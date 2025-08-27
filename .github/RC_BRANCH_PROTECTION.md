@@ -26,7 +26,7 @@ The following branch protection rules must be configured via GitHub's web interf
 
 ### 2. Repository Settings
 - **Allow squash merging**: ✅ (Required for RC branches)
-- **Allow merge commits**: ❌ (Disable for RC branches)  
+- **Allow merge commits**: ❌ (Disable for RC branches)
 - **Allow rebase merging**: ❌ (Disable for RC branches)
 - **Default merge type**: Squash and merge
 - **Delete head branches**: ✅ (Recommended)
@@ -42,7 +42,7 @@ RC branch PRs will be automatically labeled with:
 RC branches trigger enhanced CI pipeline:
 1. **Standard CI tests** (same as main branch):
    - Backend tests (Python unit tests)
-   - Frontend unit tests  
+   - Frontend unit tests
    - Linting and code quality checks
    - Template tests (if modified)
    - Documentation build tests
@@ -66,7 +66,7 @@ RC branches trigger enhanced CI pipeline:
 
 ### Via GitHub Web Interface:
 1. Go to Repository Settings → Branches
-2. Click "Add rule" 
+2. Click "Add rule"
 3. Enter branch name pattern: `release-*`
 4. Configure all the protection rules listed above
 5. Save the rule
@@ -85,7 +85,7 @@ gh api repos/{owner}/{repo}/branches/release-*/protection \
 1. Go to Repository Settings → General
 2. Under "Pull Requests" section:
    - ✅ Allow squash merging
-   - ❌ Allow merge commits  
+   - ❌ Allow merge commits
    - ❌ Allow rebase merging
 3. Set "Default merge type" to "Squash and merge"
 

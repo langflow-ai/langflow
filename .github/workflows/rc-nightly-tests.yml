@@ -101,6 +101,6 @@ jobs:
             echo ""
             echo "🎉 Release candidate tests completed successfully"
             echo "  - Frontend tests (full suite): ✅"
-            echo "  - Backend tests (full suite): ✅" 
+            echo "  - Backend tests (full suite): ✅"
             echo "  - Integration tests: ✅"
           fi
