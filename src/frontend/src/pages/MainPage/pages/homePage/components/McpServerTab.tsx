@@ -431,7 +431,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                     content={
                       (composerUrlData?.port_available ?? true)
                         ? undefined
-                        : "MCP Server is not running: port not available. Please check your settings and try again."
+                        : `MCP Server is not running: port ${composerUrlData?.port} on ${composerUrlData?.host} is not available. Please check your settings and try again.`
                     }
                   >
                     <span
