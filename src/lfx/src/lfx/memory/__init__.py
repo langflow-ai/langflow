@@ -6,7 +6,7 @@ This module automatically chooses between full langflow implementations
 
 import importlib.util
 
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 
 def _has_langflow_memory():

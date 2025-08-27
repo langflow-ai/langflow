@@ -11,7 +11,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 import sqlmodel
 from alembic import op
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 # revision identifiers, used by Alembic.
 revision: str = "b2fa308044b5"

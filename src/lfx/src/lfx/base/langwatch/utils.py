@@ -3,7 +3,7 @@ from typing import Any
 
 import httpx
 
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 
 @lru_cache(maxsize=1)

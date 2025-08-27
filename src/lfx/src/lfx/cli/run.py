@@ -15,7 +15,7 @@ from lfx.cli.script_loader import (
     load_graph_from_script,
 )
 from lfx.cli.validation import validate_global_variables_for_env
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.schema import InputValueRequest
 
 

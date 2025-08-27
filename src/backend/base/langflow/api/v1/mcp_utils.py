@@ -14,7 +14,7 @@ from uuid import uuid4
 
 from lfx.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
 from lfx.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from mcp import types
 from sqlmodel import select
 

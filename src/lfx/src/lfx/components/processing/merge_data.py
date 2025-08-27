@@ -3,7 +3,7 @@ from typing import cast
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, DropdownInput, Output
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.dataframe import DataFrame
 
 

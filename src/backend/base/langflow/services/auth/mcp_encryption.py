@@ -6,7 +6,7 @@ from cryptography.fernet import InvalidToken
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.deps import get_settings_service
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 # Fields that should be encrypted when stored
 SENSITIVE_FIELDS = [

@@ -1,4 +1,4 @@
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.services.settings.service import SettingsService
 from typing_extensions import override
 

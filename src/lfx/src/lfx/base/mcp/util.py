@@ -19,7 +19,7 @@ from mcp import ClientSession
 from mcp.shared.exceptions import McpError
 from pydantic import BaseModel, Field, create_model
 
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.services.deps import get_settings_service
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors

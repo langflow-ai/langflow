@@ -27,7 +27,7 @@ from lfx.custom.eval import eval_custom_component_code
 from lfx.custom.schema import MissingDefault
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.helpers.custom import format_type
-from lfx.lfx_logging import logger
+from lfx.logs import logger
 from lfx.schema.dotdict import dotdict
 from lfx.template.field.base import Input
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode

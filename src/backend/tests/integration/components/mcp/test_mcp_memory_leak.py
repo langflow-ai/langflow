@@ -16,7 +16,7 @@ import pytest
 from mcp import StdioServerParameters
 
 from langflow.base.mcp.util import MCPSessionManager
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 pytestmark = [
     pytest.mark.timeout(300, method="thread"),

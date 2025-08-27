@@ -26,7 +26,7 @@ from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_telemetry_service
 from langflow.services.telemetry.schema import RunPayload
 from langflow.services.telemetry.service import TelemetryService
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 router = APIRouter(tags=["OpenAI Responses API"])
 

@@ -14,7 +14,7 @@ from langflow.services.database.models.transactions.model import TransactionTabl
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.database.utils import initialize_database
 from langflow.services.schema import ServiceType
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 
 from .deps import get_db_service, get_service, get_settings_service, session_scope

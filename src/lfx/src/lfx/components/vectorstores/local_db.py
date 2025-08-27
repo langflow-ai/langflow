@@ -8,7 +8,7 @@ from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vec
 from lfx.base.vectorstores.utils import chroma_collection_to_data
 from lfx.inputs.inputs import MultilineInput
 from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, TabInput
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.template.field.base import Output

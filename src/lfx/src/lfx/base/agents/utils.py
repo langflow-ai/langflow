@@ -15,7 +15,7 @@ from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.data import Data
 from lfx.services.cache.base import CacheService
 from lfx.services.cache.utils import CacheMiss

@@ -4,7 +4,7 @@ import pydantic
 from anyio import BrokenResourceError
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport

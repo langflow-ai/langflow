@@ -124,7 +124,7 @@ def serve_command(
     # Disable pretty logs for serve command to avoid ANSI codes in API responses
     os.environ["LANGFLOW_PRETTY_LOGS"] = "false"
     verbose_print(f"Configuring logging with level: {log_level}")
-    from lfx.lfx_logging.logger import configure
+    from lfx.logs.logger import configure
 
     configure(log_level=log_level)
 

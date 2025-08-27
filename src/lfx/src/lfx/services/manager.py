@@ -12,7 +12,7 @@ import inspect
 import threading
 from typing import TYPE_CHECKING
 
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:

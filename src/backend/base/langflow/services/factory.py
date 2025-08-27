@@ -3,7 +3,7 @@ import inspect
 from typing import get_type_hints
 
 from cachetools import LRUCache, cached
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 from langflow.services.base import Service
 from langflow.services.schema import ServiceType

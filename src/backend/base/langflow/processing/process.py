@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 from lfx.graph.vertex.base import Vertex
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.processing.utils import validate_and_repair_json
 from pydantic import BaseModel
 

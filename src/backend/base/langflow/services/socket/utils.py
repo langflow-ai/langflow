@@ -2,7 +2,7 @@ import time
 from collections.abc import Callable
 
 import socketio
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 from langflow.api.utils import format_elapsed_time
 from langflow.api.v1.schemas import ResultDataResponse, VertexBuildResponse

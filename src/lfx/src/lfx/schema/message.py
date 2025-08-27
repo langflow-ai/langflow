@@ -17,7 +17,7 @@ from langchain_core.prompts.prompt import PromptTemplate
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
 
 from lfx.base.prompts.utils import dict_values_to_string
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.content_types import ErrorContent
 from lfx.schema.data import Data

@@ -16,7 +16,7 @@ from traceloop.sdk.instruments import Instruments
 from typing_extensions import override
 
 from langflow.services.tracing.base import BaseTracer
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

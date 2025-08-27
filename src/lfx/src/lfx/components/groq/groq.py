@@ -6,7 +6,7 @@ from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 
 class GroqModel(LCModelComponent):

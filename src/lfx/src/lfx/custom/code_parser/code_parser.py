@@ -11,7 +11,7 @@ from fastapi import HTTPException
 
 from lfx.custom.eval import eval_custom_component_code
 from lfx.custom.schema import CallableCodeDetails, ClassCodeDetails, MissingDefault
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 
 class CodeSyntaxError(HTTPException):

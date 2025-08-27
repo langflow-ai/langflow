@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.custom import Component
 from lfx.inputs import DictInput, DropdownInput, MessageTextInput, SortableListInput
 from lfx.io import DataInput, Output
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema import Data
 from lfx.schema.dotdict import dotdict
 from lfx.utils.component_utils import set_current_fields, set_field_display

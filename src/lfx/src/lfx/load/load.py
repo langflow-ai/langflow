@@ -10,7 +10,7 @@ from lfx.graph.schema import RunOutputs
 
 if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
-from lfx.lfx_logging.logger import configure
+from lfx.logs.logger import configure
 from lfx.load.utils import replace_tweaks_with_env
 from lfx.processing.process import process_tweaks, run_graph
 from lfx.utils.async_helpers import run_until_complete

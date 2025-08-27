@@ -3,7 +3,7 @@ import base64
 from pathlib import Path
 
 import numpy as np
-from lfx.lfx_logging import logger
+from lfx.logs import logger
 from scipy.signal import resample
 
 SAMPLE_RATE_24K = 24000

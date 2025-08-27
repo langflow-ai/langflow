@@ -5,7 +5,7 @@ from uuid import UUID
 
 from httpx import AsyncClient, codes
 
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 
 async def create_flow(client: AsyncClient, flow_data: str, headers: dict[str, str]) -> UUID:

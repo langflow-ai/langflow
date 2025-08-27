@@ -28,7 +28,7 @@ from fastapi.security import APIKeyHeader, APIKeyQuery
 from pydantic import BaseModel, Field
 
 from lfx.cli.common import execute_graph_with_capture, extract_result_data, get_api_key
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable

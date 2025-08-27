@@ -26,7 +26,7 @@ from lfx.base.constants import (
     SKIPPED_COMPONENTS,
     SKIPPED_FIELD_ATTRIBUTES,
 )
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from lfx.utils.util import escape_json_dump
 from sqlalchemy.exc import NoResultFound

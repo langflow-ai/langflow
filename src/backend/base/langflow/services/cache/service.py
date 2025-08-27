@@ -6,7 +6,7 @@ from collections import OrderedDict
 from typing import Generic, Union
 
 import dill
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.services.cache.utils import CACHE_MISS
 from typing_extensions import override
 

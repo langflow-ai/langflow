@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from lfx.base.prompts.api_utils import process_prompt_template
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 from langflow.api.utils import CurrentActiveUser
 from langflow.api.v1.base import Code, CodeValidationResponse, PromptValidationResponse, ValidatePromptRequest

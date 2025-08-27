@@ -4,7 +4,7 @@ import httpx
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.data import Data
 
 

@@ -10,7 +10,7 @@ from pydantic.v1 import Field, create_model
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.inputs.inputs import DropdownInput, IntInput, MessageTextInput, MultiselectInput
 from lfx.io import Output
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.dotdict import dotdict
 
 

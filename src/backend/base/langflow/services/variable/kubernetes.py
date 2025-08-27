@@ -4,7 +4,7 @@ import asyncio
 import os
 from typing import TYPE_CHECKING
 
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from typing_extensions import override
 
 from langflow.services.auth import utils as auth_utils

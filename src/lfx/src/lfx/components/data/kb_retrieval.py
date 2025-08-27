@@ -12,7 +12,7 @@ from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import session_scope
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.services.deps import get_settings_service

@@ -8,7 +8,7 @@ from lfx.field_typing import Tool
 from lfx.graph.graph.base import Graph
 from lfx.helpers.flow import get_flow_inputs
 from lfx.io import BoolInput, DropdownInput, Output, StrInput
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 

@@ -8,7 +8,7 @@ import yaml
 from langchain_core.language_models import BaseLanguageModel
 from PIL.Image import Image
 
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.services.chat.config import ChatConfig
 from lfx.services.deps import get_settings_service
 

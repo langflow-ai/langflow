@@ -3,7 +3,7 @@ from collections.abc import Callable
 from lfx.custom.custom_component.component import Component
 from lfx.custom.utils import get_function
 from lfx.io import CodeInput, Output
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message

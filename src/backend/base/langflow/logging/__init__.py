@@ -1,4 +1,4 @@
-from lfx.lfx_logging.logger import configure, logger
+from lfx.logs.logger import configure, logger
 
 from .setup import disable_logging, enable_logging
 

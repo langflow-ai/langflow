@@ -1,5 +1,5 @@
 from lfx.graph.schema import ResultData, RunOutputs
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 

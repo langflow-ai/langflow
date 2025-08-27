@@ -6,7 +6,7 @@ from passlib.context import CryptContext
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from lfx.services.settings.utils import read_secret_from_file, write_secret_to_file
 

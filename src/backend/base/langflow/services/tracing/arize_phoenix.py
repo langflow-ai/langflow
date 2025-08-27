@@ -18,7 +18,7 @@ from typing_extensions import override
 
 from langflow.schema.message import Message
 from langflow.services.tracing.base import BaseTracer
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.data import Data
 
 if TYPE_CHECKING:

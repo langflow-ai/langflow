@@ -1,7 +1,7 @@
 from typing import Any
 
 import socketio
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 from langflow.services.base import Service
 from langflow.services.cache.base import AsyncBaseCacheService, CacheService

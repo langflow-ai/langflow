@@ -3,7 +3,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 from langflow.services.schema import ServiceType
 

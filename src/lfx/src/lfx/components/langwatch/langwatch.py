@@ -17,7 +17,7 @@ from lfx.io import (
     Output,
     SecretStrInput,
 )
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 

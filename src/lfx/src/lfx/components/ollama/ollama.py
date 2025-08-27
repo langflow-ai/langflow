@@ -10,7 +10,7 @@ from lfx.base.models.ollama_constants import URL_LIST
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SliderInput
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 HTTP_STATUS_OK = 200
 

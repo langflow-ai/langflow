@@ -7,7 +7,7 @@ from json_repair import repair_json
 from pydantic import BaseModel
 
 from lfx.graph.vertex.base import Vertex
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.graph import InputValue, Tweaks
 from lfx.schema.schema import INPUT_FIELD_NAME, InputValueRequest
 from lfx.services.deps import get_settings_service

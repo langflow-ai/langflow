@@ -7,7 +7,7 @@ import anyio
 from aiofile import async_open
 
 from lfx.custom.custom_component.component import Component
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 MAX_DEPTH = 2
 

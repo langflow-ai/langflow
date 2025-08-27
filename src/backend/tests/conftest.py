@@ -38,7 +38,7 @@ from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, session_scope
 from lfx.components.input_output import ChatInput
 from lfx.graph import Graph
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 load_dotenv()
 

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DictInput, IntInput, MultilineInput, SecretStrInput
 from lfx.io import Output
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 

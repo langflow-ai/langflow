@@ -9,7 +9,7 @@ from pydantic.v1 import SecretStr
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.field_typing import Embeddings
 from lfx.io import BoolInput, DropdownInput, IntInput, SecretStrInput, StrInput
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.dotdict import dotdict
 
 

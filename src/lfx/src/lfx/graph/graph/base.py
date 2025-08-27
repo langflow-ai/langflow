@@ -34,7 +34,7 @@ from lfx.graph.utils import log_vertex_build
 from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
-from lfx.lfx_logging.logger import LogConfig, configure, logger
+from lfx.logs.logger import LogConfig, configure, logger
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss

@@ -1,6 +1,6 @@
 import anyio
 from aiofile import async_open
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 from .service import StorageService
 

@@ -11,7 +11,7 @@ from typing_extensions import override
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.inputs.inputs import BoolInput, DropdownInput, FieldTypes, HandleInput, MessageTextInput, MultilineInput
 from lfx.io import Output
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 

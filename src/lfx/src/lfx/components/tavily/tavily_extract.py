@@ -2,7 +2,7 @@ import httpx
 
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, MessageTextInput, Output, SecretStrInput
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema import Data
 from lfx.schema.dataframe import DataFrame
 

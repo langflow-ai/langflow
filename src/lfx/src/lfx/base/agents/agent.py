@@ -15,7 +15,7 @@ from lfx.custom.custom_component.component import Component, _get_component_tool
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import InputTypes, MultilineInput
 from lfx.io import BoolInput, HandleInput, IntInput, MessageInput
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.memory import delete_message
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data

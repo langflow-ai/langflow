@@ -21,7 +21,7 @@ from unittest.mock import Mock, patch
 import pytest
 import structlog
 
-from lfx.lfx_logging.logger import (
+from lfx.logs.logger import (
     LOG_LEVEL_MAP,
     VALID_LOG_LEVELS,
     InterceptHandler,

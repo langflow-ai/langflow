@@ -13,7 +13,7 @@ class TracingService(Service):
     def log(self, message: str, **kwargs) -> None:  # noqa: ARG002
         """Log a message with optional metadata."""
         # Lightweight implementation - just log basic info
-        from lfx.lfx_logging.logger import logger
+        from lfx.logs.logger import logger
 
         logger.debug(f"Trace: {message}")
 

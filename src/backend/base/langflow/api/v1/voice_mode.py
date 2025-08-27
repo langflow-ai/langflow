@@ -18,7 +18,7 @@ import websockets
 from cryptography.fernet import InvalidToken
 from elevenlabs import ElevenLabs
 from fastapi import APIRouter, BackgroundTasks
-from lfx.lfx_logging import logger
+from lfx.logs import logger
 from lfx.schema.schema import InputValueRequest
 from openai import OpenAI
 from sqlalchemy import select

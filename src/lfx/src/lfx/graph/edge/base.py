@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 from lfx.graph.edge.schema import EdgeData, LoopTargetHandleDict, SourceHandle, TargetHandle, TargetHandleDict
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.schema import INPUT_FIELD_NAME
 
 if TYPE_CHECKING:

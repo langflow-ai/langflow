@@ -3,7 +3,7 @@ import pandas as pd
 from lfx.custom.custom_component.component import Component
 from lfx.inputs import SortableListInput
 from lfx.io import BoolInput, DataFrameInput, DropdownInput, IntInput, MessageTextInput, Output, StrInput
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from lfx.schema.dataframe import DataFrame
 
 

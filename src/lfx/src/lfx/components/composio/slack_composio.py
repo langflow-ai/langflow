@@ -4,7 +4,7 @@ from composio import Action
 
 from lfx.base.composio.composio_base import ComposioBaseComponent
 from lfx.inputs import BoolInput, IntInput, MessageTextInput
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 
 
 class ComposioSlackAPIComponent(ComposioBaseComponent):

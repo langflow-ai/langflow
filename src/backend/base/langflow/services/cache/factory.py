@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from typing_extensions import override
 
 from langflow.services.cache.disk import AsyncDiskCache

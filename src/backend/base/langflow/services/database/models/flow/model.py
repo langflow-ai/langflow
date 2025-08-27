@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 import emoji
 from emoji import purely_emoji
 from fastapi import HTTPException, status
-from lfx.lfx_logging.logger import logger
+from lfx.logs.logger import logger
 from pydantic import BaseModel, ValidationInfo, field_serializer, field_validator
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import Text, UniqueConstraint, text

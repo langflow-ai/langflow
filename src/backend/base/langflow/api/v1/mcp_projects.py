@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
-from lfx.lfx_logging import logger
+from lfx.logs import logger
 from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from mcp import types
