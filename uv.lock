@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin'",
@@ -5827,7 +5827,6 @@ dependencies = [
     { name = "httpx", extra = ["http2"] },
     { name = "json-repair" },
     { name = "langchain-core" },
-    { name = "loguru" },
     { name = "nanoid" },
     { name = "networkx" },
     { name = "orjson" },
@@ -5839,6 +5838,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
     { name = "rich" },
+    { name = "structlog" },
     { name = "tomli" },
     { name = "typer" },
     { name = "typing-extensions" },
@@ -5870,7 +5870,6 @@ requires-dist = [
     { name = "httpx", extras = ["http2"], specifier = ">=0.24.0" },
     { name = "json-repair", specifier = ">=0.30.3" },
     { name = "langchain-core", specifier = ">=0.3.66" },
-    { name = "loguru", specifier = ">=0.7.3" },
     { name = "nanoid", specifier = ">=2.0.0" },
     { name = "networkx", specifier = ">=3.4.2" },
     { name = "orjson", specifier = ">=3.10.15" },
@@ -5882,6 +5881,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.10.1" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "rich", specifier = ">=13.0.0" },
+    { name = "structlog" },
     { name = "tomli", specifier = ">=2.2.1" },
     { name = "typer", specifier = ">=0.16.0" },
     { name = "typing-extensions", specifier = ">=4.14.0" },

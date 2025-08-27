@@ -9,7 +9,6 @@ authors = [
 requires-python = ">=3.10,<3.14"
 dependencies = [
     "langchain-core>=0.3.66",
-    "loguru>=0.7.3",
     "pandas>=2.0.0",
     "pydantic>=2.0.0",
     "pillow>=10.0.0",
@@ -36,6 +35,7 @@ dependencies = [
     "tomli>=2.2.1",
     "orjson>=3.10.15",
     "asyncer>=0.0.8",
+    "structlog",
 ]
 
 [project.scripts]
