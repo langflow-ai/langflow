@@ -180,6 +180,30 @@ For troubleshooting advice for a third-party integration, see the information ab
 
 If you are building a custom component, see [Error handling and logging for custom Python components](/components-custom-components#error-handling-and-logging).
 
+### Custom components not appearing in the visual editor
+
+If your custom components are not appearing in the Langflow visual editor, try the following troubleshooting steps:
+
+1. Ensure your components follow the [required directory structure](https://docs.langflow.org/components-custom-components#directory-structure-requirements).
+    ```
+    /your/custom/components/path/       # Base directory set by LANGFLOW_COMPONENTS_PATH
+        └── category_name/              # Required category subfolder that determines menu name
+            ├── __init__.py             # Required
+            └── custom_component.py     # Component file
+    ```
+
+2. Verify each category directory includes an `__init__.py` file.
+This is required for Python to recognize the directory as a module.
+
+3. Use the command line argument instead of the environment variable for `LANGFLOW_COMPONENTS_PATH`.
+If you're using the `LANGFLOW_COMPONENTS_PATH` environment variable and components aren't loading, try the `--components-path` command line argument instead:
+
+    ```bash
+    uv run langflow run --components-path /path/to/your/custom/components
+    ```
+
+If you continue to experience issues, please [report them on GitHub](https://github.com/langflow-ai/langflow/issues) with details about your directory structure and component setup.
+
 ## See also
 
 - [Langflow GitHub Issues and Discussions](/contributing-github-issues)

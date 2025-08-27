@@ -287,7 +287,7 @@ class TestSpecificModulePatterns:
         import time
 
         # Test large modules
-        large_modules = ["vectorstores", "processing", "langchain_utilities"]
+        large_modules = ["data", "processing", "langchain_utilities"]
 
         for module_name in large_modules:
             if module_name in components.__all__:
