@@ -128,7 +128,7 @@ class ServiceManager:
                 if asyncio.iscoroutine(teardown_result):
                     await teardown_result
             except Exception as exc:  # noqa: BLE001
-                logger.opt(exception=exc).debug(f"Error in teardown of {service.name}")
+                logger.debug(f"Error in teardown of {service.name}", exc_info=exc)
         self.services = {}
         self.factories = {}
 
@@ -154,8 +154,8 @@ class ServiceManager:
                         break
 
             except Exception as exc:  # noqa: BLE001
-                logger.opt(exception=exc).debug(
-                    f"Could not initialize services. Please check your settings. Error in {name}."
+                logger.debug(
+                    f"Could not initialize services. Please check your settings. Error in {name}.", exc_info=exc
                 )
 
         return factories
@@ -166,7 +166,7 @@ _service_manager = None
 
 
 def get_service_manager():
-    global _service_manager
+    global _service_manager  # noqa: PLW0603
     if _service_manager is None:
         _service_manager = ServiceManager()
     return _service_manager

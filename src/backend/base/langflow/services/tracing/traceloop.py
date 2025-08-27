@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
+from lfx.logs.logger import logger
 from opentelemetry import trace
 from opentelemetry.trace import Span, use_span
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
@@ -16,7 +17,6 @@ from traceloop.sdk.instruments import Instruments
 from typing_extensions import override
 
 from langflow.services.tracing.base import BaseTracer
-from lfx.logs.logger import logger
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -77,7 +77,7 @@ class TraceloopTracer(BaseTracer):
                 self.propagator.inject(carrier=self.carrier)
 
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error setting up Traceloop tracer")
+            logger.debug("Error setting up Traceloop tracer", exc_info=True)
             self._ready = False
 
     @property

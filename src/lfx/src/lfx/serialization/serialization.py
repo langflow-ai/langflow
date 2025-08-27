@@ -282,7 +282,7 @@ def serialize(
             try:
                 return repr(obj)
             except Exception:  # noqa: BLE001
-                logger.opt(exception=True).debug(f"Error serializing object: {obj}")
+                logger.debug(f"Error serializing object: {obj}", exc_info=True)
 
         # Fallback to common serialization patterns
         if hasattr(obj, "model_dump"):

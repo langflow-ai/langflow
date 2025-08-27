@@ -69,6 +69,7 @@ ignore = [
     "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
     "D1", # Missing docstring in public package
     "S1",
+    "PLC0415", # Inline imports
     # Rules that are TODOs
     "ANN",
 ]
