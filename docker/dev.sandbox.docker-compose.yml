@@ -26,7 +26,6 @@ services:
       - ../.env
     volumes:
       - ../:/app
-      - /tmp/langflow-sandbox:/tmp/langflow-sandbox:rw
     depends_on:
       - postgres
     networks:

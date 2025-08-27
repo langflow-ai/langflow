@@ -77,12 +77,17 @@ async def get_instance_results(
             # Get component code and path for verification
             vertex = getattr(custom_component, "_vertex", None)
             component_class = custom_component.__class__
-            component_name = component_class.__name__
+            component_class_name = component_class.__name__
             
             if base_type == "custom_components":
-                component_path = f"custom.{getattr(vertex, 'id', component_name)}"
+                component_path = f"custom.{getattr(vertex, 'id', component_class_name)}"
             else:
-                component_path = f"component.{component_name}"
+                # For built-in components, use the name property if available, otherwise class name
+                # This matches how components are stored in the signature database
+                if hasattr(custom_component, 'name') and custom_component.name:
+                    component_path = custom_component.name
+                else:
+                    component_path = component_class_name
             
             component_code = vertex.params.get("code") if (vertex and getattr(vertex, "params", None)) else None
             
@@ -98,7 +103,7 @@ async def get_instance_results(
                     modified = False
                     trust_level = ComponentTrustLevel.VERIFIED
             except Exception as e:
-                logger.warning(f"Verification problem for {component_name}: {e}")
+                logger.warning(f"Verification problem for {component_class_name}: {e}")
 
             # Check lock mode
             locked = verifier.security_policy.is_lock_mode_enabled()
@@ -106,7 +111,7 @@ async def get_instance_results(
                 raise ComponentLockError(component_path)
 
             logger.info(
-                f"Component {component_name} execution: "
+                f"Component {component_class_name} execution: "
                 f"modified={'YES' if modified else 'NO'}, "
                 f"locked={'YES' if locked else 'NO'}, "
                 f"trust={trust_level.value}"
@@ -269,10 +274,10 @@ async def build_component_sandboxed(
     from langflow.sandbox import get_sandbox_manager
     from langflow.schema import Data
 
-    component_name = custom_component.__class__.__name__
+    component_class_name = custom_component.__class__.__name__
     component_path = context.component_path
     
-    logger.info(f"Executing {component_name} in sandbox")
+    logger.info(f"Executing {component_class_name} in sandbox")
 
     # Execute in sandbox
     result = await get_sandbox_manager().execute_component(
@@ -459,10 +464,10 @@ async def build_custom_component_sandboxed(
     if "retriever" in params and hasattr(params["retriever"], "as_retriever"):
         params["retriever"] = params["retriever"].as_retriever()
 
-    component_name = custom_component.__class__.__name__
+    component_class_name = custom_component.__class__.__name__
     component_path = context.component_path
     
-    logger.info(f"Executing custom component {component_name} in sandbox")
+    logger.info(f"Executing custom component {component_class_name} in sandbox")
 
     # Execute in sandbox
     result = await get_sandbox_manager().execute_component(

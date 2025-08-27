@@ -99,6 +99,7 @@ class Component(CustomComponent):
     outputs: list[Output] = []
     selected_output: str | None = None
     code_class_base_inheritance: ClassVar[str] = "Component"
+    version: ClassVar[str] = "1.0"  # Component version for registry tracking
 
     def __init__(self, **kwargs) -> None:
         # Initialize instance-specific attributes first

@@ -29,9 +29,22 @@ class SandboxComponentManifest:
 
 # List of components that have been tested and verified to work in sandbox
 SANDBOX_MANIFEST: List[SandboxComponentManifest] = [
+
     SandboxComponentManifest(
         name="APIRequest",
         class_name="APIRequestComponent",
+        notes="Tested and works as expected."
+    ),
+
+    SandboxComponentManifest(
+        name="ChatInput",
+        class_name="ChatInput",
+        notes="Tested and works as expected."
+    ),
+
+    SandboxComponentManifest(
+        name="ChatOutput",
+        class_name="ChatOutput",
         notes="Tested and works as expected."
     ),
 
@@ -45,14 +58,25 @@ SANDBOX_MANIFEST: List[SandboxComponentManifest] = [
         name="CustomComponent",
         class_name="CustomComponent",
         force_sandbox=True,
-        notes="Base custom component template. Tested with basic input/output operations, "
-              "file handling, and async operations. Safe for user-defined logic although may"
-              "encounter side-effects depending on imports used."
+        notes="Tested and works as expected."
+              "May encounter side-effects depending on imports used."
     ),
 
     SandboxComponentManifest(
         name="PythonREPLComponent",
         class_name="PythonREPLComponent",
+        notes="Tested and works as expected."
+    ),
+
+    SandboxComponentManifest(
+        name="TextInputComponent",
+        class_name="TextInputComponent",
+        notes="Tested and works as expected."
+    ),
+
+    SandboxComponentManifest(
+        name="TextOutputComponent",
+        class_name="TextOutputComponent",
         notes="Tested and works as expected."
     ),
     

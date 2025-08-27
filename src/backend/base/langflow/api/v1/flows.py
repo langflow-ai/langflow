@@ -338,7 +338,8 @@ def _add_sandbox_flags(flow: Flow) -> Flow:
                     component_name = node_id.split("-")[0] if "-" in node_id else node_id
 
                     # Build component path for sandbox verification
-                    component_path = f"component.{component_name}"
+                    # For built-in components, just use the component name
+                    component_path = component_name
                     
                     # Get code from template
                     template = node_data.get("node", {}).get("template", {})
@@ -347,16 +348,7 @@ def _add_sandbox_flags(flow: Flow) -> Flow:
                     # Determine trust level and execution mode with 3 independent flags
                     if component_code:
                         # Check if component is verified (matches signature)
-                        verified_ok = verifier.verify_component_signature(component_path, component_code)
-                        
-                        # If verification failed and component doesn't end with "Component", try with suffix
-                        if not verified_ok and not component_name.endswith("Component"):
-                            component_path_with_suffix = f"component.{component_name}Component"
-                            verified_ok = verifier.verify_component_signature(component_path_with_suffix, component_code)
-                            if verified_ok:
-                                # Update component_path to the one that worked
-                                component_path = component_path_with_suffix
-                        
+                        verified_ok = verifier.verify_component_signature(component_path, component_code, log_verification=False)
                         is_untrusted = not verified_ok
 
                     # Check if component is in sandbox supported list

@@ -137,7 +137,7 @@ export default function SandboxInfoModal({
                 <span className="ml-2 text-sm text-muted-foreground">Loading components...</span>
               </div>
             ) : sandboxInfo?.components && sandboxInfo.components.length > 0 ? (
-              <div className="flex flex-col gap-y-4 max-h-96 overflow-y-auto">
+              <div className="flex flex-col gap-y-4">
                 {sandboxInfo.components.map((component) => (
                   <ComponentCard key={component.class_name} component={component} />
                 ))}

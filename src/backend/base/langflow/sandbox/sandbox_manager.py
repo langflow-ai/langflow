@@ -13,6 +13,7 @@ from typing import Dict, Optional, TYPE_CHECKING
 from uuid import uuid4
 
 from loguru import logger
+from sqlmodel import Session
 
 from .sandbox_context import (
     SandboxExecutionContext,
@@ -29,10 +30,11 @@ if TYPE_CHECKING:
 class SandboxManager:
     """Sandbox manager for secure component execution."""
     
-    def __init__(self, config: Optional[SandboxConfig] = None):
+    def __init__(self, config: Optional[SandboxConfig] = None, db_session: Optional[Session] = None):
         self.config = config or SandboxConfig()
         self.security_policy = SecurityPolicy(self.config)
-        self.verifier = ComponentSecurityManager(self.security_policy)
+        self.db_session = db_session
+        self.verifier = ComponentSecurityManager(self.security_policy, db_session)
         
         # Set up secure sandbox environment
         self._setup_sandbox_environment()
@@ -1056,9 +1058,9 @@ class SandboxManager:
 # Global singleton
 _sandbox_manager: Optional[SandboxManager] = None
 
-def get_sandbox_manager() -> SandboxManager:
+def get_sandbox_manager(db_session: Optional[Session] = None) -> SandboxManager:
     """Get the global sandbox manager instance."""
     global _sandbox_manager
     if _sandbox_manager is None:
-        _sandbox_manager = SandboxManager()
+        _sandbox_manager = SandboxManager(db_session=db_session)
     return _sandbox_manager

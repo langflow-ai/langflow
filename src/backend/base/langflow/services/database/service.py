@@ -4,7 +4,7 @@ import asyncio
 import re
 import sqlite3
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -14,12 +14,12 @@ import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
 from loguru import logger
-from sqlalchemy import event, exc, inspect
+from sqlalchemy import event, exc, inspect, create_engine
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
-from sqlmodel import SQLModel, select, text
+from sqlmodel import SQLModel, select, text, Session
 from sqlmodel.ext.asyncio.session import AsyncSession
 from tenacity import retry, stop_after_attempt, wait_fixed
 
@@ -195,6 +195,25 @@ class DatabaseService(Service):
                 except exc.SQLAlchemyError as db_exc:
                     logger.error(f"Database error during session scope: {db_exc}")
                     await session.rollback()
+                    raise
+
+    @contextmanager
+    def with_sync_session(self):
+        """Context manager for synchronous database sessions."""
+        if self.settings_service.settings.use_noop_database:
+            yield NoopSession()
+        else:
+            # Create a sync engine from the database URL
+            from sqlalchemy import create_engine
+            sync_database_url = self.database_url.replace("+aiosqlite", "").replace("+psycopg", "+psycopg2")
+            sync_engine = create_engine(sync_database_url, connect_args=self._get_connect_args())
+            
+            with Session(sync_engine, expire_on_commit=False) as session:
+                try:
+                    yield session
+                except exc.SQLAlchemyError as db_exc:
+                    logger.error(f"Database error during sync session scope: {db_exc}")
+                    session.rollback()
                     raise
 
     async def assign_orphaned_flows_to_superuser(self) -> None:

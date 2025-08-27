@@ -70,10 +70,4 @@ ENV LANGFLOW_SANDBOX_ENABLED=true
 EXPOSE 7860
 EXPOSE 3000
 
-# Add health check for sandbox functionality
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD /usr/local/bin/nsjail --help > /dev/null && \
-    python3 -c "from langflow.sandbox import get_sandbox_manager; get_sandbox_manager()" && \
-    echo "Sandbox ready" || exit 1
-
 CMD ["./docker/dev.start.sh"]

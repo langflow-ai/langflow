@@ -17,8 +17,7 @@ export const ENABLE_MCP = true;
 export const ENABLE_MCP_NOTICE = false;
 export const ENABLE_KNOWLEDGE_BASES = false;
 export const ENABLE_SANDBOXING_INDICATORS =
-  process.env.LANGFLOW_ENABLE_SANDBOXING_INDICATORS ?
-  process.env.LANGFLOW_ENABLE_SANDBOXING_INDICATORS === "true" : true;
+  process.env.LANGFLOW_ENABLE_SANDBOXING_INDICATORS !== "false";
 
 export const ENABLE_MCP_COMPOSER =
   process.env.LANGFLOW_FEATURE_MCP_COMPOSER === "true";

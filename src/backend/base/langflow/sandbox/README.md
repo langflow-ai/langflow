@@ -89,8 +89,7 @@ Manages component trust verification through cryptographic signatures.
 - `ComponentSecurityManager`: Verifies component integrity and determines trust level
 
 **Key Methods**:
-- `verify_component()`: Checks if component code matches stored signatures
-- `get_trust_level()`: Returns VERIFIED or UNTRUSTED based on verification
+- `verify_component_signature()`: Checks if component code matches stored signatures
 - `supports_sandboxing()`: Checks if a component can run in sandbox
 - `is_force_sandbox()`: Determines if a component must always run in sandbox
 
@@ -161,47 +160,35 @@ The system maintains a historical record of component signatures to ensure that 
 
 #### How It Works
 
-1. **Signature Storage** (`component_signatures.json`):
-   - All component signatures are persisted in a local JSON file
-   - Each component can have multiple signatures (one for each version)
+1. **Database Storage** (`components` table):
+   - All component signatures are persisted in the main Langflow database
+   - Each component can have multiple versions with their signatures
    - Signatures are never deleted, only added
 
 2. **Signature Structure**:
-   ```json
-   {
-     "component.APIRequestComponent": [
-       {
-         "path": "component.APIRequestComponent",
-         "code_hash": "abc123...",
-         "signature": "def456...",
-         "timestamp": "2024-01-15T10:30:00",
-         "version": "1.0",
-         "metadata": {
-           "normalized_length": 1234,
-           "original_length": 1250
-         }
-       },
-       // Newer version after component update
-       {
-         "path": "component.APIRequestComponent",
-         "code_hash": "xyz789...",
-         "signature": "uvw012...",
-         "timestamp": "2024-02-01T09:15:00",
-         "version": "1.0"
-       }
-     ]
-   }
+   ```sql
+   CREATE TABLE components (
+       id UUID PRIMARY KEY,
+       component_path VARCHAR NOT NULL,  -- e.g., "APIRequestComponent"
+       folder VARCHAR NOT NULL,          -- e.g., "data", "agents", "search"
+       version VARCHAR NOT NULL,         -- Component version: "1.0", "1.1", etc.
+       code TEXT NOT NULL,               -- Full component source code
+       signature VARCHAR NOT NULL,       -- HMAC signature: "def456..."
+       created_at DATETIME NOT NULL      -- "2024-01-15T10:30:00"
+   );
    ```
+   
+   **Unique Constraint**: `(folder, component_path, version)` - allows same component name in different folders
 
 3. **Version Compatibility**:
-   - When verifying a component, the system checks against ALL stored signatures
+   - When verifying a component, the system checks against ALL stored versions
    - If the component matches ANY historical signature, it's considered VERIFIED
    - This allows flows created with older component versions to continue working
 
 4. **Signature Generation**:
-   - Code is normalized (comments removed, whitespace standardized) before hashing
-   - SHA-256 hash ensures integrity
-   - HMAC signature provides authenticity
+   - Code is normalized (comments removed, whitespace standardized) using AST
+   - HMAC-SHA256 signature provides both integrity and authenticity
+   - Signatures use the Langflow auth secret key for signing
 
 #### Benefits
 

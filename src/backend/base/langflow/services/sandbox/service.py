@@ -48,7 +48,12 @@ class SandboxService(Service):
         if self._manager is None:
             try:
                 from langflow.sandbox import get_sandbox_manager
-                self._manager = get_sandbox_manager()
+                from langflow.services.deps import get_db_service
+                
+                # Get a sync session for signature initialization
+                db_service = get_db_service()
+                with db_service.with_sync_session() as session:
+                    self._manager = get_sandbox_manager(session)
                 logger.info("Sandbox manager initialized successfully")
             except ImportError as e:
                 logger.warning(f"Sandbox system not available: {e}")

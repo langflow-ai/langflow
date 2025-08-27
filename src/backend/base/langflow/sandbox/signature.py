@@ -8,13 +8,12 @@ import hmac
 import json
 import os
 from datetime import datetime
-from pathlib import Path
-from typing import Dict, Optional, Set, Any, List
+from typing import Optional, Set, Any, List, Dict
 from dataclasses import dataclass, asdict
 
 from loguru import logger
+from sqlmodel import Session
 
-from .sandbox_context import ComponentTrustLevel
 from .policies import SecurityPolicy
 
 
@@ -23,7 +22,6 @@ class ComponentSignature:
     """Represents a component's cryptographic signature for integrity verification."""
     
     path: str
-    code_hash: str
     signature: str
     timestamp: datetime
     version: str = "1.0"
@@ -37,12 +35,10 @@ class ComponentSignature:
     def create(cls, component_path: str, code: str, signing_key: Optional[str] = None) -> ComponentSignature:
         """Create a new component signature."""
         normalized_code = cls._normalize_code(code)
-        code_hash = cls._calculate_hash(normalized_code)
         signature = cls._generate_signature(normalized_code, signing_key)
         
         return cls(
             path=component_path,
-            code_hash=code_hash,
             signature=signature,
             timestamp=datetime.utcnow(),
             metadata={
@@ -65,11 +61,6 @@ class ComponentSignature:
             return '\n'.join(lines)
     
     @staticmethod
-    def _calculate_hash(code: str) -> str:
-        """Calculate SHA-256 hash of code."""
-        return hashlib.sha256(code.encode('utf-8')).hexdigest()
-    
-    @staticmethod
     def _generate_signature(code: str, signing_key: Optional[str] = None) -> str:
         """Generate HMAC signature for code."""
         return hmac.new(
@@ -82,13 +73,9 @@ class ComponentSignature:
         """Verify that the code matches this signature."""
         try:
             normalized_code = self._normalize_code(code)
-            calculated_hash = self._calculate_hash(normalized_code)
             calculated_signature = self._generate_signature(normalized_code, signing_key)
             
-            hash_match = calculated_hash == self.code_hash
-            signature_match = hmac.compare_digest(calculated_signature, self.signature)
-            
-            return hash_match and signature_match
+            return hmac.compare_digest(calculated_signature, self.signature)
         except Exception as e:
             logger.error(f"Error verifying signature: {e}")
             return False
@@ -110,41 +97,32 @@ class ComponentSignature:
 class ComponentSecurityManager:
     """Manages component signatures and security policies for trust-based sandbox execution."""
     
-    def __init__(self, security_policy: Optional[SecurityPolicy] = None):
-        logger.info("ComponentSecurityManager initialized with persistent signature storage")
-        self.signatures: Dict[str, ComponentSignature] = {}
+    def __init__(self, security_policy: Optional[SecurityPolicy] = None, db_session: Optional[Session] = None):
+        logger.info("ComponentSecurityManager initialized with database signature storage")
         self.sandbox_supported_components: Set[str] = set()  # Track which components support sandboxing
         self.security_policy = security_policy or SecurityPolicy()
+        self.db_session = db_session
 
         # Use the main Langflow auth secret key for component signing
         from langflow.services.settings.auth import AuthSettings
         auth_settings = AuthSettings()
         self.signing_key = auth_settings.SECRET_KEY.get_secret_value()
         
-        # Initialize persistent storage
-        from .signature_storage import ComponentSignatureStorage
-        self.storage = ComponentSignatureStorage()
-        
         # Generate signatures for built-in components on every startup
-        self._initialize_builtin_signatures()
+        if self.db_session:
+            self._initialize_builtin_signatures()
     def _initialize_builtin_signatures(self) -> None:
         """
-        Initialize component signatures with persistent storage:
-        1. Load existing signatures from storage into memory
-        2. Scan components and generate new signatures
-        3. Upsert new signatures to storage
-        4. Load final list (including historical versions) into memory
+        Initialize component signatures with database storage:
+        1. Scan components and generate new signatures
+        2. Upsert new signatures to database
         """
         
         # Load the list of sandbox-supported components
         from .sandbox_manifest import SANDBOX_MANIFEST, get_supported_component_class_names
         supported_component_class_names = get_supported_component_class_names()
         
-        # Step 1: Load existing signatures from storage
-        logger.info("Loading existing signatures from persistent storage")
-        self._load_signatures_from_storage()
-        
-        # Step 2: Scan components and generate current signatures
+        # Scan components and generate current signatures
         try:
             logger.info("Scanning codebase for component classes")
             
@@ -167,42 +145,27 @@ class ComponentSecurityManager:
             # Step 3: Scan and upsert new signatures
             generated_count = self._scan_and_upsert_signatures(components_dir, supported_component_class_names)
             
-            # Step 4: Reload all signatures (including historical) into memory
-            self._load_signatures_from_storage()
+            # Log the results
+            storage_stats = self._get_database_stats()
+            logger.info(f"Scanned {generated_count} components, stored {storage_stats['unique_components']} unique components")
+            logger.info(f"Storage stats: {storage_stats['unique_components']} components, {storage_stats['total_versions']} total versions")
             
-            # Log the results with key status warning
-            storage_stats = self.storage.get_stats()
-            logger.info(f"Scanned {generated_count} components, stored {storage_stats['components']} unique components")
-            logger.info(f"Storage stats: {storage_stats['components']} components, {storage_stats['total_signatures']} total signatures")
-            
-            # Warn if seeing signature accumulation (could indicate key instability)
-            if storage_stats['total_signatures'] > storage_stats['components'] * 2:
-                avg_sigs = storage_stats['avg_signatures_per_component']
-                logger.warning(f"⚠️  Signature accumulation detected: {avg_sigs:.1f} signatures per component")
-                logger.warning("This could indicate signing key instability or component code changes")
-            
-            logger.debug(f"SCAN COMPLETE: scanned {generated_count}, stored {storage_stats['components']} unique components, {storage_stats['total_signatures']} total signatures", flush=True)
+            logger.debug(f"SCAN COMPLETE: scanned {generated_count}, stored {storage_stats['unique_components']} unique components, {storage_stats['total_versions']} total versions", flush=True)
                 
         except Exception as e:
             logger.error(f"Failed to initialize component signatures: {e}")
             import traceback
             traceback.print_exc()
     
-    def _load_signatures_from_storage(self) -> None:
-        """Load all signatures from persistent storage into memory."""
-        self.signatures.clear()
-        
-        for component_path in self.storage.get_all_component_paths():
-            # Load the most recent signature for each component
-            latest_signature = self.storage.get_latest_signature(component_path)
-            if latest_signature:
-                self.signatures[component_path] = latest_signature
-        
-        logger.info(f"Loaded {len(self.signatures)} component signatures from storage into memory")
-    
+
     def _scan_and_upsert_signatures(self, components_dir: str, supported_components: list) -> int:
-        """Scan components and upsert new signatures to persistent storage."""
+        """Scan components and upsert new signatures to database."""
+        if not self.db_session:
+            return 0
+            
         import ast
+        from langflow.services.database.models.signature.crud import component_version_exists, create_component
+        from langflow.services.database.models.signature.model import Component as DBComponent
         
         generated_count = 0
         scanned_files = 0
@@ -235,25 +198,47 @@ class ComponentSecurityManager:
                                 
                                 # Check if it looks like a component class
                                 if self._is_component_class(node, code):
-                                    # Generate component path to match runtime lookup pattern
-                                    component_path = self._generate_component_path(node.name)
+                                    # Get the actual component name (from name attribute or class name)
+                                    component_name = self._get_component_name(node.name, file_path, code)
+                                    
+                                    # Use the component name as the path
+                                    component_path = component_name
 
-                                    # Check if component is in the supported list
+                                    # Check if component is in the supported list (by class name)
                                     if node.name in supported_components:
                                         self.sandbox_supported_components.add(component_path)
-                                        logger.debug(f"Component {component_path} is in sandbox supported list")
+                                        logger.debug(f"Component {component_path} (class: {node.name}) is in sandbox supported list")
+                                    
+                                    # Get component version (try to extract from class or default to 1.0)
+                                    component_version = self._extract_component_version(node, code)
+                                    
+                                    # Extract folder from file path
+                                    folder = self._extract_folder(file_path, components_dir)
                                     
                                     # Generate signature for the entire file's code
                                     signature = ComponentSignature.create(component_path, code, self.signing_key)
                                     
-                                    # Upsert to persistent storage (will skip if signature already exists)
-                                    self.storage.upsert_signature(component_path, signature)
-                                    generated_count += 1
-                                    
-                                    # Get relative path for logging
-                                    rel_path = os.path.relpath(file_path, components_dir)
-                                    sandbox_supported = node.name in supported_components
-                                    logger.debug(f"✓ Generated signature for {component_path} from {rel_path} (class={node.name}, sandbox_supported={sandbox_supported})")
+                                    # Check if this exact component version + signature already exists
+                                    if not component_version_exists(self.db_session, component_path, component_version, signature.signature):
+                                        # Create database model with full code storage
+                                        db_component = DBComponent(
+                                            component_path=component_path,
+                                            folder=folder,
+                                            version=component_version,
+                                            code=code,  # Store full source code
+                                            signature=signature.signature
+                                        )
+                                        create_component(self.db_session, db_component)
+                                        logger.debug(f"Added new component version {folder}/{component_path} v{component_version}")
+                                        
+                                        generated_count += 1
+                                        
+                                        # Get relative path for logging
+                                        rel_path = os.path.relpath(file_path, components_dir)
+                                        sandbox_supported = node.name in supported_components
+                                        logger.debug(f"✓ Generated signature for {component_path} v{component_version} from {rel_path} (class={node.name}, sandbox_supported={sandbox_supported})")
+                                    else:
+                                        logger.debug(f"Component version {folder}/{component_path} v{component_version} already exists, skipping")
                     
                     except SyntaxError as e:
                         # Log syntax errors but continue
@@ -266,7 +251,7 @@ class ComponentSecurityManager:
                     logger.debug(f"Could not process {rel_path}: {e}")
                     continue
         
-        logger.info(f"Scan complete: {scanned_files} files, {found_classes} total classes, {generated_count} signatures processed")
+        logger.info(f"Scan complete: {scanned_files} files, {found_classes} total classes, {generated_count} new signatures added")
         
         # Log sandbox supported components with details
         if self.sandbox_supported_components:
@@ -276,7 +261,7 @@ class ComponentSecurityManager:
             
             # Log detailed information about each supported component
             for component_config in SANDBOX_MANIFEST:
-                component_path = f"component.{component_config.name}"
+                component_path = component_config.name
                 if component_path in self.sandbox_supported_components:
                     logger.info(f"  - {component_config.name}: {component_config.notes}")
         else:
@@ -396,21 +381,61 @@ class ComponentSecurityManager:
         # Fallback to class name
         return name
     
-    def _generate_component_path(self, component_name: str) -> str:
-        """Generate component path using the component's name attribute."""
-        # Use the component's name attribute (e.g., "Agent" for AgentComponent)
-        component_path = f"component.{component_name}"
-        return component_path
+    def _extract_component_version(self, node: ast.ClassDef, code: str) -> str:
+        """Extract component version from class definition or default to 1.0."""
+        # Look for version class variable in the AST
+        for item in node.body:
+            # Handle simple assignment: version = "1.0"
+            if isinstance(item, ast.Assign):
+                for target in item.targets:
+                    if isinstance(target, ast.Name) and target.id == "version":
+                        # Try to extract the version value
+                        if isinstance(item.value, ast.Constant):
+                            return str(item.value.value)
+                        elif isinstance(item.value, ast.Str):  # Python < 3.8 compatibility
+                            return item.value.s
+            
+            # Handle annotated assignment: version: ClassVar[str] = "1.0"
+            elif isinstance(item, ast.AnnAssign):
+                if isinstance(item.target, ast.Name) and item.target.id == "version":
+                    if item.value:  # Has a value assigned
+                        if isinstance(item.value, ast.Constant):
+                            return str(item.value.value)
+                        elif isinstance(item.value, ast.Str):  # Python < 3.8 compatibility
+                            return item.value.s
+        
+        # Default version if not found
+        return "1.0"
+    
+    def _extract_folder(self, file_path: str, components_dir: str) -> str:
+        """Extract the folder name from the file path."""
+        # Get relative path from components directory
+        rel_path = os.path.relpath(file_path, components_dir)
+        
+        # Extract subdirectory (e.g., "search/google_serper_api.py" -> "search")
+        path_parts = rel_path.split(os.sep)
+        
+        if len(path_parts) > 1:
+            # Has subdirectory
+            return path_parts[0]
+        else:
+            # Top-level component
+            return "root"
+    
+
     
     def supports_sandboxing(self, path: str) -> bool:
         """Check if a component supports sandboxing."""
         from .sandbox_manifest import SANDBOX_MANIFEST
 
-        # Extract component name from path (e.g., "component.CustomComponent" -> "CustomComponent")
-        component_name = path.split(".")[-1] if "." in path else path
+        # Custom components always support sandboxing
+        if path.startswith("custom."):
+            return True
 
+        # Check if built-in component is in the manifest
+        # We check both class name and component name since components are stored by their name property
         for component_manifest in SANDBOX_MANIFEST:
-            if component_manifest.class_name == component_name or component_manifest.name == component_name:
+            if component_manifest.class_name == path or component_manifest.name == path:
                 return True
 
         return False
@@ -419,37 +444,61 @@ class ComponentSecurityManager:
         """Check if a component is forced to execute in sandbox mode."""
         from .sandbox_manifest import SANDBOX_MANIFEST
         
-        # Extract component name from path (e.g., "component.CustomComponent" -> "CustomComponent")
-        component_name = path.split(".")[-1] if "." in path else path
+        # Custom components are never forced (they're already untrusted)
+        if path.startswith("custom."):
+            return False
         
-        # Check if this component has force_sandbox=True in the manifest
+        # Check if built-in component has force_sandbox=True in the manifest
+        # We check both class name and component name since components are stored by their name property
         for component_manifest in SANDBOX_MANIFEST:
-            if component_manifest.class_name == component_name or component_manifest.name == component_name:
+            if component_manifest.class_name == path or component_manifest.name == path:
                 return component_manifest.force_sandbox
         
         return False
     
-    def get_signature(self, path: str) -> Optional[ComponentSignature]:
-        """Get signature for a component path."""
-        return self.signatures.get(path)
 
-    def verify_component_signature(self, path: str, code: str) -> bool:
+
+    def verify_component_signature(self, path: str, code: str, log_verification: bool = True) -> bool:
         """
         Verify code against any historical signature for the component.
         This prevents breaking existing flows when components are updated.
+        
+        Args:
+            path: Component path/name
+            code: Component source code
+            log_verification: Whether to log successful verifications (default True)
         """
-        # Get all signatures for this component (including historical ones)
-        all_signatures = self.storage.get_signatures(path)
+        if not self.db_session:
+            return False
+            
+        from langflow.services.database.models.signature.crud import get_components_by_path
+        
+        # Get all versions for this component (including historical ones)
+        db_components = get_components_by_path(self.db_session, path)
 
-        if not all_signatures:
+        if not db_components:
             return False
         
-        # Try to verify against any signature
-        for signature in all_signatures:
+        # Try to verify against any version
+        for db_component in db_components:
             try:
-                if signature.verify(code, self.signing_key):
+                # Verify the signature directly against the stored code
+                normalized_code = ComponentSignature._normalize_code(code)
+                calculated_signature = ComponentSignature._generate_signature(normalized_code, self.signing_key)
+                
+                if hmac.compare_digest(calculated_signature, db_component.signature):
+                    if log_verification:
+                        logger.debug(f"Component {path} verified against version {db_component.version}")
                     return True
             except Exception as e:
-                logger.debug(f"Verification error for {path} with signature from {signature.timestamp}: {e}")
+                logger.debug(f"Verification error for {path} with version {db_component.version} from {db_component.created_at}: {e}")
                 continue
         return False
+
+    def _get_database_stats(self) -> Dict[str, int]:
+        """Get statistics about stored components from database."""
+        if not self.db_session:
+            return {"components": 0, "total_signatures": 0, "avg_signatures_per_component": 0}
+            
+        from langflow.services.database.models.signature.crud import get_component_stats
+        return get_component_stats(self.db_session)
