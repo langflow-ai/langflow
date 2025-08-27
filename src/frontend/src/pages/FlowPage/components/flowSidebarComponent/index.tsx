@@ -339,11 +339,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     }
   }, [finalFilteredData, search, filterType, getFilterEdge]);
 
-  // Update dataFilter when baseData changes
-  useEffect(() => {
-    setFilterData(baseData);
-  }, [baseData]);
-
   useEffect(() => {
     const options = {
       keys: [
