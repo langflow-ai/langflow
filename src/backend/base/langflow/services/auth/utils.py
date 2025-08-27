@@ -19,6 +19,7 @@ from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_db_service, get_session, get_settings_service
+from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.settings.service import SettingsService
 
 if TYPE_CHECKING:
@@ -319,7 +320,8 @@ async def create_user_longterm_token(db: AsyncSession) -> tuple[UUID, dict]:
     settings_service = get_settings_service()
 
     # Prefer configured username; fall back to default or any existing superuser
-    username = settings_service.auth_settings.SUPERUSER or "langflow"
+    #NOTE: This user name cannot be a dynamic current user name since it is only used when autologin is True
+    username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
     super_user = await get_user_by_username(db, username)
     if not super_user:
         from langflow.services.database.models.user.crud import get_all_superusers
