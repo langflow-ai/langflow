@@ -26,9 +26,9 @@
         "id": "reactflow__edge-ChatInput-insg9{œdataTypeœ:œChatInputœ,œidœ:œChatInput-insg9œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-wgAUs{œfieldNameœ:œquestionœ,œidœ:œPrompt-wgAUsœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-insg9",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-insg9œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-insg9œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-wgAUs",
-        "targetHandle": "{œfieldNameœ:œquestionœ,œidœ:œPrompt-wgAUsœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-wgAUsœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-parser-gcmKF{œdataTypeœ:œparserœ,œidœ:œparser-gcmKFœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-wgAUs{œfieldNameœ:œcontextœ,œidœ:œPrompt-wgAUsœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "parser-gcmKF",
-        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-gcmKFœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-gcmKFœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-wgAUs",
-        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-wgAUsœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-wgAUsœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -85,9 +85,9 @@
         "id": "reactflow__edge-File-wqFzl{œdataTypeœ:œFileœ,œidœ:œFile-wqFzlœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SplitText-50nDI{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-50nDIœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "File-wqFzl",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-wqFzlœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-wqFzlœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "SplitText-50nDI",
-        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-50nDIœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-50nDIœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "reactflow__edge-Prompt-wgAUs{œdataTypeœ:œPromptœ,œidœ:œPrompt-wgAUsœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-nQYc0{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-nQYc0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-wgAUs",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-wgAUsœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-wgAUsœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-nQYc0",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-nQYc0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-nQYc0œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -143,9 +143,9 @@
         "id": "reactflow__edge-LanguageModelComponent-nQYc0{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-nQYc0œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-VG394{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-VG394œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-nQYc0",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-nQYc0œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-nQYc0œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-VG394",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-VG394œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-VG394œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -172,9 +172,9 @@
         "id": "reactflow__edge-SplitText-50nDI{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-50nDIœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-AstraDB-t8lcj{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-t8lcjœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "SplitText-50nDI",
-        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-50nDIœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-50nDIœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "AstraDB-t8lcj",
-        "targetHandle": "{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-t8lcjœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-t8lcjœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
@@ -198,9 +198,9 @@
         },
         "id": "xy-edge__ChatInput-insg9{œdataTypeœ:œChatInputœ,œidœ:œChatInput-insg9œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-CLCyc{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-CLCycœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
         "source": "ChatInput-insg9",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-insg9œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-insg9œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AstraDB-CLCyc",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-CLCycœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-CLCycœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
       },
       {
         "className": "",
@@ -225,9 +225,9 @@
         },
         "id": "xy-edge__AstraDB-CLCyc{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-CLCycœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-parser-gcmKF{œfieldNameœ:œinput_dataœ,œidœ:œparser-gcmKFœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "source": "AstraDB-CLCyc",
-        "sourceHandle": "{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-CLCycœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-CLCycœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "parser-gcmKF",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-gcmKFœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-gcmKFœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -3350,8 +3350,6 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -3366,8 +3364,6 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -3383,8 +3379,6 @@
                 "hidden": true,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
-                "options": null,
-                "required_inputs": null,
                 "selected": "VectorStore",
                 "tool_mode": true,
                 "types": [
@@ -4162,8 +4156,6 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -4178,8 +4170,6 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -4195,8 +4185,6 @@
                 "hidden": true,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
-                "options": null,
-                "required_inputs": null,
                 "selected": "VectorStore",
                 "tool_mode": true,
                 "types": [
