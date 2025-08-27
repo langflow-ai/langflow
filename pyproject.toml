@@ -197,6 +197,12 @@ Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
+docling = [
+    "docling>=2.36.1",
+    "tesserocr>=2.8.0",
+    "rapidocr-onnxruntime>=1.4.4",
+    "ocrmac>=1.0.0; sys_platform == 'darwin'",
+]
 
 audio = [
     "webrtcvad>=2.0.10",
