@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 from langflow.services.settings.auth import AuthSettings
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+
 from pydantic import SecretStr
 
 
@@ -38,7 +39,7 @@ def test_auto_login_false_preserves_username_and_scrubs_password_on_reset(tmp_pa
         CONFIG_DIR=cfg_dir,
         AUTO_LOGIN=False,
         SUPERUSER="admin",
-        SUPERUSER_PASSWORD="strongpass",
+        SUPERUSER_PASSWORD="strongpass",  # noqa: S106
     )
     # Values preserved at init
     assert settings.SUPERUSER == "admin"
