@@ -65,13 +65,11 @@ test(
       "disclosure-bundles-langchain",
       "disclosure-bundles-assemblyai",
       "disclosure-bundles-datastax",
-      "disclosure-bundles-vector stores",
     ];
 
     const elementTestIds = [
       "input_outputChat Output",
       "dataAPI Request",
-      "vectorstoresAstra DB Graph",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
       "mem0Mem0 Chat Memory",
@@ -105,7 +103,6 @@ test(
       "groqGroq",
       "lmstudioLM Studio",
       "maritalkMariTalk",
-      "mistralMistralAI",
       "perplexityPerplexity",
       "baiduQianfan",
       "sambanovaSambaNova",

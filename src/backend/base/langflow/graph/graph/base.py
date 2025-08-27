@@ -346,7 +346,7 @@ class Graph:
             for key, value in _input.items():
                 vertex = self.get_vertex(key)
                 vertex.set_input_value(key, value)
-        # I want to keep a counter of how many tyimes result.vertex.id
+        # I want to keep a counter of how many times result.vertex.id
         # has been yielded
         yielded_counts: dict[str, int] = defaultdict(int)
 
@@ -1047,6 +1047,7 @@ class Graph:
         flow_id: str | None = None,
         flow_name: str | None = None,
         user_id: str | None = None,
+        context: dict | None = None,
     ) -> Graph:
         """Creates a graph from a payload.
 
@@ -1055,6 +1056,7 @@ class Graph:
             flow_id: The ID of the flow.
             flow_name: The flow name.
             user_id: The user ID.
+            context: Optional context dictionary for request-specific data.
 
         Returns:
             Graph: The created graph.
@@ -1064,7 +1066,7 @@ class Graph:
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
-            graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id)
+            graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id, context=context)
             graph.add_nodes_and_edges(vertices, edges)
         except KeyError as exc:
             logger.exception(exc)

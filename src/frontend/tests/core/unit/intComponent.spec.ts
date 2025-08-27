@@ -20,9 +20,11 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     .getByTestId("openaiOpenAI")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
+  await page.getByTestId("canvas_controls_dropdown").click();
 
   await page.getByTestId("fit_view").click();
   await zoomOut(page, 2);
+  await page.getByTestId("canvas_controls_dropdown").click();
 
   await page.getByTestId("div-generic-node").click();
 
@@ -50,6 +52,8 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   await page.getByTestId("title-OpenAI").click();
 
+  await page.getByTestId("canvas_controls_dropdown").click();
+
   await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
@@ -58,6 +62,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
+  await page.getByTestId("canvas_controls_dropdown").click();
 
   await page.getByTestId("edit-button-modal").last().click();
 
