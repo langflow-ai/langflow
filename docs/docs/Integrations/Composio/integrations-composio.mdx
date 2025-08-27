@@ -9,16 +9,16 @@ import Icon from "@site/src/components/icon";
 
 This page describes the components that are available in the **Composio** bundle.
 
-Composio components in Langflow provide [Composio](https://app.composio.dev/) tools to your **Agent** components.
-Individual services like Gmail, GitHub, and Slack are also available as individual components.
+Composio components in Langflow provide [tools](https://app.composio.dev/) to your **Agent** components.
+Individual services like Gmail, GitHub, and Slack are available as individual components.
 
 For information about specific Composio functionality, see the [Composio documentation](https://docs.composio.dev/introduction/intro/overview).
 
 ## Authentication for Composio components
 
 Composio components require authentication to Composio with a Composio API key.
-
-Depending on the components you use, you may also need additional access, such as an OpenAI API key, Gmail account, or GitHub account.
+`COMPOSIO_API_KEY` is a [default global variable](/configuration-global-variables) that can be auto-detected by Langflow from your `.env` file.
+Depending on the components you use, you may need additional API keys, such as an OpenAI, Google, or GitHub.
 
 For information about specific Composio functionality, see the [Composio documentation](https://docs.composio.dev/introduction/intro/overview).
 
@@ -34,7 +34,7 @@ Other Composio tools will connect the same way, and use the same parameters, but
 3. Connect the **Agent** component's **Tools** port to the Composio **Gmail** component's **Tools** port.
 
 4. In the **Agent** component, enter your OpenAI API key or configure the **Agent** component to use a different LLM.
-5. In the **Composio API Key** field, enter your Composio API key.
+5. In the **Composio API Key** field, enter your Composio API key, or select the `COMPOSIO_API_KEY` [global variable](/configuration-global-variables).
 6. In the Composio **Gmail** component, enable **Tool Mode**.
 The **Actions** field populates with the actions available to the Agent, which it will choose from based on your request.
 
