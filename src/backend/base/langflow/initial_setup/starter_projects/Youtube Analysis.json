@@ -298,7 +298,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.74"
+                    "version": "0.3.75"
                   }
                 ],
                 "total_dependencies": 3
