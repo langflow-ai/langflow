@@ -10,6 +10,7 @@ interface PostGlobalVariablesParams {
   value: string;
   type?: string;
   default_fields?: string[];
+  category?: string;
 }
 
 export const usePostGlobalVariables: useMutationFunctionType<
@@ -23,12 +24,14 @@ export const usePostGlobalVariables: useMutationFunctionType<
     value,
     type,
     default_fields = [],
+    category,
   }): Promise<AxiosResponse<{ name: string; id: string; type: string }>> => {
     const res = await api.post(`${getURL("VARIABLES")}/`, {
       name,
       value,
       type,
       default_fields: default_fields,
+      category,
     });
     return res.data;
   };

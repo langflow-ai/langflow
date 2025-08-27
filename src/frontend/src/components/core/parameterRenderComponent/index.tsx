@@ -1,5 +1,6 @@
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
+import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
 import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
 import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
@@ -230,13 +231,28 @@ export function ParameterRenderComponent({
           />
         );
       case "sortableList":
+        // Handle ModelInput special case if model_type is present
+        if (templateData?.model_type) {
+          return (
+            <ModelInputComponent
+              {...baseInputProps}
+              model_type={templateData.model_type}
+              options={templateData?.options || []}
+              placeholder={templateData?.placeholder || "Select a Model"}
+              temperature={templateData?.temperature}
+              max_tokens={templateData?.max_tokens}
+              limit={templateData?.limit}
+              providers={templateData?.providers}
+            />
+          );
+        }
         return (
           <SortableListComponent
             {...baseInputProps}
             helperText={templateData?.helper_text}
             helperMetadata={templateData?.helper_text_metadata}
             options={templateData?.options}
-            searchCategory={templateData?.search_category}
+            searchCategory={templateData?.searchCategory}
             limit={templateData?.limit}
           />
         );
@@ -255,7 +271,7 @@ export function ParameterRenderComponent({
             helperText={templateData?.helper_text}
             helperMetadata={templateData?.helper_text_metadata}
             options={templateData?.options}
-            searchCategory={templateData?.search_category}
+            searchCategory={templateData?.searchCategory}
             buttonMetadata={templateData?.button_metadata}
             connectionLink={link as string}
           />
