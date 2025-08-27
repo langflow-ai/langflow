@@ -5,9 +5,10 @@ from langflow.services.utils import initialize_services
 
 
 @pytest.mark.asyncio
-async def test_mcp_longterm_token_headless_superuser_integration(monkeypatch):
-    """Integration-style check that without explicit credentials, AUTO_LOGIN=false path
-    creates a headless superuser via initialize_services and allows minting a long-term token.
+async def test_mcp_longterm_token_headless_superuser_integration():
+    """Integration-style check that without explicit credentials, AUTO_LOGIN=false path.
+
+    Creates a headless superuser via initialize_services and allows minting a long-term token.
     """
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = False
