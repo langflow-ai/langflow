@@ -827,6 +827,8 @@ async def get_project_composer_url(
             "sse_url": composer_sse_url,
             "uses_composer": True,
             "port_available": port_available,
+            "port": composer_port,
+            "host": composer_host,
         }
 
     except Exception as e:
