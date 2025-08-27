@@ -304,8 +304,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         selectedPlatform === "windows"
           ? "cmd"
           : selectedPlatform === "wsl"
-            ? "wsl"
-            : "uvx"
+          ? "wsl"
+          : "uvx"
       }",
       "args": [
         ${
@@ -314,9 +314,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "uvx",
         `
             : selectedPlatform === "wsl"
-              ? `"uvx",
+            ? `"uvx",
         `
-              : ""
+            : ""
         }"mcp-proxy",${getAuthHeaders()}
         "${apiUrl}"
       ]
@@ -389,7 +389,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               content="Flows in this project can be exposed as callable MCP tools."
               side="right"
             >
-              <div className="flex items-center text-mmd font-medium hover:cursor-help">
+              <div className="flex items-center text-sm font-medium hover:cursor-help">
                 Flows/Tools
                 <ForwardedIconComponent
                   name="info"
@@ -416,8 +416,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         <div className="flex flex-1 flex-col gap-4 overflow-hidden">
           {ENABLE_MCP_COMPOSER && (
             <div className="flex justify-between">
-              <span className="flex gap-2 items-center">
-                Auth:
+              <span className="flex gap-2 items-center text-sm cursor-default">
+                <span className=" font-medium">Auth:</span>
                 {!hasAuthentication ? (
                   <span className="text-accent-amber-foreground flex gap-2 text-mmd items-center">
                     <ForwardedIconComponent
@@ -427,20 +427,40 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                     None (public)
                   </span>
                 ) : (
-                  <span className="text-accent-emerald-foreground flex gap-2 text-mmd items-center">
-                    <ForwardedIconComponent
-                      name="Check"
-                      className="h-4 w-4 shrink-0"
-                    />
-                    {AUTH_METHODS[
-                      currentAuthSettings.auth_type as keyof typeof AUTH_METHODS
-                    ]?.label || currentAuthSettings.auth_type}
-                  </span>
+                  <ShadTooltip
+                    content={
+                      composerUrlData?.port_available ?? true
+                        ? undefined
+                        : "MCP Server is not running: port not available. Please check your settings and try again."
+                    }
+                  >
+                    <span
+                      className={cn(
+                        "flex gap-2 text-mmd items-center",
+                        composerUrlData?.port_available ?? true
+                          ? "text-accent-emerald-foreground"
+                          : "text-accent-amber-foreground",
+                      )}
+                    >
+                      <ForwardedIconComponent
+                        name={
+                          composerUrlData?.port_available ?? true
+                            ? "Check"
+                            : "AlertTriangle"
+                        }
+                        className="h-4 w-4 shrink-0"
+                      />
+                      {AUTH_METHODS[
+                        currentAuthSettings.auth_type as keyof typeof AUTH_METHODS
+                      ]?.label || currentAuthSettings.auth_type}
+                    </span>
+                  </ShadTooltip>
                 )}
               </span>
               <Button
                 variant="outline"
                 size="sm"
+                className="!text-mmd !font-normal"
                 onClick={() => setAuthModalOpen(true)}
               >
                 <ForwardedIconComponent
@@ -598,8 +618,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                         installedMCP?.includes(installer.name)
                           ? "Check"
                           : loadingMCP.includes(installer.name)
-                            ? "Loader2"
-                            : "Plus"
+                          ? "Loader2"
+                          : "Plus"
                       }
                       className={cn(
                         "h-4 w-4 absolute top-0 left-0 opacity-100",
