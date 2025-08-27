@@ -5,7 +5,6 @@ from uuid import UUID
 
 import pytest
 from httpx import codes
-from langflow.memory import aget_messages
 from langflow.services.database.models.flow import FlowUpdate
 
 from lfx.lfx_logging.logger import logger
