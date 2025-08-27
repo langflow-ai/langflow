@@ -2207,7 +2207,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.72"
+                    "version": "0.3.75"
                   },
                   {
                     "name": "langflow",
