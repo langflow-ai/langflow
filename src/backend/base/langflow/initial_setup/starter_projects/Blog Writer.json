@@ -486,7 +486,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.115.13"
+                    "version": "0.116.1"
                   },
                   {
                     "name": "langflow",
@@ -1018,7 +1018,7 @@
                 "dependencies": [
                   {
                     "name": "requests",
-                    "version": "2.32.4"
+                    "version": "2.32.5"
                   },
                   {
                     "name": "bs4",

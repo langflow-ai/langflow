@@ -159,7 +159,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.115.13"
+                    "version": "0.116.1"
                   },
                   {
                     "name": "langflow",
