@@ -1,10 +1,10 @@
 import json
 
 import httpx
-from loguru import logger
 
 from langflow.custom.custom_component.component import Component
 from langflow.io import MessageTextInput, Output
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 
 
@@ -83,7 +83,7 @@ class OlivyaComponent(Component):
                 "Content-Type": "application/json",
             }
 
-            logger.info("Sending POST request with payload: %s", payload)
+            await logger.ainfo("Sending POST request with payload: %s", payload)
 
             # Send the POST request with a timeout
             async with httpx.AsyncClient() as client:
@@ -97,19 +97,19 @@ class OlivyaComponent(Component):
 
                 # Parse and return the successful response
                 response_data = response.json()
-                logger.info("Request successful: %s", response_data)
+                await logger.ainfo("Request successful: %s", response_data)
 
         except httpx.HTTPStatusError as http_err:
-            logger.exception("HTTP error occurred")
+            await logger.aexception("HTTP error occurred")
             response_data = {"error": f"HTTP error occurred: {http_err}", "response_text": response.text}
         except httpx.RequestError as req_err:
-            logger.exception("Request failed")
+            await logger.aexception("Request failed")
             response_data = {"error": f"Request failed: {req_err}"}
         except json.JSONDecodeError as json_err:
-            logger.exception("Response parsing failed")
+            await logger.aexception("Response parsing failed")
             response_data = {"error": f"Response parsing failed: {json_err}", "raw_response": response.text}
         except Exception as e:  # noqa: BLE001
-            logger.exception("An unexpected error occurred")
+            await logger.aexception("An unexpected error occurred")
             response_data = {"error": f"An unexpected error occurred: {e!s}"}
 
         # Return the response as part of the output

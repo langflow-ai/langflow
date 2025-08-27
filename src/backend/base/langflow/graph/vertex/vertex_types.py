@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING, Any, cast
 
 import yaml
 from langchain_core.messages import AIMessage, AIMessageChunk
-from loguru import logger
 
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.exceptions import NoComponentInstanceError
+from langflow.logging.logger import logger
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.data import Data
 from langflow.schema.message import Message
@@ -427,7 +427,7 @@ class InterfaceVertex(ComponentVertex):
         # Update artifacts with the message
         # and remove the stream_url
         self.finalize_build()
-        logger.debug(f"Streamed message: {complete_message}")
+        await logger.adebug(f"Streamed message: {complete_message}")
         # Set the result in the vertex of origin
         edges = self.get_edge_with_target(self.id)
         for edge in edges:

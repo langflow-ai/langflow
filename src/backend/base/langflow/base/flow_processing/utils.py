@@ -1,6 +1,5 @@
-from loguru import logger
-
 from langflow.graph.schema import ResultData, RunOutputs
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 

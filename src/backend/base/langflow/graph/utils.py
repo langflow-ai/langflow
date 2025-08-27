@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import pandas as pd
-from loguru import logger
 
 from langflow.interface.utils import extract_input_variables_from_prompt
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
@@ -141,7 +141,7 @@ async def log_transaction(
                         result_dict[key] = value.to_dict()
                 outputs = result_dict
             except Exception as e:  # noqa: BLE001
-                logger.warning(f"Error serializing result: {e!s}")
+                await logger.awarning(f"Error serializing result: {e!s}")
                 outputs = None
         else:
             outputs = None
@@ -159,9 +159,9 @@ async def log_transaction(
             with session.no_autoflush:
                 inserted = await crud_log_transaction(session, transaction)
                 if inserted:
-                    logger.debug(f"Logged transaction: {inserted.id}")
+                    await logger.adebug(f"Logged transaction: {inserted.id}")
     except Exception as exc:  # noqa: BLE001
-        logger.error(f"Error logging transaction: {exc!s}")
+        await logger.aerror(f"Error logging transaction: {exc!s}")
 
 
 async def log_vertex_build(
@@ -198,9 +198,9 @@ async def log_vertex_build(
         )
         async with session_getter(get_db_service()) as session:
             inserted = await crud_log_vertex_build(session, vertex_build)
-            logger.debug(f"Logged vertex build: {inserted.build_id}")
+            await logger.adebug(f"Logged vertex build: {inserted.build_id}")
     except Exception:  # noqa: BLE001
-        logger.exception("Error logging vertex build")
+        await logger.aexception("Error logging vertex build")
 
 
 def rewrite_file_path(file_path: str):

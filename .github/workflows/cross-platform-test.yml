@@ -256,7 +256,8 @@ jobs:
       - name: Test CLI help command (Windows)
         if: matrix.os == 'windows'
         run: |
-          test-env\Scripts\python.exe -m langflow --help
+          call test-env\Scripts\activate.bat
+          python -m langflow --help
         shell: cmd
 
       - name: Test CLI help command (Unix)
@@ -508,7 +509,8 @@ jobs:
       - name: Test CLI help command (Windows)
         if: matrix.os == 'windows'
         run: |
-          test-env\Scripts\python.exe -m langflow --help
+          call test-env\Scripts\activate.bat
+          python -m langflow --help
         shell: cmd
 
       - name: Test CLI help command (Unix)

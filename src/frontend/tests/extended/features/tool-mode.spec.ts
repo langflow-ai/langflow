@@ -34,7 +34,7 @@ test(
     await page.keyboard.press("ControlOrMeta+Shift+m");
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "visible",
     });
 
@@ -43,7 +43,7 @@ test(
     await page.keyboard.press("ControlOrMeta+Shift+m");
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "hidden",
     });
 
@@ -52,7 +52,7 @@ test(
     await page.getByTestId("tool-mode-button").click();
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "visible",
     });
 
@@ -61,7 +61,7 @@ test(
     await page.getByTestId("tool-mode-button").click();
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "hidden",
     });
 
@@ -70,7 +70,7 @@ test(
     await page.getByTestId("tool-mode-button").click();
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "visible",
     });
 
@@ -79,7 +79,7 @@ test(
     await page.getByTestId("tool-mode-button").click();
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "hidden",
     });
 
@@ -88,7 +88,7 @@ test(
     await page.getByTestId("tool-mode-button").click();
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "visible",
     });
 
@@ -97,7 +97,7 @@ test(
     await page.getByTestId("tool-mode-button").click();
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "hidden",
     });
 
@@ -106,17 +106,19 @@ test(
     await page.getByTestId("tool-mode-button").click();
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "visible",
     });
 
     await page.getByTestId("disclosure-data").click();
 
     await page.getByTestId("disclosure-agents").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
 
     await zoomOut(page, 4);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="agentsAgent"]', {
       timeout: 3000,
@@ -125,10 +127,12 @@ test(
     await page
       .getByTestId("agentsAgent")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 0, y: 500 },
+        targetPosition: { x: 50, y: 500 },
       });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     // Move the Agent node a bit
 

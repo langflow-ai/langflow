@@ -115,6 +115,7 @@ async def get_servers(
     session: DbSession,
     storage_service=Depends(get_storage_service),
     settings_service=Depends(get_settings_service),
+    *,
     action_count: bool | None = None,
 ):
     """Get the list of available servers."""
@@ -140,27 +141,27 @@ async def get_servers(
                 server_info["error"] = "No tools found"
         except ValueError as e:
             # Configuration validation errors, invalid URLs, etc.
-            logger.error(f"Configuration error for server {server_name}: {e}")
+            await logger.aerror(f"Configuration error for server {server_name}: {e}")
             server_info["error"] = f"Configuration error: {e}"
         except ConnectionError as e:
             # Network connection and timeout issues
-            logger.error(f"Connection error for server {server_name}: {e}")
+            await logger.aerror(f"Connection error for server {server_name}: {e}")
             server_info["error"] = f"Connection failed: {e}"
         except (TimeoutError, asyncio.TimeoutError) as e:
             # Timeout errors
-            logger.error(f"Timeout error for server {server_name}: {e}")
+            await logger.aerror(f"Timeout error for server {server_name}: {e}")
             server_info["error"] = "Timeout when checking server tools"
         except OSError as e:
             # System-level errors (process execution, file access)
-            logger.error(f"System error for server {server_name}: {e}")
+            await logger.aerror(f"System error for server {server_name}: {e}")
             server_info["error"] = f"System error: {e}"
         except (KeyError, TypeError) as e:
             # Data parsing and access errors
-            logger.error(f"Data error for server {server_name}: {e}")
+            await logger.aerror(f"Data error for server {server_name}: {e}")
             server_info["error"] = f"Configuration data error: {e}"
         except (RuntimeError, ProcessLookupError, PermissionError) as e:
             # Runtime and process-related errors
-            logger.error(f"Runtime error for server {server_name}: {e}")
+            await logger.aerror(f"Runtime error for server {server_name}: {e}")
             server_info["error"] = f"Runtime error: {e}"
         except Exception as e:  # noqa: BLE001
             # Generic catch-all for other exceptions (including ExceptionGroup)
@@ -168,15 +169,15 @@ async def get_servers(
                 # Extract the first underlying exception for a more meaningful error message
                 underlying_error = e.exceptions[0]
                 if hasattr(underlying_error, "exceptions"):
-                    logger.error(
+                    await logger.aerror(
                         f"Error checking server {server_name}: {underlying_error}, {underlying_error.exceptions}"
                     )
                     underlying_error = underlying_error.exceptions[0]
                 else:
-                    logger.exception(f"Error checking server {server_name}: {underlying_error}")
+                    await logger.aexception(f"Error checking server {server_name}: {underlying_error}")
                 server_info["error"] = f"Error loading server: {underlying_error}"
             else:
-                logger.exception(f"Error checking server {server_name}: {e}")
+                await logger.aexception(f"Error checking server {server_name}: {e}")
                 server_info["error"] = f"Error loading server: {e}"
         return server_info
 

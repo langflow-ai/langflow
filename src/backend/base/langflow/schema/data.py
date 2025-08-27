@@ -9,9 +9,9 @@ from uuid import UUID
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from loguru import logger
 from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
 
+from langflow.logging.logger import logger
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 from langflow.utils.image import create_image_content_dict
 
@@ -234,7 +234,7 @@ class Data(BaseModel):
             data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
             return serialize_data(data)  # use the custom serializer
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error converting Data to JSON")
+            logger.debug("Error converting Data to JSON", exc_info=True)
             return str(self.data)
 
     def __contains__(self, key) -> bool:
@@ -275,6 +275,14 @@ class Data(BaseModel):
         ):
             return DataFrame(data=next(iter(data_dict.values())))
         return DataFrame(data=[self])
+
+    def __repr__(self) -> str:
+        """Return string representation of the Data object."""
+        return f"Data(text_key={self.text_key!r}, data={self.data!r}, default_value={self.default_value!r})"
+
+    def __hash__(self) -> int:
+        """Return hash of the Data object based on its string representation."""
+        return hash(self.__repr__())
 
 
 def custom_serializer(obj):

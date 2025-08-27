@@ -31,10 +31,12 @@ withEventDeliveryModes(
       .getByRole("heading", { name: "Travel Planning Agents" })
       .last()
       .click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await initialGPTsetup(page);
 

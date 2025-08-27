@@ -53,7 +53,7 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, *, add_fu
                                 module=class_.__base__.__module__, function=value_
                             )
                         except Exception:  # noqa: BLE001
-                            logger.opt(exception=True).debug(f"Error getting default factory for {value_}")
+                            logger.debug(f"Error getting default factory for {value_}", exc_info=True)
                             variables[class_field_items]["default"] = None
                     elif name_ != "name":
                         variables[class_field_items][name_] = value_
@@ -431,16 +431,16 @@ async def update_settings(
     initialize_settings_service()
     settings_service = get_settings_service()
     if config:
-        logger.debug(f"Loading settings from {config}")
+        await logger.adebug(f"Loading settings from {config}")
         await settings_service.settings.update_from_yaml(config, dev=dev)
     if remove_api_keys:
-        logger.debug(f"Setting remove_api_keys to {remove_api_keys}")
+        await logger.adebug(f"Setting remove_api_keys to {remove_api_keys}")
         settings_service.settings.update_settings(remove_api_keys=remove_api_keys)
     if cache:
-        logger.debug(f"Setting cache to {cache}")
+        await logger.adebug(f"Setting cache to {cache}")
         settings_service.settings.update_settings(cache=cache)
     if components_path:
-        logger.debug(f"Adding component path {components_path}")
+        await logger.adebug(f"Adding component path {components_path}")
         settings_service.settings.update_settings(components_path=components_path)
     if not store:
         logger.debug("Setting store to False")

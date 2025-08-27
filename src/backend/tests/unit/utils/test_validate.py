@@ -139,14 +139,14 @@ def test_func():
     @patch("langflow.utils.validate.logger")
     def test_logging_on_parse_error(self, mock_logger):
         """Test that parsing errors are logged."""
-        mock_logger.opt.return_value = mock_logger
+        # Structlog doesn't have opt method, so hasattr(logger, "opt") returns False
         mock_logger.debug = Mock()
 
         code = "invalid python syntax +++"
         validate_code(code)
 
-        mock_logger.opt.assert_called_once_with(exception=True)
-        mock_logger.debug.assert_called_with("Error parsing code")
+        # With structlog, we expect logger.debug to be called with exc_info=True
+        mock_logger.debug.assert_called_with("Error parsing code", exc_info=True)
 
 
 class TestCreateLangflowExecutionContext:

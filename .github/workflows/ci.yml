@@ -208,7 +208,7 @@ jobs:
   test-templates:
     needs: [path-filter, set-ci-condition]
     name: Test Starter Templates
-    if: ${{ needs.path-filter.outputs.starter-projects == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    if: ${{ (needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true') && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

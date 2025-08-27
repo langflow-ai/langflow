@@ -7,7 +7,7 @@
 """
 
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langflow.interface.components import (
@@ -299,14 +299,17 @@ class TestComponentLoadingFix:
             patch("langflow.interface.components.aget_all_types_dict", return_value=mock_custom_components),
             patch("langflow.interface.components.logger") as mock_logger,
         ):
+            # Configure async mock methods
+            mock_logger.adebug = AsyncMock()
+
             # Execute the function
             await get_and_cache_all_types_dict(mock_settings_service)
 
             # Verify debug logging calls
-            mock_logger.debug.assert_any_call("Building components cache")
+            mock_logger.adebug.assert_any_call("Building components cache")
 
             # Verify total component count logging
-            debug_calls = [call.args[0] for call in mock_logger.debug.call_args_list]
+            debug_calls = [call.args[0] for call in mock_logger.adebug.call_args_list]
             total_count_logs = [log for log in debug_calls if "Loaded" in log and "components" in log]
             assert len(total_count_logs) >= 1
 

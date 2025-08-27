@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
-from loguru import logger
 
 from langflow.custom.attributes import ATTR_FUNC_MAPPING
 from langflow.custom.code_parser.code_parser import CodeParser
 from langflow.custom.eval import eval_custom_component_code
+from langflow.logging.logger import logger
 from langflow.utils import validate
 
 if TYPE_CHECKING:

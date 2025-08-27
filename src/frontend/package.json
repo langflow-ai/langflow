@@ -95,6 +95,7 @@
     "start": "vite",
     "build": "vite build",
     "test": "jest",
+    "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
     "serve": "vite preview",
     "format": "npx @biomejs/biome check --write",

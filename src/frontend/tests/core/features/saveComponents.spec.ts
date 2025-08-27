@@ -48,11 +48,13 @@ test.describe("save component tests", () => {
       if (elementCount > 0) {
         expect(true).toBeTruthy();
       }
-
+      await page.getByTestId("canvas_controls_dropdown").click();
       // Log button element
       await page.getByTestId("fit_view").click();
 
       await zoomOut(page, 2);
+
+      await page.getByTestId("canvas_controls_dropdown").click();
 
       await page.getByTestId("title-Agent Initializer").click({
         modifiers: ["Control"],

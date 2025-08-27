@@ -5,9 +5,9 @@ from pathlib import Path
 
 import anyio
 from aiofile import async_open
-from loguru import logger
 
 from langflow.custom.custom_component.component import Component
+from langflow.logging.logger import logger
 
 MAX_DEPTH = 2
 
@@ -255,7 +255,7 @@ class DirectoryReader:
                 try:
                     output_types = self.get_output_types_from_code(result_content)
                 except Exception:  # noqa: BLE001
-                    logger.opt(exception=True).debug("Error while getting output types from code")
+                    logger.debug("Error while getting output types from code", exc_info=True)
                     output_types = [component_name_camelcase]
             else:
                 output_types = [component_name_camelcase]
@@ -278,7 +278,7 @@ class DirectoryReader:
         try:
             file_content = await self.aread_file_content(file_path)
         except Exception:  # noqa: BLE001
-            logger.exception(f"Error while reading file {file_path}")
+            await logger.aexception(f"Error while reading file {file_path}")
             return False, f"Could not read {file_path}"
 
         if file_content is None:
@@ -300,7 +300,7 @@ class DirectoryReader:
 
     async def abuild_component_menu_list(self, file_paths):
         response = {"menu": []}
-        logger.debug("-------------------- Async Building component menu list --------------------")
+        await logger.adebug("-------------------- Async Building component menu list --------------------")
 
         tasks = [self.process_file_async(file_path) for file_path in file_paths]
         results = await asyncio.gather(*tasks)
@@ -311,7 +311,7 @@ class DirectoryReader:
             filename = file_path_.name
 
             if not validation_result:
-                logger.error(f"Error while processing file {file_path}")
+                await logger.aerror(f"Error while processing file {file_path}")
 
             menu_result = self.find_menu(response, menu_name) or {
                 "name": menu_name,
@@ -329,7 +329,7 @@ class DirectoryReader:
                 try:
                     output_types = await asyncio.to_thread(self.get_output_types_from_code, result_content)
                 except Exception:  # noqa: BLE001
-                    logger.exception("Error while getting output types from code")
+                    await logger.aexception("Error while getting output types from code")
                     output_types = [component_name_camelcase]
             else:
                 output_types = [component_name_camelcase]
@@ -346,7 +346,7 @@ class DirectoryReader:
             if menu_result not in response["menu"]:
                 response["menu"].append(menu_result)
 
-        logger.debug("-------------------- Component menu list built --------------------")
+        await logger.adebug("-------------------- Component menu list built --------------------")
         return response
 
     @staticmethod

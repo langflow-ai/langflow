@@ -22,12 +22,14 @@ test(
     await page
       .getByTestId("agentsMCP Tools")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 0, y: 0 },
+        targetPosition: { x: 100, y: 100 },
       });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
 
     await zoomOut(page, 3);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
@@ -83,8 +85,10 @@ test(
     await page.getByTestId("fetch-0-option").click();
 
     await page.waitForTimeout(2000);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="int_int_max_length"]', {
       state: "visible",
@@ -231,12 +235,14 @@ test(
     await page
       .getByTestId("agentsMCP Tools")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 0, y: 0 },
+        targetPosition: { x: 100, y: 100 },
       });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
 
     await zoomOut(page, 3);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     try {
       await page.getByText("Add MCP Server", { exact: true }).click({
@@ -404,12 +410,14 @@ test(
     await page
       .getByTestId("agentsMCP Tools")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 0, y: 0 },
+        targetPosition: { x: 100, y: 100 },
       });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
 
     await zoomOut(page, 3);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     try {
       await page.getByText("Add MCP Server", { exact: true }).click({

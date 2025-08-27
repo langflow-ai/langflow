@@ -19,7 +19,6 @@ import orjson
 import sqlalchemy as sa
 from aiofile import async_open
 from emoji import demojize, purely_emoji
-from loguru import logger
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import selectinload
 from sqlmodel import col, select
@@ -33,6 +32,7 @@ from langflow.base.constants import (
     SKIPPED_FIELD_ATTRIBUTES,
 )
 from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
+from langflow.logging.logger import logger
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
@@ -517,7 +517,7 @@ def log_node_changes(node_changes_log) -> None:
 async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, dict]]:
     starter_projects = []
     folder = anyio.Path(__file__).parent / "starter_projects"
-    logger.debug("Loading starter projects")
+    await logger.adebug("Loading starter projects")
     async for file in folder.glob("*.json"):
         attempt = 0
         while attempt < retries:
@@ -533,7 +533,7 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
                     msg = f"Error loading starter project {file}: {e}"
                     raise ValueError(msg) from e
                 await asyncio.sleep(delay)  # Wait before retrying
-    logger.debug(f"Loaded {len(starter_projects)} starter projects")
+    await logger.adebug(f"Loaded {len(starter_projects)} starter projects")
     return starter_projects
 
 
@@ -580,7 +580,7 @@ async def copy_profile_pictures() -> None:
             await dst_file.parent.mkdir(parents=True, exist_ok=True)
             # Offload blocking I/O to a thread
             await asyncio.to_thread(shutil.copy2, str(src_file), str(dst_file))
-            logger.debug(f"Copied file '{rel_path}'")
+            await logger.adebug(f"Copied file '{rel_path}'")
 
         tasks = []
         async for src_file in origin.rglob("*"):
@@ -596,7 +596,7 @@ async def copy_profile_pictures() -> None:
             await asyncio.gather(*tasks)
 
     except Exception as exc:
-        logger.exception("Error copying profile pictures")
+        await logger.aexception("Error copying profile pictures")
         msg = "An error occurred while copying profile pictures."
         raise RuntimeError(msg) from exc
 
@@ -633,7 +633,7 @@ async def update_project_file(project_path: anyio.Path, project: dict, updated_p
     project["data"] = updated_project_data
     async with async_open(str(project_path), "w", encoding="utf-8") as f:
         await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
-    logger.debug(f"Updated starter project {project['name']} file")
+    await logger.adebug(f"Updated starter project {project['name']} file")
 
 
 def update_existing_project(
@@ -734,7 +734,7 @@ async def load_flows_from_directory() -> None:
     if not flows_path:
         return
     if not settings_service.auth_settings.AUTO_LOGIN:
-        logger.warning("AUTO_LOGIN is disabled, not loading flows from directory")
+        await logger.awarning("AUTO_LOGIN is disabled, not loading flows from directory")
         return
 
     async with session_scope() as session:
@@ -749,7 +749,7 @@ async def load_flows_from_directory() -> None:
         for file_path in await asyncio.to_thread(Path(flows_path).iterdir):
             if not await anyio.Path(file_path).is_file() or file_path.suffix != ".json":
                 continue
-            logger.info(f"Loading flow from file: {file_path.name}")
+            await logger.ainfo(f"Loading flow from file: {file_path.name}")
             async with async_open(str(file_path), "r", encoding="utf-8") as f:
                 content = await f.read()
             await upsert_flow_from_file(content, file_path.stem, session, user.id)
@@ -794,7 +794,7 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
     if not bundle_urls:
         return [], []
     if not settings_service.auth_settings.AUTO_LOGIN:
-        logger.warning("AUTO_LOGIN is disabled, not loading flows from URLs")
+        await logger.awarning("AUTO_LOGIN is disabled, not loading flows from URLs")
 
     async with session_scope() as session:
         user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
@@ -844,13 +844,13 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
         try:
             flow_id = UUID(flow_id)
         except ValueError:
-            logger.error(f"Invalid UUID string: {flow_id}")
+            await logger.aerror(f"Invalid UUID string: {flow_id}")
             return
 
     existing = await find_existing_flow(session, flow_id, flow_endpoint_name)
     if existing:
-        logger.debug(f"Found existing flow: {existing.name}")
-        logger.info(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
+        await logger.adebug(f"Found existing flow: {existing.name}")
+        await logger.ainfo(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
         for key, value in flow.items():
             if hasattr(existing, key):
                 # flow dict from json and db representation are not 100% the same
@@ -867,12 +867,12 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
             try:
                 existing.id = UUID(existing.id)
             except ValueError:
-                logger.error(f"Invalid UUID string: {existing.id}")
+                await logger.aerror(f"Invalid UUID string: {existing.id}")
                 return
 
         session.add(existing)
     else:
-        logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
+        await logger.ainfo(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
 
         # Assign the newly created flow to the default folder
         folder = await get_or_create_default_folder(session, user_id)
@@ -886,15 +886,15 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
 
 async def find_existing_flow(session, flow_id, flow_endpoint_name):
     if flow_endpoint_name:
-        logger.debug(f"flow_endpoint_name: {flow_endpoint_name}")
+        await logger.adebug(f"flow_endpoint_name: {flow_endpoint_name}")
         stmt = select(Flow).where(Flow.endpoint_name == flow_endpoint_name)
         if existing := (await session.exec(stmt)).first():
-            logger.debug(f"Found existing flow by endpoint name: {existing.name}")
+            await logger.adebug(f"Found existing flow by endpoint name: {existing.name}")
             return existing
 
     stmt = select(Flow).where(Flow.id == flow_id)
     if existing := (await session.exec(stmt)).first():
-        logger.debug(f"Found existing flow by id: {flow_id}")
+        await logger.adebug(f"Found existing flow by id: {flow_id}")
         return existing
     return None
 
@@ -916,7 +916,7 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
         starter_projects = await load_starter_projects()
 
         if get_settings_service().settings.update_starter_projects:
-            logger.debug("Updating starter projects")
+            await logger.adebug("Updating starter projects")
             # 1. Delete all existing starter projects
             successfully_updated_projects = 0
             await delete_starter_projects(session, new_folder.id)
@@ -959,13 +959,13 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
                         new_folder_id=new_folder.id,
                     )
                 except Exception:  # noqa: BLE001
-                    logger.exception(f"Error while creating starter project {project_name}")
+                    await logger.aexception(f"Error while creating starter project {project_name}")
 
                 successfully_updated_projects += 1
-            logger.debug(f"Successfully updated {successfully_updated_projects} starter projects")
+            await logger.adebug(f"Successfully updated {successfully_updated_projects} starter projects")
         else:
             # Even if we're not updating starter projects, we still need to create any that don't exist
-            logger.debug("Creating new starter projects")
+            await logger.adebug("Creating new starter projects")
             successfully_created_projects = 0
             existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
             existing_flow_names = [existing_flow.name for existing_flow in existing_flows]
@@ -997,9 +997,9 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
                             new_folder_id=new_folder.id,
                         )
                     except Exception:  # noqa: BLE001
-                        logger.exception(f"Error while creating starter project {project_name}")
+                        await logger.aexception(f"Error while creating starter project {project_name}")
                     successfully_created_projects += 1
-                logger.debug(f"Successfully created {successfully_created_projects} starter projects")
+                await logger.adebug(f"Successfully created {successfully_created_projects} starter projects")
 
 
 async def initialize_super_user_if_needed() -> None:
@@ -1016,7 +1016,7 @@ async def initialize_super_user_if_needed() -> None:
         super_user = await create_super_user(db=async_session, username=username, password=password)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
         _ = await get_or_create_default_folder(async_session, super_user.id)
-    logger.debug("Super user initialized")
+    await logger.adebug("Super user initialized")
 
 
 async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> FolderRead:
@@ -1082,22 +1082,24 @@ async def sync_flows_from_fs():
                                         await session.commit()
                                         await session.refresh(flow)
                                     except Exception:  # noqa: BLE001
-                                        logger.exception(f"Couldn't update flow {flow.id} in database from path {path}")
+                                        await logger.aexception(
+                                            f"Couldn't update flow {flow.id} in database from path {path}"
+                                        )
                                     flow_mtimes[flow.id] = new_mtime
                         except Exception:  # noqa: BLE001
-                            logger.exception(f"Error while handling flow file {path}")
+                            await logger.aexception(f"Error while handling flow file {path}")
             except asyncio.CancelledError:
-                logger.debug("Flow sync cancelled")
+                await logger.adebug("Flow sync cancelled")
                 break
             except (sa.exc.OperationalError, ValueError) as e:
                 if "no active connection" in str(e) or "connection is closed" in str(e):
-                    logger.debug("Database connection lost, assuming shutdown")
+                    await logger.adebug("Database connection lost, assuming shutdown")
                     break  # Exit gracefully, don't error
                 raise  # Re-raise if it's a real connection problem
             except Exception:  # noqa: BLE001
-                logger.exception("Error while syncing flows from database")
+                await logger.aexception("Error while syncing flows from database")
                 break
 
             await asyncio.sleep(fs_flows_polling_interval)
     except asyncio.CancelledError:
-        logger.debug("Flow sync task cancelled")
+        await logger.adebug("Flow sync task cancelled")

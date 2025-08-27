@@ -21,11 +21,10 @@ from langflow.io.schema import flatten_schema, schema_to_langflow_inputs
 from langflow.logging import logger
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
-from langflow.services.auth.utils import create_user_longterm_token
 
 # Import get_server from the backend API
 from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.deps import get_session, get_settings_service, get_storage_service
+from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 
 
 class MCPToolsComponent(ComponentWithCache):
@@ -118,12 +117,12 @@ class MCPToolsComponent(ComponentWithCache):
             schema_inputs = schema_to_langflow_inputs(input_schema)
             if not schema_inputs:
                 msg = f"No input parameters defined for tool '{tool_obj.name}'"
-                logger.warning(msg)
+                await logger.awarning(msg)
                 return []
 
         except Exception as e:
             msg = f"Error validating schema inputs: {e!s}"
-            logger.exception(msg)
+            await logger.aexception(msg)
             raise ValueError(msg) from e
         else:
             return schema_inputs
@@ -154,9 +153,11 @@ class MCPToolsComponent(ComponentWithCache):
             return self.tools, {"name": server_name, "config": server_config_from_value}
 
         try:
-            async for db in get_session():
-                user_id, _ = await create_user_longterm_token(db)
-                current_user = await get_user_by_id(db, user_id)
+            async with session_scope() as db:
+                if not self.user_id:
+                    msg = "User ID is required for fetching MCP tools."
+                    raise ValueError(msg)
+                current_user = await get_user_by_id(db, self.user_id)
 
                 # Try to get server config from DB/API
                 server_config = await get_server(
@@ -167,47 +168,48 @@ class MCPToolsComponent(ComponentWithCache):
                     settings_service=get_settings_service(),
                 )
 
-                # If get_server returns empty but we have a config, use it
-                if not server_config and server_config_from_value:
-                    server_config = server_config_from_value
+            # If get_server returns empty but we have a config, use it
+            if not server_config and server_config_from_value:
+                server_config = server_config_from_value
 
-                if not server_config:
-                    self.tools = []
-                    return [], {"name": server_name, "config": server_config}
+            if not server_config:
+                self.tools = []
+                return [], {"name": server_name, "config": server_config}
 
-                _, tool_list, tool_cache = await update_tools(
-                    server_name=server_name,
-                    server_config=server_config,
-                    mcp_stdio_client=self.stdio_client,
-                    mcp_sse_client=self.sse_client,
-                )
+            _, tool_list, tool_cache = await update_tools(
+                server_name=server_name,
+                server_config=server_config,
+                mcp_stdio_client=self.stdio_client,
+                mcp_sse_client=self.sse_client,
+            )
 
-                self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
-                self._tool_cache = tool_cache
-                self.tools = tool_list
-                # Cache the result using shared cache
-                cache_data = {
-                    "tools": tool_list,
-                    "tool_names": self.tool_names,
-                    "tool_cache": tool_cache,
-                    "config": server_config,
-                }
+            self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
+            self._tool_cache = tool_cache
+            self.tools = tool_list
+            # Cache the result using shared cache
+            cache_data = {
+                "tools": tool_list,
+                "tool_names": self.tool_names,
+                "tool_cache": tool_cache,
+                "config": server_config,
+            }
 
-                # Safely update the servers cache
-                current_servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
-                if isinstance(current_servers_cache, dict):
-                    current_servers_cache[server_name] = cache_data
-                    safe_cache_set(self._shared_component_cache, "servers", current_servers_cache)
+            # Safely update the servers cache
+            current_servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+            if isinstance(current_servers_cache, dict):
+                current_servers_cache[server_name] = cache_data
+                safe_cache_set(self._shared_component_cache, "servers", current_servers_cache)
 
-                return tool_list, {"name": server_name, "config": server_config}
         except (TimeoutError, asyncio.TimeoutError) as e:
             msg = f"Timeout updating tool list: {e!s}"
-            logger.exception(msg)
+            await logger.aexception(msg)
             raise TimeoutError(msg) from e
         except Exception as e:
             msg = f"Error updating tool list: {e!s}"
-            logger.exception(msg)
+            await logger.aexception(msg)
             raise ValueError(msg) from e
+        else:
+            return tool_list, {"name": server_name, "config": server_config}
 
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Toggle the visibility of connection-specific fields based on the selected mode."""
@@ -221,7 +223,7 @@ class MCPToolsComponent(ComponentWithCache):
                             build_config["tool"]["placeholder"] = "Select a tool"
                         except (TimeoutError, asyncio.TimeoutError) as e:
                             msg = f"Timeout updating tool list: {e!s}"
-                            logger.exception(msg)
+                            await logger.aexception(msg)
                             if not build_config["tools_metadata"]["show"]:
                                 build_config["tool"]["show"] = True
                                 build_config["tool"]["options"] = []
@@ -247,7 +249,7 @@ class MCPToolsComponent(ComponentWithCache):
                             break
                     if tool_obj is None:
                         msg = f"Tool {field_value} not found in available tools: {self.tools}"
-                        logger.warning(msg)
+                        await logger.awarning(msg)
                         return build_config
                     await self._update_tool_config(build_config, field_value)
                 except Exception as e:
@@ -331,7 +333,7 @@ class MCPToolsComponent(ComponentWithCache):
 
         except Exception as e:
             msg = f"Error in update_build_config: {e!s}"
-            logger.exception(msg)
+            await logger.aexception(msg)
             raise ValueError(msg) from e
         else:
             return build_config
@@ -384,7 +386,7 @@ class MCPToolsComponent(ComponentWithCache):
             msg = f"Tool {tool_name} not found in available tools: {self.tools}"
             self.remove_non_default_keys(build_config)
             build_config["tool"]["value"] = ""
-            logger.warning(msg)
+            await logger.awarning(msg)
             return
 
         try:
@@ -402,14 +404,14 @@ class MCPToolsComponent(ComponentWithCache):
             self.schema_inputs = await self._validate_schema_inputs(tool_obj)
             if not self.schema_inputs:
                 msg = f"No input parameters to configure for tool '{tool_name}'"
-                logger.info(msg)
+                await logger.ainfo(msg)
                 return
 
             # Add new inputs to build config
             for schema_input in self.schema_inputs:
                 if not schema_input or not hasattr(schema_input, "name"):
                     msg = "Invalid schema input detected, skipping"
-                    logger.warning(msg)
+                    await logger.awarning(msg)
                     continue
 
                 try:
@@ -426,16 +428,16 @@ class MCPToolsComponent(ComponentWithCache):
 
                 except (AttributeError, KeyError, TypeError) as e:
                     msg = f"Error processing schema input {schema_input}: {e!s}"
-                    logger.exception(msg)
+                    await logger.aexception(msg)
                     continue
         except ValueError as e:
             msg = f"Schema validation error for tool {tool_name}: {e!s}"
-            logger.exception(msg)
+            await logger.aexception(msg)
             self.schema_inputs = []
             return
         except (AttributeError, KeyError, TypeError) as e:
             msg = f"Error updating tool config: {e!s}"
-            logger.exception(msg)
+            await logger.aexception(msg)
             raise ValueError(msg) from e
 
     async def build_output(self) -> DataFrame:
@@ -472,7 +474,7 @@ class MCPToolsComponent(ComponentWithCache):
             return DataFrame(data=[{"error": "You must select a tool"}])
         except Exception as e:
             msg = f"Error in build_output: {e!s}"
-            logger.exception(msg)
+            await logger.aexception(msg)
             raise ValueError(msg) from e
 
     def _get_session_context(self) -> str | None:

@@ -35,7 +35,7 @@ function toUpperCase(str: string): string {
   return str?.toUpperCase();
 }
 
-function toSpaceCase(str: string): string {
+export function toSpaceCase(str: string): string {
   return str
     .trim()
     .replace(/[_\s-]+/g, " ")

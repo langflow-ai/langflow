@@ -21,7 +21,6 @@ test(
       .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-    await page.getByTestId("zoom_out").click();
     await page
       .locator('//*[@id="react-flow-id"]')
       .hover()
@@ -33,8 +32,10 @@ test(
     await page.mouse.up();
 
     await adjustScreenView(page);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await zoomOut(page, 4);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("more-options-modal").click();
 

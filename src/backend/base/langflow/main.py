@@ -17,7 +17,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
-from loguru import logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
@@ -34,13 +33,9 @@ from langflow.initial_setup.setup import (
 )
 from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
-from langflow.logging.logger import configure
+from langflow.logging.logger import configure, logger
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.deps import (
-    get_queue_service,
-    get_settings_service,
-    get_telemetry_service,
-)
+from langflow.services.deps import get_queue_service, get_settings_service, get_telemetry_service
 from langflow.services.utils import initialize_services, teardown_services
 
 if TYPE_CHECKING:
@@ -52,6 +47,15 @@ warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 _tasks: list[asyncio.Task] = []
 
 MAX_PORT = 65535
+
+
+async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
+    """Helper to safely log exceptions to telemetry without raising."""
+    try:
+        telemetry_service = get_telemetry_service()
+        await telemetry_service.log_exception(exc, context)
+    except (httpx.HTTPError, asyncio.QueueFull):
+        await logger.awarning(f"Failed to log {context} exception to telemetry")
 
 
 class RequestCancelledMiddleware(BaseHTTPMiddleware):
@@ -106,22 +110,21 @@ async def load_bundles_with_error_handling():
     try:
         return await load_bundles_from_urls()
     except (httpx.TimeoutException, httpx.HTTPError, httpx.RequestError) as exc:
-        logger.error(f"Error loading bundles from URLs: {exc}")
+        await logger.aerror(f"Error loading bundles from URLs: {exc}")
         return [], []
 
 
 def get_lifespan(*, fix_migration=False, version=None):
-    telemetry_service = get_telemetry_service()
-
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        configure(async_file=True)
+        telemetry_service = get_telemetry_service()
+        configure()
 
         # Startup message
         if version:
-            logger.debug(f"Starting Langflow v{version}...")
+            await logger.adebug(f"Starting Langflow v{version}...")
         else:
-            logger.debug("Starting Langflow...")
+            await logger.adebug("Starting Langflow...")
 
         temp_dirs: list[TemporaryDirectory] = []
         sync_flows_from_fs_task = None
@@ -129,37 +132,37 @@ def get_lifespan(*, fix_migration=False, version=None):
         try:
             start_time = asyncio.get_event_loop().time()
 
-            logger.debug("Initializing services")
+            await logger.adebug("Initializing services")
             await initialize_services(fix_migration=fix_migration)
-            logger.debug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
+            await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Setting up LLM caching")
+            await logger.adebug("Setting up LLM caching")
             setup_llm_caching()
-            logger.debug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            await logger.adebug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Initializing super user")
+            await logger.adebug("Initializing super user")
             await initialize_super_user_if_needed()
-            logger.debug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            await logger.adebug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Loading bundles")
+            await logger.adebug("Loading bundles")
             temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
             get_settings_service().settings.components_path.extend(bundles_components_paths)
-            logger.debug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Caching types")
+            await logger.adebug("Caching types")
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
-            logger.debug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            await logger.adebug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             # Use file-based lock to prevent multiple workers from creating duplicate starter projects concurrently.
             # Note that it's still possible that one worker may complete this task, release the lock,
             # then another worker pick it up, but the operation is idempotent so worst case it duplicates
             # the initialization work.
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Creating/updating starter projects")
+            await logger.adebug("Creating/updating starter projects")
             import tempfile
 
             from filelock import FileLock
@@ -169,45 +172,47 @@ def get_lifespan(*, fix_migration=False, version=None):
             try:
                 with lock:
                     await create_or_update_starter_projects(all_types_dict)
-                    logger.debug(
+                    await logger.adebug(
                         f"Starter projects created/updated in {asyncio.get_event_loop().time() - current_time:.2f}s"
                     )
             except TimeoutError:
                 # Another process has the lock
-                logger.debug("Another worker is creating starter projects, skipping")
+                await logger.adebug("Another worker is creating starter projects, skipping")
             except Exception as e:  # noqa: BLE001
-                logger.warning(
+                await logger.awarning(
                     f"Failed to acquire lock for starter projects: {e}. Starter projects may not be created or updated."
                 )
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Starting telemetry service")
+            await logger.adebug("Starting telemetry service")
             telemetry_service.start()
-            logger.debug(f"started telemetry service in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            await logger.adebug(f"started telemetry service in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Loading flows")
+            await logger.adebug("Loading flows")
             await load_flows_from_directory()
             sync_flows_from_fs_task = asyncio.create_task(sync_flows_from_fs())
             queue_service = get_queue_service()
             if not queue_service.is_started():  # Start if not already started
                 queue_service.start()
-            logger.debug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            await logger.adebug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Loading mcp servers for projects")
+            await logger.adebug("Loading mcp servers for projects")
             await init_mcp_servers()
-            logger.debug(f"mcp servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            await logger.adebug(f"mcp servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             total_time = asyncio.get_event_loop().time() - start_time
-            logger.debug(f"Total initialization time: {total_time:.2f}s")
+            await logger.adebug(f"Total initialization time: {total_time:.2f}s")
             yield
 
         except asyncio.CancelledError:
-            logger.debug("Lifespan received cancellation signal")
+            await logger.adebug("Lifespan received cancellation signal")
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
                 logger.exception(exc)
+
+                await log_exception_to_telemetry(exc, "lifespan")
             raise
         finally:
             # Clean shutdown with progress indicator
@@ -224,7 +229,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             try:
                 # Step 0: Stopping Server
                 with shutdown_progress.step(0):
-                    logger.debug("Stopping server gracefully...")
+                    await logger.adebug("Stopping server gracefully...")
                     # The actual server stopping is handled by the lifespan context
                     await asyncio.sleep(0.1)  # Brief pause for visual effect
 
@@ -239,7 +244,7 @@ def get_lifespan(*, fix_migration=False, version=None):
                     try:
                         await asyncio.wait_for(teardown_services(), timeout=10)
                     except asyncio.TimeoutError:
-                        logger.warning("Teardown services timed out.")
+                        await logger.awarning("Teardown services timed out.")
 
                 # Step 3: Clearing Temporary Files
                 with shutdown_progress.step(3):
@@ -248,26 +253,20 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 4: Finalizing Shutdown
                 with shutdown_progress.step(4):
-                    logger.debug("Langflow shutdown complete")
+                    await logger.adebug("Langflow shutdown complete")
 
                 # Show completion summary and farewell
                 shutdown_progress.print_shutdown_summary()
 
             except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.DBAPIError) as e:
                 # Case where the database connection is closed during shutdown
-                logger.warning(f"Database teardown failed due to closed connection: {e}")
+                await logger.awarning(f"Database teardown failed due to closed connection: {e}")
             except asyncio.CancelledError:
                 # Swallow this - it's normal during shutdown
-                logger.debug("Teardown cancelled during shutdown.")
+                await logger.adebug("Teardown cancelled during shutdown.")
             except Exception as e:  # noqa: BLE001
-                logger.exception(f"Unhandled error during cleanup: {e}")
-
-            try:
-                await asyncio.shield(asyncio.sleep(0.1))  # let logger flush async logs
-                await asyncio.shield(logger.complete())
-            except asyncio.CancelledError:
-                # Cancellation during logger flush is possible during shutdown, so we swallow it
-                pass
+                await logger.aexception(f"Unhandled error during cleanup: {e}")
+                await log_exception_to_telemetry(e, "lifespan_cleanup")
 
     return lifespan
 
@@ -374,12 +373,15 @@ def create_app():
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
         if isinstance(exc, HTTPException):
-            logger.error(f"HTTPException: {exc}", exc_info=exc)
+            await logger.aerror(f"HTTPException: {exc}", exc_info=exc)
             return JSONResponse(
                 status_code=exc.status_code,
                 content={"message": str(exc.detail)},
             )
-        logger.error(f"unhandled error: {exc}", exc_info=exc)
+        await logger.aerror(f"unhandled error: {exc}", exc_info=exc)
+
+        await log_exception_to_telemetry(exc, "handler")
+
         return JSONResponse(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             content={"message": str(exc)},
