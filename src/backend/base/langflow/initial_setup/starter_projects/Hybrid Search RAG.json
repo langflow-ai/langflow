@@ -724,7 +724,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.115.13"
+                    "version": "0.116.1"
                   },
                   {
                     "name": "langflow",
@@ -1255,7 +1255,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.72"
+                    "version": "0.3.75"
                   },
                   {
                     "name": "langflow",
