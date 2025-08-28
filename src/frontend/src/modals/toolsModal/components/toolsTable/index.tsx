@@ -6,14 +6,15 @@ import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-va
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
@@ -101,8 +102,8 @@ export default function ToolsTable({
             name !== "" && name !== display_name
               ? name
               : isAction
-                ? sanitizeMcpName(display_name || row.name, 46)
-                : display_name
+              ? sanitizeMcpName(display_name || row.name, 46)
+              : display_name
           ).slice(0, 46);
 
           const processedDescription =
@@ -110,8 +111,8 @@ export default function ToolsTable({
             row.description !== row.display_description
               ? row.description
               : isAction
-                ? ""
-                : row.display_description;
+              ? ""
+              : row.display_description;
 
           return selectedRows?.some(
             (selected) =>
@@ -179,11 +180,11 @@ export default function ToolsTable({
               "uppercase",
             ])
           : isAction
-            ? sanitizeMcpName(params.data.display_name, 46).toUpperCase()
-            : parseString(params.data.tags.join(", "), [
-                "snake_case",
-                "uppercase",
-              ]),
+          ? sanitizeMcpName(params.data.display_name, 46).toUpperCase()
+          : parseString(params.data.tags.join(", "), [
+              "snake_case",
+              "uppercase",
+            ]),
       cellClass: "text-muted-foreground",
     },
     {
@@ -268,6 +269,10 @@ export default function ToolsTable({
     ]);
   }, [focusedRow]);
 
+  const handleClose = () => {
+    setSidebarOpen(false);
+  };
+
   return (
     <>
       <main className="flex h-full w-full flex-1 flex-col gap-2 overflow-hidden py-4">
@@ -303,16 +308,16 @@ export default function ToolsTable({
         side="right"
         className="flex h-full flex-col overflow-auto border-l border-border"
       >
-        <SidebarHeader className="flex-none px-4 py-4">
+        <SidebarContent className="flex flex-1 flex-col gap-2 overflow-y-auto p-0">
           {focusedRow &&
             (isAction || !focusedRow.readonly ? (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 p-4">
                 <div className="flex flex-col gap-2">
                   <label
                     className="text-mmd font-medium"
                     htmlFor="sidebar-name-input"
                   >
-                    {isAction ? "Tool name" : "Name"}
+                    {isAction ? "Tool name" : "Slug"}
                   </label>
 
                   <Input
@@ -368,19 +373,15 @@ export default function ToolsTable({
                 </p>
               </div>
             ))}
-        </SidebarHeader>
-        {!isAction && <Separator />}
-        <SidebarContent className="flex flex-1 flex-col gap-0 overflow-visible px-2">
+          {!isAction && <Separator />}
           {focusedRow && (
-            <div className="flex h-full flex-col gap-4">
+            <div className="flex h-full flex-col gap-4 p-2">
               <SidebarGroup className="flex-1">
-                <SidebarGroupContent className="h-full pb-4">
+                <SidebarGroupContent className="h-full">
                   <div className="flex h-full flex-col gap-4">
                     {actionArgs.length > 0 && (
                       <div className="flex flex-col gap-1.5">
-                        <h3 className="mt-2 text-base font-medium">
-                          Parameters
-                        </h3>
+                        <h3 className="text-base font-medium">Parameters</h3>
                         <p className="text-mmd text-muted-foreground">
                           Manage inputs for this tool
                         </p>
@@ -416,6 +417,13 @@ export default function ToolsTable({
             </div>
           )}
         </SidebarContent>
+        <SidebarFooter>
+          <div className="flex justify-end w-full p-2">
+            <Button variant="primary" size="sm" onClick={handleClose}>
+              Close
+            </Button>
+          </div>
+        </SidebarFooter>
       </Sidebar>
     </>
   );
