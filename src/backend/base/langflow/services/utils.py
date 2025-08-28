@@ -235,9 +235,26 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     async with db_service.with_session() as session:
         settings_service = get_service(ServiceType.SETTINGS_SERVICE)
         await setup_superuser(settings_service, session)
-    try:
-        await get_db_service().assign_orphaned_flows_to_superuser()
-    except sqlalchemy_exc.IntegrityError as exc:
-        await logger.awarning(f"Error assigning orphaned flows to the superuser: {exc!s}")
-    await clean_transactions(settings_service, session)
-    await clean_vertex_builds(settings_service, session)
+        try:
+            await get_db_service().assign_orphaned_flows_to_superuser()
+        except sqlalchemy_exc.IntegrityError as exc:
+            await logger.awarning(f"Error assigning orphaned flows to the superuser: {exc!s}")
+        await clean_transactions(settings_service, session)
+        await clean_vertex_builds(settings_service, session)
+
+    # Initialize data purge service only if configured
+    settings_service = get_service(ServiceType.SETTINGS_SERVICE)
+    if hasattr(settings_service.settings, 'data_purge_interval') and settings_service.settings.data_purge_interval:
+        await logger.ainfo("Data purge interval configured, initializing service...")
+        try:
+            from langflow.services.data_purge.factory import DataPurgeServiceFactory
+            data_purge_service = get_service(ServiceType.DATA_PURGE_SERVICE, DataPurgeServiceFactory())
+            if hasattr(data_purge_service, 'setup'):
+                await data_purge_service.setup()
+            await logger.ainfo("Data purge service initialized successfully")
+        except Exception as exc:
+            await logger.aerror(f"Error initializing data purge service: {exc}")
+            import traceback
+            await logger.aerror(traceback.format_exc())
+    else:
+        await logger.ainfo("Data purge service disabled (LANGFLOW_DATA_PURGE_INTERVAL not set)")
