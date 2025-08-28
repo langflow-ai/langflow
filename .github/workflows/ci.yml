@@ -147,7 +147,19 @@ jobs:
       workspace: ${{ steps.filter.outputs.workspace }}
       api: ${{ steps.filter.outputs.api }}
       database: ${{ steps.filter.outputs.database }}
-      docs-only: ${{ steps.filter.outputs.docs == 'true' && steps.filter.outputs.python != 'true' && steps.filter.outputs.frontend != 'true' }}
+      docs-only: ${{
+        steps.filter.outputs.docs == 'true' &&
+        steps.filter.outputs.python != 'true' &&
+        steps.filter.outputs.frontend != 'true' &&
+        steps.filter.outputs['frontend-tests'] != 'true' &&
+        steps.filter.outputs['components-changes'] != 'true' &&
+        steps.filter.outputs['starter-projects-changes'] != 'true' &&
+        steps.filter.outputs['starter-projects'] != 'true' &&
+        steps.filter.outputs.components != 'true' &&
+        steps.filter.outputs.workspace != 'true' &&
+        steps.filter.outputs.api != 'true' &&
+        steps.filter.outputs.database != 'true'
+      }}
 
     steps:
       - name: Checkout code
