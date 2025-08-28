@@ -285,7 +285,7 @@ class Settings(BaseSettings):
     this is intended to be used to skip all startup project logic."""
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
-    
+
     # Data purge configuration
     data_purge_interval: str | None = None
     """Time interval for automatic data purge (e.g. '1m', '2h', '1d'). 
