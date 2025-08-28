@@ -235,7 +235,10 @@ export const SidebarDraggableComponent = forwardRef(
                       </div>{" "}
                     </SelectItem>
                     {(!official || onDelete) && (
-                      <SelectItem value={"delete"}>
+                      <SelectItem
+                        value={"delete"}
+                        data-testid="mcp-server-menu-delete"
+                      >
                         <div className="flex">
                           <IconComponent
                             name="Trash2"
