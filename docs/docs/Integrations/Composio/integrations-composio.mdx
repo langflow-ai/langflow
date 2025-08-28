@@ -33,12 +33,11 @@ You can connect other Composio components in the same way, but you might need to
 1. In Langflow, create a flow based on the **Simple Agent** template.
 
 2. Add a Composio **Gmail** component to the flow.
+3. In the **Composio API Key** field, enter your Composio API key, or select the `COMPOSIO_API_KEY` [global variable](/configuration-global-variables).
+4. In the Composio **Gmail** component, enable **Tool Mode**.
+5. Connect the **Agent** component's **Tools** port to the Composio **Gmail** component's **Tools** port.
+6. In the **Agent** component, enter your OpenAI API key or configure the **Agent** component to use a different LLM.
 
-3. Connect the **Agent** component's **Tools** port to the Composio **Gmail** component's **Tools** port.
-
-4. In the **Agent** component, enter your OpenAI API key or configure the **Agent** component to use a different LLM.
-5. In the **Composio API Key** field, enter your Composio API key, or select the `COMPOSIO_API_KEY` [global variable](/configuration-global-variables).
-6. In the Composio **Gmail** component, enable **Tool Mode**.
 The **Actions** field populates with the actions available to the Agent, which it will choose from based on your request.
 
     At this point your flow has four connected components:
