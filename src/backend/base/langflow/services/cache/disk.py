@@ -4,7 +4,7 @@ import time
 from typing import Generic
 
 from diskcache import Cache
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.services.cache.utils import CACHE_MISS
 
 from langflow.services.cache.base import AsyncBaseCacheService, AsyncLockType

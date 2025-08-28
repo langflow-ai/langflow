@@ -2,7 +2,7 @@ from collections import defaultdict
 from collections.abc import Callable
 from threading import Lock
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.services.settings.service import SettingsService
 
 from langflow.services.base import Service

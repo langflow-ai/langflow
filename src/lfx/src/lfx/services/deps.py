@@ -6,7 +6,7 @@ import inspect
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:

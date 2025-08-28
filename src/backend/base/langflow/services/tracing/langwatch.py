@@ -4,7 +4,7 @@ import os
 from typing import TYPE_CHECKING, Any, cast
 
 import nanoid
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from typing_extensions import override
 
 from langflow.schema.data import Data

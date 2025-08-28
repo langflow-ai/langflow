@@ -14,7 +14,7 @@ from lfx.base.astra_assistants.util import (
 )
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from lfx.inputs.inputs import DropdownInput, FileInput, HandleInput, MultilineInput
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.memory import delete_message
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.message import Message

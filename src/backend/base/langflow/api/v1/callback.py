@@ -5,7 +5,7 @@ from uuid import UUID
 
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks.base import AsyncCallbackHandler
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.utils.util import remove_ansi_escape_codes
 from typing_extensions import override
 

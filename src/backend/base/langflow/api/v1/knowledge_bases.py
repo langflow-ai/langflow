@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from langchain_chroma import Chroma
-from lfx.logs import logger
+from lfx.log import logger
 from pydantic import BaseModel
 
 from langflow.api.utils import CurrentActiveUser

@@ -6,7 +6,7 @@ from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
 from lfx.helpers.flow import get_flow_inputs
 from lfx.io import DropdownInput, Output
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 

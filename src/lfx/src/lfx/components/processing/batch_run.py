@@ -6,7 +6,7 @@ import toml  # type: ignore[import-untyped]
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 
 if TYPE_CHECKING:

@@ -16,7 +16,7 @@ import pytest
 from mcp import StdioServerParameters
 
 from lfx.base.mcp.util import MCPSessionManager
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 
 pytestmark = [
     pytest.mark.timeout(300, method="thread"),

@@ -1,7 +1,7 @@
 import platform
 from pathlib import Path
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 
 
 def set_secure_permissions(file_path: Path) -> None:

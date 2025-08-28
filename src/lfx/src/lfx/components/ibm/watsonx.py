@@ -9,7 +9,7 @@ from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
 
 

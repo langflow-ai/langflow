@@ -8,7 +8,7 @@ from collections.abc import AsyncIterator
 from fastapi import BackgroundTasks, HTTPException, Response
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
 from sqlmodel import select
 

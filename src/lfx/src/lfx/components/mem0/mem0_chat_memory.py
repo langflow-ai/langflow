@@ -5,7 +5,7 @@ from mem0 import Memory, MemoryClient
 from lfx.base.memory.model import LCChatMemoryComponent
 from lfx.inputs.inputs import DictInput, HandleInput, MessageTextInput, NestedDictInput, SecretStrInput
 from lfx.io import Output
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 
 

@@ -8,7 +8,7 @@ from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REA
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 
 
 class OpenAIModelComponent(LCModelComponent):

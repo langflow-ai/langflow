@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from lfx.components._importing import import_mod
-from lfx.logs.logger import logger
 
 if TYPE_CHECKING:
     from .chunk_docling_document import ChunkDoclingDocumentComponent

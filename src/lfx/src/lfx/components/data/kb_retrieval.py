@@ -12,7 +12,7 @@ from pydantic import SecretStr
 
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.services.deps import get_settings_service

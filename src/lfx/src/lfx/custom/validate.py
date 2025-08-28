@@ -9,7 +9,7 @@ from langchain_core._api.deprecation import LangChainDeprecationWarning
 from pydantic import ValidationError
 
 from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 
 _LANGFLOW_IS_INSTALLED = False
 

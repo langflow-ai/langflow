@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import MultilineInput, SecretStrInput, StrInput
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 
 MIN_ROWS_IN_TABLE = 3

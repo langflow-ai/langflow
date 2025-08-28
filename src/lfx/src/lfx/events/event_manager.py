@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from fastapi.encoders import jsonable_encoder
 from typing_extensions import Protocol
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 
 if TYPE_CHECKING:
     # Lightweight type stub for log types

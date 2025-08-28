@@ -14,7 +14,7 @@ from lfx.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
 from lfx.graph.vertex.param_handler import ParameterHandler
 from lfx.interface import initialize
 from lfx.interface.listing import lazy_load_dict
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.artifact import ArtifactType
 from lfx.schema.data import Data
 from lfx.schema.message import Message

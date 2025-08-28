@@ -19,7 +19,7 @@ from mcp import ClientSession
 from mcp.shared.exceptions import McpError
 from pydantic import BaseModel, Field, create_model
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
@@ -262,7 +262,7 @@ def get_unique_name(base_name, max_length, existing_names):
         i += 1
 
 
-async def get_flow_snake_case(flow_name: str, user_id: str, session, is_action: bool | None = None):
+async def get_flow_snake_case(flow_name: str, user_id: str, session, *, is_action: bool | None = None):
     try:
         from langflow.services.database.models.flow.model import Flow
         from sqlmodel import select

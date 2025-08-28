@@ -4,7 +4,7 @@ import signal
 
 from gunicorn import glogging
 from gunicorn.app.base import BaseApplication
-from lfx.logs.logger import InterceptHandler
+from lfx.log.logger import InterceptHandler
 from uvicorn.workers import UvicornWorker
 
 

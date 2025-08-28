@@ -22,7 +22,7 @@ from lfx.custom.utils import update_component_build_config
 from lfx.helpers.base_model import build_model_from_schema
 from lfx.inputs.inputs import TableInput
 from lfx.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message

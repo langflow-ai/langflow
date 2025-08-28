@@ -2,7 +2,8 @@ import time
 from collections.abc import Callable
 
 import socketio
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
+from sqlmodel import select
 
 from langflow.api.utils import format_elapsed_time
 from langflow.api.v1.schemas import ResultDataResponse, VertexBuildResponse
@@ -10,11 +11,14 @@ from langflow.graph.graph.base import Graph
 from langflow.graph.graph.utils import layered_topological_sort
 from langflow.graph.utils import log_vertex_build
 from langflow.graph.vertex.base import Vertex
+from langflow.services.database.models.flow.model import Flow
+from langflow.services.deps import get_session
 
 
 async def get_vertices(sio, sid, flow_id, chat_service) -> None:
     try:
         session = await anext(get_session())
+        stmt = select(Flow).where(Flow.id == flow_id)
         flow: Flow = (await session.exec(stmt)).first()
         if not flow or not flow.data:
             await sio.emit("error", data="Invalid flow ID", to=sid)

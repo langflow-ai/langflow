@@ -5,7 +5,7 @@ from uuid import UUID
 
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.utils.async_helpers import run_until_complete
 from sqlalchemy import delete
 from sqlmodel import col, select

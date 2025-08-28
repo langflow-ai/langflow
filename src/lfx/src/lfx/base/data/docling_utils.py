@@ -5,7 +5,7 @@ from contextlib import suppress
 
 from docling_core.types.doc import DoclingDocument
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 

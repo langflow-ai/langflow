@@ -13,7 +13,7 @@ import anyio
 import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from sqlalchemy import event, exc, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine

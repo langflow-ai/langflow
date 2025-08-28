@@ -15,7 +15,7 @@ from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSetti
 from typing_extensions import override
 
 from lfx.constants import BASE_COMPONENTS_PATH
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from lfx.utils.util_strings import is_valid_database_url
@@ -412,7 +412,7 @@ class Settings(BaseSettings):
                     logger.debug("Copying existing database to new location")
                     copy2(f"./{db_file_name}", new_path)
                     logger.debug(f"Copied existing database to {new_path}")
-                except Exception:
+                except OSError:
                     logger.exception("Failed to copy database, using default path")
                     new_path = f"./{db_file_name}"
             else:

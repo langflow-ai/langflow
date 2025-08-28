@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, create_model
 
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.io import BoolInput, DictInput, HandleInput, IntInput, SecretStrInput, StrInput, TableInput
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.table import EditMode
 

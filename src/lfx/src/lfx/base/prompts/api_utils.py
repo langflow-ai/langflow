@@ -6,7 +6,7 @@ from langchain_core.prompts import PromptTemplate
 
 from lfx.inputs.inputs import DefaultPromptField
 from lfx.interface.utils import extract_input_variables_from_prompt
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 
 _INVALID_CHARACTERS = {
     " ",

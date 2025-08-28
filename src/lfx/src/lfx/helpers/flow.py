@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, create_model
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.schema import INPUT_FIELD_NAME
 
 if TYPE_CHECKING:

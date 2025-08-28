@@ -6,7 +6,7 @@ import importlib
 import inspect
 from typing import TYPE_CHECKING
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.services.manager import NoFactoryRegisteredError
 from lfx.services.manager import ServiceManager as BaseServiceManager
 from lfx.utils.concurrency import KeyedMemoryLockManager

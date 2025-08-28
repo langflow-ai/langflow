@@ -7,7 +7,7 @@ import pytest
 from dotenv import find_dotenv, load_dotenv
 from httpx import AsyncClient
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 
 load_dotenv(find_dotenv())
 

@@ -12,7 +12,7 @@ from lfx.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceCompo
 from lfx.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path
 from lfx.graph.vertex.base import Vertex
 from lfx.graph.vertex.exceptions import NoComponentInstanceError
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.artifact import ArtifactType
 from lfx.schema.data import Data
 from lfx.schema.message import Message

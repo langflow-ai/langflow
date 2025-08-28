@@ -1,7 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, HTTPException, status
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from pydantic import BaseModel
 from sqlmodel import select
 

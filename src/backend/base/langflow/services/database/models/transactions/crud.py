@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from sqlmodel import col, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 

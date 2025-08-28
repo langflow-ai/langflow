@@ -22,7 +22,7 @@ from langflow.services.deps import get_settings_service, get_variable_service, s
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from lfx.custom import Component
 from lfx.io import BoolInput, DataFrameInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput, TableInput
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict  # noqa: TC001
 from lfx.schema.table import EditMode

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 
 from langflow.events.event_manager import EventManager
 from langflow.services.base import Service

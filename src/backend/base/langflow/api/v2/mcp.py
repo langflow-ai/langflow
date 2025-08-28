@@ -4,7 +4,7 @@ from io import BytesIO
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from lfx.base.mcp.util import update_tools
-from lfx.logs import logger
+from lfx.log import logger
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v2.files import MCP_SERVERS_FILE, delete_file, download_file, get_file_by_name, upload_user_file

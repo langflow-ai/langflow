@@ -6,7 +6,7 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 
 from langflow.services.base import Service
 from langflow.services.store.exceptions import APIKeyError, FilterError, ForbiddenError

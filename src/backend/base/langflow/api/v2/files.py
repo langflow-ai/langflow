@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse

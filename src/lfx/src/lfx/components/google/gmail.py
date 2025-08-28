@@ -15,7 +15,7 @@ from langchain_google_community.gmail.loader import GMailLoader
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import MessageTextInput
 from lfx.io import SecretStrInput
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.template.field.base import Output
 

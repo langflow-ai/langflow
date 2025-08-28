@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo, available_timezones
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, Output
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.message import Message
 
 

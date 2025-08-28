@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import DictInput, IntInput, MultilineInput, SecretStrInput
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 
 

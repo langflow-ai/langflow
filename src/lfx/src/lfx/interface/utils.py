@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 from io import BytesIO
 from pathlib import Path
 from string import Formatter
@@ -8,7 +9,7 @@ import yaml
 from langchain_core.language_models import BaseLanguageModel
 from PIL.Image import Image
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.services.chat.config import ChatConfig
 from lfx.services.deps import get_settings_service
 

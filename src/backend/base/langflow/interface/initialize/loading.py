@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 from lfx.custom.eval import eval_custom_component_code
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from pydantic import PydanticDeprecatedSince20
 
 from langflow.schema.artifact import get_artifact_type, post_process_raw

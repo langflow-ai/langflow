@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from sqlmodel import select
 from typing_extensions import override
 

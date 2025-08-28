@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.utils import abuild_custom_components, create_component_template
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 
 if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService

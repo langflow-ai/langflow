@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 from aiofile import async_open
 from lfx.graph import Graph
 from lfx.graph.vertex.param_handler import ParameterHandler
-from lfx.logs.logger import configure, logger
+from lfx.log.logger import configure, logger
 from lfx.utils.util import update_settings
 from sqlmodel import delete, select, text
 

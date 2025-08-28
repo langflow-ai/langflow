@@ -41,7 +41,7 @@ from pathlib import Path
 # Using the new flattened component access
 from lfx import components as cp
 from lfx.graph import Graph
-from lfx.logs.logger import LogConfig
+from lfx.log.logger import LogConfig
 
 log_config = LogConfig(
     log_level="INFO",
@@ -145,7 +145,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         try:
             from lfx import components as cp
             from lfx.graph import Graph
-            from lfx.logs.logger import LogConfig
+            from lfx.log.logger import LogConfig
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 
@@ -273,7 +273,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
     def test_logging_configuration(self):
         """Test LogConfig setup for the workflow."""
         try:
-            from lfx.logs.logger import LogConfig
+            from lfx.log.logger import LogConfig
         except ImportError as e:
             pytest.skip(f"LFX logging not available: {e}")
 
@@ -313,7 +313,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         try:
             from lfx import components as cp
             from lfx.graph import Graph
-            from lfx.logs.logger import LogConfig
+            from lfx.log.logger import LogConfig
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 

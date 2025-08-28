@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import HandleInput, MessageInput, Output
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 
 if TYPE_CHECKING:

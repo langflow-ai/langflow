@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 
 from lfx.custom import Component
 from lfx.io import IntInput, MessageTextInput, Output
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema import DataFrame
 
 

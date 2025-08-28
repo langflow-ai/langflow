@@ -5,7 +5,7 @@ import httpx
 from pydantic import BaseModel, SecretStr
 
 from lfx.field_typing import Embeddings
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 
 
 class AIMLEmbeddingsImpl(BaseModel, Embeddings):

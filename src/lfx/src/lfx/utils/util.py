@@ -9,7 +9,7 @@ from typing import Any
 
 from docstring_parser import parse
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service
 from lfx.template.frontend_node.constants import FORCE_SHOW_FIELDS

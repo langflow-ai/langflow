@@ -10,7 +10,7 @@ from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, Security, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.services.settings.service import SettingsService
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession

@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 
 from langflow.services.base import Service
 

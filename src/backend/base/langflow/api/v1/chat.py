@@ -10,7 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Re
 from fastapi.responses import StreamingResponse
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest, OutputValue
 from lfx.services.cache.utils import CacheMiss
 

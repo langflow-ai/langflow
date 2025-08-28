@@ -8,7 +8,7 @@ import pytest
 from dotenv import load_dotenv
 from httpx import AsyncClient
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 
 
 # Load environment variables from .env file

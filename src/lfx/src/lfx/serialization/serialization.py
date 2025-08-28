@@ -10,7 +10,7 @@ from langchain_core.documents import Document
 from pydantic import BaseModel
 from pydantic.v1 import BaseModel as BaseModelV1
 
-from lfx.logs.logger import logger
+from lfx.log.logger import logger
 from lfx.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 
 
