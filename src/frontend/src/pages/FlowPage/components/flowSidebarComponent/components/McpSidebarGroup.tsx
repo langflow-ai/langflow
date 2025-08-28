@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useDeleteMCPServer } from "@/controllers/API/queries/mcp/use-delete-mcp-server";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import type { APIClassType } from "@/types/api";
 import { removeCountFromString } from "@/utils/utils";
@@ -73,6 +74,9 @@ const McpSidebarGroup = ({
   // Use props instead of hook call
   const isLoading = mcpLoading;
   const isSuccess = mcpSuccess;
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [serverToDelete, setServerToDelete] = useState<string | null>(null);
 
   const categoryName = "MCP";
   const isOpen = search === "" || openCategories.includes(categoryName);
@@ -151,16 +155,27 @@ const McpSidebarGroup = ({
                   official={mcpComponent.official === false ? false : true}
                   beta={mcpComponent.beta ?? false}
                   legacy={mcpComponent.legacy ?? false}
-                  onDelete={() =>
-                    handleDeleteMcpServer(
+                  onDelete={() => {
+                    setServerToDelete(
                       mcpComponent.mcpServerName ?? mcpComponent.display_name,
-                    )
-                  }
+                    );
+                    setDeleteModalOpen(true);
+                  }}
                   disabled={false}
                   disabledTooltip={""}
                 />
               </ShadTooltip>
             ))}
+          <DeleteConfirmationModal
+            open={deleteModalOpen}
+            setOpen={setDeleteModalOpen}
+            onConfirm={() => {
+              if (serverToDelete) handleDeleteMcpServer(serverToDelete);
+              setDeleteModalOpen(false);
+              setServerToDelete(null);
+            }}
+            description={"MCP Server"}
+          />
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
