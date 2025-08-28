@@ -9,8 +9,10 @@ import Icon from "@site/src/components/icon";
 
 This page describes the components that are available in the **Composio** bundle.
 
-Composio components in Langflow provide [tools](https://app.composio.dev/) to your **Agent** components.
-Individual services like Gmail, GitHub, and Slack are available as individual components.
+Composio components in Langflow primarily serve as [tools](https://app.composio.dev/) for your **Agent** components.
+
+Individual services like Gmail, GitHub, and Slack are also available as individual components.
+You can use these components for non-agentic actions in your flows, or you can enable **Tool Mode** to use them as specialized tools for **Agent** components.
 
 For information about specific Composio functionality, see the [Composio documentation](https://docs.composio.dev/introduction/intro/overview).
 
@@ -22,10 +24,11 @@ Depending on the components you use, you may need additional API keys, such as a
 
 For information about specific Composio functionality, see the [Composio documentation](https://docs.composio.dev/introduction/intro/overview).
 
-## Use a Composio Gmail component in a flow
+## Use a Composio component in a flow
 
-Connect a Composio **Gmail** component to an **Agent** component to enable your agent to use Gmail functionality.
-Other Composio tools will connect the same way, and use the same parameters, but may require different API keys in Composio.
+This example demonstrates how to use the Composio **Gmail** component as a tool for an **Agent** component.
+This allows the agent to use Composio Gmail functionality, if necessary, when generating responses.
+You can connect other Composio components in the same way, but you might need to provide service-specific Composio API keys.
 
 1. In Langflow, create a flow based on the **Simple Agent** template.
 
@@ -38,7 +41,7 @@ Other Composio tools will connect the same way, and use the same parameters, but
 6. In the Composio **Gmail** component, enable **Tool Mode**.
 The **Actions** field populates with the actions available to the Agent, which it will choose from based on your request.
 
-    At this point your flow has three connected components:
+    At this point your flow has four connected components:
 
     * The **Chat Input** component is connected to the **Agent** component's **Input** port. This allows the flow to be triggered by an incoming prompt from a user or application.
     * The Composio **Gmail** component with the Gmail tool is connected to the **Agent** component's **Tools** port. The agent may not use this tool for every request; the agent only uses this connection if it decides the Gmail tool can help respond to the prompt.
@@ -46,7 +49,7 @@ The **Actions** field populates with the actions available to the Agent, which i
 
     ![Simple Agent flow with a Composio Tools component](/img/composio/composio-create-flow.png)
 
-8. To test the connection to Composio, click **Playground**, and then ask the LLM about the tools available to it.
+7. To test the connection to Composio, click **Playground**, and then ask the LLM about the tools available to it.
 The agent should provide a list of connected tools, including the **Gmail** tool and the built-in tools in the **Agent** component.
 
     ```text
@@ -70,7 +73,7 @@ The agent should provide a list of connected tools, including the **Gmail** tool
     If you have a specific task in mind, let me know and I can tell you which tool I would use or demonstrate how I can help!
     ```
 
-9. To test a specific action, tell the agent to perform an action like writing a draft email:
+8. To test a specific tool or function, tell the agent to perform an action like writing a draft email:
 
     ```text
     Create a draft email with the subject line "Greetings from Composio"
@@ -78,7 +81,7 @@ The agent should provide a list of connected tools, including the **Gmail** tool
     Body content: "Hello from composio!"
     ```
 
-    The **Playground** displays the logic as the agent chooses the `GMAIL_CREATE_EMAIL_DRAFT` tool to create the email draft.
+    The **Playground** prints the logic as the agent chooses the `GMAIL_CREATE_EMAIL_DRAFT` tool to create the email draft.
     This example response is abbreviated.
 
     ```text
@@ -112,11 +115,9 @@ The agent should provide a list of connected tools, including the **Gmail** tool
     }
     ```
 
-10. For further confirmation, go to your Gmail account and find the message in your drafts folder.
+9. For further confirmation, go to your Gmail account and find the message in your drafts folder.
 
-11. To add more Composio actions, add more Composio components to your flow, and then connect them to the **Agent** component's **Tools** port.
-
-For information about specific Composio functionality, see the [Composio documentation](https://docs.composio.dev/introduction/intro/overview).
+10. Optional: To add more Composio tools, add more Composio components to your flow, enable **Tool Mode**, and then connect them to the **Agent** component's **Tools** port.
 
 ### Composio tools parameters
 
