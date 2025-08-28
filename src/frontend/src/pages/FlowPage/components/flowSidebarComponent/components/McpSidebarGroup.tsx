@@ -89,17 +89,15 @@ const McpSidebarGroup = ({
   return (
     <SidebarGroup className={`p-3${!hasMcpServers ? " h-full" : ""}`}>
       {hasMcpServers && (
-        <>
-          <SidebarGroupLabel className="cursor-default">
-            MCP Servers
-          </SidebarGroupLabel>
+        <SidebarGroupLabel className="cursor-default w-full flex items-center justify-between">
+          <span>MCP Servers</span>
           {showSearchConfigTrigger && (
             <SearchConfigTrigger
               showConfig={showConfig}
               setShowConfig={setShowConfig}
             />
           )}
-        </>
+        </SidebarGroupLabel>
       )}
       <SidebarGroupContent className="h-full">
         <SidebarMenu className={!hasMcpServers ? " h-full" : ""}>
