@@ -41,12 +41,12 @@ def get_latest_component(session: Session, component_path: str) -> Optional[Comp
     return session.exec(statement).first()
 
 
-def component_version_exists(session: Session, component_path: str, version: str, signature: str) -> bool:
-    """Check if a specific component version with signature already exists."""
+def component_version_exists(session: Session, component_path: str, version: str, folder: str) -> bool:
+    """Check if a component version already exists (matches unique constraint)."""
     statement = select(Component).where(
+        Component.folder == folder,
         Component.component_path == component_path,
-        Component.version == version,
-        Component.signature == signature
+        Component.version == version
     )
     return session.exec(statement).first() is not None
 

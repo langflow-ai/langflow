@@ -218,8 +218,8 @@ class ComponentSecurityManager:
                                     # Generate signature for the entire file's code
                                     signature = ComponentSignature.create(component_path, code, self.signing_key)
                                     
-                                    # Check if this exact component version + signature already exists
-                                    if not component_version_exists(self.db_session, component_path, component_version, signature.signature):
+                                    # Check if this exact component version already exists
+                                    if not component_version_exists(self.db_session, component_path, component_version, folder):
                                         # Create database model with full code storage
                                         db_component = DBComponent(
                                             component_path=component_path,
