@@ -7,8 +7,10 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
 } from "@/components/ui/sidebar";
+import { useDeleteMCPServer } from "@/controllers/API/queries/mcp/use-delete-mcp-server";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
-import { APIClassType } from "@/types/api";
+import useAlertStore from "@/stores/alertStore";
+import type { APIClassType } from "@/types/api";
 import { removeCountFromString } from "@/utils/utils";
 import { SearchConfigTrigger } from "./searchConfigTrigger";
 import SidebarDraggableComponent from "./sidebarDraggableComponent";
@@ -21,11 +23,8 @@ type McpSidebarGroupProps = {
     data: { type: string; node?: APIClassType },
   ) => void;
   openCategories: string[];
-  setOpenCategories: React.Dispatch<React.SetStateAction<string[]>>;
-  mcpServers?: any[];
   mcpLoading?: boolean;
   mcpSuccess?: boolean;
-  mcpError?: boolean;
   search: string;
   hasMcpServers: boolean;
   showSearchConfigTrigger: boolean;
@@ -63,11 +62,8 @@ const McpSidebarGroup = ({
   nodeColors,
   onDragStart,
   openCategories,
-  setOpenCategories,
-  mcpServers,
   mcpLoading,
   mcpSuccess,
-  mcpError,
   search,
   hasMcpServers,
   showSearchConfigTrigger,
@@ -80,6 +76,26 @@ const McpSidebarGroup = ({
 
   const categoryName = "MCP";
   const isOpen = search === "" || openCategories.includes(categoryName);
+
+  const { mutate: deleteMcpServer } = useDeleteMCPServer();
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  const handleDeleteMcpServer = (mcpServer: string) => {
+    deleteMcpServer(
+      {
+        name: mcpServer,
+      },
+      {
+        onSuccess: (data) => {
+          setSuccessData({ title: data.message });
+        },
+        onError: (error) => {
+          setErrorData({ title: error.message });
+        },
+      },
+    );
+  };
 
   // Only render if the MCP category is open (when not searching) or if we have search results
   if (!isOpen) {
@@ -114,7 +130,7 @@ const McpSidebarGroup = ({
               <ShadTooltip
                 content={mcpComponent.display_name || mcpComponent.name}
                 side="right"
-                key={idx}
+                key={mcpComponent.mcpServerName ?? mcpComponent.display_name}
               >
                 <SidebarDraggableComponent
                   sectionName={"mcp"}
@@ -135,6 +151,11 @@ const McpSidebarGroup = ({
                   official={mcpComponent.official === false ? false : true}
                   beta={mcpComponent.beta ?? false}
                   legacy={mcpComponent.legacy ?? false}
+                  onDelete={() =>
+                    handleDeleteMcpServer(
+                      mcpComponent.mcpServerName ?? mcpComponent.display_name,
+                    )
+                  }
                   disabled={false}
                   disabledTooltip={""}
                 />
