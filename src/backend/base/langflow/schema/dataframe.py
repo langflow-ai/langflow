@@ -135,7 +135,7 @@ class DataFrame(pandas_DataFrame):
 
         return _c
 
-    def __bool__(self):
+    def __bool__(self):  # type: ignore[misc]
         """Truth value testing for the DataFrame.
 
         Returns True if the DataFrame has at least one row, False otherwise.
