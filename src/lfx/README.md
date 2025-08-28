@@ -31,6 +31,7 @@ uv run lfx serve my_flow.json
 lfx now supports simplified component imports for better developer experience:
 
 **Before (old import style):**
+
 ```python
 from lfx.components.agents.agent import AgentComponent
 from lfx.components.data.url import URLComponent
@@ -38,6 +39,7 @@ from lfx.components.input_output import ChatInput, ChatOutput
 ```
 
 **Now (new flattened style):**
+
 ```python
 from lfx import components as cp
 
@@ -49,6 +51,7 @@ chat_output = cp.ChatOutput()
 ```
 
 **Benefits:**
+
 - **Simpler imports**: One import line instead of multiple deep imports
 - **Better discovery**: All components accessible via `cp.ComponentName`
 - **Helpful error messages**: Clear guidance when dependencies are missing
@@ -167,7 +170,7 @@ from pathlib import Path
 # Using the new flattened component access
 from lfx import components as cp
 from lfx.graph import Graph
-from lfx.lfx_logging.logger import LogConfig
+from lfx.logs.logger import LogConfig
 
 log_config = LogConfig(
     log_level="INFO",
