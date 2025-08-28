@@ -137,12 +137,6 @@ LABEL org.opencontainers.image.licenses=MIT
 LABEL org.opencontainers.image.url=https://github.com/langflow-ai/langflow
 LABEL org.opencontainers.image.source=https://github.com/langflow-ai/langflow
 
-# Add health check for sandbox functionality
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD /usr/local/bin/nsjail --help > /dev/null && \
-    python3 -c "from langflow.sandbox import get_sandbox_manager; get_sandbox_manager()" && \
-    echo "Sandbox ready" || exit 1
-
 USER user
 WORKDIR /app
 
