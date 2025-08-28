@@ -1,14 +1,5 @@
 from typing import Any
 
-try:
-    from composio.client.enums import Action
-except ImportError:
-    # Fallback for different composio versions or missing package
-    try:
-        from composio import Action
-    except ImportError:
-        Action = None
-
 from lfx.base.composio.composio_base import ComposioBaseComponent
 from lfx.inputs import BoolInput, IntInput, MessageTextInput
 from lfx.log.logger import logger
@@ -535,6 +526,15 @@ class ComposioSlackAPIComponent(ComposioBaseComponent):
 
     def execute_action(self):
         """Execute action and return response as Message."""
+        try:
+            from composio.client.enums import Action
+        except ImportError:
+            try:
+                from composio import Action
+            except ImportError:
+                msg = "Composio Action class is not available. Please install composio package with correct version."
+                raise RuntimeError(msg) from None
+
         toolset = self._build_wrapper()
 
         try:
