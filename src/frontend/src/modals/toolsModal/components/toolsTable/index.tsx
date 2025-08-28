@@ -419,7 +419,12 @@ export default function ToolsTable({
         </SidebarContent>
         <SidebarFooter>
           <div className="flex justify-end w-full p-2">
-            <Button variant="primary" size="sm" onClick={handleClose}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleClose}
+              data-testid="btn_close_tools_modal"
+            >
               Close
             </Button>
           </div>
