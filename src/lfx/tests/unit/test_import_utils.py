@@ -71,7 +71,7 @@ class TestImportAttr:
         with patch("importlib.import_module") as mock_import_module:
             mock_import_module.side_effect = ModuleNotFoundError("No module named 'test'")
 
-            with pytest.raises(ImportError, match="No module named 'test'"):
+            with pytest.raises(ImportError, match="module 'test.package.test_module' not found"):
                 import_mod("TestComponent", "test_module", "test.package")
 
     def test_getattr_error_handling(self):
