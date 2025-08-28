@@ -543,7 +543,7 @@ class AgentComponent(ToolCallingAgentComponent):
                     )
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
 
-    async def _get_tools(self) -> list[Tool]:
+    def _get_tools(self) -> list[Tool]:
         component_toolkit = get_component_toolkit()
         tools_names = self._build_tools_names()
         agent_description = self.get_tool_description()
