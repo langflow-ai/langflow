@@ -24,6 +24,20 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
+
+    // See if the color matches
+
+    const isDark = await page.evaluate(() => {
+      return document.body.classList.contains("dark");
+    });
+
+    for (const path of await page
+      .getByTestId("icon-Mcp")
+      .locator("path")
+      .all()) {
+      expect(path).toHaveAttribute("fill", isDark ? "white" : "black");
+    }
+
     await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
