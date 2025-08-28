@@ -96,10 +96,10 @@ def set_multiple_field_advanced(
     """Set advanced property for multiple fields at once."""
     if fields is not None:
         for field, advanced in fields.items():
-            build_config = set_field_advanced(build_config, field, advanced)
+            build_config = set_field_advanced(build_config, field, value=advanced)
     elif field_list is not None:
         for field in field_list:
-            build_config = set_field_advanced(build_config, field, value)
+            build_config = set_field_advanced(build_config, field, value=value)
     return build_config
 
 
@@ -122,7 +122,7 @@ def set_current_fields(
     *,
     selected_action: str | None = None,
     default_fields: list[str] = DEFAULT_FIELDS,
-    func: Callable[[dotdict, str, bool], dotdict] = set_field_display,
+    func: Callable = set_field_display,
     default_value: bool | None = None,
 ) -> dotdict:
     """Set the current fields for a selected action."""
@@ -130,18 +130,25 @@ def set_current_fields(
     # we need to show action of one field and disable the rest
     if default_value is None:
         default_value = False
+
+    def _call_func(build_config: dotdict, field: str, *, value: bool) -> dotdict:
+        """Helper to call the function with appropriate signature."""
+        if func == set_field_advanced:
+            return func(build_config, field, value=value)
+        return func(build_config, field, value)
+
     if selected_action in action_fields:
         for field in action_fields[selected_action]:
-            build_config = func(build_config, field, not default_value)
+            build_config = _call_func(build_config, field, value=not default_value)
         for key, value in action_fields.items():
             if key != selected_action:
                 for field in value:
-                    build_config = func(build_config, field, default_value)
+                    build_config = _call_func(build_config, field, value=default_value)
     if selected_action is None:
         for value in action_fields.values():
             for field in value:
-                build_config = func(build_config, field, default_value)
+                build_config = _call_func(build_config, field, value=default_value)
     if default_fields is not None:
         for field in default_fields:
-            build_config = func(build_config, field, not default_value)
+            build_config = _call_func(build_config, field, value=not default_value)
     return build_config
