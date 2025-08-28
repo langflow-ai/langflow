@@ -6,7 +6,6 @@ from composio import Composio
 from composio_langchain import LangchainProvider
 from langchain_core.tools import Tool
 
-from lfx.base.mcp.util import create_input_schema_from_json_schema
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import AuthInput, FileInput, InputTypes, MessageTextInput, SecretStrInput, SortableListInput
 from lfx.io import Output
@@ -14,6 +13,7 @@ from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
+from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.schema.message import Message
 
 
@@ -21,6 +21,9 @@ def _patch_graph_clean_null_input_types() -> None:
     """Monkey-patch Graph._create_vertex to clean legacy templates."""
     try:
         from lfx.graph.graph.base import Graph
+
+        if getattr(Graph, "_composio_patch_applied", False):
+            return
 
         original_create_vertex = Graph._create_vertex
 
@@ -38,11 +41,9 @@ def _patch_graph_clean_null_input_types() -> None:
 
             return original_create_vertex(self, frontend_data)
 
-        # Patch only once
-        if getattr(Graph, "_composio_patch_applied", False) is False:
-            Graph._create_vertex = _create_vertex_with_cleanup  # type: ignore[method-assign]
-            Graph._composio_patch_applied = True  # type: ignore[attr-defined]
-            logger.debug("Applied Composio template cleanup patch to Graph._create_vertex")
+        Graph._create_vertex = _create_vertex_with_cleanup  # type: ignore[method-assign]
+        Graph._composio_patch_applied = True  # type: ignore[attr-defined]
+        logger.debug("Applied Composio template cleanup patch to Graph._create_vertex")
 
     except (AttributeError, TypeError) as e:
         logger.debug(f"Failed to apply Composio Graph patch: {e}")
