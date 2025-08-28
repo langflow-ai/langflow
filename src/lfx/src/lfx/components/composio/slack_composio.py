@@ -1,6 +1,13 @@
 from typing import Any
 
-from composio.client.enums import Action
+try:
+    from composio.client.enums import Action
+except ImportError:
+    # Fallback for different composio versions or missing package
+    try:
+        from composio import Action
+    except ImportError:
+        Action = None
 
 from lfx.base.composio.composio_base import ComposioBaseComponent
 from lfx.inputs import BoolInput, IntInput, MessageTextInput
