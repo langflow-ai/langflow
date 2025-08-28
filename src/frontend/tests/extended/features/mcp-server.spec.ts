@@ -32,10 +32,14 @@ test(
     });
 
     for (const path of await page
+      .getByTestId("generic-node-title-arrangement")
       .getByTestId("icon-Mcp")
       .locator("path")
       .all()) {
-      expect(path).toHaveAttribute("fill", isDark ? "white" : "black");
+      const color = await path.evaluate(
+        (el) => window.getComputedStyle(el).fill,
+      );
+      expect(color).toBe(isDark ? "rgb(255, 255, 255)" : "rgb(0, 0, 0)");
     }
 
     await page.getByTestId("canvas_controls_dropdown").click();
