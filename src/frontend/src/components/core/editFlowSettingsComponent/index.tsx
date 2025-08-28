@@ -179,18 +179,32 @@ export const EditFlowSettings: React.FC<
         <Form.Message match="valueMissing" className="field-invalid">
           Please enter a description
         </Form.Message>
-        <div className="flex items-center gap-2 mt-3">
-          <ForwardedIconComponent
-            name={locked ? "Lock" : "Unlock"}
-            className="text-muted-foreground !w-5 !h-5"
-          />
-          <Form.Label className="text-mmd font-medium">Lock Flow</Form.Label>
-          <Switch
-            checked={!!locked}
-            onCheckedChange={(v) => setLocked?.(v)}
-            className="data-[state=checked]:bg-primary ml-auto"
-            data-testid="lock-flow-switch"
-          />
+        <div className="mt-3">
+          <div className="flex items-center gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <Form.Label className="text-mmd font-medium">
+                  Lock Flow
+                </Form.Label>
+
+                <ForwardedIconComponent
+                  name={locked ? "Lock" : "Unlock"}
+                  className="text-muted-foreground !w-5 !h-5"
+                />
+              </div>
+
+              <p className="text-xs text-muted-foreground/70 mt-1 font-normal">
+                Lock your flow to prevent edits or accidental changes.
+              </p>
+            </div>
+
+            <Switch
+              checked={!!locked}
+              onCheckedChange={(v) => setLocked?.(v)}
+              className="data-[state=checked]:bg-primary ml-auto"
+              data-testid="lock-flow-switch"
+            />
+          </div>
         </div>
       </Form.Field>
     </>
