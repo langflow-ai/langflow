@@ -8,8 +8,6 @@ import pytest
 from typing_extensions import TypedDict
 
 from lfx.custom.custom_component.component import Component
-from lfx.graph.graph.base import Graph
-from lfx.graph.vertex.base import Vertex
 from tests.constants import SUPPORTED_VERSIONS
 from tests.integration.utils import build_component_instance_for_tests
 
@@ -53,10 +51,13 @@ class ComponentTestBase:
         raise NotImplementedError(msg)
 
     async def component_setup(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> Component:
-        mock_vertex = Mock(spec=Vertex)
-        mock_vertex.graph = Mock(spec=Graph)
+        mock_vertex = Mock()
+        mock_vertex.id = str(uuid4())
+        mock_vertex.graph = Mock()
+        mock_vertex.graph.id = str(uuid4())
         mock_vertex.graph.session_id = str(uuid4())
         mock_vertex.graph.flow_id = str(uuid4())
+        mock_vertex.is_output = Mock(return_value=False)
         source_code = await asyncio.to_thread(inspect.getsource, component_class)
         component_instance = component_class(_code=source_code, **default_kwargs)
         component_instance._should_process_output = Mock(return_value=False)
