@@ -59,7 +59,7 @@ You can enable additional request options and fields in the component's paramete
 
 Returns a [`Data` object](/data-types#data) containing the response.
 
-For provider-specific API components, see [Bundles](/components-bundle-components).
+For provider-specific API components, see <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
 
 ### API Request parameters
 
@@ -235,7 +235,7 @@ The output of the **File** component depends on the number of files loaded and w
 The **News Search** component searches Google News through RSS, and then returns clean article data as a [`DataFrame`](/data-types#dataframe) containing article titles, links, publication dates, and summaries.
 The component's `clean_html` method parses the HTML content with the BeautifulSoup library, removes HTML markup, and strips whitespace to output clean data.
 
-For other RSS feeds, use the [**RSS Reader** component](#rss-reader), and for other searches use the [**Web Search** component](#web-search) or a provider-specific [bundle](/components-bundle-components).
+For other RSS feeds, use the [**RSS Reader** component](#rss-reader), and for other searches use the [**Web Search** component](#web-search) or provider-specific <Icon name="Blocks" aria-hidden="true" /> [**Bundles**].
 
 When used as a standard component in a flow, the **News Search** component must be connected to a component that accepts `DataFrame` input.
 You can connect the **News Search** component directly to a compatible component, or you can use a [**Processing** component](/components-processing) to convert or extract data of a different type between components.
@@ -448,12 +448,12 @@ The agent decides whether to use the **URL** component based on the user's query
 ## Web Search
 
 The **Web Search** component performs a basic web search using DuckDuckGo's HTML scraping interface.
-For other search APIs, see [Bundles](/components-bundle-components).
+For other search APIs, see <Icon name="Blocks" aria-hidden="true" /> [**Bundles**].
 
 :::important
 The **Web Search** component uses web scraping that can be subject to rate limits.
 
-For production use, consider using another search component with more robust API support, such as a provider-specific [bundle](/components-bundle-components).
+For production use, consider using another search component with more robust API support, such as provider-specific bundles.
 :::
 
 ### Use the Web Search component in a flow
@@ -562,6 +562,6 @@ Replace these components with the **File** component, which supports loading CSV
 
 ## See also
 
-- [Google components](/bundles-google)
-- [Composio components](/integrations-composio)
+- [**Google** bundle](/bundles-google)
+- [**Composio** bundle](/integrations-composio)
 - [File management](/concepts-file-management)
