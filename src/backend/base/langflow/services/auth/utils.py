@@ -282,7 +282,12 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
     if not settings_service.auth_settings.WEBHOOK_AUTH_ENABLE:
         # When webhook auth is disabled, run webhook as the flow owner without requiring API key
         try:
-            return await get_user_by_flow_id_or_endpoint_name(flow_id)
+            flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
+            if flow_owner is None:
+                raise HTTPException(status_code=404, detail="Flow not found")
+            return flow_owner  # noqa: TRY300
+        except HTTPException:
+            raise
         except Exception as exc:
             raise HTTPException(status_code=404, detail="Flow not found") from exc
 
@@ -318,6 +323,10 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
     # Get flow owner to check if authenticated user owns this flow
     try:
         flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
+        if flow_owner is None:
+            raise HTTPException(status_code=404, detail="Flow not found")
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=404, detail="Flow not found") from exc
 
