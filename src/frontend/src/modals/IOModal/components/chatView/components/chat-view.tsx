@@ -5,6 +5,7 @@ import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
 import CustomChatInput from "@/customization/components/custom-chat-input";
 import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
+import useCustomUseFileHandler from "@/customization/hooks/use-custom-use-file-handler";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -17,7 +18,6 @@ import type { ChatMessageType } from "../../../../../types/chat";
 import type { chatViewProps } from "../../../../../types/components";
 import FlowRunningSqueleton from "../../flow-running-squeleton";
 import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
-import { useFileHandler } from "../chatInput/hooks/use-file-handler";
 import ChatMessage from "../chatMessage/chat-message";
 
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
@@ -134,7 +134,7 @@ export default function ChatView({
       });
   }
 
-  const { files, setFiles, handleFiles } = useFileHandler(realFlowId);
+  const { files, setFiles, handleFiles } = useCustomUseFileHandler(realFlowId);
   const [isDragging, setIsDragging] = useState(false);
 
   const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
