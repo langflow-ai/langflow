@@ -175,7 +175,7 @@ export default function ChatView({
       onDragLeave={dragLeave}
       onDrop={onDrop}
       resize="smooth"
-      initial="smooth"
+      initial="instant"
       mass={1}
     >
       <StickToBottom.Content className="flex flex-col min-h-full">
