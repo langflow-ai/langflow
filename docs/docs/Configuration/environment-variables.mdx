@@ -16,12 +16,16 @@ You can set Langflow environment variables in your terminal, in `.env`, and with
 
 If an environment variable is set in multiple places, the following hierarchy applies:
 
-1. Langflow CLI options override `.env` and terminal variables.
-2. `.env` overrides terminal variables.
-3. Terminal variables are used only if the variable isn't set in `.env` or Langflow CLI options.
+1. Langflow CLI options override all other sources.
+2. The `.env` file overrides system environment variables.
+3. System environment variables are used only if not set elsewhere.
 
-For example, if you set `LANGFLOW_PORT` in `.env` and your terminal, then Langflow uses the value from `.env`.
-Similarly, if you run a Langflow CLI command with `--port`, Langflow uses that port number instead of the `LANGFLOW_PORT` in `.env`.
+    When running a Langflow Docker image, the `-e` flag sets system environment variables.
+
+For example:
+- If you set `LANGFLOW_PORT=8080` in your system environment and `LANGFLOW_PORT=7860` in `.env`, Langflow uses `7860` from `.env`.
+- If you run `langflow run --port 9000` with `LANGFLOW_PORT=7860` in `.env`, Langflow uses `9000` from the CLI option.
+
 
 ## Configure environment variables
 

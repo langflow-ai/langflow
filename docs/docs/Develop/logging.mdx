@@ -4,6 +4,8 @@ slug: /logging
 ---
 
 import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 This page provides information about Langflow logs, including logs for individual flows and the Langflow application itself.
 
@@ -94,6 +96,45 @@ When debugging issues with the format or content of a flow's output, it can help
 
 To view the output produced by a single component during the most recent run, click <Icon name="TextSearch" aria-hidden="true"/> **Inspect output** on the component in the visual editor.
 
+## Access Langflow Desktop logs {#desktop-logs}
+
+If you encounter issues with Langflow Desktop, you might need to access startup logs for debugging.
+Follow the steps for your operating system.
+
+<Tabs>
+<TabItem value="macos" label="macOS">
+
+1. Open Terminal and run:
+   ```bash
+   cd ~/Library/Logs/com.Langflow
+   ```
+
+2. To open the folder and view the log files, run the command:
+   ```bash
+   open .
+   ```
+
+3. Locate the `langflow.log` file.
+</TabItem>
+<TabItem value="windows" label="Windows">
+
+1. Open the Command Prompt (CMD), and then run the following command:
+   ```cmd
+   cd %LOCALAPPDATA%\com.langflow\logs
+   ```
+
+2. To open the folder and view the log files, run the command:
+   ```cmd
+   start .
+   ```
+
+3. Locate the `langflow.log` file.
+</TabItem>
+</Tabs>
+
+You can use the log file to investigate the issue on your own, add context to a [GitHub Issue](/contributing-github-issues), or send it to [support](/luna-for-langflow) for debugging assistance.
+
+The log file is only created when Langflow Desktop runs. If you don't see a log file, try starting Langflow Desktop first, then check for the log file.
 ## See also
 
 * [Memory management options](/memory)
