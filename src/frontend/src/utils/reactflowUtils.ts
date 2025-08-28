@@ -1871,6 +1871,12 @@ export function extractSecretFieldsFromComponents(data: APIObjectType) {
         return;
       }
 
+      
+      // Skip legacy components
+      if (data[key][kind].legacy === true) {
+        return;
+      }
+
       // Check if template exists
       if (!data[key][kind].template) {
         console.warn(
@@ -1920,7 +1926,6 @@ export function extractFieldsFromComponenents(data: APIObjectType) {
         );
         return;
       }
-
       // Check if template exists
       if (!data[key][kind].template) {
         console.warn(
