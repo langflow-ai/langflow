@@ -1829,13 +1829,13 @@ function isSecretField(fieldData: any): boolean {
   if (fieldData?.type === "SecretStr") {
     return true;
   }
-  
-  // Also check for fields that have both password=true and load_from_db=true 
+
+  // Also check for fields that have both password=true and load_from_db=true
   // which are characteristics of SecretStrInput fields
   if (fieldData?.password === true && fieldData?.load_from_db === true) {
     return true;
   }
-  
+
   return false;
 }
 
@@ -1847,7 +1847,9 @@ export function extractSecretFieldsFromComponents(data: APIObjectType) {
 
   // Check if data exists
   if (!data) {
-    console.warn("[Types] Data is undefined in extractSecretFieldsFromComponents");
+    console.warn(
+      "[Types] Data is undefined in extractSecretFieldsFromComponents",
+    );
     return fields;
   }
 
