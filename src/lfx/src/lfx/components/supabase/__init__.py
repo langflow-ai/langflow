@@ -6,15 +6,12 @@ from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from .supabase import SupabaseVectorStoreComponent
-    from .supabase_composio import SupabaseComposioComponent
 
 _dynamic_imports = {
     "SupabaseVectorStoreComponent": "supabase",
-    "SupabaseComposioComponent": "supabase_composio",
 }
 
 __all__ = [
-    "SupabaseComposioComponent",
     "SupabaseVectorStoreComponent",
 ]
 
