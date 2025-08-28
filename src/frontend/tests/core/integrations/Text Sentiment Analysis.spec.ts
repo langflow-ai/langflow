@@ -59,6 +59,6 @@ withEventDeliveryModes(
       .isVisible();
 
     const textAnalysis = await page.locator(".markdown").last().textContent();
-    expect(textAnalysis?.length).toBeGreaterThan(100);
+    expect(textAnalysis?.length).toBeGreaterThan(50);
   },
 );

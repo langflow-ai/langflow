@@ -4,8 +4,7 @@ import importlib
 import inspect
 from typing import TYPE_CHECKING
 
-from loguru import logger
-
+from langflow.logging.logger import logger
 from langflow.utils.concurrency import KeyedMemoryLockManager
 
 if TYPE_CHECKING:
@@ -92,11 +91,11 @@ class ServiceManager:
         for service in list(self.services.values()):
             if service is None:
                 continue
-            logger.debug(f"Teardown service {service.name}")
+            await logger.adebug(f"Teardown service {service.name}")
             try:
                 await service.teardown()
             except Exception as exc:  # noqa: BLE001
-                logger.exception(exc)
+                await logger.aexception(exc)
         self.services = {}
         self.factories = {}
 

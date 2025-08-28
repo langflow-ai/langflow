@@ -6,25 +6,17 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import pandas as pd
-from loguru import logger
 
 from langflow.interface.utils import extract_input_variables_from_prompt
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
-from langflow.services.database.models.transactions.crud import (
-    log_transaction as crud_log_transaction,
-)
-from langflow.services.database.models.transactions.crud import (
-    log_transactions_batch as crud_log_transactions_batch,
-)
+from langflow.services.database.models.transactions.crud import log_transaction as crud_log_transaction
+from langflow.services.database.models.transactions.crud import log_transactions_batch as crud_log_transactions_batch
 from langflow.services.database.models.transactions.model import TransactionBase
-from langflow.services.database.models.vertex_builds.crud import (
-    log_vertex_build as crud_log_vertex_build,
-)
-from langflow.services.database.models.vertex_builds.crud import (
-    log_vertex_builds_batch as crud_log_vertex_builds_batch,
-)
+from langflow.services.database.models.vertex_builds.crud import log_vertex_build as crud_log_vertex_build
+from langflow.services.database.models.vertex_builds.crud import log_vertex_builds_batch as crud_log_vertex_builds_batch
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service
@@ -191,9 +183,9 @@ async def log_transaction(
             with session.no_autoflush:
                 inserted = await crud_log_transaction(session, transaction)
                 if inserted:
-                    logger.debug(f"Logged transaction: {inserted.id}")
+                    await logger.adebug(f"Logged transaction: {inserted.id}")
     except Exception as exc:  # noqa: BLE001
-        logger.error(f"Error logging transaction: {exc!s}")
+        await logger.aerror(f"Error logging transaction: {exc!s}")
 
 
 async def flush_transaction_queue(transaction_queue: list[tuple[str | UUID, Any, str, Any | None, Any]]) -> None:
@@ -265,9 +257,9 @@ async def log_vertex_build(
         )
         async with session_getter(get_db_service()) as session:
             inserted = await crud_log_vertex_build(session, vertex_build)
-            logger.debug(f"Logged vertex build: {inserted.build_id}")
+            await logger.adebug(f"Logged vertex build: {inserted.build_id}")
     except Exception:  # noqa: BLE001
-        logger.exception("Error logging vertex build")
+        await logger.aexception("Error logging vertex build")
 
 
 def prepare_vertex_build(

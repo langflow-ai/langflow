@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from fastapi import HTTPException
-from loguru import logger
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import select
 
+from langflow.logging.logger import logger
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.deps import get_settings_service, session_scope

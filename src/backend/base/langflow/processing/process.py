@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-from loguru import logger
 from pydantic import BaseModel
 
 from langflow.graph.vertex.base import Vertex
+from langflow.logging.logger import logger
 from langflow.processing.utils import validate_and_repair_json
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
@@ -13,9 +13,9 @@ from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
+    from langflow.events.event_manager import EventManager
     from langflow.graph.graph.base import Graph
     from langflow.graph.schema import RunOutputs
-    from langflow.services.event_manager import EventManager
 
 
 class Result(BaseModel):
@@ -41,7 +41,7 @@ async def run_graph_internal(
     types = []
     for input_value_request in inputs:
         if input_value_request.input_value is None:
-            logger.warning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
+            await logger.awarning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
             input_value_request.input_value = ""
         components.append(input_value_request.components or [])
         inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
@@ -109,7 +109,7 @@ async def run_graph(
     types = []
     for input_value_request in inputs:
         if input_value_request.input_value is None:
-            logger.warning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
+            await logger.awarning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
             input_value_request.input_value = ""
         components.append(input_value_request.components or [])
         inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
@@ -150,6 +150,9 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
 
     for tweak_name, tweak_value in node_tweaks.items():
         if tweak_name not in template_data:
+            continue
+        if tweak_name == "code":
+            logger.warning("Security: Code field cannot be overridden via tweaks.")
             continue
         if tweak_name in template_data:
             if template_data[tweak_name]["type"] == "NestedDict":

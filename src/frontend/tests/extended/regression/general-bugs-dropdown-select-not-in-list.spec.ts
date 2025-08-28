@@ -24,8 +24,10 @@ test(
       .then(async () => {
         await page.getByTestId("add-component-button-openai").last().click();
       });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("dropdown_str_model_name").click();
     await page.getByTestId("dropdown_search_input").click();
@@ -48,8 +50,10 @@ test(
 
     await page.getByTestId("agentsAgent").hover();
     await page.getByTestId("add-component-button-agent").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("dropdown_str_model_name").click();
     await page.getByTestId("dropdown_search_input").click();
@@ -81,8 +85,10 @@ test(
     await page.getByText("Anthropic").click();
 
     await page.waitForTimeout(500);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("dropdown_str_model_name").click();
     await page.getByTestId("dropdown_search_input").click();
@@ -103,8 +109,10 @@ test(
     await page.getByText("Groq").click();
 
     await page.waitForTimeout(500);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("dropdown_str_model_name").click();
     await page.getByTestId("dropdown_search_input").click();
