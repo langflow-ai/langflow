@@ -94,17 +94,14 @@ For a multi-agent example, see [Use an agent as a tool](/agents-tools#use-an-age
 
 You can configure the **Agent** component to use your preferred provider and model, custom instructions, and tools.
 
-:::tip
 Many optional **Agent** component input parameters are hidden by default in the visual editor.
 You can access all component parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
-:::
-
 ### Provider and model
 
 Use the **Model Provider** (`agent_llm`) and **Model Name** (`llm_model`) settings to select the model provider and LLM that you want the agent to use.
 
 The **Agent** component includes many models from several popular model providers.
-To access other providers and models, set **Model Provider** to **Custom**, and then connect any [**Language Model** component](/components-models).
+To access other providers and models, set **Model Provider** to <Icon name="Plus" aria-hidden="true"/> **Connect Other Models**, and then connect any [**Language Model** component](/components-models).
 
 If you need to generate embeddings in your flow, use an [**Embedding Model** component](/components-embedding-models).
 
@@ -117,7 +114,7 @@ You can enter the key directly, but it is recommended that you follow industry b
 For example, you can use a <Icon name="Globe" aria-hidden="true"/> [global variable](/configuration-global-variables) or [environment variables](/environment-variables).
 For more information, see [Add component API keys to Langflow](/api-keys-and-authentication#component-api-keys).
 
-If you select **Custom** as the model provider, authentication is handled in the incoming **Language Model** component.
+If you select <Icon name="Plus" aria-hidden="true"/> **Connect Other Models** as the model provider, authentication is handled in the incoming **Language Model** component.
 
 ### Agent instructions and input
 
@@ -162,15 +159,99 @@ Some additional input parameters include the following:
 * **Current Date** (`add_current_date_tool`): When enabled (true), this setting adds a tool to the agent that can retrieve the current date.
 * **Handle Parse Errors** (`handle_parsing_errors`): When enabled (true), this setting allows the agent to fix errors, like typos, when analyzing user input.
 * **Verbose** (`verbose`): When enabled (true), this setting records detailed logging output for debugging and analysis.
+* **Output Format Instructions** (`format_instructions`): System message that guides the agent's LLM's approach to data extraction and JSON formatting. Works with the **Output Schema** to ensure consistent, properly structured responses. Valid only with the **Structured Response** [output type](#agent-component-output).
+* **Output Schema** (`output_schema`): Schema validation table that defines the structure and data types for structured output. The LLM uses this schema along with the format instructions to validate and structure its JSON responses. No validation occurs if no output schema is provided. Valid only with the **Structured Response** [output type](#agent-component-output).
 
 To view and configure all parameters, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
-## Agent component output
+## Agent component output {#agent-component-output}
 
-The **Agent** component outputs a **Response** (`response`) that is [`Message` data](/data-types#message) containing the agent's raw response to the query.
+The **Agent** component has two output modes: **Response** and **Structured Output**.
+You can set the output type near the component's output port.
+
+### Response output
+
+The **Response** (`response`) output is a [`Message`](/data-types#message) containing the agent's raw response to the query.
 
 Typically, this is passed to a **Chat Output** component to return the response in a human-readable format.
 It can also be passed to other components if you need to process the response further before, or in addition to, returning it to the user.
+
+## Structured Response output
+
+The **Structured Response** (`structured_response`) output is [`Data`](/data-types#data) containing a validated JSON representation of the agent's response.
+
+This output attempts to parse the agent's response as JSON and returns it as structured data:
+* If the response contains valid JSON, it is returned as-is.
+* If the response contains JSON embedded within text, the component attempts to extract and parse the JSON portion of the response.
+* If no valid JSON is found, the output returns the raw content with an error indicator `Try setting an output schema`.
+* When **Output Schema** is configured, the agent's LLM uses the schema along with **Output Format Instructions** to validate and structure its JSON responses.
+
+This structured response can be used to further use an Agent's response in downstream applications.
+
+### Structured output example
+
+The **Agent** component supports advanced structured output configurations with the **Output Format Instructions** and **Output Schema** fields.
+When configured together, the agent's LLM uses the format instructions to guide its extraction approach, then validates the output against the schema defined in **Output Schema**.
+To configure advanced structured output, do the following:
+
+1. In the **Agent** component, select **Structured Response** as the output mode.
+2. In the **Agent** component, click the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+3. Enable **Output Format Instructions** and **Output Schema**, and then click **Close**.
+Two new fields are available:
+    * **Output Format Instructions** contains default instructions for the LLM to guide the output extraction.
+    * **Output Schema** defines the structure and data types for structured output that the LLM uses to validate and structure its JSON responses.
+4. In the **Output Format Instructions** field, you can use the default prompt for this example.
+
+    <details>
+    <summary>Default format instructions</summary>
+    ```text
+    You are an AI that extracts structured JSON objects from unstructured text.
+    Use a predefined schema with expected types (str, int, float, bool, dict).
+    Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all.
+    Fill missing or ambiguous values with defaults: null for missing values.
+    Remove exact duplicates but keep variations that have different field values.
+    Always return valid JSON in the expected format, never throw errors.
+    If multiple objects can be extracted, return them all in the structured format.
+    ```
+    </details>
+5. In the **Output Schema**, create a table with the following values.
+This example configures the agent to extract structured data about tasks and requirements from chat messages.
+
+    ```json
+    {
+      "task_description": "str (As List: True)",
+      "deadline": "str (As List: True)",
+      "priority": "str (As List: True)"
+    }
+    ```
+    Enabling `"str (As List: True)",` for a field allows the schema to extract multiple values for that field and return them as an array.
+
+6. Send a chat message to the agent.
+
+    ```text
+    John needs to take the task to review the marketing materials by EOD, and Sarah should prepare the presentation slides for tomorrow's meeting.
+    Both tasks are very important.
+    ```
+
+7. Open the **Playground** to inspect the output.
+The LLM correctly extracts and formats the contextual data based on the **Output Format Instructions** and the structure defined in **Output Schema**.
+
+    ```json
+    {
+      "task_description": [
+        "John needs to take the task to review the marketing materials",
+        "Sarah should prepare the presentation slides for tomorrow's meeting"
+      ],
+      "deadline": [
+        "EOD",
+        "tomorrow"
+      ],
+      "priority": [
+        "very important",
+        "very important"
+      ]
+    }
+    ```
 
 ## See also
 
