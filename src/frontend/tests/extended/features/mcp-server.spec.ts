@@ -296,7 +296,7 @@ test(
 
     await page.getByTestId(`mcp${testName}`).click({ button: "right" });
 
-    await page.getByTestId("mcp-server-menu-delete").click();
+    await page.getByTestId("draggable-component-menu-delete").click();
 
     await expect(
       page.locator('[data-testid="display-name"]', { hasText: testName }),
