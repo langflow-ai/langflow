@@ -144,6 +144,8 @@ class DataFrame(pandas_DataFrame):
         """
         return not self.empty
 
+    __hash__ = None  # DataFrames are mutable and shouldn't be hashable
+
     def to_lc_documents(self) -> list[Document]:
         """Converts the DataFrame to a list of Documents.
 
