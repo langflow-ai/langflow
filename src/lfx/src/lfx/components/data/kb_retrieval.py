@@ -4,12 +4,12 @@ from typing import Any
 
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
-from pydantic import SecretStr
-
 from langflow.base.data.kb_utils import get_knowledge_bases
 from langflow.services.auth.utils import decrypt_api_key
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import session_scope
+from pydantic import SecretStr
+
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from lfx.logs.logger import logger

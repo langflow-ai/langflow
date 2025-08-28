@@ -7,6 +7,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from lfx.logs.logger import logger
 
 from langflow.api.v1.endpoints import consume_and_yield, run_flow_generator, simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
@@ -26,7 +27,6 @@ from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_telemetry_service
 from langflow.services.telemetry.schema import RunPayload
 from langflow.services.telemetry.service import TelemetryService
-from lfx.logs.logger import logger
 
 router = APIRouter(tags=["OpenAI Responses API"])
 
