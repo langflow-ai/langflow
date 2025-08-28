@@ -20,7 +20,14 @@ For information about specific Composio functionality, see the [Composio documen
 
 Composio components require authentication to Composio with a Composio API key.
 `COMPOSIO_API_KEY` is a [default global variable](/configuration-global-variables) that can be auto-detected by Langflow from your `.env` file.
-Depending on the components you use, you may need additional API keys, such as an OpenAI, Google, or GitHub.
+
+Once you're authenticated with Composio, you must authenticate with the individual services, such as Gmail, through the Composio platform.
+This is a two-step process:
+
+* **Composio Authentication**: Use your Composio API key to connect Langflow to the Composio platform.
+* **Service Authentication**: Authenticate with the specific service through Composio's interface.
+
+The Composio API key handles the connection to Composio, while the individual service authentication is managed through Composio's platform for each service you want to use.
 
 For information about specific Composio functionality, see the [Composio documentation](https://docs.composio.dev/introduction/intro/overview).
 
@@ -28,17 +35,17 @@ For information about specific Composio functionality, see the [Composio documen
 
 This example demonstrates how to use the Composio **Gmail** component as a tool for an **Agent** component.
 This allows the agent to use Composio Gmail functionality, if necessary, when generating responses.
-You can connect other Composio components in the same way, but you might need to provide service-specific Composio API keys.
+You can connect other Composio components in the same way.
 
 1. In Langflow, create a flow based on the **Simple Agent** template.
-
 2. Add a Composio **Gmail** component to the flow.
 3. In the **Composio API Key** field, enter your Composio API key, or select the `COMPOSIO_API_KEY` [global variable](/configuration-global-variables).
-4. In the Composio **Gmail** component, enable **Tool Mode**.
-5. Connect the **Agent** component's **Tools** port to the Composio **Gmail** component's **Tools** port.
-6. In the **Agent** component, enter your OpenAI API key or configure the **Agent** component to use a different LLM.
-
+4. To authenticate your key and connect Langflow to Composio, click <Icon name="Unlink" aria-hidden="true"/> **Connect**.
+A successful connection will turn the icon green.
+5. In the Composio **Gmail** component, enable **Tool Mode**.
 The **Actions** field populates with the actions available to the Agent, which it will choose from based on your request.
+6. Connect the **Agent** component's **Tools** port to the Composio **Gmail** component's **Tools** port.
+7. In the **Agent** component, enter your OpenAI API key or configure the **Agent** component to use a different LLM.
 
     At this point your flow has four connected components:
 
@@ -48,7 +55,7 @@ The **Actions** field populates with the actions available to the Agent, which i
 
     ![Simple Agent flow with a Composio Tools component](/img/composio/composio-create-flow.png)
 
-7. To test the connection to Composio, click **Playground**, and then ask the LLM about the tools available to it.
+8. To test the connection to Composio, click **Playground**, and then ask the LLM about the tools available to it.
 The agent should provide a list of connected tools, including the **Gmail** tool and the built-in tools in the **Agent** component.
 
     ```text
@@ -72,7 +79,7 @@ The agent should provide a list of connected tools, including the **Gmail** tool
     If you have a specific task in mind, let me know and I can tell you which tool I would use or demonstrate how I can help!
     ```
 
-8. To test a specific tool or function, tell the agent to perform an action like writing a draft email:
+9. To test a specific tool or function, tell the agent to perform an action like writing a draft email:
 
     ```text
     Create a draft email with the subject line "Greetings from Composio"
@@ -114,9 +121,9 @@ The agent should provide a list of connected tools, including the **Gmail** tool
     }
     ```
 
-9. For further confirmation, go to your Gmail account and find the message in your drafts folder.
+10. For further confirmation, go to your Gmail account and find the message in your drafts folder.
 
-10. Optional: To add more Composio tools, add more Composio components to your flow, enable **Tool Mode**, and then connect them to the **Agent** component's **Tools** port.
+11. Optional: To add more Composio tools, add more Composio components to your flow, enable **Tool Mode**, and then connect them to the **Agent** component's **Tools** port.
 
 ### Composio parameters
 
