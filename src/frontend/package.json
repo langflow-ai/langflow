@@ -82,6 +82,7 @@
     "sortablejs": "^1.15.6",
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",
+    "use-stick-to-bottom": "^1.1.1",
     "uuid": "^10.0.0",
     "vanilla-jsoneditor": "^2.3.3",
     "vite-plugin-svgr": "^4.2.0",
