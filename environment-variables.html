@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.40667d1b.css">
-<script src="/assets/js/runtime~main.77c6ff16.js" defer="defer"></script>
-<script src="/assets/js/main.6b3faa68.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.7d65fbc1.js" defer="defer"></script>
+<script src="/assets/js/main.14a877c9.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -55,12 +55,22 @@ You can also import environment variables for use in your deployment, such as en
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="precedence">Precedence<a href="#precedence" class="hash-link" aria-label="Direct link to Precedence" title="Direct link to Precedence">​</a></h2>
 <p>If an environment variable is set in multiple places, the following hierarchy applies:</p>
 <ol>
-<li>Langflow CLI options override <code>.env</code> and terminal variables.</li>
-<li><code>.env</code> overrides terminal variables.</li>
-<li>Terminal variables are used only if the variable isn&#x27;t set in <code>.env</code> or Langflow CLI options.</li>
+<li>
+<p>Langflow CLI options override all other sources.</p>
+</li>
+<li>
+<p>The <code>.env</code> file overrides system environment variables.</p>
+</li>
+<li>
+<p>System environment variables are used only if not set elsewhere.</p>
+<p>When running a Langflow Docker image, the <code>-e</code> flag sets system environment variables.</p>
+</li>
 </ol>
-<p>For example, if you set <code>LANGFLOW_PORT</code> in <code>.env</code> and your terminal, then Langflow uses the value from <code>.env</code>.
-Similarly, if you run a Langflow CLI command with <code>--port</code>, Langflow uses that port number instead of the <code>LANGFLOW_PORT</code> in <code>.env</code>.</p>
+<p>For example:</p>
+<ul>
+<li>If you set <code>LANGFLOW_PORT=8080</code> in your system environment and <code>LANGFLOW_PORT=7860</code> in <code>.env</code>, Langflow uses <code>7860</code> from <code>.env</code>.</li>
+<li>If you run <code>langflow run --port 9000</code> with <code>LANGFLOW_PORT=7860</code> in <code>.env</code>, Langflow uses <code>9000</code> from the CLI option.</li>
+</ul>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="configure-environment-variables">Configure environment variables<a href="#configure-environment-variables" class="hash-link" aria-label="Direct link to Configure environment variables" title="Direct link to Configure environment variables">​</a></h2>
 <p>Langflow recognizes <a href="#supported-variables">supported environment variables</a> from the following sources:</p>
 <ul>

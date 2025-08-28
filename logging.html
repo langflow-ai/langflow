@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.40667d1b.css">
-<script src="/assets/js/runtime~main.77c6ff16.js" defer="defer"></script>
-<script src="/assets/js/main.6b3faa68.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.7d65fbc1.js" defer="defer"></script>
+<script src="/assets/js/main.14a877c9.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -110,11 +110,41 @@ For more information, see <a href="/concepts-playground#view-chat-history">View 
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="view-output-from-a-single-component">View output from a single component<a href="#view-output-from-a-single-component" class="hash-link" aria-label="Direct link to View output from a single component" title="Direct link to View output from a single component">​</a></h3>
 <p>When debugging issues with the format or content of a flow&#x27;s output, it can help to inspect each component&#x27;s output to determine where data is being lost or malformed.</p>
 <p>To view the output produced by a single component during the most recent run, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-text-search" aria-hidden="true"><path d="M21 6H3"></path><path d="M10 12H3"></path><path d="M10 18H3"></path><circle cx="17" cy="15" r="3"></circle><path d="m21 19-1.9-1.9"></path></svg> <strong>Inspect output</strong> on the component in the visual editor.</p>
+<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="desktop-logs">Access Langflow Desktop logs<a href="#desktop-logs" class="hash-link" aria-label="Direct link to Access Langflow Desktop logs" title="Direct link to Access Langflow Desktop logs">​</a></h2>
+<p>If you encounter issues with Langflow Desktop, you might need to access startup logs for debugging.
+Follow the steps for your operating system.</p>
+<div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">macOS</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Windows</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><ol>
+<li>
+<p>Open Terminal and run:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>cd ~/Library/Logs/com.Langflow</span></div></div><br></code></div></div>
+</li>
+<li>
+<p>To open the folder and view the log files, run the command:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>open .</span></div></div><br></code></div></div>
+</li>
+<li>
+<p>Locate the <code>langflow.log</code> file.</p>
+</li>
+</ol></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><ol>
+<li>
+<p>Open the Command Prompt (CMD), and then run the following command:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>cd %LOCALAPPDATA%\com.langflow\logs</span></div></div><br></code></div></div>
+</li>
+<li>
+<p>To open the folder and view the log files, run the command:</p>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>start .</span></div></div><br></code></div></div>
+</li>
+<li>
+<p>Locate the <code>langflow.log</code> file.</p>
+</li>
+</ol></div></div></div>
+<p>You can use the log file to investigate the issue on your own, add context to a <a href="/contributing-github-issues">GitHub Issue</a>, or send it to <a href="/luna-for-langflow">support</a> for debugging assistance.</p>
+<p>The log file is only created when Langflow Desktop runs. If you don&#x27;t see a log file, try starting Langflow Desktop first, then check for the log file.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="see-also">See also<a href="#see-also" class="hash-link" aria-label="Direct link to See also" title="Direct link to See also">​</a></h2>
 <ul>
 <li><a href="/memory">Memory management options</a></li>
 <li><a href="/configuration-custom-database">Configure an external PostgreSQL database</a></li>
-</ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/enterprise-database-guide"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Database guide for enterprise administrators</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/integrations-arize"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Arize</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#log-storage" class="table-of-contents__link toc-highlight">Log storage</a></li><li><a href="#configure-log-options" class="table-of-contents__link toc-highlight">Configure log options</a></li><li><a href="#flow-and-component-logs" class="table-of-contents__link toc-highlight">Flow and component logs</a><ul><li><a href="#view-flow-logs" class="table-of-contents__link toc-highlight">View flow logs</a></li><li><a href="#view-chat-logs" class="table-of-contents__link toc-highlight">View chat logs</a></li><li><a href="#view-output-from-a-single-component" class="table-of-contents__link toc-highlight">View output from a single component</a></li></ul></li><li><a href="#see-also" class="table-of-contents__link toc-highlight">See also</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
+</ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/enterprise-database-guide"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Database guide for enterprise administrators</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/integrations-arize"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Arize</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#log-storage" class="table-of-contents__link toc-highlight">Log storage</a></li><li><a href="#configure-log-options" class="table-of-contents__link toc-highlight">Configure log options</a></li><li><a href="#flow-and-component-logs" class="table-of-contents__link toc-highlight">Flow and component logs</a><ul><li><a href="#view-flow-logs" class="table-of-contents__link toc-highlight">View flow logs</a></li><li><a href="#view-chat-logs" class="table-of-contents__link toc-highlight">View chat logs</a></li><li><a href="#view-output-from-a-single-component" class="table-of-contents__link toc-highlight">View output from a single component</a></li></ul></li><li><a href="#desktop-logs" class="table-of-contents__link toc-highlight">Access Langflow Desktop logs</a></li><li><a href="#see-also" class="table-of-contents__link toc-highlight">See also</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2025 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="https://langflow.org/preferences">Manage Privacy Choices</a></span>
                   </div></li></ul></div></div></div></footer><div style="position:fixed;right:21px;bottom:21px;z-index:100;display:flex;align-items:center;gap:10px;cursor:pointer"><div style="background-color:#f6f6f6;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1)"><img src="/img/langflow-icon-black-transparent.svg" style="width:40px" alt="Search"></div></div></div>
