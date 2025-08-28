@@ -168,7 +168,13 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     project_id: projectId,
   });
 
-  const { data: installedMCP } = useGetInstalledMCP({ projectId });
+  const { data: installedMCPData } = useGetInstalledMCP({ projectId });
+
+  // Extract installed client names for backward compatibility
+  const installedMCP =
+    installedMCPData
+      ?.filter((client) => client.installed)
+      .map((client) => client.name) || [];
 
   const [selectedPlatform, setSelectedPlatform] = useState(
     operatingSystemTabs.find((tab) => tab.name.includes(getOS() || "windows"))
@@ -284,8 +290,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         selectedPlatform === "windows"
           ? "cmd"
           : selectedPlatform === "wsl"
-            ? "wsl"
-            : "uvx"
+          ? "wsl"
+          : "uvx"
       }",
       "args": [
         ${
@@ -294,9 +300,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "uvx",
         `
             : selectedPlatform === "wsl"
-              ? `"uvx",
+            ? `"uvx",
         `
-              : ""
+            : ""
         }"mcp-proxy",${getAuthHeaders()}
         "${apiUrl}"
       ]
@@ -530,7 +536,11 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                   variant="ghost"
                   className="group flex items-center justify-between disabled:text-foreground disabled:opacity-50"
                   disabled={
-                    loadingMCP.includes(installer.name) || !isLocalConnection
+                    loadingMCP.includes(installer.name) ||
+                    !isLocalConnection ||
+                    !installedMCPData?.find(
+                      (client) => client.name === installer.name,
+                    )?.available
                   }
                   onClick={() => {
                     setLoadingMCP([...loadingMCP, installer.name]);
@@ -578,8 +588,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                         installedMCP?.includes(installer.name)
                           ? "Check"
                           : loadingMCP.includes(installer.name)
-                            ? "Loader2"
-                            : "Plus"
+                          ? "Loader2"
+                          : "Plus"
                       }
                       className={cn(
                         "h-4 w-4 absolute top-0 left-0 opacity-100",
