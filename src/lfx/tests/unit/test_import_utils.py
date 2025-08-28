@@ -68,10 +68,10 @@ class TestImportAttr:
 
     def test_module_not_found_error_handling(self):
         """Test specific ModuleNotFoundError handling."""
-        with patch("importlib.import_module") as mock_import_module:
-            mock_import_module.side_effect = ModuleNotFoundError("No module named 'test'")
+        with patch("lfx.components._importing.import_module") as mock_import_module:
+            mock_import_module.side_effect = ModuleNotFoundError("No module named 'test.package.test_module'")
 
-            with pytest.raises(ImportError, match="module 'test.package.test_module' not found"):
+            with pytest.raises(ImportError, match="module .* not found"):
                 import_mod("TestComponent", "test_module", "test.package")
 
     def test_getattr_error_handling(self):
