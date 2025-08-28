@@ -37,7 +37,6 @@ from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderRead
-from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import get_settings_service, get_storage_service, get_variable_service, session_scope
 from langflow.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from langflow.utils.util import escape_json_dump
@@ -736,6 +735,7 @@ async def load_flows_from_directory() -> None:
     async with session_scope() as session:
         # Find superuser by role instead of username to avoid issues with credential reset
         from langflow.services.database.models.user.model import User
+
         stmt = select(User).where(User.is_superuser == True)  # noqa: E712
         result = await session.exec(stmt)
         user = result.first()
@@ -797,6 +797,7 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
     async with session_scope() as session:
         # Find superuser by role instead of username to avoid issues with credential reset
         from langflow.services.database.models.user.model import User
+
         stmt = select(User).where(User.is_superuser == True)  # noqa: E712
         result = await session.exec(stmt)
         user = result.first()
@@ -818,10 +819,7 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
                 for filename in zfile.namelist():
                     path = Path(filename)
                     for dir_name in dir_names:
-                        if (
-                            path.is_relative_to(f"{dir_name}flows/")
-                            and path.suffix == ".json"
-                        ):
+                        if path.is_relative_to(f"{dir_name}flows/") and path.suffix == ".json":
                             file_content = zfile.read(filename)
                             await upsert_flow_from_file(file_content, path.stem, session, user_id)
                         elif path.is_relative_to(f"{dir_name}components/"):
