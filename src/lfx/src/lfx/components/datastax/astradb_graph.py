@@ -1,7 +1,6 @@
 import os
 
 import orjson
-from astrapy.admin import parse_api_endpoint
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
@@ -174,6 +173,7 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
     @check_cached_vector_store
     def build_vector_store(self):
         try:
+            from astrapy.admin import parse_api_endpoint
             from langchain_astradb import AstraDBGraphVectorStore
             from langchain_astradb.utils.astradb import SetupMode
         except ImportError as e:
@@ -195,6 +195,17 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
         try:
             self.log(f"Initializing Graph Vector Store {self.collection_name}")
 
+            # Handle environment parsing with try-except to avoid circular import
+            environment = None
+            if self.api_endpoint:
+                try:
+                    from astrapy.admin import parse_api_endpoint
+
+                    environment = parse_api_endpoint(self.api_endpoint).environment
+                except ImportError:
+                    self.log("Warning: Could not import parse_api_endpoint, using None for environment")
+                    environment = None
+
             vector_store = AstraDBGraphVectorStore(
                 embedding=self.embedding_model,
                 collection_name=self.collection_name,
@@ -202,7 +213,7 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
                 token=self.token,
                 api_endpoint=self.api_endpoint,
                 namespace=self.keyspace or None,
-                environment=parse_api_endpoint(self.api_endpoint).environment if self.api_endpoint else None,
+                environment=environment,
                 metric=self.metric or None,
                 batch_size=self.batch_size or None,
                 bulk_insert_batch_concurrency=self.bulk_insert_batch_concurrency or None,
