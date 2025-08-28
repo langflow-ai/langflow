@@ -592,7 +592,8 @@ async def install_mcp_config(
         if not config_path.parent.exists():
             raise HTTPException(
                 status_code=400,
-                detail=f"{body.client.capitalize()} is not installed on this system. Please install {body.client.capitalize()} first.",
+                detail=f"{body.client.capitalize()} is not installed on this system. "
+                f"Please install {body.client.capitalize()} first.",
             )
 
         # Create parent directories if they don't exist
