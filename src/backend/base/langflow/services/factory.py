@@ -3,8 +3,8 @@ import inspect
 from typing import TYPE_CHECKING, get_type_hints
 
 from cachetools import LRUCache, cached
-from loguru import logger
 
+from langflow.logging.logger import logger
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:

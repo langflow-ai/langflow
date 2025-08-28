@@ -1,7 +1,6 @@
-from loguru import logger
-
 from langflow.custom.custom_component.component import Component
 from langflow.io import DataInput, Output
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 
 
