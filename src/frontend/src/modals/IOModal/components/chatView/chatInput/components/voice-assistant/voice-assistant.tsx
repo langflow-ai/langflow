@@ -300,6 +300,10 @@ export function VoiceAssistant({
   const handleCloseAudioInput = () => {
     setIsRecording(false);
     stopRecording();
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
     setShowAudioInput(false);
     scrollToBottom();
   };
