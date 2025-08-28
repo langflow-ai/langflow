@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any
 
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from lfx.log.logger import logger
+from lfx.schema.data import Data
 from openinference.semconv.trace import OpenInferenceMimeTypeValues, SpanAttributes
 from opentelemetry.semconv.trace import SpanAttributes as OTELSpanAttributes
 from opentelemetry.trace import Span, Status, StatusCode, use_span
@@ -18,19 +20,17 @@ from typing_extensions import override
 
 from langflow.schema.message import Message
 from langflow.services.tracing.base import BaseTracer
-from lfx.log.logger import logger
-from lfx.schema.data import Data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
+    from lfx.graph.vertex.base import Vertex
     from opentelemetry.propagators.textmap import CarrierT
     from opentelemetry.util.types import AttributeValue
 
     from langflow.services.tracing.schema import Log
-    from lfx.graph.vertex.base import Vertex
 
 
 class ArizePhoenixTracer(BaseTracer):
