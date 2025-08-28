@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { memo, type ReactNode, useCallback, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -12,6 +13,7 @@ import {
   useGetFlowsMCP,
   usePatchFlowsMCP,
 } from "@/controllers/API/queries/mcp";
+import { useGetProjectComposerUrl } from "@/controllers/API/queries/mcp/use-get-composer-url";
 import { useGetInstalledMCP } from "@/controllers/API/queries/mcp/use-get-installed-mcp";
 import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
@@ -156,13 +158,26 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const queryClient = useQueryClient();
 
   const { data: mcpProjectData } = useGetFlowsMCP({ projectId });
-  const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
+  const { mutate: patchFlowsMCP, isPending: isPatchingFlowsMCP } =
+    usePatchFlowsMCP({ project_id: projectId });
 
   // Extract tools and auth_settings from the response
   const flowsMCP = mcpProjectData?.tools || [];
   const currentAuthSettings = mcpProjectData?.auth_settings;
+
+  // Only get composer URL for OAuth projects
+  // Disable the query during mutations to prevent stale auth state issues
+  const isOAuthProject = currentAuthSettings?.auth_type === "oauth";
+  const shouldQueryComposerUrl = isOAuthProject && !isPatchingFlowsMCP;
+  const { data: composerUrlData } = useGetProjectComposerUrl(
+    {
+      projectId,
+    },
+    { enabled: !!projectId && shouldQueryComposerUrl },
+  );
 
   const { mutate: patchInstallMCP } = usePatchInstallMCP({
     project_id: projectId,
@@ -246,9 +261,14 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     },
   };
 
-  const apiUrl = customGetMCPUrl(projectId);
+  // Use the per-project MCP Composer SSE URL if available, otherwise fallback to direct SSE
+  const apiUrl = customGetMCPUrl(
+    projectId,
+    ENABLE_MCP_COMPOSER && !!composerUrlData?.sse_url,
+    composerUrlData?.sse_url,
+  );
 
-  // Generate auth headers based on the authentication type
+  // Generate auth headers based on authentication type
   const getAuthHeaders = () => {
     // If MCP auth is disabled, use the previous API key behavior
     if (!ENABLE_MCP_COMPOSER) {
@@ -369,7 +389,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               content="Flows in this project can be exposed as callable MCP tools."
               side="right"
             >
-              <div className="flex items-center text-mmd font-medium hover:cursor-help">
+              <div className="flex items-center text-sm font-medium hover:cursor-help">
                 Flows/Tools
                 <ForwardedIconComponent
                   name="info"
@@ -396,8 +416,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         <div className="flex flex-1 flex-col gap-4 overflow-hidden">
           {ENABLE_MCP_COMPOSER && (
             <div className="flex justify-between">
-              <span className="flex gap-2 items-center">
-                Auth:
+              <span className="flex gap-2 items-center text-sm cursor-default">
+                <span className=" font-medium">Auth:</span>
                 {!hasAuthentication ? (
                   <span className="text-accent-amber-foreground flex gap-2 text-mmd items-center">
                     <ForwardedIconComponent
@@ -407,20 +427,40 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                     None (public)
                   </span>
                 ) : (
-                  <span className="text-accent-emerald-foreground flex gap-2 text-mmd items-center">
-                    <ForwardedIconComponent
-                      name="Check"
-                      className="h-4 w-4 shrink-0"
-                    />
-                    {AUTH_METHODS[
-                      currentAuthSettings.auth_type as keyof typeof AUTH_METHODS
-                    ]?.label || currentAuthSettings.auth_type}
-                  </span>
+                  <ShadTooltip
+                    content={
+                      (composerUrlData?.port_available ?? true)
+                        ? undefined
+                        : `MCP Server is not running: port ${composerUrlData?.port} on ${composerUrlData?.host} is not available. Please check your settings and try again.`
+                    }
+                  >
+                    <span
+                      className={cn(
+                        "flex gap-2 text-mmd items-center",
+                        (composerUrlData?.port_available ?? true)
+                          ? "text-accent-emerald-foreground"
+                          : "text-accent-amber-foreground",
+                      )}
+                    >
+                      <ForwardedIconComponent
+                        name={
+                          (composerUrlData?.port_available ?? true)
+                            ? "Check"
+                            : "AlertTriangle"
+                        }
+                        className="h-4 w-4 shrink-0"
+                      />
+                      {AUTH_METHODS[
+                        currentAuthSettings.auth_type as keyof typeof AUTH_METHODS
+                      ]?.label || currentAuthSettings.auth_type}
+                    </span>
+                  </ShadTooltip>
                 )}
               </span>
               <Button
                 variant="outline"
                 size="sm"
+                className="!text-mmd !font-normal"
                 onClick={() => setAuthModalOpen(true)}
               >
                 <ForwardedIconComponent
