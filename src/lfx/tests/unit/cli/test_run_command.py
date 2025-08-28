@@ -37,7 +37,7 @@ from pathlib import Path
 
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.schema.graph import Graph
-from lfx.lfx_logging.logger import LogConfig
+from lfx.logs.logger import LogConfig
 
 log_config = LogConfig(
     log_level="INFO",
