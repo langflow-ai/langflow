@@ -8,6 +8,8 @@ import Icon from "@site/src/components/icon";
 Bundles contain custom components that support specific third-party integrations with Langflow.
 You add them to your flows and configure them in the same way as Langflow's core components.
 
+To browse bundles, click <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the visual editor.
+
 ## Bundle maintenance and documentation
 
 Many bundled components are developed by third-party contributors to the Langflow codebase.
@@ -35,17 +37,14 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 
 :::tip
 The Langflow documentation doesn't list all bundles or components in bundles.
-For the most accurate and up-to-date list of bundles and components for your version of Langflow, check the **Components** menu in Langflow.
+For the most accurate and up-to-date list of bundles and components for your version of Langflow, check <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the visual editor.
 
 If you can't find a component that you used in an earlier version of Langflow, it may have been removed or marked as a [legacy component](#legacy-components).
 :::
 
-Langflow offers core components in addition to third-party, provider-specific bundles.
+Langflow offers generic <Icon name="Component" aria-hidden="true" /> **Core components** in addition to third-party, provider-specific bundles.
 
-Core components are meant to support a wide range of use cases and typically aren't tied to a specific provider.
-Exceptions include the [**Embedding Model** core component](/components-embedding-models), [**Language Model** core component](/components-models), and [**Vector Store** components](/components-vector-stores), which are integrated with one or more specific providers.
-
-If you are looking for a specific service or integration, try searching the **Components** menu or browsing both the core components and bundles.
+If you are looking for a specific service or integration, you can <Icon name="Search" aria-hidden="true" /> **Search** components in the visual editor.
 
 If all else fails, you can always create your own [custom components](/components-custom-components).
 
@@ -56,7 +55,7 @@ Legacy components are no longer maintained and can be removed in a future releas
 You can still use them in your flows, but you should replace them with non-legacy components as soon as possible.
 Components marked `[DEPRECATED]` should be replaced immediately.
 
-In the **Components** menu, you must enable the **Legacy components** toggle to view legacy components.
+In the visual editor, click <Icon name="SlidersHorizontal" aria-hidden="true" /> **Component settings** to expose legacy components.
 
 ## See also
 

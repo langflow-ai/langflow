@@ -121,14 +121,14 @@ This is a specific data type that is only required by certain components, such a
 
 ## Additional language models
 
-If your provider or model isn't supported by the **Language Model** core component, additional provider-specific models are available in <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) in the [workspace](/concepts-overview).
+If your provider or model isn't supported by the **Language Model** core component, additional provider-specific models are available in <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) in the [visual editor](/concepts-overview).
 
 You can use these provider-specific components directly in your flows in the same place that you would use the **Language Model** core component.
 Or, you can connect them to other components that accept a [`LanguageModel`](/data-types#languagemodel) input, such as the **Smart Function** and **Agent** components.
 
 For example, to connect a provider-specific component to the **Agent** component, do the following:
 
-1. In the **Components** menu, search for your preferred model provider, and then add the provider's LLM component to your flow.
+1. In the visual editor, <Icon name="Search" aria-hidden="true" /> **Search** for your preferred model provider, and then add the provider's LLM component to your flow.
 The component may not have `model` in the name.
 For example, Azure OpenAI LLMs are in the [**Azure OpenAI** component](/bundles-azure#azure-openai).
 
@@ -139,7 +139,7 @@ The output port changes to a `LanguageModel` port.
 For more information, see [Language Model output types](#language-model-output-types).
 
 2. Add an **Agent** component to the flow, and then set **Model Provider** to **Custom**.
-The **Model Provider** field changes to a **Language Model** field with a `LanguageModel` port.
+The **Model Provider** field changes to a `LanguageModel` input port.
 
 4. Connect the LLM component's output to the **Agent** component's **Language Model** input.
 The **Agent** component now inherits the LLM settings from the connected LLM component instead of using any of the built-in models.
