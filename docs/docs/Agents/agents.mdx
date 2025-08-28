@@ -159,22 +159,27 @@ Some additional input parameters include the following:
 * **Current Date** (`add_current_date_tool`): When enabled (true), this setting adds a tool to the agent that can retrieve the current date.
 * **Handle Parse Errors** (`handle_parsing_errors`): When enabled (true), this setting allows the agent to fix errors, like typos, when analyzing user input.
 * **Verbose** (`verbose`): When enabled (true), this setting records detailed logging output for debugging and analysis.
-* **Output Format Instructions** (`format_instructions`): System message that guides the agent's LLM's approach to data extraction and JSON formatting. Works with the Output Schema to ensure consistent, properly structured responses. Valid only with Structured response mode.
-* **Output Schema** (`output_schema`): Schema validation table that defines the structure and data types for structured output. The LLM uses this schema along with the format instructions to validate and structure its JSON responses. No validation occurs if no output schema is provided.
+* **Output Format Instructions** (`format_instructions`): System message that guides the agent's LLM's approach to data extraction and JSON formatting. Works with the **Output Schema** to ensure consistent, properly structured responses. Valid only with the **Structured Response** [output type](#agent-component-output).
+* **Output Schema** (`output_schema`): Schema validation table that defines the structure and data types for structured output. The LLM uses this schema along with the format instructions to validate and structure its JSON responses. No validation occurs if no output schema is provided. Valid only with the **Structured Response** [output type](#agent-component-output).
 
 To view and configure all parameters, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
-## Agent component output
+## Agent component output {#agent-component-output}
 
 The **Agent** component has two output modes: **Response** and **Structured Output**.
 You can set the output type near the component's output port.
+
+### Response output
 
 The **Response** (`response`) output is a [`Message`](/data-types#message) containing the agent's raw response to the query.
 
 Typically, this is passed to a **Chat Output** component to return the response in a human-readable format.
 It can also be passed to other components if you need to process the response further before, or in addition to, returning it to the user.
 
+## Structured Response output
+
 The **Structured Response** (`structured_response`) output is [`Data`](/data-types#data) containing a validated JSON representation of the agent's response.
+
 This output attempts to parse the agent's response as JSON and returns it as structured data:
 * If the response contains valid JSON, it is returned as-is.
 * If the response contains JSON embedded within text, the component attempts to extract and parse the JSON portion of the response.
@@ -228,7 +233,7 @@ This example configures the agent to extract structured data about tasks and req
     Both tasks are very important.
     ```
 
-7. Inspect the Playground's output.
+7. Open the **Playground** to inspect the output.
 The LLM correctly extracts and formats the contextual data based on the **Output Format Instructions** and the structure defined in **Output Schema**.
 
     ```json
