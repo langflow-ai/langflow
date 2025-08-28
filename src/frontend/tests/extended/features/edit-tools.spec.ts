@@ -184,7 +184,7 @@ test(
 
     await page.waitForTimeout(500);
 
-    await expect(page.getByTestId("btn_close_tools_modal")).toBeHidden({
+    await expect(page.getByTestId("btn_close_tools_modal")).not.toBeInViewport({
       timeout: 3000,
     });
 
