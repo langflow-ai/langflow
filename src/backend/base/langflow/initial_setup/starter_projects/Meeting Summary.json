@@ -314,7 +314,7 @@
             "legacy": false,
             "lf_version": "1.1.5",
             "metadata": {
-              "code_hash": "971768fb12d2",
+              "code_hash": "935c9296b149",
               "dependencies": {
                 "dependencies": [
                   {
@@ -2548,7 +2548,7 @@
             "key": "AssemblyAITranscriptionJobCreator",
             "legacy": false,
             "metadata": {
-              "code_hash": "a0893abbe5ef",
+              "code_hash": "7ff7b3f90298",
               "dependencies": {
                 "dependencies": [
                   {

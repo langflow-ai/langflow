@@ -2809,7 +2809,7 @@
             "icon": "trending-up",
             "legacy": false,
             "metadata": {
-              "code_hash": "0c5ee523109e",
+              "code_hash": "d6bf628ab821",
               "dependencies": {
                 "dependencies": [
                   {
@@ -3210,7 +3210,7 @@
             "icon": "TavilyIcon",
             "legacy": false,
             "metadata": {
-              "code_hash": "12a9f1ea7513",
+              "code_hash": "e602eaec8316",
               "dependencies": {
                 "dependencies": [
                   {
