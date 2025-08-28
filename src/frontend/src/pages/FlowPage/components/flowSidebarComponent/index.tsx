@@ -178,10 +178,16 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     setSearch = () => {},
     searchInputRef = fallbackSearchInputRef,
     isSearchFocused = false,
-    handleInputFocus = () => {},
+    handleInputFocus: originalHandleInputFocus = () => {},
     handleInputBlur = () => {},
     handleInputChange = () => {},
   } = context;
+
+  // Create enhanced focus handler that also sets active section to search
+  const handleInputFocus = useCallback(() => {
+    originalHandleInputFocus();
+    setActiveSection("search");
+  }, [originalHandleInputFocus, setActiveSection]);
 
   // State
   const [fuse, setFuse] = useState<Fuse<any> | null>(null);
