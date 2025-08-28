@@ -48,7 +48,15 @@ Langflow allows users to define and run **custom code components** through endpo
 
 This means an attacker could send malicious code to the endpoint and have it executed on the server—leading to full system compromise, including data theft, remote shell access, or lateral movement within the network.
 
-To address, upgrade to >= 1.3.0.
+**CVE**: [CVE-2025-3248](https://nvd.nist.gov/vuln/detail/CVE-2025-3248)
+**Fixed in**: Langflow >= 1.3.0
+
+### Privilege Escalation via CLI Superuser Creation (Fixed in 1.5.1)
+
+A privilege escalation vulnerability exists in Langflow containers where an authenticated user with RCE access can invoke the internal CLI command `langflow superuser` to create a new administrative user. This results in full superuser access, even if the user initially registered through the UI as a regular (non-admin) account.
+
+**CVE**: [CVE-2025-57760](https://github.com/langflow-ai/langflow/security/advisories/GHSA-4gv9-mp8m-592r)
+**Fixed in**: Langflow >= 1.5.1
 
 ### No API key required if running Langflow with `LANGFLOW_AUTO_LOGIN=true` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true`
 
