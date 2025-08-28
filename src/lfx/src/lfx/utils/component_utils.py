@@ -53,7 +53,7 @@ def update_input_types(build_config: dotdict) -> dotdict:
     return build_config
 
 
-def set_field_display(build_config: dotdict, field: str, value: bool | None = None) -> dotdict:
+def set_field_display(build_config: dotdict, field: str, *, value: bool | None = None) -> dotdict:
     """Set whether a field should be displayed in the UI."""
     if field in build_config and isinstance(build_config[field], dict) and "show" in build_config[field]:
         build_config[field]["show"] = value
@@ -62,6 +62,7 @@ def set_field_display(build_config: dotdict, field: str, value: bool | None = No
 
 def set_multiple_field_display(
     build_config: dotdict,
+    *,
     fields: dict[str, bool] | None = None,
     value: bool | None = None,
     field_list: list[str] | None = None,
@@ -76,7 +77,7 @@ def set_multiple_field_display(
     return build_config
 
 
-def set_field_advanced(build_config: dotdict, field: str, value: bool | None = None) -> dotdict:
+def set_field_advanced(build_config: dotdict, field: str, *, value: bool | None = None) -> dotdict:
     """Set whether a field is considered 'advanced' in the UI."""
     if value is None:
         value = False
@@ -87,6 +88,7 @@ def set_field_advanced(build_config: dotdict, field: str, value: bool | None = N
 
 def set_multiple_field_advanced(
     build_config: dotdict,
+    *,
     fields: dict[str, bool] | None = None,
     value: bool | None = None,
     field_list: list[str] | None = None,
@@ -117,6 +119,7 @@ def merge_build_configs(base_config: dotdict, override_config: dotdict) -> dotdi
 def set_current_fields(
     build_config: dotdict,
     action_fields: dict[str, list[str]],
+    *,
     selected_action: str | None = None,
     default_fields: list[str] = DEFAULT_FIELDS,
     func: Callable[[dotdict, str, bool], dotdict] = set_field_display,
