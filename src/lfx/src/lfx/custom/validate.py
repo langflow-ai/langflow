@@ -78,7 +78,7 @@ def _create_langflow_execution_context():
 
     # Import common langflow types that are used in templates
     try:
-        from langflow.schema.dataframe import DataFrame
+        from lfx.schema.dataframe import DataFrame
 
         context["DataFrame"] = DataFrame
     except ImportError:
@@ -86,28 +86,28 @@ def _create_langflow_execution_context():
         context["DataFrame"] = type("DataFrame", (), {})
 
     try:
-        from langflow.schema.message import Message
+        from lfx.schema.message import Message
 
         context["Message"] = Message
     except ImportError:
         context["Message"] = type("Message", (), {})
 
     try:
-        from langflow.schema.data import Data
+        from lfx.schema.data import Data
 
         context["Data"] = Data
     except ImportError:
         context["Data"] = type("Data", (), {})
 
     try:
-        from langflow.custom import Component
+        from lfx.custom import Component
 
         context["Component"] = Component
     except ImportError:
         context["Component"] = type("Component", (), {})
 
     try:
-        from langflow.io import HandleInput, Output, TabInput
+        from lfx.io import HandleInput, Output, TabInput
 
         context["HandleInput"] = HandleInput
         context["Output"] = Output
@@ -126,14 +126,6 @@ def _create_langflow_execution_context():
         context["List"] = list
         context["Optional"] = Optional
         context["Union"] = Union
-    except ImportError:
-        pass
-
-    # Add other common imports that might be used
-    try:
-        import pandas as pd
-
-        context["pd"] = pd
     except ImportError:
         pass
 
