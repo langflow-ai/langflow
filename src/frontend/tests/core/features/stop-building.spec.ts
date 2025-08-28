@@ -4,6 +4,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
+
 // TODO: fix this test
 test(
   "user must be able to stop a building",
@@ -20,13 +21,15 @@ test(
     await page.getByTestId("sidebar-search-input").fill("text input");
 
     await page
-      .getByTestId("inputsText Input")
+      .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 0, y: 0 },
+        targetPosition: { x: 50, y: 50 },
       });
 
+    await page.getByTestId("canvas_controls_dropdown").click();
     await zoomOut(page, 3);
 
+    await page.getByTestId("canvas_controls_dropdown").click();
     //second component
 
     await page.getByTestId("sidebar-search-input").click();
@@ -35,7 +38,7 @@ test(
     await page
       .getByTestId("dataURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 200 },
+        targetPosition: { x: 50, y: 300 },
       });
 
     //third component
@@ -46,7 +49,7 @@ test(
     await page
       .getByTestId("processingSplit Text")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 300, y: 300 },
+        targetPosition: { x: 300, y: 500 },
       });
 
     //fourth component
@@ -66,7 +69,7 @@ test(
     await page.getByTestId("sidebar-search-input").fill("chat output");
 
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 600, y: 300 },
       });
@@ -74,18 +77,23 @@ test(
     await updateOldComponents(page);
     await removeOldApiKeys(page);
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("fit_view").click();
 
     await zoomOut(page, 2);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     //connection 1
-    await page.getByTestId("handle-urlcomponent-shownode-data-right").click();
     await page
-      .getByTestId("handle-splittext-shownode-data or dataframe-left")
+      .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
       .click();
+    await page.getByTestId("handle-splittext-shownode-input-left").click();
 
     //connection 2
-    await page.getByTestId("handle-textinput-shownode-message-right").click();
+    await page
+      .getByTestId("handle-textinput-shownode-output text-right")
+      .click();
     await page.getByTestId("handle-splittext-shownode-separator-left").click();
 
     //connection 3
@@ -94,9 +102,14 @@ test(
 
     //connection 4
     await page.getByTestId("handle-parsedata-shownode-message-right").click();
-    await page.getByTestId("handle-chatoutput-noshownode-text-target").click();
+    await page
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
+      .click();
+
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("textarea_str_input_value").first().fill(",");
 
@@ -137,8 +150,11 @@ class CustomComponent(Component):
   `;
 
     await page.getByTestId("sidebar-custom-component-button").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("title-Custom Component").first().click();
 

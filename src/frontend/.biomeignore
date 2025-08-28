@@ -1,0 +1,13 @@
+# Build outputs
+build/
+dist/
+
+# Dependencies  
+node_modules/
+
+# Test outputs
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/ 

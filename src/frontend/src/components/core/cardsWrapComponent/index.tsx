@@ -1,5 +1,5 @@
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useEffect, useState } from "react";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "../../../utils/utils";
 import IconComponent from "../../common/genericIconComponent";
 
@@ -74,7 +74,7 @@ export default function CardsWrapComponent({
       className={cn(
         "h-full w-full",
         isDragging
-          ? "mb-36 flex flex-col items-center justify-center gap-4 text-2xl font-light"
+          ? "z-10 mb-36 flex flex-col items-center justify-center gap-4 text-2xl font-light"
           : "",
       )}
     >

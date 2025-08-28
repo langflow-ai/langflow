@@ -25,10 +25,12 @@ test(
 
     await page.mouse.up();
     await page.mouse.down();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await expect(page.getByText("api_key")).toBeVisible({
       timeout: 3000,
@@ -49,14 +51,16 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("search api");
-    await page.waitForSelector('[data-testid="toolsSearch API"]', {
+    await page.waitForSelector('[data-testid="searchapiSearchApi"]', {
       timeout: 1000,
     });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await zoomOut(page, 3);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page
-      .getByTestId("toolsSearch API")
+      .getByTestId("searchapiSearchApi")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -76,9 +80,15 @@ test(
         targetPosition: { x: 300, y: 300 },
       });
 
-    await page.getByTestId("fit_view").click();
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 100000,
+    });
 
-    await page.getByTestId("title-Search API").first().click();
+    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
+
+    await page.getByTestId("title-SearchApi").first().click();
     await page.getByTestId("tool-mode-button").click();
 
     //connection

@@ -2,19 +2,22 @@ import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { simulateDragAndDrop } from "../../utils/simulate-drag-and-drop";
+
 test(
   "user should be able to drag and drop an old collection without crashing the application",
-  { tag: ["@release"] },
+  { tag: ["@release", "@mainpage"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
     //add a new flow just to have the workspace available
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 100000,
@@ -22,7 +25,7 @@ test(
 
     await page.getByTestId("icon-ChevronLeft").first().click();
 
-    await page.waitForSelector("text=my projects", {
+    await page.waitForSelector("text=starter project", {
       timeout: 5000,
     });
 
@@ -65,10 +68,12 @@ test(
     //add a new flow just to have the workspace available
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 100000,
@@ -76,7 +81,7 @@ test(
 
     await page.getByTestId("icon-ChevronLeft").first().click();
 
-    await page.waitForSelector("text=my projects", {
+    await page.waitForSelector("text=starter project", {
       timeout: 5000,
     });
 

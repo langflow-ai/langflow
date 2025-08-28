@@ -1,5 +1,5 @@
-from langflow.custom import Component
-from langflow.template import Output
+from langflow.custom.custom_component.component import Component
+from langflow.template.field.base import Output
 
 
 class LCChainComponent(Component):

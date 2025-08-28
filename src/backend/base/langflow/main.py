@@ -11,18 +11,19 @@ from urllib.parse import urlencode
 
 import anyio
 import httpx
+import sqlalchemy
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
-from loguru import logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from langflow.api import health_check_router, log_router, router
+from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
@@ -32,13 +33,9 @@ from langflow.initial_setup.setup import (
 )
 from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
-from langflow.logging.logger import configure
+from langflow.logging.logger import configure, logger
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.deps import (
-    get_queue_service,
-    get_settings_service,
-    get_telemetry_service,
-)
+from langflow.services.deps import get_queue_service, get_settings_service, get_telemetry_service
 from langflow.services.utils import initialize_services, teardown_services
 
 if TYPE_CHECKING:
@@ -50,6 +47,15 @@ warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 _tasks: list[asyncio.Task] = []
 
 MAX_PORT = 65535
+
+
+async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
+    """Helper to safely log exceptions to telemetry without raising."""
+    try:
+        telemetry_service = get_telemetry_service()
+        await telemetry_service.log_exception(exc, context)
+    except (httpx.HTTPError, asyncio.QueueFull):
+        await logger.awarning(f"Failed to log {context} exception to telemetry")
 
 
 class RequestCancelledMiddleware(BaseHTTPMiddleware):
@@ -104,89 +110,163 @@ async def load_bundles_with_error_handling():
     try:
         return await load_bundles_from_urls()
     except (httpx.TimeoutException, httpx.HTTPError, httpx.RequestError) as exc:
-        logger.error(f"Error loading bundles from URLs: {exc}")
+        await logger.aerror(f"Error loading bundles from URLs: {exc}")
         return [], []
 
 
 def get_lifespan(*, fix_migration=False, version=None):
-    telemetry_service = get_telemetry_service()
-
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        configure(async_file=True)
+        telemetry_service = get_telemetry_service()
+        configure()
 
         # Startup message
         if version:
-            logger.debug(f"Starting Langflow v{version}...")
+            await logger.adebug(f"Starting Langflow v{version}...")
         else:
-            logger.debug("Starting Langflow...")
+            await logger.adebug("Starting Langflow...")
 
         temp_dirs: list[TemporaryDirectory] = []
         sync_flows_from_fs_task = None
+
         try:
             start_time = asyncio.get_event_loop().time()
 
-            logger.debug("Initializing services")
+            await logger.adebug("Initializing services")
             await initialize_services(fix_migration=fix_migration)
-            logger.debug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
+            await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Setting up LLM caching")
+            await logger.adebug("Setting up LLM caching")
             setup_llm_caching()
-            logger.debug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            await logger.adebug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Initializing super user")
+            await logger.adebug("Initializing super user")
             await initialize_super_user_if_needed()
-            logger.debug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            await logger.adebug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Loading bundles")
+            await logger.adebug("Loading bundles")
             temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
             get_settings_service().settings.components_path.extend(bundles_components_paths)
-            logger.debug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Caching types")
+            await logger.adebug("Caching types")
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
-            logger.debug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            await logger.adebug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            # Use file-based lock to prevent multiple workers from creating duplicate starter projects concurrently.
+            # Note that it's still possible that one worker may complete this task, release the lock,
+            # then another worker pick it up, but the operation is idempotent so worst case it duplicates
+            # the initialization work.
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Creating/updating starter projects")
+            import tempfile
+
+            from filelock import FileLock
+
+            lock_file = Path(tempfile.gettempdir()) / "langflow_starter_projects.lock"
+            lock = FileLock(lock_file, timeout=1)
+            try:
+                with lock:
+                    await create_or_update_starter_projects(all_types_dict)
+                    await logger.adebug(
+                        f"Starter projects created/updated in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                    )
+            except TimeoutError:
+                # Another process has the lock
+                await logger.adebug("Another worker is creating starter projects, skipping")
+            except Exception as e:  # noqa: BLE001
+                await logger.awarning(
+                    f"Failed to acquire lock for starter projects: {e}. Starter projects may not be created or updated."
+                )
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Creating/updating starter projects")
-            await create_or_update_starter_projects(all_types_dict)
-            logger.debug(f"Starter projects updated in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
+            await logger.adebug("Starting telemetry service")
             telemetry_service.start()
+            await logger.adebug(f"started telemetry service in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            logger.debug("Loading flows")
+            await logger.adebug("Loading flows")
             await load_flows_from_directory()
             sync_flows_from_fs_task = asyncio.create_task(sync_flows_from_fs())
             queue_service = get_queue_service()
             if not queue_service.is_started():  # Start if not already started
                 queue_service.start()
-            logger.debug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+            await logger.adebug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Loading mcp servers for projects")
+            await init_mcp_servers()
+            await logger.adebug(f"mcp servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             total_time = asyncio.get_event_loop().time() - start_time
-            logger.debug(f"Total initialization time: {total_time:.2f}s")
+            await logger.adebug(f"Total initialization time: {total_time:.2f}s")
             yield
 
+        except asyncio.CancelledError:
+            await logger.adebug("Lifespan received cancellation signal")
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
                 logger.exception(exc)
+
+                await log_exception_to_telemetry(exc, "lifespan")
             raise
         finally:
-            # Clean shutdown
-            logger.info("Cleaning up resources...")
-            if sync_flows_from_fs_task:
-                sync_flows_from_fs_task.cancel()
-                await asyncio.wait([sync_flows_from_fs_task])
-            await teardown_services()
-            await logger.complete()
-            temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
-            await asyncio.gather(*temp_dir_cleanups)
-            # Final message
-            logger.debug("Langflow shutdown complete")
+            # Clean shutdown with progress indicator
+            # Create shutdown progress (show verbose timing if log level is DEBUG)
+            from langflow.__main__ import get_number_of_workers
+            from langflow.cli.progress import create_langflow_shutdown_progress
+
+            log_level = os.getenv("LANGFLOW_LOG_LEVEL", "info").lower()
+            num_workers = get_number_of_workers(get_settings_service().settings.workers)
+            shutdown_progress = create_langflow_shutdown_progress(
+                verbose=log_level == "debug", multiple_workers=num_workers > 1
+            )
+
+            try:
+                # Step 0: Stopping Server
+                with shutdown_progress.step(0):
+                    await logger.adebug("Stopping server gracefully...")
+                    # The actual server stopping is handled by the lifespan context
+                    await asyncio.sleep(0.1)  # Brief pause for visual effect
+
+                # Step 1: Cancelling Background Tasks
+                with shutdown_progress.step(1):
+                    if sync_flows_from_fs_task:
+                        sync_flows_from_fs_task.cancel()
+                        await asyncio.wait([sync_flows_from_fs_task])
+
+                # Step 2: Cleaning Up Services
+                with shutdown_progress.step(2):
+                    try:
+                        await asyncio.wait_for(teardown_services(), timeout=10)
+                    except asyncio.TimeoutError:
+                        await logger.awarning("Teardown services timed out.")
+
+                # Step 3: Clearing Temporary Files
+                with shutdown_progress.step(3):
+                    temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
+                    await asyncio.gather(*temp_dir_cleanups)
+
+                # Step 4: Finalizing Shutdown
+                with shutdown_progress.step(4):
+                    await logger.adebug("Langflow shutdown complete")
+
+                # Show completion summary and farewell
+                shutdown_progress.print_shutdown_summary()
+
+            except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.DBAPIError) as e:
+                # Case where the database connection is closed during shutdown
+                await logger.awarning(f"Database teardown failed due to closed connection: {e}")
+            except asyncio.CancelledError:
+                # Swallow this - it's normal during shutdown
+                await logger.adebug("Teardown cancelled during shutdown.")
+            except Exception as e:  # noqa: BLE001
+                await logger.aexception(f"Unhandled error during cleanup: {e}")
+                await log_exception_to_telemetry(e, "lifespan_cleanup")
 
     return lifespan
 
@@ -198,7 +278,11 @@ def create_app():
     __version__ = get_version_info()["version"]
     configure()
     lifespan = get_lifespan(version=__version__)
-    app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
+    app = FastAPI(
+        title="Langflow",
+        version=__version__,
+        lifespan=lifespan,
+    )
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
@@ -289,12 +373,15 @@ def create_app():
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
         if isinstance(exc, HTTPException):
-            logger.error(f"HTTPException: {exc}", exc_info=exc)
+            await logger.aerror(f"HTTPException: {exc}", exc_info=exc)
             return JSONResponse(
                 status_code=exc.status_code,
                 content={"message": str(exc.detail)},
             )
-        logger.error(f"unhandled error: {exc}", exc_info=exc)
+        await logger.aerror(f"unhandled error: {exc}", exc_info=exc)
+
+        await log_exception_to_telemetry(exc, "handler")
+
         return JSONResponse(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             content={"message": str(exc)},
@@ -353,7 +440,6 @@ def get_static_files_dir():
 def setup_app(static_files_dir: Path | None = None, *, backend_only: bool = False) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
-    logger.info(f"Setting up app with static files directory {static_files_dir}")
     if not static_files_dir:
         static_files_dir = get_static_files_dir()
 
@@ -361,6 +447,7 @@ def setup_app(static_files_dir: Path | None = None, *, backend_only: bool = Fals
         msg = f"Static files directory {static_files_dir} does not exist."
         raise RuntimeError(msg)
     app = create_app()
+
     if not backend_only and static_files_dir is not None:
         setup_static_files(app, static_files_dir)
     return app
@@ -374,7 +461,7 @@ if __name__ == "__main__":
     configure()
     uvicorn.run(
         "langflow.main:create_app",
-        host="127.0.0.1",
+        host="localhost",
         port=7860,
         workers=get_number_of_workers(),
         log_level="error",

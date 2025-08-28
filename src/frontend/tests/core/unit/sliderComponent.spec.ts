@@ -1,4 +1,4 @@
-import { expect, Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 // TODO: This component doesn't have slider needs updating
@@ -17,23 +17,26 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("ollama");
 
-    await page.waitForSelector('[data-testid="modelsOllama"]', {
+    await page.waitForSelector('[data-testid="ollamaOllama"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("modelsOllama")
+      .getByTestId("ollamaOllama")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("title-Ollama").click();
     await page.getByTestId("code-button-modal").click();
 
-    let cleanCode = await extractAndCleanCode(page);
+    const cleanCode = await extractAndCleanCode(page);
 
     // Replace the multiline string in the code
     const newCode = cleanCode.replace(
@@ -61,8 +64,10 @@ test(
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(newCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await mutualValidation(page);
 
@@ -71,8 +76,10 @@ test(
     // wait for the slider to update
 
     await page.waitForTimeout(500);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("zoom_out").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("more-options-modal").click();
     await page.getByText("Controls", { exact: true }).last().click();
@@ -106,7 +113,7 @@ async function extractAndCleanCode(page: Page): Promise<string> {
     throw new Error("Could not find value attribute in the HTML");
   }
 
-  let codeContent = valueMatch[1]
+  const codeContent = valueMatch[1]
     .replace(/&quot;/g, '"')
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")

@@ -23,11 +23,14 @@ test(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 3000,
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 100000,
     });
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByText("openai").last().click();
     await page.keyboard.press("Delete");
@@ -35,12 +38,12 @@ test(
     //connection 1
 
     await page
-      .getByTestId("handle-prompt-shownode-prompt message-right")
+      .getByTestId("handle-prompt-shownode-prompt-right")
       .first()
       .click();
 
     await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-shownode-inputs-left")
       .first()
       .click();
 

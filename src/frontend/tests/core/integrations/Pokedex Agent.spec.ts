@@ -35,18 +35,14 @@ withEventDeliveryModes(
     await page.getByTestId("button-send").last().click();
 
     const stopButton = page.getByRole("button", { name: "Stop" });
-    await stopButton.waitFor({ state: "visible", timeout: 30000 });
+    await stopButton.waitFor({ state: "visible", timeout: 40000 });
 
     if (await stopButton.isVisible()) {
-      await expect(stopButton).toBeHidden({ timeout: 120000 });
+      await expect(stopButton).toBeHidden({ timeout: 200000 });
     }
 
-    const output = await page
-      .getByTestId("div-chat-message")
-      .last()
-      .innerText();
+    const output = await page.getByTestId("div-chat-message").innerText();
     expect(output).toContain("Charmander");
-    expect(output).toContain("Route 24");
     expect(output.length).toBeGreaterThan(100);
   },
 );

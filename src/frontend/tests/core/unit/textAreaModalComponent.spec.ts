@@ -16,12 +16,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
 
-    await page.waitForSelector('[data-testid="promptsPrompt"]', {
+    await page.waitForSelector('[data-testid="processingPrompt Template"]', {
       timeout: 30000,
     });
 
     await page
-      .locator('//*[@id="promptsPrompt"]')
+      .locator('//*[@id="processingPrompt Template"]')
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -31,7 +31,7 @@ test(
 
     await page.getByTestId("modal-promptarea_prompt_template").fill("{text}");
 
-    let valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
+    const valueBadgeOne = await page.locator('//*[@id="badge0"]').innerText();
     if (valueBadgeOne != "text") {
       expect(false).toBeTruthy();
     }
@@ -43,6 +43,21 @@ test(
       .fill(
         "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!",
       );
+
+    // Test cursor position preservation
+    const textInput = page.getByTestId("textarea_str_text");
+    await textInput.click();
+    await textInput.press("Home"); // Move cursor to start
+    await textInput.press("ArrowRight"); // Move cursor to position 1
+    await textInput.press("ArrowRight"); // Move cursor to position 2
+    await textInput.pressSequentially("Y", { delay: 100 }); // Type at position 2
+    const cursorValue = await textInput.inputValue();
+    if (!cursorValue.startsWith("teY")) {
+      expect(false).toBeTruthy();
+    }
+    await textInput.fill(
+      "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!",
+    );
 
     await page
       .getByTestId("button_open_text_area_modal_textarea_str_text")

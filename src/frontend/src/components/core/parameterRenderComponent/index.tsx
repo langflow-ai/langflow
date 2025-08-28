@@ -1,27 +1,28 @@
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
+import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
+import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
 import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
-import { APIClassType, InputFieldType } from "@/types/api";
-import { useMemo } from "react";
-import ConnectionComponent from "./components/connectionComponent";
+import CustomConnectionComponent from "@/customization/components/custom-connectionComponent";
+import CustomInputFileComponent from "@/customization/components/custom-input-file";
+import CustomLinkComponent from "@/customization/components/custom-linkComponent";
+import type { APIClassType, InputFieldType } from "@/types/api";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
-import InputFileComponent from "./components/inputFileComponent";
 import InputListComponent from "./components/inputListComponent";
 import IntComponent from "./components/intComponent";
 import KeypairListComponent from "./components/keypairListComponent";
-import LinkComponent from "./components/linkComponent";
+import McpComponent from "./components/mcpComponent";
 import MultiselectComponent from "./components/multiselectComponent";
 import PromptAreaComponent from "./components/promptComponent";
-import { RefreshParameterComponent } from "./components/refreshParameterComponent";
+import QueryComponent from "./components/queryComponent";
 import SortableListComponent from "./components/sortableListComponent";
 import { StrRenderComponent } from "./components/strRenderComponent";
+import ToolsComponent from "./components/ToolsComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";
-import { InputProps, NodeInfoType } from "./types";
+import type { InputProps, NodeInfoType } from "./types";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
@@ -89,7 +90,7 @@ export function ParameterRenderComponent({
             />
           );
         }
-        if (!!templateData.options) {
+        if (templateData.options) {
           return (
             <MultiselectComponent
               {...baseInputProps}
@@ -144,7 +145,7 @@ export function ParameterRenderComponent({
         );
       case "link":
         return (
-          <LinkComponent
+          <CustomLinkComponent
             {...baseInputProps}
             icon={templateData.icon}
             text={templateData.text}
@@ -169,12 +170,12 @@ export function ParameterRenderComponent({
         );
       case "file":
         return (
-          <InputFileComponent
+          <CustomInputFileComponent
             {...baseInputProps}
             fileTypes={templateData.fileTypes}
             file_path={templateData.file_path}
             isList={templateData.list ?? false}
-            tempFile={templateData.temp_file ?? false}
+            tempFile={templateData.temp_file ?? true}
             id={`inputfile_${id}`}
           />
         );
@@ -200,6 +201,16 @@ export function ParameterRenderComponent({
             trigger_icon={templateData?.trigger_icon}
             trigger_text={templateData?.trigger_text}
             table_icon={templateData?.table_icon}
+          />
+        );
+      case "tools":
+        return (
+          <ToolsComponent
+            {...baseInputProps}
+            description={templateData.info || "Add or edit data"}
+            title={nodeClass?.display_name ?? "Tools"}
+            icon={nodeClass?.icon ?? ""}
+            template={nodeClass?.template}
           />
         );
       case "slider":
@@ -229,14 +240,14 @@ export function ParameterRenderComponent({
             limit={templateData?.limit}
           />
         );
-      case "connect":
+      case "connect": {
         const link =
           templateData?.options?.find(
             (option: any) => option?.name === templateValue,
           )?.link || "";
 
         return (
-          <ConnectionComponent
+          <CustomConnectionComponent
             {...baseInputProps}
             name={name}
             nodeId={nodeId}
@@ -249,6 +260,7 @@ export function ParameterRenderComponent({
             connectionLink={link as string}
           />
         );
+      }
       case "tab":
         return (
           <TabComponent
@@ -257,25 +269,30 @@ export function ParameterRenderComponent({
             id={`tab_${id}`}
           />
         );
+      case "query":
+        return (
+          <QueryComponent
+            {...baseInputProps}
+            display_name={templateData.display_name ?? ""}
+            info={templateData.info ?? ""}
+            separator={templateData.separator}
+            id={`query_${id}`}
+          />
+        );
+      case "mcp":
+        return (
+          <McpComponent
+            {...baseInputProps}
+            id={`mcp_${id}`}
+            editNode={editNode}
+            disabled={disabled}
+            value={templateValue}
+          />
+        );
       default:
         return <EmptyParameterComponent {...baseInputProps} />;
     }
   };
 
-  return useMemo(
-    () => (
-      <RefreshParameterComponent
-        templateData={templateData}
-        disabled={disabled}
-        nodeId={nodeId}
-        editNode={editNode}
-        nodeClass={nodeClass}
-        handleNodeClass={handleNodeClass}
-        name={name}
-      >
-        {renderComponent()}
-      </RefreshParameterComponent>
-    ),
-    [templateData, disabled, nodeId, editNode, nodeClass, name, templateValue],
-  );
+  return renderComponent();
 }

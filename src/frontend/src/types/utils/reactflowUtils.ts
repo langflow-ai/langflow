@@ -1,5 +1,5 @@
-import { Edge } from "@xyflow/react";
-import { AllNodeType, EdgeType, FlowType } from "../flow";
+import type { Edge } from "@xyflow/react";
+import type { AllNodeType, EdgeType, FlowType } from "../flow";
 
 export type addEscapedHandleIdsToEdgesType = {
   edges: EdgeType[];

@@ -1,6 +1,7 @@
+import { forwardRef, type ReactNode, useEffect, useState } from "react";
 import { track } from "@/customization/utils/analytics";
 import useFlowStore from "@/stores/flowStore";
-import { ReactNode, forwardRef, useEffect, useState } from "react";
+import type { FlowType } from "@/types/flow";
 import IconComponent from "../../components/common/genericIconComponent";
 import EditFlowSettings from "../../components/core/editFlowSettingsComponent";
 import { Checkbox } from "../../components/ui/checkbox";
@@ -16,11 +17,21 @@ import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef(
-  (props: { children: ReactNode }, ref): JSX.Element => {
+  (
+    props: {
+      children?: ReactNode;
+      open?: boolean;
+      setOpen?: (open: boolean) => void;
+      flowData?: FlowType;
+    },
+    ref,
+  ): JSX.Element => {
     const version = useDarkStore((state) => state.version);
+    const setSuccessData = useAlertStore((state) => state.setSuccessData);
     const setNoticeData = useAlertStore((state) => state.setNoticeData);
     const [checked, setChecked] = useState(false);
-    const currentFlow = useFlowStore((state) => state.currentFlow);
+    const currentFlowOnPage = useFlowStore((state) => state.currentFlow);
+    const currentFlow = props.flowData ?? currentFlowOnPage;
     const isBuilding = useFlowStore((state) => state.isBuilding);
     useEffect(() => {
       setName(currentFlow?.name ?? "");
@@ -30,51 +41,69 @@ const ExportModal = forwardRef(
     const [description, setDescription] = useState(
       currentFlow?.description ?? "",
     );
-    const [open, setOpen] = useState(false);
+
+    const [customOpen, customSetOpen] = useState(false);
+    const [open, setOpen] =
+      props.open !== undefined && props.setOpen !== undefined
+        ? [props.open, props.setOpen]
+        : [customOpen, customSetOpen];
+
     return (
       <BaseModal
         size="smaller-h-full"
         open={open}
         setOpen={setOpen}
-        onSubmit={() => {
-          if (checked) {
-            downloadFlow(
-              {
-                id: currentFlow!.id,
-                data: currentFlow!.data!,
+        onSubmit={async () => {
+          try {
+            if (checked) {
+              await downloadFlow(
+                {
+                  id: currentFlow!.id,
+                  data: currentFlow!.data!,
+                  description,
+                  name,
+                  last_tested_version: version,
+                  endpoint_name: currentFlow!.endpoint_name,
+                  is_component: false,
+                  tags: currentFlow!.tags,
+                },
+                name!,
                 description,
-                name,
-                last_tested_version: version,
-                endpoint_name: currentFlow!.endpoint_name,
-                is_component: false,
-                tags: currentFlow!.tags,
-              },
-              name!,
-              description,
-            );
-            setNoticeData({
-              title: API_WARNING_NOTICE_ALERT,
-            });
-          } else
-            downloadFlow(
-              removeApiKeys({
-                id: currentFlow!.id,
-                data: currentFlow!.data!,
+              );
+
+              setNoticeData({
+                title: API_WARNING_NOTICE_ALERT,
+              });
+              setOpen(false);
+              track("Flow Exported", { flowId: currentFlow!.id });
+            } else {
+              await downloadFlow(
+                removeApiKeys({
+                  id: currentFlow!.id,
+                  data: currentFlow!.data!,
+                  description,
+                  name,
+                  last_tested_version: version,
+                  endpoint_name: currentFlow!.endpoint_name,
+                  is_component: false,
+                  tags: currentFlow!.tags,
+                }),
+                name!,
                 description,
-                name,
-                last_tested_version: version,
-                endpoint_name: currentFlow!.endpoint_name,
-                is_component: false,
-                tags: currentFlow!.tags,
-              }),
-              name!,
-              description,
-            );
-          setOpen(false);
-          track("Flow Exported", { flowId: currentFlow!.id });
+              );
+
+              setSuccessData({
+                title: "Flow exported successfully",
+              });
+              setOpen(false);
+              track("Flow Exported", { flowId: currentFlow!.id });
+            }
+          } catch (error) {
+            console.error("Error exporting flow:", error);
+          }
         }}
       >
-        <BaseModal.Trigger asChild>{props.children}</BaseModal.Trigger>
+        <BaseModal.Trigger asChild>{props.children ?? <></>}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
           <span className="pr-2">Export</span>
           <IconComponent
@@ -107,7 +136,13 @@ const ExportModal = forwardRef(
           </span>
         </BaseModal.Content>
 
-        <BaseModal.Footer submit={{ label: "Export", loading: isBuilding }} />
+        <BaseModal.Footer
+          submit={{
+            label: "Export",
+            loading: isBuilding,
+            dataTestId: "modal-export-button",
+          }}
+        />
       </BaseModal>
     );
   },

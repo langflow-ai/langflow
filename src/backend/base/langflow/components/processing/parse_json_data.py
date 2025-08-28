@@ -3,12 +3,12 @@ from json import JSONDecodeError
 
 import jq
 from json_repair import repair_json
-from loguru import logger
 
-from langflow.custom import Component
-from langflow.inputs import HandleInput, MessageTextInput
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import HandleInput, MessageTextInput
 from langflow.io import Output
-from langflow.schema import Data
+from langflow.logging.logger import logger
+from langflow.schema.data import Data
 from langflow.schema.message import Message
 
 

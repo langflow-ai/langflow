@@ -1,9 +1,9 @@
-import logging
 from typing import TYPE_CHECKING
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import HandleInput, MessageInput, Output
-from langflow.schema import Data
+from langflow.logging.logger import logger
+from langflow.schema.data import Data
 
 if TYPE_CHECKING:
     from langflow.field_typing import Embeddings
@@ -14,6 +14,7 @@ class TextEmbedderComponent(Component):
     display_name: str = "Text Embedder"
     description: str = "Generate embeddings for a given message using the specified embedding model."
     icon = "binary"
+    legacy: bool = True
     inputs = [
         HandleInput(
             name="embedding_model",
@@ -56,8 +57,8 @@ class TextEmbedderComponent(Component):
             embedding_vector = embeddings[0]
             self.status = {"text": text_content, "embeddings": embedding_vector}
             return Data(data={"text": text_content, "embeddings": embedding_vector})
-        except Exception as e:
-            logging.exception("Error generating embeddings")
+        except Exception as e:  # noqa: BLE001
+            logger.exception("Error generating embeddings")
             error_data = Data(data={"text": "", "embeddings": [], "error": str(e)})
             self.status = {"error": str(e)}
             return error_data

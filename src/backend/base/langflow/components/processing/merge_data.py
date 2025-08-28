@@ -1,11 +1,10 @@
 from enum import Enum
 from typing import cast
 
-from loguru import logger
-
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import DataInput, DropdownInput, Output
-from langflow.schema import DataFrame
+from langflow.logging.logger import logger
+from langflow.schema.dataframe import DataFrame
 
 
 class DataOperation(str, Enum):
@@ -20,6 +19,7 @@ class MergeDataComponent(Component):
     description = "Combines data using different operations"
     icon = "merge"
     MIN_INPUTS_REQUIRED = 2
+    legacy = True
 
     inputs = [
         DataInput(name="data_inputs", display_name="Data Inputs", info="Data to combine", is_list=True, required=True),

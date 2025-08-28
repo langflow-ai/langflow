@@ -1,5 +1,3 @@
-from crewai import Crew, Process
-
 from langflow.base.agents.crewai.crew import BaseCrewComponent
 from langflow.io import HandleInput
 
@@ -11,6 +9,7 @@ class HierarchicalCrewComponent(BaseCrewComponent):
     )
     documentation: str = "https://docs.crewai.com/how-to/Hierarchical/"
     icon = "CrewAI"
+    legacy = True
 
     inputs = [
         *BaseCrewComponent._base_inputs,
@@ -20,7 +19,13 @@ class HierarchicalCrewComponent(BaseCrewComponent):
         HandleInput(name="manager_agent", display_name="Manager Agent", input_types=["Agent"], required=False),
     ]
 
-    def build_crew(self) -> Crew:
+    def build_crew(self):
+        try:
+            from crewai import Crew, Process
+        except ImportError as e:
+            msg = "CrewAI is not installed. Please install it with `uv pip install crewai`."
+            raise ImportError(msg) from e
+
         tasks, agents = self.get_tasks_and_agents()
         manager_llm = self.get_manager_llm()
 

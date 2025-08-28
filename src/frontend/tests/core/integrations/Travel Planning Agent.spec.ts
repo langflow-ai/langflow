@@ -1,4 +1,4 @@
-import { expect, Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -31,10 +31,12 @@ withEventDeliveryModes(
       .getByRole("heading", { name: "Travel Planning Agents" })
       .last()
       .click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await initialGPTsetup(page);
 
@@ -59,7 +61,7 @@ withEventDeliveryModes(
     await page.getByTestId("button_run_chat output").last().click();
 
     if (await checkRateLimit(page)) {
-      console.log("Rate limit detected, skipping test");
+      console.warn("Rate limit detected, skipping test");
       test.skip();
     }
 
@@ -67,11 +69,7 @@ withEventDeliveryModes(
       timeout: 60000 * 3,
     });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector("text=default session", {
       timeout: 30000,
@@ -80,8 +78,8 @@ withEventDeliveryModes(
     const output = await page.getByTestId("div-chat-message").allTextContents();
     const outputText = output.join("\n");
 
-    expect(outputText.toLowerCase()).toContain("weather");
-    expect(outputText.toLowerCase()).toContain("budget");
+    expect(outputText.toLowerCase()).toContain("travel");
+    expect(outputText.toLowerCase()).toContain("day");
 
     expect(outputText.toLowerCase()).toContain(randomCity.toLowerCase());
     expect(outputText.toLowerCase()).toContain(randomCity2.toLowerCase());

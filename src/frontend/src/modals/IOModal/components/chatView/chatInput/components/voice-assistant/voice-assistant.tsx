@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH, SAVE_API_KEY_ALERT } from "@/constants/constants";
@@ -7,6 +8,8 @@ import {
   usePatchGlobalVariables,
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
+import { customUseStartConversation } from "@/customization/hooks/use-custom-start-conversation";
+import { customUseStartRecording } from "@/customization/hooks/use-custom-start-recording";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
@@ -14,7 +17,6 @@ import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
-import { useEffect, useMemo, useRef, useState } from "react";
 import IconComponent from "../../../../../../../components/common/genericIconComponent";
 import SettingsVoiceModal from "./components/audio-settings/audio-settings-dialog";
 import { checkProvider } from "./helpers/check-provider";
@@ -25,11 +27,9 @@ import { useHandleWebsocketMessage } from "./hooks/use-handle-websocket-message"
 import { useInitializeAudio } from "./hooks/use-initialize-audio";
 import { useInterruptPlayback } from "./hooks/use-interrupt-playback";
 import { usePlayNextAudioChunk } from "./hooks/use-play-next-audio-chunk";
-import { useStartConversation } from "./hooks/use-start-conversation";
-import { useStartRecording } from "./hooks/use-start-recording";
 import { useStopRecording } from "./hooks/use-stop-recording";
 
-interface VoiceAssistantProps {
+export interface VoiceAssistantProps {
   flowId: string;
   setShowAudioInput: (value: boolean) => void;
 }
@@ -40,9 +40,9 @@ export function VoiceAssistant({
 }: VoiceAssistantProps) {
   const [recordingTime, setRecordingTime] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
-  const [status, setStatus] = useState("");
-  const [message, setMessage] = useState("");
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [_status, setStatus] = useState("");
+  const [_message, setMessage] = useState("");
+  const [showSettingsModal, _setShowSettingsModal] = useState(false);
   const [addKey, setAddKey] = useState(false);
   const [barHeights, setBarHeights] = useState<number[]>(Array(30).fill(20));
   const [preferredLanguage, setPreferredLanguage] = useState(
@@ -60,7 +60,7 @@ export function VoiceAssistant({
   const analyserRef = useRef<AnalyserNode | null>(null);
 
   const soundDetected = useVoiceStore((state) => state.soundDetected);
-  const setIsVoiceAssistantActive = useVoiceStore(
+  const _setIsVoiceAssistantActive = useVoiceStore(
     (state) => state.setIsVoiceAssistantActive,
   );
   const setSoundDetected = useVoiceStore((state) => state.setSoundDetected);
@@ -133,7 +133,7 @@ export function VoiceAssistant({
   };
 
   const startRecording = async () => {
-    useStartRecording(
+    customUseStartRecording(
       audioContextRef,
       microphoneRef,
       analyserRef,
@@ -187,7 +187,7 @@ export function VoiceAssistant({
   };
 
   const startConversation = () => {
-    useStartConversation(
+    customUseStartConversation(
       flowId,
       wsRef,
       setStatus,

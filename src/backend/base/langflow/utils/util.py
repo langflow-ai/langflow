@@ -10,7 +10,7 @@ from typing import Any
 from docstring_parser import parse
 
 from langflow.logging.logger import logger
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import initialize_settings_service
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
@@ -53,7 +53,7 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, *, add_fu
                                 module=class_.__base__.__module__, function=value_
                             )
                         except Exception:  # noqa: BLE001
-                            logger.opt(exception=True).debug(f"Error getting default factory for {value_}")
+                            logger.debug(f"Error getting default factory for {value_}", exc_info=True)
                             variables[class_field_items]["default"] = None
                     elif name_ != "name":
                         variables[class_field_items][name_] = value_
@@ -165,8 +165,15 @@ def get_default_factory(module: str, function: str):
     pattern = r"<function (\w+)>"
 
     if match := re.search(pattern, function):
-        imported_module = importlib.import_module(module)
-        return getattr(imported_module, match[1])()
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", message="Support for class-based `config` is deprecated", category=DeprecationWarning
+            )
+            warnings.filterwarnings("ignore", message="Valid config keys have changed in V2", category=UserWarning)
+            imported_module = importlib.import_module(module)
+            return getattr(imported_module, match[1])()
     return None
 
 
@@ -375,6 +382,7 @@ def add_options_to_field(value: dict[str, Any], class_name: str | None, key: str
     options_map = {
         "OpenAI": constants.OPENAI_MODELS,
         "ChatOpenAI": constants.CHAT_OPENAI_MODELS,
+        "ReasoningOpenAI": constants.REASONING_OPENAI_MODELS,
         "Anthropic": constants.ANTHROPIC_MODELS,
         "ChatAnthropic": constants.ANTHROPIC_MODELS,
     }
@@ -423,16 +431,16 @@ async def update_settings(
     initialize_settings_service()
     settings_service = get_settings_service()
     if config:
-        logger.debug(f"Loading settings from {config}")
+        await logger.adebug(f"Loading settings from {config}")
         await settings_service.settings.update_from_yaml(config, dev=dev)
     if remove_api_keys:
-        logger.debug(f"Setting remove_api_keys to {remove_api_keys}")
+        await logger.adebug(f"Setting remove_api_keys to {remove_api_keys}")
         settings_service.settings.update_settings(remove_api_keys=remove_api_keys)
     if cache:
-        logger.debug(f"Setting cache to {cache}")
+        await logger.adebug(f"Setting cache to {cache}")
         settings_service.settings.update_settings(cache=cache)
     if components_path:
-        logger.debug(f"Adding component path {components_path}")
+        await logger.adebug(f"Adding component path {components_path}")
         settings_service.settings.update_settings(components_path=components_path)
     if not store:
         logger.debug("Setting store to False")

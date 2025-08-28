@@ -5,7 +5,7 @@ import { cn } from "../../utils/utils";
 import ForwardedIconComponent from "../common/genericIconComponent";
 
 const buttonVariants = cva(
-  "noflow nopan nodelete nodrag inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-100 disabled:disabled-state [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "noflow nopan nodelete nodrag inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-70 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -105,7 +105,14 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         >
           {loading ? (
             <span className="relative flex items-center justify-center">
-              <span className="invisible">{newChildren}</span>
+              <span
+                className={cn(
+                  className,
+                  "invisible flex items-center justify-center gap-2 !p-0",
+                )}
+              >
+                {newChildren}
+              </span>
               <span className="absolute inset-0 flex items-center justify-center">
                 <ForwardedIconComponent
                   name={"Loader2"}

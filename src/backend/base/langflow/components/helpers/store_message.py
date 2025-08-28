@@ -1,9 +1,11 @@
-from langflow.custom import Component
-from langflow.inputs import HandleInput
-from langflow.inputs.inputs import MessageTextInput
+from langflow.custom.custom_component.component import Component
+from langflow.inputs.inputs import (
+    HandleInput,
+    MessageTextInput,
+)
 from langflow.memory import aget_messages, astore_message
 from langflow.schema.message import Message
-from langflow.template import Output
+from langflow.template.field.base import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 
 
@@ -12,6 +14,7 @@ class MessageStoreComponent(Component):
     description = "Stores a chat message or text into Langflow tables or an external memory."
     icon = "message-square-text"
     name = "StoreMessage"
+    legacy = True
 
     inputs = [
         MessageTextInput(

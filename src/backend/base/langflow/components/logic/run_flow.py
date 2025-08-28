@@ -1,10 +1,9 @@
 from typing import Any
 
-from loguru import logger
-
 from langflow.base.tools.run_flow import RunFlowBaseComponent
 from langflow.helpers.flow import run_flow
-from langflow.schema import dotdict
+from langflow.logging.logger import logger
+from langflow.schema.dotdict import dotdict
 
 
 class RunFlowComponent(RunFlowBaseComponent):
@@ -13,6 +12,7 @@ class RunFlowComponent(RunFlowBaseComponent):
         "Creates a tool component from a Flow that takes all its inputs and runs it. "
         " \n **Select a Flow to use the tool mode**"
     )
+    documentation: str = "https://docs.langflow.org/components-logic#run-flow"
     beta = True
     name = "RunFlow"
     icon = "Workflow"
@@ -33,7 +33,7 @@ class RunFlowComponent(RunFlowBaseComponent):
                     build_config = self.update_build_config_from_graph(build_config, graph)
                 except Exception as e:
                     msg = f"Error building graph for flow {field_value}"
-                    logger.exception(msg)
+                    await logger.aexception(msg)
                     raise RuntimeError(msg) from e
         return build_config
 

@@ -14,12 +14,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("nvidia");
 
-    await page.waitForSelector('[data-testid="modelsNVIDIA"]', {
+    await page.waitForSelector('[data-testid="nvidiaNVIDIA"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("modelsNVIDIA")
+      .getByTestId("nvidiaNVIDIA")
       .hover()
       .then(async () => {
         // Wait for the API request to complete after clicking the add button
@@ -42,7 +42,10 @@ test(
 
     await page.getByText("Close").last().click();
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.locator('//*[@id="int_int_seed"]').click();
     await page.locator('//*[@id="int_int_seed"]').fill("");

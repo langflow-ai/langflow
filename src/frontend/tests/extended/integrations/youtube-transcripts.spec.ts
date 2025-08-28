@@ -13,23 +13,25 @@ test.skip(
 
     await page.getByTestId("youtubeYouTube Transcripts").hover();
     await page.getByTestId("add-component-button-youtube-transcripts").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
-    let outdatedComponents = await page
-      .getByTestId("icon-AlertTriangle")
-      .count();
+    let outdatedComponents = await page.getByTestId("update-button").count();
 
     while (outdatedComponents > 0) {
-      await page.getByTestId("icon-AlertTriangle").first().click();
-      outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+      await page.getByTestId("update-button").first().click();
+      outdatedComponents = await page.getByTestId("update-button").count();
     }
 
     await page
       .getByTestId("textarea_str_url")
       .fill("https://www.youtube.com/watch?v=VqhCQZaH4Vs");
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("button_run_youtube transcripts").click();
 

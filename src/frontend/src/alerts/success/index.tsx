@@ -1,7 +1,7 @@
 import { Transition } from "@headlessui/react";
 import { useEffect, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
-import { SuccessAlertType } from "../../types/alerts";
+import type { SuccessAlertType } from "../../types/alerts";
 
 export default function SuccessAlert({
   title,
@@ -45,7 +45,7 @@ export default function SuccessAlert({
             />
           </div>
           <div className="ml-3">
-            <p className="success-alert-message line-clamp-2">{title}</p>
+            <p className="success-alert-message line-clamp-3">{title}</p>
           </div>
         </div>
       </div>

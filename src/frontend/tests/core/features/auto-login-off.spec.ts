@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { renameFlow } from "../../utils/rename-flow";
 
 test(
   "when auto_login is false, admin can CRUD user's and should see just your own flows",
-  { tag: ["@release", "@api", "@database"] },
+  { tag: ["@release", "@api", "@database", "@mainpage"] },
   async ({ page }) => {
     await page.route("**/api/v1/auto_login", (route) => {
       route.fulfill({
@@ -139,19 +140,18 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
+
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
 
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details", { exact: true }).last().click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.getByPlaceholder("Flow Name").fill(randomFlowName);
-
-    await page.getByText("Save", { exact: true }).click();
+    await renameFlow(page, { flowName: randomFlowName });
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 100000,
@@ -206,12 +206,9 @@ test(
 
     expect(
       (
-        await page.waitForSelector(
-          "text=Begin with a template, or start from scratch.",
-          {
-            timeout: 30000,
-          },
-        )
+        await page.waitForSelector("text=Welcome to LangFlow", {
+          timeout: 30000,
+        })
       ).isVisible(),
     );
 
@@ -222,19 +219,18 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
+
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
 
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details", { exact: true }).last().click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.getByPlaceholder("Flow Name").fill(secondRandomFlowName);
-
-    await page.getByText("Save", { exact: true }).click();
+    await renameFlow(page, { flowName: secondRandomFlowName });
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 100000,

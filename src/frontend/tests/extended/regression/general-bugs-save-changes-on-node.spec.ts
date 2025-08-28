@@ -1,5 +1,6 @@
-import { expect, Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { renameFlow } from "../../utils/rename-flow";
 
 async function verifyTextareaValue(
   page: Page,
@@ -49,22 +50,22 @@ test(
 
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 10000,
       state: "visible",
     });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.getByTestId("input-flow-name").click();
-
-    await page.getByTestId("input-flow-name").fill(randomFlowName);
-
-    await page.keyboard.press("Enter");
+    await renameFlow(page, { flowName: randomFlowName });
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text output");
 
-    await page.getByTestId("outputsText Output").waitFor({ state: "visible" });
+    await page
+      .getByTestId("input_outputText Output")
+      .waitFor({ state: "visible" });
     await page.getByTestId("add-component-button-text-output").click();
 
     await page.waitForSelector('[data-testid="title-Text Output"]', {

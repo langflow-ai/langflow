@@ -7,8 +7,8 @@ import os
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
-from loguru import logger
 
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.services.deps import get_storage_service
 from langflow.services.storage.service import StorageService
@@ -70,6 +70,11 @@ class ParameterHandler:
                 params[param_key].append(self.vertex.graph.get_vertex(edge.source_id))
             else:
                 params[param_key] = self.process_non_list_edge_param(field, edge)
+        elif param_key in self.vertex.output_names:
+            # If the param_key is in the output_names, it means that the loop is run
+            #  if the loop is run the param_key item will be set over here
+            # validate the edge
+            params[param_key] = self.vertex.graph.get_vertex(edge.source_id)
         return params
 
     def process_non_list_edge_param(self, field: dict, edge: CycleEdge) -> Any:
@@ -237,7 +242,7 @@ class ParameterHandler:
                         params[field_name] = val
                     case str():
                         params[field_name] = bool(val)
-            case "table":
+            case "table" | "tools":
                 if isinstance(val, list) and all(isinstance(item, dict) for item in val):
                     params[field_name] = pd.DataFrame(val)
                 else:

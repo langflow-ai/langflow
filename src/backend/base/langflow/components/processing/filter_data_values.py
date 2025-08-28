@@ -1,8 +1,8 @@
 from typing import Any
 
-from langflow.custom import Component
+from langflow.custom.custom_component.component import Component
 from langflow.io import DataInput, DropdownInput, MessageTextInput, Output
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 class DataFilterComponent(Component):
@@ -14,6 +14,7 @@ class DataFilterComponent(Component):
     icon = "filter"
     beta = True
     name = "FilterDataValues"
+    legacy = True
 
     inputs = [
         DataInput(name="input_data", display_name="Input Data", info="The list of data items to filter.", is_list=True),

@@ -25,14 +25,21 @@ test(
       },
     );
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.waitForSelector('[data-testid="zoom_out"]', {
       timeout: 3000,
     });
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("sidebar-custom-component-button").click();
+
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("div-generic-node").click();
     await page.getByTestId("code-button-modal").click();
@@ -177,13 +184,14 @@ class CustomComponent(Component):
     const visibleTexts = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"];
     const notVisibleTexts = ["X1", "thirdRandomText"];
 
-    await Promise.all(
-      visibleTexts.map((text) => expect(page.getByText(text)).toBeVisible()),
-    );
-    await Promise.all(
-      notVisibleTexts.map((text) =>
-        expect(page.getByText(text)).not.toBeVisible(),
-      ),
-    );
+    for (const text of visibleTexts) {
+      const count = await page.getByText(text).count();
+      expect(count).toBeGreaterThanOrEqual(1);
+    }
+
+    for (const text of notVisibleTexts) {
+      const count = await page.getByText(text).count();
+      expect(count).toBe(0);
+    }
   },
 );

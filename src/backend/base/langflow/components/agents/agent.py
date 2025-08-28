@@ -1,22 +1,32 @@
+import json
+import re
+
 from langchain_core.tools import StructuredTool
+from pydantic import ValidationError
 
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.agents.events import ExceptionWithMessageError
 from langflow.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
     MODEL_DYNAMIC_UPDATE_FIELDS,
+    MODEL_PROVIDERS,
     MODEL_PROVIDERS_DICT,
     MODELS_METADATA,
 )
 from langflow.base.models.model_utils import get_model_name
-from langflow.components.helpers import CurrentDateComponent
+from langflow.components.helpers.current_date import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
+from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.custom.utils import update_component_build_config
-from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
+from langflow.field_typing import Tool
+from langflow.helpers.base_model import build_model_from_schema
+from langflow.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output, TableInput
 from langflow.logging import logger
+from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
+from langflow.schema.table import EditMode
 
 
 def set_advanced_true(component_input):
@@ -24,27 +34,38 @@ def set_advanced_true(component_input):
     return component_input
 
 
+MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "Groq", "OpenAI"]
+
+
 class AgentComponent(ToolCallingAgentComponent):
     display_name: str = "Agent"
     description: str = "Define the agent's instructions, then enter a task to complete using tools."
+    documentation: str = "https://docs.langflow.org/agents"
     icon = "bot"
     beta = False
     name = "Agent"
 
     memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
 
+    # Filter out json_mode from OpenAI inputs since we handle structured output differently
+    openai_inputs_filtered = [
+        input_field
+        for input_field in MODEL_PROVIDERS_DICT["OpenAI"]["inputs"]
+        if not (hasattr(input_field, "name") and input_field.name == "json_mode")
+    ]
+
     inputs = [
         DropdownInput(
             name="agent_llm",
             display_name="Model Provider",
             info="The provider of the language model that the agent will use to generate responses.",
-            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), "Custom"],
+            options=[*MODEL_PROVIDERS_LIST, "Custom"],
             value="OpenAI",
             real_time_refresh=True,
             input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())] + [{"icon": "brain"}],
+            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST] + [{"icon": "brain"}],
         ),
-        *MODEL_PROVIDERS_DICT["OpenAI"]["inputs"],
+        *openai_inputs_filtered,
         MultilineInput(
             name="system_prompt",
             display_name="Agent Instructions",
@@ -52,8 +73,78 @@ class AgentComponent(ToolCallingAgentComponent):
             value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
             advanced=False,
         ),
+        IntInput(
+            name="n_messages",
+            display_name="Number of Chat History Messages",
+            value=100,
+            info="Number of chat history messages to retrieve.",
+            advanced=True,
+            show=True,
+        ),
+        MultilineInput(
+            name="format_instructions",
+            display_name="Output Format Instructions",
+            info="Generic Template for structured output formatting. Valid only with Structured response.",
+            value=(
+                "You are an AI that extracts structured JSON objects from unstructured text. "
+                "Use a predefined schema with expected types (str, int, float, bool, dict). "
+                "Extract ALL relevant instances that match the schema - if multiple patterns exist, capture them all. "
+                "Fill missing or ambiguous values with defaults: null for missing values. "
+                "Remove exact duplicates but keep variations that have different field values. "
+                "Always return valid JSON in the expected format, never throw errors. "
+                "If multiple objects can be extracted, return them all in the structured format."
+            ),
+            advanced=True,
+        ),
+        TableInput(
+            name="output_schema",
+            display_name="Output Schema",
+            info=(
+                "Schema Validation: Define the structure and data types for structured output. "
+                "No validation if no output schema."
+            ),
+            advanced=True,
+            required=False,
+            value=[],
+            table_schema=[
+                {
+                    "name": "name",
+                    "display_name": "Name",
+                    "type": "str",
+                    "description": "Specify the name of the output field.",
+                    "default": "field",
+                    "edit_mode": EditMode.INLINE,
+                },
+                {
+                    "name": "description",
+                    "display_name": "Description",
+                    "type": "str",
+                    "description": "Describe the purpose of the output field.",
+                    "default": "description of field",
+                    "edit_mode": EditMode.POPOVER,
+                },
+                {
+                    "name": "type",
+                    "display_name": "Type",
+                    "type": "str",
+                    "edit_mode": EditMode.INLINE,
+                    "description": ("Indicate the data type of the output field (e.g., str, int, float, bool, dict)."),
+                    "options": ["str", "int", "float", "bool", "dict"],
+                    "default": "str",
+                },
+                {
+                    "name": "multiple",
+                    "display_name": "As List",
+                    "type": "boolean",
+                    "description": "Set to True if this output field should be a list of the specified type.",
+                    "default": "False",
+                    "edit_mode": EditMode.INLINE,
+                },
+            ],
+        ),
         *LCToolsAgentComponent._base_inputs,
-        *memory_inputs,
+        # removed memory inputs from agent component
+        # *memory_inputs,
         BoolInput(
             name="add_current_date_tool",
             display_name="Current Date",
@@ -62,66 +153,238 @@ class AgentComponent(ToolCallingAgentComponent):
             value=True,
         ),
     ]
-    outputs = [Output(name="response", display_name="Response", method="message_response")]
+    outputs = [
+        Output(name="response", display_name="Response", method="message_response"),
+        Output(name="structured_response", display_name="Structured Response", method="json_response", tool_mode=False),
+    ]
+
+    async def get_agent_requirements(self):
+        """Get the agent requirements for the agent."""
+        llm_model, display_name = await self.get_llm()
+        if llm_model is None:
+            msg = "No language model selected. Please choose a model to proceed."
+            raise ValueError(msg)
+        self.model_name = get_model_name(llm_model, display_name=display_name)
+
+        # Get memory data
+        self.chat_history = await self.get_memory_data()
+        if isinstance(self.chat_history, Message):
+            self.chat_history = [self.chat_history]
+
+        # Add current date tool if enabled
+        if self.add_current_date_tool:
+            if not isinstance(self.tools, list):  # type: ignore[has-type]
+                self.tools = []
+            current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
+            if not isinstance(current_date_tool, StructuredTool):
+                msg = "CurrentDateComponent must be converted to a StructuredTool"
+                raise TypeError(msg)
+            self.tools.append(current_date_tool)
+        return llm_model, self.chat_history, self.tools
 
     async def message_response(self) -> Message:
         try:
-            # Get LLM model and validate
-            llm_model, display_name = self.get_llm()
-            if llm_model is None:
-                msg = "No language model selected. Please choose a model to proceed."
-                raise ValueError(msg)
-            self.model_name = get_model_name(llm_model, display_name=display_name)
-
-            # Get memory data
-            self.chat_history = await self.get_memory_data()
-
-            # Add current date tool if enabled
-            if self.add_current_date_tool:
-                if not isinstance(self.tools, list):  # type: ignore[has-type]
-                    self.tools = []
-                current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
-                if not isinstance(current_date_tool, StructuredTool):
-                    msg = "CurrentDateComponent must be converted to a StructuredTool"
-                    raise TypeError(msg)
-                self.tools.append(current_date_tool)
-
-            # Validate tools
-            if not self.tools:
-                msg = "Tools are required to run the agent. Please add at least one tool."
-                raise ValueError(msg)
-
+            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
             # Set up and run agent
             self.set(
                 llm=llm_model,
-                tools=self.tools,
+                tools=self.tools or [],
                 chat_history=self.chat_history,
                 input_value=self.input_value,
                 system_prompt=self.system_prompt,
             )
             agent = self.create_agent_runnable()
-            return await self.run_agent(agent)
+            result = await self.run_agent(agent)
+
+            # Store result for potential JSON output
+            self._agent_result = result
 
         except (ValueError, TypeError, KeyError) as e:
-            logger.error(f"{type(e).__name__}: {e!s}")
+            await logger.aerror(f"{type(e).__name__}: {e!s}")
             raise
         except ExceptionWithMessageError as e:
-            logger.error(f"ExceptionWithMessageError occurred: {e}")
+            await logger.aerror(f"ExceptionWithMessageError occurred: {e}")
             raise
+        # Avoid catching blind Exception; let truly unexpected exceptions propagate
         except Exception as e:
-            logger.error(f"Unexpected error: {e!s}")
+            await logger.aerror(f"Unexpected error: {e!s}")
             raise
+        else:
+            return result
+
+    def _preprocess_schema(self, schema):
+        """Preprocess schema to ensure correct data types for build_model_from_schema."""
+        processed_schema = []
+        for field in schema:
+            processed_field = {
+                "name": str(field.get("name", "field")),
+                "type": str(field.get("type", "str")),
+                "description": str(field.get("description", "")),
+                "multiple": field.get("multiple", False),
+            }
+            # Ensure multiple is handled correctly
+            if isinstance(processed_field["multiple"], str):
+                processed_field["multiple"] = processed_field["multiple"].lower() in ["true", "1", "t", "y", "yes"]
+            processed_schema.append(processed_field)
+        return processed_schema
+
+    async def build_structured_output_base(self, content: str):
+        """Build structured output with optional BaseModel validation."""
+        json_pattern = r"\{.*\}"
+        schema_error_msg = "Try setting an output schema"
+
+        # Try to parse content as JSON first
+        json_data = None
+        try:
+            json_data = json.loads(content)
+        except json.JSONDecodeError:
+            json_match = re.search(json_pattern, content, re.DOTALL)
+            if json_match:
+                try:
+                    json_data = json.loads(json_match.group())
+                except json.JSONDecodeError:
+                    return {"content": content, "error": schema_error_msg}
+            else:
+                return {"content": content, "error": schema_error_msg}
+
+        # If no output schema provided, return parsed JSON without validation
+        if not hasattr(self, "output_schema") or not self.output_schema or len(self.output_schema) == 0:
+            return json_data
+
+        # Use BaseModel validation with schema
+        try:
+            processed_schema = self._preprocess_schema(self.output_schema)
+            output_model = build_model_from_schema(processed_schema)
+
+            # Validate against the schema
+            if isinstance(json_data, list):
+                # Multiple objects
+                validated_objects = []
+                for item in json_data:
+                    try:
+                        validated_obj = output_model.model_validate(item)
+                        validated_objects.append(validated_obj.model_dump())
+                    except ValidationError as e:
+                        await logger.aerror(f"Validation error for item: {e}")
+                        # Include invalid items with error info
+                        validated_objects.append({"data": item, "validation_error": str(e)})
+                return validated_objects
+
+            # Single object
+            try:
+                validated_obj = output_model.model_validate(json_data)
+                return [validated_obj.model_dump()]  # Return as list for consistency
+            except ValidationError as e:
+                await logger.aerror(f"Validation error: {e}")
+                return [{"data": json_data, "validation_error": str(e)}]
+
+        except (TypeError, ValueError) as e:
+            await logger.aerror(f"Error building structured output: {e}")
+            # Fallback to parsed JSON without validation
+            return json_data
+
+    async def json_response(self) -> Data:
+        """Convert agent response to structured JSON Data output with schema validation."""
+        # Always use structured chat agent for JSON response mode for better JSON formatting
+        try:
+            system_components = []
+
+            # 1. Agent Instructions (system_prompt)
+            agent_instructions = getattr(self, "system_prompt", "") or ""
+            if agent_instructions:
+                system_components.append(f"{agent_instructions}")
+
+            # 2. Format Instructions
+            format_instructions = getattr(self, "format_instructions", "") or ""
+            if format_instructions:
+                system_components.append(f"Format instructions: {format_instructions}")
+
+            # 3. Schema Information from BaseModel
+            if hasattr(self, "output_schema") and self.output_schema and len(self.output_schema) > 0:
+                try:
+                    processed_schema = self._preprocess_schema(self.output_schema)
+                    output_model = build_model_from_schema(processed_schema)
+                    schema_dict = output_model.model_json_schema()
+                    schema_info = (
+                        "You are given some text that may include format instructions, "
+                        "explanations, or other content alongside a JSON schema.\n\n"
+                        "Your task:\n"
+                        "- Extract only the JSON schema.\n"
+                        "- Return it as valid JSON.\n"
+                        "- Do not include format instructions, explanations, or extra text.\n\n"
+                        "Input:\n"
+                        f"{json.dumps(schema_dict, indent=2)}\n\n"
+                        "Output (only JSON schema):"
+                    )
+                    system_components.append(schema_info)
+                except (ValidationError, ValueError, TypeError, KeyError) as e:
+                    await logger.aerror(f"Could not build schema for prompt: {e}", exc_info=True)
+
+            # Combine all components
+            combined_instructions = "\n\n".join(system_components) if system_components else ""
+            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+            self.set(
+                llm=llm_model,
+                tools=self.tools or [],
+                chat_history=self.chat_history,
+                input_value=self.input_value,
+                system_prompt=combined_instructions,
+            )
+
+            # Create and run structured chat agent
+            try:
+                structured_agent = self.create_agent_runnable()
+            except (NotImplementedError, ValueError, TypeError) as e:
+                await logger.aerror(f"Error with structured chat agent: {e}")
+                raise
+            try:
+                result = await self.run_agent(structured_agent)
+            except (ExceptionWithMessageError, ValueError, TypeError, RuntimeError) as e:
+                await logger.aerror(f"Error with structured agent result: {e}")
+                raise
+            # Extract content from structured agent result
+            if hasattr(result, "content"):
+                content = result.content
+            elif hasattr(result, "text"):
+                content = result.text
+            else:
+                content = str(result)
+
+        except (ExceptionWithMessageError, ValueError, TypeError, NotImplementedError, AttributeError) as e:
+            await logger.aerror(f"Error with structured chat agent: {e}")
+            # Fallback to regular agent
+            content_str = "No content returned from agent"
+            return Data(data={"content": content_str, "error": str(e)})
+
+        # Process with structured output validation
+        try:
+            structured_output = await self.build_structured_output_base(content)
+
+            # Handle different output formats
+            if isinstance(structured_output, list) and structured_output:
+                if len(structured_output) == 1:
+                    return Data(data=structured_output[0])
+                return Data(data={"results": structured_output})
+            if isinstance(structured_output, dict):
+                return Data(data=structured_output)
+            return Data(data={"content": content})
+
+        except (ValueError, TypeError) as e:
+            await logger.aerror(f"Error in structured output processing: {e}")
+            return Data(data={"content": content, "error": str(e)})
 
     async def get_memory_data(self):
-        memory_kwargs = {
-            component_input.name: getattr(self, f"{component_input.name}") for component_input in self.memory_inputs
-        }
-        # filter out empty values
-        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v}
+        # TODO: This is a temporary fix to avoid message duplication. We should develop a function for this.
+        messages = (
+            await MemoryComponent(**self.get_base_args())
+            .set(session_id=self.graph.session_id, order="Ascending", n_messages=self.n_messages)
+            .retrieve_messages()
+        )
+        return [
+            message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
+        ]
 
-        return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()
-
-    def get_llm(self):
+    async def get_llm(self):
         if not isinstance(self.agent_llm, str):
             return self.agent_llm, None
 
@@ -138,13 +401,16 @@ class AgentComponent(ToolCallingAgentComponent):
 
             return self._build_llm_model(component_class, inputs, prefix), display_name
 
-        except Exception as e:
-            logger.error(f"Error building {self.agent_llm} language model: {e!s}")
+        except (AttributeError, ValueError, TypeError, RuntimeError) as e:
+            await logger.aerror(f"Error building {self.agent_llm} language model: {e!s}")
             msg = f"Failed to initialize language model: {e!s}"
             raise ValueError(msg) from e
 
     def _build_llm_model(self, component, inputs, prefix=""):
-        model_kwargs = {input_.name: getattr(self, f"{prefix}{input_.name}") for input_ in inputs}
+        model_kwargs = {}
+        for input_ in inputs:
+            if hasattr(self, f"{prefix}{input_.name}"):
+                model_kwargs[input_.name] = getattr(self, f"{prefix}{input_.name}")
         return component.set(**model_kwargs).build_model()
 
     def set_component_params(self, component):
@@ -152,7 +418,11 @@ class AgentComponent(ToolCallingAgentComponent):
         if provider_info:
             inputs = provider_info.get("inputs")
             prefix = provider_info.get("prefix")
-            model_kwargs = {input_.name: getattr(self, f"{prefix}{input_.name}") for input_ in inputs}
+            # Filter out json_mode and only use attributes that exist on this component
+            model_kwargs = {}
+            for input_ in inputs:
+                if hasattr(self, f"{prefix}{input_.name}"):
+                    model_kwargs[input_.name] = getattr(self, f"{prefix}{input_.name}")
 
             return component.set(**model_kwargs)
         return component
@@ -220,7 +490,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 custom_component = DropdownInput(
                     name="agent_llm",
                     display_name="Language Model",
-                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), "Custom"],
+                    options=[*sorted(MODEL_PROVIDERS), "Custom"],
                     value="Custom",
                     real_time_refresh=True,
                     input_types=["LanguageModel"],
@@ -268,3 +538,16 @@ class AgentComponent(ToolCallingAgentComponent):
                         component_class, build_config, field_value, "model_name"
                     )
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
+
+    async def _get_tools(self) -> list[Tool]:
+        component_toolkit = _get_component_toolkit()
+        tools_names = self._build_tools_names()
+        agent_description = self.get_tool_description()
+        # TODO: Agent Description Depreciated Feature to be removed
+        description = f"{agent_description}{tools_names}"
+        tools = component_toolkit(component=self).get_tools(
+            tool_name="Call_Agent", tool_description=description, callbacks=self.get_langchain_callbacks()
+        )
+        if hasattr(self, "tools_metadata"):
+            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+        return tools

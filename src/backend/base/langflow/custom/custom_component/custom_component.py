@@ -8,11 +8,12 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import yaml
 from cachetools import TTLCache
 from langchain_core.documents import Document
+from loguru import logger
 from pydantic import BaseModel
 
 from langflow.custom.custom_component.base_component import BaseComponent
 from langflow.helpers.flow import list_flows, load_flow, run_flow
-from langflow.schema import Data
+from langflow.schema.data import Data
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
 from langflow.template.utils import update_frontend_node_with_template_values
@@ -116,16 +117,6 @@ class CustomComponent(BaseComponent):
             return f"{self.display_name} ({self._id})"
         return f"{self.display_name}"
 
-    def update_state(self, name: str, value: Any) -> None:
-        if not self._vertex:
-            msg = "Vertex is not set"
-            raise ValueError(msg)
-        try:
-            self._vertex.graph.update_state(name=name, record=value, caller=self._vertex.id)
-        except Exception as e:
-            msg = f"Error updating state: {e}"
-            raise ValueError(msg) from e
-
     def stop(self, output_name: str | None = None) -> None:
         if not output_name and self._vertex and len(self._vertex.outputs) == 1:
             output_name = self._vertex.outputs[0]["name"]
@@ -154,26 +145,6 @@ class CustomComponent(BaseComponent):
             self.graph.mark_branch(vertex_id=self._vertex.id, output_name=output_name, state="ACTIVE")
         except Exception as e:
             msg = f"Error starting {self.display_name}: {e}"
-            raise ValueError(msg) from e
-
-    def append_state(self, name: str, value: Any) -> None:
-        if not self._vertex:
-            msg = "Vertex is not set"
-            raise ValueError(msg)
-        try:
-            self._vertex.graph.append_state(name=name, record=value, caller=self._vertex.id)
-        except Exception as e:
-            msg = f"Error appending state: {e}"
-            raise ValueError(msg) from e
-
-    def get_state(self, name: str):
-        if not self._vertex:
-            msg = "Vertex is not set"
-            raise ValueError(msg)
-        try:
-            return self._vertex.graph.get_state(name=name)
-        except Exception as e:
-            msg = f"Error getting state: {e}"
             raise ValueError(msg) from e
 
     @staticmethod
@@ -435,6 +406,11 @@ class CustomComponent(BaseComponent):
         return run_until_complete(self.get_variables(name, field))
 
     async def get_variables(self, name: str, field: str):
+        """DEPRECATED - This is kept for backward compatibility. Use get_variable instead."""
+        async with session_scope() as session:
+            return await self.get_variable(name, field, session)
+
+    async def get_variable(self, name: str, field: str, session):
         """Returns the variable for the current user with the specified name.
 
         Raises:
@@ -446,6 +422,16 @@ class CustomComponent(BaseComponent):
         if hasattr(self, "_user_id") and not self.user_id:
             msg = f"User id is not set for {self.__class__.__name__}"
             raise ValueError(msg)
+
+        # Check graph context for request-level variable overrides first
+        if hasattr(self, "graph") and self.graph and hasattr(self.graph, "context"):
+            context = self.graph.context
+            if context and "request_variables" in context:
+                request_variables = context["request_variables"]
+                if name in request_variables:
+                    logger.debug(f"Found context override for variable '{name}': {request_variables[name]}")
+                    return request_variables[name]
+
         variable_service = get_variable_service()  # Get service instance
         # Retrieve and decrypt the variable by name for the current user
         if isinstance(self.user_id, str):
@@ -455,8 +441,7 @@ class CustomComponent(BaseComponent):
         else:
             msg = f"Invalid user id: {self.user_id}"
             raise TypeError(msg)
-        async with session_scope() as session:
-            return await variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
+        return await variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
 
     async def list_key_names(self):
         """Lists the names of the variables for the current user.

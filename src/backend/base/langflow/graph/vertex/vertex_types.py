@@ -7,17 +7,17 @@ from typing import TYPE_CHECKING, Any, cast
 
 import yaml
 from langchain_core.messages import AIMessage, AIMessageChunk
-from loguru import logger
 
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.exceptions import NoComponentInstanceError
-from langflow.schema import Data
+from langflow.logging.logger import logger
 from langflow.schema.artifact import ArtifactType
+from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.serialization import serialize
+from langflow.serialization.serialization import serialize
 from langflow.template.field.base import UNDEFINED, Output
 from langflow.utils.schemas import ChatOutputResponse, DataOutputResponse
 from langflow.utils.util import unescape_string
@@ -67,6 +67,8 @@ class ComponentVertex(Vertex):
                 self.custom_component, self.built_object, self.artifacts = result
                 self.logs = self.custom_component._output_logs
                 for key in self.artifacts:
+                    if self.artifacts_raw is None:
+                        self.artifacts_raw = {}
                     self.artifacts_raw[key] = self.artifacts[key].get("raw", None)
                     self.artifacts_type[key] = self.artifacts[key].get("type", None) or ArtifactType.UNKNOWN.value
         else:
@@ -425,7 +427,7 @@ class InterfaceVertex(ComponentVertex):
         # Update artifacts with the message
         # and remove the stream_url
         self.finalize_build()
-        logger.debug(f"Streamed message: {complete_message}")
+        await logger.adebug(f"Streamed message: {complete_message}")
         # Set the result in the vertex of origin
         edges = self.get_edge_with_target(self.id)
         for edge in edges:
@@ -461,18 +463,21 @@ class InterfaceVertex(ComponentVertex):
 
 class StateVertex(ComponentVertex):
     def __init__(self, data: NodeData, graph):
+        """Initializes a StateVertex with the provided node data and graph.
+
+        Sets up the build steps and marks the vertex as a state vertex.
+        """
         super().__init__(data, graph=graph)
         self.steps = [self._build]
-        self.is_state = False
-
-    @property
-    def successors_ids(self) -> list[str]:
-        if self._successors_ids is None:
-            self.is_state = False
-            return super().successors_ids
-        return self._successors_ids
+        self.is_state = True
 
     def built_object_repr(self):
+        """Returns a string representation of the built object from the artifacts if available.
+
+        If the artifacts dictionary contains a non-empty "repr" key, its value is returned.
+        If the "repr" value is falsy, falls back to the superclass representation.
+        Returns None if no representation is available.
+        """
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super().built_object_repr()
         return None

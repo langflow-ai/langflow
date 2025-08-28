@@ -1,5 +1,5 @@
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { FlowType } from "@/types/flow";
+import type { FlowType } from "@/types/flow";
 import { useDebounce } from "../use-debounce";
 import useSaveFlow from "./use-save-flow";
 

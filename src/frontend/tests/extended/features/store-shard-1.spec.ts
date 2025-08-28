@@ -14,7 +14,7 @@ test.skip(
     if (!process.env.CI) {
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
-    await awaitBootstrapTest(page);
+    await awaitBootstrapTest(page, { skipModal: true });
 
     await page.getByText("Close", { exact: true }).click();
     await page.waitForTimeout(1000);
@@ -96,7 +96,8 @@ test.skip(
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
 
-    await page.goto("/");
+    await awaitBootstrapTest(page, { skipModal: true });
+
     await page.waitForTimeout(1000);
 
     await page.getByTestId("button-store").click();

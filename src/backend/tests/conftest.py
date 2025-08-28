@@ -17,9 +17,10 @@ from blockbuster import blockbuster_ctx
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from langflow.components.inputs import ChatInput
+from langflow.components.input_output import ChatInput
 from langflow.graph import Graph
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.logging.logger import logger
 from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
@@ -30,7 +31,6 @@ from langflow.services.database.models.user.model import User, UserCreate, UserR
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, session_scope
-from loguru import logger
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -43,9 +43,10 @@ from tests.api_keys import get_openai_api_key
 load_dotenv()
 
 
-@pytest.fixture(autouse=True)
+# TODO: Revert this to True once bb.functions[func].can_block_in("http/client.py", "_safe_read") is fixed
+@pytest.fixture(autouse=False)
 def blockbuster(request):
-    if "benchmark" in request.keywords:
+    if "benchmark" in request.keywords or "no_blockbuster" in request.keywords:
         yield
     else:
         with blockbuster_ctx() as bb:
@@ -64,6 +65,7 @@ def blockbuster(request):
                 "io.TextIOWrapper.read",
             ]:
                 bb.functions[func].can_block_in("importlib_metadata/__init__.py", "metadata")
+                # bb.functions[func].can_block_in("http/client.py", "_safe_read")
 
             (
                 bb.functions["os.stat"]
@@ -74,19 +76,34 @@ def blockbuster(request):
                 .can_block_in("rich/traceback.py", "_render_stack")
                 .can_block_in("langchain_core/_api/internal.py", "is_caller_internal")
                 .can_block_in("langchain_core/runnables/utils.py", "get_function_nonlocals")
+                .can_block_in("alembic/versions", "_load_revisions")
+                .can_block_in("dotenv/main.py", "find_dotenv")
+                .can_block_in("alembic/script/base.py", "_load_revisions")
+                .can_block_in("alembic/env.py", "_do_run_migrations")
             )
 
-            for func in ["os.stat", "os.path.abspath", "os.scandir"]:
+            for func in ["os.stat", "os.path.abspath", "os.scandir", "os.listdir"]:
                 bb.functions[func].can_block_in("alembic/util/pyfiles.py", "load_python_file")
+                bb.functions[func].can_block_in("dotenv/main.py", "find_dotenv")
+                bb.functions[func].can_block_in("pkgutil.py", "_iter_file_finder_modules")
 
             for func in ["os.path.abspath", "os.scandir"]:
                 bb.functions[func].can_block_in("alembic/script/base.py", "_load_revisions")
+
+            # Add os.stat to alembic/script/base.py _load_revisions
+            bb.functions["os.stat"].can_block_in("alembic/script/base.py", "_load_revisions")
 
             (
                 bb.functions["os.path.abspath"]
                 .can_block_in("loguru/_better_exceptions.py", {"_get_lib_dirs", "_format_exception"})
                 .can_block_in("sqlalchemy/dialects/sqlite/pysqlite.py", "create_connect_args")
+                .can_block_in("botocore/__init__.py", "__init__")
             )
+
+            bb.functions["socket.socket.connect"].can_block_in("urllib3/connection.py", "_new_conn")
+            bb.functions["ssl.SSLSocket.send"].can_block_in("ssl.py", "sendall")
+            bb.functions["ssl.SSLSocket.read"].can_block_in("ssl.py", "recv_into")
+
             yield bb
 
 
@@ -151,25 +168,12 @@ async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
             continue
         try:
             await delete_vertex_builds_by_flow_id(session, flow_id)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.debug(f"Error deleting vertex builds for flow {flow_id}: {e}")
         try:
             await delete_transactions_by_flow_id(session, flow_id)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.debug(f"Error deleting transactions for flow {flow_id}: {e}")
-
-
-@pytest.fixture
-def caplog(caplog: pytest.LogCaptureFixture):
-    handler_id = logger.add(
-        caplog.handler,
-        format="{message}",
-        level=0,
-        filter=lambda record: record["level"].no >= caplog.handler.level,
-        enqueue=False,  # Set to 'True' if your test is spawning child processes.
-    )
-    yield caplog
-    logger.remove(handler_id)
 
 
 @pytest.fixture
@@ -181,11 +185,18 @@ async def async_client() -> AsyncGenerator:
 
 @pytest.fixture(name="session")
 def session_fixture():
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        yield session
-    SQLModel.metadata.drop_all(engine)  # Add this line to clean up tables
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    try:
+        SQLModel.metadata.create_all(engine)
+        with Session(engine) as session:
+            yield session
+    finally:
+        SQLModel.metadata.drop_all(engine)
+        engine.dispose()
 
 
 @pytest.fixture
@@ -353,6 +364,16 @@ def deactivate_tracing(monkeypatch):
     monkeypatch.undo()
 
 
+@pytest.fixture
+def use_noop_session(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_USE_NOOP_DATABASE", "1")
+    # Optionally patch the Settings object if needed
+    # from langflow.services.settings.base import Settings
+    # monkeypatch.setattr(Settings, "use_noop_database", True)
+    yield
+    monkeypatch.undo()
+
+
 @pytest.fixture(name="client")
 async def client_fixture(
     session: Session,  # noqa: ARG001
@@ -447,7 +468,7 @@ async def active_user(client):  # noqa: ARG001
             user = await session.get(User, user.id, options=[selectinload(User.flows)])
             await _delete_transactions_and_vertex_builds(session, user.flows)
             await session.commit()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.exception(f"Error deleting transactions and vertex builds for user: {e}")
 
     try:
@@ -455,7 +476,7 @@ async def active_user(client):  # noqa: ARG001
             user = await session.get(User, user.id)
             await session.delete(user)
             await session.commit()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.exception(f"Error deleting user: {e}")
 
 

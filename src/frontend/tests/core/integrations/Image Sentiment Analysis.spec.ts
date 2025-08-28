@@ -31,15 +31,27 @@ withEventDeliveryModes(
       .last()
       .click();
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
 
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await initialGPTsetup(page);
 
-    await page.getByText("Playground", { exact: true }).last().click();
+    //* TODO: Remove these 3 steps once the template is updated *//
+    await page
+      .getByTestId("handle-structuredoutput-shownode-structured output-right")
+      .click();
+    await page
+      .getByTestId("handle-parser-shownode-data or dataframe-left")
+      .click();
+    await page.getByTestId("tab_1_stringify").click();
+
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,

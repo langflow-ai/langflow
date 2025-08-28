@@ -1,6 +1,6 @@
+import { useLocation } from "react-router-dom";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -34,7 +34,7 @@ const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
             <SidebarMenu>
               {items.map((item, index) => (
                 <SidebarMenuItem key={index}>
-                  <CustomLink to={item.href!}>
+                  <CustomLink to={item.href!} replace>
                     <SidebarMenuButton
                       size="md"
                       isActive={

@@ -3,12 +3,12 @@ from typing import Any
 from langchain_text_splitters import CharacterTextSplitter, TextSplitter
 
 from langflow.base.textsplitters.model import LCTextSplitterComponent
-from langflow.inputs import DataInput, IntInput, MessageTextInput
+from langflow.inputs.inputs import DataInput, IntInput, MessageTextInput
 from langflow.utils.util import unescape_string
 
 
 class CharacterTextSplitterComponent(LCTextSplitterComponent):
-    display_name = "CharacterTextSplitter"
+    display_name = "Character Text Splitter"
     description = "Split text by number of characters."
     documentation = "https://docs.langflow.org/components/text-splitters#charactertextsplitter"
     name = "CharacterTextSplitter"

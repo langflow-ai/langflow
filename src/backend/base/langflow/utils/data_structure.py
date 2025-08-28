@@ -2,7 +2,7 @@ import json
 from collections import Counter
 from typing import Any
 
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 
 def infer_list_type(items: list, max_samples: int = 5) -> str:

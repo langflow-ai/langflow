@@ -8,14 +8,13 @@ from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
-
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
 from langflow.graph.vertex.param_handler import ParameterHandler
 from langflow.interface import initialize
 from langflow.interface.listing import lazy_load_dict
+from langflow.logging.logger import logger
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.data import Data
 from langflow.schema.message import Message
@@ -27,7 +26,7 @@ from langflow.utils.util import sync_to_async
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from langflow.custom import Component
+    from langflow.custom.custom_component.component import Component
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.base import CycleEdge, Edge
     from langflow.graph.graph.base import Graph
@@ -78,7 +77,7 @@ class Vertex:
         self.built = False
         self._successors_ids: list[str] | None = None
         self.artifacts: dict[str, Any] = {}
-        self.artifacts_raw: dict[str, Any] = {}
+        self.artifacts_raw: dict[str, Any] | None = {}
         self.artifacts_type: dict[str, str] = {}
         self.steps: list[Callable] = [self._build]
         self.steps_ran: list[Callable] = []
@@ -106,6 +105,8 @@ class Vertex:
         self.output_names: list[str] = [
             output["name"] for output in self.outputs if isinstance(output, dict) and "name" in output
         ]
+        self._incoming_edges: list[CycleEdge] | None = None
+        self._outgoing_edges: list[CycleEdge] | None = None
 
     @property
     def is_loop(self) -> bool:
@@ -129,12 +130,6 @@ class Vertex:
 
     def add_result(self, name: str, result: Any) -> None:
         self.results[name] = result
-
-    def update_graph_state(self, key, new_state, *, append: bool) -> None:
-        if append:
-            self.graph.append_state(key, new_state, caller=self.id)
-        else:
-            self.graph.update_state(key, new_state, caller=self.id)
 
     def set_state(self, state: str) -> None:
         self.state = VertexStates[state]
@@ -185,11 +180,19 @@ class Vertex:
 
     @property
     def outgoing_edges(self) -> list[CycleEdge]:
-        return [edge for edge in self.edges if edge.source_id == self.id]
+        if self._outgoing_edges is None:
+            self._outgoing_edges = [edge for edge in self.edges if edge.source_id == self.id]
+        return self._outgoing_edges
 
     @property
     def incoming_edges(self) -> list[CycleEdge]:
-        return [edge for edge in self.edges if edge.target_id == self.id]
+        if self._incoming_edges is None:
+            self._incoming_edges = [edge for edge in self.edges if edge.target_id == self.id]
+        return self._incoming_edges
+
+    # Get edge connected to an output of a certain name
+    def get_incoming_edge_by_target_param(self, target_param: str) -> str | None:
+        return next((edge.source_id for edge in self.incoming_edges if edge.target_param == target_param), None)
 
     @property
     def edges_source_names(self) -> set[str | None]:
@@ -307,6 +310,8 @@ class Vertex:
                 else:
                     params[param_key] = self.graph.get_vertex(edge.source_id)
         elif param_key in self.output_names:
+            #  if the loop is run the param_key item will be set over here
+            # validate the edge
             params[param_key] = self.graph.get_vertex(edge.source_id)
         return params
 
@@ -372,7 +377,7 @@ class Vertex:
         event_manager: EventManager | None = None,
     ) -> None:
         """Initiate the build process."""
-        logger.debug(f"Building {self.display_name}")
+        await logger.adebug(f"Building {self.display_name}")
         await self._build_each_vertex_in_params_dict()
 
         if self.base_type is None:
@@ -593,7 +598,7 @@ class Vertex:
 
                     self.params[key].append(result)
                 except AttributeError as e:
-                    logger.exception(e)
+                    await logger.aexception(e)
                     msg = (
                         f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {result}"
                         f"Error building Component {self.display_name}: \n\n{e}"
@@ -640,7 +645,7 @@ class Vertex:
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             tb = traceback.format_exc()
-            logger.exception(exc)
+            await logger.aexception(exc)
             msg = f"Error building Component {self.display_name}: \n\n{exc}"
             raise ComponentBuildError(msg, tb) from exc
 
