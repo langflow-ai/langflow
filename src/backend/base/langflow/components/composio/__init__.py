@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from .contentful_composio import ComposioContentfulAPIComponent
     from .discord_composio import ComposioDiscordAPIComponent
     from .figma_composio import ComposioFigmaAPIComponent
+    from .firecrawl_composio import ComposioFirecrawlAPIComponent
     from .github_composio import ComposioGitHubAPIComponent
     from .gmail_composio import ComposioGmailAPIComponent
     from .googlecalendar_composio import ComposioGoogleCalendarAPIComponent
@@ -65,6 +66,7 @@ _dynamic_imports = {
     "ComposioFigmaAPIComponent": "figma_composio",
     "ComposioMiroAPIComponent": "miro_composio",
     "ComposioWrikeAPIComponent": "wrike_composio",
+    "ComposioFirecrawlAPIComponent": "firecrawl_composio",
 }
 
 __all__ = [
@@ -76,6 +78,7 @@ __all__ = [
     "ComposioContentfulAPIComponent",
     "ComposioDiscordAPIComponent",
     "ComposioFigmaAPIComponent",
+    "ComposioFirecrawlAPIComponent",
     "ComposioGitHubAPIComponent",
     "ComposioGmailAPIComponent",
     "ComposioGoogleCalendarAPIComponent",
