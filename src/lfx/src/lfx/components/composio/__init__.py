@@ -4,15 +4,6 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.components._importing import import_mod
 
-# Test if composio components can be imported
-try:
-    # Try importing a key component from composio to test compatibility
-    from composio.client import NotGiven  # noqa: F401
-
-    COMPOSIO_COMPATIBLE = True
-except ImportError:
-    COMPOSIO_COMPATIBLE = False
-
 if TYPE_CHECKING:
     from .composio_api import ComposioAPIComponent
     from .github_composio import ComposioGitHubAPIComponent
@@ -46,25 +37,23 @@ _dynamic_imports = {
     "ComposioYoutubeAPIComponent": "youtube_composio",
 }
 
-if COMPOSIO_COMPATIBLE:
-    __all__ = [
-        "ComposioAPIComponent",
-        "ComposioGitHubAPIComponent",
-        "ComposioGmailAPIComponent",
-        "ComposioGoogleCalendarAPIComponent",
-        "ComposioGoogleTasksAPIComponent",
-        "ComposioGooglemeetAPIComponent",
-        "ComposioLinearAPIComponent",
-        "ComposioOutlookAPIComponent",
-        "ComposioRedditAPIComponent",
-        "ComposioSlackAPIComponent",
-        "ComposioSlackbotAPIComponent",
-        "ComposioSupabaseAPIComponent",
-        "ComposioTodoistAPIComponent",
-        "ComposioYoutubeAPIComponent",
-    ]
-else:
-    __all__ = []
+# Always expose all components - individual failures will be handled on import
+__all__ = [
+    "ComposioAPIComponent",
+    "ComposioGitHubAPIComponent",
+    "ComposioGmailAPIComponent",
+    "ComposioGoogleCalendarAPIComponent",
+    "ComposioGoogleTasksAPIComponent",
+    "ComposioGooglemeetAPIComponent",
+    "ComposioLinearAPIComponent",
+    "ComposioOutlookAPIComponent",
+    "ComposioRedditAPIComponent",
+    "ComposioSlackAPIComponent",
+    "ComposioSlackbotAPIComponent",
+    "ComposioSupabaseAPIComponent",
+    "ComposioTodoistAPIComponent",
+    "ComposioYoutubeAPIComponent",
+]
 
 
 def __getattr__(attr_name: str) -> Any:
