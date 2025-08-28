@@ -1,6 +1,6 @@
 from typing import Any
 
-from composio import Action
+from composio.client.enums import Action
 
 from lfx.base.composio.composio_base import ComposioBaseComponent
 from lfx.inputs import BoolInput, IntInput, MessageTextInput
