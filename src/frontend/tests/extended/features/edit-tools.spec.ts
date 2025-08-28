@@ -180,6 +180,14 @@ test(
 
     await page.waitForTimeout(500);
 
+    await page.getByTestId("btn_close_tools_modal").click();
+
+    await page.waitForTimeout(500);
+
+    await expect(page.getByTestId("btn_close_tools_modal")).toBeHidden({
+      timeout: 3000,
+    });
+
     await page.getByText("Close").last().click();
 
     expect(
