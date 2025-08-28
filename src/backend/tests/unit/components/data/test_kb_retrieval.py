@@ -21,7 +21,7 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture(autouse=True)
     def mock_knowledge_base_path(self, tmp_path):
         """Mock the knowledge base root path directly."""
-        with patch("langflow.components.data.kb_retrieval.KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
+        with patch("lfx.components.data.kb_retrieval.KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
             yield
 
     class MockUser:
@@ -42,7 +42,7 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         with (
             patch.object(KBRetrievalComponent, "user_id", mock_user_data["user_id"]),
             patch(
-                "langflow.components.data.kb_retrieval.get_user_by_id",
+                "lfx.components.data.kb_retrieval.get_user_by_id",
                 new_callable=AsyncMock,
                 return_value=mock_user_data["user_obj"],
             ),
@@ -138,7 +138,7 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         kb_path = Path(default_kwargs["kb_root_path"]) / mock_user_id["user"] / default_kwargs["knowledge_base"]
 
-        with patch("langflow.components.data.kb_retrieval.decrypt_api_key") as mock_decrypt:
+        with patch("lfx.components.data.kb_retrieval.decrypt_api_key") as mock_decrypt:
             mock_decrypt.return_value = "decrypted_key"
 
             metadata = component._get_kb_metadata(kb_path)
@@ -185,7 +185,7 @@ class TestKBRetrievalComponent(ComponentTestBaseWithoutClient):
         }
         (kb_path / "embedding_metadata.json").write_text(json.dumps(metadata))
 
-        with patch("langflow.components.data.kb_retrieval.decrypt_api_key") as mock_decrypt:
+        with patch("lfx.components.data.kb_retrieval.decrypt_api_key") as mock_decrypt:
             mock_decrypt.side_effect = ValueError("Decryption failed")
 
             result = component._get_kb_metadata(kb_path)
