@@ -120,6 +120,9 @@ curl -X POST \
 
 ## Example streaming request
 
+Streaming responses require your flow to contain an **Agent component** that generates streaming events during execution.
+Flows without an Agent component will return empty streaming content.
+
 ```curl
 curl -X POST \
   "$LANGFLOW_SERVER_URL/api/v1/responses" \
