@@ -298,6 +298,17 @@ test(
 
     await page.getByTestId("draggable-component-menu-delete").click();
 
+    await page.waitForSelector(
+      '[data-testid="btn_delete_delete_confirmation_modal"]',
+      {
+        timeout: 3000,
+      },
+    );
+
+    await page
+      .getByTestId("btn_delete_delete_confirmation_modal")
+      .click({ timeout: 3000 });
+
     await expect(
       page.locator('[data-testid="display-name"]', { hasText: testName }),
     ).not.toBeVisible({ timeout: 10000 });
