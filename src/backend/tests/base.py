@@ -62,6 +62,8 @@ class ComponentTestBase:
         component_instance = component_class(_code=source_code, **default_kwargs)
         component_instance._should_process_output = Mock(return_value=False)
         component_instance._vertex = mock_vertex
+        # Mock the log method to avoid tracing service context issues
+        component_instance.log = Mock()
         return component_instance
 
     async def test_latest_version(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> None:
