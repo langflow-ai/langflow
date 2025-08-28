@@ -1,8 +1,5 @@
-import useDetectScroll, {
-  Axis,
-  Direction,
-} from "@smakss/react-scroll-direction";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { StickToBottom } from "use-stick-to-bottom";
 import { v5 as uuidv5 } from "uuid";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
@@ -22,9 +19,6 @@ import FlowRunningSqueleton from "../../flow-running-squeleton";
 import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "../chatInput/hooks/use-file-handler";
 import ChatMessage from "../chatMessage/chat-message";
-import { ChatScrollAnchor } from "./chat-scroll-anchor";
-
-const TIME_TO_DISABLE_SCROLL = 2000;
 
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
@@ -51,7 +45,6 @@ export default function ChatView({
   const currentFlowId = playgroundPage
     ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
     : realFlowId;
-  const messagesRef = useRef<HTMLDivElement | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[] | undefined>(
     undefined,
   );
@@ -125,7 +118,7 @@ export default function ChatView({
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (ref.current) {
+    if (ref.current && focusChat) {
       ref.current.focus();
     }
     // trigger focus on chat when new session is set
@@ -168,87 +161,8 @@ export default function ChatView({
     (state) => state.isVoiceAssistantActive,
   );
 
-  const [customElement, setCustomElement] = useState<HTMLDivElement>();
-
-  useEffect(() => {
-    if (messagesRef.current) {
-      setCustomElement(messagesRef.current);
-    }
-  }, [messagesRef]);
-
-  const { scrollDir } = useDetectScroll({
-    target: customElement,
-    axis: Axis.Y,
-    thr: 0,
-  });
-
-  const [canScroll, setCanScroll] = useState<boolean>(false);
-  const [scrolledUp, setScrolledUp] = useState<boolean>(false);
-  const [isLlmResponding, setIsLlmResponding] = useState<boolean>(false);
-  const [lastMessageContent, setLastMessageContent] = useState<string>("");
-
-  const handleScroll = () => {
-    if (!messagesRef.current) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = messagesRef.current;
-    const atBottom = scrollHeight - clientHeight <= scrollTop + 30;
-
-    if (scrollDir === Direction.Up) {
-      setCanScroll(false);
-      setScrolledUp(true);
-    } else {
-      if (atBottom && !scrolledUp) {
-        setCanScroll(true);
-      }
-      setScrolledUp(false);
-    }
-  };
-  const setPlaygroundScrollBehaves = useUtilityStore(
-    (state) => state.setPlaygroundScrollBehaves,
-  );
-
-  useEffect(() => {
-    setPlaygroundScrollBehaves("smooth");
-
-    if (!chatHistory || chatHistory.length === 0) {
-      setCanScroll(true);
-      return;
-    }
-
-    const lastMessage = chatHistory[chatHistory.length - 1];
-    const currentMessageContent =
-      typeof lastMessage.message === "string"
-        ? lastMessage.message
-        : JSON.stringify(lastMessage.message);
-
-    const isNewMessage = lastMessage.isSend;
-
-    const isStreamingUpdate =
-      !lastMessage.isSend &&
-      currentMessageContent !== lastMessageContent &&
-      currentMessageContent.length > lastMessageContent.length;
-
-    if (isStreamingUpdate) {
-      if (!isLlmResponding) {
-        setIsLlmResponding(true);
-        setCanScroll(true);
-
-        setTimeout(() => {
-          setCanScroll(false);
-        }, TIME_TO_DISABLE_SCROLL);
-      }
-    } else if (isNewMessage || lastMessage.isSend) {
-      setCanScroll(true);
-      if (isLlmResponding) {
-        setIsLlmResponding(false);
-      }
-    }
-
-    setLastMessageContent(currentMessageContent);
-  }, [chatHistory, isLlmResponding, lastMessageContent]);
-
   return (
-    <div
+    <StickToBottom
       className={cn(
         "flex h-full w-full flex-col rounded-md",
         visibleSession ? "h-[95%]" : "h-full",
@@ -260,16 +174,15 @@ export default function ChatView({
       onDragEnter={dragEnter}
       onDragLeave={dragLeave}
       onDrop={onDrop}
+      resize="smooth"
+      initial="smooth"
+      mass={1}
     >
-      <div
-        ref={messagesRef}
-        onScroll={handleScroll}
-        className="chat-message-div"
-      >
-        {chatHistory &&
-          (isBuilding || chatHistory?.length > 0 ? (
-            <>
-              {chatHistory?.map((chat, index) => (
+      <StickToBottom.Content className="flex flex-col min-h-full">
+        <div className="flex flex-col flex-grow place-self-center w-5/6 max-w-[768px]">
+          {chatHistory &&
+            (isBuilding || chatHistory?.length > 0 ? (
+              chatHistory?.map((chat, index) => (
                 <MemoizedChatMessage
                   chat={chat}
                   lastMessage={chatHistory.length - 1 === index}
@@ -278,17 +191,9 @@ export default function ChatView({
                   closeChat={closeChat}
                   playgroundPage={playgroundPage}
                 />
-              ))}
-              {chatHistory?.length > 0 && (
-                <ChatScrollAnchor
-                  trackVisibility={chatHistory?.[chatHistory.length - 1]}
-                  canScroll={canScroll}
-                />
-              )}
-            </>
-          ) : (
-            <>
-              <div className="flex h-full w-full flex-col items-center justify-center">
+              ))
+            ) : (
+              <div className="flex flex-grow w-full flex-col items-center justify-center">
                 <div className="flex flex-col items-center justify-center gap-4 p-8">
                   <LangflowLogo
                     title="Langflow logo"
@@ -309,8 +214,8 @@ export default function ChatView({
                   </div>
                 </div>
               </div>
-            </>
-          ))}
+            ))}
+        </div>
         <div
           className={
             displayLoadingMessage
@@ -323,7 +228,7 @@ export default function ChatView({
             !(chatHistory?.[chatHistory.length - 1]?.category === "error") &&
             flowRunningSkeletonMemo}
         </div>
-      </div>
+      </StickToBottom.Content>
 
       <div className="m-auto w-full max-w-[768px] md:w-5/6">
         <CustomChatInput
@@ -339,6 +244,6 @@ export default function ChatView({
           isDragging={isDragging}
         />
       </div>
-    </div>
+    </StickToBottom>
   );
 }
