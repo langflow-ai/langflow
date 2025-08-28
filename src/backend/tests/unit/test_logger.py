@@ -1,4 +1,4 @@
-"""Comprehensive tests for langflow.logging.logger module.
+"""Comprehensive tests for lfx.logs.logger module.
 
 This test suite covers all aspects of the logger module including:
 - configure() function with all parameters and edge cases
@@ -507,7 +507,7 @@ class TestLogProcessors:
         # Import the actual module to access DEV
         import sys
 
-        logger_module = sys.modules["langflow.logging.logger"]
+        logger_module = sys.modules["lfx.logs.logger"]
         with patch.object(logger_module, "DEV", False):  # noqa: FBT003
             result = remove_exception_in_production(None, "error", event_dict)
 
@@ -523,7 +523,7 @@ class TestLogProcessors:
         # Import the actual module to access DEV
         import sys
 
-        logger_module = sys.modules["langflow.logging.logger"]
+        logger_module = sys.modules["lfx.logs.logger"]
         with patch.object(logger_module, "DEV", True):  # noqa: FBT003
             result = remove_exception_in_production(None, "error", event_dict)
 
