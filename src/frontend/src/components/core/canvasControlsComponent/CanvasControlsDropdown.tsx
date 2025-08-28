@@ -44,7 +44,7 @@ const CanvasControlsDropdown = () => {
         case KEYBOARD_SHORTCUTS.ZOOM_OUT.code:
           event.preventDefault();
           if (minZoomReached || zoom <= 0.6) {
-            zoomTo(1);
+            zoomTo(0.6);
           } else {
             zoomOut();
           }
