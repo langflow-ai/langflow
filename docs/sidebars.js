@@ -363,6 +363,7 @@ module.exports = {
             "Components/bundles-redis",
             "Components/bundles-sambanova",
             "Components/bundles-searchapi",
+            "Components/bundles-serper",
             "Components/bundles-vertexai",
             "Components/bundles-wikipedia",
             "Components/bundles-xai",

@@ -59,19 +59,15 @@ This component allows you to call the Google Search API.
 | results | List[Data] | Output parameter. A list of search results. |
 | tool | Tool | Output parameter. A Google Search tool for use in LangChain. |
 
-## Serper Google Search API
+### Other Google Search components
 
-This component allows you to call the Serper.dev Google Search API.
+Langflow includes multiple components that support Google Search, such as the following:
 
-### Google Serper API parameters
-
-| Name | Type | Description |
-|------|------|-------------|
-| serper_api_key | SecretString | Input parameter. An API key for Serper.dev authentication. |
-| input_value | String | Input parameter. The search query input. |
-| k | Integer | Input parameter. The number of search results to return. |
-| results | List[Data] | Output parameter. A list of search results. |
-| tool | Tool | Output parameter. A Serper Google Search tool for use in LangChain. |
+* [**Apify Actors** component](/integrations-apify)
+* [**SearchApi** component](/bundles-searchapi)
+* [**Serper Google Search API** component](/bundles-serper)
+* [**News Search** component](/components-data#news-search)
+* [**Web Search** component](/components-data#web-search)
 
 ## Google Vertex AI
 
