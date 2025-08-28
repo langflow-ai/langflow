@@ -15,7 +15,7 @@ import psutil
 import pytest
 from mcp import StdioServerParameters
 
-from langflow.base.mcp.util import MCPSessionManager
+from lfx.base.mcp.util import MCPSessionManager
 from lfx.logs.logger import logger
 
 pytestmark = [

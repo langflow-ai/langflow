@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pandas as pd
 import pytest
 from langflow.base.data.kb_utils import get_knowledge_bases
-from langflow.components.data.kb_ingest import KBIngestionComponent
 from langflow.schema.data import Data
 
+from lfx.components.data import KBIngestionComponent
 from tests.base import ComponentTestBaseWithoutClient
 
 
