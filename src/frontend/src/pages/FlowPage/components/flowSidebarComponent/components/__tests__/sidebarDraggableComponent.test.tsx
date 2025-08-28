@@ -11,7 +11,12 @@ jest.mock(
 );
 
 jest.mock("@/components/ui/badge", () => ({
-  Badge: ({ children, variant, size, className }: {
+  Badge: ({
+    children,
+    variant,
+    size,
+    className,
+  }: {
     children: React.ReactNode;
     variant: string;
     size: string;
@@ -74,7 +79,13 @@ jest.mock("@/components/common/genericIconComponent", () => ({
       {name}
     </span>
   ),
-  ForwardedIconComponent: ({ name, className }: { name: string; className?: string }) => (
+  ForwardedIconComponent: ({
+    name,
+    className,
+  }: {
+    name: string;
+    className?: string;
+  }) => (
     <span data-testid={`forwarded-icon-${name}`} className={className}>
       {name}
     </span>
@@ -83,7 +94,11 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 
 jest.mock("@/components/common/shadTooltipComponent", () => ({
   __esModule: true,
-  default: ({ children, content, styleClasses }: {
+  default: ({
+    children,
+    content,
+    styleClasses,
+  }: {
     children: React.ReactNode;
     content?: string;
     styleClasses?: string;
@@ -98,7 +113,13 @@ jest.mock("@/components/common/shadTooltipComponent", () => ({
 let mockOnValueChange: ((value: string) => void) | undefined;
 
 jest.mock("@/components/ui/select-custom", () => ({
-  Select: ({ children, onValueChange, onOpenChange, open, ...props }: {
+  Select: ({
+    children,
+    onValueChange,
+    onOpenChange,
+    open,
+    ...props
+  }: {
     children: React.ReactNode;
     onValueChange?: (value: string) => void;
     onOpenChange?: (open: boolean) => void;
@@ -119,7 +140,13 @@ jest.mock("@/components/ui/select-custom", () => ({
       </div>
     );
   },
-  SelectContent: ({ children, position, side, sideOffset, style }: {
+  SelectContent: ({
+    children,
+    position,
+    side,
+    sideOffset,
+    style,
+  }: {
     children: React.ReactNode;
     position?: string;
     side?: string;
@@ -136,21 +163,29 @@ jest.mock("@/components/ui/select-custom", () => ({
       {children}
     </div>
   ),
-  SelectItem: ({ children, value, ...props }: {
+  SelectItem: ({
+    children,
+    value,
+    ...props
+  }: {
     children: React.ReactNode;
     value: string;
     [key: string]: unknown;
   }) => (
-    <button 
-      data-testid={`select-item-${value}`} 
-      data-value={value} 
+    <button
+      data-testid={`select-item-${value}`}
+      data-value={value}
       onClick={() => mockOnValueChange?.(value)}
       {...props}
     >
       {children}
     </button>
   ),
-  SelectTrigger: ({ children, tabIndex, ...props }: {
+  SelectTrigger: ({
+    children,
+    tabIndex,
+    ...props
+  }: {
     children?: React.ReactNode;
     tabIndex?: number;
     [key: string]: unknown;
@@ -169,7 +204,11 @@ jest.mock("@/stores/darkStore", () => ({
 
 jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
-  default: (selector: (state: { flows: Array<{ id: string; name: string }> }) => unknown) => 
+  default: (
+    selector: (state: {
+      flows: Array<{ id: string; name: string }>;
+    }) => unknown,
+  ) =>
     selector({
       flows: [
         { id: "flow1", name: "Test Flow" },
@@ -185,7 +224,8 @@ jest.mock("@/utils/reactflowUtils", () => ({
 }));
 
 jest.mock("@/utils/utils", () => ({
-  cn: (...classes: (string | undefined | null | boolean)[]) => classes.filter(Boolean).join(" "),
+  cn: (...classes: (string | undefined | null | boolean)[]) =>
+    classes.filter(Boolean).join(" "),
   removeCountFromString: (str: string) => str.replace(/\d+$/, ""),
 }));
 
@@ -838,7 +878,7 @@ describe("SidebarDraggableComponent", () => {
       render(<SidebarDraggableComponent {...propsWithOnDelete} />);
 
       expect(screen.getByTestId("select-item-delete")).toBeInTheDocument();
-      
+
       // Click on the delete option
       const deleteItem = screen.getByTestId("select-item-delete");
       fireEvent.click(deleteItem);
@@ -859,7 +899,7 @@ describe("SidebarDraggableComponent", () => {
       render(<SidebarDraggableComponent {...propsWithoutOnDelete} />);
 
       expect(screen.getByTestId("select-item-delete")).toBeInTheDocument();
-      
+
       // Click on the delete option
       const deleteItem = screen.getByTestId("select-item-delete");
       fireEvent.click(deleteItem);
@@ -880,7 +920,7 @@ describe("SidebarDraggableComponent", () => {
       render(<SidebarDraggableComponent {...propsWithNonExistentFlow} />);
 
       expect(screen.getByTestId("select-item-delete")).toBeInTheDocument();
-      
+
       // Click on the delete option
       const deleteItem = screen.getByTestId("select-item-delete");
       fireEvent.click(deleteItem);
