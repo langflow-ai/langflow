@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from langflow.components._importing import import_mod
+from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from .vectara import VectaraVectorStoreComponent
