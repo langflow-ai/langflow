@@ -763,8 +763,9 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 ### Tokenization errors due to chunk size {#chunk-size}
 
 When using **Split Text** with embedding models (especially NVIDIA models like `nvidia/nv-embed-v1`), you may need to use smaller chunk sizes (`500` or less) even though the model supports larger token limits.
-The **Split Text** component doesn't always respect the exact chunk size you set, and individual chunks may exceed your specified limit.
-If you encounter tokenization errors, try reducing the chunk size and test your configuration by inspecting the output.
+The **Split Text** component doesn't always enforce the exact chunk size you set, and individual chunks may exceed your specified limit.
+If you encounter tokenization errors, modify your text splitting strategy by reducing the chunk size, changing the overlap length, or using a more common separator.
+Then, test your configuration by running the flow and inspecting the component's output.
 
 ### Other text splitters
 

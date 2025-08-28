@@ -45,7 +45,8 @@ For more information about using embedding model components in flows, see [**Emb
 | embeddings | Embeddings | Output parameter. An `NVIDIAEmbeddings` instance for generating embeddings. |
 
 :::tip Tokenization considerations
-When using NVIDIA embedding models like `nvidia/nv-embed-v1`, you may encounter tokenization errors if your text chunks are too large. Consider using smaller chunk sizes (500 tokens or less) in your text splitting strategy.
+Be aware of your embedding model's chunk size limit.
+Tokenization errors can occur if your text chunks are too large. 
 For more information, see [Tokenization errors due to chunk size](/components-processing#chunk-size).
 :::
 
