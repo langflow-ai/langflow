@@ -3,11 +3,11 @@ title: Contribute bundles
 slug: /contributing-bundles
 ---
 
-Bundles are groups of components that are related to a specific service provider.
+[Bundles](/components-bundle-components) are groups of components that are related to a specific service provider.
+If you want to contribute your custom components back to the Langflow project, you must put them into a bundle.
 
-Follow these steps to add components to the **Bundles** section of the **Components** menu in the Langflow visual editor.
-
-Example adds a new bundle named `DarthVader`.
+Follow these steps to add components to <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the Langflow visual editor.
+This example adds a bundle named `DarthVader`.
 
 ## Add the bundle to the backend folder
 
@@ -35,7 +35,9 @@ To add your icon, create **three** files inside the `icons/darth_vader` folder.
 To convert the SVG file to JSX format, you can use an online tool like SVG to JSX.
 It's highly recommended to use the original, lighter version of the SVG.
 :::
+
 3. In the `icons/darth_vader` folder, add the icon as a React component in JSX format, such as `DarthVaderIcon.jsx`.
+
 4. Update the JSX file to include the correct component name and structure.
 Ensure you include the `{...props}` spread operator in your JSX file.
 For example, here is `DarthVaderIcon.jsx`:
@@ -65,7 +67,7 @@ export default DarthVaderIcon;
 ```
 
 5. In the `icons/darth_vader` folder, add the React component itself in TypeScript format, such as `index.tsx`.
-Ensure the icon’s React component name corresponds to the JSX component you just created, such as `DarthVaderIcon`.
+Ensure the icon's React component name corresponds to the JSX component you just created, such as `DarthVaderIcon`.
 ```typescript
 import { useDarkStore } from "@/stores/darkStore";
 import React, { forwardRef } from "react";
@@ -85,6 +87,7 @@ export default DarthVaderIcon;
 
 6. To link your new bundle to the frontend, open `/src/frontend/src/icons/lazyIconImports.ts`.
 You can view the [lazyIconImports.ts](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/icons/lazyIconImports.ts) in the Langflow repository.
+
 7. Add the name of your icon, which should match the icon name you used in the `.tsx` file.
 For example:
 ```typescript
@@ -96,15 +99,21 @@ For example:
     import("@/icons/DeepSeek").then((mod) => ({ default: mod.DeepSeekIcon })),
 ```
 
-8. To update the **Bundles** section in the **Components** menu, add the new icon to the `SIDEBAR_BUNDLES` array in `src > frontend > src > utils > styleUtils.ts`.
-You can view the [SIDEBAR_BUNDLES array](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/utils/styleUtils.ts#L231) in the Langflow repository.\
-The `name` must point to the folder you created within the `src > backend > base > langflow > components` directory.
-For example:
-```typescript
-{ display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
-{ display_name: "DarthVader", name: "darth_vader", icon: "DarthVader" },
-{ display_name: "DataStax", name: "astra_assistants", icon: "DarthVader" },
-```
+8. To add your bundle to the <Icon name="Blocks" aria-hidden="true" /> **Bundles** menu, edit the [`SIDEBAR_BUNDLES` array](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/utils/styleUtils.ts#L231) in `/src/frontend/src/utils/styleUtils.ts`.
+
+    Add an object to the array with the following keys:
+
+    * `display_name`: The text label shown in the Langflow visual editor
+    * `name`: The name of the folder you created within the `/src/backend/base/langflow/components` directory
+    * `icon`: The name of the bundle's icon that you defined in the previous steps
+
+    For example:
+
+    ```typescript
+    { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
+    { display_name: "DarthVader", name: "darth_vader", icon: "DarthVader" },
+    { display_name: "DataStax", name: "astra_assistants", icon: "DarthVader" },
+    ```
 
 ## Update bundle components with icons
 
