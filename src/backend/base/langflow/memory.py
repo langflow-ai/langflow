@@ -99,6 +99,25 @@ async def aget_messages(
         return [await Message.create(**d.model_dump()) for d in messages]
 
 
+async def aget_messages_excluding_id(
+    sender: str | None = None,
+    sender_name: str | None = None,
+    session_id: str | UUID | None = None,
+    order_by: str | None = "timestamp",
+    order: str | None = "DESC",
+    flow_id: UUID | None = None,
+    limit: int | None = None,
+    id_: str | None = None,
+) -> list[Message]:
+    """Retrieves messages from the monitor service excluding the message with the given ID."""
+    async with session_scope() as session:
+        stmt = _get_variable_query(sender, sender_name, session_id, order_by, order, flow_id, limit)
+        if id_:
+            stmt = stmt.where(col(MessageTable.id) != id_)
+        messages = await session.exec(stmt)
+        return [await Message.create(**d.model_dump()) for d in messages]
+
+
 def add_messages(messages: Message | list[Message], flow_id: str | UUID | None = None):
     """DEPRECATED - Add a message to the monitor service.
 
