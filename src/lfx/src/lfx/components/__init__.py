@@ -222,18 +222,11 @@ def _discover_components_from_module(module_name):
 
         if hasattr(module, "_dynamic_imports"):
             # Add each component from this module to our main mapping
-            new_components = []
-            current_all = globals()["__all__"]
             for comp_name, comp_file in module._dynamic_imports.items():
                 # Create the full path: module_name.comp_file
                 _dynamic_imports[comp_name] = f"{module_name}.{comp_file}"
-                # Keep track of new components to add to __all__
-                if comp_name not in current_all:
-                    new_components.append(comp_name)
-
-            # Extend __all__ with newly discovered components
-            if new_components:
-                globals()["__all__"] = current_all + new_components
+                # Note: We don't add component names to __all__ since they are classes, not modules
+                # __all__ should only contain module names, individual components are accessible via __getattr__
 
         _discovered_modules.add(module_name)
 
