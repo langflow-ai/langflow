@@ -70,7 +70,7 @@ export default function CopyFieldAreaComponent({
 
   const valueToRender = useMemo(() => {
     if (value === BACKEND_URL) {
-      return `${URL_WEBHOOK}${endpointName}`;
+      return `${URL_WEBHOOK}${endpointName}${currentFlow?.id ?? ""}`;
     } else if (value === MCP_SSE_VALUE) {
       return `${URL_MCP_SSE}`;
     }
@@ -123,7 +123,9 @@ export default function CopyFieldAreaComponent({
       )}
       <div onClick={handleCopy}>
         <IconComponent
-          dataTestId={`btn_copy_${id?.toLowerCase()}${editNode ? "_advanced" : ""}`}
+          dataTestId={`btn_copy_${id?.toLowerCase()}${
+            editNode ? "_advanced" : ""
+          }`}
           name={isCopied ? "Check" : "Copy"}
           className={cn(
             "cursor-pointer bg-muted",
