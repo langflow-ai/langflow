@@ -177,12 +177,21 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 In Langflow version 1.6, the **File** component supports advanced document parsing using the [Docling](https://docling-project.github.io/docling/) library.
 Advanced parsing can process any of the **File** component's supported file types except `.csv`, `.xlsx`, and `.parquet` files.
 
-When advanced parsing is enabled, the File component processes only the first file from the uploaded files and ignores any additional files.
-For processing multiple files with advanced parsing, use separate **File** components or use the dedicated [**Docling** components](/integrations-docling).
 
-The advanced parser option is automatically hidden when you select tabular data files, specifically `.csv`, `.xlsx`, and `.parquet`.
-Advanced parsing is designed for document processing, such as extracting text from PDFs, rather than structured data analysis.
-For structured data, use the [**Parser** component](/components-processing#parser).
+#### Advancing parsing limitations
+
+Advanced parsing mode has the following restrictions:
+
+* **Only one file**: Advanced parsing mode processes only one file.
+If you select multiple files, the **File** component processes the first file only, ignoring any additional files.
+
+To process multiple files with advanced parsing, pass each file to a separate **File** components, or use the dedicated [**Docling** components](/integrations-docling).
+
+* **No tabular file types**:  Advanced parsing mode isn't available for tabular file types like `.csv`, `.xlsx`, and `.parquet`.
+Advanced parsing is designed for document processing, such as extracting text from PDFs.
+For structured data analysis, use the [**Parser** component](/components-processing#parser).
+
+#### Advanced parsing parameters
 
 When you enable advanced parsing, you can configure the following advanced parsing parameters:
 
@@ -194,7 +203,9 @@ When you enable advanced parsing, you can configure the following advanced parsi
 | md_image_placeholder | Markdown Image Placeholder | Input parameter. Defines the placeholder for image files in the output Markdown document. Default: `<!-- image -->`. |
 | md_page_break_placeholder | Markdown Page Break Placeholder | Input parameter. Defines the placeholder for page breaks in the output Markdown document. Default: empty string. |
 
+:::tip
 For more Docling features, use the [**Docling** components](/integrations-docling).
+:::
 
 ### File output
 
@@ -202,20 +213,22 @@ The output of the **File** component depends on the number of files loaded and w
 
 - **No files**: Throws an error or, if **Silent Errors** is enabled, produces no output.
 
-- **One file (Advanced parsing OFF)**:
+- **One file without advanced parsing**:
     - **Structured Content**: Available only for `.csv`, `.xlsx`, `.parquet`, and `.json` files.
         - For `.csv` files, produces a [`DataFrame`](/data-types#dataframe) representing the table data.
         - For `.json` files, produces a [`Data`](/data-types#data) object with the parsed JSON data.
     - **Raw Content**: A [`Message`](/data-types#message) containing the file's raw text content.
     - **File Path**: A [`Message`](/data-types#message) containing the path to the file in [Langflow file management](/concepts-file-management).
 
-- **One file (Advanced parsing ON)**:
+- **One file with advanced parsing**:
     - **Structured Output**: A [`DataFrame`](/data-types#dataframe) containing the Docling-processed document data with text elements, page numbers, and metadata.
     - **Markdown**: A [`Message`](/data-types#message) containing the document exported to Markdown format with image placeholders.
     - **File Path**: A [`Message`](/data-types#message) containing the path to the file in [Langflow file management](/concepts-file-management).
 
 - **Multiple files**: Produces a **Files** [`DataFrame`](/data-types#dataframe) containing the content and metadata of all selected files.
-Advanced parsing is not available for multiple files.
+
+    Advanced parsing doesn't support multiple files.
+    See [Advanced parsing limitations](#advanced-parsing-limitations).
 
 ## News Search
 
@@ -551,5 +564,4 @@ Replace these components with the **File** component, which supports loading CSV
 
 - [Google components](/bundles-google)
 - [Composio components](/integrations-composio)
-- [File management](/concepts-file-management)
 - [File management](/concepts-file-management)
