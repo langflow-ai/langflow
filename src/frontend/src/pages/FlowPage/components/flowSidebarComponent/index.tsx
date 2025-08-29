@@ -178,16 +178,22 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     setSearch = () => {},
     searchInputRef = fallbackSearchInputRef,
     isSearchFocused = false,
-    handleInputFocus: originalHandleInputFocus = () => {},
+    handleInputFocus = () => {},
     handleInputBlur = () => {},
-    handleInputChange = () => {},
+    handleInputChange: originalHandleInputChange = () => {},
   } = context;
 
-  // Create enhanced focus handler that also sets active section to search
-  const handleInputFocus = useCallback(() => {
-    originalHandleInputFocus();
-    setActiveSection("search");
-  }, [originalHandleInputFocus, setActiveSection]);
+  // Create enhanced change handler that sets active section to search when user starts typing
+  const handleInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      originalHandleInputChange(event);
+      // Set active section to search when user first enters text
+      if (event.target.value.length > 0 && search.length === 0) {
+        setActiveSection("search");
+      }
+    },
+    [originalHandleInputChange, search, setActiveSection],
+  );
 
   // State
   const [fuse, setFuse] = useState<Fuse<any> | null>(null);
