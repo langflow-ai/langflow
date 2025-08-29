@@ -23,7 +23,7 @@ import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-serv
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
+import { setLocalStorage } from "@/utils/local-storage-util";
 import {
   nodeColors,
   SIDEBAR_BUNDLES,
@@ -74,12 +74,6 @@ export function useSearchContext() {
     throw new Error("useSearchContext must be used within SearchProvider");
   }
   return context;
-}
-
-interface SearchProviderProps {
-  children: React.ReactNode;
-  searchInputRef: React.RefObject<HTMLInputElement>;
-  isSearchFocused: boolean;
 }
 
 // Create a provider that can be used at the FlowPage level
