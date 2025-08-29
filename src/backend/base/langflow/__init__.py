@@ -31,13 +31,17 @@ class LangflowCompatibilityModule(ModuleType):
         return self._lfx_module
 
     def __getattr__(self, name: str) -> Any:
-        """Forward attribute access to the lfx module."""
+        """Forward attribute access to the lfx module with caching."""
         lfx_module = self._get_lfx_module()
         try:
-            return getattr(lfx_module, name)
+            attr = getattr(lfx_module, name)
         except AttributeError as e:
             msg = f"module '{self.__name__}' has no attribute '{name}'"
             raise AttributeError(msg) from e
+        else:
+            # Cache the attribute in our __dict__ for faster subsequent access
+            setattr(self, name, attr)
+            return attr
 
     def __dir__(self):
         """Return directory of the lfx module."""
