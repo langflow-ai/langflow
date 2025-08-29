@@ -7,134 +7,6 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Langflow's vector store components are used to read and write vector data, including embedding storage, vector search, Graph RAG traversals, and specialized provider-specific search, such as OpenSearch, Elasticsearch, and Vectara.
-
-These components are critical for vector search applications, such as Retrieval Augmented Generation (RAG) chatbots that need to retrieve relevant context from large datasets.
-
-Most of these components connect to a specific vector database provider, but some components support multiple providers or platforms.
-For example, the **Cassandra** vector store component can connect to self-managed Apache Cassandra-based clusters as well as Astra DB, which is a managed Cassandra DBaaS.
-
-Other types of storage, like traditional structured databases and chat memory, are handled through other components like the [**SQL Database** component](/components-data#sql-database) or the [**Message History** component](/components-helpers#message-history).
-
-## Use vector store components in a flow
-
-:::tip
-For a tutorial using vector store components in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
-:::
-
-The following steps introduce the use of vector store components in a flow, including configuration details, how the components work when you run a flow, why you might need multiple vector store components in one flow, and useful supporting components, such as **Embedding Model** and **Parser** components.
-
-1. Create a flow with the **Vector Store RAG** template.
-
-    This template has two subflows.
-    The **Load Data** subflow loads embeddings and content into a vector database, and the **Retriever** subflow runs a vector search to retrieve relevant context based on a user's query.
-
-2. Configure the database connection for both [**Astra DB** components](#astra-db), or replace them with another pair of vector store components of your choice.
-Make sure the components connect to the same vector store, and that the component in the **Retriever** subflow is able to run a similarity search.
-
-    The parameters you set in each vector store component depend on the component's role in your flow.
-    In this example, the **Load Data** subflow _writes_ to the vector store, whereas the **Retriever** subflow _reads_ from the vector store.
-    Therefore, search-related parameters are only relevant to the **Vector Search** component in the **Retriever** subflow.
-
-    For information about specific configuration parameters, see the section of this page for your chosen vector store component and [Hidden parameters](#hidden-parameters).
-
-3. To configure the embedding model, do one of the following:
-
-    * **Use an OpenAI model**: In both **OpenAI Embeddings** components, enter your OpenAI API key.
-    You can use the default model or select a different OpenAI embedding model.
-
-    * **Use another provider**: Replace the **OpenAI Embeddings** components with another pair of [embedding model components](/components-embedding-models) of your choice, and then configure the parameters and credentials accordingly.
-
-    * **Use Astra DB vectorize**: If you are using an Astra DB vector store that has a vectorize integration, you can remove both **OpenAI Embeddings** components.
-    If you do this, the vectorize integration automatically generates embeddings from the **Ingest Data** (in the **Load Data** subflow) and **Search Query** (in the **Retriever** subflow).
-
-    :::tip
-    If your vector store already contains embeddings, make sure your embedding model components use the same model as your previous embeddings.
-    Mixing embedding models in the same vector store can produce inaccurate search results.
-    :::
-
-4. Recommended: In the [**Split Text** component](/components-processing#split-text), optimize the chunking settings for your embedding model.
-For example, if your embedding model has a token limit of 512, then the **Chunk Size** parameter must not exceed that limit.
-
-    Additionally, because the **Retriever** subflow passes the chat input directly to the vector store component for vector search, make sure that your chat input string doesn't exceed your embedding model's limits.
-    For this example, you can enter a query that is within the limits; however, in a production environment, you might need to implement additional checks or preprocessing steps to ensure compliance.
-    For example, use additional components to prepare the chat input before running the vector search, or enforce chat input limits in your application code.
-
-5. In the **Language Model** component, enter your OpenAI API key, or select a different provider and model to use for the chat portion of the flow.
-
-6. Run the **Load Data** subflow to populate your vector store.
-In the **File** component, select one or more files, and then click <Icon name="Play" aria-hidden="True" /> **Run component** on the vector store component in the **Load Data** subflow.
-
-    The **Load Data** subflow loads files from your local machine, chunks them, generates embeddings for the chunks, and then stores the chunks and their embeddings in the vector database.
-
-    ![Embedding data into a vector store](/img/vector-store-document-ingestion.png)
-
-    The **Load Data** subflow is separate from the **Retriever** subflow because you probably won't run it every time you use the chat.
-    You can run the **Load Data** subflow as needed to preload or update the data in your vector store.
-    Then, your chat interactions only use the components that are necessary for chat.
-
-    If your vector store already contains data that you want to use for vector search, then you don't need to run the **Load Data** subflow.
-
-7. Open the **Playground** and start chatting to run the **Retriever** subflow.
-
-    The **Retriever** subflow generates an embedding from chat input, runs a vector search to retrieve similar content from your vector store, parses the search results into supplemental context for the LLM, and then uses the LLM to generate a natural language response to your query.
-    The LLM uses the vector search results along with its internal training data and tools, such as basic web search and datetime information, to produce the response.
-
-    ![Retrieval from a vector store](/img/vector-store-retrieval.png)
-
-    To avoid passing the entire block of raw search results to the LLM, the **Parser** component extracts `text` strings from the search results `Data` object, and then passes them to the **Prompt Template** component in `Message` format.
-    From there, the strings and other template content are compiled into natural language instructions for the LLM.
-
-    You can use other components for this transformation, such as the **Data Operations** component, depending on how you want to use the search results.
-
-    To view the raw search results, click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** on the vector store component after running the **Retriever** subflow.
-
-### Hidden parameters
-
-You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
-
-import PartialParams from '@site/docs/_partial-hidden-params.mdx';
-
-<PartialParams />
-
-Some parameters are conditional, and they are only available after you set other parameters or select specific options for other parameters.
-Conditional parameters may not be visible on the **Controls** pane until you set the required dependencies.
-However, all parameters are always listed in a [component's code](/concepts-components#component-code).
-
-For information about a specific component's parameters, see the provider's documentation and the component details.
-
-### Search results output
-
-If you use a vector store component to query your vector database, it produces search results that you can pass to downstream components in your flow as a list of [`Data`](/data-types#data) objects or a tabular [`DataFrame`](/data-types#dataframe).
-If both types are supported, you can set the format near the component's output port in the visual editor.
-
-The exception to this pattern is the **Vectara RAG** component, which outputs only an `answer` string in [`Message`](/data-types#message) format.
-
-### Vector store instances
-
-Because Langflow is based on LangChain, vector store components use an instance of [LangChain vector store](https://python.langchain.com/docs/integrations/vectorstores/) to drive the underlying vector search functions.
-In the component code, this is often instantiated as `vector_store`, but some components use a different name, such as the provider name.
-
-For the **Cassandra Graph** and **Astra DB Graph** components, `vector_store` is an instance of [LangChain graph vector store](https://python.langchain.com/api_reference/community/graph_vectorstores.html).
-
-These instances are provider-specific and configured according to the component's parameters.
-For example, the **Redis** component creates an instance of [`RedisVectorStore`](https://python.langchain.com/docs/integrations/vectorstores/redis/) based on the component's parameters, such as the connection string, index name, and schema.
-
-Some LangChain classes don't expose all possible options as component parameters.
-Depending on the provider, these options might use default values or allow modification through environment variables, if they are supported in Langflow.
-For information about specific options, see the LangChain API reference and provider documentation.
-
-<details>
-<summary>Vector Store Connection ports</summary>
-
-The **Astra DB** and **OpenSearch** components have an additional **Vector Store Connection** output.
-This output can only connect to a `VectorStore` input port, and it was intended for use with dedicated Graph RAG components.
-
-The only non-legacy component that supports this input is the **Graph RAG** component, which was meant as a Graph RAG extension to the **Astra DB** component.
-Instead, you can use the **Astra DB Graph** component that includes both the vector store connection and Graph RAG functionality.
-OpenSearch instances support Graph traversal through built-in RAG functionality and plugins.
-
-</details>
 
 ## Apache Cassandra
 
@@ -142,14 +14,48 @@ The **Cassandra** and **Cassandra Graph** components can be used with Cassandra 
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [Vector search in Cassandra](https://cassandra.apache.org/doc/latest/cassandra/vector-search/overview.html)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see [Vector search in Cassandra](https://cassandra.apache.org/doc/latest/cassandra/vector-search/overview.html) or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
 
 ### Cassandra
 
 Use the **Cassandra** component to read or write to a Cassandra vector store using a `CassandraVectorStore` instance.
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
 
 <details>
 <summary>Cassandra parameters</summary>
@@ -177,9 +83,32 @@ Use the **Cassandra** component to read or write to a Cassandra vector store usi
 
 </details>
 
+### Cassandra Chat Memory
+
+The **Cassandra Chat Memory** component retrieves and stores chat messages using an Apache Cassandra-based database.
+
+Chat memories are passed between memory storage components as the [`Memory`](/data-types#memory) data type.
+Specifically, the component creates an instance of `CassandraChatMessageHistory`, which is a LangChain chat message history class that uses a Cassandra database for storage.
+
+For more information about using external chat memory in flows, see the [**Message History** component](/components-helpers#message-history).
+
+#### Cassandra Chat Memory parameters
+
+<PartialParams />
+
+| Name           | Type          | Description   |
+|----------------|---------------|-----------------------------|
+| database_ref   | MessageText   | Input parameter. The contact points for the Cassandra database or Astra DB database ID. Required. |
+| username       | MessageText   | Input parameter. The username for Cassandra. Leave empty for Astra DB. |
+| token          | SecretString  | Input parameter. The password for Cassandra or the token for Astra DB. Required. |
+| keyspace       | MessageText   | Input parameter. The keyspace in Cassandra or namespace in Astra DB. Required. |
+| table_name     | MessageText   | Input parameter. The name of the table or collection for storing messages. Required. |
+| session_id     | MessageText   | Input parameter. The unique identifier for the chat session. Optional. |
+| cluster_kwargs | Dictionary    | Input parameter. Additional keyword arguments for the Cassandra cluster configuration. Optional. |
+
 ### Cassandra Graph
 
-The **Cassandra Graph** component uses a `CassandraGraphVectorStore` instance for graph traversal and graph-based document retrieval in a compatible Cassandra cluster.
+The **Cassandra Graph** component uses `CassandraGraphVectorStore`, an instance of [LangChain graph vector store](https://python.langchain.com/api_reference/community/graph_vectorstores.html), for graph traversal and graph-based document retrieval in a compatible Cassandra cluster.
 It also supports writing to the vector store.
 
 <details>
@@ -212,10 +141,40 @@ Includes support for remote or in-memory instances with or without persistence.
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [Chroma documentation](https://docs.trychroma.com/)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the provider's documentation or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
 
 ### Chroma DB
 
@@ -237,6 +196,10 @@ To trigger reads, open the **Playground** and enter a chat message.
 After running the flow once, you can click <Icon name="TextSearch" aria-hidden="true"/> **Inspect Output** on each component to understand how the data transformed as it passed from component to component.
 
 ![ChromaDB receiving split text](/img/component-chroma-db.png)
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
 
 <details>
 <summary>Chroma DB parameters</summary>
@@ -261,61 +224,50 @@ After running the flow once, you can click <Icon name="TextSearch" aria-hidden="
 
 </details>
 
-### Local DB
-
-The **Local DB** component reads and writes to a persistent, in-memory Chroma DB instance intended for use with Langflow.
-It has separate modes for reads and writes, automatic collection management, and default persistence in your Langflow cache directory.
-
-![A basic flow with a Local DB component in Retrieve mode.](/img/component-local-db.png)
-
-Set the **Mode** parameter to reflect the operation you want the component to perform, and the configure the other parameters accordingly.
-Some parameters are only available for one mode.
-
-<Tabs>
-<TabItem value="ingest" label="Ingest">
-
-To create or write to your local Chroma vector store, use **Ingest** mode.
-
-The following parameters are available in **Ingest** mode:
-
-| Name | Type | Description |
-|------|------|-------------|
-| **Name Your Collection** (`collection_name`) | String | Input parameter. The name for your Chroma vector store collection. Default: `langflow`. Only available in **Ingest** mode. |
-| **Persist Directory** (`persist_directory`) | String | Input parameter. The base directory where you want to create and persist the vector store. If you use the **Local DB** component in multiple flows or to create multiple collections, collections are stored at `$PERSISTENT_DIRECTORY/vector_stores/$COLLECTION_NAME`. If not specified, the default location is your Langflow cache directory (`LANGFLOW_CONFIG_DIR`). For more information, see [Memory management options](/memory). |
-| **Embedding** (`embedding`) | Embeddings | Input parameter. The embedding function to use for the vector store. |
-| **Allow Duplicates** (`allow_duplicates`) | Boolean | Input parameter. If true (default), writes don't check for existing duplicates in the collection, allowing you to store multiple copies of the same content. If false, writes won't add documents that match existing documents already present in the collection. If false, it can strictly enforce deduplication by searching the entire collection or only search the number of records, specified in `limit`. Only available in **Ingest** mode. |
-| **Ingest Data** (`ingest_data`) | Data or DataFrame | Input parameter. The records to write to the collection. Records are embedded and indexed for semantic search. Only available in **Ingest** mode. |
-| **Limit** (`limit`) | Integer | Input parameter. Limit the number of records to compare when **Allow Duplicates** is false. This can help improve performance when writing to large collections, but it can result in some duplicate records. Only available in **Ingest** mode. |
-
-</TabItem>
-<TabItem value="retrieve" label="Retrieve">
-
-To read from your local Chroma vector store, use **Retrieve** mode.
-
-The following parameters are available in **Retrieve** mode:
-
-| Name | Type | Description |
-|------|------|-------------|
-| **Persist Directory** (`persist_directory`) | String | Input parameter. The base directory where you want to create and persist the vector store. If you use the **Local DB** component in multiple flows or to create multiple collections, collections are stored at `$PERSISTENT_DIRECTORY/vector_stores/$COLLECTION_NAME`. If not specified, the default location is your Langflow cache directory (`LANGFLOW_CONFIG_DIR`). For more information, see [Memory management options](/memory). |
-| **Existing Collections** (`existing_collections`) | String | Input parameter. Select a previously-created collection to search. Only available in **Retrieve** mode. |
-| **Embedding** (`embedding`) | Embeddings | Input parameter. The embedding function to use for the vector store. |
-| **Search Type** (`search_type`) | String | Input parameter. The type of search to perform, either `Similarity` or `MMR`. Only available in **Retrieve** mode. |
-| **Search Query** (`search_query`) | String | Input parameter. Enter a query for similarity search. Only available in **Retrieve** mode. |
-| **Number of Results** (`number_of_results`) | Integer | Input parameter. Number of search results to return. Default: 10. Only available in **Retrieve** mode. |
-
-</TabItem>
-</Tabs>
-
 ## Clickhouse
 
 The **Clickhouse** component reads and writes to a Clickhouse vector store using an instance of `Clickhouse` vector store.
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [Clickhouse Documentation](https://clickhouse.com/docs/en/intro)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Clickhouse Documentation](https://clickhouse.com/docs/en/intro) or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
 
 <details>
 <summary>Clickhouse parameters</summary>
@@ -348,10 +300,44 @@ The **Couchbase** component reads and writes to a Couchbase vector store using a
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [Couchbase documentation](https://docs.couchbase.com/home/index.html)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Couchbase documentation](https://docs.couchbase.com/home/index.html) or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
 
 <details>
 <summary>Couchbase parameters</summary>
@@ -373,239 +359,46 @@ For more information, see the following:
 
 </details>
 
-## DataStax
-
-The following components support DataStax vector stores.
-
-For more information, see the following:
-
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/index.html)
-* [Hyper-Converged Database (HCD) documentation](https://docs.datastax.com/en/hyper-converged-database/1.2/get-started/get-started-hcd.html)
-
-### Astra DB
-
-The **Astra DB** component read and writes to Astra DB Serverless databases, using an instance of `AstraDBVectorStore` to call the Data API and DevOps API.
-
-:::important
-It is recommend that you create any databases, keyspaces, and collections you need before configuring the **Astra DB** component.
-
-You can create new databases and collections through this component, but this is only possible in the Langflow visual editor, not at runtime, and you must wait while the database or collection initializes before proceeding with flow configuration.
-Additionally, not all database and collection configuration options are available through the **Astra DB** component, such as hybrid search options, PCU groups, vectorize integration management, and multi-region deployments.
-:::
-
-<details>
-<summary>Astra DB parameters</summary>
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| token | Astra DB Application Token | Input parameter. An Astra application token with permission to access your vector database. Once the connection is verified, additional fields are populated with your existing databases and collections. If you want to create a database through this component, the application token must have Organization Administrator permissions. |
-| environment | Environment | Input parameter. The environment for the Astra DB API endpoint. Always use `prod`. |
-| database_name | Database | Input parameter. The name of the database that you want this component to connect to. Or, you can select **New Database** to create a new database, and then wait for the database to initialize. |
-| keyspace | Keyspace | Input parameter. The keyspace in your database that contains the collection specified in `collection_name`. Default: `default_keyspace`. |
-| collection_name | Collection | Input parameter. The name of the collection that you want to use with this flow. Or, select **New Collection** to create a new collection with limited configuration options. To ensure your collection is configured with the correct embedding provider and search capabilities, it is recommended to create the collection in the Astra Portal or with the Data API *before* configuring this component. For more information, see [Manage collections in Astra DB Serverless](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html). |
-| embedding_model | Embedding Model | Input parameter. Attach an [embedding model component](/components-embedding-models) to generate embeddings. Only available if the specified collection doesn't have a [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). If a vectorize integration exists, the component automatically uses the collection's integrated model. |
-| ingest_data | Ingest Data | Input parameter. The documents to load into the specified collection. |
-| search_query | Search Query | Input parameter. The query string for vector search. |
-| cache_vector_store | Cache Vector Store | Input parameter. Whether to cache the vector store in Langflow memory for faster reads. Default: Enabled (true). |
-| search_method | Search Method | Input parameter. The search methods to use, either `Hybrid Search` or `Vector Search`. Your collection must be configured to support the chosen option, and the default depends on what your collection supports. All collections in Astra DB Serverless (Vector) databases support vector search, but hybrid search requires that you set specific collection settings when creating the collection. These options are only available when creating a collection programmatically. For more information, see [Ways to find data in Astra DB Serverless](https://docs.datastax.com/en/astra-db-serverless/databases/about-search.html) and [Create a collection that supports hybrid search](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid). |
-| reranker | Reranker | Input parameter. The re-ranker model to use for hybrid search, depending on the collection configuration. **This parameter shows the default reranker even if the selected collection doesn't support hybrid search.** To verify if a collection supports hybrid search, [get collection metadata](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/list-collection-metadata.html), and then check that `lexical` and `rerank` both have `"enabled": true`. |
-| lexical_terms | Lexical Terms | Input parameter. A space-separated string of keywords for hybrid search, like `features, data, attributes, characteristics`. This parameter is only available if the collection supports hybrid search. For more information, see the following **Hybrid search example**. |
-| number_of_results | Number of Search Results | Input parameter. The number of search results to return. Default: 4. |
-| search_type | Search Type | Input parameter. The search type to use, either `Similarity` (default), `Similarity with score threshold`, and `MMR (Max Marginal Relevance)`. |
-| search_score_threshold | Search Score Threshold | Input parameter. The minimum similarity score threshold for vector search results with the `Similarity with score threshold` search type. Default: 0. |
-| advanced_search_filter | Search Metadata Filter | Input parameter. An optional dictionary of metadata filters to apply in addition to vector or hybrid search. |
-| autodetect_collection | Autodetect Collection | Input parameter. Whether to automatically fetch a list of available collections after providing an application token and API endpoint. |
-| content_field | Content Field | Input parameter. For writes, this parameter specifies the name of the field in the documents that contains text strings for which you want to generate embeddings. |
-| deletion_field | Deletion Based On Field | Input parameter. When provided, documents in the target collection with metadata field values matching the input metadata field value are deleted before new records are loaded. Use this setting for writes with upserts (overwrites). |
-| ignore_invalid_documents | Ignore Invalid Documents | Input parameter. Whether to ignore invalid documents during writes. If disabled (false), then an error is raised for invalid documents. Default: Enabled (true). |
-| astradb_vectorstore_kwargs | AstraDBVectorStore Parameters | Input parameter. An optional dictionary of additional parameters for the `AstraDBVectorStore` instance. For more information, see [Vector store instances](#vector-store-instances). |
-
-</details>
-
-<details>
-<summary>Hybrid search example</summary>
-
-The **Astra DB** component supports the Data API's [hybrid search](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html) feature.
-Hybrid search performs a vector similarity search and a lexical search, compares the results of both searches, and then returns the most relevant results overall.
-
-To use hybrid search through the **Astra DB** component, do the following:
-
-1. Use the Data API to [create a collection that supports hybrid search](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid) if you haven't already created one.
-
-    Although you can create a collection through the **Astra DB** component, you have more control and insight into the collection settings when using the Data API for this operation.
-
-2. Create a flow based on the **Hybrid Search RAG** template, which includes an **Astra DB** component that is pre-configured for hybrid search.
-3. In the **Language Model** components, add your OpenAI API key.
-4. Delete the **Language Model** component that is connected to the **Structured Output** component's **Input Message** port, and then connect the **Chat Input** component to that port.
-5. Configure the **Astra DB** vector store component:
-
-    1. Enter your Astra DB application token.
-    2. In the **Database** field, select your database.
-    3. In the **Collection** field, select your collection with hybrid search enabled.
-
-        Once you select a collection that supports hybrid search, the other parameters automatically update to allow hybrid search options.
-
-6. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, find the **Lexical Terms** field, enable the **Show** toggle, and then click **Close**.
-
-7. Connect the first **Parser** component's **Parsed Text** output to the **Astra DB** component's **Lexical Terms** input.
-This input only appears after connecting a collection that support hybrid search with reranking.
-
-8. Click the **Structured Output** component to expose the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, find the **Format Instructions** row, click <Icon name="Expand" aria-hidden="true"/> **Expand**, and then replace the prompt with the following text:
-
-    ```text
-    You are a database query planner that takes a user's requests, and then converts to a search against the subject matter in question.
-    You should convert the query into:
-    1. A list of keywords to use against a Lucene text analyzer index, no more than 4. Strictly unigrams.
-    2. A question to use as the basis for a QA embedding engine.
-    Avoid common keywords associated with the user's subject matter.
-    ```
-
-9. Click **Finish Editing**, and then click **Close** to save your changes to the component.
-
-10. Open the **Playground**, and then enter a natural language question that you would ask about your database.
-
-    In this example, your input is sent to both the **Astra DB** and **Structured Output** components:
-
-    * The input sent directly to the **Astra DB** component's **Search Query** port is used as a string for similarity search.
-    An embedding is generated from the query string using the collection's Astra DB vectorize integration.
-
-    * The input sent to the **Structured Output** component is processed by the **Structured Output**, **Language Model**, and **Parser** components to extract space-separated `keywords` used for the lexical search portion of the hybrid search.
-
-    The complete hybrid search query is executed against your database using the Data API's `find_and_rerank` command.
-    The API's response is output as a `DataFrame` that is transformed into a text string `Message` by another **Parser** component.
-    Finally, the **Chat Output** component prints the `Message` response to the **Playground**.
-
-11. Optional: Exit the **Playground**, and then click <Icon name="TextSearch" aria-hidden="true"/> **Inspect Output** on each individual component to understand how lexical keywords were constructed and view the raw response from the Data API.
-This is helpful for debugging flows where a certain component isn't receiving input as expected from another component.
-
-    * **Structured Output component**: The output is the `Data` object produced by applying the output schema to the LLM's response to the input message and format instructions.
-    The following example is based on the aforementioned instructions for keyword extraction:
-
-        ```
-        1. Keywords: features, data, attributes, characteristics
-        2. Question: What characteristics can be identified in my data?
-        ```
-
-    * **Parser component**: The output is the string of keywords extracted from the structured output `Data`, and then used as lexical terms for the hybrid search.
-
-    * **Astra DB component**: The output is the `DataFrame` containing the results of the hybrid search as returned by the Data API.
-
-</details>
-
-### Astra DB Graph
-
-The **Astra DB Graph** component uses a `AstraDBGraphVectorStore` instance for graph traversal and graph-based document retrieval in an Astra DB collection. It also supports writing to the vector store.
-For more information, see [Build a Graph RAG system with LangChain and GraphRetriever](https://docs.datastax.com/en/astra-db-serverless/tutorials/graph-rag.html).
-
-<details>
-<summary>Astra DB Graph parameters</summary>
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| token | Astra DB Application Token | Input parameter. An Astra application token with permission to access your vector database. Once the connection is verified, additional fields are populated with your existing databases and collections. If you want to create a database through this component, the application token must have Organization Administrator permissions. |
-| api_endpoint | API Endpoint | Input parameter. Your database's API endpoint. |
-| keyspace | Keyspace | Input parameter. The keyspace in your database that contains the collection specified in `collection_name`. Default: `default_keyspace`. |
-| collection_name | Collection | Input parameter. The name of the collection that you want to use with this flow. For write operations, if a matching collection doesn't exist, a new one is created. |
-| metadata_incoming_links_key | Metadata Incoming Links Key | Input parameter. The metadata key for the incoming links in the vector store. |
-| ingest_data | Ingest Data | Input parameter. Records to load into the vector store. Only relevant for writes. |
-| search_input | Search Query | Input parameter. Query string for similarity search. Only relevant for reads. |
-| cache_vector_store | Cache Vector Store | Input parameter. Whether to cache the vector store in Langflow memory for faster reads. Default: Enabled (true). |
-| embedding_model | Embedding Model | Input parameter. Attach an [embedding model component](/components-embedding-models) to generate embeddings. If the collection has a [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html), don't attach an embedding model component. |
-| metric | Metric | Input parameter. The metrics to use for similarity search calculations, either `cosine` (default), `dot_product`, or `euclidean`. This is a collection setting. |
-| batch_size | Batch Size | Input parameter. Optional number of records to process in a single batch. |
-| bulk_insert_batch_concurrency | Bulk Insert Batch Concurrency | Input parameter. Optional concurrency level for bulk write operations. |
-| bulk_insert_overwrite_concurrency | Bulk Insert Overwrite Concurrency | Input parameter. Optional concurrency level for bulk write operations that allow upserts (overwriting existing records). |
-| bulk_delete_concurrency | Bulk Delete Concurrency | Input parameter. Optional concurrency level for bulk delete operations. |
-| setup_mode | Setup Mode | Input parameter. Configuration mode for setting up the vector store, either `Sync` (default) or `Off`. |
-| pre_delete_collection | Pre Delete Collection | Input parameter. Whether to delete the collection before creating a new one. Default: Disabled (false). |
-| metadata_indexing_include | Metadata Indexing Include | Input parameter. An list of metadata fields to index if you want to enable [selective indexing](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-indexes.html) *only* when creating a collection. Doesn't apply to existing collections. Only one `*_indexing_*` parameter can be set per collection. If all `*_indexing_*` parameters are unset, then all fields are indexed (default indexing). |
-| metadata_indexing_exclude | Metadata Indexing Exclude | Input parameter. An list of metadata fields to exclude from indexing if you want to enable selective indexing *only* when creating a collection. Doesn't apply to existing collections. Only one `*_indexing_*` parameter can be set per collection. If all `*_indexing_*` parameters are unset, then all fields are indexed (default indexing). |
-| collection_indexing_policy | Collection Indexing Policy | Input parameter. A dictionary to define the indexing policy if you want to enable selective indexing *only* when creating a collection. Doesn't apply to existing collections. Only one `*_indexing_*` parameter can be set per collection. If all `*_indexing_*` parameters are unset, then all fields are indexed (default indexing). The `collection_indexing_policy` dictionary is used when you need to set indexing on subfields or a complex indexing definition that isn't compatible as a list. |
-| number_of_results | Number of Results | Input parameter. Number of search results to return. Default: 4. Only relevant to reads. |
-| search_type | Search Type | Input parameter. Search type to use, either `Similarity`, `Similarity with score threshold`, or `MMR (Max Marginal Relevance)`, `Graph Traversal`, or `MMR (Max Marginal Relevance) Graph Traversal` (default). Only relevant to reads. |
-| search_score_threshold | Search Score Threshold | Input parameter. Minimum similarity score threshold for search results if the `search_type` is `Similarity with score threshold`. Default: 0. |
-| search_filter | Search Metadata Filter | Input parameter. Optional dictionary of metadata filters to apply in addition to vector search. |
-
-</details>
-
-### Graph RAG
-
-The **Graph RAG** component uses an instance of [`GraphRetriever`](https://datastax.github.io/graph-rag/reference/langchain_graph_retriever/) for Graph RAG traversal enabling graph-based document retrieval in an Astra DB vector store.
-For more information, see the [DataStax Graph RAG documentation](https://datastax.github.io/graph-rag/).
-
-:::tip
-This component was meant as a Graph RAG extension for the **Astra DB** vector store component.
-However, the **Astra DB Graph** component includes both the vector store connection and Graph RAG functionality.
-:::
-
-<details>
-<summary>Graph RAG parameters</summary>
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| embedding_model | Embedding Model | Input parameter. Specify the embedding model to use. Not required if the connected vector store has an [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). |
-| vector_store | Vector Store Connection | Input parameter. A [`vector_store`](#vector-store-instances) instance inherited from an **Astra DB** component's **Vector Store Connection** output. |
-| edge_definition | Edge Definition | Input parameter. [Edge definition](https://datastax.github.io/graph-rag/reference/graph_retriever/edges/) for the graph traversal. |
-| strategy | Traversal Strategies | Input parameter. The strategy to use for graph traversal. Strategy options are dynamically loaded from available strategies. |
-| search_query | Search Query | Input parameter. The query to search for in the vector store. |
-| graphrag_strategy_kwargs | Strategy Parameters | Input parameter. Optional dictionary of additional parameters for the [retrieval strategy](https://datastax.github.io/graph-rag/reference/graph_retriever/strategies/). |
-| search_results | **Search Results** or **DataFrame** | Output parameter. The results of the graph-based document retrieval as a list of [`Data`](/data-types#data) objects or as a tabular [`DataFrame`](/data-types#dataframe). You can set the desired output type near the component's output port. |
-
-</details>
-
-### Hyper-Converged Database (HCD)
-
-The **Hyper-Converged Database (HCD)** component uses your cluster's the Data API server to read and write to an HCD vector store.
-Because the underlying functions call the Data API, which originated from Astra DB, the component uses an instance of `AstraDBVectorStore`.
-
-![A flow using the HCD component to load vector data.](/img/component-hcd-example-flow.png)
-
-For more information about using the Data API with an HCD deployment, see [Get started with the Data API in HCD 1.2](https://docs.datastax.com/en/hyper-converged-database/1.2/api-reference/dataapiclient.html).
-
-<details>
-<summary>HCD parameters</summary>
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| collection_name | Collection Name | Input parameter. The name of a vector store collection in HCD. For write operations, if the collection doesn't exist, then a new one is created. Required. |
-| username | HCD Username | Input parameter. Username for authenticating to your HCD deployment. Default: `hcd-superuser`. Required. |
-| password | HCD Password | Input parameter. Password for authenticating to your HCD deployment. Required. |
-| api_endpoint | HCD API Endpoint | Input parameter. Your deployment's HCD Data API endpoint, formatted as `http[s]://**CLUSTER_HOST**:**GATEWAY_PORT` where `CLUSTER_HOST` is the IP address of any node in your cluster and `GATEWAY_PORT` is the port number ofr your API gateway service. For example, `http://192.0.2.250:8181`. Required. |
-| ingest_data | Ingest Data | Input parameter. Records to load into the vector store. Only relevant for writes. |
-| search_input | Search Input | Input parameter. Query string for similarity search. Only relevant for reads. |
-| namespace | Namespace | Input parameter. The namespace in HCD that contains or will contain the collection specified in `collection_name`. Default: `default_namespace`. |
-| ca_certificate | CA Certificate | Input parameter. Optional CA certificate for TLS connections to HCD. |
-| metric | Metric | Input parameter. The metrics to use for similarity search calculations, either `cosine`, `dot_product`, or `euclidean`. This is a collection setting. If calling an existing collection, leave unset to use the collection's metric. If a write operation creates a new collection, specify the desired similarity metric setting. |
-| batch_size | Batch Size | Input parameter. Optional number of records to process in a single batch. |
-| bulk_insert_batch_concurrency | Bulk Insert Batch Concurrency | Input parameter. Optional concurrency level for bulk write operations. |
-| bulk_insert_overwrite_concurrency | Bulk Insert Overwrite Concurrency | Input parameter. Optional concurrency level for bulk write operations that allow upserts (overwriting existing records). |
-| bulk_delete_concurrency | Bulk Delete Concurrency | Input parameter. Optional concurrency level for bulk delete operations. |
-| setup_mode | Setup Mode | Input parameter. Configuration mode for setting up the vector store, either `Sync` (default), `Async`, or `Off`. |
-| pre_delete_collection | Pre Delete Collection | Input parameter. Whether to delete the collection before creating a new one. |
-| metadata_indexing_include | Metadata Indexing Include | Input parameter. An list of metadata fields to index if you want to enable [selective indexing](https://docs.datastax.com/en/hyper-converged-database/1.2/api-reference/collection-indexes.html) *only* when creating a collection. Doesn't apply to existing collections. Only one `*_indexing_*` parameter can be set per collection. If all `*_indexing_*` parameters are unset, then all fields are indexed (default indexing). |
-| metadata_indexing_exclude | Metadata Indexing Exclude | Input parameter. An list of metadata fields to exclude from indexing if you want to enable selective indexing *only* when creating a collection. Doesn't apply to existing collections. Only one `*_indexing_*` parameter can be set per collection. If all `*_indexing_*` parameters are unset, then all fields are indexed (default indexing). |
-| collection_indexing_policy | Collection Indexing Policy | Input parameter. A dictionary to define the indexing policy if you want to enable selective indexing *only* when creating a collection. Doesn't apply to existing collections. Only one `*_indexing_*` parameter can be set per collection. If all `*_indexing_*` parameters are unset, then all fields are indexed (default indexing). The `collection_indexing_policy` dictionary is used when you need to set indexing on subfields or a complex indexing definition that isn't compatible as a list. |
-| embedding | Embedding or Astra Vectorize | Input parameter. The embedding model to use by attaching an **Embedding Model** component. This component doesn't support additional vectorize authentication headers, so it isn't possible to use a vectorize integration with this component, even if you have enabled one on an existing HCD collection. |
-| number_of_results | Number of Results | Input parameter. Number of search results to return. Default: 4. Only relevant to reads. |
-| search_type | Search Type | Input parameter. Search type to use, either `Similarity` (default), `Similarity with score threshold`, or `MMR (Max Marginal Relevance)`. Only relevant to reads. |
-| search_score_threshold | Search Score Threshold | Input parameter. Minimum similarity score threshold for search results if the `search_type` is `Similarity with score threshold`. Default: 0. |
-| search_filter | Search Metadata Filter | Input parameter. Optional dictionary of metadata filters to apply in addition to vector search. |
-
-</details>
-
 ## Elasticsearch
 
-The **Elasticsearch** component reads and writes to an Elasticsearch instance using `ElasticsearchStore`.
+The **Elasticsearch** component reads and writes to an Elasticsearch instance using [`ElasticsearchStore`](https://python.langchain.com/docs/integrations/vectorstores/elasticsearch/).
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/dense-vector.html)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/dense-vector.html) or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
 
 <details>
 <summary>Elasticsearch parameters</summary>
@@ -631,10 +424,40 @@ The **FAISS** component providese access to the Facebook AI Similarity Search (F
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [FAISS documentation](https://faiss.ai/index.html)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [FAISS documentation](https://faiss.ai/index.html) or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
 
 <details>
 <summary>FAISS parameters</summary>
@@ -657,10 +480,44 @@ The **Milvus** component reads and writes to Milvus vector stores using an insta
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [Milvus documentation](https://milvus.io/docs)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Milvus documentation](https://milvus.io/docs) or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
 
 <details>
 <summary>Milvus parameters</summary>
@@ -688,14 +545,44 @@ For more information, see the following:
 
 ## MongoDB Atlas
 
-The **MongoDB Atlas** component reads and writes to MongoDB Atlas vector stores using an instance of `MongoDBAtlasVectorSearch`.
+The **MongoDB Atlas** component reads and writes to MongoDB Atlas vector stores using an instance of [`MongoDBAtlasVectorSearch`](https://python.langchain.com/docs/integrations/vectorstores/mongodb_atlas/).
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [MongoDB Atlas documentation](https://www.mongodb.com/docs/atlas/atlas-vector-search/tutorials/vector-search-quick-start/)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [MongoDB Atlas documentation](https://www.mongodb.com/docs/atlas/atlas-vector-search/tutorials/vector-search-quick-start/) or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
 
 <details>
 <summary>MongoDB Atlas parameters</summary>
@@ -721,14 +608,44 @@ For more information, see the following:
 
 ## OpenSearch
 
-The **OpenSearch** component reads and writes to OpenSearch instances using `OpenSearchVectorSearch`.
+The **OpenSearch** component reads and writes to OpenSearch instances using [`OpenSearchVectorSearch`](https://python.langchain.com/docs/integrations/vectorstores/opensearch/).
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [OpenSearch documentation](https://opensearch.org/platform/search/vector-database.html)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [OpenSearch documentation](https://opensearch.org/platform/search/vector-database.html) or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
 
 <details>
 <summary>OpenSearch parameters</summary>
@@ -751,16 +668,60 @@ For more information, see the following:
 
 </details>
 
+<details>
+<summary>Vector Store Connection port</summary>
+
+The **OpenSearch** component has an additional, deprecated **Vector Store Connection** output.
+This output can only connect to a `VectorStore` input port, and it was intended for use with dedicated Graph RAG components.
+
+The **OpenSearch** component doesn't require a separate Graph RAG component because OpenSearch instances support Graph traversal through built-in RAG functionality and plugins.
+
+</details>
+
 ## PGVector
 
-The **PGVector** component reads and writes to PostgreSQL vector stores using an instance of `PGVector`.
+The **PGVector** component reads and writes to PostgreSQL vector stores using an instance of [`PGVector`](https://python.langchain.com/docs/integrations/vectorstores/pgvector/).
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [PGVector documentation](https://github.com/pgvector/pgvector)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [PGVector documentation](https://github.com/pgvector/pgvector) or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
 
 <details>
 <summary>PGVector parameters</summary>
@@ -782,10 +743,44 @@ The **Pinecone** component reads and writes to Pinecone vector stores using an i
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [Pinecone documentation](https://docs.pinecone.io/home)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Pinecone documentation](https://docs.pinecone.io/home) or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
 
 <details>
 <summary>Pinecone parameters</summary>
@@ -810,10 +805,44 @@ The **Qdrant** component reads and writes to Qdrant vector stores using an insta
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [Qdrant documentation](https://qdrant.tech/documentation/)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Qdrant documentation](https://qdrant.tech/documentation/) or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
 
 <details>
 <summary>Qdrant parameters</summary>
@@ -841,14 +870,48 @@ For more information, see the following:
 
 ## Redis
 
-The **Redis** component reads and writes to Redis vector stores using an instance of `Redis` vector store.
+The **Redis** component reads and writes to Redis vector stores using an instance of [`RedisVectorStore`](https://python.langchain.com/docs/integrations/vectorstores/redis/).
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [Redis documentation](https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Redis documentation](https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/) or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
 
 <details>
 <summary>Redis parameters</summary>
@@ -872,10 +935,44 @@ The **Supabase** component reads and writes to Supabase vector stores using an i
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [Supabase documentation](https://supabase.com/docs/guides/ai)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Supabase documentation](https://supabase.com/docs/guides/ai) or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
 
 <details>
 <summary>Supabase parameters</summary>
@@ -899,10 +996,44 @@ The **Upstash** component reads and writes to Upstash vector stores using an ins
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [Upstash documentation](https://upstash.com/docs/introduction)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Upstash documentation](https://upstash.com/docs/introduction) or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
 
 <details>
 <summary>Upstash parameters</summary>
@@ -927,13 +1058,44 @@ The **Vectara** and **Vectara RAG** components support Vectara vector store, sea
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Vector store instances](#vector-store-instances)
-* [Vectara documentation](https://docs.vectara.com/docs/)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Vectara documentation](https://docs.vectara.com/docs/) or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
 
 ### Vectara
 
-The **Vectara** component reads and writes to Vectara vector stores, and then produces [search results output](#search-results-output).
+The **Vectara** component reads and writes to Vectara vector stores, and then produces search results output.
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
 
 <details>
 <summary>Vectara parameters</summary>
@@ -962,10 +1124,44 @@ The **Weaviate** component reads and writes to Weaviate vector stores using an i
 
 For more information, see the following:
 
-* [Hidden parameters](#hidden-parameters)
-* [Search results output](#search-results-output)
-* [Vector store instances](#vector-store-instances)
-* [Weaviate Documentation](https://weaviate.io/developers/weaviate)
+<details>
+<summary>Hidden parameters</summary>
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Weaviate documentation](https://weaviate.io/developers/weaviate) or inspect [component code](/concepts-components#component-code).
+
+</details>
+
+<details>
+<summary>Search results output</summary>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+</details>
+
+<details>
+<summary>Vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
 
 <details>
 <summary>Weaviate parameters</summary>

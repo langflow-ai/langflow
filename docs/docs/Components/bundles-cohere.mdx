@@ -66,7 +66,7 @@ Outputs `Data` containing the reranked documents, limited by the **Top N** param
 | Name | Type | Description |
 |------|------|-------------|
 | **Search Query** | String | Input parameter. The search query for reranking documents. |
-| **Search Results** | Data | Input parameter. Connect [search results output](/components-vector-stores#search-results-output) from a vector store component. Use this parameter to apply reranking after running a similarity search on your vector database. |
+| **Search Results** | Data | Input parameter. Connect search results output from a vector store component. Use this parameter to apply reranking after running a similarity search on your vector database. |
 | **Top N** | Integer | Input parameter. The number of documents to return after reranking. Default: `3`. |
 | **Cohere API Key** | SecretString | Input parameter. Your Cohere API key. |
 | **Model** | String | Input parameter. The re-ranker model to use. Default: `rerank-english-v3.0` |
