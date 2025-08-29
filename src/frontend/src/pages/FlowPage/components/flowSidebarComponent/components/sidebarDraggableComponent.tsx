@@ -36,6 +36,7 @@ export const SidebarDraggableComponent = forwardRef(
       onDragStart,
       apiClass,
       official,
+      onDelete,
       beta,
       legacy,
       disabled,
@@ -50,6 +51,7 @@ export const SidebarDraggableComponent = forwardRef(
       color: string;
       onDragStart: DragEventHandler<HTMLDivElement>;
       official: boolean;
+      onDelete?: () => void;
       beta: boolean;
       legacy: boolean;
       disabled?: boolean;
@@ -89,6 +91,10 @@ export const SidebarDraggableComponent = forwardRef(
           break;
         }
         case "delete": {
+          if (onDelete) {
+            onDelete();
+            break;
+          }
           const flowId = flows?.find((f) => f.name === display_name);
           if (flowId) deleteFlow({ id: flowId.id });
           break;
@@ -228,8 +234,11 @@ export const SidebarDraggableComponent = forwardRef(
                         Download{" "}
                       </div>{" "}
                     </SelectItem>
-                    {!official && (
-                      <SelectItem value={"delete"}>
+                    {(!official || onDelete) && (
+                      <SelectItem
+                        value={"delete"}
+                        data-testid="draggable-component-menu-delete"
+                      >
                         <div className="flex">
                           <IconComponent
                             name="Trash2"
