@@ -23,6 +23,7 @@ import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-serv
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useShortcutsStore } from "@/stores/shortcuts";
+import { useUtilityStore } from "@/stores/utilityStore";
 import {
   nodeColors,
   SIDEBAR_BUNDLES,
@@ -150,6 +151,10 @@ interface FlowSidebarComponentProps {
 
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const data = useTypesStore((state) => state.data);
+
+  const lockAllComponents = useUtilityStore(
+    (state) => state.lockAllComponents,
+  );
 
   const { getFilterEdge, setFilterEdge, filterType } = useFlowStore(
     useShallow((state) => ({
@@ -614,7 +619,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
               </>
             )}
           </SidebarContent>
-          {ENABLE_NEW_SIDEBAR &&
+          {!lockAllComponents &&
+          ENABLE_NEW_SIDEBAR &&
           activeSection === "mcp" &&
           !hasMcpServers ? null : (
             <SidebarFooter className="border-t p-4 py-3 group-data-[collapsible=icon]:hidden">

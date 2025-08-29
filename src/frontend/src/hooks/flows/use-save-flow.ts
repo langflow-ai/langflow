@@ -96,6 +96,40 @@ const useSaveFlow = () => {
                       }),
                     );
                     setCurrentFlow(updatedFlow);
+                    
+                    // Update the sandbox flags from the server response
+                    if (updatedFlow.data?.nodes) {
+                      const currentNodes = useFlowStore.getState().nodes;
+                      const nodesWithFlags = currentNodes.map(node => {
+                        const updatedNode = updatedFlow.data?.nodes.find(n => n.id === node.id);
+                        if (updatedNode && (updatedNode.data.sandboxed !== undefined || updatedNode.data.locked !== undefined || updatedNode.data.blocked !== undefined)) {
+                          return {
+                            ...node,
+                            data: {
+                              ...node.data,
+                              sandboxed: updatedNode.data.sandboxed,
+                              locked: updatedNode.data.locked,
+                              blocked: updatedNode.data.blocked,
+                            }
+                          };
+                        }
+                        return node;
+                      });
+
+                      // Update nodes WITHOUT triggering autosave
+                      useFlowStore.setState({ 
+                        nodes: nodesWithFlags,
+                        // Also update currentFlow in flowStore to match
+                        currentFlow: {
+                          ...updatedFlow,
+                          data: {
+                            ...updatedFlow.data,
+                            nodes: nodesWithFlags
+                          }
+                        }
+                      });
+                    }
+                    
                     resolve();
                   } else {
                     setErrorData({

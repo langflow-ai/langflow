@@ -23,6 +23,7 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
+import { useUtilityStore } from "../../stores/utilityStore";
 import type { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
 import type { NodeDataType } from "../../types/flow";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
@@ -517,6 +518,9 @@ function GenericNode({
                   editNameDescription={editNameDescription}
                   toggleEditNameDescription={toggleEditNameDescription}
                   setHasChangedNodeDescription={setHasChangedNodeDescription}
+                  sandboxed={data.sandboxed}
+                  locked={data.locked}
+                  blocked={data.blocked}
                 />
               </div>
             </div>
@@ -560,6 +564,7 @@ function GenericNode({
               isUserEdited={isUserEdited}
               isBreakingChange={hasBreakingChange}
               getValidationStatus={getValidationStatus}
+              locked={data.locked}
             />
           </div>
           {showNode && (hasDescription || editNameDescription) && (

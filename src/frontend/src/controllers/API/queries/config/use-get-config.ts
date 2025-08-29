@@ -21,6 +21,8 @@ export interface ConfigResponse {
   webhook_polling_interval: number;
   serialization_max_items_length: number;
   event_delivery: EventDeliveryType;
+  sandbox_enabled: boolean;
+  sandbox_lock_components: boolean;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
@@ -44,6 +46,10 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
     (state) => state.setWebhookPollingInterval,
   );
   const setEventDelivery = useUtilityStore((state) => state.setEventDelivery);
+  const setSandboxEnabled = useUtilityStore((state) => state.setSandboxEnabled);
+  const setLockAllComponents = useUtilityStore(
+    (state) => state.setLockAllComponents,
+  );
 
   const { query } = UseRequestProcessor();
 
@@ -66,6 +72,8 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
         data.webhook_polling_interval ?? DEFAULT_POLLING_INTERVAL,
       );
       setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
+      setSandboxEnabled(data.sandbox_enabled ?? false);
+      setLockAllComponents(data.sandbox_lock_components ?? false);
     }
     return data;
   };

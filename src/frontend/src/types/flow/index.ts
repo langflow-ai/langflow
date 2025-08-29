@@ -69,6 +69,8 @@ export type NodeDataType = {
   selected_output_type?: string;
   buildStatus?: BuildStatus;
   selected_output?: string;
+  sandboxed?: boolean;
+  locked?: boolean;
 };
 
 export type EdgeType = Edge<EdgeDataType, "default">;

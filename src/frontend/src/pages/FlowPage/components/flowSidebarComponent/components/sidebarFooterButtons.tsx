@@ -7,6 +7,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
 
 const SidebarMenuButtons = ({
+  createCustomComponentButton = true,
   customComponent,
   addComponent,
   isLoading = false,
@@ -61,7 +62,7 @@ const SidebarMenuButtons = ({
           </SidebarMenuButton>
           <AddMcpServerModal open={addMcpOpen} setOpen={setAddMcpOpen} />
         </>
-      ) : (
+      ) : createCustomComponentButton && (
         <SidebarMenuButton asChild>
           <Button
             unstyled
