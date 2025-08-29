@@ -56,6 +56,19 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
   The **Create knowledge** component ingests knowledge into a knowledge base. The **Retrieve knowledge** component is added to flows to access a knowledge base.
   For more information, see Knowledge bases.
 
+- Advanced parsing available for the **File** component
+
+  The **File** component supports [advanced parsing with the Docling library](/components-data#advanced-parsing).
+
+- Built-in Docling support
+
+    The Docling dependency is now included with Langflow, making it easier to use the **Docling** components and the **File** component's new advanced parsing feature.
+
+- Structured output option for the **Agent** component
+
+  In addition to the `Message` output, the Agent component now includes a structured output for `Data`.
+  This output parses JSON into a structured `Data` object to make it easier to work with the agent's output downstream.
+
 - Advanced parsing available for File component
 
   The File component includes advanced parsing capabilities powered by the Docling library.
@@ -70,30 +83,12 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Increased max file upload size
 
   Increased the default max file upload size from `100 MB` to `1024 MB`.
-
-- The Langflow `config_dir` default directory is moved
-
-  The default Langflow `config_dir` is now moved.
-  The directory location can still be modified with the `LANGFLOW_CONFIG_DIR` [environment variable](/environment-variables).
-
-  ```
-  Current:
-  macOS | ~/Library/Caches/langflow/
-  Linux | ~/.cache/langflow/
-  Windows | %LOCALAPPDATA%\langflow\Cache\
-
-  1.6:
-  macOS | ~/Library/Application Support/langflow/
-  Linux | ~/.config/langflow/
-  Windows | %APPDATA%\langflow\
-  ```
-
+  
 - New integrations and bundles
 
    - Traceloop
 
 ### Deprecations
-
 
 ## 1.5.0
 
