@@ -36,7 +36,10 @@ HTTP_INTERNAL_SERVER_ERROR = 500
 # MCP Session Manager constants - lazy loaded to avoid blocking at import time
 def _get_mcp_settings():
     """Get MCP settings lazily to avoid blocking operations at import time."""
-    return get_settings_service().settings
+    global _cached_settings
+    if _cached_settings is None:
+        _cached_settings = get_settings_service().settings
+    return _cached_settings
 
 
 def get_max_sessions_per_server():
@@ -1537,3 +1540,6 @@ async def update_tools(
 
     logger.info(f"Successfully loaded {len(tool_list)} tools from MCP server '{server_name}'")
     return mode, tool_list, tool_cache
+
+
+_cached_settings = None
