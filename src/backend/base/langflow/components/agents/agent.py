@@ -483,6 +483,7 @@ class AgentComponent(ToolCallingAgentComponent):
                     build_config.update(fields_to_add)
                 # Reset input types for agent_llm
                 build_config["agent_llm"]["input_types"] = []
+                build_config["agent_llm"]["display_name"] = "Model Provider"
             elif field_value == "Custom":
                 # Delete all provider fields
                 self.delete_fields(build_config, ALL_PROVIDER_FIELDS)

@@ -87,7 +87,7 @@ Write-Host "`nStep 4: Running Langflow..." -ForegroundColor Yellow
 Write-Host "`nAttention: Wait until uvicorn is running before opening the browser" -ForegroundColor Red
 try {
     if ($useEnvFile) {
-        & uv run langflow run --env-file $envPath
+        & uv run --env-file $envPath langflow run
     } else {
         & uv run langflow run
     }
