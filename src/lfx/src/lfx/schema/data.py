@@ -254,19 +254,19 @@ class Data(BaseModel):
         Returns:
             Data: The filtered Data.
         """
-        from langflow.template.utils import apply_json_filter
+        from lfx.template.utils import apply_json_filter
 
         return apply_json_filter(self.data, filter_str)
 
     def to_message(self) -> Message:
-        from langflow.schema.message import Message  # Local import to avoid circular import
+        from lfx.schema.message import Message  # Local import to avoid circular import
 
         if self.text_key in self.data:
             return Message(text=self.get_text())
         return Message(text=str(self.data))
 
     def to_dataframe(self) -> DataFrame:
-        from langflow.schema.dataframe import DataFrame  # Local import to avoid circular import
+        from lfx.schema.dataframe import DataFrame  # Local import to avoid circular import
 
         data_dict = self.data
         # If data contains only one key and the value is a list of dictionaries, convert to DataFrame
