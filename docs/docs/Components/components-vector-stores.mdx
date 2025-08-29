@@ -868,67 +868,6 @@ For a tutorial using a vector database in a flow, see [Create a vector RAG chatb
 
 </details>
 
-## Redis
-
-The **Redis** component reads and writes to Redis vector stores using an instance of [`RedisVectorStore`](https://python.langchain.com/docs/integrations/vectorstores/redis/).
-
-For more information, see the following:
-
-<details>
-<summary>Hidden parameters</summary>
-
-You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
-
-import PartialParams from '@site/docs/_partial-hidden-params.mdx';
-
-<PartialParams />
-
-import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
-
-<PartialConditionalParams />
-
-For information about accepted values and functionality, see the [Redis documentation](https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/) or inspect [component code](/concepts-components#component-code).
-
-</details>
-
-<details>
-<summary>Search results output</summary>
-
-import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
-
-<PartialVectorSearchResults />
-
-</details>
-
-<details>
-<summary>Vector store instances</summary>
-
-import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
-
-<PartialVectorStoreInstance />
-
-</details>
-
-:::tip
-For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
-:::
-
-<details>
-<summary>Redis parameters</summary>
-
-| Name              | Type         | Description                               |
-| ----------------- | ------------ | ----------------------------------------- |
-| redis_server_url  | SecretString | Input parameter. The Redis server connection string.            |
-| redis_index_name  | String       | Input parameter. The name of the Redis index.                   |
-| code              | String       | Input parameter. The custom code for Redis (advanced).          |
-| schema            | String       | Input parameter. The schema for Redis index.                    |
-| search_query      | String       | Input parameter. The query for similarity search.               |
-| ingest_data       | Data         | Input parameter. The data to be ingested into the vector store. |
-| number_of_results | Integer      | Input parameter. The number of results to return in search.     |
-| embedding         | Embeddings   | Input parameter. The embedding function to use.                 |
-
-</details>
-
 ## Supabase
 
 The **Supabase** component reads and writes to Supabase vector stores using an instance of `SupabaseVectorStore`.

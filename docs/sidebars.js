@@ -268,7 +268,6 @@ module.exports = {
               ]
             },
             "Components/components-data",
-            "Components/components-vector-stores",
             {
               type: "category",
               label: "Processing",

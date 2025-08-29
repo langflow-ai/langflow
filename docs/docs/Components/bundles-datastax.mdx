@@ -6,10 +6,160 @@ slug: /bundles-datastax
 import Icon from "@site/src/components/icon";
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
 
 <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
 This page describes the components that are available in the **DataStax** bundle, including components that read and write to Astra DB databases.
+
+## Astra DB
+
+:::important
+It is recommend that you create any databases, keyspaces, and collections you need before configuring the **Astra DB** component.
+
+You can create new databases and collections through this component, but this is only possible in the Langflow visual editor, not at runtime, and you must wait while the database or collection initializes before proceeding with flow configuration.
+Additionally, not all database and collection configuration options are available through the **Astra DB** component, such as hybrid search options, PCU groups, vectorize integration management, and multi-region deployments.
+:::
+
+The **Astra DB** component read and writes to [Astra DB Serverless databases](https://docs.datastax.com/en/astra-db-serverless/index.html), using an instance of `AstraDBVectorStore` to call the Data API and DevOps API.
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+### Astra DB parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the provider's documentation or inspect [component code](/concepts-components#component-code).
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| token | Astra DB Application Token | Input parameter. An Astra application token with permission to access your vector database. Once the connection is verified, additional fields are populated with your existing databases and collections. If you want to create a database through this component, the application token must have Organization Administrator permissions. |
+| environment | Environment | Input parameter. The environment for the Astra DB API endpoint. Always use `prod`. |
+| database_name | Database | Input parameter. The name of the database that you want this component to connect to. Or, you can select **New Database** to create a new database, and then wait for the database to initialize. |
+| keyspace | Keyspace | Input parameter. The keyspace in your database that contains the collection specified in `collection_name`. Default: `default_keyspace`. |
+| collection_name | Collection | Input parameter. The name of the collection that you want to use with this flow. Or, select **New Collection** to create a new collection with limited configuration options. To ensure your collection is configured with the correct embedding provider and search capabilities, it is recommended to create the collection in the Astra Portal or with the Data API *before* configuring this component. For more information, see [Manage collections in Astra DB Serverless](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html). |
+| embedding_model | Embedding Model | Input parameter. Attach an [embedding model component](/components-embedding-models) to generate embeddings. Only available if the specified collection doesn't have a [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). If a vectorize integration exists, the component automatically uses the collection's integrated model. |
+| ingest_data | Ingest Data | Input parameter. The documents to load into the specified collection. |
+| search_query | Search Query | Input parameter. The query string for vector search. |
+| cache_vector_store | Cache Vector Store | Input parameter. Whether to cache the vector store in Langflow memory for faster reads. Default: Enabled (true). |
+| search_method | Search Method | Input parameter. The search methods to use, either `Hybrid Search` or `Vector Search`. Your collection must be configured to support the chosen option, and the default depends on what your collection supports. All collections in Astra DB Serverless (Vector) databases support vector search, but hybrid search requires that you set specific collection settings when creating the collection. These options are only available when creating a collection programmatically. For more information, see [Ways to find data in Astra DB Serverless](https://docs.datastax.com/en/astra-db-serverless/databases/about-search.html) and [Create a collection that supports hybrid search](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid). |
+| reranker | Reranker | Input parameter. The re-ranker model to use for hybrid search, depending on the collection configuration. **This parameter shows the default reranker even if the selected collection doesn't support hybrid search.** To verify if a collection supports hybrid search, [get collection metadata](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/list-collection-metadata.html), and then check that `lexical` and `rerank` both have `"enabled": true`. |
+| lexical_terms | Lexical Terms | Input parameter. A space-separated string of keywords for hybrid search, like `features, data, attributes, characteristics`. This parameter is only available if the collection supports hybrid search. For more information, see the following **Hybrid search example**. |
+| number_of_results | Number of Search Results | Input parameter. The number of search results to return. Default: 4. |
+| search_type | Search Type | Input parameter. The search type to use, either `Similarity` (default), `Similarity with score threshold`, and `MMR (Max Marginal Relevance)`. |
+| search_score_threshold | Search Score Threshold | Input parameter. The minimum similarity score threshold for vector search results with the `Similarity with score threshold` search type. Default: 0. |
+| advanced_search_filter | Search Metadata Filter | Input parameter. An optional dictionary of metadata filters to apply in addition to vector or hybrid search. |
+| autodetect_collection | Autodetect Collection | Input parameter. Whether to automatically fetch a list of available collections after providing an application token and API endpoint. |
+| content_field | Content Field | Input parameter. For writes, this parameter specifies the name of the field in the documents that contains text strings for which you want to generate embeddings. |
+| deletion_field | Deletion Based On Field | Input parameter. When provided, documents in the target collection with metadata field values matching the input metadata field value are deleted before new records are loaded. Use this setting for writes with upserts (overwrites). |
+| ignore_invalid_documents | Ignore Invalid Documents | Input parameter. Whether to ignore invalid documents during writes. If disabled (false), then an error is raised for invalid documents. Default: Enabled (true). |
+| astradb_vectorstore_kwargs | AstraDBVectorStore Parameters | Input parameter. An optional dictionary of additional parameters for the `AstraDBVectorStore` instance. For more information, see [Vector store instances](#vector-store-instances). |
+
+### Astra DB examples
+
+<details>
+<summary>Vector RAG example</summary>
+
+import PartialVectorRagFlow from '@site/docs/_partial-vector-rag-flow.mdx';
+
+<PartialVectorRagFlow />
+
+</details>
+
+<details>
+<summary>Hybrid search example</summary>
+
+The **Astra DB** component supports the Data API's [hybrid search](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html) feature.
+Hybrid search performs a vector similarity search and a lexical search, compares the results of both searches, and then returns the most relevant results overall.
+
+To use hybrid search through the **Astra DB** component, do the following:
+
+1. Use the Data API to [create a collection that supports hybrid search](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid) if you haven't already created one.
+
+    Although you can create a collection through the **Astra DB** component, you have more control and insight into the collection settings when using the Data API for this operation.
+
+2. Create a flow based on the **Hybrid Search RAG** template, which includes an **Astra DB** component that is pre-configured for hybrid search.
+3. In the **Language Model** components, add your OpenAI API key.
+4. Delete the **Language Model** component that is connected to the **Structured Output** component's **Input Message** port, and then connect the **Chat Input** component to that port.
+5. Configure the **Astra DB** vector store component:
+
+    1. Enter your Astra DB application token.
+    2. In the **Database** field, select your database.
+    3. In the **Collection** field, select your collection with hybrid search enabled.
+
+        Once you select a collection that supports hybrid search, the other parameters automatically update to allow hybrid search options.
+
+6. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, find the **Lexical Terms** field, enable the **Show** toggle, and then click **Close**.
+
+7. Connect the first **Parser** component's **Parsed Text** output to the **Astra DB** component's **Lexical Terms** input.
+This input only appears after connecting a collection that support hybrid search with reranking.
+
+8. Click the **Structured Output** component to expose the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, find the **Format Instructions** row, click <Icon name="Expand" aria-hidden="true"/> **Expand**, and then replace the prompt with the following text:
+
+    ```text
+    You are a database query planner that takes a user's requests, and then converts to a search against the subject matter in question.
+    You should convert the query into:
+    1. A list of keywords to use against a Lucene text analyzer index, no more than 4. Strictly unigrams.
+    2. A question to use as the basis for a QA embedding engine.
+    Avoid common keywords associated with the user's subject matter.
+    ```
+
+9. Click **Finish Editing**, and then click **Close** to save your changes to the component.
+
+10. Open the **Playground**, and then enter a natural language question that you would ask about your database.
+
+    In this example, your input is sent to both the **Astra DB** and **Structured Output** components:
+
+    * The input sent directly to the **Astra DB** component's **Search Query** port is used as a string for similarity search.
+    An embedding is generated from the query string using the collection's Astra DB vectorize integration.
+
+    * The input sent to the **Structured Output** component is processed by the **Structured Output**, **Language Model**, and **Parser** components to extract space-separated `keywords` used for the lexical search portion of the hybrid search.
+
+    The complete hybrid search query is executed against your database using the Data API's `find_and_rerank` command.
+    The API's response is output as a `DataFrame` that is transformed into a text string `Message` by another **Parser** component.
+    Finally, the **Chat Output** component prints the `Message` response to the **Playground**.
+
+11. Optional: Exit the **Playground**, and then click <Icon name="TextSearch" aria-hidden="true"/> **Inspect Output** on each individual component to understand how lexical keywords were constructed and view the raw response from the Data API.
+This is helpful for debugging flows where a certain component isn't receiving input as expected from another component.
+
+    * **Structured Output component**: The output is the `Data` object produced by applying the output schema to the LLM's response to the input message and format instructions.
+    The following example is based on the aforementioned instructions for keyword extraction:
+
+        ```
+        1. Keywords: features, data, attributes, characteristics
+        2. Question: What characteristics can be identified in my data?
+        ```
+
+    * **Parser component**: The output is the string of keywords extracted from the structured output `Data`, and then used as lexical terms for the hybrid search.
+
+    * **Astra DB component**: The output is the `DataFrame` containing the results of the hybrid search as returned by the Data API.
+
+</details>
+
+### Astra DB output
+
+<PartialVectorSearchResults />
+
+<details>
+<summary>Vector Store Connection port</summary>
+
+The **Astra DB** component has an additional **Vector Store Connection** output.
+This output can only connect to a `VectorStore` input port, and it was intended for use with dedicated Graph RAG components.
+
+The only non-legacy component that supports this input is the [**Graph RAG** component](#graph-rag), which can be a Graph RAG extension to the **Astra DB** component.
+Instead, use the **Astra DB Graph** component that includes both the vector store connection and Graph RAG functionality.
+
+</details>
 
 ## Astra DB CQL
 
@@ -112,16 +262,14 @@ The following fields are available for each row in the **Tool Parameters** pane:
 | Is Timestamp | For date or time-based filters, enable this option to automatically convert values to the timestamp format that the Astrapy client expects. This ensures compatibility with the underlying API without requiring manual formatting. |
 | Operator | Defines the filtering logic applied to the attribute. You can use any valid [Data API filter operator](https://docs.datastax.com/en/astra-db-serverless/api-reference/filter-operator-collections.html). For example, to filter a time range on the timestamp attribute, use two parameters: one with the `$gt` operator for "greater than", and another with the `$lt` operator for "less than". |
 
-## DataStax vector store components
+## Astra DB Graph
 
-The following components support DataStax vector stores.
+The **Astra DB Graph** component uses `AstraDBGraphVectorStore`, an instance of [LangChain graph vector store](https://python.langchain.com/api_reference/community/graph_vectorstores.html), for graph traversal and graph-based document retrieval in an Astra DB collection. It also supports writing to the vector store.
+For more information, see [Build a Graph RAG system with LangChain and GraphRetriever](https://docs.datastax.com/en/astra-db-serverless/tutorials/graph-rag.html).
 
-:::tip
-For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
-:::
+<PartialVectorSearchResults />
 
-<details>
-<summary>Hidden parameters</summary>
+### Astra DB Graph parameters
 
 You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
 
@@ -130,164 +278,6 @@ You can inspect a vector store component's parameters to learn more about the in
 <PartialConditionalParams />
 
 For information about accepted values and functionality, see the provider's documentation or inspect [component code](/concepts-components#component-code).
-
-</details>
-
-<details>
-<summary>Search results output</summary>
-
-import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
-
-<PartialVectorSearchResults />
-
-</details>
-
-<details>
-<summary>Vector store instances</summary>
-
-import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
-
-<PartialVectorStoreInstance />
-
-</details>
-
-### Astra DB
-
-The **Astra DB** component read and writes to [Astra DB Serverless databases](https://docs.datastax.com/en/astra-db-serverless/index.html), using an instance of `AstraDBVectorStore` to call the Data API and DevOps API.
-
-:::important
-It is recommend that you create any databases, keyspaces, and collections you need before configuring the **Astra DB** component.
-
-You can create new databases and collections through this component, but this is only possible in the Langflow visual editor, not at runtime, and you must wait while the database or collection initializes before proceeding with flow configuration.
-Additionally, not all database and collection configuration options are available through the **Astra DB** component, such as hybrid search options, PCU groups, vectorize integration management, and multi-region deployments.
-:::
-
-<details>
-<summary>Use the Astra DB component in a flow</summary>
-
-import PartialVectorRagFlow from '@site/docs/_partial-vector-rag-flow.mdx';
-
-<PartialVectorRagFlow />
-
-</details>
-
-<details>
-<summary>Astra DB parameters</summary>
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| token | Astra DB Application Token | Input parameter. An Astra application token with permission to access your vector database. Once the connection is verified, additional fields are populated with your existing databases and collections. If you want to create a database through this component, the application token must have Organization Administrator permissions. |
-| environment | Environment | Input parameter. The environment for the Astra DB API endpoint. Always use `prod`. |
-| database_name | Database | Input parameter. The name of the database that you want this component to connect to. Or, you can select **New Database** to create a new database, and then wait for the database to initialize. |
-| keyspace | Keyspace | Input parameter. The keyspace in your database that contains the collection specified in `collection_name`. Default: `default_keyspace`. |
-| collection_name | Collection | Input parameter. The name of the collection that you want to use with this flow. Or, select **New Collection** to create a new collection with limited configuration options. To ensure your collection is configured with the correct embedding provider and search capabilities, it is recommended to create the collection in the Astra Portal or with the Data API *before* configuring this component. For more information, see [Manage collections in Astra DB Serverless](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html). |
-| embedding_model | Embedding Model | Input parameter. Attach an [embedding model component](/components-embedding-models) to generate embeddings. Only available if the specified collection doesn't have a [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). If a vectorize integration exists, the component automatically uses the collection's integrated model. |
-| ingest_data | Ingest Data | Input parameter. The documents to load into the specified collection. |
-| search_query | Search Query | Input parameter. The query string for vector search. |
-| cache_vector_store | Cache Vector Store | Input parameter. Whether to cache the vector store in Langflow memory for faster reads. Default: Enabled (true). |
-| search_method | Search Method | Input parameter. The search methods to use, either `Hybrid Search` or `Vector Search`. Your collection must be configured to support the chosen option, and the default depends on what your collection supports. All collections in Astra DB Serverless (Vector) databases support vector search, but hybrid search requires that you set specific collection settings when creating the collection. These options are only available when creating a collection programmatically. For more information, see [Ways to find data in Astra DB Serverless](https://docs.datastax.com/en/astra-db-serverless/databases/about-search.html) and [Create a collection that supports hybrid search](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid). |
-| reranker | Reranker | Input parameter. The re-ranker model to use for hybrid search, depending on the collection configuration. **This parameter shows the default reranker even if the selected collection doesn't support hybrid search.** To verify if a collection supports hybrid search, [get collection metadata](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/list-collection-metadata.html), and then check that `lexical` and `rerank` both have `"enabled": true`. |
-| lexical_terms | Lexical Terms | Input parameter. A space-separated string of keywords for hybrid search, like `features, data, attributes, characteristics`. This parameter is only available if the collection supports hybrid search. For more information, see the following **Hybrid search example**. |
-| number_of_results | Number of Search Results | Input parameter. The number of search results to return. Default: 4. |
-| search_type | Search Type | Input parameter. The search type to use, either `Similarity` (default), `Similarity with score threshold`, and `MMR (Max Marginal Relevance)`. |
-| search_score_threshold | Search Score Threshold | Input parameter. The minimum similarity score threshold for vector search results with the `Similarity with score threshold` search type. Default: 0. |
-| advanced_search_filter | Search Metadata Filter | Input parameter. An optional dictionary of metadata filters to apply in addition to vector or hybrid search. |
-| autodetect_collection | Autodetect Collection | Input parameter. Whether to automatically fetch a list of available collections after providing an application token and API endpoint. |
-| content_field | Content Field | Input parameter. For writes, this parameter specifies the name of the field in the documents that contains text strings for which you want to generate embeddings. |
-| deletion_field | Deletion Based On Field | Input parameter. When provided, documents in the target collection with metadata field values matching the input metadata field value are deleted before new records are loaded. Use this setting for writes with upserts (overwrites). |
-| ignore_invalid_documents | Ignore Invalid Documents | Input parameter. Whether to ignore invalid documents during writes. If disabled (false), then an error is raised for invalid documents. Default: Enabled (true). |
-| astradb_vectorstore_kwargs | AstraDBVectorStore Parameters | Input parameter. An optional dictionary of additional parameters for the `AstraDBVectorStore` instance. For more information, see [Vector store instances](#vector-store-instances). |
-
-</details>
-
-<details>
-<summary>Hybrid search example</summary>
-
-The **Astra DB** component supports the Data API's [hybrid search](https://docs.datastax.com/en/astra-db-serverless/databases/hybrid-search.html) feature.
-Hybrid search performs a vector similarity search and a lexical search, compares the results of both searches, and then returns the most relevant results overall.
-
-To use hybrid search through the **Astra DB** component, do the following:
-
-1. Use the Data API to [create a collection that supports hybrid search](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid) if you haven't already created one.
-
-    Although you can create a collection through the **Astra DB** component, you have more control and insight into the collection settings when using the Data API for this operation.
-
-2. Create a flow based on the **Hybrid Search RAG** template, which includes an **Astra DB** component that is pre-configured for hybrid search.
-3. In the **Language Model** components, add your OpenAI API key.
-4. Delete the **Language Model** component that is connected to the **Structured Output** component's **Input Message** port, and then connect the **Chat Input** component to that port.
-5. Configure the **Astra DB** vector store component:
-
-    1. Enter your Astra DB application token.
-    2. In the **Database** field, select your database.
-    3. In the **Collection** field, select your collection with hybrid search enabled.
-
-        Once you select a collection that supports hybrid search, the other parameters automatically update to allow hybrid search options.
-
-6. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, find the **Lexical Terms** field, enable the **Show** toggle, and then click **Close**.
-
-7. Connect the first **Parser** component's **Parsed Text** output to the **Astra DB** component's **Lexical Terms** input.
-This input only appears after connecting a collection that support hybrid search with reranking.
-
-8. Click the **Structured Output** component to expose the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, find the **Format Instructions** row, click <Icon name="Expand" aria-hidden="true"/> **Expand**, and then replace the prompt with the following text:
-
-    ```text
-    You are a database query planner that takes a user's requests, and then converts to a search against the subject matter in question.
-    You should convert the query into:
-    1. A list of keywords to use against a Lucene text analyzer index, no more than 4. Strictly unigrams.
-    2. A question to use as the basis for a QA embedding engine.
-    Avoid common keywords associated with the user's subject matter.
-    ```
-
-9. Click **Finish Editing**, and then click **Close** to save your changes to the component.
-
-10. Open the **Playground**, and then enter a natural language question that you would ask about your database.
-
-    In this example, your input is sent to both the **Astra DB** and **Structured Output** components:
-
-    * The input sent directly to the **Astra DB** component's **Search Query** port is used as a string for similarity search.
-    An embedding is generated from the query string using the collection's Astra DB vectorize integration.
-
-    * The input sent to the **Structured Output** component is processed by the **Structured Output**, **Language Model**, and **Parser** components to extract space-separated `keywords` used for the lexical search portion of the hybrid search.
-
-    The complete hybrid search query is executed against your database using the Data API's `find_and_rerank` command.
-    The API's response is output as a `DataFrame` that is transformed into a text string `Message` by another **Parser** component.
-    Finally, the **Chat Output** component prints the `Message` response to the **Playground**.
-
-11. Optional: Exit the **Playground**, and then click <Icon name="TextSearch" aria-hidden="true"/> **Inspect Output** on each individual component to understand how lexical keywords were constructed and view the raw response from the Data API.
-This is helpful for debugging flows where a certain component isn't receiving input as expected from another component.
-
-    * **Structured Output component**: The output is the `Data` object produced by applying the output schema to the LLM's response to the input message and format instructions.
-    The following example is based on the aforementioned instructions for keyword extraction:
-
-        ```
-        1. Keywords: features, data, attributes, characteristics
-        2. Question: What characteristics can be identified in my data?
-        ```
-
-    * **Parser component**: The output is the string of keywords extracted from the structured output `Data`, and then used as lexical terms for the hybrid search.
-
-    * **Astra DB component**: The output is the `DataFrame` containing the results of the hybrid search as returned by the Data API.
-
-</details>
-
-<details>
-<summary>Vector Store Connection port</summary>
-
-The **Astra DB** component has an additional **Vector Store Connection** output.
-This output can only connect to a `VectorStore` input port, and it was intended for use with dedicated Graph RAG components.
-
-The only non-legacy component that supports this input is the [**Graph RAG** component](#graph-rag), which can be a Graph RAG extension to the **Astra DB** component.
-Instead, use the **Astra DB Graph** component that includes both the vector store connection and Graph RAG functionality.
-
-</details>
-
-### Astra DB Graph
-
-The **Astra DB Graph** component uses `AstraDBGraphVectorStore`, an instance of [LangChain graph vector store](https://python.langchain.com/api_reference/community/graph_vectorstores.html), for graph traversal and graph-based document retrieval in an Astra DB collection. It also supports writing to the vector store.
-For more information, see [Build a Graph RAG system with LangChain and GraphRetriever](https://docs.datastax.com/en/astra-db-serverless/tutorials/graph-rag.html).
-
-<details>
-<summary>Astra DB Graph parameters</summary>
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -315,9 +305,7 @@ For more information, see [Build a Graph RAG system with LangChain and GraphRetr
 | search_score_threshold | Search Score Threshold | Input parameter. Minimum similarity score threshold for search results if the `search_type` is `Similarity with score threshold`. Default: 0. |
 | search_filter | Search Metadata Filter | Input parameter. Optional dictionary of metadata filters to apply in addition to vector search. |
 
-</details>
-
-### Graph RAG
+## Graph RAG
 
 The **Graph RAG** component uses an instance of [`GraphRetriever`](https://datastax.github.io/graph-rag/reference/langchain_graph_retriever/) for Graph RAG traversal enabling graph-based document retrieval in an Astra DB vector store.
 For more information, see the [DataStax Graph RAG documentation](https://datastax.github.io/graph-rag/).
@@ -327,8 +315,15 @@ This component can be a Graph RAG extension for the [**Astra DB** vector store c
 However, the [**Astra DB Graph** component](#astra-db-graph) includes both the vector store connection and Graph RAG functionality.
 :::
 
-<details>
-<summary>Graph RAG parameters</summary>
+### Graph RAG parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the provider's documentation or inspect [component code](/concepts-components#component-code).
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -340,19 +335,33 @@ However, the [**Astra DB Graph** component](#astra-db-graph) includes both the v
 | graphrag_strategy_kwargs | Strategy Parameters | Input parameter. Optional dictionary of additional parameters for the [retrieval strategy](https://datastax.github.io/graph-rag/reference/graph_retriever/strategies/). |
 | search_results | **Search Results** or **DataFrame** | Output parameter. The results of the graph-based document retrieval as a list of [`Data`](/data-types#data) objects or as a tabular [`DataFrame`](/data-types#dataframe). You can set the desired output type near the component's output port. |
 
-</details>
-
-### Hyper-Converged Database (HCD)
+## Hyper-Converged Database (HCD)
 
 The **Hyper-Converged Database (HCD)** component uses your cluster's Data API server to read and write to your HCD vector store.
 Because the underlying functions call the Data API, which originated from Astra DB, the component uses an instance of `AstraDBVectorStore`.
 
 ![A flow using the HCD component to load vector data.](/img/component-hcd-example-flow.png)
 
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+<PartialVectorSearchResults />
+
 For more information about HCD, see [Get started with HCD 1.2](https://docs.datastax.com/en/hyper-converged-database/1.2/get-started/get-started-hcd.html) and [Get started with the Data API in HCD 1.2](https://docs.datastax.com/en/hyper-converged-database/1.2/api-reference/dataapiclient.html).
 
-<details>
-<summary>HCD parameters</summary>
+### HCD parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the provider's documentation or inspect [component code](/concepts-components#component-code).
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -379,8 +388,6 @@ For more information about HCD, see [Get started with HCD 1.2](https://docs.data
 | search_type | Search Type | Input parameter. Search type to use, either `Similarity` (default), `Similarity with score threshold`, or `MMR (Max Marginal Relevance)`. Only relevant to reads. |
 | search_score_threshold | Search Score Threshold | Input parameter. Minimum similarity score threshold for search results if the `search_type` is `Similarity with score threshold`. Default: 0. |
 | search_filter | Search Metadata Filter | Input parameter. Optional dictionary of metadata filters to apply in addition to vector search. |
-
-</details>
 
 ## Other DataStax components
 
@@ -415,7 +422,7 @@ For more information about using external chat memory in flows, see the [**Messa
 | namespace        | String        | Input parameter. The optional namespace within Astra DB for the collection. |
 | session_id       | MessageText   | Input parameter. The unique identifier for the chat session. Uses the current session ID if not provided. |
 
-### Assistants API components
+### Assistants API
 
 The following DataStax components are used to create and manage Assistants API functions in a flow:
 
@@ -445,7 +452,7 @@ The following DataStax components are in legacy status:
 <summary>Astra Vectorize</summary>
 
 This component was deprecated in Langflow version 1.1.2.
-Replace it with the [**Astra DB** component](/components-vector-stores#astra-db).
+Replace it with the [**Astra DB** component](#astra-db).
 
 The **Astra DB Vectorize** component was used to generate embeddings with Astra DB's vectorize feature in conjunction with an **Astra DB** component.
 
@@ -457,3 +464,4 @@ You no longer need a separate component for vectorize embedding generation.
 ## See also
 
 * [**Cassandra** bundle](/bundles-cassandra)
+* [Create a vector RAG chatbot](/chat-with-rag)

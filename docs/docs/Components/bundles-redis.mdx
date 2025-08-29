@@ -35,4 +35,46 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 ## Redis vector store
 
-See [**Redis** vector store component](/components-vector-stores#redis).
+The **Redis** vector store component reads and writes to Redis vector stores using an instance of [`RedisVectorStore`](https://python.langchain.com/docs/integrations/vectorstores/redis/).
+
+<details>
+<summary>About vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
+
+### Redis vector store parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Redis documentation](https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/) or inspect [component code](/concepts-components#component-code).
+
+| Name              | Type         | Description                               |
+| ----------------- | ------------ | ----------------------------------------- |
+| redis_server_url  | SecretString | Input parameter. The Redis server connection string. |
+| redis_index_name  | String       | Input parameter. The name of the Redis index. |
+| code              | String       | Input parameter. Additional custom code for Redis, if supported. |
+| schema            | String       | Input parameter. The schema for Redis index. |
+| ingest_data       | Data         | Input parameter. The data to be ingested into the vector store. |
+| search_query      | String       | Input parameter. The query for similarity search. |
+| embedding         | Embeddings   | Input parameter. The embedding function to use. |
+| number_of_results | Integer      | Input parameter. The number of results to return in search. |

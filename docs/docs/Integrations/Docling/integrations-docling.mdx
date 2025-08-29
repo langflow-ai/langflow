@@ -49,7 +49,7 @@ This example demonstrates how to use Docling components to split a PDF in a flow
     The **Docling** component loads the document, and the **Export DoclingDocument** component converts the `DoclingDocument` into the format you select. This example converts the document to Markdown, with images represented as placeholders.
     The **Split Text** component will split the Markdown into chunks for the vector database to store in the next part of the flow.
 
-2. Connect a [**Chroma DB** vector store component](/components-vector-stores#chroma-db) to the **Split Text** component's **Chunks** output.
+2. Connect a [**Chroma DB** vector store component](/components-bundles#chroma-db) to the **Split Text** component's **Chunks** output.
 3. Connect an [embedding model component](/components-embedding-models) to the **Chroma DB** component's **Embedding** port and a **Chat Output** component to view the extracted [`DataFrame`](/data-types#dataframe).
 4. In the embedding model component, select your preferred model, provide credentials, and configure other settings as needed.
 
