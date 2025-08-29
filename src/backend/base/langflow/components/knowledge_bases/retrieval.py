@@ -4,18 +4,18 @@ from typing import Any
 
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
-from langflow.base.data.kb_utils import get_knowledge_bases
-from langflow.services.auth.utils import decrypt_api_key
-from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.deps import session_scope
-from pydantic import SecretStr
-
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.services.deps import get_settings_service
+from pydantic import SecretStr
+
+from langflow.base.knowledge_bases import get_knowledge_bases
+from langflow.services.auth.utils import decrypt_api_key
+from langflow.services.database.models.user.crud import get_user_by_id
+from langflow.services.deps import session_scope
 
 settings = get_settings_service().settings
 knowledge_directory = settings.knowledge_bases_dir
@@ -25,11 +25,11 @@ if not knowledge_directory:
 KNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()
 
 
-class KBRetrievalComponent(Component):
+class KnowledgeRetrievalComponent(Component):
     display_name = "Knowledge Retrieval"
     description = "Search and retrieve data from knowledge."
-    icon = "database"
-    name = "KBRetrieval"
+    icon = "download"
+    name = "KnowledgeRetrieval"
 
     inputs = [
         DropdownInput(
@@ -52,6 +52,7 @@ class KBRetrievalComponent(Component):
             name="search_query",
             display_name="Search Query",
             info="Optional search query to filter knowledge base data.",
+            tool_mode=True,
         ),
         IntInput(
             name="top_k",
@@ -64,17 +65,24 @@ class KBRetrievalComponent(Component):
         BoolInput(
             name="include_metadata",
             display_name="Include Metadata",
-            info="Whether to include all metadata and embeddings in the output. If false, only content is returned.",
+            info="Whether to include all metadata in the output. If false, only content is returned.",
             value=True,
             advanced=False,
+        ),
+        BoolInput(
+            name="include_embeddings",
+            display_name="Include Embeddings",
+            info="Whether to include embeddings in the output. Only applicable if 'Include Metadata' is enabled.",
+            value=False,
+            advanced=True,
         ),
     ]
 
     outputs = [
         Output(
-            name="chroma_kb_data",
+            name="retrieve_data",
             display_name="Results",
-            method="get_chroma_kb_data",
+            method="retrieve_data",
             info="Returns the data from the selected knowledge base.",
         ),
     ]
@@ -163,7 +171,7 @@ class KBRetrievalComponent(Component):
         msg = f"Embedding provider '{provider}' is not supported for retrieval."
         raise NotImplementedError(msg)
 
-    async def get_chroma_kb_data(self) -> DataFrame:
+    async def retrieve_data(self) -> DataFrame:
         """Retrieve data from the selected knowledge base by reading the Chroma collection.
 
         Returns:
@@ -213,16 +221,16 @@ class KBRetrievalComponent(Component):
             # For each result, make it a tuple to match the expected output format
             results = [(doc, 0) for doc in results]  # Assign a dummy score of 0
 
-        # If metadata is enabled, get embeddings for the results
+        # If include_embeddings is enabled, get embeddings for the results
         id_to_embedding = {}
-        if self.include_metadata and results:
+        if self.include_embeddings and results:
             doc_ids = [doc[0].metadata.get("_id") for doc in results if doc[0].metadata.get("_id")]
 
             # Only proceed if we have valid document IDs
             if doc_ids:
                 # Access underlying client to get embeddings
                 collection = chroma._client.get_collection(name=self.knowledge_base)
-                embeddings_result = collection.get(where={"_id": {"$in": doc_ids}}, include=["embeddings", "metadatas"])
+                embeddings_result = collection.get(where={"_id": {"$in": doc_ids}}, include=["metadatas", "embeddings"])
 
                 # Create a mapping from document ID to embedding
                 for i, metadata in enumerate(embeddings_result.get("metadatas", [])):
@@ -232,20 +240,16 @@ class KBRetrievalComponent(Component):
         # Build output data based on include_metadata setting
         data_list = []
         for doc in results:
+            kwargs = {
+                "content": doc[0].page_content,
+            }
+            if self.search_query:
+                kwargs["_score"] = -1 * doc[1]
             if self.include_metadata:
                 # Include all metadata, embeddings, and content
-                kwargs = {
-                    "content": doc[0].page_content,
-                    **doc[0].metadata,
-                }
-                if self.search_query:
-                    kwargs["_score"] = -1 * doc[1]
+                kwargs.update(doc[0].metadata)
+            if self.include_embeddings:
                 kwargs["_embeddings"] = id_to_embedding.get(doc[0].metadata.get("_id"))
-            else:
-                # Only include content
-                kwargs = {
-                    "content": doc[0].page_content,
-                }
 
             data_list.append(Data(**kwargs))
 

@@ -2,25 +2,25 @@ import json
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pandas as pd
 import pytest
-from langflow.base.data.kb_utils import get_knowledge_bases
+from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
+from langflow.components.knowledge_bases.ingestion import KnowledgeIngestionComponent
 from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 
-from lfx.components.data import KBIngestionComponent
 from tests.base import ComponentTestBaseWithoutClient
 
 
-class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
+class TestKnowledgeIngestionComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
-        return KBIngestionComponent
+        return KnowledgeIngestionComponent
 
     @pytest.fixture(autouse=True)
     def mock_knowledge_base_path(self, tmp_path):
         """Mock the knowledge base root path directly."""
-        with patch("lfx.components.data.kb_ingest.KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
+        with patch("langflow.components.knowledge_bases.ingestion.KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
             yield
 
     class MockUser:
@@ -39,14 +39,14 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
     def setup_mocks(self, mock_user_data):
         """Mock the component's user_id attribute and User object."""
         with (
-            patch.object(KBIngestionComponent, "user_id", mock_user_data["user_id"]),
+            patch.object(KnowledgeIngestionComponent, "user_id", mock_user_data["user_id"]),
             patch(
-                "lfx.components.data.kb_ingest.get_user_by_id",
+                "langflow.components.knowledge_bases.ingestion.get_user_by_id",
                 new_callable=AsyncMock,
                 return_value=mock_user_data["user_obj"],
             ),
             patch(
-                "langflow.base.data.kb_utils.get_user_by_id",
+                "langflow.base.knowledge_bases.knowledge_base_utils.get_user_by_id",
                 new_callable=AsyncMock,
                 return_value=mock_user_data["user_obj"],
             ),
@@ -62,7 +62,7 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
     def default_kwargs(self, tmp_path, mock_user_id):
         """Return default kwargs for component instantiation."""
         # Create a sample DataFrame
-        data_df = pd.DataFrame(
+        data_df = DataFrame(
             {"text": ["Sample text 1", "Sample text 2"], "title": ["Title 1", "Title 2"], "category": ["cat1", "cat2"]}
         )
 
@@ -209,8 +209,8 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(NotImplementedError, match="Custom embedding models not yet supported"):
             component._build_embeddings("custom-model", "test-key")
 
-    @patch("lfx.components.data.kb_ingest.get_settings_service")
-    @patch("lfx.components.data.kb_ingest.encrypt_api_key")
+    @patch("langflow.components.knowledge_bases.ingestion.get_settings_service")
+    @patch("langflow.components.knowledge_bases.ingestion.encrypt_api_key")
     def test_build_embedding_metadata(self, mock_encrypt, mock_get_settings, component_class, default_kwargs):
         """Test building embedding metadata."""
         component = component_class(**default_kwargs)
@@ -250,7 +250,7 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         config_list = default_kwargs["column_config"]
 
         # Mock Chroma to avoid actual vector store operations
-        with patch("lfx.components.data.kb_ingest.Chroma") as mock_chroma:
+        with patch("langflow.components.knowledge_bases.ingestion.Chroma") as mock_chroma:
             mock_chroma_instance = MagicMock()
             mock_chroma_instance.get.return_value = {"metadatas": []}
             mock_chroma.return_value = mock_chroma_instance
@@ -275,7 +275,7 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         config_list = default_kwargs["column_config"]
 
         # Mock Chroma with existing hash
-        with patch("lfx.components.data.kb_ingest.Chroma") as mock_chroma:
+        with patch("langflow.components.knowledge_bases.ingestion.Chroma") as mock_chroma:
             # Simulate existing document with same hash
             existing_hash = "some_existing_hash"
             mock_chroma_instance = MagicMock()
@@ -283,7 +283,7 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
             mock_chroma.return_value = mock_chroma_instance
 
             # Mock hashlib to return the existing hash for first row
-            with patch("lfx.components.data.kb_ingest.hashlib.sha256") as mock_hash:
+            with patch("langflow.components.knowledge_bases.ingestion.hashlib.sha256") as mock_hash:
                 mock_hash_obj = MagicMock()
                 mock_hash_obj.hexdigest.side_effect = [existing_hash, "different_hash"]
                 mock_hash.return_value = mock_hash_obj
@@ -309,8 +309,8 @@ class TestKBIngestionComponent(ComponentTestBaseWithoutClient):
         assert component.is_valid_collection_name("invalid_") is False  # Ends with underscore
         assert component.is_valid_collection_name("invalid@name") is False  # Invalid character
 
-    @patch("lfx.components.data.kb_ingest.json.loads")
-    @patch("lfx.components.data.kb_ingest.decrypt_api_key")
+    @patch("langflow.components.knowledge_bases.ingestion.json.loads")
+    @patch("langflow.components.knowledge_bases.ingestion.decrypt_api_key")
     async def test_build_kb_info_success(self, mock_decrypt, mock_json_loads, component_class, default_kwargs):
         """Test successful KB info building."""
         component = component_class(**default_kwargs)

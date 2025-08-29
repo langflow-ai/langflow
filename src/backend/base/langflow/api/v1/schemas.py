@@ -372,13 +372,15 @@ class ConfigResponse(BaseModel):
     public_flow_cleanup_interval: int
     public_flow_expiration: int
     event_delivery: Literal["polling", "streaming", "direct"]
+    webhook_auth_enable: bool
 
     @classmethod
-    def from_settings(cls, settings: Settings) -> "ConfigResponse":
-        """Create a ConfigResponse instance using values from a Settings object and global feature flags.
+    def from_settings(cls, settings: Settings, auth_settings) -> "ConfigResponse":
+        """Create a ConfigResponse instance using values from a Settings object and AuthSettings.
 
         Parameters:
             settings (Settings): The Settings object containing configuration values.
+            auth_settings: The AuthSettings object containing authentication configuration values.
 
         Returns:
             ConfigResponse: An instance populated with configuration and feature flag values.
@@ -396,6 +398,7 @@ class ConfigResponse(BaseModel):
             public_flow_cleanup_interval=settings.public_flow_cleanup_interval,
             public_flow_expiration=settings.public_flow_expiration,
             event_delivery=settings.event_delivery,
+            webhook_auth_enable=auth_settings.WEBHOOK_AUTH_ENABLE,
         )
 
 

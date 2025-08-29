@@ -595,6 +595,11 @@ class TestMCPSseClientWithDeepWikiServer:
         # Test valid URL
         valid_url = "https://mcp.deepwiki.com/sse"
         is_valid, error = await sse_client.validate_url(valid_url)
+        # Either valid or accessible, or rate-limited (429) which indicates server is reachable
+        if not is_valid and "429" in error:
+            # Rate limiting indicates the server is accessible but limiting requests
+            # This is a transient network issue, not a test failure
+            pytest.skip(f"DeepWiki server is rate limiting requests: {error}")
         assert is_valid or error == ""  # Either valid or accessible
 
         # Test invalid URL

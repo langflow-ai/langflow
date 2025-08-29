@@ -40,11 +40,10 @@ from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
-from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
-from langflow.services.auth.utils import api_key_security, get_current_active_user
+from langflow.services.auth.utils import api_key_security, get_current_active_user, get_webhook_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
@@ -399,16 +398,16 @@ async def simplified_run_flow(
 
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)  # noqa: RUF100, FAST003
 async def webhook_run_flow(
+    flow_id_or_name: str,
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
-    user: Annotated[User, Depends(get_user_by_flow_id_or_endpoint_name)],
     request: Request,
     background_tasks: BackgroundTasks,
 ):
     """Run a flow using a webhook request.
 
     Args:
-        flow (Flow, optional): The flow to be executed. Defaults to Depends(get_flow_by_id).
-        user (User): The flow user.
+        flow_id_or_name (str): The flow ID or endpoint name.
+        flow (Flow): The flow to be executed.
         request (Request): The incoming HTTP request.
         background_tasks (BackgroundTasks): The background tasks manager.
 
@@ -422,6 +421,10 @@ async def webhook_run_flow(
     start_time = time.perf_counter()
     await logger.adebug("Received webhook request")
     error_msg = ""
+
+    # Get the appropriate user for webhook execution based on auth settings
+    webhook_user = await get_webhook_user(flow_id_or_name, request)
+
     try:
         try:
             data = await request.body()
@@ -453,7 +456,7 @@ async def webhook_run_flow(
                 simple_run_flow_task,
                 flow=flow,
                 input_request=input_request,
-                api_key_user=user,
+                api_key_user=webhook_user,
             )
         except Exception as exc:
             error_msg = str(exc)
@@ -762,7 +765,7 @@ async def get_config() -> ConfigResponse:
     """
     try:
         settings_service: SettingsService = get_settings_service()
-        return ConfigResponse.from_settings(settings_service.settings)
+        return ConfigResponse.from_settings(settings_service.settings, settings_service.auth_settings)
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

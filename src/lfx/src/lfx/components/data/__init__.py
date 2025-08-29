@@ -10,8 +10,6 @@ if TYPE_CHECKING:
     from lfx.components.data.directory import DirectoryComponent
     from lfx.components.data.file import FileComponent
     from lfx.components.data.json_to_data import JSONToDataComponent
-    from lfx.components.data.kb_ingest import KBIngestionComponent
-    from lfx.components.data.kb_retrieval import KBRetrievalComponent
     from lfx.components.data.news_search import NewsSearchComponent
     from lfx.components.data.rss import RSSReaderComponent
     from lfx.components.data.sql_executor import SQLComponent
@@ -25,8 +23,6 @@ _dynamic_imports = {
     "DirectoryComponent": "directory",
     "FileComponent": "file",
     "JSONToDataComponent": "json_to_data",
-    "KBIngestionComponent": "kb_ingest",
-    "KBRetrievalComponent": "kb_retrieval",
     "NewsSearchComponent": "news_search",
     "RSSReaderComponent": "rss",
     "SQLComponent": "sql_executor",
