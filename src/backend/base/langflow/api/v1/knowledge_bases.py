@@ -375,6 +375,49 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting knowledge base '{kb_name}': {e!s}") from e
+    
+
+@router.put("/{kb_name}", status_code=HTTPStatus.OK)
+async def rename_knowledge_base(kb_name: str, new_name: str, current_user: CurrentActiveUser) -> KnowledgeBaseInfo:
+    """Rename a specific knowledge base."""
+    try:
+        if not new_name or any(char in new_name for char in r'\/:*?"<>|'):
+            raise HTTPException(status_code=400, detail="Invalid new name for knowledge base")
+
+        kb_root_path = get_kb_root_path()
+        kb_user = current_user.username
+        kb_path = kb_root_path / kb_user / kb_name
+        new_kb_path = kb_root_path / kb_user / new_name
+
+        if not kb_path.exists() or not kb_path.is_dir():
+            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
+
+        if new_kb_path.exists():
+            raise HTTPException(status_code=400, detail=f"Knowledge base '{new_name}' already exists")
+
+        # Rename the directory
+        kb_path.rename(new_kb_path)
+
+        # Return updated knowledge base info
+        size = get_directory_size(new_kb_path)
+        metadata = get_kb_metadata(new_kb_path)
+
+        return KnowledgeBaseInfo(
+            id=new_name,
+            name=new_name.replace("_", " ").replace("-", " ").title(),
+            embedding_provider=metadata["embedding_provider"],
+            embedding_model=metadata["embedding_model"],
+            size=size,
+            words=metadata["words"],
+            characters=metadata["characters"],
+            chunks=metadata["chunks"],
+            avg_chunk_size=metadata["avg_chunk_size"],
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error renaming knowledge base '{kb_name}': {e!s}") from e
 
 
 @router.delete("/{kb_name}", status_code=HTTPStatus.OK)
