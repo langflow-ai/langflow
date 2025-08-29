@@ -68,6 +68,16 @@ def _setup_compatibility_modules():
         "langflow.template": "lfx.template",
         "langflow.template.field": "lfx.template.field",
         "langflow.template.field.base": "lfx.template.field.base",
+        # Components modules
+        "langflow.components": "lfx.components",
+        "langflow.components.helpers": "lfx.components.helpers",
+        "langflow.components.helpers.calculator_core": "lfx.components.helpers.calculator_core",
+        "langflow.components.helpers.create_list": "lfx.components.helpers.create_list",
+        "langflow.components.helpers.current_date": "lfx.components.helpers.current_date",
+        "langflow.components.helpers.id_generator": "lfx.components.helpers.id_generator",
+        "langflow.components.helpers.memory": "lfx.components.helpers.memory",
+        "langflow.components.helpers.output_parser": "lfx.components.helpers.output_parser",
+        "langflow.components.helpers.store_message": "lfx.components.helpers.store_message",
         # Individual modules that exist in lfx
         "langflow.base.agents": "lfx.base.agents",
         "langflow.base.chains": "lfx.base.chains",
@@ -127,6 +137,8 @@ def _setup_compatibility_modules():
                         current_module.schema = compat_module
                     elif langflow_name == "langflow.template":
                         current_module.template = compat_module
+                    elif langflow_name == "langflow.components":
+                        current_module.components = compat_module
             except (ImportError, ValueError):
                 # Skip modules that don't exist in lfx
                 continue
