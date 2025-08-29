@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 from langflow.components._importing import import_mod
 
 if TYPE_CHECKING:
+    from langflow.components.logic.classifier_router import ClassifierRouterComponent
     from langflow.components.logic.conditional_router import ConditionalRouterComponent
     from langflow.components.logic.data_conditional_router import DataConditionalRouterComponent
     from langflow.components.logic.flow_tool import FlowToolComponent
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
     from langflow.components.logic.sub_flow import SubFlowComponent
 
 _dynamic_imports = {
+    "ClassifierRouterComponent": "classifier_router",
     "ConditionalRouterComponent": "conditional_router",
     "DataConditionalRouterComponent": "data_conditional_router",
     "FlowToolComponent": "flow_tool",
@@ -24,6 +26,7 @@ _dynamic_imports = {
 }
 
 __all__ = [
+    "ClassifierRouterComponent",
     "ConditionalRouterComponent",
     "DataConditionalRouterComponent",
     "FlowToolComponent",
