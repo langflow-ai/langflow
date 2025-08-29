@@ -8,7 +8,7 @@ import Icon from "@site/src/components/icon";
 Embedding model components in Langflow generate text embeddings using a specified Large Language Model (LLM).
 
 Langflow includes an **Embedding Model** core component that has built-in support for some LLMs.
-Alternatively, you can use [additional embedding models](#additional-embedding-model-components) in place of the **Embedding Model** core component.
+Alternatively, you can use any [additional embedding model](#additional-embedding-models) in place of the **Embedding Model** core component.
 
 ## Use embedding model components in a flow
 
@@ -21,11 +21,11 @@ This flow loads a text file, splits the text into chunks, generates embeddings f
 
 1. Create a flow, add a **File** component, and then select a file containing text data, such as a PDF, that you can use to test the flow.
 
-2. Add an **Embedding Model** component, and then provide a valid OpenAI API key.
-You can enter component API keys directly or use Langflow global variables to reference your API keys.
+2. Add the **Embedding Model** core component, and then provide a valid OpenAI API key.
+You can enter the API key directly or use a <Icon name="Globe" aria-hidden="true"/> [global variable](/configuration-global-variables).
 
-    :::tip
-    If your preferred embedding model provider or model isn't supported by the **Embedding Model** core component, you can use [additional embedding models](#additional-embedding-model-components) in place of the core component.
+    :::tip My preferred provider or model isn't listed
+    If your preferred embedding model provider or model isn't supported by the **Embedding Model** core component, you can use any [additional embedding models](#additional-embedding-models) in place of the core component.
 
     Browse <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) or <Icon name="Search" aria-hidden="true" /> **Search** for your preferred provider to find additional embedding models, such as the [**Hugging Face Embeddings Inference** component](/bundles-huggingface#hugging-face-embeddings-inference).
     :::
@@ -49,7 +49,10 @@ This component stores the generated embeddings so they can be used for similarit
 
 7. Click **Playground**, and then enter a search query to retrieve text chunks that are most semantically similar to your query.
 
-## Embedding Model
+## Embedding model parameters
+
+The following parameters are for the **Embedding Model** core component.
+Other embedding model components can have additional or different parameters.
 
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
@@ -69,9 +72,11 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 | model_kwargs | Model Kwargs | Dictionary | Input parameter. Additional keyword arguments to pass to the model. |
 | embeddings | Embeddings | Embeddings | Output parameter. An instance for generating embeddings using the selected provider. |
 
-## Additional embedding models {#additional-embedding-model-components}
+## Additional embedding models
 
-If your provider or model isn't supported by the **Embedding Model** core component, additional provider-specific embedding model components are available in <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) in the [visual editor](/concepts-overview).
+If your provider or model isn't supported by the **Embedding Model** core component, you can replace this component with any other component that generates embeddings.
+
+To find additional embedding model components, browse <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) or <Icon name="Search" aria-hidden="true" /> **Search** for your preferred provider.
 
 ## Legacy embedding components
 
