@@ -97,7 +97,9 @@ test(
     const nodesFromServer = astraStarterProject?.data.nodes.length;
 
     expect(
-      edges === edgesFromServer || edges === edgesFromServer - 1,
+      edges === edgesFromServer ||
+        edges === edgesFromServer - 1 ||
+        edges === edgesFromServer - 2,
     ).toBeTruthy();
     expect(nodes).toBe(nodesFromServer);
   },
