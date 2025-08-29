@@ -176,7 +176,7 @@ The **Response** (`response`) output is a [`Message`](/data-types#message) conta
 Typically, this is passed to a **Chat Output** component to return the response in a human-readable format.
 It can also be passed to other components if you need to process the response further before, or in addition to, returning it to the user.
 
-## Structured Response output
+### Structured Response output
 
 The **Structured Response** (`structured_response`) output is [`Data`](/data-types#data) containing a validated JSON representation of the agent's response.
 
@@ -188,7 +188,7 @@ This output attempts to parse the agent's response as JSON and returns it as str
 
 This structured response can be used to further use an Agent's response in downstream applications.
 
-### Structured output example
+#### Structured output example
 
 The **Agent** component supports advanced structured output configurations with the **Output Format Instructions** and **Output Schema** fields.
 When configured together, the agent's LLM uses the format instructions to guide its extraction approach, then validates the output against the schema defined in **Output Schema**.
