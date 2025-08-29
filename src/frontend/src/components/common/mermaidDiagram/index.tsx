@@ -24,10 +24,10 @@ export const MermaidDiagram = ({ definition, className }: MermaidDiagramProps) =
       mermaid.initialize({
         startOnLoad: false,
         theme: isDark ? "dark" : "default",
-        securityLevel: "strict", // Changed from "loose" to "strict" for security
+        securityLevel: "strict",
         flowchart: {
           useMaxWidth: true,
-          htmlLabels: false,
+          htmlLabels: true, // Changed to true to allow text in strict mode
         },
       });
       mermaidInitialized = true;
@@ -64,9 +64,11 @@ export const MermaidDiagram = ({ definition, className }: MermaidDiagramProps) =
         
         // Only update if this is still the current render
         if (currentRenderId === renderIdRef.current) {
-          // Sanitize SVG for security
+          // Sanitize SVG for security while preserving text content
           const sanitizedSvg = DOMPurify.sanitize(svg, { 
-            USE_PROFILES: { svg: true, svgFilters: true } 
+            USE_PROFILES: { svg: true, svgFilters: true },
+            ADD_TAGS: ['foreignObject'],
+            ADD_ATTR: ['style', 'class', 'id', 'width', 'height', 'viewBox', 'transform']
           });
           
           setSvgContent(sanitizedSvg);
