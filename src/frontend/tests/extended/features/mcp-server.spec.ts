@@ -24,6 +24,24 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
+
+    // See if the color matches
+
+    const isDark = await page.evaluate(() => {
+      return document.body.classList.contains("dark");
+    });
+
+    for (const path of await page
+      .getByTestId("generic-node-title-arrangement")
+      .getByTestId("icon-Mcp")
+      .locator("path")
+      .all()) {
+      const color = await path.evaluate(
+        (el) => window.getComputedStyle(el).fill,
+      );
+      expect(color).toBe(isDark ? "rgb(255, 255, 255)" : "rgb(0, 0, 0)");
+    }
+
     await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("fit_view").click();
