@@ -32,13 +32,28 @@ HTTP_NOT_FOUND = 404
 HTTP_BAD_REQUEST = 400
 HTTP_INTERNAL_SERVER_ERROR = 500
 
-# MCP Session Manager constants
-settings = get_settings_service().settings
-MAX_SESSIONS_PER_SERVER = (
-    settings.mcp_max_sessions_per_server
-)  # Maximum number of sessions per server to prevent resource exhaustion
-SESSION_IDLE_TIMEOUT = settings.mcp_session_idle_timeout  # 5 minutes idle timeout for sessions
-SESSION_CLEANUP_INTERVAL = settings.mcp_session_cleanup_interval  # Cleanup interval in seconds
+
+# MCP Session Manager constants - lazy loaded to avoid blocking at import time
+def _get_mcp_settings():
+    """Get MCP settings lazily to avoid blocking operations at import time."""
+    return get_settings_service().settings
+
+
+def get_max_sessions_per_server():
+    """Get maximum sessions per server setting."""
+    return _get_mcp_settings().mcp_max_sessions_per_server
+
+
+def get_session_idle_timeout():
+    """Get session idle timeout setting."""
+    return _get_mcp_settings().mcp_session_idle_timeout
+
+
+def get_session_cleanup_interval():
+    """Get session cleanup interval setting."""
+    return _get_mcp_settings().mcp_session_cleanup_interval
+
+
 # RFC 7230 compliant header name pattern: token = 1*tchar
 # tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /
 #         "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
@@ -500,7 +515,7 @@ class MCPSessionManager:
         """Periodically clean up idle sessions."""
         while True:
             try:
-                await asyncio.sleep(SESSION_CLEANUP_INTERVAL)
+                await asyncio.sleep(get_session_cleanup_interval())
                 await self._cleanup_idle_sessions()
             except asyncio.CancelledError:
                 break
@@ -518,7 +533,7 @@ class MCPSessionManager:
             sessions_to_remove = []
 
             for session_id, session_info in sessions.items():
-                if current_time - session_info["last_used"] > SESSION_IDLE_TIMEOUT:
+                if current_time - session_info["last_used"] > get_session_idle_timeout():
                     sessions_to_remove.append(session_id)
 
             # Clean up idle sessions
@@ -640,7 +655,7 @@ class MCPSessionManager:
                 await self._cleanup_session_by_id(server_key, session_id)
 
         # Check if we've reached the maximum number of sessions for this server
-        if len(sessions) >= MAX_SESSIONS_PER_SERVER:
+        if len(sessions) >= get_max_sessions_per_server():
             # Remove the oldest session
             oldest_session_id = min(sessions.keys(), key=lambda x: sessions[x]["last_used"])
             await logger.ainfo(
