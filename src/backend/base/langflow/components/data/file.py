@@ -116,7 +116,7 @@ class FileComponent(BaseFileComponent):
             display_name="OCR Engine",
             info="OCR engine to use. Only available when pipeline is set to 'standard'.",
             options=["None", "easyocr"],
-            value="None",
+            value="easyocr",
             show=False,
             advanced=True,
         ),
