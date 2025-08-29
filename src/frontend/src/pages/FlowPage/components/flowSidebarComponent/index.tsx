@@ -23,7 +23,7 @@ import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-serv
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
+import { setLocalStorage } from "@/utils/local-storage-util";
 import {
   nodeColors,
   SIDEBAR_BUNDLES,
@@ -74,12 +74,6 @@ export function useSearchContext() {
     throw new Error("useSearchContext must be used within SearchProvider");
   }
   return context;
-}
-
-interface SearchProviderProps {
-  children: React.ReactNode;
-  searchInputRef: React.RefObject<HTMLInputElement>;
-  isSearchFocused: boolean;
 }
 
 // Create a provider that can be used at the FlowPage level
@@ -180,8 +174,19 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     isSearchFocused = false,
     handleInputFocus = () => {},
     handleInputBlur = () => {},
-    handleInputChange = () => {},
+    handleInputChange: originalHandleInputChange = () => {},
   } = context;
+
+  const handleInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      originalHandleInputChange(event);
+      // Set active section to search when user first enters text
+      if (event.target.value.length > 0 && search.length === 0) {
+        setActiveSection("search");
+      }
+    },
+    [originalHandleInputChange, search, setActiveSection],
+  );
 
   const showBetaStorage = getBooleanFromStorage("showBeta", true);
   const showLegacyStorage = getBooleanFromStorage("showLegacy", false);

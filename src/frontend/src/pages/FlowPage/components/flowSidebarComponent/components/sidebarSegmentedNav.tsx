@@ -48,7 +48,7 @@ export const NAV_ITEMS: NavItem[] = [
 
 export default function SidebarSegmentedNav() {
   const { activeSection, setActiveSection, toggleSidebar, open } = useSidebar();
-  const { focusSearch, isSearchFocused, setSearch } = useSearchContext();
+  const { focusSearch, setSearch } = useSearchContext();
   return (
     <div className="flex h-full flex-col border-r border-border bg-background">
       <SidebarMenu className="gap-2 p-1">
@@ -73,14 +73,10 @@ export default function SidebarSegmentedNav() {
                     }
                   }
                 }}
-                isActive={
-                  activeSection === item.id ||
-                  (item.id === "search" && isSearchFocused)
-                }
+                isActive={activeSection === item.id}
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-md p-0 transition-all duration-200",
-                  activeSection === item.id ||
-                    (item.id === "search" && isSearchFocused)
+                  activeSection === item.id
                     ? "bg-accent text-accent-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                 )}
