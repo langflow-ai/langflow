@@ -154,13 +154,59 @@ The newly added MCP server will appear in the **MCP Servers** section.
 
 Cursor is now connected to your project's MCP server and your flows are registered as tools.
 Cursor determines when to use tools based on your queries, and requests permissions when necessary.
-For more information, see the [Cursor's MCP documentation](https://docs.cursor.com/context/model-context-protocol).
+For more information, see [Cursor's MCP documentation](https://docs.cursor.com/context/model-context-protocol).
 
 ### MCP server authentication and environment variables {#authentication}
 
-You must provide a Langflow API key in your MCP client configuration if your [Langflow server has authentication enabled](/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled).
+Langflow MCP servers support these authentication types:
 
-When this is the case, the code template in your project's **MCP Server** tab automatically includes the `--header` and `x-api-key` arguments:
+- **None**: No authentication required (public endpoint) - Use this for development or when your Langflow server is running in a trusted environment without authentication enabled.
+- **API Key**: Use this when you want to authenticate using a Langflow API key.
+- **OAuth**: Use this to integrate with enterprise identity providers and OAuth 2.0 services for enhanced security.
+
+<Tabs>
+<TabItem value="API key" label="API key">
+
+When authenticating your MCP server with an Langflow API key, the code template in your project's **MCP Server** tab automatically includes the `--headers` and `x-api-key` arguments:
+
+Click <Icon name="key" aria-hidden="true"/> **Generate API key** to automatically insert a new Langflow API key into the code template.
+Alternatively, you can replace `YOUR_API_KEY` with an existing Langflow API key.
+
+</TabItem>
+<TabItem value="OAuth" label="OAuth">
+
+OAuth authentication allows integration with enterprise identity providers and OAuth 2.0 services.
+To configure OAuth authentication:
+
+1. In the **MCP Server** tab, click <Icon name="Settings2" aria-hidden="true"/> **Add Auth**.
+2. Select **OAuth** as the authentication type.
+3. Configure the OAuth settings with the values from your OAuth deployment:
+
+   - **Host**: OAuth server host.
+   - **Port**: OAuth server port.
+   - **Server URL**: Full OAuth server URL.
+   - **Callback Path**: OAuth callback URL.
+   - **Client ID**: Your OAuth client identifier.
+   - **Client Secret**: Your OAuth client secret.
+   - **Authorization URL**: OAuth authorization endpoint.
+   - **Token URL**: OAuth token endpoint.
+   - **MCP Scope**: Scope for MCP operations.
+   - **Provider Scope**: OAuth provider scope.
+
+The OAuth credentials are encrypted and stored securely in your Langflow database.
+
+</TabItem>
+<TabItem value="None" label="None">
+
+When no authentication is configured, your MCP server becomes a public endpoint that anyone can access without providing credentials.
+Only use this option in development or in trusted environments.
+
+</TabItem>
+</Tabs>
+
+#### Environment Variables
+
+To include other environment variables with your MCP server command, use the `env` object with key-value pairs of environment variables:
 
 ```json
 {
@@ -172,27 +218,6 @@ When this is the case, the code template in your project's **MCP Server** tab au
         "--headers",
         "x-api-key",
         "YOUR_API_KEY",
-        "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
-      ]
-    }
-  }
-}
-```
-
-Click <Icon name="key" aria-hidden="true"/> **Generate API key** to automatically insert a new Langflow API key into the code template.
-Alternatively, you can replace `YOUR_API_KEY` with an existing Langflow API key.
-
-![MCP server tab showing Generate API key button](/img/mcp-server-api-key.png)
-
-To include other environment variables with your MCP server command, use the `env` object with key-value pairs of environment variables:
-
-```json
-{
-  "mcpServers": {
-    "PROJECT_NAME": {
-      "command": "uvx",
-      "args": [
-        "mcp-proxy",
         "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
       ],
       "env": {
