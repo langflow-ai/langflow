@@ -21,6 +21,7 @@ export interface ConfigResponse {
   webhook_polling_interval: number;
   serialization_max_items_length: number;
   event_delivery: EventDeliveryType;
+  voice_mode_available: boolean;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
