@@ -7,7 +7,7 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-**Helper** components provide utility functions to help manage data and perform simple tasks in your flow.
+Helper components provide utility functions to help manage data and perform simple tasks in your flow.
 
 ## Calculator
 
@@ -92,9 +92,9 @@ The following steps explain how to create a chat-based flow that uses **Message 
 
 4. Connect the **Prompt Template** component's output to a **Language Model** component's **System Message** input.
 
-    This example uses a **Language Model** component as the central chat driver, but you can also use an **Agent** component.
+    This example uses the **Language Model** core component as the central chat driver, but you can also use another language model component or the **Agent** component.
 
-5. Add a **Chat Input** component, and then connect it to the **Language Model** component's **Input** input.
+5. Add a **Chat Input** component, and then connect it to the **Language Model** component's **Input** field.
 
 6. Connect the **Language Model** component's output to a **Chat Output** component.
 

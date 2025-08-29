@@ -5,18 +5,18 @@ slug: /components-models
 
 import Icon from "@site/src/components/icon";
 
-**Language Model** components in Langflow generate text using a specified Large Language Model (LLM).
+Language model components in Langflow generate text using a specified Large Language Model (LLM).
 
 Langflow includes a **Language Model** core component that has built-in support for many LLMs.
-Alternatively, you can use any [additional language model](#additional-language-models) in place of the core **Language Model** component.
+Alternatively, you can use any [additional language model](#additional-language-models) in place of the **Language Model** core component.
 
-## Use Language Model components in a flow
+## Use language model components in a flow
 
-Use **Language Model** components anywhere you would use an LLM in a flow.
+Use language model components anywhere you would use an LLM in a flow.
 
 These components accept inputs like chat messages, files, and instructions in order to generate a text response.
 The flow must include [**Chat Input and Output** components](/components-io#chat-io) to allow chat-based interactions with the LLM.
-However, you can also use the **Language Model** component for actions that don't emit chat output directly, such as the **Smart Function** component.
+However, you can also use a language model component for actions that don't emit chat output directly, such as the **Smart Function** component.
 
 The following example uses the **Language Model** core component to create a chatbot flow similar to the **Basic Prompting** template.
 It also explains how you can replace the core component with another LLM.
@@ -90,7 +90,10 @@ It also explains how you can replace the core component with another LLM.
 
     </details>
 
-## Language Model parameters
+## Language model parameters
+
+The following parameters are for the **Language Model** core component.
+Other language model components can have additional or different parameters.
 
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
@@ -107,17 +110,17 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 | temperature | Float | Input parameter. Controls randomness in responses. Range: `[0.0, 1.0]`. Default: `0.1`. |
 | model | LanguageModel | Output parameter. Alternative output type to the default `Message` output. Produces an instance of Chat configured with the specified parameters. See [Language Model output types](#language-model-output-types). |
 
-## Language Model output types
+## Language model output types
 
-**Language Model** components, including the core component and bundled components, can produce two types of output:
+Language model components, including the core component and bundled components, can produce two types of output:
 
 * **Model Response**: The default output type emits the model's generated response as [`Message` data](/data-types#message).
 Use this output type when you want the typical LLM interaction where the LLM produces a text response based on given input.
 
-* **Language Model**: Change the **Language Model** component's output type to [`LanguageModel`](/data-types#languagemodel) when you need to attach an LLM to another component in your flow.
+* **Language Model**: Change the language model component's output type to [`LanguageModel`](/data-types#languagemodel) when you need to attach an LLM to another component in your flow.
 This is a specific data type that is only required by certain components, such as the [**Smart Function** component](/components-processing#smart-function).
 
-    With this configuration, the **Language Model** component is meant to support an action completed by another component, rather than producing a text response for a standard chat-based interaction.
+    With this configuration, the language model component is meant to support an action completed by another component, rather than producing a text response for a standard chat-based interaction.
     For an example, the **Smart Function** component uses an LLM to create a function from natural language input.
 
 ## Additional language models

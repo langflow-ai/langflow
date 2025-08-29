@@ -7,7 +7,7 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Langflow's **Vector Store** components are used to read and write vector data, including embedding storage, vector search, Graph RAG traversals, and specialized provider-specific search, such as OpenSearch, Elasticsearch, and Vectara.
+Langflow's vector store components are used to read and write vector data, including embedding storage, vector search, Graph RAG traversals, and specialized provider-specific search, such as OpenSearch, Elasticsearch, and Vectara.
 
 These components are critical for vector search applications, such as Retrieval Augmented Generation (RAG) chatbots that need to retrieve relevant context from large datasets.
 
@@ -16,54 +16,54 @@ For example, the **Cassandra** vector store component can connect to self-manage
 
 Other types of storage, like traditional structured databases and chat memory, are handled through other components like the [**SQL Database** component](/components-data#sql-database) or the [**Message History** component](/components-helpers#message-history).
 
-## Use Vector Store components in a flow
+## Use vector store components in a flow
 
 :::tip
-For a tutorial using **Vector Store** components in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+For a tutorial using vector store components in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
 :::
 
-The following steps introduce the use of **Vector Store** components in a flow, including configuration details, how the components work when you run a flow, why you might need multiple **Vector Store** components in one flow, and useful supporting components, such as **Embedding Model** and **Parser** components.
+The following steps introduce the use of vector store components in a flow, including configuration details, how the components work when you run a flow, why you might need multiple vector store components in one flow, and useful supporting components, such as **Embedding Model** and **Parser** components.
 
 1. Create a flow with the **Vector Store RAG** template.
 
     This template has two subflows.
     The **Load Data** subflow loads embeddings and content into a vector database, and the **Retriever** subflow runs a vector search to retrieve relevant context based on a user's query.
 
-2. Configure the database connection for both [**Astra DB** components](#astra-db), or replace them with another pair of **Vector Store** components of your choice.
+2. Configure the database connection for both [**Astra DB** components](#astra-db), or replace them with another pair of vector store components of your choice.
 Make sure the components connect to the same vector store, and that the component in the **Retriever** subflow is able to run a similarity search.
 
-    The parameters you set in each **Vector Store** component depend on the component's role in your flow.
+    The parameters you set in each vector store component depend on the component's role in your flow.
     In this example, the **Load Data** subflow _writes_ to the vector store, whereas the **Retriever** subflow _reads_ from the vector store.
     Therefore, search-related parameters are only relevant to the **Vector Search** component in the **Retriever** subflow.
 
-    For information about specific configuration parameters, see the section of this page for your chosen **Vector Store** component and [Hidden parameters](#hidden-parameters).
+    For information about specific configuration parameters, see the section of this page for your chosen vector store component and [Hidden parameters](#hidden-parameters).
 
 3. To configure the embedding model, do one of the following:
 
     * **Use an OpenAI model**: In both **OpenAI Embeddings** components, enter your OpenAI API key.
     You can use the default model or select a different OpenAI embedding model.
 
-    * **Use another provider**: Replace the **OpenAI Embeddings** components with another pair of [**Embedding Model** component](/components-embedding-models) of your choice, and then configure the parameters and credentials accordingly.
+    * **Use another provider**: Replace the **OpenAI Embeddings** components with another pair of [embedding model components](/components-embedding-models) of your choice, and then configure the parameters and credentials accordingly.
 
     * **Use Astra DB vectorize**: If you are using an Astra DB vector store that has a vectorize integration, you can remove both **OpenAI Embeddings** components.
     If you do this, the vectorize integration automatically generates embeddings from the **Ingest Data** (in the **Load Data** subflow) and **Search Query** (in the **Retriever** subflow).
 
     :::tip
-    If your vector store already contains embeddings, make sure your **Embedding Model** components use the same model as your previous embeddings.
+    If your vector store already contains embeddings, make sure your embedding model components use the same model as your previous embeddings.
     Mixing embedding models in the same vector store can produce inaccurate search results.
     :::
 
 4. Recommended: In the [**Split Text** component](/components-processing#split-text), optimize the chunking settings for your embedding model.
 For example, if your embedding model has a token limit of 512, then the **Chunk Size** parameter must not exceed that limit.
 
-    Additionally, because the **Retriever** subflow passes the chat input directly to the **Vector Store** component for vector search, make sure that your chat input string doesn't exceed your embedding model's limits.
+    Additionally, because the **Retriever** subflow passes the chat input directly to the vector store component for vector search, make sure that your chat input string doesn't exceed your embedding model's limits.
     For this example, you can enter a query that is within the limits; however, in a production environment, you might need to implement additional checks or preprocessing steps to ensure compliance.
     For example, use additional components to prepare the chat input before running the vector search, or enforce chat input limits in your application code.
 
 5. In the **Language Model** component, enter your OpenAI API key, or select a different provider and model to use for the chat portion of the flow.
 
 6. Run the **Load Data** subflow to populate your vector store.
-In the **File** component, select one or more files, and then click <Icon name="Play" aria-hidden="True" /> **Run component** on the **Vector Store** component in the **Load Data** subflow.
+In the **File** component, select one or more files, and then click <Icon name="Play" aria-hidden="True" /> **Run component** on the vector store component in the **Load Data** subflow.
 
     The **Load Data** subflow loads files from your local machine, chunks them, generates embeddings for the chunks, and then stores the chunks and their embeddings in the vector database.
 
@@ -87,11 +87,11 @@ In the **File** component, select one or more files, and then click <Icon name="
 
     You can use other components for this transformation, such as the **Data Operations** component, depending on how you want to use the search results.
 
-    To view the raw search results, click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** on the **Vector Store** component after running the **Retriever** subflow.
+    To view the raw search results, click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** on the vector store component after running the **Retriever** subflow.
 
 ### Hidden parameters
 
-You can inspect a **Vector Store** component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
 
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
@@ -105,14 +105,14 @@ For information about a specific component's parameters, see the provider's docu
 
 ### Search results output
 
-If you use a **Vector Store** component to query your vector store, it produces search results that you can pass to downstream components in your flow as a list of [`Data`](/data-types#data) objects or a tabular [`DataFrame`](/data-types#dataframe).
+If you use a vector store component to query your vector database, it produces search results that you can pass to downstream components in your flow as a list of [`Data`](/data-types#data) objects or a tabular [`DataFrame`](/data-types#dataframe).
 If both types are supported, you can set the format near the component's output port in the visual editor.
 
 The exception to this pattern is the **Vectara RAG** component, which outputs only an `answer` string in [`Message`](/data-types#message) format.
 
 ### Vector store instances
 
-Because Langflow is based on LangChain, **Vector Store** components use an instance of [LangChain vector store](https://python.langchain.com/docs/integrations/vectorstores/) to drive the underlying vector search functions.
+Because Langflow is based on LangChain, vector store components use an instance of [LangChain vector store](https://python.langchain.com/docs/integrations/vectorstores/) to drive the underlying vector search functions.
 In the component code, this is often instantiated as `vector_store`, but some components use a different name, such as the provider name.
 
 For the **Cassandra Graph** and **Astra DB Graph** components, `vector_store` is an instance of [LangChain graph vector store](https://python.langchain.com/api_reference/community/graph_vectorstores.html).
@@ -406,7 +406,7 @@ Additionally, not all database and collection configuration options are availabl
 | database_name | Database | Input parameter. The name of the database that you want this component to connect to. Or, you can select **New Database** to create a new database, and then wait for the database to initialize. |
 | keyspace | Keyspace | Input parameter. The keyspace in your database that contains the collection specified in `collection_name`. Default: `default_keyspace`. |
 | collection_name | Collection | Input parameter. The name of the collection that you want to use with this flow. Or, select **New Collection** to create a new collection with limited configuration options. To ensure your collection is configured with the correct embedding provider and search capabilities, it is recommended to create the collection in the Astra Portal or with the Data API *before* configuring this component. For more information, see [Manage collections in Astra DB Serverless](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html). |
-| embedding_model | Embedding Model | Input parameter. Attach an [**Embedding Model** component](/components-embedding-models) to generate embeddings. Only available if the specified collection doesn't have a [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). If a vectorize integration exists, the component automatically uses the collection's integrated model. |
+| embedding_model | Embedding Model | Input parameter. Attach an [embedding model component](/components-embedding-models) to generate embeddings. Only available if the specified collection doesn't have a [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). If a vectorize integration exists, the component automatically uses the collection's integrated model. |
 | ingest_data | Ingest Data | Input parameter. The documents to load into the specified collection. |
 | search_query | Search Query | Input parameter. The query string for vector search. |
 | cache_vector_store | Cache Vector Store | Input parameter. Whether to cache the vector store in Langflow memory for faster reads. Default: Enabled (true). |
@@ -513,7 +513,7 @@ For more information, see [Build a Graph RAG system with LangChain and GraphRetr
 | ingest_data | Ingest Data | Input parameter. Records to load into the vector store. Only relevant for writes. |
 | search_input | Search Query | Input parameter. Query string for similarity search. Only relevant for reads. |
 | cache_vector_store | Cache Vector Store | Input parameter. Whether to cache the vector store in Langflow memory for faster reads. Default: Enabled (true). |
-| embedding_model | Embedding Model | Input parameter. Attach an [**Embedding Model** component](/components-embedding-models) to generate embeddings. If the collection has a [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html), don't attach an **Embedding Model** component. |
+| embedding_model | Embedding Model | Input parameter. Attach an [embedding model component](/components-embedding-models) to generate embeddings. If the collection has a [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html), don't attach an embedding model component. |
 | metric | Metric | Input parameter. The metrics to use for similarity search calculations, either `cosine` (default), `dot_product`, or `euclidean`. This is a collection setting. |
 | batch_size | Batch Size | Input parameter. Optional number of records to process in a single batch. |
 | bulk_insert_batch_concurrency | Bulk Insert Batch Concurrency | Input parameter. Optional concurrency level for bulk write operations. |

@@ -8,7 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
-Langflow's **Processing** components process and transform data within a flow.
+Processing components process and transform data within a flow.
 They have many uses, including:
 
 * Feed instructions and context to your LLMs and agents with the [**Prompt Template** component](#prompt-template).
@@ -19,7 +19,7 @@ They have many uses, including:
 
 ## Prompt Template
 
-See [Prompt Template](/components-prompts).
+See [**Prompt Template** component](/components-prompts).
 
 ## Batch Run
 
@@ -38,7 +38,7 @@ This is demonstrated in the following example.
 
 ![A batch run component connected to OpenAI and a Parser](/img/component-batch-run.png)
 
-1. Connect a **Language Model** component to a **Batch Run** component's **Language model** port.
+1. Connect any language model component to a **Batch Run** component's **Language model** port.
 
 2. Connect `DataFrame` output from another component to the **Batch Run** component's **DataFrame** input.
 For example, you could connect a **File** component with a CSV file.
@@ -69,7 +69,7 @@ For example, `Create a business card for each name.`
 
 | Name | Type | Description |
 |------|------|-------------|
-| model | HandleInput | Input parameter. Connect the 'Language Model' output from a **Language Model** component. Required. |
+| model | HandleInput | Input parameter. Connect the 'Language Model' output from a language model component. Required. |
 | system_message | MultilineInput | Input parameter. A multi-line system instruction for all rows in the DataFrame. |
 | df | DataFrameInput | Input parameter. The DataFrame whose column is treated as text messages, as specified by 'column_name'. Required. |
 | column_name | MessageTextInput | Input parameter. The name of the DataFrame column to treat as text messages. If empty, all columns are formatted in TOML. |
@@ -368,13 +368,13 @@ The output is a `DataFrame` containing all columns from the original `DataFrame`
 
 The **LLM Router** component routes requests to the most appropriate LLM based on [OpenRouter](https://openrouter.ai/docs/quickstart) model specifications.
 
-To use the component in a flow, you connect multiple **Language Model** components to the **LLM Router** components.
+To use the component in a flow, you connect multiple language model components to the **LLM Router** components.
 One model is the judge LLM that analyzes input messages to understand the evaluation context, selects the most appropriate model from the other attached LLMs, and then routes the input to the selected model.
 The selected model processes the input, and then returns the generated response.
 
-The following example flow has three **Language Model** components.
+The following example flow has three language model components.
 One is the judge LLM, and the other two are in the LLM pool for request routing.
-The **Chat Input** and **Chat Output** components create a seamless chat interaction where you send a message and receive a response without any user awareness of the underlying routing.
+The input and output components create a seamless chat interaction where you send a message and receive a response without any user awareness of the underlying routing.
 
 ![LLM Router component](/img/component-llm-router.png)
 
@@ -384,7 +384,7 @@ The **Chat Input** and **Chat Output** components create a seamless chat interac
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| `models` | **Language Models** | Input parameter. Connect [`LanguageModel`](/data-types#languagemodel) output from multiple [**Language Model** components](/components-models) to create a pool of models. The `judge_llm` selects models from this pool when routing requests. The first model you connect is the default model if there is a problem with model selection or routing. |
+| `models` | **Language Models** | Input parameter. Connect [`LanguageModel`](/data-types#languagemodel) output from multiple [language model components](/components-models) to create a pool of models. The `judge_llm` selects models from this pool when routing requests. The first model you connect is the default model if there is a problem with model selection or routing. |
 | `input_value` | **Input** | Input parameter. The incoming query to be routed to the model selected by the judge LLM. |
 | `judge_llm` | **Judge LLM** | Input parameter. Connect `LanguageModel` output from _one_ **Language Model** component to serve as the judge LLM for request routing. |
 | `optimization` | **Optimization** | Input parameter. Set a preferred characteristic for model selection by the judge LLM. The options are `quality` (highest response quality), `speed` (fastest response time), `cost` (most cost-effective model), or `balanced` (equal weight for quality, speed, and cost). Default: `balanced` |
@@ -427,10 +427,9 @@ The output is a `Message` containing the parsed text.
 This is a versatile component for data extraction and manipulation in your flows.
 For examples of **Parser** components in flows, see the following:
 
-* [**Batch Run** component](#batch-run)
-* [**Structured Output** component](#structured-output)
+* [**Batch Run** component example](#batch-run)
+* [**Structured Output** component example](#structured-output)
 * **Financial Report Parser** template
-* [**Vector Store** components](/components-vector-stores)
 * [Trigger flows with webhooks](/webhook)
 * [Create a vector RAG chatbot](/chat-with-rag)
 
@@ -699,7 +698,7 @@ To configure the **Save File** component and use it in a flow, do the following:
 In Langflow version 1.5, this component was renamed from **Lambda Filter** to **Smart Function**.
 
 The **Smart Function** component uses an LLM to generate a Lambda function to filter or transform structured data based on natural language instructions.
-You must connect this component to a [**Language Model** component](/components-models), which is used to generate a function based on the natural language instructions you provide in the **Instructions** parameter.
+You must connect this component to a [language model component](/components-models), which is used to generate a function based on the natural language instructions you provide in the **Instructions** parameter.
 The LLM runs the function against the data input, and then outputs the results as [`Data`](/data-types#data).
 
 :::tip
@@ -731,7 +730,7 @@ From there, the LLM generates a filter function that extracts email addresses fr
 
 The **Split Text** component splits data into chunks based on parameters like chunk size and separator.
 It is often used to chunk data to be tokenized and embedded into vector databases.
-For examples, see [Use Vector Store components in a flow](/components-vector-stores#use-vector-store-components-in-a-flow), [Use Embedding Model components in a flow](/components-embedding-models#use-embedding-model-components-in-a-flow), and [Create a Vector RAG chatbot](/chat-with-rag).
+For examples, see [Use embedding model components in a flow](/components-embedding-models#use-embedding-model-components-in-a-flow) and [Create a Vector RAG chatbot](/chat-with-rag).
 
 ![An embedding generation flow that uses a Split Text component to chunk data.](/img/component-split-text.png)
 
@@ -794,12 +793,12 @@ This can come from practically any component, but it is typically a **Chat Input
     The schema is a table that defines the fields (keys) and data types to organize the data extracted by the LLM into a structured `Data` or `DataFrame` object.
     For more information, see [Output Schema options](#output-schema-options)
 
-3. Attach a [**Language Model** component](/components-models) that is set to emit [`LanguageModel`](/data-types#languagemodel) output.
+3. Attach a [language model component](/components-models) that is set to emit [`LanguageModel`](/data-types#languagemodel) output.
 
-    The **Language Model** component uses the **Input Message** and **Format Instructions** from the **Structured Output** component to extract specific pieces of data from the input text.
+    The LLM uses the **Input Message** and **Format Instructions** from the **Structured Output** component to extract specific pieces of data from the input text.
     The output schema is applied to the model's response to produce the final `Data` or `DataFrame` structured object.
 
-4. Optional: Typically, the structured output is passed to downstream components that use the extracted data for other processes, such as other **Processing** components like the **Parser** or **Data Operations** components.
+4. Optional: Typically, the structured output is passed to downstream components that use the extracted data for other processes, such as the **Parser** or **Data Operations** components.
 
 ![A basic flow with Structured Output, Language Model, Type Convert, and Chat Input and Output components.](/img/component-structured-output.png)
 
@@ -1010,7 +1009,7 @@ The following example uses the **Type Convert** component to convert the `DataFr
 
 ## Legacy Processing components
 
-The following **Processing** components are legacy components.
+The following components are legacy components.
 You can still use them in your flows, but they are no longer supported and can be removed in a future release.
 
 Replace these components with suggested alternatives as soon as possible.
@@ -1087,7 +1086,7 @@ This component extracts a specific key from a `Data` object and returns the valu
 <details>
 <summary>Data to DataFrame/Data to Message</summary>
 
-Replace these legacy components with newer **Processing** components, such as the [**Data Operations** component](#data-operations) and [**Type Convert** component](#type-convert).
+Replace these legacy components with newer processing components, such as the [**Data Operations** component](#data-operations) and [**Type Convert** component](#type-convert).
 
 These components converted one or more `Data` objects into a `DataFrame` or `Message` object.
 

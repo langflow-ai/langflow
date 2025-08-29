@@ -93,9 +93,9 @@ The values for **Collection Name**, **Astra DB Application Token**, and **Astra 
 | Tool Parameters  | Dict   | Input parameter. [Astra DB Data API `find` filters](https://docs.datastax.com/en/astra-db-serverless/api-reference/document-methods/find-many.html#parameters) that become tools for an agent. These Filters _may_ be used in a search, if the agent selects them. See [Define tool-specific parameters](#define-tool-specific-parameters). |
 | Static Filters    | Dict   | Input parameter. Attribute-value pairs used to filter query results. Equivalent to [Astra DB Data API `find` filters](https://docs.datastax.com/en/astra-db-serverless/api-reference/document-methods/find-many.html#parameters). **Static Filters** are included with _every_ query. Use **Static Filters** without semantic search to perform a regular filter search. |
 | Number of Results  | Int | Input parameter. The maximum number of documents to return.   |
-| Semantic Search | Boolean | Input parameter. Whether to run a similarity search by generating a vector embedding from the chat input and following the **Semantic Search Instruction**. Default: false. If true, you must attach an [**Embedding Model** component](/components-embedding-models) or have vectorize pre-enabled on your collection. |
+| Semantic Search | Boolean | Input parameter. Whether to run a similarity search by generating a vector embedding from the chat input and following the **Semantic Search Instruction**. Default: false. If true, you must attach an [embedding model component](/components-embedding-models) or have vectorize pre-enabled on your collection. |
 | Use Astra DB Vectorize | Boolean | Input parameter. Whether to use the Astra DB vectorize feature for embedding generation when running a semantic search. Default: false. If true, you must have vectorize pre-enabled on your collection. |
-| Embedding Model | Embedding | Input parameter. A port to attach an **Embedding Model** component to generate a vector from input text for semantic search. This can be used when **Semantic Search** is true, with or without vectorize. Be sure to use a model that aligns with the dimensions of the embeddings already present in the collection. |
+| Embedding Model | Embedding | Input parameter. A port to attach an embedding model component to generate a vector from input text for semantic search. This can be used when **Semantic Search** is true, with or without vectorize. Be sure to use a model that aligns with the dimensions of the embeddings already present in the collection. |
 | Semantic Search Instruction | String | Input parameter. The query to use for similarity search. Default: `"Find documents similar to the query."`. This instruction is used to guide the model in performing semantic search. |
 
 ### Define tool-specific parameters
@@ -192,11 +192,11 @@ Replace them with the suggested alternatives as soon as possible.
 <summary>Astra DB Vectorize</summary>
 
 This component was deprecated in Langflow version 1.1.2.
-Replace it with the [**Astra DB** vector store component](/components-vector-stores#astra-db) as soon as possible.
+Replace it with the [**Astra DB** component](/components-vector-stores#astra-db) as soon as possible.
 
-The **Astra DB Vectorize** component was used to generate embeddings with Astra DB's vectorize feature in conjunction with an **Astra DB** vector store component.
+The **Astra DB Vectorize** component was used to generate embeddings with Astra DB's vectorize feature in conjunction with an **Astra DB** component.
 
-The vectorize functionality is now built into the **Astra DB** vector store component.
+The vectorize functionality is now built into the **Astra DB** component.
 You no longer need a separate component for vectorize embedding generation.
 
 </details>

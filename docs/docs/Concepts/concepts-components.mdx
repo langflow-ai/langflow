@@ -118,7 +118,7 @@ Some components can produce multiple types of output:
 
 * If the component emits only one type, you must select the output type by clicking the output label near the output port, and then selecting the desired output type. In component code, this is represented by `group_outputs=False` or omitting the `group_outputs` parameter.
 
-For example, the **Language Model** component can output _either_ a **Model Response** or **Language Model**.
+For example, a language model component can output _either_ a **Model Response** or **Language Model**.
 The **Model Response** output produces [`Message`](/data-types#message) data that can be passed to another component's `Message` port.
 The **Language Model** output must be connected to a component with a **Language Model** input, such as the [**Structured Output** component](/components-processing#structured-output), that uses the attached LLM to power the receiving component's reasoning.
 
@@ -244,7 +244,7 @@ Components are updated to the latest available version, based on the version of 
 
 ## Group components
 
-Multiple components can be grouped into a single component for reuse. This is useful for organizing large flows by combining related components together, such as a RAG **Agent** component and it's associated **Embeddings Model** and **Vector Store** components.
+Multiple components can be grouped into a single component for reuse. This is useful for organizing large flows by combining related components together, such as a RAG **Agent** component and it's associated tools or vector store components.
 
 1. Hold <kbd>Shift</kbd>, and then click and drag to highlight all components you want to merge. Components must be completely within the selection area to be merged.
 

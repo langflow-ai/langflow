@@ -6,7 +6,7 @@ slug: /components-data
 import Icon from "@site/src/components/icon";
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
-You can use Langflow's **Data** components to bring data into your flows from various sources like files, API endpoints, and URLs.
+Data components bring data into your flows from various sources like files, API endpoints, and URLs.
 For example:
 
 * **Load files**: Import data from a file or directory with the [**File** component](#file) and [**Directory** component](#directory).
@@ -23,20 +23,20 @@ Additionally, some components return raw data, whereas others can convert, restr
 This means that some similar components might produce different results.
 
 :::tip
-**Data** components pair well with [**Processing** components](/components-processing) that can perform additional parsing, transformation, and validation after retrieving the data.
+Data components pair well with [Processing components](/components-processing) that can perform additional parsing, transformation, and validation after retrieving the data.
 
 This can include basic operations, like saving a file in a specific format, or more complex tasks, like using a **Text Splitter** component to break down a large document into smaller chunks before generating embeddings for vector search.
 :::
 
 ## Use Data components in flows
 
-**Data** components are used often in flows because they offer a versatile way to perform common, basic functions.
+Data components are used often in flows because they offer a versatile way to perform common functions.
 
-You can use **Data** components to perform their base functions as isolated steps in your flow, or you can connect them to an **Agent** component as tools.
+You can use these components to perform their base functions as isolated steps in your flow, or you can connect them to an **Agent** component as tools.
 
 ![An agent flow with three Data components connected to the agent as tools](/img/connect-data-components-to-agent.png)
 
-For examples of **Data** components in flows, see the following:
+For example flows, see the following:
 
 * [Create a chatbot that can ingest files](/chat-with-files): Learn how to use a **File** component to load a file as context for a chatbot.
 The file and user input are both passed to the LLM so you can ask questions about the file you uploaded.
@@ -236,7 +236,7 @@ The component's `clean_html` method parses the HTML content with the BeautifulSo
 For other RSS feeds, use the [**RSS Reader** component](#rss-reader), and for other searches use the [**Web Search** component](#web-search) or provider-specific <Icon name="Blocks" aria-hidden="true" /> [**Bundles**].
 
 When used as a standard component in a flow, the **News Search** component must be connected to a component that accepts `DataFrame` input.
-You can connect the **News Search** component directly to a compatible component, or you can use a [**Processing** component](/components-processing) to convert or extract data of a different type between components.
+You can connect the **News Search** component directly to a compatible component, or you can use a [Processing component](/components-processing) to convert or extract data of a different type between components.
 
 When used in **Tool Mode** with an **Agent** component, the **News Search** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
 The agent decides whether to use the **News Search** component based on the user's query, and it can process the `DataFrame` output directly.
@@ -261,7 +261,7 @@ The agent decides whether to use the **News Search** component based on the user
 The **RSS Reader** component fetches and parses RSS feeds from any valid RSS feed URL, and then returns the feed content as a [`DataFrame`](/data-types#dataframe) containing article titles, links, publication dates, and summaries.
 
 When used as a standard component in a flow, the **RSS Reader** component must be connected to a component that accepts `DataFrame` input.
-You can connect the **RSS Reader** component directly to a compatible component, or you can use a [**Processing** component](/components-processing) to convert or extract data of a different type between components.
+You can connect the **RSS Reader** component directly to a compatible component, or you can use a [Processing component](/components-processing) to convert or extract data of a different type between components.
 
 When used in **Tool Mode** with an **Agent** component, the **RSS Reader** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
 The agent decides whether to use the **RSS Reader** component based on the user's query, and it can process the `DataFrame` output directly.
@@ -358,7 +358,7 @@ Instead, you only need to provide enough context for the agent to understand tha
     If you want to use a different model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
 
     If you need to execute highly specialized queries, consider selecting a model that is trained for tasks like advanced SQL queries.
-    If your preferred model isn't in the **Agent** component's built-in model list, select the **Custom** model provider, and then use a [**Language Model** component](/components-models) to attach a specific model.
+    If your preferred model isn't in the **Agent** component's built-in model list, select the **Custom** model provider, and then use a [language model component](/components-models) to attach a specific model.
 
 6. Connect the **SQL Database** component's **Toolset** output to the **Agent** component's **Tools** input.
 
@@ -434,7 +434,7 @@ There are two settings that control the output of the **URL** component at diffe
 When used as a standard component in a flow, the **URL** component must be connected to a component that accepts the selected output data type (`DataFrame` or `Message`).
 You can connect the **URL** component directly to a compatible component, or you can use a [**Type Convert** component](/components-processing#type-convert) to convert the output to another type before passing the data to other components if the data types aren't directly compatible.
 
-**Processing** components like the **Type Convert** component are useful with the **URL** component because it can extract a large amount of data from the crawled pages.
+Processing components like the **Type Convert** component are useful with the **URL** component because it can extract a large amount of data from the crawled pages.
 For example, if you only want to pass specific fields to other components, you can use a [**Parser** component](/components-processing#parser) to extract only that data from the crawled pages before passing the data to other components.
 
 When used in **Tool Mode** with an **Agent** component, the **URL** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
@@ -544,7 +544,7 @@ For more information, see [Trigger flows with webhooks](/webhook).
 Langflow's core components are meant to be generic and support a range of use cases.
 Core components typically aren't limited to a single provider.
 
-If the core **Data** components don't meet your needs, you can find provider-specific components in <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
+If the core components don't meet your needs, you can find provider-specific components in <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
 
 For example, the [**DataStax** bundle](/bundles-datastax) includes components for CQL queries, and the [**Google** bundle](/bundles-google) includes components for Google Search APIs.
 
