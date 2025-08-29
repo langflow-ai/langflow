@@ -173,7 +173,7 @@ jest.mock("@/components/ui/select-custom", () => ({
     [key: string]: unknown;
   }) => (
     <button
-      data-testid={`select-item-${value}`}
+      data-testid={props["data-testid"] || `select-item-${value}`}
       data-value={value}
       onClick={() => mockOnValueChange?.(value)}
       {...props}
@@ -538,7 +538,9 @@ describe("SidebarDraggableComponent", () => {
       const propsNotOfficial = { ...defaultProps, official: false };
       render(<SidebarDraggableComponent {...propsNotOfficial} />);
 
-      expect(screen.getByTestId("select-item-delete")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
       expect(screen.getByText("Delete")).toBeInTheDocument();
       expect(screen.getByTestId("icon-Trash2")).toBeInTheDocument();
     });
@@ -547,7 +549,7 @@ describe("SidebarDraggableComponent", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
       expect(
-        screen.queryByTestId("select-item-delete"),
+        screen.queryByTestId("draggable-component-menu-delete"),
       ).not.toBeInTheDocument();
     });
   });
@@ -730,7 +732,9 @@ describe("SidebarDraggableComponent", () => {
       expect(
         screen.queryByTestId("add-component-button-test-component"),
       ).not.toBeInTheDocument();
-      expect(screen.getByTestId("select-item-delete")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
     });
   });
 
@@ -783,10 +787,12 @@ describe("SidebarDraggableComponent", () => {
       render(<SidebarDraggableComponent {...propsWithOnDelete} />);
 
       // Verify delete option is shown when onDelete is provided
-      expect(screen.getByTestId("select-item-delete")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
 
       // Click on the delete option to trigger the onValueChange
-      const deleteItem = screen.getByTestId("select-item-delete");
+      const deleteItem = screen.getByTestId("draggable-component-menu-delete");
       fireEvent.click(deleteItem);
 
       // Verify that our custom onDelete function was called
@@ -803,7 +809,9 @@ describe("SidebarDraggableComponent", () => {
 
       render(<SidebarDraggableComponent {...propsWithOnDeleteAndOfficial} />);
 
-      expect(screen.getByTestId("select-item-delete")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
       expect(screen.getByText("Delete")).toBeInTheDocument();
       expect(screen.getByTestId("icon-Trash2")).toBeInTheDocument();
     });
@@ -817,7 +825,9 @@ describe("SidebarDraggableComponent", () => {
 
       render(<SidebarDraggableComponent {...propsNotOfficial} />);
 
-      expect(screen.getByTestId("select-item-delete")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
       expect(screen.getByText("Delete")).toBeInTheDocument();
       expect(screen.getByTestId("icon-Trash2")).toBeInTheDocument();
     });
@@ -832,7 +842,7 @@ describe("SidebarDraggableComponent", () => {
       render(<SidebarDraggableComponent {...propsOfficialWithoutOnDelete} />);
 
       expect(
-        screen.queryByTestId("select-item-delete"),
+        screen.queryByTestId("draggable-component-menu-delete"),
       ).not.toBeInTheDocument();
     });
 
@@ -846,7 +856,9 @@ describe("SidebarDraggableComponent", () => {
 
       render(<SidebarDraggableComponent {...propsWithBothConditions} />);
 
-      expect(screen.getByTestId("select-item-delete")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
       expect(screen.getByText("Delete")).toBeInTheDocument();
       expect(screen.getByTestId("icon-Trash2")).toBeInTheDocument();
     });
@@ -862,7 +874,9 @@ describe("SidebarDraggableComponent", () => {
         render(<SidebarDraggableComponent {...propsWithUndefinedOnDelete} />);
       }).not.toThrow();
 
-      expect(screen.getByTestId("select-item-delete")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
     });
 
     it("should prioritize onDelete over default flow deletion when onDelete is provided", async () => {
@@ -877,10 +891,12 @@ describe("SidebarDraggableComponent", () => {
 
       render(<SidebarDraggableComponent {...propsWithOnDelete} />);
 
-      expect(screen.getByTestId("select-item-delete")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
 
       // Click on the delete option
-      const deleteItem = screen.getByTestId("select-item-delete");
+      const deleteItem = screen.getByTestId("draggable-component-menu-delete");
       fireEvent.click(deleteItem);
 
       // Verify that our custom onDelete function was called and deleteFlow was NOT called
@@ -898,10 +914,12 @@ describe("SidebarDraggableComponent", () => {
 
       render(<SidebarDraggableComponent {...propsWithoutOnDelete} />);
 
-      expect(screen.getByTestId("select-item-delete")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
 
       // Click on the delete option
-      const deleteItem = screen.getByTestId("select-item-delete");
+      const deleteItem = screen.getByTestId("draggable-component-menu-delete");
       fireEvent.click(deleteItem);
 
       // Verify that the default deleteFlow function was called
@@ -919,10 +937,12 @@ describe("SidebarDraggableComponent", () => {
 
       render(<SidebarDraggableComponent {...propsWithNonExistentFlow} />);
 
-      expect(screen.getByTestId("select-item-delete")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
 
       // Click on the delete option
-      const deleteItem = screen.getByTestId("select-item-delete");
+      const deleteItem = screen.getByTestId("draggable-component-menu-delete");
       fireEvent.click(deleteItem);
 
       // Verify that deleteFlow was not called since flow was not found
