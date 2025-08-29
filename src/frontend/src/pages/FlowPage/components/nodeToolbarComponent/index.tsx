@@ -125,7 +125,10 @@ const NodeToolbarComponent = memo(
     const hasOutputs =
       data.node?.outputs?.length && data.node?.outputs?.length > 1;
 
-    const isMinimal = hasOutputs && !hasGroupOutputs;
+    const hasSelectOutput = hasOutputs && !hasGroupOutputs;
+    const hasOnlyOneOutput = data.node?.outputs?.length === 1;
+
+    const isMinimal = hasSelectOutput || hasOnlyOneOutput;
 
     const [toolMode, setToolMode] = useState(
       () =>
