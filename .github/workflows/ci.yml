@@ -159,7 +159,7 @@ jobs:
         steps.filter.outputs.workspace != 'true' &&
         steps.filter.outputs.api != 'true' &&
         steps.filter.outputs.database != 'true'
-      }}
+        }}
 
     steps:
       - name: Checkout code
