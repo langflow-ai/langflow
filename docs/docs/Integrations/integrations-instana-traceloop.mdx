@@ -52,20 +52,20 @@ Copy the script below into that file, then update the placeholder values with th
 2. Make sure the OpenTelemetry Data Collector (OTel DC) is running and correctly set up.
 Open your Collector’s `config.yaml` file, copy in the configuration shown below, and replace the placeholder values with the ones that match your setup or requirements.
 
-```yaml
-llm.application: "LLM_DC"
-instances:
-   -  otel.agentless.mode: true
-      # Example endpoint: https://otlp-magenta-saas.instana.rocks:4318
-      otel.backend.url: "<INSTANA_ENDPOINT>"
-      otel.backend.using.http: false
-      callback.interval: 10
-      otel.service.name: "DC1"
-      otel.service.port: 8000
-      currency: "USD"
-```
+    ```yaml
+    llm.application: "LLM_DC"
+    instances:
+       -  otel.agentless.mode: true
+          # Example endpoint: https://otlp-magenta-saas.instana.rocks:4318
+          otel.backend.url: "<INSTANA_ENDPOINT>"
+          otel.backend.using.http: false
+          callback.interval: 10
+          otel.service.name: "DC1"
+          otel.service.port: 8000
+          currency: "USD"
+    ```
 
-This configuration enables the OTel Collector to operate in agentless mode and route telemetry data to your Instana backend with proper service identification and collection intervals for effective monitoring integration.
+    This configuration enables the OTel Collector to operate in agentless mode and route telemetry data to your Instana backend with proper service identification and collection intervals for effective monitoring integration.
 
 ## Start Langflow with environment variables
 
@@ -83,7 +83,7 @@ To verify that observability is working correctly:
 1. Run a flow in Langflow to generate traffic.
 2. To view traces in Instana, open Instana and click **Applications**.
 3. In **Services**, search for `Langflow`.
-4. Click Langflow to view and analyze the associated calls.
+4. Click **Langflow** to view and analyze the associated calls.
 
 ![Instana Traces dashboard](/img/instana-traces-dashboard.png)
 
