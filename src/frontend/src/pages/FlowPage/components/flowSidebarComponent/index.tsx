@@ -167,7 +167,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     data: mcpServers,
     isLoading: mcpLoading,
     isSuccess: mcpSuccess,
-    isError: mcpError,
   } = useGetMCPServers({ enabled: ENABLE_NEW_SIDEBAR });
 
   // Get search state from context
@@ -575,11 +574,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                         nodeColors={nodeColors}
                         onDragStart={onDragStart}
                         openCategories={openCategories}
-                        setOpenCategories={setOpenCategories}
-                        mcpServers={mcpServers}
                         mcpLoading={mcpLoading}
                         mcpSuccess={mcpSuccess}
-                        mcpError={mcpError}
                         search={search}
                         hasMcpServers={hasMcpServers}
                         showSearchConfigTrigger={
