@@ -27,7 +27,7 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
         ),
         SecretStrInput(
             name="index_token",
-            display_name="Index Token",
+            display_name="Upstash Index Token",
             info="The token for the Upstash index.",
             required=True,
         ),

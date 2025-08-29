@@ -24,7 +24,7 @@ class AstraDBChatMemory(LCChatMemoryComponent):
         ),
         SecretStrInput(
             name="api_endpoint",
-            display_name="API Endpoint",
+            display_name="Astra DB API Endpoint",
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
             required=True,

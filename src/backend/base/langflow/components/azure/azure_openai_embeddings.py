@@ -50,7 +50,7 @@ class AzureOpenAIEmbeddingsComponent(LCModelComponent):
         ),
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
+            display_name="Azure OpenAI API Key",
             required=True,
         ),
         IntInput(

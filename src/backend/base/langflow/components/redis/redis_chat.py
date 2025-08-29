@@ -23,7 +23,7 @@ class RedisIndexChatMemory(LCChatMemoryComponent):
             name="username", display_name="Username", value="", info="The Redis user name.", advanced=True
         ),
         SecretStrInput(
-            name="password", display_name="Password", value="", info="The password for username.", advanced=True
+            name="password", display_name="Redis Password", value="", info="The password for username.", advanced=True
         ),
         StrInput(name="key_prefix", display_name="Key prefix", info="Key prefix.", advanced=True),
         MessageTextInput(

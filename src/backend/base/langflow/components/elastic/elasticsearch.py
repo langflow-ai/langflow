@@ -58,7 +58,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
         ),
         SecretStrInput(
             name="password",
-            display_name="Password",
+            display_name="Elasticsearch Password",
             value="",
             advanced=False,
             info=(
