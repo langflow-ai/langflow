@@ -1,6 +1,18 @@
 """Schema modules for lfx package."""
 
-__all__ = ["Data", "DataFrame", "InputValue", "Message", "Tweaks", "dotdict"]
+__all__ = [
+    "Data",
+    "DataFrame",
+    "InputValue",
+    "Message",
+    "OpenAIErrorResponse",
+    "OpenAIResponsesRequest",
+    "OpenAIResponsesResponse",
+    "OpenAIResponsesStreamChunk",
+    "Tweaks",
+    "UUIDstr",
+    "dotdict",
+]
 
 
 def __getattr__(name: str):
@@ -29,6 +41,26 @@ def __getattr__(name: str):
         from .message import Message
 
         return Message
+    if name == "UUIDstr":
+        from .serialize import UUIDstr
+
+        return UUIDstr
+    if name == "OpenAIResponsesRequest":
+        from .openai_responses_schemas import OpenAIResponsesRequest
+
+        return OpenAIResponsesRequest
+    if name == "OpenAIResponsesResponse":
+        from .openai_responses_schemas import OpenAIResponsesResponse
+
+        return OpenAIResponsesResponse
+    if name == "OpenAIResponsesStreamChunk":
+        from .openai_responses_schemas import OpenAIResponsesStreamChunk
+
+        return OpenAIResponsesStreamChunk
+    if name == "OpenAIErrorResponse":
+        from .openai_responses_schemas import OpenAIErrorResponse
+
+        return OpenAIErrorResponse
 
     msg = f"module '{__name__}' has no attribute '{name}'"
     raise AttributeError(msg)
