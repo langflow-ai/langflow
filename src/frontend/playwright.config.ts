@@ -121,6 +121,7 @@ export default defineConfig({
       env: {
         VITE_PROXY_TARGET: "http://localhost:7860",
       },
+      reuseExistingServer: true,
     },
   ],
 });

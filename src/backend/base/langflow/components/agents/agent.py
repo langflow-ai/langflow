@@ -9,14 +9,15 @@ from langflow.base.agents.events import ExceptionWithMessageError
 from langflow.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
     MODEL_DYNAMIC_UPDATE_FIELDS,
-    MODEL_PROVIDERS,
     MODEL_PROVIDERS_DICT,
     MODELS_METADATA,
 )
 from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers.current_date import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
-from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
+from langflow.components.langchain_utilities.tool_calling import (
+    ToolCallingAgentComponent,
+)
 from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.custom.utils import update_component_build_config
 from langflow.field_typing import Tool
@@ -59,11 +60,23 @@ class AgentComponent(ToolCallingAgentComponent):
             name="agent_llm",
             display_name="Model Provider",
             info="The provider of the language model that the agent will use to generate responses.",
-            options=[*MODEL_PROVIDERS_LIST, "Custom"],
+            options=[*MODEL_PROVIDERS_LIST],
             value="OpenAI",
             real_time_refresh=True,
+            refresh_button=False,
             input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST] + [{"icon": "brain"}],
+            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST],
+            external_options={
+                "fields": {
+                    "data": {
+                        "node": {
+                            "name": "connect_other_models",
+                            "display_name": "Connect other models",
+                            "icon": "CornerDownLeft",
+                        }
+                    }
+                },
+            },
         ),
         *openai_inputs_filtered,
         MultilineInput(
@@ -155,7 +168,12 @@ class AgentComponent(ToolCallingAgentComponent):
     ]
     outputs = [
         Output(name="response", display_name="Response", method="message_response"),
-        Output(name="structured_response", display_name="Structured Response", method="json_response", tool_mode=False),
+        Output(
+            name="structured_response",
+            display_name="Structured Response",
+            method="json_response",
+            tool_mode=False,
+        ),
     ]
 
     async def get_agent_requirements(self):
@@ -377,7 +395,11 @@ class AgentComponent(ToolCallingAgentComponent):
         # TODO: This is a temporary fix to avoid message duplication. We should develop a function for this.
         messages = (
             await MemoryComponent(**self.get_base_args())
-            .set(session_id=self.graph.session_id, order="Ascending", n_messages=self.n_messages)
+            .set(
+                session_id=self.graph.session_id,
+                order="Ascending",
+                n_messages=self.n_messages,
+            )
             .retrieve_messages()
         )
         return [
@@ -483,19 +505,32 @@ class AgentComponent(ToolCallingAgentComponent):
                     build_config.update(fields_to_add)
                 # Reset input types for agent_llm
                 build_config["agent_llm"]["input_types"] = []
-            elif field_value == "Custom":
+                build_config["agent_llm"]["display_name"] = "Model Provider"
+            elif field_value == "connect_other_models":
                 # Delete all provider fields
                 self.delete_fields(build_config, ALL_PROVIDER_FIELDS)
-                # Update with custom component
+                # # Update with custom component
                 custom_component = DropdownInput(
                     name="agent_llm",
                     display_name="Language Model",
-                    options=[*sorted(MODEL_PROVIDERS), "Custom"],
-                    value="Custom",
+                    info="The provider of the language model that the agent will use to generate responses.",
+                    options=[*MODEL_PROVIDERS_LIST],
                     real_time_refresh=True,
+                    refresh_button=False,
                     input_types=["LanguageModel"],
-                    options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())]
-                    + [{"icon": "brain"}],
+                    placeholder="Awaiting model input.",
+                    options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST],
+                    external_options={
+                        "fields": {
+                            "data": {
+                                "node": {
+                                    "name": "connect_other_models",
+                                    "display_name": "Connect other models",
+                                    "icon": "CornerDownLeft",
+                                },
+                            }
+                        },
+                    },
                 )
                 build_config.update({"agent_llm": custom_component.to_dict()})
             # Update input types for all fields
@@ -546,7 +581,9 @@ class AgentComponent(ToolCallingAgentComponent):
         # TODO: Agent Description Depreciated Feature to be removed
         description = f"{agent_description}{tools_names}"
         tools = component_toolkit(component=self).get_tools(
-            tool_name="Call_Agent", tool_description=description, callbacks=self.get_langchain_callbacks()
+            tool_name="Call_Agent",
+            tool_description=description,
+            callbacks=self.get_langchain_callbacks(),
         )
         if hasattr(self, "tools_metadata"):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
