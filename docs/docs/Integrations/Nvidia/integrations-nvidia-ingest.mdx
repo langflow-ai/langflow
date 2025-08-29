@@ -4,6 +4,7 @@ slug: /integrations-nvidia-ingest
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_markdown-partial-example.mdx';
 
 The **NVIDIA Retriever Extraction** component integrates with the [NVIDIA nv-ingest](https://github.com/NVIDIA/nv-ingest) microservice for data ingestion, processing, and extraction of text files.
 
@@ -49,7 +50,7 @@ You can also store the URL as a [global variable](/configuration-global-variable
 5. Optional: For PDF files, enable **High Resolution Mode** for better quality extraction from scanned documents.
 6. Select whether to split the text into chunks.
 
-    You can modify the splitting parameters and other hidden settings through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+    <PartialParams />
 
 7. Click <Icon name="Play" aria-hidden="True" /> **Run component** to ingest the file, and then click **Logs** or <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** to confirm the component ingested the file.
 8. To store the processed data in a vector database, add a **Vector Store** component to your flow, and then connect the **NVIDIA Retriever Extraction** component's `Data` output to the **Vector Store** component's input.

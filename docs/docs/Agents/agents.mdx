@@ -4,6 +4,7 @@ slug: /agents
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_markdown-partial-example.mdx';
 
 Langflow's [**Agent** component](/components-agents) is critical for building agent flows.
 This component provides everything you need to create an agent, including multiple Large Language Model (LLM) providers, tool calling, and custom instructions.
@@ -95,8 +96,7 @@ For a multi-agent example, see [Use an agent as a tool](/agents-tools#use-an-age
 You can configure the **Agent** component to use your preferred provider and model, custom instructions, and tools.
 
 :::tip
-Many optional parameters are hidden by default in the visual editor.
-You can access all component parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 :::
 
 ### Provider and model
@@ -154,16 +154,14 @@ For more information, see [Store chat memory](/memory#store-chat-memory) and [**
 
 ### Additional parameters
 
-With the **Agent** component, the available parameters can change depending on the selected provider and model.
-For example, some models support additional modes, arguments, or features like chat memory and temperature.
-
-Some additional input parameters include the following:
+With the **Agent** component, the available parameters can change depending on the selected provider and model, which can support additional modes, arguments, or features like chat memory and temperature.
+For example:
 
 * **Current Date** (`add_current_date_tool`): When enabled (true), this setting adds a tool to the agent that can retrieve the current date.
 * **Handle Parse Errors** (`handle_parsing_errors`): When enabled (true), this setting allows the agent to fix errors, like typos, when analyzing user input.
 * **Verbose** (`verbose`): When enabled (true), this setting records detailed logging output for debugging and analysis.
 
-To view and configure all parameters, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 ## Agent component output
 

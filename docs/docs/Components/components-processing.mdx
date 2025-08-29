@@ -6,6 +6,7 @@ slug: /components-processing
 import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_markdown-partial-example.mdx';
 
 Langflow's **Processing** components process and transform data within a flow.
 They have many uses, including:
@@ -64,8 +65,7 @@ For example, `Create a business card for each name.`
 
 ### Batch Run parameters
 
-Some parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -380,8 +380,7 @@ The **Chat Input** and **Chat Output** components create a seamless chat interac
 
 ### LLM Router parameters
 
-Some parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -493,7 +492,7 @@ The resulting text for each row is output as a [`Message`](/data-types#message).
 </details>
 
 The following parameters are available in **Parser** mode.
-To view and edit all available parameters, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -509,7 +508,7 @@ Use **Stringify** mode to convert the entire input directly to text.
 This mode doesn't support templates or key selection.
 
 The following parameters are available in **Stringify** mode.
-To view and edit all available parameters, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -718,8 +717,7 @@ From there, the LLM generates a filter function that extracts email addresses fr
 
 ### Smart Function parameters
 
-Some parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -748,8 +746,7 @@ The **Split Text** component's parameters control how the text is split into chu
 To test the chunking behavior, add a **Text Input** or **File** component with some sample data to chunk, click <Icon name="Play" aria-hidden="True" /> **Run component** on the **Split Text** component, and then click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** to view the list of chunks and their metadata. The **text** column contains the actual text chunks created from your chunking settings.
 If the chunks aren't split as you expect, adjust the parameters, rerun the component, and then inspect the new output.
 
-Some parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -845,8 +842,7 @@ EBITDA: 900 million , Net Income: 500 million , GROSS_PROFIT: 1.2 billion
 
 ### Structured Output parameters
 
-Some parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Type | Description |
 |------|------|-------------|
