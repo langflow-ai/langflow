@@ -239,6 +239,7 @@ backend: setup_env install_backend ## run the backend in development mode
 	@-kill -9 $$(lsof -t -i:7860) || true
 ifdef login
 	@echo "Running backend autologin is $(login)";
+	uv pip install mcp_composer-0.0.0.post207.dev0-py3-none-any.whl
 	LANGFLOW_AUTO_LOGIN=$(login) uv run uvicorn \
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
@@ -249,6 +250,7 @@ ifdef login
 		$(if $(workers),--workers $(workers),)
 else
 	@echo "Running backend respecting the $(env) file";
+	uv pip install mcp_composer-0.0.0.post207.dev0-py3-none-any.whl
 	uv run uvicorn \
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \

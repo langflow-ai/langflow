@@ -120,6 +120,9 @@ class MCPComposerService(Service):
         if not existing_auth and not new_auth:
             return False
 
+        if not existing_auth or not new_auth:
+            return True
+
         if bool(existing_auth) != bool(new_auth):
             return True
 
@@ -272,15 +275,11 @@ class MCPComposerService(Service):
                 for config_key, env_key in oauth_env_mapping.items():
                     cmd.extend(["--env", env_key, str(auth_config[config_key])])
 
-                # Add server_url as workaround for MCP Composer internal ServerSettings bug
-                server_url = auth_config.get("oauth_server_url")
-                if server_url:
-                    cmd.extend(["--env", "server_url", str(server_url)])
-
         # Set environment variables
         env = os.environ.copy()
 
         # Start the subprocess with stderr captured to PIPE, stdout to DEVNULL
+        print(f"MCP Composer running command:\n {cmd}")
         process = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
 
         # Give it a moment to start

@@ -294,7 +294,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": null
+                    "version": "1.5"
                   },
                   {
                     "name": "langchain_core",
@@ -533,7 +533,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": null
+                    "version": "1.5"
                   }
                 ],
                 "total_dependencies": 3
@@ -1486,7 +1486,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": null
+                    "version": "1.5"
                   }
                 ],
                 "total_dependencies": 3
@@ -1818,7 +1818,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": null
+                    "version": "1.5"
                   }
                 ],
                 "total_dependencies": 4
@@ -2577,7 +2577,7 @@
                 "dependencies": [
                   {
                     "name": "langflow",
-                    "version": null
+                    "version": "1.5"
                   }
                 ],
                 "total_dependencies": 1

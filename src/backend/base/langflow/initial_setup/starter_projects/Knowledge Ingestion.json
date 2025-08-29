@@ -97,7 +97,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": null
+                    "version": "1.5"
                   }
                 ],
                 "total_dependencies": 2
@@ -369,7 +369,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": null
+                    "version": "1.5"
                   }
                 ],
                 "total_dependencies": 4
@@ -757,7 +757,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": null
+                    "version": "1.5"
                   },
                   {
                     "name": "langchain_openai",
