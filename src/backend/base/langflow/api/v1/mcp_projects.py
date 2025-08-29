@@ -1274,7 +1274,7 @@ def should_use_mcp_composer(project: Folder) -> bool:
     )
 
 
-async def get_or_start_mcp_composer(project: Folder, project_id: UUID) -> tuple[str, str]:
+async def get_or_start_mcp_composer(project: Folder, project_id: UUID) -> tuple[str, str, bool]:
     """Get MCP Composer port or start it if not running, restarting if config changed."""
     mcp_composer_service: MCPComposerService = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
 
@@ -1296,8 +1296,6 @@ async def get_or_start_mcp_composer(project: Folder, project_id: UUID) -> tuple[
         if decrypted_settings:
             auth_config = decrypted_settings
 
-    # Check if composer is running and if config has changed
-
     try:
         composer_port = await mcp_composer_service.ensure_composer_updated(str(project_id), sse_url, auth_config)
 
@@ -1309,7 +1307,10 @@ async def get_or_start_mcp_composer(project: Folder, project_id: UUID) -> tuple[
             )
         port_available = True
     except RuntimeError as e:
-        composer_port = auth_config.get("oauth_port")
+        if auth_config:
+            composer_port = auth_config.get("oauth_port")
+        else:
+            composer_port = None
         await logger.aerror(e)
         port_available = False
 

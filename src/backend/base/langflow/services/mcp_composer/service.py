@@ -117,9 +117,9 @@ class MCPComposerService(Service):
 
     def _has_auth_config_changed(self, existing_auth: dict[str, Any] | None, new_auth: dict[str, Any] | None) -> bool:
         """Check if auth configuration has changed in a way that requires restart."""
-        # Handle None/empty cases
         if not existing_auth and not new_auth:
             return False
+
         if bool(existing_auth) != bool(new_auth):
             return True
 
@@ -155,13 +155,16 @@ class MCPComposerService(Service):
         return False
 
     async def start_project_composer(
-        self, project_id: str, sse_url: str, auth_config: dict[str, Any] | None = None
+        self, project_id: str, sse_url: str, auth_config: dict[str, Any] | None
     ) -> int:
         """Start an MCP Composer instance for a specific project.
 
         Returns:
             int: The port number assigned to this project's composer
         """
+        if not auth_config: 
+            raise ValueError("No auth settings provided. MCP Composer cannot be started.")
+            
         # Use a per-project lock to prevent race conditions
         if project_id not in self._start_locks:
             self._start_locks[project_id] = asyncio.Lock()
@@ -169,6 +172,9 @@ class MCPComposerService(Service):
         async with self._start_locks[project_id]:
             # Check if already running (double-check after acquiring lock)
             project_port = auth_config.get("oauth_port")
+            if not project_port:
+                raise ValueError("No OAuth port provided. MCP Composer cannot be started.")
+
             if project_id in self.project_composers:
                 composer_info = self.project_composers[project_id]
                 process = composer_info.get("process")
@@ -200,8 +206,6 @@ class MCPComposerService(Service):
                 raise RuntimeError(error)
 
             max_retries = 3
-            last_error = None
-
             for attempt in range(max_retries):
                 try:
                     process = await self._start_project_composer_process(project_id, project_port, sse_url, auth_config)
@@ -215,36 +219,12 @@ class MCPComposerService(Service):
 
                     logger.info(f"MCP Composer started for project {project_id} on port {project_port}")
                     return project_port
-
                 except Exception as e:
-                    last_error = e
-
-                    # If it's a port-related error, try to find another port
-                    if (
-                        "port" in str(e).lower()
-                        or "bind" in str(e).lower()
-                        or "address already in use" in str(e).lower()
-                    ):
-                        logger.warning(
-                            f"Port {project_port} failed for project {project_id} (attempt {attempt + 1}): {e}"
-                        )
-
-                        if attempt < max_retries - 1:  # Don't find new port on last attempt
-                            try:
-                                # Try to find another available port
-                                project_port = self._find_available_port(project_port + 1)
-                                logger.debug(f"Retrying with port {project_port} for project {project_id}")
-                                continue
-                            except RuntimeError:
-                                logger.error(f"Could not find alternative port for project {project_id}")
-                                break
+                    if attempt == max_retries - 1:
+                        raise RuntimeError(f"Failed to start MCP Composer for project {project_id} after {max_retries} attempts: {e}")
                     else:
-                        # Non-port related error, don't retry
-                        break
+                        continue
 
-            error = f"Failed to start MCP Composer for project {project_id} after {max_retries} attempts: {last_error}"
-            logger.error(error)
-            raise RuntimeError(error) from last_error
 
     async def _start_project_composer_process(
         self, project_id: str, port: int, sse_url: str, auth_config: dict[str, Any] | None = None
