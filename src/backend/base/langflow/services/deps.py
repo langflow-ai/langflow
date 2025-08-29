@@ -246,3 +246,10 @@ def get_queue_service() -> JobQueueService:
     from langflow.services.job_queue.factory import JobQueueServiceFactory
 
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
+
+
+def get_data_purge_service():
+    """Retrieves the DataPurgeService instance from the service manager."""
+    from langflow.services.data_purge.factory import DataPurgeServiceFactory
+
+    return get_service(ServiceType.DATA_PURGE_SERVICE, DataPurgeServiceFactory())
