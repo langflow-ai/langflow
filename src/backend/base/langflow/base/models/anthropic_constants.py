@@ -8,7 +8,9 @@ ANTHROPIC_MODELS_DETAILED = [
     create_model_metadata(provider="Anthropic", name="claude-3-5-sonnet-latest", icon="Anthropic", tool_calling=True),
     create_model_metadata(provider="Anthropic", name="claude-3-5-haiku-latest", icon="Anthropic", tool_calling=True),
     create_model_metadata(provider="Anthropic", name="claude-3-opus-latest", icon="Anthropic", tool_calling=True),
-    create_model_metadata(provider="Anthropic", name="claude-3-sonnet-20240229", icon="Anthropic", tool_calling=True),
+    create_model_metadata(
+        provider="Anthropic", name="claude-3-sonnet-20240229", icon="Anthropic", tool_calling=True, deprecated=True
+    ),
     # Tool calling unsupported models
     create_model_metadata(provider="Anthropic", name="claude-2.1", icon="Anthropic", tool_calling=False),
     create_model_metadata(provider="Anthropic", name="claude-2.0", icon="Anthropic", tool_calling=False),
