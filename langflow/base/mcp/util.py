@@ -7,6 +7,7 @@ import re
 import shutil
 import unicodedata
 from collections.abc import Awaitable, Callable
+from threading import Lock
 from typing import Any
 from urllib.parse import urlparse
 from uuid import UUID
@@ -36,7 +37,12 @@ HTTP_INTERNAL_SERVER_ERROR = 500
 # MCP Session Manager constants - lazy loaded to avoid blocking at import time
 def _get_mcp_settings():
     """Get MCP settings lazily to avoid blocking operations at import time."""
-    return get_settings_service().settings
+    global __mcp_settings
+    if __mcp_settings is None:
+        with __mcp_settings_lock:
+            if __mcp_settings is None:
+                __mcp_settings = get_settings_service().settings
+    return __mcp_settings
 
 
 def get_max_sessions_per_server():
@@ -1537,3 +1543,8 @@ async def update_tools(
 
     logger.info(f"Successfully loaded {len(tool_list)} tools from MCP server '{server_name}'")
     return mode, tool_list, tool_cache
+
+
+__mcp_settings = None
+
+__mcp_settings_lock = Lock()
