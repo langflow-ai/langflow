@@ -375,7 +375,7 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting knowledge base '{kb_name}': {e!s}") from e
-    
+
 
 @router.put("/{kb_name}", status_code=HTTPStatus.OK)
 async def rename_knowledge_base(kb_name: str, new_name: str, current_user: CurrentActiveUser) -> KnowledgeBaseInfo:
