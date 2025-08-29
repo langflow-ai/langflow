@@ -12,7 +12,7 @@ env:
 
 jobs:
   create-nightly-tag:
-    if: github.repository == 'langflow-ai/langflow'
+    if: github.repository == 'langflow-ai/langflow' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     defaults:
       run:

@@ -3,10 +3,15 @@ name: Manage Review Labels
 on:
   pull_request_review:
     types: [submitted]
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - 'release-*'
 
 jobs:
   label-on-review:
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request_review'
     permissions:
       pull-requests: write
       issues: write
@@ -62,4 +67,41 @@ jobs:
               } else {
                 console.log(`No ${LGTM_LABEL} label to remove`);
               }
+            }
+
+  label-rc-prs:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && startsWith(github.base_ref, 'release-')
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Auto-label RC PRs with type:release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const RELEASE_LABEL = 'type:release';
+            const pullRequestNumber = context.payload.pull_request.number;
+            const repoDetails = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pullRequestNumber
+            };
+
+            console.log(`Auto-labeling RC PR #${pullRequestNumber} with ${RELEASE_LABEL}`);
+            console.log(`Target branch: ${context.payload.pull_request.base.ref}`);
+
+            // Check if the label already exists
+            const { data: labels } = await github.rest.issues.listLabelsOnIssue(repoDetails);
+            const hasReleaseLabel = labels.some(label => label.name === RELEASE_LABEL);
+
+            if (!hasReleaseLabel) {
+              console.log(`Adding ${RELEASE_LABEL} label to RC PR #${pullRequestNumber}`);
+              await github.rest.issues.addLabels({
+                ...repoDetails,
+                labels: [RELEASE_LABEL]
+              });
+              console.log('Release label added successfully');
+            } else {
+              console.log(`${RELEASE_LABEL} label already exists`);
             }
