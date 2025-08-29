@@ -8,7 +8,9 @@ import { preprocessChatMessage } from "@/utils/markdownUtils";
 import { cn } from "@/utils/utils";
 import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent";
 
-const MermaidDiagram = lazy(() => import("../../../../../../components/common/mermaidDiagram"));
+const MermaidDiagram = lazy(
+  () => import("../../../../../../components/common/mermaidDiagram"),
+);
 
 type MarkdownFieldProps = {
   chat: any;
@@ -86,8 +88,14 @@ export const MarkdownField = ({
               // Check if it's a Mermaid diagram
               if (!inline && match && match[1] === "mermaid") {
                 return (
-                  <Suspense fallback={<div className="my-4 p-4 text-center">Loading diagram...</div>}>
-                    <MermaidDiagram 
+                  <Suspense
+                    fallback={
+                      <div className="my-4 p-4 text-center">
+                        Loading diagram...
+                      </div>
+                    }
+                  >
+                    <MermaidDiagram
                       definition={String(content).replace(/\n$/, "")}
                       className="my-4"
                     />

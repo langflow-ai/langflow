@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import mermaid from "mermaid";
 import DOMPurify from "dompurify";
+import mermaid from "mermaid";
+import { useEffect, useRef, useState } from "react";
 
 interface MermaidDiagramProps {
   definition: string;
@@ -10,7 +10,10 @@ interface MermaidDiagramProps {
 // Initialize mermaid only once at module level
 let mermaidInitialized = false;
 
-export const MermaidDiagram = ({ definition, className }: MermaidDiagramProps) => {
+export const MermaidDiagram = ({
+  definition,
+  className,
+}: MermaidDiagramProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(true);
@@ -48,7 +51,7 @@ export const MermaidDiagram = ({ definition, className }: MermaidDiagramProps) =
 
     const renderDiagram = async () => {
       const currentRenderId = ++renderIdRef.current;
-      
+
       try {
         if (import.meta.env.DEV) {
           console.debug("MermaidDiagram: Starting render");
@@ -58,22 +61,30 @@ export const MermaidDiagram = ({ definition, className }: MermaidDiagramProps) =
 
         // Generate unique ID for this diagram
         const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        
+
         // Render the diagram
         const { svg, bindFunctions } = await mermaid.render(id, definition);
-        
+
         // Only update if this is still the current render
         if (currentRenderId === renderIdRef.current) {
           // Sanitize SVG for security while preserving text content
-          const sanitizedSvg = DOMPurify.sanitize(svg, { 
+          const sanitizedSvg = DOMPurify.sanitize(svg, {
             USE_PROFILES: { svg: true, svgFilters: true },
-            ADD_TAGS: ['foreignObject'],
-            ADD_ATTR: ['style', 'class', 'id', 'width', 'height', 'viewBox', 'transform']
+            ADD_TAGS: ["foreignObject"],
+            ADD_ATTR: [
+              "style",
+              "class",
+              "id",
+              "width",
+              "height",
+              "viewBox",
+              "transform",
+            ],
           });
-          
+
           setSvgContent(sanitizedSvg);
           setIsRendering(false);
-          
+
           // Bind interactive functions after sanitization if needed
           if (bindFunctions && containerRef.current) {
             setTimeout(() => {
@@ -82,14 +93,15 @@ export const MermaidDiagram = ({ definition, className }: MermaidDiagramProps) =
               }
             }, 0);
           }
-          
+
           if (import.meta.env.DEV) {
             console.debug("MermaidDiagram: Render complete");
           }
         }
       } catch (err) {
         if (currentRenderId === renderIdRef.current) {
-          const errorMessage = err instanceof Error ? err.message : "Failed to render diagram";
+          const errorMessage =
+            err instanceof Error ? err.message : "Failed to render diagram";
           if (import.meta.env.DEV) {
             console.error("MermaidDiagram: Rendering error:", err);
           }
@@ -108,7 +120,9 @@ export const MermaidDiagram = ({ definition, className }: MermaidDiagramProps) =
       <div className="flex items-center justify-center p-8 bg-gray-50 dark:bg-gray-900 rounded-md">
         <div className="flex items-center gap-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
-          <span className="text-sm text-gray-600 dark:text-gray-400">Rendering diagram...</span>
+          <span className="text-sm text-gray-600 dark:text-gray-400">
+            Rendering diagram...
+          </span>
         </div>
       </div>
     );
@@ -119,8 +133,12 @@ export const MermaidDiagram = ({ definition, className }: MermaidDiagramProps) =
       <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
         <div className="flex items-start gap-2">
           <div className="flex-1">
-            <p className="text-sm font-medium text-red-800 dark:text-red-200">Failed to render diagram</p>
-            <p className="text-xs text-red-600 dark:text-red-400 mt-1">{error}</p>
+            <p className="text-sm font-medium text-red-800 dark:text-red-200">
+              Failed to render diagram
+            </p>
+            <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+              {error}
+            </p>
             <details className="mt-2">
               <summary className="text-xs cursor-pointer text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
                 View source
@@ -144,10 +162,10 @@ export const MermaidDiagram = ({ definition, className }: MermaidDiagramProps) =
   }
 
   return (
-    <div className={`mermaid-diagram-container ${className || ''}`}>
-      <div 
+    <div className={`mermaid-diagram-container ${className || ""}`}>
+      <div
         className="w-full overflow-auto bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-md p-4"
-        style={{ maxHeight: 'min(600px, 50vh)' }}
+        style={{ maxHeight: "min(600px, 50vh)" }}
         ref={containerRef}
         dangerouslySetInnerHTML={{ __html: svgContent }}
       />
@@ -168,8 +186,18 @@ export const MermaidDiagram = ({ definition, className }: MermaidDiagramProps) =
           aria-label="Download diagram as SVG"
           className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
         >
-          <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          <svg
+            className="h-3 w-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+            />
           </svg>
           Download SVG
         </button>
