@@ -2,7 +2,6 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import MessageInput, Output
 from lfx.log.logger import logger
 from lfx.schema.data import Data
-from lfx.schema.message import Message
 
 
 class MessageToDataComponent(Component):
@@ -26,8 +25,9 @@ class MessageToDataComponent(Component):
     ]
 
     def convert_message_to_data(self) -> Data:
-        if isinstance(self.message, Message):
-            # Convert Message to Data
+        # Check for Message by checking if it has the expected attributes instead of isinstance
+        if hasattr(self.message, "data") and hasattr(self.message, "text") and hasattr(self.message, "get_text"):
+            # Convert Message to Data - this works for both langflow.Message and lfx.Message
             return Data(data=self.message.data)
 
         msg = "Error converting Message to Data: Input must be a Message object"
