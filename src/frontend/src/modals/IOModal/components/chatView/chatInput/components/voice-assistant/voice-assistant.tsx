@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useStickToBottomContext } from "use-stick-to-bottom";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH, SAVE_API_KEY_ALERT } from "@/constants/constants";
@@ -288,20 +289,16 @@ export function VoiceAssistant({
     };
   }, [setShowAudioInput]);
 
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      const chatContainer = document.querySelector(".chat-message-div");
-      if (chatContainer) {
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-      }
-    }, 300);
-  };
+  const { scrollToBottom } = useStickToBottomContext();
 
   const handleCloseAudioInput = () => {
     setIsRecording(false);
     stopRecording();
     setShowAudioInput(false);
-    scrollToBottom();
+    scrollToBottom({
+      animation: "smooth",
+      duration: 1000,
+    });
   };
 
   const handleSetShowSettingsModal = async (

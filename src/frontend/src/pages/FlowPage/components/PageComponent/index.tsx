@@ -70,7 +70,7 @@ import HelperLines from "./components/helper-lines";
 import {
   getHelperLines,
   getSnapPosition,
-  HelperLinesState,
+  type HelperLinesState,
 } from "./helpers/helper-lines";
 import {
   MemoizedBackground,
@@ -648,10 +648,8 @@ export default function Page({
     };
   }, [isAddingNote, shadowBoxWidth, shadowBoxHeight]);
 
-  const _componentsToUpdate = useFlowStore((state) => state.componentsToUpdate);
-
-  const MIN_ZOOM = 0.2;
-  const MAX_ZOOM = 8;
+  const MIN_ZOOM = 0.25;
+  const MAX_ZOOM = 2;
   const fitViewOptions = {
     minZoom: MIN_ZOOM,
     maxZoom: MAX_ZOOM,
