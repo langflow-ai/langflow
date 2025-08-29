@@ -21,31 +21,33 @@ This guide demonstrates how to integrate the Instana observability platform with
 1. In the root folder of your Langflow application, edit your existing Langflow `.env` file or create a new one.
 Copy the script below into that file, then update the placeholder values with the details from your deployment.
 
-```text
-TRACELOOP_API_KEY=<your_traceloop_api_key>
-TRACELOOP_BASE_URL=<instana_endpoint>
-TRACELOOP_HEADERS="x-instana-key=<your_instana_key>"
-OTEL_EXPORTER_OTLP_INSECURE=false
-TRACELOOP_METRICS_ENDPOINT=host.docker.internal:8000
-TRACELOOP_METRICS_ENABLED=true
-OTEL_METRIC_EXPORT_INTERVAL=10000
-```
+   This integration uses the Traceloop SDK for instrumentation, which requires a Traceloop API key to initialize properly. If you don't have a Traceloop API key, then proceed with the dummy API key provided below.
 
-Configure each environment variable according to your setup:
+   ```text
+   TRACELOOP_API_KEY=tl_dummy_1234567890abcdef1234567890abcdef
+   TRACELOOP_BASE_URL=<instana_endpoint>
+   TRACELOOP_HEADERS="x-instana-key=<your_instana_key>"
+   OTEL_EXPORTER_OTLP_INSECURE=false
+   TRACELOOP_METRICS_ENDPOINT=<otel-dc-llm-host>:8000
+   TRACELOOP_METRICS_ENABLED=true
+   OTEL_METRIC_EXPORT_INTERVAL=10000
+   ```
 
-   - **TRACELOOP_API_KEY** - Your Traceloop API key that authenticates your application with Traceloop's monitoring service. Obtain this from your Traceloop account dashboard.
+   Configure each environment variable according to your setup:
 
-   - **TRACELOOP_BASE_URL** - The Instana endpoint URL for telemetry data collection. This should be your Instana backend endpoint, for example: `https://otlp-magenta-saas.instana.rocks:4318`. Find this in your Instana configuration or contact your Instana administrator.
+      - **TRACELOOP_API_KEY** - Your Traceloop API key that authenticates your application with Traceloop's monitoring service. Obtain this from your Traceloop account dashboard.
 
-   - **TRACELOOP_HEADERS** - Authentication headers for Instana data collection. Set this to `"x-instana-key=<your_instana_key>"` where the Instana key is provided by your Instana setup.
+      - **TRACELOOP_BASE_URL** - The Instana endpoint URL for telemetry data collection. This should be your Instana backend endpoint, for example: `https://otlp-magenta-saas.instana.rocks:4318`. Find this in your Instana configuration or contact your Instana administrator.
 
-   - **OTEL_EXPORTER_OTLP_INSECURE** - Security setting for OpenTelemetry Protocol connections. Set to `false` for secure HTTPS/TLS connections (recommended for production Instana SaaS endpoints) or `true` for insecure HTTP connections during local development.
+      - **TRACELOOP_HEADERS** - Authentication headers for Instana data collection. Set this to `"x-instana-key=<your_instana_key>"` where the Instana key is provided by your Instana setup.
 
-   - **TRACELOOP_METRICS_ENDPOINT** - Separate metrics endpoint configuration, typically set to `host.docker.internal:8000` for Docker environments. Adjust the host and port based on your deployment setup.
+      - **OTEL_EXPORTER_OTLP_INSECURE** - Security setting for OpenTelemetry Protocol connections. Set to `false` for secure HTTPS/TLS connections (recommended for production Instana SaaS endpoints) or `true` for insecure HTTP connections during local development.
 
-   - **TRACELOOP_METRICS_ENABLED** - Boolean flag to enable metrics collection. Set to `true` to activate metrics gathering.
+      - **TRACELOOP_METRICS_ENDPOINT** - Separate metrics endpoint configuration, typically set to `host.docker.internal:8000` for Docker environments. Adjust the host and port based on your deployment setup.
 
-   - **OTEL_METRIC_EXPORT_INTERVAL** - Interval in milliseconds for metrics export. Set to `10000` for 10-second export intervals, or adjust based on your monitoring requirements.
+      - **TRACELOOP_METRICS_ENABLED** - Boolean flag to enable metrics collection. Set to `true` to activate metrics gathering.
+
+      - **OTEL_METRIC_EXPORT_INTERVAL** - Interval in milliseconds for metrics export. Set to `10000` for 10-second export intervals, or adjust based on your monitoring requirements.
 
 2. Make sure the OpenTelemetry Data Collector (OTel DC) is running and correctly set up.
 Open your Collector’s `config.yaml` file, copy in the configuration shown below, and replace the placeholder values with the ones that match your setup or requirements.
@@ -94,4 +96,5 @@ To verify that observability is working correctly:
 ## See also
 
 * [Traceloop documentation](https://www.traceloop.com/docs/introduction)
-* [Instana documentation](https://www.ibm.com/docs/en/instana-observability/current)
+* [Instana setup documentation](https://www.ibm.com/docs/en/instana-observability/1.0.300?topic=started-instana-setup)
+* [Otel DC setup documentation](https://www.ibm.com/docs/en/instana-observability/1.0.300?topic=started-install-otel-data-collector-llm-odcl)
