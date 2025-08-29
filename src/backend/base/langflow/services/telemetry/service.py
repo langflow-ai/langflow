@@ -9,8 +9,8 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import httpx
+from lfx.log.logger import logger
 
-from langflow.logging.logger import logger
 from langflow.services.base import Service
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
 from langflow.services.telemetry.schema import (
@@ -24,9 +24,8 @@ from langflow.services.telemetry.schema import (
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
+    from lfx.services.settings.service import SettingsService
     from pydantic import BaseModel
-
-    from langflow.services.settings.service import SettingsService
 
 
 class TelemetryService(Service):

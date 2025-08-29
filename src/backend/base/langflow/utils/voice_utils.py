@@ -3,9 +3,8 @@ import base64
 from pathlib import Path
 
 import numpy as np
+from lfx.log import logger
 from scipy.signal import resample
-
-from langflow.logging import logger
 
 SAMPLE_RATE_24K = 24000
 VAD_SAMPLE_RATE_16K = 16000

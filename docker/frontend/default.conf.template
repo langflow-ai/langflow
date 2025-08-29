@@ -36,7 +36,7 @@ http {
             add_header Cache-Control "no-cache, no-store, must-revalidate";
             etag on;
         }
-        
+
         location /api {
             proxy_pass ${BACKEND_URL};
         }

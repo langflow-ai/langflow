@@ -11,9 +11,10 @@ from langflow.initial_setup.setup import (
     update_project_file,
     update_projects_components_with_latest_component_versions,
 )
-from langflow.interface.components import get_and_cache_all_types_dict
-from langflow.services.deps import get_settings_service
 from langflow.services.utils import initialize_services
+
+from lfx.interface.components import get_and_cache_all_types_dict
+from lfx.services.deps import get_settings_service
 
 
 async def main():

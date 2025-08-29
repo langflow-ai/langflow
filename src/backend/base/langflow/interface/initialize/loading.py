@@ -6,19 +6,20 @@ import warnings
 from typing import TYPE_CHECKING, Any
 
 import orjson
+from lfx.custom.eval import eval_custom_component_code
+from lfx.log.logger import logger
 from pydantic import PydanticDeprecatedSince20
 
-from langflow.custom.eval import eval_custom_component_code
-from langflow.logging.logger import logger
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.services.deps import get_tracing_service, session_scope
 
 if TYPE_CHECKING:
-    from langflow.custom.custom_component.component import Component
-    from langflow.custom.custom_component.custom_component import CustomComponent
+    from lfx.custom.custom_component.component import Component
+    from lfx.custom.custom_component.custom_component import CustomComponent
+    from lfx.graph.vertex.base import Vertex
+
     from langflow.events.event_manager import EventManager
-    from langflow.graph.vertex.base import Vertex
 
 
 def instantiate_class(
@@ -108,7 +109,7 @@ def convert_kwargs(params):
 
 
 async def update_params_with_load_from_db_fields(
-    custom_component: CustomComponent,
+    custom_component: Component,
     params,
     load_from_db_fields,
     *,

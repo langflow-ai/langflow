@@ -3,7 +3,7 @@
 from typing import Any
 
 from cryptography.fernet import InvalidToken
-from loguru import logger
+from lfx.log.logger import logger
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.deps import get_settings_service

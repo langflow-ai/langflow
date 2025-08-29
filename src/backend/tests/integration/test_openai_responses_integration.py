@@ -6,7 +6,8 @@ import pathlib
 import pytest
 from dotenv import find_dotenv, load_dotenv
 from httpx import AsyncClient
-from loguru import logger
+
+from lfx.log.logger import logger
 
 load_dotenv(find_dotenv())
 

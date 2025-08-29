@@ -13,6 +13,7 @@ import anyio
 import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
+from lfx.log.logger import logger
 from sqlalchemy import event, exc, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
@@ -23,7 +24,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
-from langflow.logging.logger import logger
 from langflow.services.base import Service
 from langflow.services.database import models
 from langflow.services.database.models.user.crud import get_user_by_username
@@ -33,7 +33,7 @@ from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
+    from lfx.services.settings.service import SettingsService
 
 
 class DatabaseService(Service):

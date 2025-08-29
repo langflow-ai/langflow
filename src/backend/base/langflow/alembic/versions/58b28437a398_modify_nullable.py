@@ -10,8 +10,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
-
-from langflow.logging.logger import logger
+from lfx.log.logger import logger
 
 down_revision: str | None = "4e5980a44eaa"
 branch_labels: str | Sequence[str] | None = None

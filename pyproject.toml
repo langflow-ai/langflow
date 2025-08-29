@@ -185,9 +185,14 @@ dev = [
 [tool.uv.sources]
 langflow-base = { workspace = true }
 langflow = { workspace = true }
+lfx = { workspace = true }
 
 [tool.uv.workspace]
-members = ["src/backend/base", "."]
+members = [
+    "src/backend/base",
+    ".",
+    "src/lfx",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/backend/langflow"]
@@ -256,13 +261,21 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 timeout = 150
 timeout_method = "signal"
 minversion = "6.0"
-testpaths = ["src/backend/tests"]
+testpaths = ["src/backend/tests", "src/lfx/tests"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
-markers = ["async_test", "api_key_required", "no_blockbuster", "benchmark"]
+markers = [
+    "async_test",
+    "api_key_required",
+    "no_blockbuster",
+    "benchmark",
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow-running tests"
+]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = "-p no:benchmark"
@@ -312,7 +325,7 @@ ignore = [
     "D10", # Missing docstrings
     "PLW1641", # Object does not implement `__hash__` method (mutable objects shouldn't be hashable)
     # Rules that are TODOs
-    "ANN",
+    "ANN"
 ]
 
 # Preview rules that are not yet activated
