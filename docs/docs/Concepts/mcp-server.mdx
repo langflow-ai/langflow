@@ -158,11 +158,15 @@ For more information, see [Cursor's MCP documentation](https://docs.cursor.com/c
 
 ### MCP server authentication and environment variables {#authentication}
 
+Each Langflow [Project](/concepts-flows#projects) has its own isolated MCP server with authentication configured per project.
+
+You can selectively expose flows as tools, choosing which specific flows to make available.
+
 Langflow MCP servers support these authentication types:
 
-- **None**: No authentication required (public endpoint) - Use this for development or when your Langflow server is running in a trusted environment without authentication enabled.
 - **API Key**: Use this when you want to authenticate using a Langflow API key.
 - **OAuth**: Use this to integrate with enterprise identity providers and OAuth 2.0 services for enhanced security.
+- **None**: No authentication required (public endpoint) - Use this for development or when your Langflow server is running in a trusted environment without authentication enabled.
 
 <Tabs>
 <TabItem value="API key" label="API key">
@@ -176,6 +180,8 @@ Alternatively, you can replace `YOUR_API_KEY` with an existing Langflow API key.
 <TabItem value="OAuth" label="OAuth">
 
 OAuth authentication allows integration with enterprise identity providers and OAuth 2.0 services.
+When OAuth is enabled, Langflow automatically starts an [MCP Composer](https://pypi.org/project/mcp-composer) instance for your project, creating a secure proxy between MCP clients and your flows.
+
 To configure OAuth authentication:
 
 1. In the **MCP Server** tab, click <Icon name="Settings2" aria-hidden="true"/> **Add Auth**.
