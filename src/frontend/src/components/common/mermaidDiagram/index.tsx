@@ -1,62 +1,104 @@
 import { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
+import DOMPurify from "dompurify";
 
 interface MermaidDiagramProps {
   definition: string;
   className?: string;
 }
 
+// Initialize mermaid only once at module level
+let mermaidInitialized = false;
+
 export const MermaidDiagram = ({ definition, className }: MermaidDiagramProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(true);
   const [svgContent, setSvgContent] = useState<string | null>(null);
+  const renderIdRef = useRef(0);
+
+  // Initialize mermaid only once
+  useEffect(() => {
+    if (!mermaidInitialized) {
+      const isDark = document.documentElement.classList.contains("dark");
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: isDark ? "dark" : "default",
+        securityLevel: "strict", // Changed from "loose" to "strict" for security
+        flowchart: {
+          useMaxWidth: true,
+          htmlLabels: false,
+        },
+      });
+      mermaidInitialized = true;
+      if (import.meta.env.DEV) {
+        console.debug("MermaidDiagram: Mermaid initialized");
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!definition) {
-      console.log("MermaidDiagram: No definition provided");
+      if (import.meta.env.DEV) {
+        console.debug("MermaidDiagram: No definition provided");
+      }
       setIsRendering(false);
       return;
     }
 
     const renderDiagram = async () => {
+      const currentRenderId = ++renderIdRef.current;
+      
       try {
-        console.log("MermaidDiagram: Starting render with definition:", definition);
+        if (import.meta.env.DEV) {
+          console.debug("MermaidDiagram: Starting render");
+        }
         setIsRendering(true);
         setError(null);
 
-        // Initialize mermaid with simple config
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: "default",
-          securityLevel: "loose"
-        });
-
         // Generate unique ID for this diagram
-        const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
-        
-        // We don't need to clear content since we're using state for SVG
+        const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         
         // Render the diagram
-        console.log("MermaidDiagram: Calling mermaid.render with id:", id);
-        const { svg } = await mermaid.render(id, definition);
-        console.log("MermaidDiagram: Render successful, SVG length:", svg?.length);
+        const { svg, bindFunctions } = await mermaid.render(id, definition);
         
-        setSvgContent(svg);
-        setIsRendering(false);
+        // Only update if this is still the current render
+        if (currentRenderId === renderIdRef.current) {
+          // Sanitize SVG for security
+          const sanitizedSvg = DOMPurify.sanitize(svg, { 
+            USE_PROFILES: { svg: true, svgFilters: true } 
+          });
+          
+          setSvgContent(sanitizedSvg);
+          setIsRendering(false);
+          
+          // Bind interactive functions after sanitization if needed
+          if (bindFunctions && containerRef.current) {
+            setTimeout(() => {
+              if (containerRef.current) {
+                bindFunctions(containerRef.current);
+              }
+            }, 0);
+          }
+          
+          if (import.meta.env.DEV) {
+            console.debug("MermaidDiagram: Render complete");
+          }
+        }
       } catch (err) {
-        console.error("MermaidDiagram: Rendering error:", err);
-        setError(err instanceof Error ? err.message : "Failed to render diagram");
-        setIsRendering(false);
+        if (currentRenderId === renderIdRef.current) {
+          const errorMessage = err instanceof Error ? err.message : "Failed to render diagram";
+          if (import.meta.env.DEV) {
+            console.error("MermaidDiagram: Rendering error:", err);
+          }
+          setError(errorMessage);
+          setIsRendering(false);
+        }
       }
     };
 
-    // Add a small delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-      renderDiagram();
-    }, 100);
-
-    return () => clearTimeout(timer);
+    // Call renderDiagram immediately (removed the 100ms delay)
+    renderDiagram();
   }, [definition]);
 
   if (isRendering) {
@@ -99,7 +141,6 @@ export const MermaidDiagram = ({ definition, className }: MermaidDiagramProps) =
     );
   }
 
-
   return (
     <div className={`mermaid-diagram-container ${className || ''}`}>
       <div 
@@ -117,11 +158,12 @@ export const MermaidDiagram = ({ definition, className }: MermaidDiagramProps) =
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = "diagram.svg";
+            a.download = `diagram-${Date.now()}.svg`;
             a.click();
             URL.revokeObjectURL(url);
           }}
           type="button"
+          aria-label="Download diagram as SVG"
           className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
         >
           <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

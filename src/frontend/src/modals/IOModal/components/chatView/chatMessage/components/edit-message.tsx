@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import rehypeRaw from "rehype-raw";
@@ -6,7 +7,8 @@ import { EMPTY_OUTPUT_SEND_MESSAGE } from "@/constants/constants";
 import { preprocessChatMessage } from "@/utils/markdownUtils";
 import { cn } from "@/utils/utils";
 import CodeTabsComponent from "../../../../../../components/core/codeTabsComponent";
-import MermaidDiagram from "../../../../../../components/common/mermaidDiagram";
+
+const MermaidDiagram = lazy(() => import("../../../../../../components/common/mermaidDiagram"));
 
 type MarkdownFieldProps = {
   chat: any;
@@ -79,15 +81,17 @@ export const MarkdownField = ({
                 }
               }
 
-              const match = /language-(\w+)/.exec(className || "");
+              const match = /(?:^|\s)language-([^\s]+)/.exec(className || "");
 
               // Check if it's a Mermaid diagram
               if (!inline && match && match[1] === "mermaid") {
                 return (
-                  <MermaidDiagram 
-                    definition={String(content).replace(/\n$/, "")}
-                    className="my-4"
-                  />
+                  <Suspense fallback={<div className="my-4 p-4 text-center">Loading diagram...</div>}>
+                    <MermaidDiagram 
+                      definition={String(content).replace(/\n$/, "")}
+                      className="my-4"
+                    />
+                  </Suspense>
                 );
               }
 
