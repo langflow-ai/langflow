@@ -157,32 +157,18 @@ test(
       .click();
 
     await page
-      .getByTestId("handle-chatoutput-noshownode-inputs-target")
+      .getByTestId("handle-chatoutput-shownode-inputs-left")
       .first()
       .click();
 
     await page.getByTestId("canvas_controls_dropdown").click();
 
-    await zoomOut(page, 3);
+    await zoomOut(page, 2);
     await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("div-generic-node").nth(5).click();
 
     await page.waitForTimeout(1000);
-
-    await page.waitForSelector('[data-testid="more-options-modal"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("more-options-modal").click();
-
-    await page.waitForTimeout(1000);
-
-    await page.waitForSelector('[data-testid="expand-button-modal"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("expand-button-modal").click();
 
     await page.getByTestId("input-list-plus-btn_urls-0").click();
 
