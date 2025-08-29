@@ -314,6 +314,10 @@ const config = {
             to: "/data-types",
             from: "/concepts-objects",
           },
+          {
+            to: "/components-helpers",
+            from: "/components-memories",
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',

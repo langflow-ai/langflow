@@ -280,7 +280,6 @@ module.exports = {
             "Components/components-logic",
             "Components/components-helpers",
             "Components/components-tools",
-            "Components/components-memories",
           ],
         },
         {
