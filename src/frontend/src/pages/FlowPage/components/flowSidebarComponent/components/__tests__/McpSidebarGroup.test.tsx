@@ -33,7 +33,7 @@ jest.mock("@/components/ui/sidebar", () => ({
 jest.mock("@/components/ui/button", () => ({
   Button: ({ children, onClick, disabled, variant, size, ...props }: any) => (
     <button
-      data-testid="add-mcp-server-button"
+      data-testid="add-mcp-server-button-sidebar"
       onClick={onClick}
       disabled={disabled}
       data-variant={variant}
@@ -262,7 +262,9 @@ describe("McpSidebarGroup", () => {
       render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       expect(screen.getByText("No MCP Servers Added")).toBeInTheDocument();
-      expect(screen.getByTestId("add-mcp-server-button")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("add-mcp-server-button-sidebar"),
+      ).toBeInTheDocument();
     });
 
     it("should open AddMcpServerModal when Add MCP Server button is clicked", async () => {
@@ -276,7 +278,7 @@ describe("McpSidebarGroup", () => {
       const TestWrapper = createTestWrapper();
       render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
-      const addButton = screen.getByTestId("add-mcp-server-button");
+      const addButton = screen.getByTestId("add-mcp-server-button-sidebar");
       await user.click(addButton);
 
       expect(screen.getByTestId("add-mcp-server-modal")).toHaveAttribute(
@@ -296,7 +298,9 @@ describe("McpSidebarGroup", () => {
       const TestWrapper = createTestWrapper();
       render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
-      expect(screen.getByTestId("add-mcp-server-button")).toBeDisabled();
+      expect(
+        screen.getByTestId("add-mcp-server-button-sidebar"),
+      ).toBeDisabled();
     });
 
     it("should apply full height class when no MCP servers", () => {
