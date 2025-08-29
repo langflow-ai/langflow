@@ -1009,10 +1009,11 @@ The following example uses the **Type Convert** component to convert the `DataFr
 
 ## Legacy Processing components
 
-The following components are legacy components.
-You can still use them in your flows, but they are no longer supported and can be removed in a future release.
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
 
-Replace these components with suggested alternatives as soon as possible.
+<PartialLegacy />
+
+The following Processing components are in legacy status:
 
 <details>
 <summary>Alter Metadata</summary>
@@ -1086,7 +1087,7 @@ This component extracts a specific key from a `Data` object and returns the valu
 <details>
 <summary>Data to DataFrame/Data to Message</summary>
 
-Replace these legacy components with newer processing components, such as the [**Data Operations** component](#data-operations) and [**Type Convert** component](#type-convert).
+Replace these legacy components with newer Processing components, such as the [**Data Operations** component](#data-operations) and [**Type Convert** component](#type-convert).
 
 These components converted one or more `Data` objects into a `DataFrame` or `Message` object.
 
@@ -1216,6 +1217,13 @@ It accepts the following parameters:
 | tool_function | String | Input parameter. The selected function for the tool. |
 | global_variables | Dict | Input parameter. Global variables or data for the tool. |
 | result_tool | Tool | Output parameter. A structured tool created from the Python code. |
+
+</details>
+
+<details>
+<summary>Python Function</summary>
+
+Replace this legacy component with the [**Python Interpreter** component](#python-interpreter) or another processing or logic component.
 
 </details>
 

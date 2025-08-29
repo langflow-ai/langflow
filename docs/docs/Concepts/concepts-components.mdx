@@ -23,10 +23,10 @@ Components are grouped by type or provider, and some components are hidden by de
 * <Icon name="Component" aria-hidden="true" /> **Core components**: Langflow's base components are grouped by purpose, such as **Inputs and Outputs** or **Data**.
 These components either provide generic functionality, like loops and parsing, or they provide single components that support multiple third-party integrations.
 
-* <Icon name="Blocks" aria-hidden="true" /> **Bundles**: These components support specific third-party integrations, and they are grouped by provider.
+* <Icon name="Blocks" aria-hidden="true" /> **Bundles**: Bundles contain one or more components that support specific third-party integrations, and they are grouped by service provider.
 
-* **Legacy**: You can still use these components, but they are no longer supported. Legacy components are hidden by default; click <Icon name="SlidersHorizontal" aria-hidden="true" /> **Component settings** to expose legacy components.
-**Beta** components are newly released and still in development.
+* **Legacy**: These components are hidden by default.
+For more information, see [Legacy components](#legacy-components).
 
 ### Configure a component
 
@@ -257,3 +257,9 @@ Grouped components are configured and managed as a single component, including t
 To ungroup the components, click the component in the workspace to expose the component's header menu, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**, and then select **Ungroup**.
 
 If you want to reuse this grouping in other flows, click the component in the workspace to expose the component's header menu, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**, and then select **Save** to save the component to the <Icon name="Component" aria-hidden="true" /> **Core components** menu as a custom component.
+
+## Legacy components
+
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
+
+<PartialLegacy />

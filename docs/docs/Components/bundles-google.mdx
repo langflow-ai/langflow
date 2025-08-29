@@ -75,10 +75,11 @@ For information about Vertex AI components, see the [**Vertex AI** bundle](/bund
 
 ## Legacy Google components
 
-The following Google components are considered legacy components.
-You can still use them in your flows, but they are no longer supported and can be removed in future releases.
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
 
-As an alternative to these components, you can use [Composio components](/integrations-composio) to connect your flows to Google services.
+<PartialLegacy />
+
+The following Google components are in legacy status:
 
 <details>
 <summary>Google OAuth Token</summary>
@@ -92,46 +93,27 @@ To connect your flows to Google OAuth services, use [Composio components](/integ
 <details>
 <summary>Gmail Loader</summary>
 
-This component loads emails from Gmail using provided credentials and filters.
+This component loads emails from Gmail using [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account) credentials and label ID filters.
 
-| Input       | Type             | Description                                                                          |
-| ----------- | ---------------- | ------------------------------------------------------------------------------------ |
-| json_string | SecretStrInput   | Input parameter. A JSON string containing OAuth 2.0 access token information for service account access. For information about creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account). |
-| label_ids   | MessageTextInput | Input parameter. A comma-separated list of label IDs to filter emails.                                |
-| max_results | MessageTextInput | Input parameter. The maximum number of emails to load.                                                |
-| data   | Data | Output parameter.The loaded email data. |
+As an alternative, you can use [Composio components](/integrations-composio) to connect your flows to Google services.
 
 </details>
 
 <details>
 <summary>Google Drive Loader</summary>
 
-This component accepts the following parameters:
+This component loads documents from Google Drive using [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account) credentials and document ID filters.
 
-| Input       | Type             | Description                                                                          |
-| ----------- | ---------------- | ------------------------------------------------------------------------------------ |
-| json_string | SecretStrInput   | Input parameter. A JSON string containing OAuth 2.0 access token information for service account access. For information about creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account). |
-| document_id | MessageTextInput | Input parameter. A single Google Drive document ID.                                                   |
-| docs   | Data | Output parameter. The loaded document data. |
+While there is no direct replacement, consider using the [**API Request** component](/components-data#api-request) to call the Google Drive API.
 
 </details>
 
 <details>
 <summary>Google Drive Search</summary>
 
-This component searches Google Drive files using provided credentials and query parameters.
+This component searches Google Drive using [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account) credentials and various query strings and filters.
 
-| Input          | Type             | Description                                                                          |
-| -------------- | ---------------- | ------------------------------------------------------------------------------------ |
-| token_string   | SecretStrInput   | Input parameter. A JSON string containing OAuth 2.0 access token information for service account access. For information about creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).  |
-| query_item     | DropdownInput    | Input parameter. The field to query.                                                                  |
-| valid_operator | DropdownInput    | Input parameter. The operator to use in the query.                                                    |
-| search_term    | MessageTextInput | Input parameter. The value to search for in the specified query item.                                 |
-| query_string   | MessageTextInput | Input parameter. The query string used for searching.                      |
-| doc_urls   | List[str] | Output parameter. The URLs of the found documents.                |
-| doc_ids    | List[str] | Output parameter. The IDs of the found documents.                 |
-| doc_titles | List[str] | Output parameter. The titles of the found documents.              |
-| Data       | Data      | Output parameter. The document titles and URLs in a structured format. |
+While there is no direct replacement, consider using the [**API Request** component](/components-data#api-request) to call the Google Drive API.
 
 </details>
 

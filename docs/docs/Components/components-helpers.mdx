@@ -194,79 +194,22 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 ## Legacy Helper components
 
-The following components are legacy components.
-You can use these components in your flows, but they are no longer maintained and may be removed in a future release.
-It is recommended that you replace legacy components with the recommended alternatives as soon as possible.
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
+
+<PartialLegacy />
+
+The following Helper components are in legacy status:
 
 * **Chat History**: Replaced by the [**Message History** component](#message-history)
 * **Message Store**: Replaced by the [**Message History** component](#message-history)
-
-<details>
-<summary>Create List</summary>
-
-This component dynamically creates a record with a specified number of fields.
-
-It accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| n_fields | Integer | Input parameter. The number of fields to be added to the record. |
-| text_key | String | Input parameter. The key used as text. |
-| list | List | Output parameter. The dynamically created list with the specified number of fields. |
-
-</details>
-
-<details>
-<summary>ID Generator</summary>
-
-This component generates a unique ID.
-
-It accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| unique_id | String | Input parameter. The generated unique ID. |
-| id | String | Output parameter. The generated unique ID. |
-
-</details>
-
-<details>
-<summary>Output Parser</summary>
-
-Replace the legacy **Output Parser** component with the [**Structured Output** component](/components-processing#structured-output) and [**Parser** component](/components-processing#parser).
+* **Create List**: Replace with [Processing components](/components-processing)
+* **ID Generator**: Replace with a component that executes arbitrary code to generate an ID or embed an ID generator script your application code (external to your Langflow flows).
+* **Output Parser**: Replace with the [**Structured Output** component](/components-processing#structured-output) and [**Parser** component](/components-processing#parser).
 The components you need depend on the data types and complexity of the parsing task.
 
-The **Output Parser** component transforms the output of a language model into comma-separated values (CSV) format, such as `["item1", "item2", "item3"]`, using LangChain's `CommaSeparatedListOutputParser`.
-The **Structured Output** component is a good alternative for this component because it also formats LLM responses with support for custom schemas and more complex parsing.
+    The **Output Parser** component transformed the output of a language model into comma-separated values (CSV) format, such as `["item1", "item2", "item3"]`, using LangChain's `CommaSeparatedListOutputParser`.
+    The **Structured Output** component is a good alternative for this component because it also formats LLM responses with support for custom schemas and more complex parsing.
 
-**Parsing** components only provide formatting instructions and parsing functionality.
-_They don't include prompts._
-You must connect parsers to **Prompt Template** components to create prompts that LLMs can use.
-
-1. Open a flow that has a **Chat Input**, **Language Model**, and **Chat Output** components.
-
-2. Add **Output Parser** and **Prompt Template** components to your flow.
-
-3. Define your LLM's prompt in the **Prompt Template** component's **Template**, including all instructions and pre-loaded context.
-Make sure to include a `{format_instructions}` variable where you will inject the formatting instructions from the **Output Parser** component.
-For example:
-
-    ```
-    You are a helpful assistant that provides lists of information.
-
-    {format_instructions}
-    ```
-
-    Variables in the template dynamically add fields to the **Prompt Template** component so that your flow can receive definitions for those values from other components, Langflow global variables, or fixed input.
-
-4. Connect the **Output Parser** component's output to the **Prompt Template** component's **format instructions** input.
-
-The **Output Parser** component accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| parser_type | String | Input parameter. Sets the parser type as "CSV". |
-| format_instructions | String | Output parameter. Pass to a prompt template to include formatting instructions for LLM responses. |
-| output_parser | Parser | Output parameter. The constructed output parser that can be used to parse LLM responses. |
-
-</details>
+    **Parsing** components only provide formatting instructions and parsing functionality.
+    _They don't include prompts._
+    You must connect parsers to **Prompt Template** components to create prompts that LLMs can use.

@@ -183,16 +183,17 @@ The following DataStax components are used to load and retrieve environment vari
 
 ## Legacy DataStax components
 
-The following components are considered legacy or deprecated.
-These components are no longer being developed and can be removed in future releases.
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
 
-Replace them with the suggested alternatives as soon as possible.
+<PartialLegacy />
+
+The following DataStax components are in legacy status:
 
 <details>
 <summary>Astra DB Vectorize</summary>
 
 This component was deprecated in Langflow version 1.1.2.
-Replace it with the [**Astra DB** component](/components-vector-stores#astra-db) as soon as possible.
+Replace it with the [**Astra DB** component](/components-vector-stores#astra-db).
 
 The **Astra DB Vectorize** component was used to generate embeddings with Astra DB's vectorize feature in conjunction with an **Astra DB** component.
 

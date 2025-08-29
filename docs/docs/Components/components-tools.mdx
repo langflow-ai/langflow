@@ -54,21 +54,5 @@ You have two options for replacing these components:
     * [**Wikipedia** bundle](/bundles-wikipedia)
     * **Yahoo! Search** bundle
 
-<details>
-<summary>SearXNG Search Tool</summary>
-
-The **SearXNG Search Tool** component is a legacy component.
-Replace this component with other search components, as described above.
-
-This component creates a tool for searching using SearXNG, a metasearch engine.
-It accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| url | String | Input parameter. The URL of the SearXNG instance. |
-| max_results | Integer | Input parameter. The maximum number of results to return. |
-| categories | List[String] | Input parameter. The categories to search in. |
-| language | String | Input parameter. The language for the search results. |
-| result_tool | Tool | Output parameter. A SearXNG search tool for use in LangChain. |
-
-</details>
+    There is no direct replacement for the **SearXNG Search Tool** component.
+    Use another provider's search component, create a custom component, or use a core component like the [**API Request** component](/components-data#api-request).
