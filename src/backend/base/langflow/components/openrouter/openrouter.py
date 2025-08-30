@@ -3,7 +3,9 @@ from typing import Any
 
 import httpx
 from langchain_openai import ChatOpenAI
+from openai import BadRequestError
 from pydantic.v1 import SecretStr
+from typing_extensions import override
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
@@ -47,8 +49,7 @@ class OpenRouterComponent(LCModelComponent):
             name="provider",
             display_name="Provider",
             info="The AI model provider",
-            options=["Loading providers..."],
-            value="Loading providers...",
+            options=[],
             real_time_refresh=True,
             required=True,
         ),
@@ -56,9 +57,7 @@ class OpenRouterComponent(LCModelComponent):
             name="model_name",
             display_name="Model",
             info="The model to use for chat completion",
-            options=["Select a provider first"],
-            value="Select a provider first",
-            real_time_refresh=True,
+            options=[],
             required=True,
         ),
         SliderInput(
@@ -111,9 +110,9 @@ class OpenRouterComponent(LCModelComponent):
     def build_model(self) -> LanguageModel:
         """Build and return the OpenRouter language model."""
         model_not_selected = "Please select a model"
-        api_key_required = "API key is required"
+        api_key_required = "Openrouter API key is required (https://openrouter.ai/settings/keys)"
 
-        if not self.model_name or self.model_name == "Select a provider first":
+        if not self.model_name:
             raise ValueError(model_not_selected)
 
         if not self.api_key:
@@ -159,8 +158,6 @@ class OpenRouterComponent(LCModelComponent):
             str | None: The message from the exception, or None if no specific message can be extracted.
         """
         try:
-            from openai import BadRequestError
-
             if isinstance(e, BadRequestError):
                 message = e.body.get("message")
                 if message:
@@ -169,28 +166,67 @@ class OpenRouterComponent(LCModelComponent):
             pass
         return None
 
+    @override
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Update build configuration based on field updates."""
         try:
-            if field_name is None or field_name == "provider":
+            # Always fetch models when any relevant field changes or on initial load
+            if field_name in {"api_key", "provider", "model_name"} or field_name is None:
                 provider_models = self.fetch_models()
-                build_config["provider"]["options"] = sorted(provider_models.keys())
-                if build_config["provider"]["value"] not in provider_models:
-                    build_config["provider"]["value"] = build_config["provider"]["options"][0]
 
-            if field_name == "provider" and field_value in self.fetch_models():
+                # Update provider options
+                providers = sorted(provider_models.keys())
+                build_config["provider"]["options"] = providers
+
+                # Set default provider if none selected or invalid
+                current_provider = build_config["provider"]["value"]
+                if (not current_provider or current_provider not in providers) and providers:
+                    build_config["provider"]["value"] = providers[0]
+                    current_provider = providers[0]
+
+                # Update model options based on selected provider
+                if current_provider and current_provider in provider_models:
+                    models = provider_models[current_provider]
+                    build_config["model_name"]["options"] = [model["id"] for model in models]
+
+                    # Set default model if none selected or invalid
+                    current_model = build_config["model_name"]["value"]
+                    model_ids = [model["id"] for model in models]
+                    if (not current_model or current_model not in model_ids) and models:
+                        build_config["model_name"]["value"] = models[0]["id"]
+
+                    # Add tooltips for models
+                    tooltips = {
+                        model["id"]: (
+                            f"{model['name']}\nContext Length: {model['context_length']}\n{model['description']}"
+                        )
+                        for model in models
+                    }
+                    build_config["model_name"]["tooltips"] = tooltips
+                else:
+                    # Clear model options if no valid provider
+                    build_config["model_name"]["options"] = []
+                    build_config["model_name"]["value"] = ""
+
+            # Handle provider change specifically
+            elif field_name == "provider" and field_value:
                 provider_models = self.fetch_models()
-                models = provider_models[field_value]
+                if field_value in provider_models:
+                    models = provider_models[field_value]
+                    build_config["model_name"]["options"] = [model["id"] for model in models]
 
-                build_config["model_name"]["options"] = [model["id"] for model in models]
-                if models:
-                    build_config["model_name"]["value"] = models[0]["id"]
+                    # Set first model as default
+                    if models:
+                        build_config["model_name"]["value"] = models[0]["id"]
 
-                tooltips = {
-                    model["id"]: (f"{model['name']}\nContext Length: {model['context_length']}\n{model['description']}")
-                    for model in models
-                }
-                build_config["model_name"]["tooltips"] = tooltips
+                    # Add tooltips
+                    tooltips = {
+                        model["id"]: (
+                            f"{model['name']}\nContext Length: {model['context_length']}\n{model['description']}"
+                        )
+                        for model in models
+                    }
+                    build_config["model_name"]["tooltips"] = tooltips
 
         except httpx.HTTPError as e:
             self.log(f"Error updating build config: {e!s}")
