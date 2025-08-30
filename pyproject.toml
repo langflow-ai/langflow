@@ -128,6 +128,7 @@ dependencies = [
     "structlog>=25.4.0",
     "aiosqlite==0.21.0",
     "fastparquet>=2024.11.0",
+    "vlmrun[all]>=0.2.0",
     "traceloop-sdk>=0.43.1",
 ]
 
@@ -207,6 +208,7 @@ docling = [
 audio = [
     "webrtcvad>=2.0.10",
 ]
+
 
 couchbase = [
     "couchbase>=4.2.1"
