@@ -5,6 +5,7 @@ from langchain_ollama import ChatOllama
 from langflow.components.ollama.ollama import ChatOllamaComponent
 
 from tests.base import ComponentTestBaseWithoutClient
+from tests.unit.shared_mocks import COMMON_COMPONENT_KWARGS
 
 
 class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
@@ -14,26 +15,29 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
 
     @pytest.fixture
     def default_kwargs(self):
-        return {
-            "base_url": "http://localhost:8000",
-            "model_name": "ollama-model",
-            "temperature": 0.1,
-            "format": "json",
-            "metadata": {},
-            "tags": "",
-            "mirostat": "Disabled",
-            "num_ctx": 2048,
-            "num_gpu": 1,
-            "num_thread": 4,
-            "repeat_last_n": 64,
-            "repeat_penalty": 1.1,
-            "tfs_z": 1.0,
-            "timeout": 30,
-            "top_k": 40,
-            "top_p": 0.9,
-            "verbose": False,
-            "tool_model_enabled": True,
-        }
+        # Use common kwargs and extend with Ollama-specific parameters
+        kwargs = COMMON_COMPONENT_KWARGS.copy()
+        kwargs.update(
+            {
+                "base_url": "http://localhost:8000",
+                "model_name": "ollama-model",
+                "format": "json",
+                "metadata": {},
+                "tags": "",
+                "mirostat": "Disabled",
+                "num_ctx": 2048,
+                "num_gpu": 1,
+                "num_thread": 4,
+                "repeat_last_n": 64,
+                "repeat_penalty": 1.1,
+                "tfs_z": 1.0,
+                "top_k": 40,
+                "top_p": 0.9,
+                "verbose": False,
+                "tool_model_enabled": True,
+            }
+        )
+        return kwargs
 
     @pytest.fixture
     def file_names_mapping(self):
