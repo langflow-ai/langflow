@@ -159,22 +159,22 @@ export const MermaidDiagram = ({
           if (el && svgContent && !isRendering) {
             // Clear existing content
             el.replaceChildren();
-            
+
             // Parse the sanitized SVG using DOMParser
             const parser = new DOMParser();
             const doc = parser.parseFromString(svgContent, "image/svg+xml");
             const svgElement = doc.documentElement;
-            
+
             // Check for parsing errors
             if (svgElement.nodeName === "parsererror") {
               console.error("Failed to parse SVG content");
               return;
             }
-            
+
             // Import and append the SVG node
             const importedSvg = el.ownerDocument.importNode(svgElement, true);
             el.appendChild(importedSvg);
-            
+
             // Apply styling to the SVG element
             if (importedSvg.nodeName.toLowerCase() === "svg") {
               const svg = importedSvg as SVGElement;
