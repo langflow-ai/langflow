@@ -1,5 +1,4 @@
 import importlib
-import inspect
 from typing import get_type_hints
 
 from cachetools import LRUCache, cached
@@ -72,18 +71,18 @@ def import_all_services_into_a_dict():
     from langflow.services.base import Service
 
     services = {}
+    issubclass_local = issubclass
     for service_type in ServiceType:
         try:
-            service_name = ServiceType(service_type).value.replace("_service", "")
+            service_name = service_type.value.replace("_service", "")
             module_name = f"langflow.services.{service_name}.service"
             module = importlib.import_module(module_name)
-            services.update(
-                {
-                    name: obj
-                    for name, obj in inspect.getmembers(module, inspect.isclass)
-                    if issubclass(obj, Service) and obj is not Service
-                }
-            )
+            module_dict = module.__dict__
+            # Fast, direct iteration over values
+            for obj in module_dict.values():
+                # Check class, inheritance, and non-base-class—avoid name lookups
+                if isinstance(obj, type) and issubclass_local(obj, Service) and obj is not Service:
+                    services[obj.__name__] = obj
         except Exception as exc:
             logger.exception(exc)
             msg = "Could not initialize services. Please check your settings."
