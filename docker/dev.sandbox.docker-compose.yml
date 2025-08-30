@@ -12,10 +12,15 @@ services:
     ports:
       - "7860:7860"
       - "3000:3000"
-    privileged: true
+    cap_add:
+      - SYS_ADMIN
+      - SYS_PTRACE
+      - SYS_CHROOT
+      - NET_ADMIN
     security_opt:
       - apparmor:unconfined
       - seccomp:unconfined
+      - systempaths:unconfined
     environment:
       - PYTHONDONTWRITEBYTECODE=1
       - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow

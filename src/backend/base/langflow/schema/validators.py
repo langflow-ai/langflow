@@ -25,6 +25,8 @@ def timestamp_to_str(timestamp: datetime | str) -> str:
             "%Y-%m-%d %H:%M:%S",  # Without timezone
             "%Y-%m-%dT%H:%M:%S.%f",  # ISO with microseconds
             "%Y-%m-%dT%H:%M:%S%z",  # ISO with numeric timezone
+            "%Y-%m-%d %H:%M:%S%z",  # Standard with numeric timezone offset
+            "%Y-%m-%dT%H:%M:%S.%f%z",  # ISO with microseconds and timezone
         ]
 
         for fmt in formats:
@@ -87,10 +89,13 @@ def timestamp_with_fractional_seconds(timestamp: datetime | str) -> str:
             "%Y-%m-%d %H:%M:%S.%f",  # Without timezone
             "%Y-%m-%dT%H:%M:%S.%f",  # ISO format
             "%Y-%m-%dT%H:%M:%S.%f%z",  # ISO with numeric timezone
+            "%Y-%m-%d %H:%M:%S.%f%z",  # Standard with numeric timezone offset
             # Also try without fractional seconds
             "%Y-%m-%d %H:%M:%S %Z",
             "%Y-%m-%d %H:%M:%S",
             "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%d %H:%M:%S%z",  # Standard with numeric timezone offset
+            "%Y-%m-%dT%H:%M:%S%z",  # ISO with numeric timezone
         ]
 
         for fmt in formats:

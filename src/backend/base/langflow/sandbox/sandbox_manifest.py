@@ -63,19 +63,31 @@ SANDBOX_MANIFEST: List[SandboxComponentManifest] = [
     ),
 
     SandboxComponentManifest(
+        name="DataOperations",
+        class_name="DataOperationsComponent",
+        notes="Tested and works as expected."
+    ),
+
+    SandboxComponentManifest(
+        name="ParserComponent",
+        class_name="ParserComponent",
+        notes="Tested and works as expected."
+    ),
+
+    SandboxComponentManifest(
         name="PythonREPLComponent",
         class_name="PythonREPLComponent",
         notes="Tested and works as expected."
     ),
 
     SandboxComponentManifest(
-        name="TextInputComponent",
+        name="TextInput",
         class_name="TextInputComponent",
         notes="Tested and works as expected."
     ),
 
     SandboxComponentManifest(
-        name="TextOutputComponent",
+        name="TextOutput",
         class_name="TextOutputComponent",
         notes="Tested and works as expected."
     ),

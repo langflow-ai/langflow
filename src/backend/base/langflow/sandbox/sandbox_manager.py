@@ -7,7 +7,7 @@ import json
 import os
 import shutil
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Optional, TYPE_CHECKING
 from uuid import uuid4
@@ -575,7 +575,7 @@ class SandboxManager:
                 ])
                 
                 # Execute the component executor with stdin
-                start_time = datetime.utcnow()
+                start_time = datetime.now(timezone.utc)
                 process = await asyncio.create_subprocess_exec(
                     *nsjail_cmd,
                     stdin=asyncio.subprocess.PIPE,
@@ -589,7 +589,7 @@ class SandboxManager:
                     timeout=context.timeout + 10
                 )
                 
-                execution_time = (datetime.utcnow() - start_time).total_seconds()
+                execution_time = (datetime.now(timezone.utc) - start_time).total_seconds()
                 
                 # Decode outputs
                 stdout_str = stdout.decode('utf-8') if stdout else ""
