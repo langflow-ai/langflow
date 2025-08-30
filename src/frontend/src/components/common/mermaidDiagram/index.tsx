@@ -17,7 +17,7 @@ export const MermaidDiagram = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(true);
-  const [svgContent, setSvgContent] = useState<string | null>(null);
+  const [svgContent, setSvgContent] = useState<string>("");
   const renderIdRef = useRef(0);
 
   // Initialize mermaid only once
@@ -30,7 +30,11 @@ export const MermaidDiagram = ({
         securityLevel: "strict",
         flowchart: {
           useMaxWidth: true,
-          htmlLabels: true, // Changed to true to allow text in strict mode
+          htmlLabels: true,
+          curve: "basis",
+        },
+        themeVariables: {
+          fontSize: "16px",
         },
       });
       mermaidInitialized = true;
@@ -60,13 +64,13 @@ export const MermaidDiagram = ({
         setError(null);
 
         // Generate unique ID for this diagram
-        const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const id = `mermaid-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
         // Render the diagram
         const { svg, bindFunctions } = await mermaid.render(id, definition);
 
         // Only update if this is still the current render
-        if (currentRenderId === renderIdRef.current) {
+        if (currentRenderId === renderIdRef.current && containerRef.current) {
           // Sanitize SVG for security while preserving text content
           const sanitizedSvg = DOMPurify.sanitize(svg, {
             USE_PROFILES: { svg: true, svgFilters: true },
@@ -82,10 +86,11 @@ export const MermaidDiagram = ({
             ],
           });
 
+          // Store the sanitized SVG content
           setSvgContent(sanitizedSvg);
           setIsRendering(false);
-
-          // Bind interactive functions after sanitization if needed
+          
+          // Bind interactive functions after React renders the SVG
           if (bindFunctions && containerRef.current) {
             setTimeout(() => {
               if (containerRef.current) {
@@ -115,19 +120,6 @@ export const MermaidDiagram = ({
     renderDiagram();
   }, [definition]);
 
-  if (isRendering) {
-    return (
-      <div className="flex items-center justify-center p-8 bg-gray-50 dark:bg-gray-900 rounded-md">
-        <div className="flex items-center gap-2">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
-          <span className="text-sm text-gray-600 dark:text-gray-400">
-            Rendering diagram...
-          </span>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
@@ -153,34 +145,65 @@ export const MermaidDiagram = ({
     );
   }
 
-  if (!svgContent) {
-    return (
-      <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-        <p className="text-sm">No diagram content to display</p>
-      </div>
-    );
-  }
-
   return (
-    <div className={`mermaid-diagram-container ${className || ""}`}>
+    <div className={`mermaid-diagram-container w-full ${className || ""}`}>
       <div
-        className="w-full overflow-auto bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-md p-4"
-        style={{ maxHeight: "min(600px, 50vh)" }}
-        ref={containerRef}
-        dangerouslySetInnerHTML={{ __html: svgContent }}
-      />
+        className="w-full overflow-x-auto overflow-y-auto bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-md p-4"
+        style={{ 
+          maxHeight: "min(600px, 50vh)", 
+          minHeight: "200px"
+        }}
+        ref={(el) => {
+          containerRef.current = el;
+          // Safely set innerHTML only when we have content and element
+          if (el && svgContent && !isRendering) {
+            el.innerHTML = svgContent;
+            // Ensure SVG scales to container width
+            const svg = el.querySelector('svg');
+            if (svg) {
+              // Set SVG to scale properly
+              svg.style.maxWidth = '100%';
+              svg.style.height = 'auto';
+              svg.style.display = 'block';
+              svg.style.margin = '0 auto';
+              // Remove any hardcoded dimensions
+              svg.removeAttribute('width');
+              svg.removeAttribute('height');
+              // Let viewBox handle the sizing
+              if (!svg.hasAttribute('viewBox') && svg.hasAttribute('width') && svg.hasAttribute('height')) {
+                const width = svg.getAttribute('width');
+                const height = svg.getAttribute('height');
+                svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+              }
+            }
+          }
+        }}
+      >
+        {isRendering && (
+          <div className="flex items-center justify-center py-8">
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                Rendering diagram...
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
       <div className="flex justify-end mt-2 gap-2">
         <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            const blob = new Blob([svgContent], { type: "image/svg+xml" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `diagram-${Date.now()}.svg`;
-            a.click();
-            URL.revokeObjectURL(url);
+            if (svgContent) {
+              const blob = new Blob([svgContent], { type: "image/svg+xml" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `diagram-${Date.now()}.svg`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }
           }}
           type="button"
           aria-label="Download diagram as SVG"
