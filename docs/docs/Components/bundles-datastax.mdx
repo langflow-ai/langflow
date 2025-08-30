@@ -44,17 +44,18 @@ For information about accepted values and functionality, see the provider's docu
 | Name | Display Name | Info |
 |------|--------------|------|
 | token | Astra DB Application Token | Input parameter. An Astra application token with permission to access your vector database. Once the connection is verified, additional fields are populated with your existing databases and collections. If you want to create a database through this component, the application token must have Organization Administrator permissions. |
-| environment | Environment | Input parameter. The environment for the Astra DB API endpoint. Always use `prod`. |
-| database_name | Database | Input parameter. The name of the database that you want this component to connect to. Or, you can select **New Database** to create a new database, and then wait for the database to initialize. |
+| environment | Environment | Input parameter. The environment for the Astra DB API endpoint. Typically always `prod`. |
+| database_name | Database | Input parameter. The name of the database that you want this component to connect to. Or, you can select **New Database** to create a new database, and then wait for the database to initialize before setting the remaining parameters. |
+| endpoint | Astra DB API Endpoint | Input parameter. For multi-region databases, select the API endpoint for your nearest datacenter. To get the list of regions for a multi-region database, see [List database regions](https://docs.datastax.com/en/astra-db-serverless/databases/manage-regions.html#list-db-regions). This field is automatically populates when you select a database, and it defaults to the primary region's endpoint. |
 | keyspace | Keyspace | Input parameter. The keyspace in your database that contains the collection specified in `collection_name`. Default: `default_keyspace`. |
 | collection_name | Collection | Input parameter. The name of the collection that you want to use with this flow. Or, select **New Collection** to create a new collection with limited configuration options. To ensure your collection is configured with the correct embedding provider and search capabilities, it is recommended to create the collection in the Astra Portal or with the Data API *before* configuring this component. For more information, see [Manage collections in Astra DB Serverless](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html). |
 | embedding_model | Embedding Model | Input parameter. Attach an [embedding model component](/components-embedding-models) to generate embeddings. Only available if the specified collection doesn't have a [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). If a vectorize integration exists, the component automatically uses the collection's integrated model. |
-| ingest_data | Ingest Data | Input parameter. The documents to load into the specified collection. |
+| ingest_data | Ingest Data | Input parameter. The documents to load into the specified collection. Accepts `Data` or `DataFrame` input. |
 | search_query | Search Query | Input parameter. The query string for vector search. |
 | cache_vector_store | Cache Vector Store | Input parameter. Whether to cache the vector store in Langflow memory for faster reads. Default: Enabled (true). |
-| search_method | Search Method | Input parameter. The search methods to use, either `Hybrid Search` or `Vector Search`. Your collection must be configured to support the chosen option, and the default depends on what your collection supports. All collections in Astra DB Serverless (Vector) databases support vector search, but hybrid search requires that you set specific collection settings when creating the collection. These options are only available when creating a collection programmatically. For more information, see [Ways to find data in Astra DB Serverless](https://docs.datastax.com/en/astra-db-serverless/databases/about-search.html) and [Create a collection that supports hybrid search](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid). |
-| reranker | Reranker | Input parameter. The re-ranker model to use for hybrid search, depending on the collection configuration. **This parameter shows the default reranker even if the selected collection doesn't support hybrid search.** To verify if a collection supports hybrid search, [get collection metadata](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/list-collection-metadata.html), and then check that `lexical` and `rerank` both have `"enabled": true`. |
-| lexical_terms | Lexical Terms | Input parameter. A space-separated string of keywords for hybrid search, like `features, data, attributes, characteristics`. This parameter is only available if the collection supports hybrid search. For more information, see the following **Hybrid search example**. |
+| search_method | Search Method | Input parameter. The search methods to use, either `Hybrid Search` or `Vector Search`. Your collection must be configured to support the chosen option, and the default depends on what your collection supports. All vector-enabled collections in Astra DB Serverless (Vector) databases support vector search, but hybrid search requires that you set specific collection settings when creating the collection. These options are only available when creating a collection programmatically. For more information, see [Ways to find data in Astra DB Serverless](https://docs.datastax.com/en/astra-db-serverless/databases/about-search.html) and [Create a collection that supports hybrid search](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid). |
+| reranker | Reranker | Input parameter. The re-ranker model to use for hybrid search, depending on the collection configuration. This parameter is only available for collections that support hybrid search. To determine if a collection supports hybrid search, [get collection metadata](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/list-collection-metadata.html), and then check that `lexical` and `rerank` both have `"enabled": true`. |
+| lexical_terms | Lexical Terms | Input parameter. A space-separated string of keywords for hybrid search, like `features, data, attributes, characteristics`. This parameter is only available if the collection supports hybrid search. For more information, see the [Hybrid search example](#astra-db-examples). |
 | number_of_results | Number of Search Results | Input parameter. The number of search results to return. Default: 4. |
 | search_type | Search Type | Input parameter. The search type to use, either `Similarity` (default), `Similarity with score threshold`, and `MMR (Max Marginal Relevance)`. |
 | search_score_threshold | Search Score Threshold | Input parameter. The minimum similarity score threshold for vector search results with the `Similarity with score threshold` search type. Default: 0. |
@@ -84,39 +85,47 @@ Hybrid search performs a vector similarity search and a lexical search, compares
 
 To use hybrid search through the **Astra DB** component, do the following:
 
-1. Use the Data API to [create a collection that supports hybrid search](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid) if you haven't already created one.
+1. Use the Data API to [create a collection that supports hybrid search](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid) if you don't already have one.
 
     Although you can create a collection through the **Astra DB** component, you have more control and insight into the collection settings when using the Data API for this operation.
 
 2. Create a flow based on the **Hybrid Search RAG** template, which includes an **Astra DB** component that is pre-configured for hybrid search.
+
+    After loading the template, check for **Upgrade available** alerts on the components.
+    If any components have an upgrade pending, upgrade and reconnect them before continuing.
+
 3. In the **Language Model** components, add your OpenAI API key.
+If you want to use a different provider or model, see [Language model components](/components-models).
+
 4. Delete the **Language Model** component that is connected to the **Structured Output** component's **Input Message** port, and then connect the **Chat Input** component to that port.
+
 5. Configure the **Astra DB** vector store component:
 
     1. Enter your Astra DB application token.
     2. In the **Database** field, select your database.
     3. In the **Collection** field, select your collection with hybrid search enabled.
 
-        Once you select a collection that supports hybrid search, the other parameters automatically update to allow hybrid search options.
+    Once you select a collection that supports hybrid search, the other parameters automatically update to allow hybrid search options.
 
-6. In the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, find the **Lexical Terms** field, enable the **Show** toggle, and then click **Close**.
-
-7. Connect the first **Parser** component's **Parsed Text** output to the **Astra DB** component's **Lexical Terms** input.
+6. Connect the first **Parser** component's **Parsed Text** output to the **Astra DB** component's **Lexical Terms** input.
 This input only appears after connecting a collection that support hybrid search with reranking.
 
-8. Click the **Structured Output** component to expose the [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**, find the **Format Instructions** row, click <Icon name="Expand" aria-hidden="true"/> **Expand**, and then replace the prompt with the following text:
+7. Update the **Structured Output** template:
 
-    ```text
-    You are a database query planner that takes a user's requests, and then converts to a search against the subject matter in question.
-    You should convert the query into:
-    1. A list of keywords to use against a Lucene text analyzer index, no more than 4. Strictly unigrams.
-    2. A question to use as the basis for a QA embedding engine.
-    Avoid common keywords associated with the user's subject matter.
-    ```
+    1. Click the **Structured Output** component to expose the [component's header menu](/concepts-components#component-menus), and then click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls**.
+    2. Find the **Format Instructions** row, click <Icon name="Expand" aria-hidden="true"/> **Expand**, and then replace the prompt with the following text:
 
-9. Click **Finish Editing**, and then click **Close** to save your changes to the component.
+        ```text
+        You are a database query planner that takes a user's requests, and then converts to a search against the subject matter in question.
+        You should convert the query into:
+        1. A list of keywords to use against a Lucene text analyzer index, no more than 4. Strictly unigrams.
+        2. A question to use as the basis for a QA embedding engine.
+        Avoid common keywords associated with the user's subject matter.
+        ```
 
-10. Open the **Playground**, and then enter a natural language question that you would ask about your database.
+    3. Click **Finish Editing**, and then click **Close** to save your changes to the component.
+
+8. Open the **Playground**, and then enter a natural language question that you would ask about your database.
 
     In this example, your input is sent to both the **Astra DB** and **Structured Output** components:
 
@@ -129,7 +138,7 @@ This input only appears after connecting a collection that support hybrid search
     The API's response is output as a `DataFrame` that is transformed into a text string `Message` by another **Parser** component.
     Finally, the **Chat Output** component prints the `Message` response to the **Playground**.
 
-11. Optional: Exit the **Playground**, and then click <Icon name="TextSearch" aria-hidden="true"/> **Inspect Output** on each individual component to understand how lexical keywords were constructed and view the raw response from the Data API.
+9. Optional: Exit the **Playground**, and then click <Icon name="TextSearch" aria-hidden="true"/> **Inspect Output** on each individual component to understand how lexical keywords were constructed and view the raw response from the Data API.
 This is helpful for debugging flows where a certain component isn't receiving input as expected from another component.
 
     * **Structured Output component**: The output is the `Data` object produced by applying the output schema to the LLM's response to the input message and format instructions.
