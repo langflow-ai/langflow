@@ -89,7 +89,7 @@ export const MermaidDiagram = ({
           // Store the sanitized SVG content
           setSvgContent(sanitizedSvg);
           setIsRendering(false);
-          
+
           // Bind interactive functions after React renders the SVG
           if (bindFunctions && containerRef.current) {
             setTimeout(() => {
@@ -149,9 +149,9 @@ export const MermaidDiagram = ({
     <div className={`mermaid-diagram-container w-full ${className || ""}`}>
       <div
         className="w-full overflow-x-auto overflow-y-auto bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-md p-4"
-        style={{ 
-          maxHeight: "min(600px, 50vh)", 
-          minHeight: "200px"
+        style={{
+          maxHeight: "min(600px, 50vh)",
+          minHeight: "200px",
         }}
         ref={(el) => {
           containerRef.current = el;
@@ -159,21 +159,25 @@ export const MermaidDiagram = ({
           if (el && svgContent && !isRendering) {
             el.innerHTML = svgContent;
             // Ensure SVG scales to container width
-            const svg = el.querySelector('svg');
+            const svg = el.querySelector("svg");
             if (svg) {
               // Set SVG to scale properly
-              svg.style.maxWidth = '100%';
-              svg.style.height = 'auto';
-              svg.style.display = 'block';
-              svg.style.margin = '0 auto';
+              svg.style.maxWidth = "100%";
+              svg.style.height = "auto";
+              svg.style.display = "block";
+              svg.style.margin = "0 auto";
               // Remove any hardcoded dimensions
-              svg.removeAttribute('width');
-              svg.removeAttribute('height');
+              svg.removeAttribute("width");
+              svg.removeAttribute("height");
               // Let viewBox handle the sizing
-              if (!svg.hasAttribute('viewBox') && svg.hasAttribute('width') && svg.hasAttribute('height')) {
-                const width = svg.getAttribute('width');
-                const height = svg.getAttribute('height');
-                svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+              if (
+                !svg.hasAttribute("viewBox") &&
+                svg.hasAttribute("width") &&
+                svg.hasAttribute("height")
+              ) {
+                const width = svg.getAttribute("width");
+                const height = svg.getAttribute("height");
+                svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
               }
             }
           }
