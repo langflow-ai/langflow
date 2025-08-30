@@ -9,12 +9,11 @@ import orjson
 from pydantic import PydanticDeprecatedSince20
 
 from langflow.custom.eval import eval_custom_component_code
+from langflow.exceptions.component import ComponentLockError
 from langflow.logging.logger import logger
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.services.deps import get_tracing_service, session_scope
-
-from langflow.exceptions.component import ComponentLockError
 
 if TYPE_CHECKING:
     from langflow.custom.custom_component.component import Component
@@ -38,7 +37,7 @@ def instantiate_class(
         raise ValueError(msg)
 
     custom_params = get_params(vertex.params)
-    
+
     code = custom_params.pop("code")
     class_object: type[CustomComponent | Component] = eval_custom_component_code(code)
     custom_component: CustomComponent | Component = class_object(
@@ -62,35 +61,35 @@ async def get_instance_results(
     base_type: str = "component",
 ):
     # Check if sandbox system is enabled
+    import uuid
+
     from langflow.sandbox.sandbox_context import ComponentTrustLevel
     from langflow.services.sandbox.service import is_sandbox_enabled
-    import uuid
 
     # Check if sandboxing is enabled
     sandbox_enabled = is_sandbox_enabled()
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
-        
+
         # If sandbox is enabled, verify component and determine trust level
         if sandbox_enabled:
             # Get component code and path for verification
             vertex = getattr(custom_component, "_vertex", None)
             component_class = custom_component.__class__
             component_class_name = component_class.__name__
-            
+
             if base_type == "custom_components":
                 component_path = f"custom.{getattr(vertex, 'id', component_class_name)}"
+            # For built-in components, use the name property if available, otherwise class name
+            # This matches how components are stored in the signature database
+            elif hasattr(custom_component, "name") and custom_component.name:
+                component_path = custom_component.name
             else:
-                # For built-in components, use the name property if available, otherwise class name
-                # This matches how components are stored in the signature database
-                if hasattr(custom_component, 'name') and custom_component.name:
-                    component_path = custom_component.name
-                else:
-                    component_path = component_class_name
-            
+                component_path = component_class_name
+
             component_code = vertex.params.get("code") if (vertex and getattr(vertex, "params", None)) else None
-            
+
             trust_level = ComponentTrustLevel.UNTRUSTED
             modified = True
 
@@ -126,58 +125,54 @@ async def get_instance_results(
                     vertex.load_from_db_fields,
                     fallback_to_env_vars=fallback_to_env_vars,
                 )
-                
+
                 if base_type == "custom_components":
                     return await build_custom_component(params=custom_params, custom_component=custom_component)
-                else:
-                    return await build_component(params=custom_params, custom_component=custom_component)
-            else:
-                # UNTRUSTED components - check if they support sandboxing
-                sandbox_supported = verifier.supports_sandboxing(component_path)
-                if not sandbox_supported:
-                    # Component doesn't support sandboxing and is untrusted - cannot run
-                    raise ComponentLockError(component_path)
-                
-                # Component supports sandboxing - run in sandbox WITHOUT decrypted secrets
-                # Secrets will be handled by the sandbox manager via environment variables
-                from langflow.sandbox.sandbox_context import SandboxExecutionContext
-                
-                context = SandboxExecutionContext(
-                    execution_id=str(uuid.uuid4()),
-                    execution_type="component",
-                    component_path=component_path,
-                )
-                
-                if base_type == "custom_components":
-                    return await build_custom_component_sandboxed(
-                        params=custom_params, 
-                        custom_component=custom_component,
-                        code=component_code,
-                        context=context
-                    )
-                else:
-                    # Set the params as attributes before sandboxing (WITHOUT decrypted secrets)
-                    custom_component.set_attributes(custom_params)
-                    return await build_component_sandboxed(
-                        params=custom_params,
-                        custom_component=custom_component,
-                        code=component_code,
-                        context=context
-                    )
-        else:
-            # Sandbox disabled - decrypt secrets and run all components normally
-            custom_params = await update_params_with_load_from_db_fields(
-                custom_component,
-                custom_params,
-                vertex.load_from_db_fields,
-                fallback_to_env_vars=fallback_to_env_vars,
-            )
-            
-            if base_type == "custom_components":
-                return await build_custom_component(params=custom_params, custom_component=custom_component)
-            if base_type == "component":
                 return await build_component(params=custom_params, custom_component=custom_component)
-        
+            # UNTRUSTED components - check if they support sandboxing
+            sandbox_supported = verifier.supports_sandboxing(component_path)
+            if not sandbox_supported:
+                # Component doesn't support sandboxing and is untrusted - cannot run
+                raise ComponentLockError(component_path)
+
+            # Component supports sandboxing - run in sandbox WITHOUT decrypted secrets
+            # Secrets will be handled by the sandbox manager via environment variables
+            from langflow.sandbox.sandbox_context import SandboxExecutionContext
+
+            context = SandboxExecutionContext(
+                execution_id=str(uuid.uuid4()),
+                execution_type="component",
+                component_path=component_path,
+            )
+
+            if base_type == "custom_components":
+                return await build_custom_component_sandboxed(
+                    params=custom_params,
+                    custom_component=custom_component,
+                    code=component_code,
+                    context=context
+                )
+            # Set the params as attributes before sandboxing (WITHOUT decrypted secrets)
+            custom_component.set_attributes(custom_params)
+            return await build_component_sandboxed(
+                params=custom_params,
+                custom_component=custom_component,
+                code=component_code,
+                context=context
+            )
+        # Sandbox disabled - decrypt secrets and run all components normally
+        custom_params = await update_params_with_load_from_db_fields(
+            custom_component,
+            custom_params,
+            vertex.load_from_db_fields,
+            fallback_to_env_vars=fallback_to_env_vars,
+        )
+
+        if base_type == "custom_components":
+            return await build_custom_component(params=custom_params, custom_component=custom_component)
+        if base_type == "component":
+            return await build_component(params=custom_params, custom_component=custom_component)
+
         msg = f"Base type {base_type} not found."
         raise ValueError(msg)
 
@@ -263,20 +258,19 @@ async def build_component(
 
 
 async def build_component_sandboxed(
-    params: dict, 
+    params: dict,
     custom_component: Component,
     code: str,
     context
 ):
-    """
-    Execute component in sandbox (for UNTRUSTED components only).
+    """Execute component in sandbox (for UNTRUSTED components only).
     """
     from langflow.sandbox import get_sandbox_manager
     from langflow.schema import Data
 
     component_class_name = custom_component.__class__.__name__
     component_path = context.component_path
-    
+
     logger.info(f"Executing {component_class_name} in sandbox")
 
     # Execute in sandbox
@@ -300,51 +294,51 @@ async def build_component_sandboxed(
             error_parts.append(f"Stderr: {result.stderr}")
         if hasattr(result, "stdout") and result.stdout:
             error_parts.append(f"Stdout: {result.stdout}")
-        
+
         error_message = "\n".join(error_parts) if error_parts else "Unknown sandbox error"
         raise RuntimeError(f"Sandbox execution failed:\n{error_message}")
 
     # Normalize output into (component, build_results, artifacts)
     def finalize(value):
         build_results, artifacts = {}, {}
-        
+
         # Check if value contains output metadata
         output_name = None
         method_called = None
-        if isinstance(value, dict) and '_result' in value:
-            output_name = value.get('_output_name')
-            method_called = value.get('_method_called')
-            value = value['_result']
+        if isinstance(value, dict) and "_result" in value:
+            output_name = value.get("_output_name")
+            method_called = value.get("_method_called")
+            value = value["_result"]
             logger.debug(f"Sandbox provided output_name: {output_name}, method_called: {method_called}")
-        
+
         # If no output name was provided but we have method_called, try to find it
         if not output_name and method_called:
             # First, check if the method exists in the current outputs
-            if hasattr(custom_component, 'outputs'):
+            if hasattr(custom_component, "outputs"):
                 for output in custom_component.outputs:
-                    output_method = output.method if hasattr(output, 'method') else output.get('method')
+                    output_method = output.method if hasattr(output, "method") else output.get("method")
                     if output_method == method_called:
-                        output_name = output.name if hasattr(output, 'name') else output.get('name', 'result')
+                        output_name = output.name if hasattr(output, "name") else output.get("name", "result")
                         logger.debug(f"Found output name {output_name} for method {method_called}")
                         break
-            
+
             # If not found, try to infer from method name using common patterns
             if not output_name:
                 # Common pattern: convert_to_X -> X_output
-                if method_called.startswith('convert_to_'):
+                if method_called.startswith("convert_to_"):
                     # Extract the type being converted to
-                    output_type = method_called.replace('convert_to_', '')
+                    output_type = method_called.replace("convert_to_", "")
                     output_name = f"{output_type}_output"
                     logger.debug(f"Inferred output name {output_name} from method {method_called}")
                 # Another pattern: build_X -> X
-                elif method_called.startswith('build_'):
-                    output_name = method_called.replace('build_', '')
+                elif method_called.startswith("build_"):
+                    output_name = method_called.replace("build_", "")
                     logger.debug(f"Inferred output name {output_name} from method {method_called}")
                 # Default pattern: method_name -> method_name_output
                 else:
                     output_name = f"{method_called}_output"
                     logger.debug(f"Using default output name {output_name} for method {method_called}")
-        
+
         # If still no output name, use default
         if not output_name:
             output_name = custom_component.outputs[0].name if getattr(custom_component, "outputs", None) else "result"
@@ -371,14 +365,14 @@ async def build_component_sandboxed(
             from langflow.schema import DataFrame
             data_dict = {k: v for k, v in value.items() if k != "_type"}
             logger.debug(f"Sandbox result - creating DataFrame object with data dict: {data_dict}")
-            
+
             if "data" in data_dict:
                 # Create DataFrame from records
                 df_obj = DataFrame(data_dict["data"])
             else:
                 # Fallback
                 df_obj = DataFrame([data_dict])
-            
+
             build_results[output_name] = df_obj
             custom_component._results = {output_name: df_obj}
             s = str(data_dict)
@@ -396,7 +390,7 @@ async def build_component_sandboxed(
                 "raw": value,
                 "type": "Any",
             }
-        
+
         return custom_component, build_results, artifacts
 
     return finalize(result.result)
@@ -454,8 +448,7 @@ async def build_custom_component_sandboxed(
     code: str,
     context
 ):
-    """
-    Execute custom component in sandbox (for UNTRUSTED components only).
+    """Execute custom component in sandbox (for UNTRUSTED components only).
     """
     from langflow.sandbox import get_sandbox_manager
     from langflow.schema import Data
@@ -466,7 +459,7 @@ async def build_custom_component_sandboxed(
 
     component_class_name = custom_component.__class__.__name__
     component_path = context.component_path
-    
+
     logger.info(f"Executing custom component {component_class_name} in sandbox")
 
     # Execute in sandbox
@@ -490,7 +483,7 @@ async def build_custom_component_sandboxed(
             error_parts.append(f"Stderr: {result.stderr}")
         if hasattr(result, "stdout") and result.stdout:
             error_parts.append(f"Stdout: {result.stdout}")
-        
+
         error_message = "\n".join(error_parts) if error_parts else "Unknown sandbox error"
         raise RuntimeError(f"Sandbox execution failed:\n{error_message}")
 

@@ -1,6 +1,6 @@
 """Sandbox service module for dependency injection."""
 
-from .service import SandboxService
 from .factory import SandboxServiceFactory
+from .service import SandboxService
 
 __all__ = ["SandboxService", "SandboxServiceFactory"]

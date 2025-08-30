@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
     from langflow.services.job_queue.service import JobQueueService
+    from langflow.services.sandbox.service import SandboxService
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
     from langflow.services.socket.service import SocketIOService
@@ -25,7 +26,6 @@ if TYPE_CHECKING:
     from langflow.services.telemetry.service import TelemetryService
     from langflow.services.tracing.service import TracingService
     from langflow.services.variable.service import VariableService
-    from langflow.services.sandbox.service import SandboxService
 
 
 def get_service(service_type: ServiceType, default=None):
@@ -256,5 +256,5 @@ def get_sandbox_service() -> SandboxService:
         SandboxService: The SandboxService instance.
     """
     from langflow.services.sandbox.factory import SandboxServiceFactory
-    
+
     return get_service(ServiceType.SANDBOX_SERVICE, SandboxServiceFactory())

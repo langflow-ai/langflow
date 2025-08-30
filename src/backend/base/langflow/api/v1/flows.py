@@ -253,10 +253,10 @@ async def read_flows(
                 flows = [flow for flow in flows if flow.is_component]
             if remove_example_flows and starter_folder_id:
                 flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
-            
+
             # Add sandbox flags to each flow
             flows = [_add_sandbox_flags(flow) for flow in flows]
-            
+
             if header_flows:
                 # Convert to FlowHeader objects and compress the response
                 flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
@@ -298,18 +298,18 @@ def _remove_sandbox_flags(flow_data: dict) -> dict:
     """
     if not flow_data or "data" not in flow_data:
         return flow_data
-    
+
     # Make a copy to avoid modifying the original
     cleaned_data = flow_data.copy()
-    
+
     if "nodes" in cleaned_data["data"]:
         for node in cleaned_data["data"]["nodes"]:
             if "data" in node:
                 # Remove sandbox flags if they exist
                 node["data"].pop("sandboxed", None)
-                node["data"].pop("locked", None) 
+                node["data"].pop("locked", None)
                 node["data"].pop("blocked", None)
-    
+
     return cleaned_data
 
 
@@ -318,10 +318,10 @@ def _add_sandbox_flags(flow: Flow) -> Flow:
     try:
         from langflow.services.deps import get_sandbox_service
         sandbox_service = get_sandbox_service()
-        
+
         if not sandbox_service or not sandbox_service.enabled or not flow.data:
             return flow
-            
+
         verifier = sandbox_service.manager.verifier
         locked = verifier.security_policy.is_lock_mode_enabled()
 
@@ -333,18 +333,18 @@ def _add_sandbox_flags(flow: Flow) -> Flow:
 
                     node_data = node["data"]
                     node_id = node.get("id", "")
-                    
+
                     # Extract component class name from node ID (e.g., "CustomComponent-5ADNr" -> "CustomComponent")
                     component_name = node_id.split("-")[0] if "-" in node_id else node_id
 
                     # Build component path for sandbox verification
                     # For built-in components, just use the component name
                     component_path = component_name
-                    
+
                     # Get code from template
                     template = node_data.get("node", {}).get("template", {})
                     component_code = template.get("code", {}).get("value") if "code" in template else None
-                    
+
                     # Determine trust level and execution mode with 3 independent flags
                     if component_code:
                         # Check if component is verified (matches signature)
@@ -356,20 +356,20 @@ def _add_sandbox_flags(flow: Flow) -> Flow:
 
                     # Check if component is forced to execute in sandbox mode
                     force_sandbox = verifier.is_force_sandbox(component_path)
-                        
+
                     # Set the 3 independent flags
                     sandboxed = is_untrusted or force_sandbox  # true if component is untrusted OR forced into sandbox
                     component_locked = locked or not sandbox_supported  # true if lock mode OR unsupported
                     blocked = is_untrusted and not sandbox_supported  # true if untrusted AND unsupported
-                    
+
                     # Add the sandbox flags to the node data
                     node["data"]["sandboxed"] = sandboxed
                     node["data"]["locked"] = component_locked
                     node["data"]["blocked"] = blocked
-                    
+
     except Exception as e:
         logger.warning(f"Failed to add sandbox flags to flow: {e}")
-        
+
     return flow
 
 

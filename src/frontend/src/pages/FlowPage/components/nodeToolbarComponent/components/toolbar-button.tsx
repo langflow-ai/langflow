@@ -26,7 +26,7 @@ export const ToolbarButton = memo(
     tooltipContent?: string | React.ReactNode;
   }) => {
     const content = tooltipContent || <ShortcutDisplay {...shortcut} />;
-    
+
     if (disabled) {
       // For disabled buttons, wrap in a div to enable tooltip
       return (

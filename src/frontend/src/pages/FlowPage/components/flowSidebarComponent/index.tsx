@@ -152,9 +152,7 @@ interface FlowSidebarComponentProps {
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const data = useTypesStore((state) => state.data);
 
-  const lockAllComponents = useUtilityStore(
-    (state) => state.lockAllComponents,
-  );
+  const lockAllComponents = useUtilityStore((state) => state.lockAllComponents);
 
   const { getFilterEdge, setFilterEdge, filterType } = useFlowStore(
     useShallow((state) => ({

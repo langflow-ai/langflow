@@ -1799,7 +1799,7 @@ export function removeGlobalVariableFromComponents(flow: FlowType) {
 export function removeSandboxFlagsFromComponents(flow: FlowType) {
   /**
    * Remove sandbox flags from flow components before export.
-   * 
+   *
    * Sandbox flags (sandboxed, locked, blocked) are computed dynamically
    * based on the current sandbox state and should not be exported as they
    * would become stale and cause issues when importing the flow.
@@ -1810,7 +1810,7 @@ export function removeSandboxFlagsFromComponents(flow: FlowType) {
       delete node.data.sandboxed;
       delete node.data.locked;
       delete node.data.blocked;
-      
+
       // Recursively clean nested flows (for sub-flows)
       if (node.data.node?.flow) {
         removeSandboxFlagsFromComponents(node.data.node.flow);

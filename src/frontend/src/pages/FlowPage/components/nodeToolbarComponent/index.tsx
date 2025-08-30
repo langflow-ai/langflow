@@ -445,7 +445,11 @@ const NodeToolbarComponent = memo(
               )}
               dataTestId="code-button-modal"
               disabled={data.locked}
-              tooltipContent={data.locked ? "This component is locked and can't be modified" : undefined}
+              tooltipContent={
+                data.locked
+                  ? "This component is locked and can't be modified"
+                  : undefined
+              }
             />
           )}
           {nodeLength > 0 && (

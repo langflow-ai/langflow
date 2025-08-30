@@ -6,11 +6,10 @@ import { cn } from "@/utils/utils";
 
 export function LockedIndicator() {
   const sandboxEnabled = useUtilityStore((state) => state.sandboxEnabled);
-  const lockAllComponents = useUtilityStore(
-    (state) => state.lockAllComponents,
-  );
+  const lockAllComponents = useUtilityStore((state) => state.lockAllComponents);
 
-  if (!sandboxEnabled || !lockAllComponents || !ENABLE_SANDBOXING_INDICATORS) return null;
+  if (!sandboxEnabled || !lockAllComponents || !ENABLE_SANDBOXING_INDICATORS)
+    return null;
 
   return (
     <ShadTooltip
@@ -26,7 +25,7 @@ export function LockedIndicator() {
     >
       <div
         className={cn(
-          "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-red-50 border border-red-400 text-red-600 dark:bg-gray-800 dark:border-red-400 dark:text-red-400 cursor-default"
+          "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-red-50 border border-red-400 text-red-600 dark:bg-gray-800 dark:border-red-400 dark:text-red-400 cursor-default",
         )}
       >
         <Lock className="h-3.5 w-3.5" />

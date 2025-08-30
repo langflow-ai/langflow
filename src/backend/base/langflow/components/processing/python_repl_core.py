@@ -74,9 +74,9 @@ class PythonREPLComponent(Component):
         """Check if we're running inside a sandbox environment."""
         # Check for sandbox-specific environment variables
         return any([
-            os.environ.get('LANGFLOW_EXECUTION_ID'),  # Set by sandbox executor
-            os.environ.get('LANGFLOW_USE_STDIN'),      # Set by sandbox executor
-            '/opt/executor.py' in sys.argv[0] if sys.argv else False,  # Running as executor
+            os.environ.get("LANGFLOW_EXECUTION_ID"),  # Set by sandbox executor
+            os.environ.get("LANGFLOW_USE_STDIN"),      # Set by sandbox executor
+            "/opt/executor.py" in sys.argv[0] if sys.argv else False,  # Running as executor
         ])
 
     def run_python_repl(self) -> Data:
@@ -89,10 +89,9 @@ class PythonREPLComponent(Component):
                 # Use simple exec-based implementation for sandbox
                 self.log("Running in sandbox mode - using exec-based implementation")
                 return self._run_with_exec(globals_)
-            else:
-                # Use langchain's PythonREPL for non-sandbox (supports multiprocessing)
-                self.log("Running in standard mode - using langchain PythonREPL")
-                return self._run_with_langchain_repl(globals_)
+            # Use langchain's PythonREPL for non-sandbox (supports multiprocessing)
+            self.log("Running in standard mode - using langchain PythonREPL")
+            return self._run_with_langchain_repl(globals_)
 
         except ImportError as e:
             error_message = f"Import Error: {e!s}"

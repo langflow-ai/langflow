@@ -15,8 +15,8 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import useAlertStore from "@/stores/alertStore";
 import FlowMenu from "./components/FlowMenu";
-import { SandboxIndicator } from "./components/sandbox-indicator";
 import { LockedIndicator } from "./components/locked-indicator";
+import { SandboxIndicator } from "./components/sandbox-indicator";
 
 export default function AppHeader(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);

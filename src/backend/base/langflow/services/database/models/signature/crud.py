@@ -1,5 +1,6 @@
-from typing import List, Optional, Dict
-from sqlmodel import Session, select, func
+
+from sqlmodel import Session, func, select
+
 from .model import Component
 
 
@@ -11,7 +12,7 @@ def create_component(session: Session, component: Component) -> Component:
     return component
 
 
-def get_components_by_path(session: Session, component_path: str) -> List[Component]:
+def get_components_by_path(session: Session, component_path: str) -> list[Component]:
     """Get all versions of a component, ordered by created_at desc."""
     statement = (
         select(Component)
@@ -21,7 +22,7 @@ def get_components_by_path(session: Session, component_path: str) -> List[Compon
     return list(session.exec(statement).all())
 
 
-def get_component_by_path_and_version(session: Session, component_path: str, version: str) -> Optional[Component]:
+def get_component_by_path_and_version(session: Session, component_path: str, version: str) -> Component | None:
     """Get a specific component version."""
     statement = (
         select(Component)
@@ -30,7 +31,7 @@ def get_component_by_path_and_version(session: Session, component_path: str, ver
     return session.exec(statement).first()
 
 
-def get_latest_component(session: Session, component_path: str) -> Optional[Component]:
+def get_latest_component(session: Session, component_path: str) -> Component | None:
     """Get the most recent version of a component."""
     statement = (
         select(Component)
@@ -51,17 +52,17 @@ def component_version_exists(session: Session, component_path: str, version: str
     return session.exec(statement).first() is not None
 
 
-def get_all_component_paths(session: Session) -> List[str]:
+def get_all_component_paths(session: Session) -> list[str]:
     """Get all unique component paths."""
     statement = select(Component.component_path).distinct()
     return list(session.exec(statement).all())
 
 
-def get_component_stats(session: Session) -> Dict[str, int]:
+def get_component_stats(session: Session) -> dict[str, int]:
     """Get statistics about stored components."""
     total_components = session.exec(select(func.count(Component.id))).first() or 0
     unique_paths = session.exec(select(func.count(Component.component_path.distinct()))).first() or 0
-    
+
     return {
         "unique_components": unique_paths,
         "total_versions": total_components,

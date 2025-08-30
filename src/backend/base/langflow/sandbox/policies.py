@@ -3,18 +3,16 @@
 from __future__ import annotations
 
 import os
-import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
-
-from .sandbox_context import SandboxConfig
 
 from loguru import logger
+
+from .sandbox_context import SandboxConfig
 
 
 def is_lock_mode_enabled() -> bool:
     """Check if component locking mode is enabled via LANGFLOW_SANDBOX_LOCK_COMPONENTS."""
-    return os.getenv('LANGFLOW_SANDBOX_LOCK_COMPONENTS', 'false').lower() in ('true', '1', 'yes')
+    return os.getenv("LANGFLOW_SANDBOX_LOCK_COMPONENTS", "false").lower() in ("true", "1", "yes")
 
 
 # Essential environment variables
@@ -31,10 +29,10 @@ ENV = {
 def get_dynamic_bind_mounts():
     """Get bind mounts that work in both dev and production environments."""
     import os
-    
+
     base_mounts = [
         "/usr/bin:/usr/bin",
-        "/usr/local/bin:/usr/local/bin", 
+        "/usr/local/bin:/usr/local/bin",
         "/usr/lib:/usr/lib",
         "/usr/local/lib:/usr/local/lib",
         "/lib:/lib",
@@ -44,29 +42,29 @@ def get_dynamic_bind_mounts():
         "/dev/zero:/dev/zero",
         "/dev/urandom:/dev/urandom"
     ]
-    
+
     # Add langflow source paths if they exist (dev environment)
     if os.path.exists("/app/src/backend/base"):
         base_mounts.extend([
             "/app/src/backend/base:/opt/langflow/src/backend/base",
             "/app/src:/opt/src",
         ])
-    
+
     # Add component executor - try multiple locations
     executor_paths = [
         "/app/src/backend/base/langflow/sandbox/component_executor.py",
         "/app/.venv/lib/python3.12/site-packages/langflow/sandbox/component_executor.py"
     ]
-    
+
     for executor_path in executor_paths:
         if os.path.exists(executor_path):
             base_mounts.append(f"{executor_path}:/opt/executor.py")
             break
-    
+
     # Add config directory if it exists
     if os.path.exists("/var/lib/langflow"):
         base_mounts.append("/var/lib/langflow:/var/lib/langflow")
-    
+
     return base_mounts
 
 # Bind mounts for file system access
@@ -95,24 +93,24 @@ class NsjailConfig:
     disable_clone_newuser: bool = False
     disable_clone_newpid: bool = False
     chroot: str = ""
-    bindmount_ro: List[str] = field(default_factory=lambda: BINDMOUNTS_RO.copy())
-    bindmount_rw: List[str] = field(default_factory=lambda: BINDMOUNTS_RW.copy())
-    execution_id: Optional[str] = None  # Used for unique temp directories
-    tmpfs: List[str] = field(default_factory=list)
-    env: Dict[str, str] = field(default_factory=lambda: ENV.copy())
+    bindmount_ro: list[str] = field(default_factory=lambda: BINDMOUNTS_RO.copy())
+    bindmount_rw: list[str] = field(default_factory=lambda: BINDMOUNTS_RW.copy())
+    execution_id: str | None = None  # Used for unique temp directories
+    tmpfs: list[str] = field(default_factory=list)
+    env: dict[str, str] = field(default_factory=lambda: ENV.copy())
     seccomp_policy: str = ""
 
     def add_execution_temp_mount(self, execution_id: str, host_temp_dir: str):
         """Add execution-specific temporary directory mount."""
         # Remove any existing temp mounts first
         self.bindmount_rw = [mount for mount in self.bindmount_rw if not mount.endswith(":/tmp")]
-        
+
         # Add the new temp mount
         temp_mount = f"{host_temp_dir}:/tmp"
         self.bindmount_rw.append(temp_mount)
         logger.debug(f"Added execution-specific temp mount: {temp_mount}")
-    
-    def to_command_args(self) -> List[str]:
+
+    def to_command_args(self) -> list[str]:
         args = [
             "--mode", self.mode,
             "--hostname", self.hostname,
@@ -154,14 +152,14 @@ class SandboxProfile:
     max_execution_time_seconds: int = 30
     max_memory_mb: int = 128
     max_code_size_kb: int = 50
-    
+
     # Environment parameters (configurable)
-    env_params: List[str] = field(default_factory=list)
-    
+    env_params: list[str] = field(default_factory=list)
+
     # Internal settings (not configurable)
     nsjail_config: NsjailConfig = field(default_factory=NsjailConfig)
     description: str = "Simplified sandbox profile for untrusted code."
-    
+
     def _update_nsjail_config(self):
         """Update nsjail configuration based on current profile settings."""
         # Apply settings to nsjail config
@@ -169,21 +167,21 @@ class SandboxProfile:
         self.nsjail_config.rlimit_cpu = self.max_execution_time_seconds
         self.nsjail_config.time_limit = self.max_execution_time_seconds + 10
         self.nsjail_config.disable_clone_newnet = not self.network_enabled
-        
+
         # Clear and rebuild environment variables
         user_env = {}
         for env_var in self.env_params:
             if env_var in os.environ:
                 user_env[env_var] = os.environ[env_var]
-        
+
         # Combine env with user env
         self.nsjail_config.env.update(user_env)
-        
-        # Network configuration with DNS resolution  
+
+        # Network configuration with DNS resolution
         # disable_clone_newnet = True means disable network namespace isolation (allow network)
         # disable_clone_newnet = False means enable network namespace isolation (block network)
         self.nsjail_config.disable_clone_newnet = self.network_enabled
-        
+
         # Seccomp policies - always apply base sandbox restrictions
         if self.network_enabled:
             # Network enabled - apply base policy only (allows network)
@@ -201,7 +199,7 @@ class SandboxProfile:
         """Find the correct path for seccomp policy files."""
         import os
         from pathlib import Path
-        
+
         # Try multiple possible locations
         possible_paths = [
             # Development paths
@@ -212,25 +210,25 @@ class SandboxProfile:
             # Relative to this file
             str(Path(__file__).parent / policy_filename),
         ]
-        
+
         for path in possible_paths:
             if os.path.exists(path):
                 logger.debug(f"Found seccomp policy at: {path}")
                 return path
-        
+
         # Fallback: return the first path and let nsjail handle the error
         logger.warning(f"Could not find seccomp policy {policy_filename}, tried: {possible_paths}")
         return possible_paths[0]
 
     def validate_code_size(self, code: str) -> tuple[bool, str]:
-        code_size_kb = len(code.encode('utf-8')) / 1024
+        code_size_kb = len(code.encode("utf-8")) / 1024
         if code_size_kb > self.max_code_size_kb:
             return False, f"Code size ({code_size_kb:.1f}KB) exceeds limit ({self.max_code_size_kb}KB) for sandboxed code."
         return True, ""
 
 class SecurityPolicy:
     """Manages the single sandbox security profile."""
-    def __init__(self, config: Optional[SandboxConfig] = None):
+    def __init__(self, config: SandboxConfig | None = None):
         self.config = config or SandboxConfig()
         self.profile = self._initialize_profile()
         self._apply_local_overrides()
@@ -238,8 +236,8 @@ class SecurityPolicy:
 
     def _initialize_profile(self) -> SandboxProfile:
         """Initialize the sandbox profile with default settings."""
-        max_code_kb = self.config.untrusted_max_code_kb or int(os.getenv('LANGFLOW_UNTRUSTED_MAX_CODE_KB', '50'))
-        
+        max_code_kb = self.config.untrusted_max_code_kb or int(os.getenv("LANGFLOW_UNTRUSTED_MAX_CODE_KB", "50"))
+
         return SandboxProfile(
             allow_secrets_for_untrusted=False,
             network_enabled=False,
@@ -253,7 +251,7 @@ class SecurityPolicy:
     def get_profile(self) -> SandboxProfile:
         """Return the active sandbox profile."""
         return self.profile
-    
+
     def is_lock_mode_enabled(self) -> bool:
         """Check if component locking mode is enabled via LANGFLOW_SANDBOX_LOCK_COMPONENTS."""
         return self.config.lock_components
@@ -274,25 +272,25 @@ class SecurityPolicy:
     def _apply_profile_overrides(self, overrides: dict):
         """Apply configuration overrides to the profile."""
         profile = self.profile
-        
+
         # Apply flat configuration settings
         configurable_keys = [
-            "allow_secrets_for_untrusted", 
-            "network_enabled", 
-            "max_execution_time_seconds", 
-            "max_memory_mb", 
+            "allow_secrets_for_untrusted",
+            "network_enabled",
+            "max_execution_time_seconds",
+            "max_memory_mb",
             "max_code_size_kb"
         ]
-        
+
         for key in configurable_keys:
             if key in overrides and overrides[key] is not None:
                 setattr(profile, key, overrides[key])
-        
+
         # Handle environment parameters
-        if "env_params" in overrides and overrides["env_params"]:
+        if overrides.get("env_params"):
             env_params = overrides["env_params"]
             if isinstance(env_params, list):
                 profile.env_params = env_params.copy()
             else:
                 logger.warning("env_params must be a list of environment variable names, ignoring")
-        
+

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from langflow.services.base import Service
 
@@ -21,11 +21,11 @@ def is_sandbox_enabled() -> bool:
 
 class SandboxService(Service):
     """Service for managing sandbox execution and security policies."""
-    
+
     name = "sandbox_service"
-    
-    def __init__(self, settings_service: Optional[SettingsService] = None):
-        self._manager: Optional[SandboxManager] = None
+
+    def __init__(self, settings_service: SettingsService | None = None):
+        self._manager: SandboxManager | None = None
         self._settings_service = settings_service
         self._enabled = self._check_sandbox_enabled()
         logger.info(f"SandboxService initialized, enabled: {self._enabled}")
@@ -40,7 +40,7 @@ class SandboxService(Service):
         return self._enabled
 
     @property
-    def manager(self) -> Optional[SandboxManager]:
+    def manager(self) -> SandboxManager | None:
         """Get the sandbox manager instance."""
         if not self._enabled:
             return None
@@ -49,7 +49,7 @@ class SandboxService(Service):
             try:
                 from langflow.sandbox import get_sandbox_manager
                 from langflow.services.deps import get_db_service
-                
+
                 # Get a sync session for signature initialization
                 db_service = get_db_service()
                 with db_service.with_sync_session() as session:
@@ -63,5 +63,5 @@ class SandboxService(Service):
                 logger.warning(f"Failed to initialize sandbox manager: {e}")
                 self._enabled = False
                 return None
-        
+
         return self._manager

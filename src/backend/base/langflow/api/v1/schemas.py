@@ -425,13 +425,13 @@ class ConfigResponse(BaseModel):
         sandbox_service = get_sandbox_service()
         sandbox_enabled = sandbox_service.enabled if sandbox_service else False
         sandbox_lock_components = False
-        
+
         if sandbox_enabled and sandbox_service:
             try:
                 sandbox_lock_components = sandbox_service.manager.security_policy.is_lock_mode_enabled()
             except Exception:
                 sandbox_lock_components = False
-        
+
         return cls(
             feature_flags=FEATURE_FLAGS,
             serialization_max_items_length=settings.max_items_length,

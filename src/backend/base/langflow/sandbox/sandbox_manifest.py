@@ -1,12 +1,11 @@
-"""
-List of components that have been tested and verified to work correctly in the sandbox.
+"""List of components that have been tested and verified to work correctly in the sandbox.
 
 This list is manually maintained. When a component has been thoroughly tested
 in the sandbox environment, add its configuration here.
 """
 
-from typing import List, Dict, Any
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -17,7 +16,7 @@ class SandboxComponentManifest:
     notes: str                  # Explanation of sandboxing requirements/testing status
     force_sandbox: bool = False # If true the component will always execute in the sandbox
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "class_name": self.class_name,
@@ -28,7 +27,7 @@ class SandboxComponentManifest:
 
 
 # List of components that have been tested and verified to work in sandbox
-SANDBOX_MANIFEST: List[SandboxComponentManifest] = [
+SANDBOX_MANIFEST: list[SandboxComponentManifest] = [
 
     SandboxComponentManifest(
         name="APIRequest",
@@ -53,7 +52,7 @@ SANDBOX_MANIFEST: List[SandboxComponentManifest] = [
         class_name="CurrentDateComponent",
         notes="Tested and works as expected."
     ),
-    
+
     SandboxComponentManifest(
         name="CustomComponent",
         class_name="CustomComponent",
@@ -91,7 +90,7 @@ SANDBOX_MANIFEST: List[SandboxComponentManifest] = [
         class_name="TextOutputComponent",
         notes="Tested and works as expected."
     ),
-    
+
     SandboxComponentManifest(
         name="TypeConverterComponent",
         class_name="TypeConverterComponent",
@@ -99,6 +98,6 @@ SANDBOX_MANIFEST: List[SandboxComponentManifest] = [
     ),
 ]
 
-def get_supported_component_class_names() -> List[str]:
+def get_supported_component_class_names() -> list[str]:
     """Get list of supported component class names."""
     return [component.class_name for component in SANDBOX_MANIFEST]

@@ -4,8 +4,8 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Input } from "@/components/ui/input";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
-import {useUtilityStore} from "@/stores/utilityStore";
 
 export default function NodeName({
   display_name,
@@ -18,7 +18,7 @@ export default function NodeName({
   setHasChangedNodeDescription,
   sandboxed,
   locked,
-  blocked
+  blocked,
 }: {
   display_name?: string;
   selected?: boolean;
@@ -80,9 +80,7 @@ export default function NodeName({
     setHasChangedNodeDescription(true);
   };
 
-  const lockAllComponents = useUtilityStore(
-    (state) => state.lockAllComponents,
-  );
+  const lockAllComponents = useUtilityStore((state) => state.lockAllComponents);
 
   return editNameDescription ? (
     <div className="w-full">

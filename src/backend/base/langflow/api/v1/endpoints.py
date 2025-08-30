@@ -780,16 +780,16 @@ async def get_sandbox_supported_components():
     """
     try:
         from langflow.services.deps import get_sandbox_service
-        
+
         sandbox_service = get_sandbox_service()
         if not sandbox_service or not sandbox_service.enabled:
             return {
                 "components": []
             }
-        
+
         # Get the list of supported components from the configuration
         from langflow.sandbox.sandbox_manifest import SANDBOX_MANIFEST
-        
+
         # Enhance each component with display name from the actual component class
         enhanced_components = []
         for component_config in SANDBOX_MANIFEST:
@@ -797,12 +797,12 @@ async def get_sandbox_supported_components():
                 # Try to import and get the display name and icon from the actual component class
                 from langflow.interface.components import get_and_cache_all_types_dict
                 all_types = await get_and_cache_all_types_dict(settings_service=get_settings_service())
-                
+
                 # Find the component in the types dict
                 display_name = component_config.class_name  # fallback to class name
                 icon = None  # fallback to None
                 found = False
-                
+
                 # Try exact match first
                 for category_name, category_data in all_types.items():
                     if component_config.class_name in category_data:
@@ -811,7 +811,7 @@ async def get_sandbox_supported_components():
                         icon = component_data.get("icon")
                         found = True
                         break
-                
+
                 # If not found, try without "Component" suffix
                 if not found and component_config.class_name.endswith("Component"):
                     short_name = component_config.class_name[:-9]  # Remove "Component"
@@ -822,7 +822,7 @@ async def get_sandbox_supported_components():
                             icon = component_data.get("icon")
                             found = True
                             break
-                
+
                 enhanced_component = {
                     "class_name": component_config.class_name,
                     "display_name": display_name,
@@ -831,7 +831,7 @@ async def get_sandbox_supported_components():
                     "force_sandbox": component_config.force_sandbox,
                 }
                 enhanced_components.append(enhanced_component)
-                
+
             except Exception as e:
                 logger.warning(f"Could not get class name for {component_config.class_name}: {e}")
                 # Fallback to basic info
@@ -843,7 +843,7 @@ async def get_sandbox_supported_components():
                     "force_sandbox": component_config.force_sandbox,
                 }
                 enhanced_components.append(enhanced_component)
-        
+
         return {
             "components": enhanced_components
         }

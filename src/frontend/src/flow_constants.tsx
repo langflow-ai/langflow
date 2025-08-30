@@ -367,14 +367,16 @@ export const NOUNS: string[] = [
  * Controls whether to show sandboxing indicators in the UI
  * @constant
  */
-export const ENABLE_SANDBOXING_INDICATORS = 
-  process.env.LANGFLOW_ENABLE_SANDBOXING_INDICATORS ? 
-  process.env.LANGFLOW_ENABLE_SANDBOXING_INDICATORS === "true" : true;
+export const ENABLE_SANDBOXING_INDICATORS = process.env
+  .LANGFLOW_ENABLE_SANDBOXING_INDICATORS
+  ? process.env.LANGFLOW_ENABLE_SANDBOXING_INDICATORS === "true"
+  : true;
 
 /**
  * Controls whether to use empty strings for secrets when allow_secrets_for_untrusted is false
  * @constant
  */
-export const USE_EMPTY_STRINGS_FOR_DENIED_SECRETS = 
-  process.env.LANGFLOW_USE_EMPTY_STRINGS_FOR_DENIED_SECRETS ? 
-  process.env.LANGFLOW_USE_EMPTY_STRINGS_FOR_DENIED_SECRETS === "true" : true;
+export const USE_EMPTY_STRINGS_FOR_DENIED_SECRETS = process.env
+  .LANGFLOW_USE_EMPTY_STRINGS_FOR_DENIED_SECRETS
+  ? process.env.LANGFLOW_USE_EMPTY_STRINGS_FOR_DENIED_SECRETS === "true"
+  : true;
