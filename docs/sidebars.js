@@ -309,6 +309,7 @@ module.exports = {
             "Components/bundles-duckduckgo",
             "Components/bundles-elastic",
             "Components/bundles-exa",
+            "Components/bundles-faiss",
             "Components/bundles-glean",
             {
               type: 'category',
@@ -326,7 +327,9 @@ module.exports = {
             "Components/bundles-lmstudio",
             "Components/bundles-maritalk",
             "Components/bundles-mem0",
+            "Components/bundles-milvus",
             "Components/bundles-mistralai",
+            "Components/bundles-mongodb",
             {
               type: "category",
               label: "Notion",
@@ -363,6 +366,8 @@ module.exports = {
             "Components/bundles-openai",
             "Components/bundles-openrouter",
             "Components/bundles-perplexity",
+            "Components/bundles-pgvector",
+            "Components/bundles-pinecone",
             "Components/bundles-qdrant",
             "Components/bundles-redis",
             "Components/bundles-sambanova",
