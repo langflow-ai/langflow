@@ -22,7 +22,7 @@ You can create new databases and collections through this component, but this is
 Additionally, not all database and collection configuration options are available through the **Astra DB** component, such as hybrid search options, PCU groups, vectorize integration management, and multi-region deployments.
 :::
 
-The **Astra DB** component read and writes to [Astra DB Serverless databases](https://docs.datastax.com/en/astra-db-serverless/index.html), using an instance of `AstraDBVectorStore` to call the Data API and DevOps API.
+The **Astra DB** component read and writes to Astra DB Serverless databases, using an instance of `AstraDBVectorStore` to call the Data API and DevOps API.
 
 <details>
 <summary>About vector store instances</summary>
@@ -39,7 +39,7 @@ You can inspect a vector store component's parameters to learn more about the in
 
 <PartialConditionalParams />
 
-For information about accepted values and functionality, see the provider's documentation or inspect [component code](/concepts-components#component-code).
+For information about accepted values and functionality, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/index.html) or inspect [component code](/concepts-components#component-code).
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -64,7 +64,7 @@ For information about accepted values and functionality, see the provider's docu
 | content_field | Content Field | Input parameter. For writes, this parameter specifies the name of the field in the documents that contains text strings for which you want to generate embeddings. |
 | deletion_field | Deletion Based On Field | Input parameter. When provided, documents in the target collection with metadata field values matching the input metadata field value are deleted before new records are loaded. Use this setting for writes with upserts (overwrites). |
 | ignore_invalid_documents | Ignore Invalid Documents | Input parameter. Whether to ignore invalid documents during writes. If disabled (false), then an error is raised for invalid documents. Default: Enabled (true). |
-| astradb_vectorstore_kwargs | AstraDBVectorStore Parameters | Input parameter. An optional dictionary of additional parameters for the `AstraDBVectorStore` instance. For more information, see [Vector store instances](#vector-store-instances). |
+| astradb_vectorstore_kwargs | AstraDBVectorStore Parameters | Input parameter. An optional dictionary of additional parameters for the `AstraDBVectorStore` instance. |
 
 ### Astra DB examples
 
@@ -286,7 +286,7 @@ You can inspect a vector store component's parameters to learn more about the in
 
 <PartialConditionalParams />
 
-For information about accepted values and functionality, see the provider's documentation or inspect [component code](/concepts-components#component-code).
+For information about accepted values and functionality, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/index.html) or inspect [component code](/concepts-components#component-code).
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -332,12 +332,10 @@ You can inspect a vector store component's parameters to learn more about the in
 
 <PartialConditionalParams />
 
-For information about accepted values and functionality, see the provider's documentation or inspect [component code](/concepts-components#component-code).
-
 | Name | Display Name | Info |
 |------|--------------|------|
 | embedding_model | Embedding Model | Input parameter. Specify the embedding model to use. Not required if the connected vector store has an [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). |
-| vector_store | Vector Store Connection | Input parameter. A [`vector_store`](#vector-store-instances) instance inherited from an **Astra DB** component's **Vector Store Connection** output. |
+| vector_store | Vector Store Connection | Input parameter. An instance of `AstraDbVectorStore` inherited from the [**Astra DB** component](#astra-db) **Vector Store Connection** output. |
 | edge_definition | Edge Definition | Input parameter. [Edge definition](https://datastax.github.io/graph-rag/reference/graph_retriever/edges/) for the graph traversal. |
 | strategy | Traversal Strategies | Input parameter. The strategy to use for graph traversal. Strategy options are dynamically loaded from available strategies. |
 | search_query | Search Query | Input parameter. The query to search for in the vector store. |
@@ -369,8 +367,6 @@ You can inspect a vector store component's parameters to learn more about the in
 <PartialParams />
 
 <PartialConditionalParams />
-
-For information about accepted values and functionality, see the provider's documentation or inspect [component code](/concepts-components#component-code).
 
 | Name | Display Name | Info |
 |------|--------------|------|

@@ -8,357 +8,6 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 
-## Apache Cassandra
-
-The **Cassandra** and **Cassandra Graph** components can be used with Cassandra clusters that support vector search, including Astra DB.
-
-For more information, see the following:
-
-<details>
-<summary>Hidden parameters</summary>
-
-You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
-
-import PartialParams from '@site/docs/_partial-hidden-params.mdx';
-
-<PartialParams />
-
-import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
-
-<PartialConditionalParams />
-
-For information about accepted values and functionality, see [Vector search in Cassandra](https://cassandra.apache.org/doc/latest/cassandra/vector-search/overview.html) or inspect [component code](/concepts-components#component-code).
-
-</details>
-
-<details>
-<summary>Search results output</summary>
-
-import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
-
-<PartialVectorSearchResults />
-
-</details>
-
-<details>
-<summary>Vector store instances</summary>
-
-import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
-
-<PartialVectorStoreInstance />
-
-</details>
-
-### Cassandra
-
-Use the **Cassandra** component to read or write to a Cassandra vector store using a `CassandraVectorStore` instance.
-
-:::tip
-For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
-:::
-
-<details>
-<summary>Cassandra parameters</summary>
-
-| Name | Type | Description |
-|------|------|-------------|
-| database_ref | String | Input parameter. Contact points for the database or an Astra database ID. |
-| username | String | Input parameter. Username for the database. Leave empty for Astra DB. |
-| token | SecretString | Input parameter. User password for the database or an Astra application token. |
-| keyspace | String | Input parameter. The name of the keyspace containing the vector store specified in **Table Name** (`table_name`). |
-| table_name | String | Input parameter. The name of the table or collection that is the vector store. |
-| ttl_seconds | Integer | Input parameter. Time-to-live for added texts, if supported by the cluster. Only relevant for writes. |
-| batch_size | Integer | Input parameter. Amount of records to process in a single batch. |
-| setup_mode | String | Input parameter. Configuration mode for setting up a Cassandra table. |
-| cluster_kwargs | Dict | Input parameter. Additional keyword arguments for a Cassandra cluster. |
-| search_query | String | Input parameter. Query string for similarity search. Only relevant for reads. |
-| ingest_data | Data | Input parameter. Data to be loaded into the vector store as raw chunks and embeddings. Only relevant for writes. |
-| embedding | Embeddings | Input parameter. Embedding function to use. |
-| number_of_results | Integer | Input parameter. Number of results to return in search. Only relevant for reads. |
-| search_type | String | Input parameter. Type of search to perform. Only relevant for reads. |
-| search_score_threshold | Float | Input parameter. Minimum similarity score for search results. Only relevant for reads. |
-| search_filter | Dict | Input parameter. An optional dictionary of metadata search filters to apply in addition to vector search. Only relevant for reads. |
-| body_search | String | Input parameter. Document textual search terms. Only relevant for reads. |
-| enable_body_search | Boolean | Input parameter. Flag to enable body search. Only relevant for reads. |
-
-</details>
-
-### Cassandra Chat Memory
-
-The **Cassandra Chat Memory** component retrieves and stores chat messages using an Apache Cassandra-based database.
-
-Chat memories are passed between memory storage components as the [`Memory`](/data-types#memory) data type.
-Specifically, the component creates an instance of `CassandraChatMessageHistory`, which is a LangChain chat message history class that uses a Cassandra database for storage.
-
-For more information about using external chat memory in flows, see the [**Message History** component](/components-helpers#message-history).
-
-#### Cassandra Chat Memory parameters
-
-<PartialParams />
-
-| Name           | Type          | Description   |
-|----------------|---------------|-----------------------------|
-| database_ref   | MessageText   | Input parameter. The contact points for the Cassandra database or Astra DB database ID. Required. |
-| username       | MessageText   | Input parameter. The username for Cassandra. Leave empty for Astra DB. |
-| token          | SecretString  | Input parameter. The password for Cassandra or the token for Astra DB. Required. |
-| keyspace       | MessageText   | Input parameter. The keyspace in Cassandra or namespace in Astra DB. Required. |
-| table_name     | MessageText   | Input parameter. The name of the table or collection for storing messages. Required. |
-| session_id     | MessageText   | Input parameter. The unique identifier for the chat session. Optional. |
-| cluster_kwargs | Dictionary    | Input parameter. Additional keyword arguments for the Cassandra cluster configuration. Optional. |
-
-### Cassandra Graph
-
-The **Cassandra Graph** component uses `CassandraGraphVectorStore`, an instance of [LangChain graph vector store](https://python.langchain.com/api_reference/community/graph_vectorstores.html), for graph traversal and graph-based document retrieval in a compatible Cassandra cluster.
-It also supports writing to the vector store.
-
-<details>
-<summary>Cassandra Graph parameters</summary>
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| database_ref | Contact Points / Astra Database ID | Input parameter. The contact points for the database or an Astra database ID. Required. |
-| username | Username | Input parameter. The username for the database. Leave empty for Astra DB. |
-| token | Password / Astra DB Token | Input parameter. The user password for the database or an Astra application token. Required. |
-| keyspace | Keyspace | Input parameter. The name of the keyspace containing the vector store specified in **Table Name** (`table_name`). Required. |
-| table_name | Table Name | Input parameter. The name of the table or collection that is the vector store. Required. |
-| setup_mode | Setup Mode | Input parameter. The configuration mode for setting up the Cassandra table. The options are `Sync` (default) or `Off`. |
-| cluster_kwargs | Cluster arguments | Input parameter. An optional dictionary of additional keyword arguments for the Cassandra cluster. |
-| search_query | Search Query | Input parameter. The query string for similarity search. Only relevant for reads. |
-| ingest_data | Ingest Data | Input parameter. Data to be loaded into the vector store as raw chunks and embeddings. Only relevant for writes. |
-| embedding | Embedding | Input parameter. The embedding model to use. |
-| number_of_results | Number of Results | Input parameter. The number of results to return in similarity search. Only relevant for reads. Default: 4. |
-| search_type | Search Type | Input parameter. The search type to use. The options are `Traversal` (default), `MMR Traversal`, `Similarity`, `Similarity with score threshold`, or `MMR (Max Marginal Relevance)`. |
-| depth | Depth of traversal | Input parameter. The maximum depth of edges to traverse. Only relevant if **Search Type** (`search_type`) is `Traversal` or `MMR Traversal`. Default: 1. |
-| search_score_threshold | Search Score Threshold | Input parameter. The minimum similarity score threshold for search results. Only relevant for reads using the `Similarity with score threshold` search type. |
-| search_filter | Search Metadata Filter | Input parameter. An optional dictionary of metadata search filters to apply in addition to graph traversal and similarity search. |
-
-</details>
-
-## Chroma
-
-The **Chroma DB** and **Local DB** components read and write to Chroma vector stores using an instance of `Chroma` vector store.
-Includes support for remote or in-memory instances with or without persistence.
-
-For more information, see the following:
-
-<details>
-<summary>Hidden parameters</summary>
-
-You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
-
-import PartialParams from '@site/docs/_partial-hidden-params.mdx';
-
-<PartialParams />
-
-import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
-
-<PartialConditionalParams />
-
-For information about accepted values and functionality, see the provider's documentation or inspect [component code](/concepts-components#component-code).
-
-</details>
-
-<details>
-<summary>Search results output</summary>
-
-import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
-
-<PartialVectorSearchResults />
-
-</details>
-
-<details>
-<summary>Vector store instances</summary>
-
-import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
-
-<PartialVectorStoreInstance />
-
-</details>
-
-### Chroma DB
-
-You can use the **Chroma DB** component to read and write to a Chroma database in local storage or a remote Chroma server with options for persistence and caching.
-When writing, the component can create a new database or collection at the specified location.
-
-:::tip
-An ephemeral (non-persistent) local Chroma vector store is helpful for testing vector search flows where you don't need to retain the database.
-:::
-
-The following example flow uses one **Chroma DB** component for both reads and writes:
-
-* When writing, it splits `Data` from a [**URL** component](/components-data#url) into chunks, computes embeddings with attached **Embedding Model** component, and then loads the chunks and embeddings into the Chroma vector store.
-To trigger writes, click <Icon name="Play" aria-hidden="true"/> **Run component** on the **Chroma DB** component.
-
-* When reading, it uses chat input to perform a similarity search on the vector store, and then print the search results to the chat.
-To trigger reads, open the **Playground** and enter a chat message.
-
-After running the flow once, you can click <Icon name="TextSearch" aria-hidden="true"/> **Inspect Output** on each component to understand how the data transformed as it passed from component to component.
-
-![ChromaDB receiving split text](/img/component-chroma-db.png)
-
-:::tip
-For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
-:::
-
-<details>
-<summary>Chroma DB parameters</summary>
-
-| Name | Type | Description |
-|------|------|-------------|
-| **Collection Name** (`collection_name`) | String | Input parameter.  The name of your Chroma vector store collection. Default: `langflow`. |
-| **Persist Directory** (`persist_directory`) | String | Input parameter. To persist the Chroma database, enter a relative or absolute path to a directory to store the `chroma.sqlite3` file. Leave empty for an ephemeral database. When reading or writing to an existing persistent database, specify the path to the persistent directory. |
-| **Ingest Data** (`ingest_data`) | Data or DataFrame | Input parameter. `Data` or `DataFrame` input containing the records to write to the vector store. Only relevant for writes. |
-| **Search Query** (`search_query`) | String | Input parameter. The query to use for vector search. Only relevant for reads. |
-| **Cache Vector Store** (`cache_vector_store`) | Boolean | Input parameter. If true, the component caches the vector store in memory for faster reads. Default: Enabled (true). |
-| **Embedding** (`embedding`) | Embeddings | Input parameter. The embedding function to use for the vector store. By default, Chroma DB uses its built-in embeddings model, or you can attach an **Embedding Model** component to use a different provider or model. |
-| **CORS Allow Origins** (`chroma_server_cors_allow_origins`) | String | Input parameter. The CORS allow origins for the Chroma server. |
-| **Chroma Server Host** (`chroma_server_host`) | String | Input parameter. The host for the Chroma server. |
-| **Chroma Server HTTP Port** (`chroma_server_http_port`) | Integer | Input parameter. The HTTP port for the Chroma server. |
-| **Chroma Server gRPC Port** (`chroma_server_grpc_port`) | Integer | Input parameter. The gRPC port for the Chroma server. |
-| **Chroma Server SSL Enabled** (`chroma_server_ssl_enabled`) | Boolean | Input parameter. Enable SSL for the Chroma server. |
-| **Allow Duplicates** (`allow_duplicates`) | Boolean | Input parameter. If true (default), writes don't check for existing duplicates in the collection, allowing you to store multiple copies of the same content. If false, writes won't add documents that match existing documents already present in the collection. If false, it can strictly enforce deduplication by searching the entire collection or only search the number of records, specified in `limit`. Only relevant for writes.|
-| **Search Type** (`search_type`) | String | Input parameter. The type of search to perform, either `Similarity` or `MMR`. Only relevant for reads. |
-| **Number of Results** (`number_of_results`) | Integer | Input parameter. The number of search results to return. Default: `10`. Only relevant for reads. |
-| **Limit** (`limit`) | Integer | Input parameter. Limit the number of records to compare when **Allow Duplicates** is false. This can help improve performance when writing to large collections, but it can result in some duplicate records. Only relevant for writes. |
-
-</details>
-
-## Clickhouse
-
-The **Clickhouse** component reads and writes to a Clickhouse vector store using an instance of `Clickhouse` vector store.
-
-For more information, see the following:
-
-<details>
-<summary>Hidden parameters</summary>
-
-You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
-
-import PartialParams from '@site/docs/_partial-hidden-params.mdx';
-
-<PartialParams />
-
-import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
-
-<PartialConditionalParams />
-
-For information about accepted values and functionality, see the [Clickhouse Documentation](https://clickhouse.com/docs/en/intro) or inspect [component code](/concepts-components#component-code).
-
-</details>
-
-<details>
-<summary>Search results output</summary>
-
-import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
-
-<PartialVectorSearchResults />
-
-</details>
-
-<details>
-<summary>Vector store instances</summary>
-
-import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
-
-<PartialVectorStoreInstance />
-
-</details>
-
-:::tip
-For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
-:::
-
-<details>
-<summary>Clickhouse parameters</summary>
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| host | hostname | Input parameter. The Clickhouse server hostname. Required. Default: `localhost`. |
-| port | port | Input parameter. The Clickhouse server port. Required. Default: `8123`. |
-| database | database | Input parameter. The Clickhouse database name. Required. |
-| table | Table name | Input parameter. The Clickhouse table name. Required. |
-| username | Username | Input parameter. Clickhouse username for authentication. Required. |
-| password | Password | Input parameter. Clickhouse password for authentication. Required. |
-| index_type | index_type | Input parameter. Type of the index, either `annoy` (default) or `vector_similarity`. |
-| metric | metric | Input parameter. Metric to compute distance for similarity search. The options are `angular` (default), `euclidean`, `manhattan`, `hamming`, `dot`. |
-| secure | Use HTTPS/TLS | Input parameter. If true, enables HTTPS/TLS for the Clickhouse server and overrides inferred values for interface or port arguments. Default: false. |
-| index_param | Param of the index | Input parameter. Index parameters. Default: `100,'L2Distance'`. |
-| index_query_params | index query params | Input parameter. Additional index query parameters. |
-| search_query | Search Query | Input parameter. The query string for similarity search. Only relevant for reads. |
-| ingest_data | Ingest Data | Input parameter. The records to load into the vector store. |
-| cache_vector_store | Cache Vector Store | Input parameter. If true, the component caches the vector store in memory for faster reads. Default: Enabled (true). |
-| embedding | Embedding | Input parameter. The embedding model to use. |
-| number_of_results | Number of Results | Input parameter. The number of search results to return. Default: `4`. Only relevant for reads. |
-| score_threshold | Score threshold | Input parameter. The threshold for similarity score comparison. Default: Unset (no threshold). Only relevant for reads. |
-
-</details>
-
-## Couchbase
-
-The **Couchbase** component reads and writes to a Couchbase vector store using an instance of `CouchbaseSearchVectorStore`.
-
-For more information, see the following:
-
-<details>
-<summary>Hidden parameters</summary>
-
-You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
-
-import PartialParams from '@site/docs/_partial-hidden-params.mdx';
-
-<PartialParams />
-
-import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
-
-<PartialConditionalParams />
-
-For information about accepted values and functionality, see the [Couchbase documentation](https://docs.couchbase.com/home/index.html) or inspect [component code](/concepts-components#component-code).
-
-</details>
-
-<details>
-<summary>Search results output</summary>
-
-import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
-
-<PartialVectorSearchResults />
-
-</details>
-
-<details>
-<summary>Vector store instances</summary>
-
-import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
-
-<PartialVectorStoreInstance />
-
-</details>
-
-:::tip
-For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
-:::
-
-<details>
-<summary>Couchbase parameters</summary>
-
-| Name | Type | Description |
-|------|------|-------------|
-| couchbase_connection_string | SecretString | Input parameter. Couchbase Cluster connection string. Required. |
-| couchbase_username | String | Input parameter. Couchbase username for authentication. Required. |
-| couchbase_password | SecretString | Input parameter. Couchbase password for authentication. Required. |
-| bucket_name | String | Input parameter. Name of the Couchbase bucket. Required. |
-| scope_name | String | Input parameter. Name of the Couchbase scope. Required. |
-| collection_name | String | Input parameter. Name of the Couchbase collection. Required. |
-| index_name | String | Input parameter. Name of the Couchbase index. Required. |
-| ingest_data | Data | Input parameter. The records to load into the vector store. Only relevant for writes. |
-| search_query | String | Input parameter. The query string for vector search. Only relevant for reads. |
-| cache_vector_store | Boolean | Input parameter. If true, the component caches the vector store in memory for faster reads. Default: Enabled (true). |
-| embedding | Embeddings | Input parameter. The embedding function to use for the vector store. |
-| number_of_results | Integer | Input parameter. Maximum number of search results to return. Default: 4. Only relevant for reads. |
-
-</details>
-
 ## Elasticsearch
 
 The **Elasticsearch** component reads and writes to an Elasticsearch instance using [`ElasticsearchStore`](https://python.langchain.com/docs/integrations/vectorstores/elasticsearch/).
@@ -392,7 +41,7 @@ import PartialVectorSearchResults from '@site/docs/_partial-vector-search-result
 </details>
 
 <details>
-<summary>Vector store instances</summary>
+<summary>About vector store instances</summary>
 
 import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
 
@@ -451,7 +100,7 @@ import PartialVectorSearchResults from '@site/docs/_partial-vector-search-result
 </details>
 
 <details>
-<summary>Vector store instances</summary>
+<summary>About vector store instances</summary>
 
 import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
 
@@ -507,7 +156,7 @@ import PartialVectorSearchResults from '@site/docs/_partial-vector-search-result
 </details>
 
 <details>
-<summary>Vector store instances</summary>
+<summary>About vector store instances</summary>
 
 import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
 
@@ -576,7 +225,7 @@ import PartialVectorSearchResults from '@site/docs/_partial-vector-search-result
 </details>
 
 <details>
-<summary>Vector store instances</summary>
+<summary>About vector store instances</summary>
 
 import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
 
@@ -639,7 +288,7 @@ import PartialVectorSearchResults from '@site/docs/_partial-vector-search-result
 </details>
 
 <details>
-<summary>Vector store instances</summary>
+<summary>About vector store instances</summary>
 
 import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
 
@@ -711,7 +360,7 @@ import PartialVectorSearchResults from '@site/docs/_partial-vector-search-result
 </details>
 
 <details>
-<summary>Vector store instances</summary>
+<summary>About vector store instances</summary>
 
 import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
 
@@ -770,7 +419,7 @@ import PartialVectorSearchResults from '@site/docs/_partial-vector-search-result
 </details>
 
 <details>
-<summary>Vector store instances</summary>
+<summary>About vector store instances</summary>
 
 import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
 
@@ -832,7 +481,7 @@ import PartialVectorSearchResults from '@site/docs/_partial-vector-search-result
 </details>
 
 <details>
-<summary>Vector store instances</summary>
+<summary>About vector store instances</summary>
 
 import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
 
@@ -901,7 +550,7 @@ import PartialVectorSearchResults from '@site/docs/_partial-vector-search-result
 </details>
 
 <details>
-<summary>Vector store instances</summary>
+<summary>About vector store instances</summary>
 
 import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
 
@@ -962,7 +611,7 @@ import PartialVectorSearchResults from '@site/docs/_partial-vector-search-result
 </details>
 
 <details>
-<summary>Vector store instances</summary>
+<summary>About vector store instances</summary>
 
 import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
 
@@ -1015,7 +664,7 @@ For information about accepted values and functionality, see the [Vectara docume
 </details>
 
 <details>
-<summary>Vector store instances</summary>
+<summary>About vector store instances</summary>
 
 import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
 
@@ -1090,7 +739,7 @@ import PartialVectorSearchResults from '@site/docs/_partial-vector-search-result
 </details>
 
 <details>
-<summary>Vector store instances</summary>
+<summary>About vector store instances</summary>
 
 import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
 
