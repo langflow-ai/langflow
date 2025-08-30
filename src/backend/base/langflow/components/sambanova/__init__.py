@@ -6,12 +6,14 @@ from langflow.components._importing import import_mod
 
 if TYPE_CHECKING:
     from langflow.components.sambanova.sambanova import SambaNovaComponent
+    from langflow.components.sambanova.sambanova_embeddings import SambaNovaEmbeddingsComponent
 
 _dynamic_imports = {
     "SambaNovaComponent": "sambanova",
+    "SambaNovaEmbeddingsComponent": "sambanova_embeddings",
 }
 
-__all__ = ["SambaNovaComponent"]
+__all__ = ["SambaNovaComponent", "SambaNovaEmbeddingsComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:
