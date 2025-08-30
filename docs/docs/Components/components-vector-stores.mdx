@@ -8,64 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 
-## Elasticsearch
 
-The **Elasticsearch** component reads and writes to an Elasticsearch instance using [`ElasticsearchStore`](https://python.langchain.com/docs/integrations/vectorstores/elasticsearch/).
-
-For more information, see the following:
-
-<details>
-<summary>Hidden parameters</summary>
-
-You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
-
-import PartialParams from '@site/docs/_partial-hidden-params.mdx';
-
-<PartialParams />
-
-import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
-
-<PartialConditionalParams />
-
-For information about accepted values and functionality, see the [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/dense-vector.html) or inspect [component code](/concepts-components#component-code).
-
-</details>
-
-<details>
-<summary>Search results output</summary>
-
-import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
-
-<PartialVectorSearchResults />
-
-</details>
-
-<details>
-<summary>About vector store instances</summary>
-
-import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
-
-<PartialVectorStoreInstance />
-
-</details>
-
-<details>
-<summary>Elasticsearch parameters</summary>
-
-| Name | Type | Description |
-|------|------|-------------|
-| es_url | String | Input parameter. Elasticsearch server URL. |
-| es_user | String | Input parameter. Username for Elasticsearch authentication. |
-| es_password | SecretString | Input parameter. Password for Elasticsearch authentication. |
-| index_name | String | Input parameter. Name of the Elasticsearch index. |
-| strategy | String | Input parameter. Strategy for vector search, either `approximate_k_nearest_neighbors` or `script_scoring`. |
-| distance_strategy | String | Input parameter. Strategy for distance calculation, either `COSINE`, `EUCLIDEAN_DISTANCE`, or `DOT_PRODUCT`. |
-| search_query | String | Input parameter. Query string for similarity search. |
-| ingest_data | Data | Input parameter. Records to load into the vector store. |
-| embedding | Embeddings | Input parameter. The embedding model to use. |
-| number_of_results | Integer | Input parameter. Number of search results to return. Default: 4. |
-
-</details>
 
 ## FAISS
 
@@ -252,78 +195,6 @@ import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instanc
 | number_dimensions         | Integer      | Input parameter. Embedding context length. Default: 1536. |
 | similarity                | String       | Input parameter. The method used to measure similarity between vectors. The options are "cosine", "euclidean", or "dotProduct". Default: "cosine". |
 | quantization              | String       | Input parameter. Quantization reduces memory costs by converting 32-bit floats to smaller data types. The options are "scalar" or "binary". |
-
-</details>
-
-## OpenSearch
-
-The **OpenSearch** component reads and writes to OpenSearch instances using [`OpenSearchVectorSearch`](https://python.langchain.com/docs/integrations/vectorstores/opensearch/).
-
-For more information, see the following:
-
-<details>
-<summary>Hidden parameters</summary>
-
-You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
-
-import PartialParams from '@site/docs/_partial-hidden-params.mdx';
-
-<PartialParams />
-
-import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
-
-<PartialConditionalParams />
-
-For information about accepted values and functionality, see the [OpenSearch documentation](https://opensearch.org/platform/search/vector-database.html) or inspect [component code](/concepts-components#component-code).
-
-</details>
-
-<details>
-<summary>Search results output</summary>
-
-import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
-
-<PartialVectorSearchResults />
-
-</details>
-
-<details>
-<summary>About vector store instances</summary>
-
-import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
-
-<PartialVectorStoreInstance />
-
-</details>
-
-<details>
-<summary>OpenSearch parameters</summary>
-
-| Name | Type | Description |
-|------|------|-------------|
-| opensearch_url | String | Input parameter. URL for OpenSearch cluster, such as `https://192.168.1.1:9200`. |
-| index_name | String | Input parameter. The index name where the vectors are stored in OpenSearch cluster. |
-| search_input | String | Input parameter. Enter a search query. Leave empty to retrieve all documents or if hybrid search is being used. |
-| ingest_data | Data | Input parameter. The data to be ingested into the vector store. |
-| embedding | Embeddings | Input parameter. The embedding function to use. |
-| search_type | String | Input parameter. The options are "similarity", "similarity_score_threshold", "mmr". |
-| number_of_results | Integer | Input parameter. The number of results to return in search. |
-| search_score_threshold | Float | Input parameter. The minimum similarity score threshold for search results. |
-| username | String | Input parameter. The username for the opensource cluster. |
-| password | SecretString | Input parameter. The password for the opensource cluster. |
-| use_ssl | Boolean | Input parameter. Use SSL. |
-| verify_certs | Boolean | Input parameter. Verify certificates. |
-| hybrid_search_query | String | Input parameter. Provide a custom hybrid search query in JSON format. This allows you to combine vector similarity and keyword matching. |
-
-</details>
-
-<details>
-<summary>Vector Store Connection port</summary>
-
-The **OpenSearch** component has an additional, deprecated **Vector Store Connection** output.
-This output can only connect to a `VectorStore` input port, and it was intended for use with dedicated Graph RAG components.
-
-The **OpenSearch** component doesn't require a separate Graph RAG component because OpenSearch instances support Graph traversal through built-in RAG functionality and plugins.
 
 </details>
 

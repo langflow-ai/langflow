@@ -307,6 +307,7 @@ module.exports = {
             "Components/bundles-deepseek",
             "Integrations/Docling/integrations-docling",
             "Components/bundles-duckduckgo",
+            "Components/bundles-elastic",
             "Components/bundles-exa",
             "Components/bundles-glean",
             {
