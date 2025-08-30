@@ -19,10 +19,10 @@ class MemoryComponent(Component):
     documentation: str = "https://docs.langflow.org/components-helpers#message-history"
     icon = "message-square-more"
     name = "Memory"
-    default_keys = ["mode", "memory"]
+    default_keys = ["mode", "memory", "session_id"]
     mode_config = {
         "Store": ["message", "memory", "sender", "sender_name", "session_id"],
-        "Retrieve": ["n_messages", "order", "template", "memory"],
+        "Retrieve": ["n_messages", "order", "template", "memory", "session_id"],
     }
 
     inputs = [
