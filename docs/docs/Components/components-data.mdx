@@ -4,8 +4,11 @@ slug: /components-data
 ---
 
 import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
-You can use Langflow's **Data** components to bring data into your flows from various sources like files, API endpoints, and URLs.
+Data components bring data into your flows from various sources like files, API endpoints, and URLs.
 For example:
 
 * **Load files**: Import data from a file or directory with the [**File** component](#file) and [**Directory** component](#directory).
@@ -22,20 +25,20 @@ Additionally, some components return raw data, whereas others can convert, restr
 This means that some similar components might produce different results.
 
 :::tip
-**Data** components pair well with [**Processing** components](/components-processing) that can perform additional parsing, transformation, and validation after retrieving the data.
+Data components pair well with [Processing components](/components-processing) that can perform additional parsing, transformation, and validation after retrieving the data.
 
 This can include basic operations, like saving a file in a specific format, or more complex tasks, like using a **Text Splitter** component to break down a large document into smaller chunks before generating embeddings for vector search.
 :::
 
 ## Use Data components in flows
 
-**Data** components are used often in flows because they offer a versatile way to perform common, basic functions.
+Data components are used often in flows because they offer a versatile way to perform common functions.
 
-You can use **Data** components to perform their base functions as isolated steps in your flow, or you can connect them to an **Agent** component as tools.
+You can use these components to perform their base functions as isolated steps in your flow, or you can connect them to an **Agent** component as tools.
 
 ![An agent flow with three Data components connected to the agent as tools](/img/connect-data-components-to-agent.png)
 
-For examples of **Data** components in flows, see the following:
+For example flows, see the following:
 
 * [Create a chatbot that can ingest files](/chat-with-files): Learn how to use a **File** component to load a file as context for a chatbot.
 The file and user input are both passed to the LLM so you can ask questions about the file you uploaded.
@@ -59,12 +62,11 @@ You can enable additional request options and fields in the component's paramete
 
 Returns a [`Data` object](/data-types#data) containing the response.
 
-For provider-specific API components, see [Bundles](/components-bundle-components).
+For provider-specific API components, see <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
 
 ### API Request parameters
 
-Most **API Request** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -90,8 +92,7 @@ Outputs either a [`Data`](/data-types#data) or [`DataFrame`](/data-types#datafra
 
 ### Directory parameters
 
-Many **Directory** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name               | Type             | Description                                        |
 | ------------------ | ---------------- | -------------------------------------------------- |
@@ -107,7 +108,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 ## File
 
 The **File** component loads and parses files, converts the content into a `Data`, `DataFrame`, or `Message` object.
-It supports multiple file types and provides parameters for parallel processing and error handling.
+It supports multiple file types, provides parameters for parallel processing and error handling, and supports advanced parsing with the Docling library.
 
 You can add files to the **File** component in the visual editor or at runtime, and you can upload multiple files at once.
 For more information about uploading files and working with files in flows, see [File management](/concepts-file-management) and [Create a chatbot that can ingest files](/chat-with-files).
@@ -153,12 +154,11 @@ If you need to load an unsupported file type, you must use a different component
 
 For images, see [Upload images](/concepts-file-management#upload-images).
 
-For videos, see the **Twelve Labs** and **YouTube** [bundles](/components-bundle-components) in the Langflow **Components** menu.
+For videos, see the **Twelve Labs** and **YouTube** <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
 
 ### File parameters
 
-Most **File** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -169,84 +169,103 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | delete_server_file_after_processing | Delete Server File After Processing | Input parameter. If true (default), the **Server File Path** (`file_path`) is deleted after processing. |
 | ignore_unsupported_extensions | Ignore Unsupported Extensions | Input parameter. If enabled (true), files with unsupported extensions are accepted but not processed. If disabled (false), the **File** component either can throw an error if an unsupported file type is provided. The default is true. |
 | ignore_unspecified_files | Ignore Unspecified Files | Input parameter. If true, `Data` with no `file_path` property is ignored. If false (default), the component errors when a file isn't specified. |
-| concurrency_multithreading | Processing Concurrency | Input parameter. The number of files to process concurrently if multiple files are uploaded. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. |
-| markdown | Markdown Export | Input parameter. Export processed documents to Markdown format. Only available when advanced mode is enabled in the file component. Default is false. |
+| concurrency_multithreading | Processing Concurrency | Input parameter. The number of files to process concurrently if multiple files are uploaded. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. Ignored for single-file uploads and advanced parsing. |
+| advanced_parser | Advanced Parser | Input parameter. If true, enables [advanced parsing](#advanced-parsing). Only available for single-file uploads of compatible file types. Default: Disabled (false). |
 
 ### Advanced parsing
 
-In Langflow version 1.6, the **File** component supports advanced document parsing using the [Docling](https://docling-project.github.io/docling/) library.
-Advanced parsing can process any of the **File** component's supported file types except `.csv`, `.xlsx`, and `.parquet` files.
+In Langflow version 1.6 and later, the **File** component supports advanced document parsing using the [Docling](https://docling-project.github.io/docling/) library for supported file types.
 
+To use advanced parsing, do the following:
 
-#### Advancing parsing limitations
+1. Add one valid file to the **File** component.
 
-Advanced parsing mode has the following restrictions:
+    :::info Advanced parsing limitations
+    * Advanced parsing processes only one file.
+    If you select multiple files, the **File** component processes the first file only, ignoring any additional files.
+    To process multiple files with advanced parsing, pass each file to a separate **File** components, or use the dedicated [**Docling** components](/integrations-docling).
 
-* **Only one file**: Advanced parsing mode processes only one file.
-If you select multiple files, the **File** component processes the first file only, ignoring any additional files.
+    * Advanced parsing can process any of the **File** component's supported file types except `.csv`, `.xlsx`, and `.parquet` files because it is designed for document processing, such as extracting text from PDFs.
+    For structured data analysis, use the [**Parser** component](/components-processing#parser).
+    :::
 
-To process multiple files with advanced parsing, pass each file to a separate **File** components, or use the dedicated [**Docling** components](/integrations-docling).
+2. Enable **Advanced Parsing**.
 
-* **No tabular file types**:  Advanced parsing mode isn't available for tabular file types like `.csv`, `.xlsx`, and `.parquet`.
-Advanced parsing is designed for document processing, such as extracting text from PDFs.
-For structured data analysis, use the [**Parser** component](/components-processing#parser).
+3. Click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus) to configure advanced parsing parameters, which are hidden by default:
 
-#### Advanced parsing parameters
+    | Name | Display Name | Info |
+    |------|--------------|------|
+    | pipeline | Pipeline | Input parameter, advanced parsing. The Docling pipeline to use, either `standard` (default, recommended) or `vlm`. |
+    | ocr_engine | OCR Engine | Input parameter, advanced parsing. The OCR parser to use if `pipeline` is `standard`. Options are `None` (default) or [`EasyOCR`](https://pypi.org/project/easyocr/). `None` means that no OCR engine is used, and this can produce inconsistent or broken results for some documents. |
+    | md_image_placeholder | Markdown Image Placeholder | Input parameter, advanced parsing. Defines the placeholder for image files if the output type is **Markdown**. Default: `<!-- image -->`. |
+    | md_page_break_placeholder | Markdown Page Break Placeholder | Input parameter, advanced parsing. Defines the placeholder for page breaks if the output type is **Markdown**. Default: `""` (empty string). |
+    | doc_key | Document Key | Input parameter, advanced parsing. The key to use for the `DoclingDocument` column, which holds the structured information extracted from the source document. See [Docling Document](https://docling-project.github.io/docling/concepts/docling_document/) for details. Default: `doc`. |
 
-When you enable advanced parsing, you can configure the following advanced parsing parameters:
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| pipeline | Pipeline | Input parameter. Which Docling pipeline to use. The `standard` pipeline is the only supported pipeline. For additional pipeline support, use the dedicated [**Docling** components](/integrations-docling). Default: `standard`. |
-| ocr_engine | OCR Engine | Input parameter. Which OCR parser to use. [EasyOCR](https://pypi.org/project/easyocr/) is the only supported OCR engine. For additional OCR engines, use the dedicated [**Docling** components](/integrations-docling). |
-| doc_key | Document Key | Input parameter. The key to use for the `DoclingDocument` column, which holds the structured information extracted from the source document. See [Docling Document](https://docling-project.github.io/docling/concepts/docling_document/) for details. Default: `doc`. |
-| md_image_placeholder | Markdown Image Placeholder | Input parameter. Defines the placeholder for image files in the output Markdown document. Default: `<!-- image -->`. |
-| md_page_break_placeholder | Markdown Page Break Placeholder | Input parameter. Defines the placeholder for page breaks in the output Markdown document. Default: empty string. |
-
-:::tip
-For more Docling features, use the [**Docling** components](/integrations-docling).
-:::
+    :::tip
+    For additional Docling features, including other components and OCR parsers, use the [**Docling** bundle](/integrations-docling).
+    :::
 
 ### File output
 
-The output of the **File** component depends on the number of files loaded and whether advanced parsing is enabled:
+The output of the **File** component depends on the number of files loaded and whether advanced parsing is enabled.
+If multiple options are available, you can set the output type near the component's output port.
 
-- **No files**: Throws an error or, if **Silent Errors** is enabled, produces no output.
+<Tabs>
+<TabItem value="zero" label="No files">
 
-- **One file without advanced parsing**:
-    - **Structured Content**: Available only for `.csv`, `.xlsx`, `.parquet`, and `.json` files.
-        - For `.csv` files, produces a [`DataFrame`](/data-types#dataframe) representing the table data.
-        - For `.json` files, produces a [`Data`](/data-types#data) object with the parsed JSON data.
-    - **Raw Content**: A [`Message`](/data-types#message) containing the file's raw text content.
-    - **File Path**: A [`Message`](/data-types#message) containing the path to the file in [Langflow file management](/concepts-file-management).
+If you run the **File** component with no file selected, it throws an error, or, if **Silent Errors** is enabled, produces no output.
 
-- **One file with advanced parsing**:
-    - **Structured Output**: A [`DataFrame`](/data-types#dataframe) containing the Docling-processed document data with text elements, page numbers, and metadata.
-    - **Markdown**: A [`Message`](/data-types#message) containing the document exported to Markdown format with image placeholders.
-    - **File Path**: A [`Message`](/data-types#message) containing the path to the file in [Langflow file management](/concepts-file-management).
+</TabItem>
+<TabItem value="one-false" label="One file without advanced parsing">
 
-- **Multiple files**: Produces a **Files** [`DataFrame`](/data-types#dataframe) containing the content and metadata of all selected files.
+If advanced parsing is disabled and you upload one file, the following output types are available:
 
-    Advanced parsing doesn't support multiple files.
-    See [Advanced parsing limitations](#advanced-parsing-limitations).
+- **Structured Content**: Available only for `.csv`, `.xlsx`, `.parquet`, and `.json` files.
+
+    - For `.csv` files, produces a [`DataFrame`](/data-types#dataframe) representing the table data.
+    - For `.json` files, produces a [`Data`](/data-types#data) object with the parsed JSON data.
+
+- **Raw Content**: A [`Message`](/data-types#message) containing the file's raw text content.
+
+- **File Path**: A [`Message`](/data-types#message) containing the path to the file in [Langflow file management](/concepts-file-management).
+
+</TabItem>
+<TabItem value="one-true" label="One file with advanced parsing">
+
+If advanced parsing is enabled and you upload one file, the following output types are available:
+
+- **Structured Output**: A [`DataFrame`](/data-types#dataframe) containing the Docling-processed document data with text elements, page numbers, and metadata.
+
+- **Markdown**: A [`Message`](/data-types#message) containing the uploaded document contents in Markdown format with image placeholders.
+
+- **File Path**: A [`Message`](/data-types#message) containing the path to the file in [Langflow file management](/concepts-file-management).
+
+</TabItem>
+<TabItem value="multi" label="Multiple files">
+
+If you upload multiple files, the component outputs **Files**, which is a [`DataFrame`](/data-types#dataframe) containing the content and metadata of all selected files.
+
+[Advanced parsing](#advanced-parsing) doesn't support multiple files; it processes only the first file.
+
+</TabItem>
+</Tabs>
 
 ## News Search
 
 The **News Search** component searches Google News through RSS, and then returns clean article data as a [`DataFrame`](/data-types#dataframe) containing article titles, links, publication dates, and summaries.
 The component's `clean_html` method parses the HTML content with the BeautifulSoup library, removes HTML markup, and strips whitespace to output clean data.
 
-For other RSS feeds, use the [**RSS Reader** component](#rss-reader), and for other searches use the [**Web Search** component](#web-search) or a provider-specific [bundle](/components-bundle-components).
+For other RSS feeds, use the [**RSS Reader** component](#rss-reader), and for other searches use the [**Web Search** component](#web-search) or provider-specific <Icon name="Blocks" aria-hidden="true" /> [**Bundles**].
 
 When used as a standard component in a flow, the **News Search** component must be connected to a component that accepts `DataFrame` input.
-You can connect the **News Search** component directly to a compatible component, or you can use a [**Processing** component](/components-processing) to convert or extract data of a different type between components.
+You can connect the **News Search** component directly to a compatible component, or you can use a [Processing component](/components-processing) to convert or extract data of a different type between components.
 
 When used in **Tool Mode** with an **Agent** component, the **News Search** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
 The agent decides whether to use the **News Search** component based on the user's query, and it can process the `DataFrame` output directly.
 
 ### News Search parameters
 
-Most **News Search** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -264,7 +283,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 The **RSS Reader** component fetches and parses RSS feeds from any valid RSS feed URL, and then returns the feed content as a [`DataFrame`](/data-types#dataframe) containing article titles, links, publication dates, and summaries.
 
 When used as a standard component in a flow, the **RSS Reader** component must be connected to a component that accepts `DataFrame` input.
-You can connect the **RSS Reader** component directly to a compatible component, or you can use a [**Processing** component](/components-processing) to convert or extract data of a different type between components.
+You can connect the **RSS Reader** component directly to a compatible component, or you can use a [Processing component](/components-processing) to convert or extract data of a different type between components.
 
 When used in **Tool Mode** with an **Agent** component, the **RSS Reader** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
 The agent decides whether to use the **RSS Reader** component based on the user's query, and it can process the `DataFrame` output directly.
@@ -361,7 +380,7 @@ Instead, you only need to provide enough context for the agent to understand tha
     If you want to use a different model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
 
     If you need to execute highly specialized queries, consider selecting a model that is trained for tasks like advanced SQL queries.
-    If your preferred model isn't in the **Agent** component's built-in model list, select the **Custom** model provider, and then use a [**Language Model** component](/components-models) to attach a specific model.
+    If your preferred model isn't in the **Agent** component's built-in model list, select the **Custom** model provider, and then use a [language model component](/components-models) to attach a specific model.
 
 6. Connect the **SQL Database** component's **Toolset** output to the **Agent** component's **Tools** input.
 
@@ -387,8 +406,7 @@ Instead, you only need to provide enough context for the agent to understand tha
 
 ### SQL Database parameters
 
-Some **SQL Database** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -405,8 +423,7 @@ It follows links recursively to a given depth, and it supports output in plain t
 
 ### URL parameters
 
-Most **URL** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 Some of the available parameters include the following:
 
@@ -439,7 +456,7 @@ There are two settings that control the output of the **URL** component at diffe
 When used as a standard component in a flow, the **URL** component must be connected to a component that accepts the selected output data type (`DataFrame` or `Message`).
 You can connect the **URL** component directly to a compatible component, or you can use a [**Type Convert** component](/components-processing#type-convert) to convert the output to another type before passing the data to other components if the data types aren't directly compatible.
 
-**Processing** components like the **Type Convert** component are useful with the **URL** component because it can extract a large amount of data from the crawled pages.
+Processing components like the **Type Convert** component are useful with the **URL** component because it can extract a large amount of data from the crawled pages.
 For example, if you only want to pass specific fields to other components, you can use a [**Parser** component](/components-processing#parser) to extract only that data from the crawled pages before passing the data to other components.
 
 When used in **Tool Mode** with an **Agent** component, the **URL** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
@@ -448,12 +465,12 @@ The agent decides whether to use the **URL** component based on the user's query
 ## Web Search
 
 The **Web Search** component performs a basic web search using DuckDuckGo's HTML scraping interface.
-For other search APIs, see [Bundles](/components-bundle-components).
+For other search APIs, see <Icon name="Blocks" aria-hidden="true" /> [**Bundles**].
 
 :::important
 The **Web Search** component uses web scraping that can be subject to rate limits.
 
-For production use, consider using another search component with more robust API support, such as a provider-specific [bundle](/components-bundle-components).
+For production use, consider using another search component with more robust API support, such as provider-specific bundles.
 :::
 
 ### Use the Web Search component in a flow
@@ -549,19 +566,25 @@ For more information, see [Trigger flows with webhooks](/webhook).
 Langflow's core components are meant to be generic and support a range of use cases.
 Core components typically aren't limited to a single provider.
 
-If the core **Data** components don't meet your needs, you can find provider-specific components in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
+If the core components don't meet your needs, you can find provider-specific components in <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
 
 For example, the [**DataStax** bundle](/bundles-datastax) includes components for CQL queries, and the [**Google** bundle](/bundles-google) includes components for Google Search APIs.
 
 ## Legacy Data components
 
-The **Load CSV** and **Load JSON** components are legacy components.
-You can still use them in your flows, but they are no longer maintained and can be removed in a future release.
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
+
+<PartialLegacy />
+
+The following Data components are in legacy status:
+
+* **Load CSV**
+* **Load JSON**
 
 Replace these components with the **File** component, which supports loading CSV and JSON files, as well as many other file types.
 
 ## See also
 
-- [Google components](/bundles-google)
-- [Composio components](/integrations-composio)
+- [**Google** bundle](/bundles-google)
+- [**Composio** bundle](/integrations-composio)
 - [File management](/concepts-file-management)

@@ -3,35 +3,35 @@ title: Integrate NVIDIA G-Assist with Langflow
 slug: /integrations-nvidia-g-assist
 ---
 
-:::important
-The **NVIDIA G-Assist** component is available only for Langflow users with NVIDIA GPUs on Windows systems.
-:::
-
-The **NVIDIA G-Assist** component enables interaction with NVIDIA GPU drivers through natural language prompts.
+The **NVIDIA System-Assist** component integrates your flows with NVIDIA G-Assist, enabling interaction with NVIDIA GPU drivers through natural language prompts.
 For example, prompt G-Assist with `"What is my current GPU temperature?"` or `"Show me the available GPU memory"` to get information, and then tell G-Assist to modify your GPU settings.
 For more information, see the [NVIDIA G-Assist repository](https://github.com/NVIDIA/g-assist).
 
 ## Prerequisites
 
-* Windows operating system
-* NVIDIA GPU
-* `gassist.rise` package installed. This package is included in your [Langflow installation](/get-started-installation).
+The **NVIDIA System-Assist** component requires an NVIDIA GPU on a Windows operating system.
 
-## Use the G-Assist component in a flow
+It uses the `gassist.rise` package, which is installed with all Langflow versions that include this component.
 
-1. Create a flow with **Chat Input** component, **G-Assist** component, and **Chat Output** components.
-2. Connect the **Chat Input** component to the **G-Assist** component's **Prompt** input.
-3. Connect the **G-Assist** component's output to the **Chat Output** component.
-4. Open the **Playground**, and then ask a question about your GPU. For example, `"What is my current GPU temperature?"`.
-The **G-Assist** component queries your GPU, and the response appears in the **Playground**.
+## Use NVIDIA G-Assist in a flow
 
-### Inputs
+1. Create a flow with a **Chat Input** component, **NVIDIA System-Assist** component, and **Chat Output** components.
 
-The **NVIDIA G-Assist** component accepts a single input:
+    This is a simplified example that uses only three components.
+    Depending on your use case, your flow might use more components or different inputs and outputs.
 
-- `prompt`: A human-readable prompt processed by NVIDIA G-Assist.
+2. Connect the **Chat Input** component to the **NVIDIA System-Assist** component's **Prompt** input.
 
-### Outputs
+    The **Prompt** parameter accepts a natural language prompt that is processed by the NVIDIA G-Assist AI Assistant.
+    In this example, you'll provide the prompt as chat input.
+    You could also enter a prompt directly in the **Prompt** input or connect another input component.
 
-The **NVIDIA G-Assist** component outputs a [`Message`](/data-types#message) object that contains the NVIDIA G-Assist response.
-The string response with the completed operation result is available in the `text` field of the `Message` object.
+3. Connect the **NVIDIA System-Assist** component's output to the **Chat Output** component.
+
+4. To test the flow, open the **Playground**, and then ask a question about your GPU.
+For example, `"What is my current GPU temperature?"`.
+
+    Through the **NVIDIA System-Assist** component, NVIDIA G-Assist queries your GPU based on the prompt, and then prints the response to the **Playground**.
+
+    The component's output is a [`Message`](/data-types#message) containing the NVIDIA G-Assist response.
+    The string response with the completed operation result is available in the `text` key in the `Message` object.
