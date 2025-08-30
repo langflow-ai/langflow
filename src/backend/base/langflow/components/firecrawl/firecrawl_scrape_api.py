@@ -1,7 +1,7 @@
 from langflow.custom.custom_component.component import Component
 from langflow.io import (
+    BoolInput,
     DataInput,
-    IntInput,
     MultilineInput,
     Output,
     SecretStrInput,
@@ -31,20 +31,25 @@ class FirecrawlScrapeApi(Component):
             info="The URL to scrape.",
             tool_mode=True,
         ),
-        IntInput(
-            name="timeout",
-            display_name="Timeout",
-            info="Timeout in milliseconds for the request.",
-        ),
         DataInput(
             name="scrapeOptions",
             display_name="Scrape Options",
             info="The page options to send with the request.",
+            advanced=True,
         ),
-        DataInput(
-            name="extractorOptions",
-            display_name="Extractor Options",
-            info="The extractor options to send with the request.",
+        IntInput(
+            name="timeout",
+            display_name="Timeout",
+            info="Timeout in seconds for the request.",
+            default=300,
+            advanced=True,
+        ),
+        BoolInput(
+            name="ignoreSitemap",
+            display_name="Ignore Sitemap",
+            info="Skip sitemap.xml discovery for URL extraction.",
+            default=False,
+            advanced=True,
         ),
     ]
 
@@ -59,15 +64,11 @@ class FirecrawlScrapeApi(Component):
             msg = "Could not import firecrawl integration package. Please install it with `pip install firecrawl-py`."
             raise ImportError(msg) from e
 
-        params = self.scrapeOptions.__dict__.get("data", {}) if self.scrapeOptions else {}
-        extractor_options_dict = self.extractorOptions.__dict__.get("data", {}) if self.extractorOptions else {}
-        if extractor_options_dict:
-            params["extract"] = extractor_options_dict
+        params = {}
 
-        # Set default values for parameters
-        params.setdefault("formats", ["markdown"])  # Default output format
-        params.setdefault("onlyMainContent", True)  # Default to only main content
+        if self.scrapeOptions:
+            params.update(self.scrapeOptions.__dict__["data"])
 
         app = FirecrawlApp(api_key=self.api_key)
-        results = app.scrape_url(self.url, params=params)
-        return Data(data=results)
+        scrape_result = app.scrape_url(self.url, params=params)
+        return Data(data=scrape_result)
