@@ -155,12 +155,29 @@ export const MermaidDiagram = ({
         }}
         ref={(el) => {
           containerRef.current = el;
-          // Safely set innerHTML only when we have content and element
+          // Safely parse and insert SVG using DOMParser (avoids innerHTML security concerns)
           if (el && svgContent && !isRendering) {
-            el.innerHTML = svgContent;
-            // Ensure SVG scales to container width
-            const svg = el.querySelector("svg");
-            if (svg) {
+            // Clear existing content
+            el.replaceChildren();
+            
+            // Parse the sanitized SVG using DOMParser
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(svgContent, "image/svg+xml");
+            const svgElement = doc.documentElement;
+            
+            // Check for parsing errors
+            if (svgElement.nodeName === "parsererror") {
+              console.error("Failed to parse SVG content");
+              return;
+            }
+            
+            // Import and append the SVG node
+            const importedSvg = el.ownerDocument.importNode(svgElement, true);
+            el.appendChild(importedSvg);
+            
+            // Apply styling to the SVG element
+            if (importedSvg.nodeName.toLowerCase() === "svg") {
+              const svg = importedSvg as SVGElement;
               // Set SVG to scale properly
               svg.style.maxWidth = "100%";
               svg.style.height = "auto";
