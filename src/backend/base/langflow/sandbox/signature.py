@@ -112,9 +112,25 @@ class ComponentSecurityManager:
             self._initialize_builtin_signatures()
     def _initialize_builtin_signatures(self) -> None:
         """Initialize component signatures with database storage:
-        1. Scan components and generate new signatures
-        2. Upsert new signatures to database
+        1. If LANGFLOW_SANDBOX_DEV_MODE=true, truncate the signatures table
+        2. Scan components and generate new signatures
+        3. Upsert new signatures to database
         """
+        # Check if we're in sandbox development mode
+        sandbox_dev_mode = os.getenv("LANGFLOW_SANDBOX_DEV_MODE") == "true"
+
+        if sandbox_dev_mode and self.db_session:
+            logger.warning("SANDBOX DEV MODE: Truncating signatures table to regenerate fresh signatures")
+            try:
+                from langflow.services.database.models.signature.model import Component
+                # Delete all existing signatures
+                self.db_session.query(Component).delete()
+                self.db_session.commit()
+                logger.info("Successfully truncated signatures table")
+            except Exception as e:
+                logger.error(f"Failed to truncate signatures table: {e}")
+                self.db_session.rollback()
+
         # Load the list of sandbox-supported components
         from .sandbox_manifest import get_supported_component_class_names
         supported_component_class_names = get_supported_component_class_names()

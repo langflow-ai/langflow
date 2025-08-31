@@ -9,6 +9,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlencode
 
+# Load .env file early if it exists to ensure env vars are available
+# This is important for sandbox configuration and other settings
+from dotenv import load_dotenv
+_env_file = Path(".env")
+if _env_file.exists():
+    load_dotenv(_env_file, override=False)
+
 import anyio
 import httpx
 import sqlalchemy
