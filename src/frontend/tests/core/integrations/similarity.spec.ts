@@ -30,7 +30,7 @@ test(
     await page
       .getByText("OpenAI Embeddings", { exact: true })
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 0, y: 0 },
+        targetPosition: { x: 100, y: 100 },
       });
     await page.getByTestId("canvas_controls_dropdown").click();
 

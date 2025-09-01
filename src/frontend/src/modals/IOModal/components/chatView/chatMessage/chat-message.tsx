@@ -205,7 +205,7 @@ export default function ChatMessage({
 
   return (
     <>
-      <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
+      <div className="w-full py-4 word-break-break-word">
         <div
           className={cn(
             "group relative flex w-full gap-4 rounded-md p-2",
