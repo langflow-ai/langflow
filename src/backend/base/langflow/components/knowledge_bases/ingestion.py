@@ -9,23 +9,27 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
 from loguru import logger
 
-from langflow.base.data.kb_utils import get_knowledge_bases
+from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
+from langflow.components.processing.converter import convert_to_dataframe
 from langflow.custom import Component
-from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput, TableInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput, TableInput
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict  # noqa: TC001
 from langflow.schema.table import EditMode
 from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_settings_service, get_variable_service, session_scope
+
+if TYPE_CHECKING:
+    from langflow.schema.dataframe import DataFrame
 
 HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
@@ -38,14 +42,14 @@ if not knowledge_directory:
 KNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()
 
 
-class KBIngestionComponent(Component):
+class KnowledgeIngestionComponent(Component):
     """Create or append to Langflow Knowledge from a DataFrame."""
 
     # ------ UI metadata ---------------------------------------------------
     display_name = "Knowledge Ingestion"
     description = "Create or update knowledge in Langflow."
-    icon = "database"
-    name = "KBIngestion"
+    icon = "upload"
+    name = "KnowledgeIngestion"
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -101,12 +105,17 @@ class KBIngestionComponent(Component):
             required=True,
             options=[],
             refresh_button=True,
+            real_time_refresh=True,
             dialog_inputs=asdict(NewKnowledgeBaseInput()),
         ),
-        DataFrameInput(
+        HandleInput(
             name="input_df",
-            display_name="Data",
-            info="Table with all original columns (already chunked / processed).",
+            display_name="Input",
+            info=(
+                "Table with all original columns (already chunked / processed). "
+                "Accepts Data or DataFrame. If Data is provided, it is converted to a DataFrame automatically."
+            ),
+            input_types=["Data", "DataFrame"],
             required=True,
         ),
         TableInput(
@@ -171,7 +180,7 @@ class KBIngestionComponent(Component):
     ]
 
     # ------ Outputs -------------------------------------------------------
-    outputs = [Output(display_name="DataFrame", name="dataframe", method="build_kb_info")]
+    outputs = [Output(display_name="Results", name="dataframe_output", method="build_kb_info")]
 
     # ------ Internal helpers ---------------------------------------------
     def _get_kb_root(self) -> Path:
@@ -503,8 +512,8 @@ class KBIngestionComponent(Component):
     async def build_kb_info(self) -> Data:
         """Main ingestion routine → returns a dict with KB metadata."""
         try:
-            # Get source DataFrame
-            df_source: pd.DataFrame = self.input_df
+            input_value = self.input_df[0] if isinstance(self.input_df, list) else self.input_df
+            df_source: DataFrame = convert_to_dataframe(input_value)
 
             # Validate column configuration (using Structured Output patterns)
             config_list = self._validate_column_config(df_source)
@@ -559,9 +568,8 @@ class KBIngestionComponent(Component):
             return Data(data=meta)
 
         except (OSError, ValueError, RuntimeError, KeyError) as e:
-            self.log(f"Error in KB ingestion: {e}")
-            self.status = f"❌ KB ingestion failed: {e}"
-            return Data(data={"error": str(e), "kb_name": self.knowledge_base})
+            msg = f"Error during KB ingestion: {e}"
+            raise RuntimeError(msg) from e
 
     async def _get_api_key_variable(self, field_value: dict[str, Any]):
         async with session_scope() as db:
