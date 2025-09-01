@@ -42,9 +42,18 @@ def convert_to_dataframe(v: DataFrame | Data | Message | dict) -> DataFrame:
     Returns:
         DataFrame: Converted DataFrame object
     """
+    import pandas as pd
+
     if isinstance(v, dict):
         return DataFrame([v])
-    return v if isinstance(v, DataFrame) else v.to_dataframe()
+    if isinstance(v, DataFrame):
+        return v
+    # Handle pandas DataFrame
+    if isinstance(v, pd.DataFrame):
+        # Convert pandas DataFrame to our DataFrame by creating Data objects
+        return DataFrame(data=v)
+    # For other types, call to_dataframe method
+    return v.to_dataframe()
 
 
 class TypeConverterComponent(Component):
