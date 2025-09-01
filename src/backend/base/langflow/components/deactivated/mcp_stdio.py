@@ -18,7 +18,7 @@ class MCPStdio(Component):
     client = MCPStdioClient()
     tools = types.ListToolsResult
     tool_names = [str]
-    display_name = "MCP Tools (stdio) [DEPRECATED]"
+    display_name = "MCP Tools (stdio)"
     description = (
         "Connects to an MCP server over stdio and exposes it's tools as langflow tools to be used by an Agent."
     )

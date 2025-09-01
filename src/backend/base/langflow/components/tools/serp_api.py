@@ -30,7 +30,7 @@ class SerpAPISchema(BaseModel):
 
 
 class SerpAPIComponent(LCToolComponent):
-    display_name = "Serp Search API [DEPRECATED]"
+    display_name = "Serp Search API"
     description = "Call Serp Search API with result limiting"
     name = "SerpAPI"
     icon = "SerpSearch"

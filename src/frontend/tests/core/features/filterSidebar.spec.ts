@@ -122,7 +122,7 @@ test(
 
     await expect(page.getByTestId("dataAPI Request")).toBeVisible();
     await expect(page.getByTestId("datastaxAstra DB")).toBeVisible();
-    await expect(page.getByTestId("logicSub Flow [Deprecated]")).toBeVisible();
+    await expect(page.getByTestId("logicSub Flow")).toBeVisible();
 
     await page.getByTestId("sidebar-options-trigger").click();
     await page.getByTestId("sidebar-beta-switch").isVisible({ timeout: 5000 });
@@ -130,7 +130,7 @@ test(
     await expect(page.getByTestId("sidebar-beta-switch")).toBeChecked();
     await page.getByTestId("sidebar-options-trigger").click();
 
-    await expect(page.getByTestId("logicSub Flow [Deprecated]")).toBeVisible();
+    await expect(page.getByTestId("logicSub Flow")).toBeVisible();
 
     await expect(page.getByTestId("processingData Operations")).toBeVisible();
 
@@ -138,9 +138,7 @@ test(
 
     await expect(page.getByTestId("dataAPI Request")).not.toBeVisible();
     await expect(page.getByTestId("datastaxAstra DB")).not.toBeVisible();
-    await expect(
-      page.getByTestId("logicSub Flow [Deprecated]"),
-    ).not.toBeVisible();
+    await expect(page.getByTestId("logicSub Flow")).not.toBeVisible();
 
     await expect(page.getByTestId("processingSplit Text")).not.toBeVisible();
   },

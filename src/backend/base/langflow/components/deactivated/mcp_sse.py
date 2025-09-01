@@ -18,7 +18,7 @@ class MCPSse(Component):
     client = MCPSseClient()
     tools = types.ListToolsResult
     tool_names = [str]
-    display_name = "MCP Tools (SSE) [DEPRECATED]"
+    display_name = "MCP Tools (SSE)"
     description = "Connects to an MCP server over SSE and exposes it's tools as langflow tools to be used by an Agent."
     documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "code"
