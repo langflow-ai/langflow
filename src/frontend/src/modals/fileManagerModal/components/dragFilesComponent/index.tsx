@@ -111,13 +111,12 @@ export default function DragFilesComponent({
             <span>{types.slice(0, 3).join(", ")}</span>
             {types.length > 3 && (
               <ShadTooltip content={types.slice(3).toSorted().join(", ")}>
-                <span className="text-muted-foreground flex items-center gap-1">
+                <span
+                  className="text-muted-foreground flex items-center gap-1"
+                  data-testid="info-types"
+                >
                   +{types.length - 3} more
-                  <ForwardedIconComponent
-                    name="info"
-                    data-testid="info-types-icon"
-                    className="w-3 h-3"
-                  />
+                  <ForwardedIconComponent name="info" className="w-3 h-3" />
                 </span>
               </ShadTooltip>
             )}
