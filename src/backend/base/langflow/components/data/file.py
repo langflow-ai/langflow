@@ -47,9 +47,7 @@ class FileComponent(BaseFileComponent):
 
     # Docling-supported/compatible extensions; TEXT_FILE_TYPES are supported by the base loader.
     VALID_EXTENSIONS = [
-        "csv",
-        "json",
-        "pdf",
+        *TEXT_FILE_TYPES,
         "adoc",
         "asciidoc",
         "asc",
@@ -57,11 +55,7 @@ class FileComponent(BaseFileComponent):
         "dotx",
         "dotm",
         "docm",
-        "docx",
-        "htm",
-        "html",
         "jpeg",
-        "md",
         "png",
         "potx",
         "ppsx",
@@ -70,13 +64,10 @@ class FileComponent(BaseFileComponent):
         "ppsm",
         "pptx",
         "tiff",
-        "txt",
         "xls",
         "xlsx",
         "xhtml",
-        "xml",
         "webp",
-        *TEXT_FILE_TYPES,
     ]
 
     # Fixed export settings used when markdown export is requested.
