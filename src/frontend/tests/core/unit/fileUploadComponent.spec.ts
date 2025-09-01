@@ -58,7 +58,7 @@ test(
       await page.getByTestId("info-types-icon").hover();
       await expect(
         page.getByText(
-          "adoc, asciidoc, asc, bmp, dotx, dotm, docm, docx, htm, html, jpeg, png, potx, ppsx, pptm, potm, ppsm, pptx, tiff, txt, xls, xlsx, xhtml, xml, webp, txt, md, mdx, csv, json, yaml, yml, xml, html, htm, pdf, docx, py, sh, sql, js, ts, tsx, zip, tar, tgz, bz2, gz",
+          "adoc, asc, asciidoc, bmp, bz2, csv, docm, docx, docx, dotm, dotx, gz, htm, htm, html, html, jpeg, js, json, md, md, mdx, pdf, png, potm, potx, ppsm, ppsx, pptm, pptx, py, sh, sql, tar, tgz, tiff, ts, tsx, txt, txt, webp, xhtml, xls, xlsx, xml, xml, yaml, yml, zip",
         ),
       ).toBeVisible();
 
