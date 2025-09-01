@@ -1,5 +1,14 @@
+"""CometAPI model constants and configuration.
+
+This module contains the default model names available through CometAPI.
+These models are used as fallbacks when the API is unavailable or when
+no API key is provided.
+"""
+
+from typing import Final
+
 # CometAPI available model list based on actual API offerings
-COMETAPI_MODELS = [
+COMETAPI_MODELS: Final[list[str]] = [
     # GPT series
     "gpt-5-chat-latest",
     "chatgpt-4o-latest",
@@ -40,4 +49,5 @@ COMETAPI_MODELS = [
     "qwen3-coder-plus-2025-07-22",
 ]
 
-MODEL_NAMES = COMETAPI_MODELS  # Backward compatibility
+# Backward compatibility alias
+MODEL_NAMES: Final[list[str]] = COMETAPI_MODELS
