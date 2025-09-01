@@ -192,6 +192,19 @@ class MessageInput(StrInput, InputTraceMixin):
             return Message(**v)
         if isinstance(v, Message):
             return v
+        # Check for Message-like objects by examining their fields
+        # This handles both langflow and lfx Message instances
+        if hasattr(v, "text") and hasattr(v, "model_dump") and callable(v.model_dump):
+            # Check if it has other Message-specific attributes
+            message_fields = {"text", "data", "sender", "session_id", "properties"}
+            obj_attrs = set(dir(v))
+            min_message_fields = 3
+            if len(message_fields.intersection(obj_attrs)) >= min_message_fields:
+                try:
+                    return Message(**v.model_dump())
+                except (TypeError, ValueError):
+                    # Fallback to text only if model_dump fails
+                    return Message(text=v.text)
         if isinstance(v, str | AsyncIterator | Iterator):
             return Message(text=v)
         # For simplified implementation, we'll skip MessageBase handling
