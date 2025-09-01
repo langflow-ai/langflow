@@ -1,4 +1,5 @@
 import json
+import re
 
 from langflow.custom.custom_component.component import Component
 from langflow.io import MultilineInput, Output
@@ -44,7 +45,7 @@ class WebhookComponent(Component):
             self.status = "No data provided."
             return Data(data={})
         try:
-            my_data = self.data.replace('"\n"', '"\\n"')
+            my_data = re.sub(r"(?<!\\)(\r|\n|\t)", lambda m: "\\n" if m.group() == "\n" else "\\t", self.data)
             body = json.loads(my_data or "{}")
         except json.JSONDecodeError:
             body = {"payload": self.data}
