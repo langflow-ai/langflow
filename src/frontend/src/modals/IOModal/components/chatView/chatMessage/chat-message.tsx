@@ -132,7 +132,7 @@ export default function ChatMessage({
     updateMessageMutation(
       {
         message: {
-          ...chat,
+          id: chat.id,
           files: convertFiles(chat.files),
           sender_name: chat.sender_name ?? "AI",
           text: message,
