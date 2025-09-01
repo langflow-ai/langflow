@@ -80,7 +80,6 @@ module.exports = {
       items: [
         "Agents/agents",
         "Agents/agents-tools",
-        "Concepts/knowledge",
       ],
     },
     {
@@ -114,6 +113,7 @@ module.exports = {
               id: "Develop/memory",
               label: "Manage memory"
             },
+            "Concepts/knowledge",
             {
               type: "doc",
               id: "Develop/session-id",
