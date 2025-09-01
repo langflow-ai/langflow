@@ -1,12 +1,12 @@
-import sortSenderMessages from "../helpers/sort-sender-messages";
 import type { ChatMessageType } from "../../../../../types/chat";
+import sortSenderMessages from "../helpers/sort-sender-messages";
 
 // Helper function to create mock ChatMessageType
 const createMockMessage = (
   timestamp: string,
   isSend: boolean,
   id: string = "test-id",
-  message: string = "test message"
+  message: string = "test message",
 ): ChatMessageType => ({
   id,
   timestamp,
@@ -18,7 +18,7 @@ const createMockMessage = (
   edit: false,
   category: "message",
   properties: {
-    source: { id: "test", display_name: "Test", source: "test" }
+    source: { id: "test", display_name: "Test", source: "test" },
   },
   content_blocks: [],
 });
@@ -34,12 +34,12 @@ describe("sortSenderMessages", () => {
 
       const sorted = [...messages].sort(sortSenderMessages);
 
-      expect(sorted.map(m => m.id)).toEqual(["msg1", "msg2", "msg3"]);
+      expect(sorted.map((m) => m.id)).toEqual(["msg1", "msg2", "msg3"]);
       expect(new Date(sorted[0].timestamp).getTime()).toBeLessThan(
-        new Date(sorted[1].timestamp).getTime()
+        new Date(sorted[1].timestamp).getTime(),
       );
       expect(new Date(sorted[1].timestamp).getTime()).toBeLessThan(
-        new Date(sorted[2].timestamp).getTime()
+        new Date(sorted[2].timestamp).getTime(),
       );
     });
 
@@ -53,7 +53,7 @@ describe("sortSenderMessages", () => {
       const sorted = [...messages].sort(sortSenderMessages);
 
       // Check that first is earliest, last is latest
-      const sortedTimes = sorted.map(m => new Date(m.timestamp).getTime());
+      const sortedTimes = sorted.map((m) => new Date(m.timestamp).getTime());
       expect(sortedTimes[0]).toBeLessThan(sortedTimes[1]);
       expect(sortedTimes[1]).toBeLessThan(sortedTimes[2]);
       expect(sorted[0].id).toBe("utc"); // 08:51:21 is earliest
@@ -68,15 +68,25 @@ describe("sortSenderMessages", () => {
 
       const sorted = [...messages].sort(sortSenderMessages);
 
-      expect(sorted.map(m => m.id)).toEqual(["day1", "day2", "day3"]);
+      expect(sorted.map((m) => m.id)).toEqual(["day1", "day2", "day3"]);
     });
   });
 
   describe("Secondary sorting for identical timestamps", () => {
     it("should place User messages before AI messages when timestamps are identical", () => {
       const messages = [
-        createMockMessage("2025-08-29 08:51:21 UTC", false, "ai-msg", "AI response"),
-        createMockMessage("2025-08-29 08:51:21 UTC", true, "user-msg", "User question"),
+        createMockMessage(
+          "2025-08-29 08:51:21 UTC",
+          false,
+          "ai-msg",
+          "AI response",
+        ),
+        createMockMessage(
+          "2025-08-29 08:51:21 UTC",
+          true,
+          "user-msg",
+          "User question",
+        ),
       ];
 
       const sorted = [...messages].sort(sortSenderMessages);
@@ -106,37 +116,77 @@ describe("sortSenderMessages", () => {
 
     it("should preserve original order for messages with same timestamp and sender type", () => {
       const messages = [
-        createMockMessage("2025-08-29 08:51:21 UTC", true, "user2", "Second user message"),
-        createMockMessage("2025-08-29 08:51:21 UTC", true, "user1", "First user message"),
-        createMockMessage("2025-08-29 08:51:21 UTC", true, "user3", "Third user message"),
+        createMockMessage(
+          "2025-08-29 08:51:21 UTC",
+          true,
+          "user2",
+          "Second user message",
+        ),
+        createMockMessage(
+          "2025-08-29 08:51:21 UTC",
+          true,
+          "user1",
+          "First user message",
+        ),
+        createMockMessage(
+          "2025-08-29 08:51:21 UTC",
+          true,
+          "user3",
+          "Third user message",
+        ),
       ];
 
       const sorted = [...messages].sort(sortSenderMessages);
 
       // Order should be preserved when timestamps and sender types are identical
-      expect(sorted.map(m => m.id)).toEqual(["user2", "user1", "user3"]);
-      expect(sorted.every(m => m.isSend)).toBe(true);
+      expect(sorted.map((m) => m.id)).toEqual(["user2", "user1", "user3"]);
+      expect(sorted.every((m) => m.isSend)).toBe(true);
     });
   });
 
   describe("Complex conversation scenarios", () => {
     it("should handle a realistic conversation with mixed timestamps", () => {
       const messages = [
-        createMockMessage("2025-08-29 08:51:23 UTC", false, "ai2", "Second AI response"),
-        createMockMessage("2025-08-29 08:51:21 UTC", true, "user1", "First question"),
-        createMockMessage("2025-08-29 08:51:21 UTC", false, "ai1", "First AI response"),
-        createMockMessage("2025-08-29 08:51:23 UTC", true, "user2", "Follow-up question"),
-        createMockMessage("2025-08-29 08:51:25 UTC", true, "user3", "Third question"),
+        createMockMessage(
+          "2025-08-29 08:51:23 UTC",
+          false,
+          "ai2",
+          "Second AI response",
+        ),
+        createMockMessage(
+          "2025-08-29 08:51:21 UTC",
+          true,
+          "user1",
+          "First question",
+        ),
+        createMockMessage(
+          "2025-08-29 08:51:21 UTC",
+          false,
+          "ai1",
+          "First AI response",
+        ),
+        createMockMessage(
+          "2025-08-29 08:51:23 UTC",
+          true,
+          "user2",
+          "Follow-up question",
+        ),
+        createMockMessage(
+          "2025-08-29 08:51:25 UTC",
+          true,
+          "user3",
+          "Third question",
+        ),
       ];
 
       const sorted = [...messages].sort(sortSenderMessages);
 
-      expect(sorted.map(m => m.id)).toEqual([
-        "user1",  // 08:51:21, User first
-        "ai1",    // 08:51:21, AI second
-        "user2",  // 08:51:23, User first
-        "ai2",    // 08:51:23, AI second
-        "user3",  // 08:51:25, only message at this time
+      expect(sorted.map((m) => m.id)).toEqual([
+        "user1", // 08:51:21, User first
+        "ai1", // 08:51:21, AI second
+        "user2", // 08:51:23, User first
+        "ai2", // 08:51:23, AI second
+        "user3", // 08:51:25, only message at this time
       ]);
     });
 
@@ -144,8 +194,18 @@ describe("sortSenderMessages", () => {
       // Simulate scenario where user sends message and AI responds immediately
       // causing identical timestamps due to backend streaming/load balancer
       const messages = [
-        createMockMessage("2025-08-29 08:51:21 UTC", false, "stream-ai", "Streaming AI response"),
-        createMockMessage("2025-08-29 08:51:21 UTC", true, "stream-user", "User message"),
+        createMockMessage(
+          "2025-08-29 08:51:21 UTC",
+          false,
+          "stream-ai",
+          "Streaming AI response",
+        ),
+        createMockMessage(
+          "2025-08-29 08:51:21 UTC",
+          true,
+          "stream-user",
+          "User message",
+        ),
       ];
 
       const sorted = [...messages].sort(sortSenderMessages);
@@ -158,9 +218,24 @@ describe("sortSenderMessages", () => {
 
     it("should handle conversation with multiple AI responses to one user message", () => {
       const messages = [
-        createMockMessage("2025-08-29 08:51:21 UTC", false, "ai-chunk-1", "AI chunk 1"),
-        createMockMessage("2025-08-29 08:51:21 UTC", false, "ai-chunk-2", "AI chunk 2"),
-        createMockMessage("2025-08-29 08:51:21 UTC", true, "user-msg", "User question"),
+        createMockMessage(
+          "2025-08-29 08:51:21 UTC",
+          false,
+          "ai-chunk-1",
+          "AI chunk 1",
+        ),
+        createMockMessage(
+          "2025-08-29 08:51:21 UTC",
+          false,
+          "ai-chunk-2",
+          "AI chunk 2",
+        ),
+        createMockMessage(
+          "2025-08-29 08:51:21 UTC",
+          true,
+          "user-msg",
+          "User question",
+        ),
       ];
 
       const sorted = [...messages].sort(sortSenderMessages);
@@ -183,7 +258,9 @@ describe("sortSenderMessages", () => {
     });
 
     it("should handle single message", () => {
-      const messages = [createMockMessage("2025-08-29 08:51:21 UTC", true, "single")];
+      const messages = [
+        createMockMessage("2025-08-29 08:51:21 UTC", true, "single"),
+      ];
       const sorted = [...messages].sort(sortSenderMessages);
       expect(sorted.length).toBe(1);
       expect(sorted[0].id).toBe("single");
@@ -204,9 +281,9 @@ describe("sortSenderMessages", () => {
 
       const sorted = [...messages].sort(sortSenderMessages);
       expect(sorted.length).toBe(3);
-      
+
       // Valid timestamp should be sorted correctly relative to others
-      const validMessage = sorted.find(m => m.id === "valid-user");
+      const validMessage = sorted.find((m) => m.id === "valid-user");
       expect(validMessage).toBeDefined();
     });
 
@@ -221,19 +298,21 @@ describe("sortSenderMessages", () => {
 
       // Test the key behavior: chronological order with user-first for identical timestamps
       expect(sorted.length).toBe(3);
-      
+
       // Messages with .001 should come before .002
-      const firstTwoTimes = sorted.slice(0, 2).map(m => new Date(m.timestamp).getTime());
+      const firstTwoTimes = sorted
+        .slice(0, 2)
+        .map((m) => new Date(m.timestamp).getTime());
       const thirdTime = new Date(sorted[2].timestamp).getTime();
-      
+
       expect(firstTwoTimes[0]).toEqual(firstTwoTimes[1]); // Same millisecond
       expect(firstTwoTimes[0]).toBeLessThan(thirdTime); // Earlier than third
-      
+
       // Among the first two (same timestamp), user should come first
       const sameTimestampMessages = sorted.slice(0, 2);
-      const userMsg = sameTimestampMessages.find(m => m.isSend);
-      const aiMsg = sameTimestampMessages.find(m => !m.isSend);
-      
+      const userMsg = sameTimestampMessages.find((m) => m.isSend);
+      const aiMsg = sameTimestampMessages.find((m) => !m.isSend);
+
       expect(userMsg?.id).toBe("user-milli1");
       expect(aiMsg?.id).toBe("ai-milli1");
       expect(sorted.indexOf(userMsg!)).toBeLessThan(sorted.indexOf(aiMsg!));
@@ -267,17 +346,17 @@ describe("sortSenderMessages", () => {
       const sorted2 = [...messages].sort(sortSenderMessages);
 
       // Should produce consistent results
-      expect(sorted1.map(m => m.id)).toEqual(sorted2.map(m => m.id));
+      expect(sorted1.map((m) => m.id)).toEqual(sorted2.map((m) => m.id));
     });
 
     it("should handle large arrays efficiently", () => {
       // Generate 1000 messages with mixed timestamps
-      const messages = Array.from({ length: 1000 }, (_, i) => 
+      const messages = Array.from({ length: 1000 }, (_, i) =>
         createMockMessage(
-          `2025-08-29 08:${String(51 + (i % 10)).padStart(2, '0')}:${String(21 + (i % 40)).padStart(2, '0')} UTC`,
+          `2025-08-29 08:${String(51 + (i % 10)).padStart(2, "0")}:${String(21 + (i % 40)).padStart(2, "0")} UTC`,
           i % 2 === 0, // Alternate between user and AI
-          `msg-${i}`
-        )
+          `msg-${i}`,
+        ),
       );
 
       const startTime = performance.now();
@@ -286,7 +365,7 @@ describe("sortSenderMessages", () => {
 
       expect(sorted.length).toBe(1000);
       expect(endTime - startTime).toBeLessThan(100); // Should complete in <100ms
-      
+
       // Verify sorting is correct - timestamps should be chronological
       for (let i = 1; i < sorted.length; i++) {
         const prevTime = new Date(sorted[i - 1].timestamp).getTime();
@@ -311,7 +390,9 @@ describe("sortSenderMessages", () => {
         files: [{ path: "/test", type: "text", name: "test.txt" }],
         edit: false,
         category: "message",
-        properties: { source: { id: "test", display_name: "Test", source: "test" } },
+        properties: {
+          source: { id: "test", display_name: "Test", source: "test" },
+        },
         content_blocks: [],
         template: "test template",
         thought: "test thought",
