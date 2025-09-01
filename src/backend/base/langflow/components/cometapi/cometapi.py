@@ -52,6 +52,8 @@ class CometAPIModelComponent(LCModelComponent):
             options=MODEL_NAMES,
             value=MODEL_NAMES[0],
             refresh_button=True,
+            combobox=True,
+            info="Select a model from the dropdown or enter a custom model name.",
         ),
         SecretStrInput(
             name="api_key",
