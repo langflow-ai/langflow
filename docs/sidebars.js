@@ -111,11 +111,6 @@ module.exports = {
             },
             {
               type: "doc",
-              id: "Concepts/knowledge",
-              label: "Manage knowledge bases"
-            },
-            {
-              type: "doc",
               id: "Develop/memory",
               label: "Manage memory"
             },
@@ -273,6 +268,7 @@ module.exports = {
               ]
             },
             "Components/components-data",
+            "Components/components-kb",
             "Components/components-vector-stores",
             {
               type: "category",
