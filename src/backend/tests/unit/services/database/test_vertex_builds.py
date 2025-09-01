@@ -3,7 +3,7 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from langflow.services.database.models.vertex_builds.crud import log_vertex_build
+from langflow.services.database.models.vertex_builds.crud import cleanup_old_vertex_builds_for_flow, log_vertex_build
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
 from langflow.services.settings.base import Settings
 from sqlalchemy import delete, func, select
@@ -102,6 +102,14 @@ async def test_log_vertex_build_max_global_limit(async_session: AsyncSession, ve
             vertex_id=str(uuid4()),  # Different vertex ID each time
         )
 
+        # Perform cleanup to enforce limits
+        await cleanup_old_vertex_builds_for_flow(
+            async_session,
+            vertex_build_data.flow_id,
+            mock_settings.max_vertex_builds_to_keep,
+            mock_settings.max_vertex_builds_per_vertex,
+        )
+
         count = await async_session.scalar(select(func.count()).select_from(VertexBuildTable))
         assert count <= mock_settings.max_vertex_builds_to_keep
 
@@ -118,6 +126,14 @@ async def test_log_vertex_build_max_per_vertex_limit(async_session: AsyncSession
             count=mock_settings.max_vertex_builds_per_vertex + 2,
             flow_id=vertex_build_data.flow_id,
             vertex_id=vertex_build_data.id,  # Same vertex ID
+        )
+
+        # Perform cleanup to enforce limits
+        await cleanup_old_vertex_builds_for_flow(
+            async_session,
+            vertex_build_data.flow_id,
+            mock_settings.max_vertex_builds_to_keep,
+            mock_settings.max_vertex_builds_per_vertex,
         )
 
         # Count builds for this vertex
@@ -176,15 +192,18 @@ async def test_log_vertex_build_ordering(async_session: AsyncSession, timestamp_
 
     # Add builds in random order to test sorting
     for build in sorted(builds, key=lambda _: uuid4()):  # Randomize order
-        await log_vertex_build(
-            async_session,
-            build,
-            max_builds_to_keep=max_builds,
-            max_builds_per_vertex=max_builds,  # Allow same number per vertex as global
-        )
+        await log_vertex_build(async_session, build)
 
     # Wait for the transaction to complete
     await async_session.commit()
+
+    # Perform cleanup to enforce limits
+    await cleanup_old_vertex_builds_for_flow(
+        async_session,
+        flow_id,
+        max_builds,
+        max_builds,  # Allow same number per vertex as global
+    )
 
     # Verify newest builds are kept
     remaining_builds = (
@@ -229,10 +248,11 @@ async def test_log_vertex_build_with_different_limits(
 
     # Insert builds one by one
     for build in builds_to_insert:
-        await log_vertex_build(
-            async_session, build, max_builds_to_keep=max_global, max_builds_per_vertex=max_per_vertex
-        )
+        await log_vertex_build(async_session, build)
         await async_session.commit()
+
+    # Perform cleanup to enforce limits
+    await cleanup_old_vertex_builds_for_flow(async_session, vertex_build_data.flow_id, max_global, max_per_vertex)
 
     # Verify the total count
     count = await async_session.scalar(select(func.count()).select_from(VertexBuildTable))
@@ -261,6 +281,9 @@ async def test_log_vertex_build_with_different_limits(
     for build in vertex_builds_to_insert:
         await log_vertex_build(async_session, build)
         await async_session.commit()
+
+    # Perform cleanup to enforce limits for per-vertex test as well
+    await cleanup_old_vertex_builds_for_flow(async_session, vertex_build_data.flow_id, max_global, max_per_vertex)
 
     # Verify per-vertex count
     vertex_count = await async_session.scalar(
