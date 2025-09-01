@@ -16,6 +16,7 @@ from langflow.inputs import (
     SliderInput,
 )
 from langflow.inputs.inputs import HandleInput
+from langflow.logging import logger
 
 
 class CometAPIModelComponent(LCModelComponent):
@@ -23,6 +24,10 @@ class CometAPIModelComponent(LCModelComponent):
     description = "Generates text using CometAPI LLMs (OpenAI compatible)."
     icon = "CometAPI"
     name = "CometAPIModel"
+
+    # Constants
+    API_BASE_URL = "https://api.cometapi.com/v1"
+    REQUEST_TIMEOUT = 10
 
     inputs = [
         *LCModelComponent._base_inputs,
@@ -80,56 +85,95 @@ class CometAPIModelComponent(LCModelComponent):
         ),
     ]
 
-    def get_models(self) -> list[str]:
-        base_url = "https://api.cometapi.com/v1"
-        url = f"{base_url}/models"
+    def _build_headers(self) -> dict[str, str]:
+        """Build request headers for CometAPI calls."""
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        return headers
 
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}" if self.api_key else "",
-        }
+    def get_models(self) -> list[str]:
+        """Fetch available models from CometAPI."""
+        if not self.api_key:
+            logger.warning("No API key provided, using default models")
+            return MODEL_NAMES
+
+        url = f"{self.API_BASE_URL}/models"
+        headers = self._build_headers()
 
         try:
-            response = requests.get(url, headers=headers, timeout=10)
+            logger.debug(f"Fetching models from CometAPI: {url}")
+            response = requests.get(url, headers=headers, timeout=self.REQUEST_TIMEOUT)
             response.raise_for_status()
+
             model_list = response.json()
-            return [model["id"] for model in model_list.get("data", [])]
-        except requests.RequestException as e:
-            self.status = f"Error fetching models: {e}"
+            models = [model["id"] for model in model_list.get("data", [])]
+
+            if not models:
+                logger.warning("No models returned from CometAPI, using default models")
+            else:
+                logger.debug(f"Successfully fetched {len(models)} models from CometAPI")
+                return models
+
+        except requests.exceptions.Timeout:
+            error_msg = f"Timeout fetching models from CometAPI (>{self.REQUEST_TIMEOUT}s)"
+            logger.error(error_msg)
+            self.status = error_msg
+            return MODEL_NAMES
+        except requests.exceptions.HTTPError as e:
+            error_msg = f"HTTP error fetching models: {e.response.status_code}"
+            logger.error(error_msg)
+            self.status = error_msg
+            return MODEL_NAMES
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Error fetching models: {e}"
+            logger.error(error_msg)
+            self.status = error_msg
+            return MODEL_NAMES
+        except (KeyError, ValueError) as e:
+            error_msg = f"Invalid response format from CometAPI: {e}"
+            logger.error(error_msg)
+            self.status = error_msg
             return MODEL_NAMES
 
     @override
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        """Update build configuration with fresh model list when API key changes."""
         if field_name in {"api_key", "model_name"}:
             models = self.get_models()
             build_config["model_name"]["options"] = models
         return build_config
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        api_key = self.api_key
-        temperature = self.temperature
-        model_name: str = self.model_name
-        max_tokens = self.max_tokens
-        model_kwargs = self.model_kwargs or {}
-        json_mode = self.json_mode
-        seed = self.seed
+        """Build and configure the CometAPI language model."""
+        if not self.api_key:
+            msg = "CometAPI API Key is required"
+            raise ValueError(msg)
+
+        if not self.model_name:
+            msg = "Model name is required"
+            raise ValueError(msg)
+
+        logger.debug(f"Building CometAPI model: {self.model_name}")
 
         try:
             output = ChatOpenAI(
-                model=model_name,
-                api_key=(SecretStr(api_key).get_secret_value() if api_key else None),
-                max_tokens=max_tokens or None,
-                temperature=temperature,
-                model_kwargs=model_kwargs,
+                model=self.model_name,
+                api_key=SecretStr(self.api_key).get_secret_value(),
+                max_tokens=self.max_tokens or None,
+                temperature=self.temperature,
+                model_kwargs=self.model_kwargs or {},
                 streaming=self.stream,
-                seed=seed,
-                base_url="https://api.cometapi.com/v1",
+                seed=self.seed,
+                base_url=self.API_BASE_URL,
             )
         except Exception as e:
-            msg = "Could not connect to CometAPI API."
-            raise ValueError(msg) from e
+            error_msg = f"Failed to initialize CometAPI model '{self.model_name}': {e}"
+            logger.error(error_msg)
+            raise ValueError(error_msg) from e
 
-        if json_mode:
+        if self.json_mode:
             output = output.bind(response_format={"type": "json_object"})
 
+        logger.debug(f"Successfully built CometAPI model: {self.model_name}")
         return output
