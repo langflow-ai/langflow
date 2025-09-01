@@ -9,17 +9,12 @@ from typing import Any, Literal
 import orjson
 import yaml
 from aiofile import async_open
-from loguru import logger
 from pydantic import Field, field_validator
 from pydantic.fields import FieldInfo
-from pydantic_settings import (
-    BaseSettings,
-    EnvSettingsSource,
-    PydanticBaseSettingsSource,
-    SettingsConfigDict,
-)
+from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 from typing_extensions import override
 
+from langflow.logging.logger import logger
 from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from langflow.utils.util_strings import is_valid_database_url
@@ -72,6 +67,9 @@ class Settings(BaseSettings):
     save_db_in_config_dir: bool = False
     """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory
     (i.e. in the package directory)."""
+
+    knowledge_bases_dir: str | None = "~/.langflow/knowledge_bases"
+    """The directory to store knowledge bases."""
 
     dev: bool = False
     """If True, Langflow will run in development mode."""
@@ -546,6 +544,6 @@ async def load_settings_from_yaml(file_path: str) -> Settings:
             if key not in Settings.model_fields:
                 msg = f"Key {key} not found in settings"
                 raise KeyError(msg)
-            logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
+            await logger.adebug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
     return await asyncio.to_thread(Settings, **settings_dict)

@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.5.0.post1"
+version = "1.6.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -31,7 +31,7 @@ dependencies = [
     "faiss-cpu==1.9.0.post1",
     "types-cachetools==5.5.0.20240820",
     "pymongo==4.10.1",
-    "supabase==2.6.0",
+    "supabase>=2.6.0,<3.0.0",
     "certifi>=2023.11.17,<2025.0.0",
     "certifi==2024.8.30",
     'fastavro==1.9.7; python_version < "3.13"',
@@ -52,7 +52,7 @@ dependencies = [
     "dspy-ai==2.5.41",
     "datasets>2.14.7",
     "assemblyai==0.35.1",
-    "litellm==1.60.2",
+    "litellm>=1.60.2,<2.0.0",
     "chromadb==0.5.23",
     "zep-python==2.0.2",
     "youtube-transcript-api==0.6.3",
@@ -61,13 +61,13 @@ dependencies = [
     "GitPython==3.1.43",
     "kubernetes==31.0.0",
     "json_repair==0.30.3",
-    "langwatch==0.1.16",
+    "langwatch>=0.2.11,<0.3.0",
     "langsmith>=0.3.42,<1.0.0",
     "yfinance==0.2.50",
     "wolframalpha==5.1.3",
-    "astra-assistants[tools]~=2.2.12",
-    "composio-langchain==0.7.15",
-    "composio-core==0.7.15",
+    "astra-assistants[tools]>=2.2.13,<3.0.0",
+    "composio==0.8.5",
+    "composio-langchain==0.8.5",
     "spider-client==0.1.24",
     "nltk==3.9.1",
     "lark==1.2.2",
@@ -77,10 +77,11 @@ dependencies = [
     "opensearch-py==2.8.0",
     "langchain-google-genai==2.0.6",
     "langchain-cohere==0.3.3",
+    "langchain-huggingface==0.3.1",
     "langchain-anthropic==0.3.14",
     "langchain-astradb~=0.6.0",
     "langchain-openai>=0.2.12",
-    "langchain-google-vertexai==2.0.7",
+    "langchain-google-vertexai>=2.0.7,<3.0.0",
     "langchain-groq==0.2.1",
     "langchain-pinecone>=0.2.8",
     "langchain-mistralai==0.2.3",
@@ -112,8 +113,6 @@ dependencies = [
     "pydantic-ai>=0.0.19",
     "smolagents>=1.8.0",
     "apify-client>=1.8.1",
-    "pylint>=3.3.4",
-    "ruff>=0.9.7",
     "langchain-graph-retriever==0.6.1",
     "graph-retriever==0.6.1",
     "ibm-watsonx-ai>=1.3.1",
@@ -126,6 +125,10 @@ dependencies = [
     "docling_core>=2.36.1",
     "filelock>=3.18.0",
     "jigsawstack==0.2.7",
+    "structlog>=25.4.0",
+    "aiosqlite==0.21.0",
+    "fastparquet>=2024.11.0",
+    "traceloop-sdk>=0.43.1",
 ]
 
 [dependency-groups]
@@ -134,8 +137,8 @@ dev = [
     "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
     "mypy>=1.11.0",
-    "ruff>=0.9.7,<0.10",
-    "httpx>=0.27.0",
+    "ruff>=0.12.7",
+    "httpx>=0.28.1",
     "pytest>=8.2.0",
     "types-requests>=2.32.0",
     "requests>=2.32.0",
@@ -176,6 +179,7 @@ dev = [
     "pytest-timeout>=2.3.1",
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
+    "docling>=2.36.1"
 ]
 
 [tool.uv.sources]
@@ -195,6 +199,9 @@ Documentation = "https://docs.langflow.org"
 [project.optional-dependencies]
 docling = [
     "docling>=2.36.1",
+    "tesserocr>=2.8.0",
+    "rapidocr-onnxruntime>=1.4.4",
+    "ocrmac>=1.0.0; sys_platform == 'darwin'",
 ]
 
 audio = [
@@ -217,8 +224,12 @@ clickhouse-connect = [
 ]
 
 nv-ingest = [
-    "nv-ingest-api==2025.4.22.dev20250422",
-    "nv-ingest-client==2025.4.22.dev20250422",
+    # NOTE: These must be removed in order to run `uv lock --upgrade` or `uv sync --upgrade`
+    # due to incompatibility with <3.12 and how uv handles lockfile creation.
+    # If upgrading, ensure `uv lock` and `uv sync` are run after upgrade with these,
+    # and that afterward, the lockfile contains nv-ingest.
+    "nv-ingest-api==25.6.2,<26.0.0 ; python_version >= '3.12'",
+    "nv-ingest-client==25.6.3,<26.0.0 ; python_version >= '3.12'",
 ]
 
 postgresql = [
@@ -254,6 +265,7 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 markers = ["async_test", "api_key_required", "no_blockbuster", "benchmark"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+addopts = "-p no:benchmark"
 
 [tool.coverage.run]
 command_line = """
@@ -296,7 +308,9 @@ ignore = [
     "TD002", # Missing author in TODO
     "TD003", # Missing issue link in TODO
     "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
-
+    "PLC0415", # Inline imports
+    "D10", # Missing docstrings
+    "PLW1641", # Object does not implement `__hash__` method (mutable objects shouldn't be hashable)
     # Rules that are TODOs
     "ANN",
 ]
@@ -306,6 +320,7 @@ external = ["RUF027"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["D1", "INP", "T201"]
+"src/backend/base/langflow/alembic/versions/*" = ["INP001", "D415", "PGH003"]
 "src/backend/tests/*" = [
     "D1",
     "PLR2004",

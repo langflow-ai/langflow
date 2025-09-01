@@ -109,7 +109,9 @@ test(
       timeout: 3000,
     });
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByTestId("canvas_controls_dropdown").click();
     await page.waitForSelector('[data-testid="fit_view"]', { timeout: 30000 });
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await renameFlow(page, { flowName: userAFlowName });
 

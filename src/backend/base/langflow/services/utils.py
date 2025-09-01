@@ -3,11 +3,11 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
-from loguru import logger
 from sqlalchemy import delete
 from sqlalchemy import exc as sqlalchemy_exc
 from sqlmodel import col, select
 
+from langflow.logging.logger import logger
 from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.cache.base import ExternalAsyncBaseCacheService
 from langflow.services.cache.factory import CacheServiceFactory
@@ -45,7 +45,7 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
             # This means that the user has already created
             # a superuser and changed the password in the UI
             # so we don't need to do anything.
-            logger.debug(
+            await logger.adebug(
                 "Superuser exists but password is incorrect. "
                 "This means that the user has changed the "
                 "base superuser credentials."
@@ -68,15 +68,20 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
     return await create_super_user(username, password, db=session)
 
 
-async def setup_superuser(settings_service, session: AsyncSession) -> None:
+async def setup_superuser(settings_service: SettingsService, session: AsyncSession) -> None:
     if settings_service.auth_settings.AUTO_LOGIN:
-        logger.debug("AUTO_LOGIN is set to True. Creating default superuser.")
+        await logger.adebug("AUTO_LOGIN is set to True. Creating default superuser.")
+        username = DEFAULT_SUPERUSER
+        password = DEFAULT_SUPERUSER_PASSWORD
     else:
         # Remove the default superuser if it exists
         await teardown_superuser(settings_service, session)
+        username = settings_service.auth_settings.SUPERUSER
+        password = settings_service.auth_settings.SUPERUSER_PASSWORD
 
-    username = settings_service.auth_settings.SUPERUSER
-    password = settings_service.auth_settings.SUPERUSER_PASSWORD
+    if not username or not password:
+        msg = "Username and password must be set"
+        raise ValueError(msg)
 
     is_default = (username == DEFAULT_SUPERUSER) and (password == DEFAULT_SUPERUSER_PASSWORD)
 
@@ -85,7 +90,7 @@ async def setup_superuser(settings_service, session: AsyncSession) -> None:
             session=session, username=username, password=password, is_default=is_default
         )
         if user is not None:
-            logger.debug("Superuser created successfully.")
+            await logger.adebug("Superuser created successfully.")
     except Exception as exc:
         logger.exception(exc)
         msg = "Could not create superuser. Please create a superuser manually."
@@ -101,7 +106,7 @@ async def teardown_superuser(settings_service, session: AsyncSession) -> None:
 
     if not settings_service.auth_settings.AUTO_LOGIN:
         try:
-            logger.debug("AUTO_LOGIN is set to False. Removing default superuser if exists.")
+            await logger.adebug("AUTO_LOGIN is set to False. Removing default superuser if exists.")
             username = DEFAULT_SUPERUSER
             from langflow.services.database.models.user.model import User
 
@@ -113,7 +118,7 @@ async def teardown_superuser(settings_service, session: AsyncSession) -> None:
             if user and user.is_superuser is True and not user.last_login_at:
                 await session.delete(user)
                 await session.commit()
-                logger.debug("Default superuser removed successfully.")
+                await logger.adebug("Default superuser removed successfully.")
 
         except Exception as exc:
             logger.exception(exc)
@@ -233,6 +238,6 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     try:
         await get_db_service().assign_orphaned_flows_to_superuser()
     except sqlalchemy_exc.IntegrityError as exc:
-        logger.warning(f"Error assigning orphaned flows to the superuser: {exc!s}")
+        await logger.awarning(f"Error assigning orphaned flows to the superuser: {exc!s}")
     await clean_transactions(settings_service, session)
     await clean_vertex_builds(settings_service, session)
