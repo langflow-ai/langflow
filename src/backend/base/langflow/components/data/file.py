@@ -47,11 +47,13 @@ class FileComponent(BaseFileComponent):
 
     # Docling-supported/compatible extensions; TEXT_FILE_TYPES are supported by the base loader.
     VALID_EXTENSIONS = [
+        "csv",
+        "json",
+        "pdf",
         "adoc",
         "asciidoc",
         "asc",
         "bmp",
-        "csv",
         "dotx",
         "dotm",
         "docm",
@@ -59,9 +61,7 @@ class FileComponent(BaseFileComponent):
         "htm",
         "html",
         "jpeg",
-        "json",
         "md",
-        "pdf",
         "png",
         "potx",
         "ppsx",
