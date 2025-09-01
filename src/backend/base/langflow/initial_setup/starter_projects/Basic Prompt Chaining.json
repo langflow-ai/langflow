@@ -1233,7 +1233,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Runs a language model given a specified provider. ",
+            "description": "Runs a language model given a specified provider.",
             "display_name": "Language Model",
             "documentation": "",
             "edited": false,
@@ -1251,12 +1251,35 @@
             "legacy": false,
             "lf_version": "1.5.0",
             "metadata": {
+              "code_hash": "bb5f8714781b",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langchain_anthropic",
+                    "version": "0.3.14"
+                  },
+                  {
+                    "name": "langchain_google_genai",
+                    "version": "2.0.6"
+                  },
+                  {
+                    "name": "langchain_openai",
+                    "version": "0.3.23"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 4
+              },
               "keywords": [
                 "model",
                 "llm",
                 "language model",
                 "large language model"
-              ]
+              ],
+              "module": "lfx.components.models.language_model.LanguageModelComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -1266,11 +1289,8 @@
                 "cache": true,
                 "display_name": "Model Response",
                 "group_outputs": false,
-                "hidden": null,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1283,11 +1303,8 @@
                 "cache": true,
                 "display_name": "Language Model",
                 "group_outputs": false,
-                "hidden": null,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1374,11 +1391,20 @@
                   "gpt-4.1",
                   "gpt-4.1-mini",
                   "gpt-4.1-nano",
-                  "gpt-4.5-preview",
                   "gpt-4-turbo",
                   "gpt-4-turbo-preview",
                   "gpt-4",
-                  "gpt-3.5-turbo"
+                  "gpt-3.5-turbo",
+                  "gpt-5",
+                  "gpt-5-mini",
+                  "gpt-5-nano",
+                  "gpt-5-chat-latest",
+                  "o1",
+                  "o3-mini",
+                  "o3",
+                  "o3-pro",
+                  "o4-mini",
+                  "o4-mini-high"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -1529,7 +1555,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Runs a language model given a specified provider. ",
+            "description": "Runs a language model given a specified provider.",
             "display_name": "Language Model",
             "documentation": "",
             "edited": false,
@@ -1547,12 +1573,35 @@
             "legacy": false,
             "lf_version": "1.5.0",
             "metadata": {
+              "code_hash": "bb5f8714781b",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langchain_anthropic",
+                    "version": "0.3.14"
+                  },
+                  {
+                    "name": "langchain_google_genai",
+                    "version": "2.0.6"
+                  },
+                  {
+                    "name": "langchain_openai",
+                    "version": "0.3.23"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 4
+              },
               "keywords": [
                 "model",
                 "llm",
                 "language model",
                 "large language model"
-              ]
+              ],
+              "module": "lfx.components.models.language_model.LanguageModelComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -1562,11 +1611,8 @@
                 "cache": true,
                 "display_name": "Model Response",
                 "group_outputs": false,
-                "hidden": null,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1579,11 +1625,8 @@
                 "cache": true,
                 "display_name": "Language Model",
                 "group_outputs": false,
-                "hidden": null,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1670,11 +1713,20 @@
                   "gpt-4.1",
                   "gpt-4.1-mini",
                   "gpt-4.1-nano",
-                  "gpt-4.5-preview",
                   "gpt-4-turbo",
                   "gpt-4-turbo-preview",
                   "gpt-4",
-                  "gpt-3.5-turbo"
+                  "gpt-3.5-turbo",
+                  "gpt-5",
+                  "gpt-5-mini",
+                  "gpt-5-nano",
+                  "gpt-5-chat-latest",
+                  "o1",
+                  "o3-mini",
+                  "o3",
+                  "o3-pro",
+                  "o4-mini",
+                  "o4-mini-high"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -1825,7 +1877,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Runs a language model given a specified provider. ",
+            "description": "Runs a language model given a specified provider.",
             "display_name": "Language Model",
             "documentation": "",
             "edited": false,
@@ -1842,12 +1894,35 @@
             "icon": "brain-circuit",
             "legacy": false,
             "metadata": {
+              "code_hash": "bb5f8714781b",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "langchain_anthropic",
+                    "version": "0.3.14"
+                  },
+                  {
+                    "name": "langchain_google_genai",
+                    "version": "2.0.6"
+                  },
+                  {
+                    "name": "langchain_openai",
+                    "version": "0.3.23"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 4
+              },
               "keywords": [
                 "model",
                 "llm",
                 "language model",
                 "large language model"
-              ]
+              ],
+              "module": "lfx.components.models.language_model.LanguageModelComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -1857,11 +1932,8 @@
                 "cache": true,
                 "display_name": "Model Response",
                 "group_outputs": false,
-                "hidden": null,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1874,11 +1946,8 @@
                 "cache": true,
                 "display_name": "Language Model",
                 "group_outputs": false,
-                "hidden": null,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1965,11 +2034,20 @@
                   "gpt-4.1",
                   "gpt-4.1-mini",
                   "gpt-4.1-nano",
-                  "gpt-4.5-preview",
                   "gpt-4-turbo",
                   "gpt-4-turbo-preview",
                   "gpt-4",
-                  "gpt-3.5-turbo"
+                  "gpt-3.5-turbo",
+                  "gpt-5",
+                  "gpt-5-mini",
+                  "gpt-5-nano",
+                  "gpt-5-chat-latest",
+                  "o1",
+                  "o3-mini",
+                  "o3",
+                  "o3-pro",
+                  "o4-mini",
+                  "o4-mini-high"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
