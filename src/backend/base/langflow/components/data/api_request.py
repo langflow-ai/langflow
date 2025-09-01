@@ -189,6 +189,8 @@ class APIRequestComponent(Component):
         """Process the body input into a valid dictionary."""
         if body is None:
             return {}
+        if hasattr(body, "data"):
+            body = body.data
         if isinstance(body, dict):
             return self._process_dict_body(body)
         if isinstance(body, str):
@@ -213,6 +215,13 @@ class APIRequestComponent(Component):
         processed_dict = {}
         try:
             for item in body:
+                # Unwrap Data objects
+                if hasattr(item, "data"):
+                    unwrapped_data = item.data
+                    # If the unwrapped data is a dict but not key-value format, use it directly
+                    if isinstance(unwrapped_data, dict) and not self._is_valid_key_value_item(unwrapped_data):
+                        return unwrapped_data
+                    item = unwrapped_data
                 if not self._is_valid_key_value_item(item):
                     continue
                 key = item["key"]
