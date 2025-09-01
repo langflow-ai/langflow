@@ -54,11 +54,11 @@ test(
       await page.getByTestId("button_open_file_management").click();
 
       // Test available types
-      expect(await page.getByText("csv, json, pdf").isVisible()).toBeTruthy();
-      await page.getByTestId("info-types-icon").hover();
+      await expect(page.getByText("csv, json, pdf")).toBeVisible();
+      await page.getByTestId("info-types").hover();
       await expect(
         page.getByText(
-          "adoc, asc, asciidoc, bmp, bz2, csv, docm, docx, docx, dotm, dotx, gz, htm, htm, html, html, jpeg, js, json, md, md, mdx, pdf, png, potm, potx, ppsm, ppsx, pptm, pptx, py, sh, sql, tar, tgz, tiff, ts, tsx, txt, txt, webp, xhtml, xls, xlsx, xml, xml, yaml, yml, zip",
+          "adoc, asc, asciidoc, bmp, bz2, docm, docx, dotm, dotx, gz, htm, html, jpeg, js, md, mdx, png, potm, potx, ppsm, ppsx, pptm, pptx, py, sh, sql, tar, tgz, tiff, ts, tsx, txt, webp, xhtml, xls, xlsx, xml, yaml, yml, zip",
         ),
       ).toBeVisible();
 
