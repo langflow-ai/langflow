@@ -7,6 +7,7 @@ import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import useCustomUseFileHandler from "@/customization/hooks/use-custom-use-file-handler";
 import { track } from "@/customization/utils/analytics";
 import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
@@ -39,6 +40,7 @@ export default function ChatView({
   sidebarOpen,
 }: chatViewProps): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs);
+  const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const currentFlowId = useGetFlowId();
   const [chatHistory, setChatHistory] = useState<ChatMessageType[] | undefined>(
     undefined,
