@@ -147,10 +147,12 @@ def _setup_compatibility_modules():
                 # Skip modules that don't exist in lfx
                 continue
 
-    # Handle modules that exist only in langflow (like kb_utils)
+    # Handle modules that exist only in langflow (like knowledge_bases)
     # These need special handling because they're not in lfx yet
     langflow_only_modules = {
         "langflow.base.data.kb_utils": "langflow.base.data.kb_utils",
+        "langflow.base.knowledge_bases": "langflow.base.knowledge_bases",
+        "langflow.components.knowledge_bases": "langflow.components.knowledge_bases",
     }
 
     for langflow_name in langflow_only_modules:
@@ -160,18 +162,50 @@ def _setup_compatibility_modules():
                 from pathlib import Path
 
                 base_dir = Path(__file__).parent
-                kb_utils_file = base_dir / "base" / "data" / "kb_utils.py"
-                if kb_utils_file.exists():
-                    spec = importlib.util.spec_from_file_location(langflow_name, kb_utils_file)
-                    if spec is not None and spec.loader is not None:
-                        module = importlib.util.module_from_spec(spec)
-                        sys.modules[langflow_name] = module
-                        spec.loader.exec_module(module)
 
-                        # Also add to parent module
-                        parent_module = sys.modules.get("langflow.base.data")
-                        if parent_module is not None:
-                            parent_module.kb_utils = module
+                if langflow_name == "langflow.base.data.kb_utils":
+                    kb_utils_file = base_dir / "base" / "data" / "kb_utils.py"
+                    if kb_utils_file.exists():
+                        spec = importlib.util.spec_from_file_location(langflow_name, kb_utils_file)
+                        if spec is not None and spec.loader is not None:
+                            module = importlib.util.module_from_spec(spec)
+                            sys.modules[langflow_name] = module
+                            spec.loader.exec_module(module)
+
+                            # Also add to parent module
+                            parent_module = sys.modules.get("langflow.base.data")
+                            if parent_module is not None:
+                                parent_module.kb_utils = module
+
+                elif langflow_name == "langflow.base.knowledge_bases":
+                    kb_dir = base_dir / "base" / "knowledge_bases"
+                    kb_init_file = kb_dir / "__init__.py"
+                    if kb_init_file.exists():
+                        spec = importlib.util.spec_from_file_location(langflow_name, kb_init_file)
+                        if spec is not None and spec.loader is not None:
+                            module = importlib.util.module_from_spec(spec)
+                            sys.modules[langflow_name] = module
+                            spec.loader.exec_module(module)
+
+                            # Also add to parent module
+                            parent_module = sys.modules.get("langflow.base")
+                            if parent_module is not None:
+                                parent_module.knowledge_bases = module
+
+                elif langflow_name == "langflow.components.knowledge_bases":
+                    components_kb_dir = base_dir / "components" / "knowledge_bases"
+                    components_kb_init_file = components_kb_dir / "__init__.py"
+                    if components_kb_init_file.exists():
+                        spec = importlib.util.spec_from_file_location(langflow_name, components_kb_init_file)
+                        if spec is not None and spec.loader is not None:
+                            module = importlib.util.module_from_spec(spec)
+                            sys.modules[langflow_name] = module
+                            spec.loader.exec_module(module)
+
+                            # Also add to parent module
+                            parent_module = sys.modules.get("langflow.components")
+                            if parent_module is not None:
+                                parent_module.knowledge_bases = module
             except (ImportError, AttributeError):
                 # If direct file loading fails, skip silently
                 continue
