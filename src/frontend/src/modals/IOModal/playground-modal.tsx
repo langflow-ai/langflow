@@ -235,6 +235,9 @@ export default function IOModal({
   );
 
   useEffect(() => {
+    if (playgroundPage && messages.length > 0) {
+      window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
+    }
     if (newChatOnPlayground && !sessionsLoading) {
       const handleRefetchAndSetSession = async () => {
         try {
@@ -252,7 +255,7 @@ export default function IOModal({
       handleRefetchAndSetSession();
       setNewChatOnPlayground(false);
     }
-  }, [messages]);
+  }, [messages, playgroundPage]);
 
   useEffect(() => {
     if (!visibleSession) {
@@ -308,12 +311,6 @@ export default function IOModal({
     track("LangflowButtonClick");
     customOpenNewTab(LangflowButtonRedirectTarget());
   };
-
-  useEffect(() => {
-    if (playgroundPage && messages.length > 0) {
-      window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
-    }
-  }, [playgroundPage, messages]);
 
   const swatchIndex =
     (flowGradient && !isNaN(parseInt(flowGradient))
