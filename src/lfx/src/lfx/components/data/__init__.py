@@ -37,8 +37,6 @@ __all__ = [
     "DirectoryComponent",
     "FileComponent",
     "JSONToDataComponent",
-    "KBIngestionComponent",
-    "KBRetrievalComponent",
     "NewsSearchComponent",
     "RSSReaderComponent",
     "SQLComponent",
