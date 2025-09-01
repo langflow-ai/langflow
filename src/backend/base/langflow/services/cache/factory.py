@@ -29,6 +29,7 @@ class CacheServiceFactory(ServiceFactory):
                 port=settings_service.settings.redis_port,
                 db=settings_service.settings.redis_db,
                 url=settings_service.settings.redis_url,
+                password=settings_service.settings.redis_password,
                 expiration_time=settings_service.settings.redis_cache_expire,
             )
 
