@@ -7,6 +7,130 @@ import Icon from "@site/src/components/icon";
 
 Langflow's **Logic** components provide functionalities for routing, conditional processing, and flow management.
 
+## Classifier Router {#classifier-router}
+
+The **Classifier Router** component routes incoming messages to specific outputs based on intelligent classification using either embedding similarity or Large Language Model (LLM) evaluation.
+
+The component analyzes input text against predefined categories and dynamically creates output ports for each category, plus a **No Matches** port for unclassified inputs.
+
+### Classification Methods
+
+**Embedding**: Uses vector embeddings to find the most semantically similar category based on distance metrics.
+
+**LLM**: Leverages language models to classify text with contextual understanding, confidence scoring, and conversation history support.
+
+### Use the Classifier Router component in a flow
+
+The following example uses the **Classifier Router** component with LLM classification to route customer support messages to appropriate departments.
+
+![Classifier Router connected to multiple output workflows](/img/component-classifier-router.png)
+
+1. Add a **Classifier Router** component to your flow, and then configure it as follows:
+
+    * **Classifier Type**: Select **LLM** for intelligent text classification, or **Embedding** for fast semantic similarity matching.
+    
+    * **Categories**: Define your classification categories using the table input:
+      - Category: "Sales", Description: "Questions about products, pricing, purchases"
+      - Category: "Support", Description: "Technical issues, troubleshooting, product support"
+      - Category: "Billing", Description: "Payment issues, invoicing, refunds"
+
+    * **Text Input**: Connect to a **Chat Input** component or provide the text to classify.
+
+    * **Language Model** (LLM mode): Connect to LLM component.
+    
+    * **Embedding** (Embedding mode): Connect to embeddings component.
+
+2. Configure classification parameters based on the selected method:
+
+    **For LLM classification:**
+    * **Confidence threshold**: Set to 0.8 to ensure high-confidence classifications.
+    * **Use history**: Enable to consider conversation context for better classification.
+    * **Use structured output**: Enable for more reliable JSON parsing.
+
+    **For Embedding classification:**
+    * **Distance threshold**: Set to 0.19 (lower values = stricter matching).
+    * **Distance metric**: Choose **Cosine** for most text applications.
+    * **Top N**: Set to 1 for single-category classification.
+
+3. Connect output routes to appropriate handlers:
+
+    * Connect the **Sales** output to a sales-focused workflow.
+    
+    * Connect the **Support** output to a technical support chain.
+    
+    * Connect the **Billing** output to a billing assistance flow.
+    
+    * Connect the **No Matches** output to a general help workflow.
+
+4. Test the classification:
+
+    ```text
+    LLM Classification:
+    User: "I want to know more about your premium plan pricing"
+    → Routes to Sales output (confidence: 0.95)
+    
+    User: "My app keeps crashing when I try to upload files"  
+    → Routes to Support output (confidence: 0.92)
+    
+    User: "Hello there"
+    → Routes to No Matches output (confidence: 0.15, below threshold)
+    
+    Embedding Classification:
+    User: "What are your subscription costs?"
+    → Routes to Sales output (distance: 0.12, below threshold)
+    
+    User: "Error message appears on startup"
+    → Routes to Support output (distance: 0.08, below threshold)
+    
+    User: "Nice weather today"
+    → Routes to No Matches output (distance: 0.45, above threshold)
+    ```
+
+### Classifier Router parameters
+
+Some **Classifier Router** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+#### General Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| classifier_type | Dropdown | Input parameter. Choose between **LLM** and **Embedding** classification methods. Default is **LLM**. |
+| categories_descriptions | Table | Input parameter. Define categories and their descriptions using the table interface. |
+| input_text | String | Input parameter. The primary text input for classification. |
+| message | Message | Input parameter. Optional message to pass through routes. If provided, this overrides input_text. |
+
+#### LLM Classification Parameters
+
+The following parameters are available when **classifier_type** is set to **LLM**:
+
+| Name | Type | Description |
+|------|------|-------------|
+| llm | LanguageModel | Input parameter. The language model to use for classification. Required for LLM mode. |
+| use_with_structured_output | Boolean | Input parameter. When true, uses structured output for more reliable results. Default is false. |
+| classifier_prompt | String | Input parameter. Custom prompt template for classification. Advanced parameter. |
+| use_history | Boolean | Input parameter. When true, considers conversation history for context. Default is true. |
+| confidence_threshold | Float | Input parameter. Minimum confidence level (0.00-1.00) required for classification. Default is 0.8. |
+
+#### Embedding Classification Parameters
+
+The following parameters are available when **classifier_type** is set to **Embedding**:
+
+| Name | Type | Description |
+|------|------|-------------|
+| embedding | Embeddings | Input parameter. The embedding model to use for vector similarity. Required for Embedding mode. |
+| distance_threshold | Float | Input parameter. Maximum distance for similarity matching (0.0 = exact match). Default is 0.19. |
+| top_n_values | Integer | Input parameter. Number of top similar categories to consider. Default is 1. |
+| distance_metric | Dropdown | Input parameter. Distance metric for similarity calculation. Options include cosine, euclidean, manhattan, chebyshev, hamming. Default is cosine. |
+
+#### Output Parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| [category_name] | Message | Output parameter. Activated when input is classified into this category. |
+| no_matches | Message | Output parameter. Activated when no category meets the classification criteria. |
+
+
 ## If-Else (conditional router) {#if-else}
 
 The **If-Else** component is a conditional router that routes messages by comparing two strings.
