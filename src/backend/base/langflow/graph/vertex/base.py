@@ -256,7 +256,7 @@ class Vertex:
 
             if "type" in value_dict:
                 list_to_append.append(value_dict["type"])
-            if "input_types" in value_dict:
+            if "input_types" in value_dict and value_dict["input_types"] is not None:
                 list_to_append.extend(value_dict["input_types"])
 
         template_dict = self.data["node"]["template"]
