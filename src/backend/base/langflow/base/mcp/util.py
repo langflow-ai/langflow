@@ -559,7 +559,9 @@ class MCPSessionManager:
         try:
             # Try to list tools as a connectivity test (this is a lightweight operation)
             # Use a shorter timeout for the connectivity test to fail fast
-            response = await asyncio.wait_for(session.list_tools(), timeout=3.0)
+            response = await asyncio.wait_for(
+                session.list_tools(), timeout=float(os.getenv("MCP_SESSION_CONNECTIVITY_TEST_TIMEOUT", "3.0"))
+            )
         except (asyncio.TimeoutError, ConnectionError, OSError, ValueError) as e:
             await logger.adebug(f"Session connectivity test failed (standard error): {e}")
             return False
@@ -712,7 +714,9 @@ class MCPSessionManager:
 
         # Wait for session to be ready
         try:
-            session = await asyncio.wait_for(session_future, timeout=10.0)
+            session = await asyncio.wait_for(
+                session_future, timeout=float(os.getenv("MCP_STDIO_SESSION_INIT_TIMEOUT", "10.0"))
+            )
         except asyncio.TimeoutError as timeout_err:
             # Clean up the failed task
             if not task.done():
@@ -771,7 +775,9 @@ class MCPSessionManager:
 
         # Wait for session to be ready
         try:
-            session = await asyncio.wait_for(session_future, timeout=10.0)
+            session = await asyncio.wait_for(
+                session_future, timeout=float(os.getenv("MCP_SSE_SESSION_INIT_TIMEOUT", "10.0"))
+            )
         except asyncio.TimeoutError as timeout_err:
             # Clean up the failed task
             if not task.done():
@@ -1039,7 +1045,7 @@ class MCPStdioClient:
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=30.0,  # 30 second timeout
+                    timeout=float(os.getenv("MCP_STDIO_TOOL_CALL_TIMEOUT", "30.0")),
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
@@ -1168,7 +1174,9 @@ class MCPSseClient:
                     # For SSE endpoints, try a GET request with short timeout
                     # Many SSE servers don't support HEAD requests and return 404
                     response = await client.get(
-                        url, timeout=2.0, headers={"Accept": "text/event-stream", **(headers or {})}
+                        url,
+                        timeout=float(os.getenv("MCP_SSE_URL_VALIDATION_TIMEOUT", "2.0")),
+                        headers={"Accept": "text/event-stream", **(headers or {})},
                     )
 
                     # For SSE, we expect the server to either:
@@ -1209,7 +1217,9 @@ class MCPSseClient:
             async with httpx.AsyncClient(follow_redirects=False) as client:
                 # Use GET with SSE headers instead of HEAD since many SSE servers don't support HEAD
                 response = await client.get(
-                    url, timeout=2.0, headers={"Accept": "text/event-stream", **(headers or {})}
+                    url,
+                    timeout=float(os.getenv("MCP_SSE_REDIRECT_CHECK_TIMEOUT", "2.0")),
+                    headers={"Accept": "text/event-stream", **(headers or {})},
                 )
                 if response.status_code == httpx.codes.TEMPORARY_REDIRECT:
                     return response.headers.get("Location", url)
@@ -1222,8 +1232,8 @@ class MCPSseClient:
         self,
         url: str | None,
         headers: dict[str, str] | None = None,
-        timeout_seconds: int = 30,
-        sse_read_timeout_seconds: int = 30,
+        timeout_seconds: int = int(os.getenv("MCP_SSE_HTTP_TIMEOUT_SECONDS", "30")),
+        sse_read_timeout_seconds: int = int(os.getenv("MCP_SSE_READ_TIMEOUT_SECONDS", "30")),
     ) -> list[StructuredTool]:
         """Connect to MCP server using SSE transport (SDK style)."""
         # Validate and sanitize headers early
@@ -1302,7 +1312,7 @@ class MCPSseClient:
             headers["Mcp-Session-Id"] = str(session_id)
 
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
+            async with httpx.AsyncClient(timeout=float(os.getenv("MCP_SSE_DELETE_TIMEOUT", "5.0"))) as client:
                 await client.delete(url, headers=headers)
         except Exception as e:  # noqa: BLE001
             # DELETE is advisory—log and continue
@@ -1347,7 +1357,7 @@ class MCPSseClient:
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=30.0,  # 30 second timeout
+                    timeout=float(os.getenv("MCP_SSE_TOOL_CALL_TIMEOUT", "30.0")),
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
