@@ -298,6 +298,7 @@ module.exports = {
             "Components/bundles-bing",
             "Integrations/Cleanlab/integrations-cleanlab",
             "Components/bundles-cloudflare",
+            "Components/bundles-cometapi",
             "Components/bundles-cohere",
             "Integrations/Composio/integrations-composio",
             "Components/bundles-datastax",
