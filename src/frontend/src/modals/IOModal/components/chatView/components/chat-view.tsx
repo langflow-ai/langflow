@@ -19,6 +19,7 @@ import type { chatViewProps } from "../../../../../types/components";
 import FlowRunningSqueleton from "../../flow-running-squeleton";
 import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
 import ChatMessage from "../chatMessage/chat-message";
+import sortSenderMessages from "../helpers/sort-sender-messages";
 
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
@@ -46,14 +47,14 @@ export default function ChatView({
     ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
     : realFlowId;
   const [chatHistory, setChatHistory] = useState<ChatMessageType[] | undefined>(
-    undefined,
+    undefined
   );
   const messages = useMessagesStore((state) => state.messages);
   const nodes = useFlowStore((state) => state.nodes);
   const chatInput = inputs.find((input) => input.type === "ChatInput");
   const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
   const displayLoadingMessage = useMessagesStore(
-    (state) => state.displayLoadingMessage,
+    (state) => state.displayLoadingMessage
   );
 
   const isBuilding = useFlowStore((state) => state.isBuilding);
@@ -69,7 +70,7 @@ export default function ChatView({
       .filter(
         (message) =>
           message.flow_id === currentFlowId &&
-          (visibleSession === message.session_id || visibleSession === null),
+          (visibleSession === message.session_id || visibleSession === null)
       )
       .map((message) => {
         let files = message.files;
@@ -102,13 +103,14 @@ export default function ChatView({
           properties: message.properties || {},
         };
       });
-    const finalChatHistory = [...messagesFromMessagesStore].sort((a, b) => {
-      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-    });
+
+    const finalChatHistory = [...messagesFromMessagesStore].sort(
+      sortSenderMessages
+    );
 
     if (messages.length === 0 && !isBuilding && chatInputNode && isTabHidden) {
       setChatValueStore(
-        chatInputNode.data.node.template["input_value"].value ?? "",
+        chatInputNode.data.node.template["input_value"].value ?? ""
       );
     }
 
@@ -139,7 +141,7 @@ export default function ChatView({
 
   const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
     setIsDragging,
-    !!playgroundPage,
+    !!playgroundPage
   );
 
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -158,7 +160,7 @@ export default function ChatView({
 
   const flowRunningSkeletonMemo = useMemo(() => <FlowRunningSqueleton />, []);
   const isVoiceAssistantActive = useVoiceStore(
-    (state) => state.isVoiceAssistantActive,
+    (state) => state.isVoiceAssistantActive
   );
 
   return (
@@ -168,7 +170,7 @@ export default function ChatView({
         visibleSession ? "h-[95%]" : "h-full",
         sidebarOpen &&
           !isVoiceAssistantActive &&
-          "pointer-events-none blur-sm lg:pointer-events-auto lg:blur-0",
+          "pointer-events-none blur-sm lg:pointer-events-auto lg:blur-0"
       )}
       onDragOver={dragOver}
       onDragEnter={dragEnter}
