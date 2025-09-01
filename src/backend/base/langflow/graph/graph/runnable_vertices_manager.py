@@ -4,7 +4,9 @@ from collections import defaultdict
 class RunnableVerticesManager:
     def __init__(self) -> None:
         self.run_map: dict[str, list[str]] = defaultdict(list)  # Tracks successors of each vertex
-        self.run_predecessors: dict[str, list[str]] = defaultdict(list)  # Tracks predecessors for each vertex
+        self.run_predecessors: dict[str, set[str]] = defaultdict(
+            set
+        )  # Tracks predecessors for each vertex, using sets for O(1) ops
         self.vertices_to_run: set[str] = set()  # Set of vertices that are ready to run
         self.vertices_being_run: set[str] = set()  # Set of vertices that are currently running
         self.cycle_vertices: set[str] = set()  # Set of vertices that are in a cycle
@@ -78,13 +80,10 @@ class RunnableVerticesManager:
         Returns:
             bool: True if all predecessor conditions are met, False otherwise
         """
-        # Get pending predecessors, return True if none exist
-        pending = self.run_predecessors.get(vertex_id, [])
+        pending: set[str] = self.run_predecessors.get(vertex_id, set())
         if not pending:
             return True
 
-        # For cycle vertices, check if any pending predecessors are also in cycle
-        # Using set intersection is faster than iteration
         if vertex_id in self.cycle_vertices:
             pending_set = set(pending)
             running_predecessors = pending_set & self.vertices_being_run
@@ -112,7 +111,8 @@ class RunnableVerticesManager:
         for vertex_id, predecessors in predecessor_map.items():
             for predecessor in predecessors:
                 self.run_map[predecessor].append(vertex_id)
-        self.run_predecessors = predecessor_map.copy()
+        # Convert predecessor_map values to sets for efficient membership and removals
+        self.run_predecessors = defaultdict(set, {k: set(v) for k, v in predecessor_map.items()})
         self.vertices_to_run = vertices_to_run
 
     def update_vertex_run_state(self, vertex_id: str, *, is_runnable: bool) -> None:
