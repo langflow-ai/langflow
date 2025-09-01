@@ -32,6 +32,7 @@ Make sure the components connect to the same vector store, and that the componen
     * **Use Astra DB vectorize**: If you are using an Astra DB vector store that has a vectorize integration, you can remove both **OpenAI Embeddings** components.
     If you do this, the vectorize integration automatically generates embeddings from the **Ingest Data** (in the **Load Data** subflow) and **Search Query** (in the **Retriever** subflow).
 
+
     :::tip
     If your vector store already contains embeddings, make sure your embedding model components use the same model as your previous embeddings.
     Mixing embedding models in the same vector store can produce inaccurate search results.
