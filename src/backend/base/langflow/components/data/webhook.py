@@ -45,7 +45,7 @@ class WebhookComponent(Component):
             self.status = "No data provided."
             return Data(data={})
         try:
-            my_data = re.sub(r'(?<!\\)(\r|\n|\t)', lambda m: '\\n' if m.group() == '\n' else '\\t', self.data)
+            my_data = re.sub(r"(?<!\\)(\r|\n|\t)", lambda m: "\\n" if m.group() == "\n" else "\\t", self.data)
             body = json.loads(my_data or "{}")
         except json.JSONDecodeError:
             body = {"payload": self.data}
