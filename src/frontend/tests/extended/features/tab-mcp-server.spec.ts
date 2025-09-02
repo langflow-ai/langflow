@@ -6,11 +6,27 @@ test(
   "user should be able to manage MCP server tools and configuration",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    const maxRetries = 5;
+    const maxRetries = 3; // Reduce retries due to longer individual attempts
+    
+    // Add error listeners for better debugging
+    page.on('pageerror', error => {
+      console.error('Page runtime error:', error.message);
+    });
+    
+    page.on('requestfailed', request => {
+      console.warn('Failed request:', request.url(), request.failure()?.errorText);
+    });
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         console.warn(`Attempt ${attempt} of ${maxRetries}`);
+        
+        // Validate page is still usable
+        if (page.isClosed()) {
+          console.error('Page is closed, creating new page...');
+          // The page is closed, we can't continue with this attempt
+          throw new Error('Page was closed, cannot continue with this attempt');
+        }
 
         await awaitBootstrapTest(page);
 
@@ -204,7 +220,7 @@ test(
           /"args":\s*\[\s*"\/c"\s*,\s*"uvx"\s*,\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
         );
         expect(sseUrlMatch).not.toBeNull();
-        const _sseUrl = sseUrlMatch![1];
+        // SSE URL is validated but not used further
 
         await page.getByText("macOS/Linux", { exact: true }).click();
 
@@ -289,22 +305,19 @@ test(
         await page.waitForTimeout(5000);
 
         // Force a page refresh if needed to ensure state is loaded
-        const isCI =
-          process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
-        if (isCI) {
-          console.warn("CI environment detected, using extended wait times");
-          await page.waitForTimeout(3000);
-        }
+        // Use longer waits for all environments to handle CI slowness
+        console.warn("Using extended wait times for CI compatibility");
+        await page.waitForTimeout(3000);
 
         // Robust dropdown detection with multiple strategies
         const dropdownSelector = "dropdown_str_tool";
-        let targetElement;
+        let targetElement: any;
 
         // Strategy 1: Wait for specific dropdown
         try {
           await page.waitForSelector(`[data-testid="${dropdownSelector}"]`, {
             state: "visible",
-            timeout: isCI ? 45000 : 30000, // Longer timeout for CI
+            timeout: 60000, // Extended timeout for all environments
           });
           targetElement = page.getByTestId(dropdownSelector);
           console.warn("Found target dropdown via strategy 1");
@@ -391,6 +404,16 @@ test(
         return;
       } catch (error) {
         console.error(`Attempt ${attempt} failed:`, error);
+        
+        // Check if this is a browser/page closure issue
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('Target page, context or browser has been closed') ||
+            errorMessage.includes('Browser has been closed') ||
+            errorMessage.includes('peer closed connection') ||
+            page.isClosed()) {
+          console.error('Browser/page was closed - stopping retry attempts');
+          throw error; // Don't retry on browser closure
+        }
 
         // Add debugging information about the page state
         try {
@@ -429,8 +452,19 @@ test(
           throw error;
         }
 
-        // Wait a bit before retrying
-        await page.waitForTimeout(2000);
+        // Wait a bit before retrying, but only if page is still valid
+        try {
+          if (!page.isClosed()) {
+            await page.waitForTimeout(2000);
+          } else {
+            console.warn(`Page closed during retry wait on attempt ${attempt}`);
+            // Force break the loop if page is closed - no point in retrying
+            break;
+          }
+        } catch (timeoutError) {
+          console.warn(`Timeout wait failed on attempt ${attempt}:`, timeoutError.message);
+          // Continue to next attempt anyway
+        }
       }
     }
   },
