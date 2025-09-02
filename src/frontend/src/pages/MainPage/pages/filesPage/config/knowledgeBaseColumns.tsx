@@ -1,7 +1,7 @@
+import type { ColDef } from "ag-grid-community";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { formatFileSize } from "@/utils/stringManipulation";
-import type { ColDef } from "ag-grid-community";
 import {
   formatAverageChunkSize,
   formatNumber,
