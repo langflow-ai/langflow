@@ -49,6 +49,7 @@ import { filteredDataFn } from "./helpers/filtered-data";
 import { normalizeString } from "./helpers/normalize-string";
 import sensitiveSort from "./helpers/sensitive-sort";
 import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata";
+import { applyComponentFilter } from "./helpers/apply-component-filter";
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
@@ -151,11 +152,19 @@ interface FlowSidebarComponentProps {
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const data = useTypesStore((state) => state.data);
 
-  const { getFilterEdge, setFilterEdge, filterType } = useFlowStore(
+  const {
+    getFilterEdge,
+    setFilterEdge,
+    filterType,
+    getFilterComponent,
+    setFilterComponent,
+  } = useFlowStore(
     useShallow((state) => ({
       getFilterEdge: state.getFilterEdge,
       setFilterEdge: state.setFilterEdge,
       filterType: state.filterType,
+      getFilterComponent: state.getFilterComponent,
+      setFilterComponent: state.setFilterComponent,
     })),
   );
 
@@ -294,6 +303,10 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       filteredData = applyEdgeFilter(filteredData, getFilterEdge);
     }
 
+    if (getFilterComponent !== "") {
+      filteredData = applyComponentFilter(filteredData, getFilterComponent);
+    }
+
     if (!showBeta) {
       filteredData = applyBetaFilter(filteredData);
     }
@@ -303,7 +316,13 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     }
 
     return filteredData;
-  }, [searchFilteredData, getFilterEdge, showBeta, showLegacy]);
+  }, [
+    searchFilteredData,
+    getFilterEdge,
+    getFilterComponent,
+    showBeta,
+    showLegacy,
+  ]);
 
   const hasResults = useMemo(() => {
     return Object.entries(dataFilter).some(
@@ -336,22 +355,34 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   }, [baseData, setSearch]);
 
   useEffect(() => {
-    if (filterType) {
+    if (filterType || getFilterComponent !== "") {
       setOpen(true);
       setActiveSection("search");
     }
-  }, [filterType, setOpen]);
+  }, [filterType, getFilterComponent, setOpen]);
 
   useEffect(() => {
     setFilterData(finalFilteredData);
 
-    if (search !== "" || filterType || getFilterEdge.length > 0) {
+    if (
+      search !== "" ||
+      filterType ||
+      getFilterEdge.length > 0 ||
+      getFilterComponent !== ""
+    ) {
       const newOpenCategories = Object.keys(finalFilteredData).filter(
         (cat) => Object.keys(finalFilteredData[cat]).length > 0,
       );
       setOpenCategories(newOpenCategories);
     }
-  }, [finalFilteredData, search, filterType, getFilterEdge]);
+  }, [
+    finalFilteredData,
+    search,
+    filterType,
+    getFilterEdge,
+    setFilterComponent,
+    getFilterComponent,
+  ]);
 
   useEffect(() => {
     const options = {
@@ -400,16 +431,20 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   }, [baseData, mcpSuccess, mcpServers]);
 
   useEffect(() => {
-    if (getFilterEdge.length !== 0) {
+    if (getFilterEdge.length !== 0 || getFilterComponent !== "") {
       setSearch("");
     }
-  }, [getFilterEdge, baseData]);
+  }, [getFilterEdge, getFilterComponent, baseData]);
 
   useEffect(() => {
-    if (search === "" && getFilterEdge.length === 0) {
+    if (
+      search === "" &&
+      getFilterEdge.length === 0 &&
+      getFilterComponent === ""
+    ) {
       setOpenCategories([]);
     }
-  }, [search, getFilterEdge]);
+  }, [search, getFilterEdge, getFilterComponent]);
 
   const searchComponentsSidebar = useShortcutsStore(
     (state) => state.searchComponentsSidebar,
@@ -498,6 +533,28 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     (ENABLE_NEW_SIDEBAR && activeSection === "mcp") ||
     (hasSearchInput && hasMcpComponents && ENABLE_NEW_SIDEBAR);
 
+  const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
+
+  const filterDescription =
+    getFilterComponent !== ""
+      ? baseData[category][component]?.display_name ?? ""
+      : filterType?.type ?? "";
+
+  const filterName =
+    getFilterComponent !== ""
+      ? "Component"
+      : filterType
+      ? !!filterType.source
+        ? "Input"
+        : "Output"
+      : "";
+
+  const resetFilters = useCallback(() => {
+    setFilterEdge([]);
+    setFilterComponent("");
+    setFilterData(baseData);
+  }, [setFilterEdge, setFilterComponent, setFilterData, baseData]);
+
   return (
     <Sidebar
       collapsible="offcanvas"
@@ -525,10 +582,9 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
             handleInputFocus={handleInputFocus}
             handleInputBlur={handleInputBlur}
             handleInputChange={handleInputChange}
-            filterType={filterType}
-            setFilterEdge={setFilterEdge}
-            setFilterData={setFilterData}
-            data={baseData}
+            filterName={filterName}
+            filterDescription={filterDescription}
+            resetFilters={resetFilters}
           />
 
           <SidebarContent
