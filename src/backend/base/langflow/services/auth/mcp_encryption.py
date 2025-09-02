@@ -71,12 +71,11 @@ def decrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
             try:
                 decrypted_value = auth_utils.decrypt_api_key(decrypted_settings[field], settings_service)
                 decrypted_settings[field] = decrypted_value
-                logger.debug(f"Decrypted field {field}")
             except (ValueError, TypeError, KeyError, InvalidToken) as e:
                 # If decryption fails, assume the value is already plaintext
                 # This handles backward compatibility with existing unencrypted data
-                logger.debug(f"Field {field} appears to be plaintext or decryption failed: {e}")
                 # Keep the original value
+                pass
 
     return decrypted_settings
 

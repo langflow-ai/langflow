@@ -6,11 +6,12 @@ import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from urllib.parse import urlencode
 
 import anyio
 import httpx
+from langflow.services.mcp_composer.service import MCPComposerService
 import sqlalchemy
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -191,7 +192,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Starting MCP Composer service")
-            mcp_composer_service = get_service(ServiceType.MCP_COMPOSER_SERVICE)
+            mcp_composer_service = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
             await mcp_composer_service.start()
             await logger.adebug(
                 f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s"
@@ -209,17 +210,23 @@ def get_lifespan(*, fix_migration=False, version=None):
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
 
-            # Schedule MCP servers initialization to run after HTTP server is ready
             async def delayed_init_mcp_servers():
-                # Wait a bit for the HTTP server to be fully ready
-                await asyncio.sleep(2.0)
+                await asyncio.sleep(3.0)
                 current_time = asyncio.get_event_loop().time()
-                await logger.adebug("Loading mcp servers for projects (delayed until HTTP server ready)")
+                await logger.adebug("Loading mcp servers for projects")
                 try:
                     await init_mcp_servers()
                     await logger.adebug(f"mcp servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
                 except Exception as e:
-                    await logger.aexception(f"Failed to initialize MCP servers: {e}")
+                    await logger.awarning(f"First MCP server initialization attempt failed: {e}")
+                    await asyncio.sleep(3.0)
+                    current_time = asyncio.get_event_loop().time()
+                    await logger.adebug("Retrying mcp servers initialization")
+                    try:
+                        await init_mcp_servers()
+                        await logger.adebug(f"mcp servers loaded on retry in {asyncio.get_event_loop().time() - current_time:.2f}s")
+                    except Exception as e2:
+                        await logger.aexception(f"Failed to initialize MCP servers after retry: {e2}")
             
             # Start the delayed initialization as a background task
             asyncio.create_task(delayed_init_mcp_servers())

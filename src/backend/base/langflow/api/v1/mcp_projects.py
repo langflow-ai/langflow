@@ -250,12 +250,19 @@ async def list_project_tools(
                     await logger.awarning(msg)
                     continue
 
-            # Get project-level auth settings and decrypt sensitive fields
+            # Get project-level auth settings but mask sensitive fields for security
             auth_settings = None
             if project.auth_settings:
-                # Decrypt sensitive fields before returning
+                # Decrypt to get the settings structure
                 decrypted_settings = decrypt_auth_settings(project.auth_settings)
-                auth_settings = AuthSettings(**decrypted_settings) if decrypted_settings else None
+                if decrypted_settings:
+                    # Mask sensitive fields before sending to frontend
+                    masked_settings = decrypted_settings.copy()
+                    if "oauth_client_secret" in masked_settings and masked_settings["oauth_client_secret"]:
+                        masked_settings["oauth_client_secret"] = "*******"
+                    if "api_key" in masked_settings and masked_settings["api_key"]:
+                        masked_settings["api_key"] = "*******"
+                    auth_settings = AuthSettings(**masked_settings)
 
     except Exception as e:
         msg = f"Error listing project tools: {e!s}"
@@ -407,22 +414,33 @@ async def update_project_mcp_settings(
 
                     new_auth_type = auth_dict.get("auth_type")
 
-                    # Check if auth type is changing
-                    if new_auth_type == "oauth" and current_auth_type != "oauth":
+                    # Handle masked secret fields from frontend
+                    # If frontend sends back "*******" for a secret field, preserve the existing value
+                    if project.auth_settings:
+                        decrypted_current = decrypt_auth_settings(project.auth_settings)
+                        if decrypted_current:
+                            # Check for masked secret fields and restore original values
+                            secret_fields = ["oauth_client_secret", "api_key"]
+                            for field in secret_fields:
+                                if field in auth_dict and auth_dict[field] == "*******":
+                                    # Frontend sent back masked value, restore the original
+                                    if field in decrypted_current:
+                                        auth_dict[field] = decrypted_current[field]
+                    
+                    # Now encrypt the auth_dict with properly handled secrets
+                    encrypted_settings = encrypt_auth_settings(auth_dict)
+                    project.auth_settings = encrypted_settings
+
+                    # Determine if we need to handle MCP Composer
+                    if new_auth_type == "oauth":
+                        # Always try to start/restart MCP Composer for OAuth projects
+                        # This handles cases where the server wasn't running or port became available
                         should_handle_mcp_composer = True
                         should_start_composer = True
                     elif current_auth_type == "oauth" and new_auth_type != "oauth":
+                        # Switching away from OAuth - stop the composer
                         should_handle_mcp_composer = True
                         should_stop_composer = True
-                    elif current_auth_type == "oauth" and new_auth_type == "oauth":
-                        # Both are OAuth - always trigger a restart check to see if
-                        # any auth values have changed.
-                        # There are more efficient ways to do this, but this is simple, for now
-                        should_handle_mcp_composer = True
-                        should_start_composer = True
-
-                    encrypted_settings = encrypt_auth_settings(auth_dict)
-                    project.auth_settings = encrypted_settings
 
             session.add(project)
 
@@ -462,11 +480,7 @@ async def update_project_mcp_settings(
                         try:
                             auth_config = await _get_mcp_composer_auth_config(project)
                             await get_or_start_mcp_composer(auth_config, project.name, project_id)
-
-                            # Success - construct URL using auth_config
-                            composer_host = auth_config.get("oauth_host")
-                            composer_port = auth_config.get("oauth_port")
-                            composer_sse_url = f"http://{composer_host}:{composer_port}/sse"
+                            composer_sse_url = await get_composer_sse_url(project)
                             response["result"] = {
                                 "project_id": str(project_id),
                                 "sse_url": composer_sse_url,
@@ -611,10 +625,9 @@ async def install_mcp_config(
             try:
                 auth_config = await _get_mcp_composer_auth_config(project)
                 await get_or_start_mcp_composer(auth_config, project.name, project_id)
-
                 sse_url = await get_composer_sse_url(project)
-
             except MCPComposerError as e:
+                await logger.aerror(f"Failed to start MCP Composer for project '{project.name}' ({project_id}): {e.message}")
                 raise HTTPException(status_code=500, detail=e.message)
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Failed to start MCP Composer: {str(e)}")
@@ -752,11 +765,7 @@ async def get_project_composer_url(
 
         try:
             await get_or_start_mcp_composer(auth_config, project.name, project_id)
-
-            # Success - construct URL using auth_config
-            composer_host = auth_config.get("oauth_host")
-            composer_port = auth_config.get("oauth_port")
-            composer_sse_url = f"http://{composer_host}:{composer_port}/sse"
+            composer_sse_url = await get_composer_sse_url(project)
             return {"project_id": str(project_id), "sse_url": composer_sse_url, "uses_composer": True}
         except MCPComposerError as e:
             return {"project_id": str(project_id), "uses_composer": True, "error_message": e.message}
@@ -878,6 +887,9 @@ async def get_composer_sse_url(project: Folder) -> str:
     auth_config = await _get_mcp_composer_auth_config(project)
     composer_host = auth_config.get("oauth_host")
     composer_port = auth_config.get("oauth_port")
+    if not composer_host or not composer_port:
+        raise ValueError("OAuth host and port are required to get the SSE URL for MCP Composer")
+
     composer_sse_url = f"http://{composer_host}:{composer_port}/sse"
     return await get_url_by_os(composer_host, composer_port, composer_sse_url)
 
@@ -1135,6 +1147,7 @@ async def init_mcp_servers():
                             await logger.adebug(
                                 f"Starting MCP Composer for OAuth project {project.name} ({project.id}) on startup"
                             )
+                            await asyncio.sleep(3.0) # wait a second for the langflow mcp server to start before attaching the composer to it
                             await register_project_with_composer(project)
 
                 except Exception as e:  # noqa: BLE001
@@ -1173,7 +1186,7 @@ def should_use_mcp_composer(project: Folder) -> bool:
 
 
 async def get_or_start_mcp_composer(auth_config: dict, project_name: str, project_id: UUID) -> None:
-    """Get MCP Composer or start it if not running, restarting if config changed.
+    """Get MCP Composer or start it if not running.
 
     Raises:
         MCPComposerError: If MCP Composer fails to start
