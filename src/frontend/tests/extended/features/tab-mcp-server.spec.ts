@@ -7,25 +7,29 @@ test(
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     const maxRetries = 3; // Reduce retries due to longer individual attempts
-    
+
     // Add error listeners for better debugging
-    page.on('pageerror', error => {
-      console.error('Page runtime error:', error.message);
+    page.on("pageerror", (error) => {
+      console.error("Page runtime error:", error.message);
     });
-    
-    page.on('requestfailed', request => {
-      console.warn('Failed request:', request.url(), request.failure()?.errorText);
+
+    page.on("requestfailed", (request) => {
+      console.warn(
+        "Failed request:",
+        request.url(),
+        request.failure()?.errorText,
+      );
     });
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         console.warn(`Attempt ${attempt} of ${maxRetries}`);
-        
+
         // Validate page is still usable
         if (page.isClosed()) {
-          console.error('Page is closed, creating new page...');
+          console.error("Page is closed, creating new page...");
           // The page is closed, we can't continue with this attempt
-          throw new Error('Page was closed, cannot continue with this attempt');
+          throw new Error("Page was closed, cannot continue with this attempt");
         }
 
         await awaitBootstrapTest(page);
@@ -404,14 +408,19 @@ test(
         return;
       } catch (error) {
         console.error(`Attempt ${attempt} failed:`, error);
-        
+
         // Check if this is a browser/page closure issue
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Target page, context or browser has been closed') ||
-            errorMessage.includes('Browser has been closed') ||
-            errorMessage.includes('peer closed connection') ||
-            page.isClosed()) {
-          console.error('Browser/page was closed - stopping retry attempts');
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        if (
+          errorMessage.includes(
+            "Target page, context or browser has been closed",
+          ) ||
+          errorMessage.includes("Browser has been closed") ||
+          errorMessage.includes("peer closed connection") ||
+          page.isClosed()
+        ) {
+          console.error("Browser/page was closed - stopping retry attempts");
           throw error; // Don't retry on browser closure
         }
 
@@ -462,7 +471,10 @@ test(
             break;
           }
         } catch (timeoutError) {
-          console.warn(`Timeout wait failed on attempt ${attempt}:`, timeoutError.message);
+          console.warn(
+            `Timeout wait failed on attempt ${attempt}:`,
+            timeoutError.message,
+          );
           // Continue to next attempt anyway
         }
       }
