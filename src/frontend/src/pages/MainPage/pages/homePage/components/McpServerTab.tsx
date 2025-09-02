@@ -274,7 +274,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   // Use the per-project MCP Composer SSE URL only if project uses composer, otherwise fallback to direct SSE
   const apiUrl = customGetMCPUrl(
     projectId,
-    ENABLE_MCP_COMPOSER &&
+    isOAuthProject &&
       !!composerUrlData?.sse_url &&
       composerUrlData?.uses_composer,
     composerUrlData?.sse_url,
