@@ -58,7 +58,7 @@ export default function NodeLegacyComponent({
                   variant="link"
                   className=" !text-accent-pink-foreground !text-mmd !inline-block"
                   size={null}
-                  onClick={() => handleFilterComponent(component)}
+                  onClick={() => handleFilterComponent(replacement[index])}
                 >
                   {component}
                 </Button>
