@@ -35,13 +35,7 @@ export const useGetProjectComposerUrl: useQueryFunctionType<
   return query(["project-composer-url", projectId], responseFn, {
     staleTime: 30000, // 30 seconds
     retry: 1,
-    // Handle 400/500 errors when project doesn't have OAuth auth
-    // This allows the UI to gracefully fall back to direct SSE
-    throwOnError: (error: unknown) => {
-      // Don't throw on 400 errors (non-OAuth projects) or 500 errors (auth transition states)
-      const errorWithStatus = error as { status?: number };
-      return errorWithStatus?.status !== 400 && errorWithStatus?.status !== 500;
-    },
+    // Backend returns 200 responses with error_message field instead of HTTP errors
     ...options,
   });
 };

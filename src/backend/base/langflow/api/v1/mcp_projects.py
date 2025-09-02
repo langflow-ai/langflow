@@ -496,6 +496,14 @@ async def update_project_mcp_settings(
                             # Unexpected errors
                             await logger.aerror(f"Failed to get mcp composer URL for project {project_id}: {e}")
                             raise HTTPException(status_code=500, detail=str(e)) from e
+                    else:
+                        # This shouldn't happen - we determined we should start composer but now we can't use it
+                        await logger.aerror(f"PATCH: OAuth set but MCP Composer is disabled in settings for project {project_id}")
+                        response["result"] = {
+                            "project_id": str(project_id),
+                            "uses_composer": False,
+                            "error_message": "OAuth authentication is set but MCP Composer is disabled in settings"
+                        }
                 elif should_stop_composer:
                     await logger.adebug(
                         f"Auth settings changed from OAuth for project {project.name} ({project_id}), "
@@ -630,7 +638,8 @@ async def install_mcp_config(
                 await logger.aerror(f"Failed to start MCP Composer for project '{project.name}' ({project_id}): {e.message}")
                 raise HTTPException(status_code=500, detail=e.message)
             except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Failed to start MCP Composer: {str(e)}")
+                await logger.aerror(f"Failed to start MCP Composer for project '{project.name}' ({project_id}): {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Failed to start MCP Composer. See logs for details.")
 
             # For OAuth/MCP Composer, use the special format
             command = "uvx"
@@ -730,7 +739,6 @@ async def install_mcp_config(
 
     except HTTPException:
         raise
-
     except Exception as e:
         msg = f"Error installing MCP configuration: {e!s}"
         await logger.aexception(msg)
@@ -756,10 +764,11 @@ async def get_project_composer_url(
     try:
         project = await verify_project_access(project_id, current_user)
         if not should_use_mcp_composer(project):
-            raise HTTPException(
-                status_code=400,
-                detail="MCP Composer is only available for projects with OAuth authentication",
-            )
+            return {
+                "project_id": str(project_id),
+                "uses_composer": False,
+                "error_message": "MCP Composer is only available for projects with MCP Composer enabled and OAuth authentication"
+            }
 
         auth_config = await _get_mcp_composer_auth_config(project)
 
@@ -770,14 +779,13 @@ async def get_project_composer_url(
         except MCPComposerError as e:
             return {"project_id": str(project_id), "uses_composer": True, "error_message": e.message}
         except Exception as e:
-            # Other unexpected errors - log and re-raise as HTTP error
             await logger.aerror(f"Unexpected error getting composer URL: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to start MCP Composer: {str(e)}")
+            return {"project_id": str(project_id), "uses_composer": True, "error_message": f"Failed to start MCP Composer. See logs for details."}
 
     except Exception as e:
         msg = f"Error getting composer URL for project {project_id}: {e!s}"
-        await logger.aexception(msg)
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        await logger.aerror(msg)
+        return {"project_id": str(project_id), "uses_composer": True, "error_message": f"Failed to get MCP Composer URL. See logs for details."}
 
 
 @router.get("/{project_id}/installed")
