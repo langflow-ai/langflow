@@ -462,7 +462,7 @@ async def update_project_mcp_settings(
                         try:
                             auth_config = await _get_mcp_composer_auth_config(project)
                             await get_or_start_mcp_composer(auth_config, project.name, project_id)
-                            
+
                             # Success - construct URL using auth_config
                             composer_host = auth_config.get("oauth_host")
                             composer_port = auth_config.get("oauth_port")
@@ -470,13 +470,13 @@ async def update_project_mcp_settings(
                             response["result"] = {
                                 "project_id": str(project_id),
                                 "sse_url": composer_sse_url,
-                                "uses_composer": True
+                                "uses_composer": True,
                             }
                         except MCPComposerError as e:
                             response["result"] = {
                                 "project_id": str(project_id),
                                 "uses_composer": True,
-                                "error_message": e.message
+                                "error_message": e.message,
                             }
                         except Exception as e:
                             # Unexpected errors
@@ -594,14 +594,6 @@ async def install_mcp_config(
             auth_settings = AuthSettings(**project.auth_settings) if project.auth_settings else AuthSettings()
             should_generate_api_key = auth_settings.auth_type == "apikey"
 
-        if should_generate_api_key:
-            # Generate API key with specific name format
-            async with session_scope() as session:
-                api_key_name = f"MCP Project {project.name} - {body.client}"
-                api_key_create = ApiKeyCreate(name=api_key_name)
-                unmasked_api_key = await create_api_key(session, api_key_create, current_user.id)
-                generated_api_key = unmasked_api_key.api_key
-
         # Get settings service to build the SSE URL
         settings_service = get_settings_service()
         settings = settings_service.settings
@@ -610,54 +602,18 @@ async def install_mcp_config(
         if not host or not port:
             raise HTTPException(status_code=500, detail="Host and port are not set in settings")
 
-        sse_url = await get_project_sse_url(project_id)
-
         # Determine command and args based on operating system
         os_type = platform.system()
-        command = "uvx"
-
-        # Check if running on WSL (will appear as Linux but with Microsoft in release info)
-        is_wsl = os_type == "Linux" and "microsoft" in platform.uname().release.lower()
-
-        if is_wsl:
-            await logger.adebug("WSL detected, using Windows-specific configuration")
-
-            # If we're in WSL and the host is localhost, we might need to adjust the URL
-            # so Windows applications can reach the WSL service
-            if host in {"localhost", "127.0.0.1"}:
-                try:
-                    # Try to get the WSL IP address for host.docker.internal or similar access
-
-                    # This might vary depending on WSL version and configuration
-                    proc = await create_subprocess_exec(
-                        "/usr/bin/hostname",
-                        "-I",
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                    )
-                    stdout, _ = await proc.communicate()
-
-                    if proc.returncode == 0 and stdout.strip():
-                        wsl_ip = stdout.decode().strip().split()[0]  # Get first IP address
-                        await logger.adebug("Using WSL IP for external access: %s", wsl_ip)
-                        # Replace the localhost with the WSL IP in the URL
-                        sse_url = sse_url.replace(f"http://{host}:{port}", f"http://{wsl_ip}:{port}")
-                except OSError as e:
-                    await logger.awarning("Failed to get WSL IP address: %s. Using default URL.", str(e))
 
         use_mcp_composer = should_use_mcp_composer(project)
 
-        mcp_composer_enabled = get_settings_service().settings.mcp_composer_enabled
-        
         if use_mcp_composer:
             try:
                 auth_config = await _get_mcp_composer_auth_config(project)
                 await get_or_start_mcp_composer(auth_config, project.name, project_id)
-                
-                # Success - construct URL using auth_config
-                composer_host = auth_config.get("oauth_host")
-                composer_port = auth_config.get("oauth_port")
-                composer_sse_url = f"http://{composer_host}:{composer_port}/sse"
+
+                sse_url = await get_composer_sse_url(project)
+
             except MCPComposerError as e:
                 raise HTTPException(status_code=500, detail=e.message)
             except Exception as e:
@@ -670,28 +626,24 @@ async def install_mcp_config(
                 "--mode",
                 "stdio",
                 "--sse-url",
-                composer_sse_url,
+                sse_url,
                 "--disable-composer-tools",
                 "--client_auth_type",
-                "oauth"
+                "oauth",
             ]
         else:
             # For non-OAuth (API key or no auth), use mcp-proxy
+            sse_url = await get_project_sse_url(project_id)
             command = "uvx"
             args = ["mcp-proxy"]
-
-        # For non-OAuth mode, handle API key authentication
-        if not use_mcp_composer:
             # Check if we need to add Langflow API key headers
             # Necessary only when Project API Key Authentication is enabled
             auth_settings = get_settings_service().auth_settings
 
             # Generate a Langflow API key for auto-install if needed
             # Only add API key headers for projects with "apikey" auth type (not "none" or OAuth)
-            project_auth_type = project.auth_settings.get("auth_type", "") if project.auth_settings else ""
-            needs_api_key = project_auth_type == "apikey" if mcp_composer_enabled else not auth_settings.AUTO_LOGIN
 
-            if needs_api_key:
+            if should_generate_api_key:
                 async with session_scope() as api_key_session:
                     api_key_create = ApiKeyCreate(name=f"MCP Server {project.name}")
                     api_key_response = await create_api_key(api_key_session, api_key_create, current_user.id)
@@ -716,9 +668,7 @@ async def install_mcp_config(
             "args": args,
         }
 
-        mcp_config = {
-            "mcpServers": {server_name: server_config}
-        }
+        mcp_config = {"mcpServers": {server_name: server_config}}
 
         await logger.adebug("Installing MCP config for project: %s (server name: %s)", project.name, server_name)
 
@@ -753,9 +703,7 @@ async def install_mcp_config(
         if "mcpServers" not in existing_config:
             existing_config["mcpServers"] = {}
 
-        # Remove any existing servers with the same SSE URL (for reinstalling)
-        project_sse_url = await get_project_sse_url(project_id)
-        existing_config, removed_servers = remove_server_by_sse_url(existing_config, project_sse_url)
+        existing_config, removed_servers = remove_server_by_sse_url(existing_config, sse_url)
 
         if removed_servers:
             await logger.adebug("Removed existing MCP servers with same SSE URL for reinstall: %s", removed_servers)
@@ -801,25 +749,17 @@ async def get_project_composer_url(
             )
 
         auth_config = await _get_mcp_composer_auth_config(project)
-        
+
         try:
             await get_or_start_mcp_composer(auth_config, project.name, project_id)
-            
+
             # Success - construct URL using auth_config
             composer_host = auth_config.get("oauth_host")
             composer_port = auth_config.get("oauth_port")
             composer_sse_url = f"http://{composer_host}:{composer_port}/sse"
-            return {
-                "project_id": str(project_id),
-                "sse_url": composer_sse_url,
-                "uses_composer": True
-            }
+            return {"project_id": str(project_id), "sse_url": composer_sse_url, "uses_composer": True}
         except MCPComposerError as e:
-            return {
-                "project_id": str(project_id),
-                "uses_composer": True,
-                "error_message": e.message
-            }
+            return {"project_id": str(project_id), "uses_composer": True, "error_message": e.message}
         except Exception as e:
             # Other unexpected errors - log and re-raise as HTTP error
             await logger.aerror(f"Unexpected error getting composer URL: {e}")
@@ -847,8 +787,11 @@ async def check_installed_mcp_servers(
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
 
-        # Generate the SSE URL for this project
-        project_sse_url = await get_project_sse_url(project_id)
+        project = await verify_project_access(project_id, current_user)
+        if should_use_mcp_composer(project):
+            project_sse_url = await get_composer_sse_url(project)
+        else:
+            project_sse_url = await get_project_sse_url(project_id)
 
         await logger.adebug(
             "Checking for installed MCP servers for project: %s (SSE URL: %s)", project.name, project_sse_url
@@ -922,12 +865,25 @@ async def get_project_sse_url(project_id: UUID) -> str:
     """Generate the SSE URL for a project, including WSL handling."""
     # Get settings service to build the SSE URL
     settings_service = get_settings_service()
+
     host = settings_service.settings.host or "localhost"
     port = settings_service.settings.port or 7860
-    base_url = f"http://{host}:{port}".rstrip("/")
-    project_sse_url = f"{base_url}/api/v1/mcp/project/{project_id}/sse"
+    project_sse_url = f"http://{host}:{port}/api/v1/mcp/project/{project_id}/sse"
 
-    # Handle WSL case - must match the logic in install function
+    return await get_url_by_os(host, port, project_sse_url)
+
+
+async def get_composer_sse_url(project: Folder) -> str:
+    """Get the SSE URL for a project using MCP Composer."""
+    auth_config = await _get_mcp_composer_auth_config(project)
+    composer_host = auth_config.get("oauth_host")
+    composer_port = auth_config.get("oauth_port")
+    composer_sse_url = f"http://{composer_host}:{composer_port}/sse"
+    return await get_url_by_os(composer_host, composer_port, composer_sse_url)
+
+
+async def get_url_by_os(host: str, port: int, url: str) -> str:
+    """Get the URL by operating system."""
     os_type = platform.system()
     is_wsl = os_type == "Linux" and "microsoft" in platform.uname().release.lower()
 
@@ -945,11 +901,11 @@ async def get_project_sse_url(project_id: UUID) -> str:
                 wsl_ip = stdout.decode().strip().split()[0]  # Get first IP address
                 logger.debug("Using WSL IP for external access: %s", wsl_ip)
                 # Replace the localhost with the WSL IP in the URL
-                project_sse_url = project_sse_url.replace(f"http://{host}:{port}", f"http://{wsl_ip}:{port}")
+                url = url.replace(f"http://{host}:{port}", f"http://{wsl_ip}:{port}")
         except OSError as e:
             logger.warning("Failed to get WSL IP address: %s. Using default URL.", str(e))
 
-    return project_sse_url
+    return url
 
 
 async def get_config_path(client: str) -> Path:
@@ -1045,13 +1001,13 @@ def remove_server_by_sse_url(config_data: dict, sse_url: str) -> tuple[dict, lis
 
 async def _get_mcp_composer_auth_config(project) -> dict:
     """Get MCP Composer authentication configuration from project settings.
-    
+
     Args:
         project: The project object containing auth_settings
-        
+
     Returns:
         dict: The decrypted authentication configuration
-        
+
     Raises:
         HTTPException: If MCP Composer is not enabled or auth config is missing
     """
@@ -1066,6 +1022,7 @@ async def _get_mcp_composer_auth_config(project) -> dict:
         raise ValueError(error_message)
 
     return auth_config
+
 
 # Project-specific MCP server instance for handling project-specific tools
 class ProjectMCPServer:
@@ -1142,9 +1099,7 @@ async def register_project_with_composer(project: Folder):
         if error_message is not None:
             raise RuntimeError(error_message)
 
-        await logger.adebug(
-            f"Registered project {project.name} ({project.id}) with MCP Composer"
-        )
+        await logger.adebug(f"Registered project {project.name} ({project.id}) with MCP Composer")
 
     except Exception as e:  # noqa: BLE001
         await logger.awarning(f"Failed to register project {project.id} with MCP Composer: {e}")
@@ -1219,12 +1174,12 @@ def should_use_mcp_composer(project: Folder) -> bool:
 
 async def get_or_start_mcp_composer(auth_config: dict, project_name: str, project_id: UUID) -> None:
     """Get MCP Composer or start it if not running, restarting if config changed.
-        
+
     Raises:
         MCPComposerError: If MCP Composer fails to start
     """
     from langflow.services.mcp_composer.service import MCPComposerConfigError
-    
+
     mcp_composer_service: MCPComposerService = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
 
     # Prepare current auth config for comparison
@@ -1234,6 +1189,8 @@ async def get_or_start_mcp_composer(auth_config: dict, project_name: str, projec
 
     sse_url = await get_project_sse_url(project_id)
     if not auth_config:
-        raise MCPComposerConfigError(f"Auth config is required to start MCP Composer for project {project_name}", str(project_id))
+        raise MCPComposerConfigError(
+            f"Auth config is required to start MCP Composer for project {project_name}", str(project_id)
+        )
 
     await mcp_composer_service.start_project_composer(str(project_id), sse_url, auth_config)
