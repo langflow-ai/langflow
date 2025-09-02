@@ -54,19 +54,18 @@ export const usePatchFlowsMCP: useMutationFunctionType<
         "useGetFlowsMCP",
         params.project_id,
       ]);
-      if (currentMCPData && authSettings) {
+      if (currentMCPData && authSettings !== undefined) {
         queryClient.setQueryData(["useGetFlowsMCP", params.project_id], {
           ...currentMCPData,
           auth_settings: authSettings,
         });
       }
 
-      // Always invalidate the composer URL cache when the result changes
-      if (data.result) {
-        queryClient.invalidateQueries({
-          queryKey: ["project-composer-url", params.project_id],
-        });
-      }
+      // Always invalidate the composer URL cache when auth settings change
+      // This ensures the query re-runs with the new auth state
+      queryClient.invalidateQueries({
+        queryKey: ["project-composer-url", params.project_id],
+      });
 
       // Call the original onSuccess if provided
       if (options?.onSuccess) {
