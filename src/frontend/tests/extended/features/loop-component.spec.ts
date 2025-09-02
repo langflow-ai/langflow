@@ -157,7 +157,7 @@ test(
       .click();
 
     await page
-      .getByTestId("handle-chatoutput-shownode-inputs-left")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .first()
       .click();
 
@@ -216,6 +216,8 @@ test(
       .click();
 
     // Build and run
+    await page.getByTestId("title-Chat Output").click();
+    await page.keyboard.press(`ControlOrMeta+.`);
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
