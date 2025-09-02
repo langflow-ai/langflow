@@ -170,7 +170,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   // Only get composer URL for OAuth projects
   // Disable the query during mutations to prevent stale auth state issues
-  const isOAuthProject = currentAuthSettings?.auth_type === "oauth";
+  const isOAuthProject =
+    currentAuthSettings?.auth_type === "oauth" && ENABLE_MCP_COMPOSER;
   const shouldQueryComposerUrl = isOAuthProject && !isPatchingFlowsMCP;
   const { data: composerUrlData } = useGetProjectComposerUrl(
     {
@@ -269,11 +270,13 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   // Check if OAuth project has MCP Composer errors
   const hasOAuthError = isOAuthProject && composerUrlData?.error_message;
-  
+
   // Use the per-project MCP Composer SSE URL only if project uses composer, otherwise fallback to direct SSE
   const apiUrl = customGetMCPUrl(
     projectId,
-    ENABLE_MCP_COMPOSER && !!composerUrlData?.sse_url && composerUrlData?.uses_composer,
+    ENABLE_MCP_COMPOSER &&
+      !!composerUrlData?.sse_url &&
+      composerUrlData?.uses_composer,
     composerUrlData?.sse_url,
   );
 
@@ -452,7 +455,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                 ) : (
                   <ShadTooltip
                     content={
-                      (!composerUrlData?.error_message)
+                      !composerUrlData?.error_message
                         ? undefined
                         : `MCP Server is not running: ${composerUrlData?.error_message}`
                     }
@@ -460,14 +463,14 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                     <span
                       className={cn(
                         "flex gap-2 text-mmd items-center",
-                        (!composerUrlData?.error_message)
+                        !composerUrlData?.error_message
                           ? "text-accent-emerald-foreground"
                           : "text-accent-amber-foreground",
                       )}
                     >
                       <ForwardedIconComponent
                         name={
-                          (!composerUrlData?.error_message)
+                          !composerUrlData?.error_message
                             ? "Check"
                             : "AlertTriangle"
                         }
@@ -551,7 +554,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                         {composerUrlData?.error_message}
                       </p>
                       <p className="text-sm text-muted-foreground mt-2">
-                        Please fix the OAuth configuration in your project settings to generate the MCP server configuration.
+                        Please fix the OAuth configuration in your project
+                        settings to generate the MCP server configuration.
                       </p>
                     </div>
                   ) : (
