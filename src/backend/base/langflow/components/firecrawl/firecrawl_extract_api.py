@@ -43,30 +43,40 @@ class FirecrawlExtractApi(Component):
             name="enable_web_search",
             display_name="Enable Web Search",
             info="When true, the extraction will use web search to find additional data.",
+            default=False,
+            advanced=True,
         ),
-        # # Optional: Not essential for basic extraction
-        # BoolInput(
-        #     name="ignore_sitemap",
-        #     display_name="Ignore Sitemap",
-        #     info="When true, sitemap.xml files will be ignored during website scanning.",
-        # ),
-        # # Optional: Not essential for basic extraction
-        # BoolInput(
-        #     name="include_subdomains",
-        #     display_name="Include Subdomains",
-        #     info="When true, subdomains of the provided URLs will also be scanned.",
-        # ),
-        # # Optional: Not essential for basic extraction
-        # BoolInput(
-        #     name="show_sources",
-        #     display_name="Show Sources",
-        #     info="When true, the sources used to extract the data will be included in the response.",
-        # ),
+        BoolInput(
+            name="ignoreSitemap",
+            display_name="Ignore Sitemap",
+            info="Skip sitemap.xml discovery for URL extraction.",
+            default=False,
+            advanced=True,
+        ),
+        BoolInput(
+            name="includeSubdomains",
+            display_name="Include Subdomains",
+            info="Include URLs from subdomains in extraction.",
+            default=True,
+            advanced=True,
+        ),
+        IntInput(
+            name="timeout",
+            display_name="Timeout",
+            info="Timeout in seconds for the extraction process.",
+            default=300,
+            advanced=True,
+        ),
     ]
 
     outputs = [
         Output(display_name="Data", name="data", method="extract"),
     ]
+
+    enable_web_search: bool = False
+    ignoreSitemap: bool = False
+    includeSubdomains: bool = True
+    timeout: int = 300
 
     def extract(self) -> Data:
         try:
@@ -107,11 +117,9 @@ class FirecrawlExtractApi(Component):
         params = {
             "prompt": enhanced_prompt,
             "enableWebSearch": self.enable_web_search,
-            # Optional parameters - not essential for basic extraction
-            "ignoreSitemap": self.ignore_sitemap,
-            "includeSubdomains": self.include_subdomains,
-            "showSources": self.show_sources,
-            "timeout": 300,
+            "ignoreSitemap": self.ignoreSitemap,
+            "includeSubdomains": self.includeSubdomains,
+            "timeout": self.timeout,
         }
 
         # Only add schema to params if it's provided and is a valid schema structure
@@ -124,7 +132,7 @@ class FirecrawlExtractApi(Component):
                 else:
                     # Skip invalid schema without raising an error
                     pass
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 logger.error(f"Invalid schema: {e!s}")
 
         try:
