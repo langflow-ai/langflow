@@ -762,6 +762,7 @@ export const AUTHORIZED_DUPLICATE_REQUESTS = [
   "/refresh",
   "/login",
   "/auto_login",
+  "https://discord.com/api/v9/invites/EqksyE2EX9",
 ];
 
 export const BROKEN_EDGES_WARNING =
