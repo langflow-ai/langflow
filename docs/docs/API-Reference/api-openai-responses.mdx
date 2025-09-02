@@ -6,11 +6,12 @@ slug: /api-openai-responses
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/Tabs';
 
-Langflow includes an OpenAI-compatible API endpoint at `POST /api/v1/responses`.
-This endpoint allows you to run your flows using OpenAI-compatible request and response formats.
+Langflow includes an OpenAI Responses API-compatible endpoint at `POST /api/v1/responses`.
 
-This enables you to use existing OpenAI client libraries with minimal code changes - just change the `model` name to your `flow_id` instead of using OpenAI model names like "gpt-4".
+This endpoint allows you to use existing OpenAI client libraries with minimal code changes - just replace the `model` name, such as `gpt-4`, with your `flow_id`.
 Flow IDs can be found on the code snippets on the [**API access** pane](/concepts-publish#api-access) or in a flow's URL.
+
+For more information on the OpenAI Responses API, see the [OpenAI documentation](https://platform.openai.com/docs/api-reference/responses).
 
 ## Prerequisites
 
