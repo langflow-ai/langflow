@@ -37,12 +37,13 @@ export const useUpdateMessage: useMutationFunctionType<
         flow_id: flowId,
       };
       sessionStorage.setItem(flowId, JSON.stringify(messages));
+    } else {
+      const result = await api.put(
+        `${getURL("MESSAGES")}/${message.id}`,
+        message,
+      );
+      return result.data;
     }
-    const result = await api.put(
-      `${getURL("MESSAGES")}/${message.id}`,
-      message,
-    );
-    return result.data;
   };
 
   const mutation: UseMutationResult<Message, any, UpdateMessageParams> = mutate(
