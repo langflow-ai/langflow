@@ -43,7 +43,7 @@ export type APIClassType = {
   custom_fields?: CustomFieldsType;
   beta?: boolean;
   legacy?: boolean;
-  replacement?: string;
+  replacement?: string[];
   documentation: string;
   error?: string;
   official?: boolean;
