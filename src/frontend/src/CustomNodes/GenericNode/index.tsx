@@ -546,6 +546,10 @@ function GenericNode({
                   selected={selected}
                   showNode={showNode}
                   beta={data.node?.beta || false}
+                  legacy={
+                    data.node?.legacy ||
+                    (data.node?.replacement?.length ?? 0) > 0
+                  }
                   editNameDescription={editNameDescription}
                   toggleEditNameDescription={toggleEditNameDescription}
                   setHasChangedNodeDescription={setHasChangedNodeDescription}
