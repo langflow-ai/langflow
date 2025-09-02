@@ -40,6 +40,7 @@ class LCModelComponent(Component):
 
     _base_inputs: list[InputTypes] = [
         MessageInput(name="input_value", display_name="Input"),
+        MultilineInput(name="image", display_name="Image", info="Image in Base64.", advanced=True),
         MultilineInput(
             name="system_message",
             display_name="System Message",
@@ -228,6 +229,21 @@ class LCModelComponent(Component):
                             ]
                             system_message_added = True
                         runnable = prompt | runnable
+                    elif self.image:
+                        # Ensure image is in proper data URL format
+                        image_url = self.image
+                        if not image_url.startswith("data:"):
+                            # Assume it's raw base64 and add appropriate prefix
+                            image_url = f"data:image/jpeg;base64,{image_url}"
+
+                        content_parts = [
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": image_url},
+                            },
+                            {"type": "text", "text": input_value.text},
+                        ]
+                        messages.append(HumanMessage(content=content_parts))
                     else:
                         messages.append(input_value.to_lc_message())
             else:
