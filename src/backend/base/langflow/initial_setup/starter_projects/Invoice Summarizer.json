@@ -318,7 +318,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": "1.5"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 3
@@ -608,7 +608,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": "1.5"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 2
@@ -825,7 +825,7 @@
                 "dependencies": [
                   {
                     "name": "langflow",
-                    "version": "1.5"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 1

@@ -108,7 +108,7 @@
                 "dependencies": [
                   {
                     "name": "langflow",
-                    "version": "1.5"
+                    "version": null
                   },
                   {
                     "name": "scrapegraph_py",
@@ -295,7 +295,7 @@
                 "dependencies": [
                   {
                     "name": "langflow",
-                    "version": "1.5"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 1
@@ -557,7 +557,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": "1.5"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 3
