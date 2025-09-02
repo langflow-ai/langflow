@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTypesStore } from "@/stores/typesStore";
 import { useShallow } from "zustand/react/shallow";
+import { useGetReplacementComponents } from "../../hooks/use-get-replacement-components";
 
 export default function NodeDescription({
   description,
@@ -41,7 +42,7 @@ export default function NodeDescription({
   stickyNote?: boolean;
   setHasChangedNodeDescription?: (value: boolean) => void;
   legacy?: boolean;
-  replacement?: string;
+  replacement?: string[];
 }) {
   const [nodeDescription, setNodeDescription] = useState<string>(
     description ?? "",
@@ -158,16 +159,7 @@ export default function NodeDescription({
     setFilterEdge([]);
   };
 
-  const categoryName = replacement?.split(".")[0];
-  const componentName = replacement?.split(".")[1];
-  const foundComponent = useTypesStore(
-    useShallow(
-      (state) =>
-        categoryName &&
-        componentName &&
-        state.data[categoryName][componentName].display_name,
-    ),
-  );
+  const foundComponents = useGetReplacementComponents(replacement);
 
   return (
     <>
@@ -176,19 +168,26 @@ export default function NodeDescription({
           <Badge variant="secondaryStatic" size="xq">
             Legacy
           </Badge>
-          {replacement && (
-            <span className="flex items-center gap-1 text-mmd">
-              Replaced with{" "}
-              <Button
-                variant="link"
-                className=" !text-accent-pink-foreground !text-mmd"
-                size={null}
-                onClick={handleFilterComponent}
-              >
-                {foundComponent}
-              </Button>
-            </span>
-          )}
+          {replacement &&
+            Array.isArray(replacement) &&
+            replacement.length > 0 && (
+              <span className="block items-center text-mmd">
+                Replaced with{" "}
+                <Button
+                  variant="link"
+                  className=" !text-accent-pink-foreground !text-mmd !inline-block"
+                  size={null}
+                  onClick={handleFilterComponent}
+                >
+                  {foundComponents.map((component, index) => (
+                    <>
+                      {index > 0 && " and "}
+                      {component}
+                    </>
+                  ))}
+                </Button>
+              </span>
+            )}
         </div>
       )}
       <div
