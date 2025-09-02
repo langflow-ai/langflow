@@ -140,6 +140,12 @@ unit_tests: ## run unit tests
 unit_tests_looponfail:
 	@make unit_tests args="-f"
 
+lfx_tests: ## run lfx package unit tests
+	@echo 'Running LFX Package Tests...'
+	@cd src/lfx && \
+	uv sync && \
+	uv run pytest tests/unit -v $(args)
+
 integration_tests:
 	uv run pytest src/backend/tests/integration \
 		--instafail -ra \
@@ -386,6 +392,50 @@ endif
 
 publish_testpypi: ## build the frontend static files and package the project and publish it to PyPI
 	@echo 'Publishing the project'
+
+######################
+# LFX PACKAGE
+######################
+
+lfx_build: ## build the LFX package
+	@echo 'Building LFX package'
+	@cd src/lfx && make build
+
+lfx_publish: ## publish LFX package to PyPI
+	@echo 'Publishing LFX package'
+	@cd src/lfx && make publish
+
+lfx_publish_testpypi: ## publish LFX package to test PyPI
+	@echo 'Publishing LFX package to test PyPI'
+	@cd src/lfx && make publish_test
+
+lfx_test: ## run LFX tests
+	@echo 'Running LFX tests'
+	@cd src/lfx && make test
+
+lfx_format: ## format LFX code
+	@echo 'Formatting LFX code'
+	@cd src/lfx && make format
+
+lfx_lint: ## lint LFX code
+	@echo 'Linting LFX code'
+	@cd src/lfx && make lint
+
+lfx_clean: ## clean LFX build artifacts
+	@echo 'Cleaning LFX build artifacts'
+	@cd src/lfx && make clean
+
+lfx_docker_build: ## build LFX production Docker image
+	@echo 'Building LFX Docker image'
+	@cd src/lfx && make docker_build
+
+lfx_docker_dev: ## start LFX development environment
+	@echo 'Starting LFX development environment'
+	@cd src/lfx && make docker_dev
+
+lfx_docker_test: ## run LFX tests in Docker
+	@echo 'Running LFX tests in Docker'
+	@cd src/lfx && make docker_test
 
 # example make alembic-revision message="Add user table"
 alembic-revision: ## generate a new migration

@@ -1,1 +1,0 @@
-MODES = ["scrape", "crawl"]

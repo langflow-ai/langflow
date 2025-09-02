@@ -11,8 +11,15 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.base.mcp import util
-from langflow.base.mcp.util import MCPSessionManager, MCPSseClient, MCPStdioClient, _process_headers, validate_headers
+
+from lfx.base.mcp import util
+from lfx.base.mcp.util import (
+    MCPSessionManager,
+    MCPSseClient,
+    MCPStdioClient,
+    _process_headers,
+    validate_headers,
+)
 
 
 class TestMCPSessionManager:
@@ -41,15 +48,21 @@ class TestMCPSessionManager:
 
         with (
             patch.object(session_manager, "_create_stdio_session") as mock_create,
-            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
+            patch.object(
+                session_manager, "_validate_session_connectivity", return_value=True
+            ),
         ):
             mock_create.return_value = (mock_session, mock_task)
 
             # First call should create session
-            session1 = await session_manager.get_session(context_id, connection_params, transport_type)
+            session1 = await session_manager.get_session(
+                context_id, connection_params, transport_type
+            )
 
             # Second call should return cached session without creating new one
-            session2 = await session_manager.get_session(context_id, connection_params, transport_type)
+            session2 = await session_manager.get_session(
+                context_id, connection_params, transport_type
+            )
 
             assert session1 == session2
             assert session1 == mock_session
@@ -69,7 +82,14 @@ class TestMCPSessionManager:
 
         # Set up the new session structure
         session_manager.sessions_by_server[server_key] = {
-            "sessions": {session_id: {"session": AsyncMock(), "task": mock_task, "type": "stdio", "last_used": 0}},
+            "sessions": {
+                session_id: {
+                    "session": AsyncMock(),
+                    "task": mock_task,
+                    "type": "stdio",
+                    "last_used": 0,
+                }
+            },
             "last_cleanup": 0,
         }
 
@@ -80,7 +100,9 @@ class TestMCPSessionManager:
 
         # Should cancel the task and remove from sessions
         mock_task.cancel.assert_called_once()
-        assert session_id not in session_manager.sessions_by_server[server_key]["sessions"]
+        assert (
+            session_id not in session_manager.sessions_by_server[server_key]["sessions"]
+        )
 
     async def test_server_switch_detection(self, session_manager):
         """Test that server switches are properly detected and handled."""
@@ -96,19 +118,28 @@ class TestMCPSessionManager:
 
         with (
             patch.object(session_manager, "_create_stdio_session") as mock_create,
-            patch.object(session_manager, "_validate_session_connectivity", return_value=True),
+            patch.object(
+                session_manager, "_validate_session_connectivity", return_value=True
+            ),
         ):
             mock_session1 = AsyncMock()
             mock_session2 = AsyncMock()
             mock_task1 = AsyncMock()
             mock_task2 = AsyncMock()
-            mock_create.side_effect = [(mock_session1, mock_task1), (mock_session2, mock_task2)]
+            mock_create.side_effect = [
+                (mock_session1, mock_task1),
+                (mock_session2, mock_task2),
+            ]
 
             # First connection
-            session1 = await session_manager.get_session(context_id, server1_params, "stdio")
+            session1 = await session_manager.get_session(
+                context_id, server1_params, "stdio"
+            )
 
             # Switch to different server should create new session
-            session2 = await session_manager.get_session(context_id, server2_params, "stdio")
+            session2 = await session_manager.get_session(
+                context_id, server2_params, "stdio"
+            )
 
             assert session1 != session2
             assert mock_create.call_count == 2
@@ -119,12 +150,20 @@ class TestHeaderValidation:
 
     def test_validate_headers_valid_input(self):
         """Test header validation with valid headers."""
-        headers = {"Authorization": "Bearer token123", "Content-Type": "application/json", "X-API-Key": "secret-key"}
+        headers = {
+            "Authorization": "Bearer token123",
+            "Content-Type": "application/json",
+            "X-API-Key": "secret-key",
+        }
 
         result = validate_headers(headers)
 
         # Headers should be normalized to lowercase
-        expected = {"authorization": "Bearer token123", "content-type": "application/json", "x-api-key": "secret-key"}
+        expected = {
+            "authorization": "Bearer token123",
+            "content-type": "application/json",
+            "x-api-key": "secret-key",
+        }
         assert result == expected
 
     def test_validate_headers_empty_input(self):
@@ -164,7 +203,12 @@ class TestHeaderValidation:
 
     def test_validate_headers_non_string_values(self):
         """Test header validation with non-string values."""
-        headers = {"String-Header": "valid", "Number-Header": 123, "None-Header": None, "List-Header": ["value"]}
+        headers = {
+            "String-Header": "valid",
+            "Number-Header": 123,
+            "None-Header": None,
+            "List-Header": ["value"],
+        }
 
         result = validate_headers(headers)
 
@@ -322,7 +366,14 @@ class TestMCPUtilityFunctions:
         """Test flow lookup by snake case name with mocked session."""
 
         class DummyFlow:
-            def __init__(self, name: str, user_id: str, *, is_component: bool = False, action_name: str | None = None):
+            def __init__(
+                self,
+                name: str,
+                user_id: str,
+                *,
+                is_component: bool = False,
+                action_name: str | None = None,
+            ):
                 self.name = name
                 self.user_id = user_id
                 self.is_component = is_component
@@ -346,11 +397,15 @@ class TestMCPUtilityFunctions:
         flows = [DummyFlow("Test Flow", user_id), DummyFlow("Other", user_id)]
 
         # Should match sanitized name
-        result = await util.get_flow_snake_case(util.sanitize_mcp_name("Test Flow"), user_id, DummySession(flows))
+        result = await util.get_flow_snake_case(
+            util.sanitize_mcp_name("Test Flow"), user_id, DummySession(flows)
+        )
         assert result is flows[0]
 
         # Should return None if not found
-        result = await util.get_flow_snake_case("notfound", user_id, DummySession(flows))
+        result = await util.get_flow_snake_case(
+            "notfound", user_id, DummySession(flows)
+        )
         assert result is None
 
 
@@ -457,7 +512,9 @@ class TestMCPStdioClientWithEverythingServer:
             # Common tools that should be available
             expected_tools = ["echo"]  # Echo is typically available
             for expected_tool in expected_tools:
-                assert any(tool.name == expected_tool for tool in tools), f"Expected tool '{expected_tool}' not found"
+                assert any(
+                    tool.name == expected_tool for tool in tools
+                ), f"Expected tool '{expected_tool}' not found"
 
         finally:
             await stdio_client.disconnect()
@@ -482,7 +539,9 @@ class TestMCPStdioClientWithEverythingServer:
             assert len(tools1) == len(tools2)
 
             # Run a tool to verify the session is working
-            result = await stdio_client.run_tool("echo", {"message": "Session reuse test"})
+            result = await stdio_client.run_tool(
+                "echo", {"message": "Session reuse test"}
+            )
             assert result is not None
 
         finally:
@@ -510,11 +569,17 @@ class TestMCPSseClientWithDeepWikiServer:
             assert len(tools) > 0
 
             # Check for expected DeepWiki tools
-            expected_tools = ["read_wiki_structure", "read_wiki_contents", "ask_question"]
+            expected_tools = [
+                "read_wiki_structure",
+                "read_wiki_contents",
+                "ask_question",
+            ]
 
             # Verify we have the expected tools
             for expected_tool in expected_tools:
-                assert any(tool.name == expected_tool for tool in tools), f"Expected tool '{expected_tool}' not found"
+                assert any(
+                    tool.name == expected_tool for tool in tools
+                ), f"Expected tool '{expected_tool}' not found"
 
         except Exception as e:
             # If the server is not accessible, skip the test
@@ -541,7 +606,9 @@ class TestMCPSseClientWithDeepWikiServer:
             assert wiki_tool is not None, "read_wiki_structure tool not found"
 
             # Run the tool with a test repository (use repoName as expected by the API)
-            result = await sse_client.run_tool("read_wiki_structure", {"repoName": "microsoft/vscode"})
+            result = await sse_client.run_tool(
+                "read_wiki_structure", {"repoName": "microsoft/vscode"}
+            )
 
             # Verify the result
             assert result is not None
@@ -574,7 +641,8 @@ class TestMCPSseClientWithDeepWikiServer:
 
             # Run the tool with a test question (use repoName as expected by the API)
             result = await sse_client.run_tool(
-                "ask_question", {"repoName": "microsoft/vscode", "question": "What is VS Code?"}
+                "ask_question",
+                {"repoName": "microsoft/vscode", "question": "What is VS Code?"},
             )
 
             # Verify the result
@@ -634,7 +702,9 @@ class TestMCPSseClientWithDeepWikiServer:
         tool.description = "Test tool description"
         tool.inputSchema = {
             "type": "object",
-            "properties": {"test_param": {"type": "string", "description": "Test parameter"}},
+            "properties": {
+                "test_param": {"type": "string", "description": "Test parameter"}
+            },
             "required": ["test_param"],
         }
         return tool
@@ -648,7 +718,9 @@ class TestMCPSseClientWithDeepWikiServer:
         list_tools_result.tools = [mock_tool]
         session.list_tools = AsyncMock(return_value=list_tools_result)
         session.call_tool = AsyncMock(
-            return_value=MagicMock(content=[MagicMock(model_dump=lambda: {"result": "success"})])
+            return_value=MagicMock(
+                content=[MagicMock(model_dump=lambda: {"result": "success"})]
+            )
         )
         return session
 
@@ -674,7 +746,9 @@ class TestMCPSseClientUnit:
         with patch("httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
             mock_response.status_code = 200
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value.get.return_value = (
+                mock_response
+            )
 
             is_valid, error_msg = await sse_client.validate_url("http://test.url", {})
 
@@ -693,7 +767,9 @@ class TestMCPSseClientUnit:
         with patch("httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
             mock_response.status_code = 404
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value.get.return_value = (
+                mock_response
+            )
 
             is_valid, error_msg = await sse_client.validate_url("http://test.url", {})
 
@@ -704,7 +780,10 @@ class TestMCPSseClientUnit:
         """Test connecting to server via SSE with custom headers."""
         test_url = "http://test.url"
         test_headers = {"Authorization": "Bearer token123", "Custom-Header": "value"}
-        expected_headers = {"authorization": "Bearer token123", "custom-header": "value"}  # normalized
+        expected_headers = {
+            "authorization": "Bearer token123",
+            "custom-header": "value",
+        }  # normalized
 
         with (
             patch.object(sse_client, "validate_url", return_value=(True, "")),
@@ -734,7 +813,10 @@ class TestMCPSseClientUnit:
     async def test_headers_passed_to_session_manager(self, sse_client):
         """Test that headers are properly passed to the session manager."""
         test_url = "http://test.url"
-        expected_headers = {"authorization": "Bearer token123", "x-api-key": "secret"}  # normalized
+        expected_headers = {
+            "authorization": "Bearer token123",
+            "x-api-key": "secret",
+        }  # normalized
 
         sse_client._session_context = "test_context"
         sse_client._connection_params = {
@@ -753,7 +835,9 @@ class TestMCPSseClientUnit:
             result_session = await sse_client._get_or_create_session()
 
             # Verify session manager was called with correct parameters including normalized headers
-            mock_manager.get_session.assert_called_once_with("test_context", sse_client._connection_params, "sse")
+            mock_manager.get_session.assert_called_once_with(
+                "test_context", sse_client._connection_params, "sse"
+            )
             assert result_session == mock_session
 
     async def test_pre_check_redirect_with_headers(self, sse_client):
@@ -767,14 +851,18 @@ class TestMCPSseClientUnit:
             mock_response = MagicMock()
             mock_response.status_code = 307
             mock_response.headers.get.return_value = redirect_url
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value.get.return_value = (
+                mock_response
+            )
 
             result = await sse_client.pre_check_redirect(test_url, test_headers)
 
             assert result == redirect_url
             # Verify validated headers were passed to the request
             mock_client.return_value.__aenter__.return_value.get.assert_called_with(
-                test_url, timeout=2.0, headers={"Accept": "text/event-stream", **test_headers}
+                test_url,
+                timeout=2.0,
+                headers={"Accept": "text/event-stream", **test_headers},
             )
 
     async def test_run_tool_with_retry_on_connection_error(self, sse_client):
@@ -802,7 +890,11 @@ class TestMCPSseClientUnit:
             return session
 
         with (
-            patch.object(sse_client, "_get_or_create_session", side_effect=mock_get_session_side_effect),
+            patch.object(
+                sse_client,
+                "_get_or_create_session",
+                side_effect=mock_get_session_side_effect,
+            ),
             patch.object(sse_client, "_get_session_manager") as mock_get_manager,
         ):
             mock_manager = AsyncMock()

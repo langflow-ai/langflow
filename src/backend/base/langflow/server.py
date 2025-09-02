@@ -4,9 +4,8 @@ import signal
 
 from gunicorn import glogging
 from gunicorn.app.base import BaseApplication
+from lfx.log.logger import InterceptHandler
 from uvicorn.workers import UvicornWorker
-
-from langflow.logging.logger import InterceptHandler
 
 
 class LangflowUvicornWorker(UvicornWorker):
