@@ -21,7 +21,7 @@ export const createKnowledgeBaseColumns = (
       sortable: false,
       headerCheckboxSelection: true,
       checkboxSelection: true,
-      editable: true,
+      editable: false,
       filter: "agTextColumnFilter",
       cellClass: baseCellClass,
       cellRenderer: (params) => (
