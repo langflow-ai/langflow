@@ -1,11 +1,3 @@
-import type {
-  NewValueParams,
-  RowClickedEvent,
-  SelectionChangedEvent,
-} from "ag-grid-community";
-import type { AgGridReact } from "ag-grid-react";
-import { useRef, useState } from "react";
-import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Button } from "@/components/ui/button";
@@ -25,6 +17,13 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { updateIds } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
+import type {
+  RowClickedEvent,
+  SelectionChangedEvent
+} from "ag-grid-community";
+import type { AgGridReact } from "ag-grid-react";
+import { useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import { createKnowledgeBaseColumns } from "../config/knowledgeBaseColumns";
 import KnowledgeBaseEmptyState from "./KnowledgeBaseEmptyState";
 import KnowledgeBaseSelectionOverlay from "./KnowledgeBaseSelectionOverlay";
@@ -106,12 +105,6 @@ const KnowledgeBasesTab = ({
     setIsDeleteModalOpen(false);
   };
 
-  const handleRename = (params: NewValueParams<any, any>) => {
-    setSuccessData({
-      title: "Knowledge Base renamed successfully!",
-    });
-  };
-
   const handleDelete = (knowledgeBase: KnowledgeBaseInfo) => {
     setKnowledgeBaseToDelete(knowledgeBase);
     setIsDeleteModalOpen(true);
@@ -163,7 +156,7 @@ const KnowledgeBasesTab = ({
     }
   };
 
-  const columnDefs = createKnowledgeBaseColumns(handleRename, handleDelete);
+  const columnDefs = createKnowledgeBaseColumns(handleDelete);
 
   if (isLoading || !knowledgeBases || !Array.isArray(knowledgeBases)) {
     return (
@@ -211,13 +204,6 @@ const KnowledgeBasesTab = ({
               hide_options: true,
             }}
             suppressRowClickSelection={!isShiftPressed}
-            editable={[
-              {
-                field: "name",
-                onUpdate: handleRename,
-                editableCell: true,
-              },
-            ]}
             rowSelection="multiple"
             onSelectionChanged={handleSelectionChange}
             onRowClicked={handleRowClick}
