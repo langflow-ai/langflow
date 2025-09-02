@@ -70,8 +70,8 @@ This sets up the development environment by installing backend and frontend depe
 
 After running `make init`, you have two options for running Langflow:
 
-1. Use `make run_cli` to build and run the application immediately.
-2. Continue with `Run Langflow in "Development" mode` in the next section.
+* Use `make run_cli` to build and run the application immediately.
+* Continue to the next section to run Langflow in Development" mode.
 
 ## Complete development environment setup
 
@@ -91,7 +91,7 @@ uv sync
 uv run pre-commit install
 ```
 
-## Run Langflow in "Development" mode
+## Run Langflow in Development mode
 
 With the above validation, you can now run the backend (FastAPI) and frontend (Node) services in a way that will "hot-reload" your changes. In this mode, the FastAPI server requires a Node.js server to serve the frontend pages rather than serving them directly.
 
