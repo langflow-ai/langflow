@@ -26,7 +26,7 @@ import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import type { AuthSettingsType, MCPSettingsType } from "@/types/mcp";
 import { AUTH_METHODS } from "@/utils/mcpUtils";
-import { parseString } from "@/utils/stringManipulation";
+import { parseString, toSpaceCase } from "@/utils/stringManipulation";
 import { cn, getOS } from "@/utils/utils";
 
 interface MemoizedApiKeyButtonProps {
@@ -183,7 +183,13 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     project_id: projectId,
   });
 
-  const { data: installedMCP } = useGetInstalledMCP({ projectId });
+  const { data: installedMCPData } = useGetInstalledMCP({ projectId });
+
+  // Extract installed client names for backward compatibility
+  const installedMCP =
+    installedMCPData
+      ?.filter((client) => client.installed)
+      .map((client) => client.name) || [];
 
   const [selectedPlatform, setSelectedPlatform] = useState(
     operatingSystemTabs.find((tab) => tab.name.includes(getOS() || "windows"))
@@ -602,79 +608,99 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                 </div>
               )}
               {autoInstallers.map((installer) => (
-                <Button
+                <ShadTooltip
                   key={installer.name}
-                  variant="ghost"
-                  className="group flex items-center justify-between disabled:text-foreground disabled:opacity-50"
-                  disabled={
-                    loadingMCP.includes(installer.name) || !isLocalConnection
+                  content={
+                    !installedMCPData?.find(
+                      (client) => client.name === installer.name,
+                    )?.available
+                      ? `Install ${toSpaceCase(
+                          installer.name,
+                        )} to enable auto-install.`
+                      : ""
                   }
-                  onClick={() => {
-                    setLoadingMCP([...loadingMCP, installer.name]);
-                    patchInstallMCP(
-                      {
-                        client: installer.name,
-                      },
-                      {
-                        onSuccess: () => {
-                          setSuccessData({
-                            title: `MCP Server installed successfully on ${installer.title}. You may need to restart your client to see the changes.`,
-                          });
-                          setLoadingMCP(
-                            loadingMCP.filter(
-                              (name) => name !== installer.name,
-                            ),
-                          );
-                        },
-                        onError: (e) => {
-                          setErrorData({
-                            title: `Failed to install MCP Server on ${installer.title}`,
-                            list: [e.message],
-                          });
-                          setLoadingMCP(
-                            loadingMCP.filter(
-                              (name) => name !== installer.name,
-                            ),
-                          );
-                        },
-                      },
-                    );
-                  }}
+                  side="left"
                 >
-                  <div className="flex items-center gap-4 text-sm font-medium">
-                    <ForwardedIconComponent
-                      name={installer.icon}
-                      className={cn("h-5 w-5")}
-                      aria-hidden="true"
-                    />
-                    {installer.title}
-                  </div>
-                  <div className="relative h-4 w-4">
-                    <ForwardedIconComponent
-                      name={
-                        installedMCP?.includes(installer.name)
-                          ? "Check"
-                          : loadingMCP.includes(installer.name)
-                            ? "Loader2"
-                            : "Plus"
+                  <div className="w-full flex">
+                    <Button
+                      variant="ghost"
+                      className="group flex flex-1 items-center justify-between disabled:text-foreground disabled:opacity-50"
+                      disabled={
+                        loadingMCP.includes(installer.name) ||
+                        !isLocalConnection ||
+                        !installedMCPData?.find(
+                          (client) => client.name === installer.name,
+                        )?.available
                       }
-                      className={cn(
-                        "h-4 w-4 absolute top-0 left-0 opacity-100",
-                        loadingMCP.includes(installer.name) && "animate-spin",
-                        installedMCP?.includes(installer.name) &&
-                          "group-hover:opacity-0",
-                      )}
-                    />
-                    {installedMCP?.includes(installer.name) && (
-                      <ForwardedIconComponent
-                        name={"RefreshCw"}
-                        className={cn(
-                          "h-4 w-4 absolute top-0 left-0 opacity-0 group-hover:opacity-100",
+                      onClick={() => {
+                        setLoadingMCP([...loadingMCP, installer.name]);
+                        patchInstallMCP(
+                          {
+                            client: installer.name,
+                          },
+                          {
+                            onSuccess: () => {
+                              setSuccessData({
+                                title: `MCP Server installed successfully on ${installer.title}. You may need to restart your client to see the changes.`,
+                              });
+                              setLoadingMCP(
+                                loadingMCP.filter(
+                                  (name) => name !== installer.name,
+                                ),
+                              );
+                            },
+                            onError: (e) => {
+                              setErrorData({
+                                title: `Failed to install MCP Server on ${installer.title}`,
+                                list: [e.message],
+                              });
+                              setLoadingMCP(
+                                loadingMCP.filter(
+                                  (name) => name !== installer.name,
+                                ),
+                              );
+                            },
+                          },
+                        );
+                      }}
+                    >
+                      <div className="flex items-center gap-4 text-sm font-medium">
+                        <ForwardedIconComponent
+                          name={installer.icon}
+                          className={cn("h-5 w-5")}
+                          aria-hidden="true"
+                        />
+                        {installer.title}
+                      </div>
+                      <div className="relative h-4 w-4">
+                        <ForwardedIconComponent
+                          name={
+                            installedMCP?.includes(installer.name)
+                              ? "Check"
+                              : loadingMCP.includes(installer.name)
+                                ? "Loader2"
+                                : "Plus"
+                          }
+                          className={cn(
+                            "h-4 w-4 absolute top-0 left-0 opacity-100",
+                            loadingMCP.includes(installer.name) &&
+                              "animate-spin",
+                            installedMCP?.includes(installer.name) &&
+                              "group-hover:opacity-0",
+                          )}
+                        />
+                        {installedMCP?.includes(installer.name) && (
+                          <ForwardedIconComponent
+                            name={"RefreshCw"}
+                            className={cn(
+                              "h-4 w-4 absolute top-0 left-0 opacity-0 group-hover:opacity-100",
+                            )}
+                          />
                         )}
-                      />
-                    )}
+                      </div>
+                    </Button>
                   </div>
-                </Button>
+                </ShadTooltip>
               ))}
             </div>
           )}
