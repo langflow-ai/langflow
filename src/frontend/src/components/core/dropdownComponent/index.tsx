@@ -15,7 +15,12 @@ import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { DropDownComponent } from "../../../types/components";
-import { cn, filterNullOptions, formatName, groupByFamily } from "../../../utils/utils";
+import {
+  cn,
+  filterNullOptions,
+  formatName,
+  groupByFamily,
+} from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
 import ShadTooltip from "../../common/shadTooltipComponent";
 import { Button } from "../../ui/button";
@@ -207,7 +212,6 @@ export default function Dropdown({
             ? inputTypes.join("\n")
             : templateField.type) || "";
 
-
         const typesData = useTypesStore.getState().data;
         const grouped = groupByFamily(
           typesData,
@@ -373,6 +377,14 @@ export default function Dropdown({
     ) : null;
   };
 
+  console.log({
+    value,
+    options,
+    filteredOptions,
+    filteredMetadata,
+    sourceOptions,
+  });
+
   const renderTriggerButton = () => (
     <div className="flex w-full flex-col">
       <PopoverTrigger asChild>
@@ -403,28 +415,25 @@ export default function Dropdown({
             data-testid={`value-dropdown-${id}`}
           >
             {value && <>{renderSelectedIcon()}</>}
-            <span className="truncate">
-              {disabled ? (
-                RECEIVING_INPUT_VALUE
-              ) : (
-                <>
-                  {/* this logic is used for the agents component, if you update make sure to test the agent component */}
-                  {options?.includes(value) ? (
-                    value && filteredOptions.includes(value) ? (
-                      value
-                    ) : (
-                      placeholder || SELECT_AN_OPTION
-                    )
-                  ) : (
-                    <span className="text-muted-foreground">
-                      <LoadingTextComponent
-                        text={placeholder || SELECT_AN_OPTION}
-                      />
-                    </span>
-                  )}
-                </>
-              )}
-            </span>
+            {value === null &&
+            sourceOptions?.fields?.data?.node?.name ===
+              "connect_other_models" ? (
+              <span className="text-muted-foreground">
+                <LoadingTextComponent text={placeholder || SELECT_AN_OPTION} />
+              </span>
+            ) : (
+              <span className="truncate">
+                {disabled ? (
+                  RECEIVING_INPUT_VALUE
+                ) : (
+                  <>
+                    {value && filteredOptions.includes(value)
+                      ? value
+                      : placeholder || SELECT_AN_OPTION}{" "}
+                  </>
+                )}
+              </span>
+            )}
           </span>
 
           <ForwardedIconComponent
