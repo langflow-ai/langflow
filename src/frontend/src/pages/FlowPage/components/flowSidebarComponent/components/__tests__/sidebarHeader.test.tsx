@@ -220,7 +220,7 @@ describe("SidebarHeaderComponent", () => {
         "flex-col",
         "gap-2",
         "p-4",
-        "pb-1",
+        "pb-0",
         "group-data-[collapsible=icon]:hidden",
       );
     });
