@@ -5,7 +5,8 @@ import os
 import select
 import socket
 import subprocess
-from typing import Any
+from functools import wraps
+from typing import Any, Callable
 
 from langflow.logging.logger import logger
 from langflow.services.base import Service
@@ -40,6 +41,18 @@ class MCPComposerStartupError(MCPComposerError):
     pass
 
 
+def require_composer_enabled(func: Callable) -> Callable:
+    """Decorator that checks if MCP Composer is enabled before executing the method."""
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if not get_settings_service().settings.mcp_composer_enabled:
+            project_id = kwargs.get('project_id')
+            raise MCPComposerDisabledError("MCP Composer is disabled in settings", project_id)
+        
+        return func(self, *args, **kwargs)
+    return wrapper
+
+
 class MCPComposerService(Service):
     """Service for managing per-project MCP Composer instances."""
 
@@ -67,7 +80,6 @@ class MCPComposerService(Service):
             await logger.adebug(
                 "MCP Composer is disabled in settings. OAuth authentication will not be enabled for MCP Servers."
             )
-            return
         else:
             await logger.adebug("MCP Composer is enabled in settings. OAuth authentication will be enabled for MCP Servers.")
 
@@ -77,6 +89,7 @@ class MCPComposerService(Service):
             await self.stop_project_composer(project_id)
         await logger.adebug("All MCP Composer instances stopped")
 
+    @require_composer_enabled
     async def stop_project_composer(self, project_id: str):
         """Stop the MCP Composer instance for a specific project."""
         if project_id not in self.project_composers:
@@ -245,6 +258,7 @@ class MCPComposerService(Service):
             
         return safe_cmd
 
+    @require_composer_enabled
     async def start_project_composer(
         self, project_id: str, sse_url: str, auth_config: dict[str, Any] | None
     ) -> None:
@@ -266,9 +280,6 @@ class MCPComposerService(Service):
         # Use a per-project lock to prevent race conditions
         if project_id not in self._start_locks:
             self._start_locks[project_id] = asyncio.Lock()
-
-        if not get_settings_service().settings.mcp_composer_enabled:
-            raise MCPComposerDisabledError("MCP Composer is disabled in settings", project_id)
 
         async with self._start_locks[project_id]:
             # Check if already running (double-check after acquiring lock)
@@ -497,12 +508,14 @@ class MCPComposerService(Service):
 
         return process
 
+    @require_composer_enabled
     def get_project_composer_port(self, project_id: str) -> int | None:
         """Get the port number for a specific project's composer."""
         if project_id not in self.project_composers:
             return None
         return self.project_composers[project_id]["port"]
 
+    @require_composer_enabled
     async def teardown(self) -> None:
         """Clean up resources when the service is torn down."""
         await logger.adebug("Tearing down MCP Composer service...")
