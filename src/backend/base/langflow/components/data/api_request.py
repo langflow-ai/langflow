@@ -216,16 +216,17 @@ class APIRequestComponent(Component):
         try:
             for item in body:
                 # Unwrap Data objects
+                current_item = item
                 if hasattr(item, "data"):
                     unwrapped_data = item.data
                     # If the unwrapped data is a dict but not key-value format, use it directly
                     if isinstance(unwrapped_data, dict) and not self._is_valid_key_value_item(unwrapped_data):
                         return unwrapped_data
-                    item = unwrapped_data
-                if not self._is_valid_key_value_item(item):
+                    current_item = unwrapped_data
+                if not self._is_valid_key_value_item(current_item):
                     continue
-                key = item["key"]
-                value = self._parse_json_value(item["value"])
+                key = current_item["key"]
+                value = self._parse_json_value(current_item["value"])
                 processed_dict[key] = value
         except (KeyError, TypeError, ValueError) as e:
             self.log(f"Failed to process body list: {e}")
