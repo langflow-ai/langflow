@@ -21,7 +21,7 @@ export const createKnowledgeBaseColumns = (
       flex: 2,
       headerCheckboxSelection: true,
       checkboxSelection: true,
-      editable: true,
+      editable: false,
       filter: "agTextColumnFilter",
       cellClass: baseCellClass,
       cellRenderer: (params) => (
