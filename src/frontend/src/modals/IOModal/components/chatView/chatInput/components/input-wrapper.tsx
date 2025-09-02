@@ -1,4 +1,5 @@
 import type React from "react";
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import {
   ENABLE_IMAGE_ON_PLAYGROUND,
   ENABLE_VOICE_ASSISTANT,
@@ -51,6 +52,9 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
 }) => {
   const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto custom-scroll`;
 
+  // Check if voice mode is available
+  const { data: config } = useGetConfig();
+
   return (
     <div className="flex w-full flex-col-reverse">
       <div
@@ -95,7 +99,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
             )}
           </div>
           <div className="flex items-center gap-2">
-            {ENABLE_VOICE_ASSISTANT && (
+            {ENABLE_VOICE_ASSISTANT && config?.voice_mode_available && (
               <VoiceButton toggleRecording={() => setShowAudioInput(true)} />
             )}
 

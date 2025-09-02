@@ -59,6 +59,7 @@ export function VoiceAssistant({
   const isPlayingRef = useRef(false);
   const microphoneRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
 
   const soundDetected = useVoiceStore((state) => state.soundDetected);
   const _setIsVoiceAssistantActive = useVoiceStore(
@@ -139,6 +140,7 @@ export function VoiceAssistant({
       microphoneRef,
       analyserRef,
       wsRef,
+      mediaStreamRef,
       setIsRecording,
       playNextAudioChunk,
       isPlayingRef,
@@ -155,6 +157,7 @@ export function VoiceAssistant({
       processorRef,
       analyserRef,
       wsRef,
+      mediaStreamRef,
       setIsRecording,
     );
   };
