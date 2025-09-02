@@ -7,7 +7,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from twelvelabs import TwelveLabs
 
 from langflow.custom import Component
-from langflow.inputs import DataInput, DropdownInput, SecretStrInput, StrInput
+from langflow.inputs import DataFrameInput, DropdownInput, SecretStrInput, StrInput
 from langflow.io import Output
 from langflow.schema import Data
 
@@ -38,11 +38,10 @@ class PegasusIndexVideo(Component):
     documentation = "https://github.com/twelvelabs-io/twelvelabs-developer-experience/blob/main/integrations/Langflow/TWELVE_LABS_COMPONENTS_README.md"
 
     inputs = [
-        DataInput(
+        DataFrameInput(
             name="videodata",
             display_name="Video Data",
-            info="Video Data objects (from VideoFile or SplitVideo)",
-            is_list=True,
+            info="Video data from VideoFile component",
             required=True,
         ),
         SecretStrInput(
@@ -210,7 +209,7 @@ class PegasusIndexVideo(Component):
 
     def index_videos(self) -> list[Data]:
         """Indexes each video and adds the video_id to its metadata."""
-        if not self.videodata:
+        if not self.videodata or self.videodata.empty:
             self.status = "No video data provided."
             return []
 
@@ -233,13 +232,13 @@ class PegasusIndexVideo(Component):
             self.status = f"Failed to get/create TwelveLabs index: {e!s}"
             raise
 
-        # First, validate all videos and create a list of valid ones
-        valid_videos: list[tuple[Data, str]] = []
-        for video_data_item in self.videodata:
-            if not isinstance(video_data_item, Data):
-                self.status = f"Skipping invalid data item: {video_data_item}"
-                continue
+        # Convert DataFrame to list of Data objects
+        data_list = self.videodata.to_data_list()
 
+        # Validate all videos and create a list of valid ones
+        valid_videos: list[tuple[Data, str]] = []
+
+        for video_data_item in data_list:
             video_info = video_data_item.data
             if not isinstance(video_info, dict):
                 self.status = f"Skipping item with invalid data structure: {video_info}"

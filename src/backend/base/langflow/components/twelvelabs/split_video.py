@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from langflow.custom import Component
-from langflow.inputs import BoolInput, DropdownInput, HandleInput, IntInput
-from langflow.schema import Data
+from langflow.inputs import BoolInput, DataFrameInput, DropdownInput, IntInput
+from langflow.schema import Data, DataFrame
 from langflow.template import Output
 
 
@@ -21,12 +21,11 @@ class SplitVideoComponent(Component):
     documentation = "https://github.com/twelvelabs-io/twelvelabs-developer-experience/blob/main/integrations/Langflow/TWELVE_LABS_COMPONENTS_README.md"
 
     inputs = [
-        HandleInput(
+        DataFrameInput(
             name="videodata",
             display_name="Video Data",
             info="Input video data from VideoFile component",
             required=True,
-            input_types=["Data"],
         ),
         IntInput(
             name="clip_duration",
@@ -62,7 +61,7 @@ class SplitVideoComponent(Component):
             name="clips",
             display_name="Video Clips",
             method="process",
-            output_types=["Data"],
+            output_types=["DataFrame"],
         ),
     ]
 
@@ -265,15 +264,22 @@ class SplitVideoComponent(Component):
         else:
             return video_paths
 
-    def process(self) -> list[Data]:
+    def process(self) -> DataFrame:
         """Process the input video and return a list of Data objects containing the clips."""
         try:
             # Get the input video path from the previous component
-            if not hasattr(self, "videodata") or not isinstance(self.videodata, list) or len(self.videodata) != 1:
+            if not hasattr(self, "videodata") or not self.videodata or self.videodata.empty:
+                error_msg = "No video data provided"
+                raise ValueError(error_msg)
+
+            # Convert DataFrame to list of Data objects
+            data_list = self.videodata.to_data_list()
+
+            if len(data_list) != 1:
                 error_msg = "Please provide exactly one video"
                 raise ValueError(error_msg)
 
-            video_path = self.videodata[0].data.get("text")
+            video_path = data_list[0].data.get("text")
             if not video_path or not Path(video_path).exists():
                 error_msg = "Invalid video path"
                 raise ValueError(error_msg)
@@ -284,7 +290,11 @@ class SplitVideoComponent(Component):
                 raise ValueError(error_msg)
 
             # Process the video
-            return self.process_video(video_path, self.clip_duration, include_original=self.include_original)
+            clips_data = self.process_video(video_path, self.clip_duration, include_original=self.include_original)
+
+            # Convert list of Data objects to DataFrame
+            clips_dict_list = [clip.data for clip in clips_data]
+            return DataFrame(data=clips_dict_list)
 
         except Exception as e:
             self.log(f"Error in split video component: {e!s}", "ERROR")

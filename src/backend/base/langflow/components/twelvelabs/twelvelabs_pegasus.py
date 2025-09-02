@@ -9,7 +9,7 @@ from twelvelabs import TwelveLabs
 
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import DataInput, DropdownInput, MessageInput, MultilineInput, SecretStrInput, SliderInput
+from langflow.inputs import DataFrameInput, DropdownInput, MessageInput, MultilineInput, SecretStrInput, SliderInput
 from langflow.io import Output
 from langflow.schema.message import Message
 
@@ -42,7 +42,7 @@ class TwelveLabsPegasus(Component):
     documentation = "https://github.com/twelvelabs-io/twelvelabs-developer-experience/blob/main/integrations/Langflow/TWELVE_LABS_COMPONENTS_README.md"
 
     inputs = [
-        DataInput(name="videodata", display_name="Video Data", info="Video Data", is_list=True),
+        DataFrameInput(name="videodata", display_name="Video Data", info="Video data from VideoFile component"),
         SecretStrInput(
             name="api_key", display_name="TwelveLabs API Key", info="Enter your TwelveLabs API Key.", required=True
         ),
@@ -339,10 +339,16 @@ class TwelveLabsPegasus(Component):
                 return Message(text=response.data)
 
             # Otherwise process new video
-            if not self.videodata or not isinstance(self.videodata, list) or len(self.videodata) != 1:
+            if not self.videodata or self.videodata.empty:
+                return Message(text="No video data provided")
+
+            # Convert DataFrame to list of Data objects
+            data_list = self.videodata.to_data_list()
+
+            if len(data_list) != 1:
                 return Message(text="Please provide exactly one video")
 
-            video_path = self.videodata[0].data.get("text")
+            video_path = data_list[0].data.get("text")
             if not video_path or not Path(video_path).exists():
                 return Message(text="Invalid video path")
 
