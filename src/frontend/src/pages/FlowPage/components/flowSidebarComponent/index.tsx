@@ -517,7 +517,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   const hasMcpServers = Boolean(mcpServers && mcpServers.length > 0);
 
-  const hasSearchInput = search !== "" || filterType !== undefined;
+  const hasSearchInput =
+    search !== "" || filterType !== undefined || getFilterComponent !== "";
 
   const showComponents =
     (ENABLE_NEW_SIDEBAR &&
