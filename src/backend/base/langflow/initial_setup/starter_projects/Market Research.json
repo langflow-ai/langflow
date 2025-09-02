@@ -515,7 +515,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.115.13"
+                    "version": "0.116.1"
                   },
                   {
                     "name": "langflow",
@@ -1238,7 +1238,7 @@
                 "dependencies": [
                   {
                     "name": "httpx",
-                    "version": "0.27.2"
+                    "version": "0.28.1"
                   },
                   {
                     "name": "langflow",
