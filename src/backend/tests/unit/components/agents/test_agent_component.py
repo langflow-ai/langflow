@@ -3,18 +3,18 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
-from langflow.base.models.model_input_constants import (
+from langflow.custom import Component
+
+from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
+from lfx.base.models.model_input_constants import (
     MODEL_PROVIDERS,
 )
-from langflow.base.models.openai_constants import (
+from lfx.base.models.openai_constants import (
     OPENAI_CHAT_MODEL_NAMES,
     OPENAI_REASONING_MODEL_NAMES,
 )
-from langflow.components.agents.agent import AgentComponent
-from langflow.components.tools.calculator import CalculatorToolComponent
-from langflow.custom import Component
-
+from lfx.components.agents.agent import AgentComponent
+from lfx.components.tools.calculator import CalculatorToolComponent
 from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 
@@ -142,7 +142,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         result = await component.json_response()
 
-        from langflow.schema.data import Data
+        from lfx.schema.data import Data
 
         assert isinstance(result, Data)
         assert result.data == {"name": "test", "value": 123}
@@ -160,7 +160,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         result = await component.json_response()
 
-        from langflow.schema.data import Data
+        from lfx.schema.data import Data
 
         assert isinstance(result, Data)
         assert result.data == {"status": "success"}
@@ -178,7 +178,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         result = await component.json_response()
 
-        from langflow.schema.data import Data
+        from lfx.schema.data import Data
 
         assert isinstance(result, Data)
         assert "error" in result.data

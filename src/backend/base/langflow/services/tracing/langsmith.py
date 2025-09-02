@@ -6,9 +6,9 @@ import types
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
+from lfx.log.logger import logger
 from typing_extensions import override
 
-from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.serialization.serialization import serialize
 from langflow.services.tracing.base import BaseTracer
@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 
     from langchain.callbacks.base import BaseCallbackHandler
     from langsmith.run_trees import RunTree
+    from lfx.graph.vertex.base import Vertex
 
-    from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
 
 

@@ -1,8 +1,8 @@
 from typing import Any
 
 import socketio
+from lfx.log.logger import logger
 
-from langflow.logging.logger import logger
 from langflow.services.base import Service
 from langflow.services.cache.base import AsyncBaseCacheService, CacheService
 from langflow.services.deps import get_chat_service

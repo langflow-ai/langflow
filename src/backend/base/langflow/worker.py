@@ -8,7 +8,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 from langflow.core.celery_app import celery_app
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
+    from lfx.graph.vertex.base import Vertex
 
 
 @celery_app.task(acks_late=True)

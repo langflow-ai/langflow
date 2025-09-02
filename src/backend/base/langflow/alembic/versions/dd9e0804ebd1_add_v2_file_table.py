@@ -5,19 +5,20 @@ Revises: e3162c1804e6
 Create Date: 2025-02-03 11:47:16.101523
 
 """
-from typing import Sequence, Union
 
-from alembic import op
+from collections.abc import Sequence
+
 import sqlalchemy as sa
 import sqlmodel
+from alembic import op
+
 from langflow.utils import migration
 
-
 # revision identifiers, used by Alembic.
-revision: str = 'dd9e0804ebd1'
-down_revision: Union[str, None] = 'e3162c1804e6'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+revision: str = "dd9e0804ebd1"
+down_revision: str | None = "e3162c1804e6"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

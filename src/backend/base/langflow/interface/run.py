@@ -1,4 +1,4 @@
-from langflow.logging.logger import logger
+from lfx.log.logger import logger
 
 
 def get_memory_key(langchain_object):

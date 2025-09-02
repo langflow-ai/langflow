@@ -6,8 +6,9 @@ from anyio import Path
 from fastapi import status
 from httpx import AsyncClient
 from langflow.api.v1.schemas import CustomComponentRequest, UpdateCustomComponentRequest
-from langflow.components.agents.agent import AgentComponent
-from langflow.custom.utils import build_custom_component_template
+
+from lfx.components.agents.agent import AgentComponent
+from lfx.custom.utils import build_custom_component_template
 
 
 async def test_get_version(client: AsyncClient):
@@ -64,7 +65,7 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
     template = component_node["template"]
     current_model_names = template["model_name"]["options"]
 
-    # load the code from the file at langflow.components.agents.agent.py asynchronously
+    # load the code from the file at lfx.components.agents.agent.py asynchronously
     # we are at str/backend/tests/unit/api/v1/test_endpoints.py
     # find the file by using the class AgentComponent
     agent_component_file = await asyncio.to_thread(inspect.getsourcefile, AgentComponent)
@@ -111,9 +112,9 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
 async def test_custom_component_endpoint_returns_metadata(client: AsyncClient, logged_in_headers: dict):
     """Test that the /custom_component endpoint returns metadata with module and code_hash."""
     component_code = """
-from langflow.custom import Component
-from langflow.inputs.inputs import MessageTextInput
-from langflow.template.field.base import Output
+from lfx.custom import Component
+from lfx.inputs import MessageTextInput
+from lfx.template.field.base import Output
 
 class TestMetadataComponent(Component):
     display_name = "Test Metadata Component"
@@ -159,8 +160,8 @@ class TestMetadataComponent(Component):
 async def test_custom_component_endpoint_metadata_consistency(client: AsyncClient, logged_in_headers: dict):
     """Test that the same component code produces consistent metadata."""
     component_code = """
-from langflow.custom import Component
-from langflow.template.field.base import Output
+from lfx.custom import Component
+from lfx.template.field.base import Output
 
 class ConsistencyTestComponent(Component):
     display_name = "Consistency Test"

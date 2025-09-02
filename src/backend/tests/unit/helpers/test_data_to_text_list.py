@@ -1,6 +1,7 @@
 import pytest
 from langflow.helpers.data import data_to_text_list
-from langflow.schema import Data
+
+from lfx.schema import Data
 
 
 @pytest.mark.parametrize(

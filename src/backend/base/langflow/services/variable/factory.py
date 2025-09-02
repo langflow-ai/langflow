@@ -8,7 +8,7 @@ from langflow.services.factory import ServiceFactory
 from langflow.services.variable.service import DatabaseVariableService, VariableService
 
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
+    from lfx.services.settings.service import SettingsService
 
 
 class VariableServiceFactory(ServiceFactory):

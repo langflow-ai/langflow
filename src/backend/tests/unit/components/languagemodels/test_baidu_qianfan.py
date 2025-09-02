@@ -3,8 +3,9 @@ import os
 import pytest
 from langchain.schema import HumanMessage
 from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
-from langflow.components.baidu.baidu_qianfan_chat import QianfanChatEndpointComponent
 from qianfan.errors import APIError
+
+from lfx.components.baidu.baidu_qianfan_chat import QianfanChatEndpointComponent
 
 
 @pytest.fixture

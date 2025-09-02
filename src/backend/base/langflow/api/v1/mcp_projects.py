@@ -14,6 +14,11 @@ from uuid import UUID
 from anyio import BrokenResourceError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
+from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
+from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.log import logger
+from lfx.services.deps import get_settings_service, session_scope
+from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
@@ -36,16 +41,11 @@ from langflow.api.v1.schemas import (
     MCPProjectUpdateRequest,
     MCPSettings,
 )
-from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from langflow.base.mcp.util import sanitize_mcp_name
-from langflow.logging import logger
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import check_key, create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_settings_service, session_scope
-from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
@@ -249,6 +249,15 @@ async def handle_project_sse(
     current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
     """Handle SSE connections for a specific project."""
+    # Verify project exists and user has access
+    async with session_scope() as session:
+        project = (
+            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
+        ).first()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
     # Get project-specific SSE transport and MCP server
     sse = get_project_sse(project_id)
     project_server = get_project_mcp_server(project_id)

@@ -6,8 +6,8 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
+from lfx.log.logger import logger
 
-from langflow.logging.logger import logger
 from langflow.services.base import Service
 from langflow.services.store.exceptions import APIKeyError, FilterError, ForbiddenError
 from langflow.services.store.schema import (
@@ -24,7 +24,7 @@ from langflow.services.store.utils import (
 )
 
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
+    from lfx.services.settings.service import SettingsService
 
 from contextlib import asynccontextmanager
 from contextvars import ContextVar

@@ -11,6 +11,18 @@ import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
+from lfx.custom.custom_component.component import Component
+from lfx.custom.utils import (
+    add_code_field_to_build_config,
+    build_custom_component_template,
+    get_instance_name,
+    update_component_build_config,
+)
+from lfx.graph.graph.base import Graph
+from lfx.graph.schema import RunOutputs
+from lfx.log.logger import logger
+from lfx.schema.schema import InputValueRequest
+from lfx.services.settings.service import SettingsService
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
@@ -18,28 +30,17 @@ from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
     CustomComponentResponse,
-    InputValueRequest,
     RunResponse,
     SimplifiedAPIRequest,
     TaskStatusResponse,
     UpdateCustomComponentRequest,
     UploadFileResponse,
 )
-from langflow.custom.custom_component.component import Component
-from langflow.custom.utils import (
-    add_code_field_to_build_config,
-    build_custom_component_template,
-    get_instance_name,
-    update_component_build_config,
-)
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
-from langflow.graph.graph.base import Graph
-from langflow.graph.schema import RunOutputs
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
-from langflow.logging.logger import logger
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user, get_webhook_user
@@ -54,7 +55,6 @@ from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
-    from langflow.services.settings.service import SettingsService
 
 router = APIRouter(tags=["Base"])
 
@@ -723,9 +723,9 @@ async def custom_component_update(
                 for field_name, field_dict in template.items()
                 if isinstance(field_dict, dict) and field_dict.get("load_from_db") and field_dict.get("value")
             ]
-
-            params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
-            cc_instance.set_attributes(params)
+            if isinstance(cc_instance, Component):
+                params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
+                cc_instance.set_attributes(params)
         updated_build_config = code_request.get_template()
         await update_component_build_config(
             cc_instance,

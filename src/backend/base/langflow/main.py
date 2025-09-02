@@ -17,6 +17,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
+from lfx.interface.utils import setup_llm_caching
+from lfx.log.logger import configure, logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
@@ -31,12 +33,9 @@ from langflow.initial_setup.setup import (
     load_flows_from_directory,
     sync_flows_from_fs,
 )
-from langflow.interface.components import get_and_cache_all_types_dict
-from langflow.interface.utils import setup_llm_caching
-from langflow.logging.logger import configure, logger
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.services.deps import get_queue_service, get_settings_service, get_telemetry_service
-from langflow.services.utils import initialize_services, teardown_services
+from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
 
 if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
@@ -115,9 +114,13 @@ async def load_bundles_with_error_handling():
 
 
 def get_lifespan(*, fix_migration=False, version=None):
+    initialize_settings_service()
+    telemetry_service = get_telemetry_service()
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        telemetry_service = get_telemetry_service()
+        from lfx.interface.components import get_and_cache_all_types_dict
+
         configure()
 
         # Startup message

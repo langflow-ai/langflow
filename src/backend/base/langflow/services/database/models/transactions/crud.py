@@ -1,9 +1,9 @@
 from uuid import UUID
 
+from lfx.log.logger import logger
 from sqlmodel import col, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.logging.logger import logger
 from langflow.services.database.models.transactions.model import (
     TransactionBase,
     TransactionReadResponse,

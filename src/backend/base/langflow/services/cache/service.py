@@ -6,9 +6,10 @@ from collections import OrderedDict
 from typing import Generic, Union
 
 import dill
+from lfx.log.logger import logger
+from lfx.services.cache.utils import CACHE_MISS
 from typing_extensions import override
 
-from langflow.logging.logger import logger
 from langflow.services.cache.base import (
     AsyncBaseCacheService,
     AsyncLockType,
@@ -16,7 +17,6 @@ from langflow.services.cache.base import (
     ExternalAsyncBaseCacheService,
     LockType,
 )
-from langflow.services.cache.utils import CACHE_MISS
 
 
 class ThreadingInMemoryCache(CacheService, Generic[LockType]):

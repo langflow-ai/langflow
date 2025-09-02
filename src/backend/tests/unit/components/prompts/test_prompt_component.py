@@ -1,6 +1,6 @@
 import pytest
-from langflow.components.processing import PromptComponent
 
+from lfx.components.processing import PromptComponent
 from tests.base import ComponentTestBaseWithClient
 
 

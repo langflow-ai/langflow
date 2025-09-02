@@ -1,9 +1,10 @@
 import os
 
 import pytest
-from langflow.components.langchain_utilities import ToolCallingAgentComponent
-from langflow.components.openai.openai_chat_model import OpenAIModelComponent
-from langflow.components.tools.calculator import CalculatorToolComponent
+
+from lfx.components.langchain_utilities import ToolCallingAgentComponent
+from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+from lfx.components.tools.calculator import CalculatorToolComponent
 
 
 @pytest.mark.api_key_required

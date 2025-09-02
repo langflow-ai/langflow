@@ -10,9 +10,8 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from lfx.log.logger import logger
 from sqlalchemy.dialects import postgresql
-
-from langflow.logging.logger import logger
 
 # revision identifiers, used by Alembic.
 revision: str = "79e675cb6752"

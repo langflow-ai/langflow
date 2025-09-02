@@ -1,6 +1,6 @@
 from fastapi import HTTPException
+from lfx.log.logger import logger
 
-from langflow.logging.logger import logger
 from langflow.services.deps import get_settings_service
 
 
