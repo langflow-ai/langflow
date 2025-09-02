@@ -22,7 +22,14 @@ from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.custom.utils import update_component_build_config
 from langflow.field_typing import Tool
 from langflow.helpers.base_model import build_model_from_schema
-from langflow.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output, TableInput
+from langflow.io import (
+    BoolInput,
+    DropdownInput,
+    IntInput,
+    MultilineInput,
+    Output,
+    TableInput,
+)
 from langflow.logging import logger
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
@@ -40,13 +47,18 @@ MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "Groq", "OpenAI"]
 
 class AgentComponent(ToolCallingAgentComponent):
     display_name: str = "Agent"
-    description: str = "Define the agent's instructions, then enter a task to complete using tools."
+    description: str = (
+        "Define the agent's instructions, then enter a task to complete using tools."
+    )
     documentation: str = "https://docs.langflow.org/agents"
     icon = "bot"
     beta = False
     name = "Agent"
 
-    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
+    memory_inputs = [
+        set_advanced_true(component_input)
+        for component_input in MemoryComponent().inputs
+    ]
 
     # Filter out json_mode from OpenAI inputs since we handle structured output differently
     openai_inputs_filtered = [
@@ -141,7 +153,9 @@ class AgentComponent(ToolCallingAgentComponent):
                     "display_name": "Type",
                     "type": "str",
                     "edit_mode": EditMode.INLINE,
-                    "description": ("Indicate the data type of the output field (e.g., str, int, float, bool, dict)."),
+                    "description": (
+                        "Indicate the data type of the output field (e.g., str, int, float, bool, dict)."
+                    ),
                     "options": ["str", "int", "float", "bool", "dict"],
                     "default": "str",
                 },
@@ -193,7 +207,9 @@ class AgentComponent(ToolCallingAgentComponent):
         if self.add_current_date_tool:
             if not isinstance(self.tools, list):  # type: ignore[has-type]
                 self.tools = []
-            current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
+            current_date_tool = (
+                await CurrentDateComponent(**self.get_base_args()).to_toolkit()
+            ).pop(0)
             if not isinstance(current_date_tool, StructuredTool):
                 msg = "CurrentDateComponent must be converted to a StructuredTool"
                 raise TypeError(msg)
@@ -202,7 +218,9 @@ class AgentComponent(ToolCallingAgentComponent):
 
     async def message_response(self) -> Message:
         try:
-            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+            llm_model, self.chat_history, self.tools = (
+                await self.get_agent_requirements()
+            )
             # Set up and run agent
             self.set(
                 llm=llm_model,
@@ -242,7 +260,13 @@ class AgentComponent(ToolCallingAgentComponent):
             }
             # Ensure multiple is handled correctly
             if isinstance(processed_field["multiple"], str):
-                processed_field["multiple"] = processed_field["multiple"].lower() in ["true", "1", "t", "y", "yes"]
+                processed_field["multiple"] = processed_field["multiple"].lower() in [
+                    "true",
+                    "1",
+                    "t",
+                    "y",
+                    "yes",
+                ]
             processed_schema.append(processed_field)
         return processed_schema
 
@@ -266,7 +290,11 @@ class AgentComponent(ToolCallingAgentComponent):
                 return {"content": content, "error": schema_error_msg}
 
         # If no output schema provided, return parsed JSON without validation
-        if not hasattr(self, "output_schema") or not self.output_schema or len(self.output_schema) == 0:
+        if (
+            not hasattr(self, "output_schema")
+            or not self.output_schema
+            or len(self.output_schema) == 0
+        ):
             return json_data
 
         # Use BaseModel validation with schema
@@ -285,7 +313,9 @@ class AgentComponent(ToolCallingAgentComponent):
                     except ValidationError as e:
                         await logger.aerror(f"Validation error for item: {e}")
                         # Include invalid items with error info
-                        validated_objects.append({"data": item, "validation_error": str(e)})
+                        validated_objects.append(
+                            {"data": item, "validation_error": str(e)}
+                        )
                 return validated_objects
 
             # Single object
@@ -318,7 +348,11 @@ class AgentComponent(ToolCallingAgentComponent):
                 system_components.append(f"Format instructions: {format_instructions}")
 
             # 3. Schema Information from BaseModel
-            if hasattr(self, "output_schema") and self.output_schema and len(self.output_schema) > 0:
+            if (
+                hasattr(self, "output_schema")
+                and self.output_schema
+                and len(self.output_schema) > 0
+            ):
                 try:
                     processed_schema = self._preprocess_schema(self.output_schema)
                     output_model = build_model_from_schema(processed_schema)
@@ -336,11 +370,17 @@ class AgentComponent(ToolCallingAgentComponent):
                     )
                     system_components.append(schema_info)
                 except (ValidationError, ValueError, TypeError, KeyError) as e:
-                    await logger.aerror(f"Could not build schema for prompt: {e}", exc_info=True)
+                    await logger.aerror(
+                        f"Could not build schema for prompt: {e}", exc_info=True
+                    )
 
             # Combine all components
-            combined_instructions = "\n\n".join(system_components) if system_components else ""
-            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+            combined_instructions = (
+                "\n\n".join(system_components) if system_components else ""
+            )
+            llm_model, self.chat_history, self.tools = (
+                await self.get_agent_requirements()
+            )
             self.set(
                 llm=llm_model,
                 tools=self.tools or [],
@@ -357,7 +397,12 @@ class AgentComponent(ToolCallingAgentComponent):
                 raise
             try:
                 result = await self.run_agent(structured_agent)
-            except (ExceptionWithMessageError, ValueError, TypeError, RuntimeError) as e:
+            except (
+                ExceptionWithMessageError,
+                ValueError,
+                TypeError,
+                RuntimeError,
+            ) as e:
                 await logger.aerror(f"Error with structured agent result: {e}")
                 raise
             # Extract content from structured agent result
@@ -368,7 +413,13 @@ class AgentComponent(ToolCallingAgentComponent):
             else:
                 content = str(result)
 
-        except (ExceptionWithMessageError, ValueError, TypeError, NotImplementedError, AttributeError) as e:
+        except (
+            ExceptionWithMessageError,
+            ValueError,
+            TypeError,
+            NotImplementedError,
+            AttributeError,
+        ) as e:
             await logger.aerror(f"Error with structured chat agent: {e}")
             # Fallback to regular agent
             content_str = "No content returned from agent"
@@ -403,7 +454,9 @@ class AgentComponent(ToolCallingAgentComponent):
             .retrieve_messages()
         )
         return [
-            message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
+            message
+            for message in messages
+            if getattr(message, "id", None) != getattr(self.input_value, "id", None)
         ]
 
     async def get_llm(self):
@@ -424,7 +477,9 @@ class AgentComponent(ToolCallingAgentComponent):
             return self._build_llm_model(component_class, inputs, prefix), display_name
 
         except (AttributeError, ValueError, TypeError, RuntimeError) as e:
-            await logger.aerror(f"Error building {self.agent_llm} language model: {e!s}")
+            await logger.aerror(
+                f"Error building {self.agent_llm} language model: {e!s}"
+            )
             msg = f"Failed to initialize language model: {e!s}"
             raise ValueError(msg) from e
 
@@ -499,14 +554,16 @@ class AgentComponent(ToolCallingAgentComponent):
                     self.delete_fields(build_config, fields)
 
                 # Add provider-specific fields
-                if field_value == "OpenAI" and not any(field in build_config for field in fields_to_add):
+                if field_value == "OpenAI" and not any(
+                    field in build_config for field in fields_to_add
+                ):
                     build_config.update(fields_to_add)
                 else:
                     build_config.update(fields_to_add)
                 # Reset input types for agent_llm
                 build_config["agent_llm"]["input_types"] = []
                 build_config["agent_llm"]["display_name"] = "Model Provider"
-            elif field_value == "connect_other_models":
+            elif field_value == "Custom":
                 # Delete all provider fields
                 self.delete_fields(build_config, ALL_PROVIDER_FIELDS)
                 # # Update with custom component
@@ -519,7 +576,9 @@ class AgentComponent(ToolCallingAgentComponent):
                     refresh_button=False,
                     input_types=["LanguageModel"],
                     placeholder="Awaiting model input.",
-                    options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST],
+                    options_metadata=[
+                        MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST
+                    ],
                     external_options={
                         "fields": {
                             "data": {
@@ -572,7 +631,12 @@ class AgentComponent(ToolCallingAgentComponent):
                     build_config = await update_component_build_config(
                         component_class, build_config, field_value, "model_name"
                     )
-        return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
+        return dotdict(
+            {
+                k: v.to_dict() if hasattr(v, "to_dict") else v
+                for k, v in build_config.items()
+            }
+        )
 
     async def _get_tools(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
@@ -586,5 +650,7 @@ class AgentComponent(ToolCallingAgentComponent):
             callbacks=self.get_langchain_callbacks(),
         )
         if hasattr(self, "tools_metadata"):
-            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+            tools = component_toolkit(
+                component=self, metadata=self.tools_metadata
+            ).update_tools_metadata(tools=tools)
         return tools
