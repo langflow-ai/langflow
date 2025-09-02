@@ -67,12 +67,10 @@ export default function CopyFieldAreaComponent({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const endpointName = currentFlow?.endpoint_name ?? currentFlow?.id ?? "";
-  const flowId =
-    currentFlow?.endpoint_name && currentFlow?.id ? currentFlow?.id : "";
 
   const valueToRender = useMemo(() => {
     if (value === BACKEND_URL) {
-      return `${URL_WEBHOOK}${endpointName}${flowId}`;
+      return `${URL_WEBHOOK}${endpointName}`;
     } else if (value === MCP_SSE_VALUE) {
       return `${URL_MCP_SSE}`;
     }
