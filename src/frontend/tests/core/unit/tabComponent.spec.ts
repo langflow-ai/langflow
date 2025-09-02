@@ -20,8 +20,11 @@ test(
     );
 
     await page.getByTestId("sidebar-custom-component-button").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTitle("fit view").click();
     await page.getByTitle("zoom out").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("title-Custom Component").first().click();
 
@@ -63,6 +66,7 @@ test(
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(cleanCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 3000,
@@ -70,6 +74,7 @@ test(
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     // Verify that all tabs are visible
     expect(await page.getByText("Tab 1").isVisible()).toBeTruthy();
@@ -133,7 +138,7 @@ function updateComponentCode(
 
   // Update imports
   if (updates.imports) {
-    const importPattern = /from\s+langflow\.io\s+import\s+([^;\n]+)/;
+    const importPattern = /from\s+lfx\.io\s+import\s+([^;\n]+)/;
     const newImports = updates.imports.join(", ");
     updatedCode = updatedCode.replace(
       importPattern,

@@ -18,6 +18,8 @@ from dotenv import load_dotenv
 from fastapi import HTTPException
 from httpx import HTTPError
 from jose import JWTError
+from lfx.log.logger import configure, logger
+from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from multiprocess import cpu_count
 from multiprocess.context import Process
 from packaging import version as pkg_version
@@ -29,11 +31,9 @@ from sqlmodel import select
 
 from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
 from langflow.services.auth.utils import check_key, get_current_user_by_jwt
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
-from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
@@ -42,6 +42,20 @@ from langflow.utils.version import is_pre_release as langflow_is_pre_release
 console = Console(legacy_windows=True, emoji=False) if platform.system() == "Windows" else Console()
 
 app = typer.Typer(no_args_is_help=True)
+
+# Add LFX commands as a sub-app
+try:
+    from lfx.cli.commands import serve_command
+    from lfx.cli.run import run as lfx_run
+
+    lfx_app = typer.Typer(name="lfx", help="Langflow Executor commands")
+    lfx_app.command(name="serve", help="Serve a flow as an API", no_args_is_help=True)(serve_command)
+    lfx_app.command(name="run", help="Run a flow directly", no_args_is_help=True)(lfx_run)
+
+    app.add_typer(lfx_app, name="lfx")
+except ImportError:
+    # LFX not available, skip adding the sub-app
+    pass
 
 
 class ProcessManager:

@@ -8,12 +8,17 @@ from datetime import datetime, timezone
 from ipaddress import ip_address
 from pathlib import Path
 from subprocess import CalledProcessError
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from anyio import BrokenResourceError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
+from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
+from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.log import logger
+from lfx.services.deps import get_settings_service, session_scope
+from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
@@ -36,15 +41,11 @@ from langflow.api.v1.schemas import (
     MCPProjectUpdateRequest,
     MCPSettings,
 )
-from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from langflow.base.mcp.util import sanitize_mcp_name
-from langflow.logging import logger
+from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import check_key, create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_settings_service, session_scope
-from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
@@ -205,7 +206,7 @@ async def list_project_tools(
                 )
                 try:
                     tool = MCPSettings(
-                        id=str(flow.id),
+                        id=flow.id,
                         action_name=name,
                         action_description=description,
                         mcp_enabled=flow.mcp_enabled,
@@ -219,10 +220,14 @@ async def list_project_tools(
                     await logger.awarning(msg)
                     continue
 
-            # Get project-level auth settings
+            # Get project-level auth settings and decrypt sensitive fields
             auth_settings = None
             if project.auth_settings:
-                auth_settings = AuthSettings(**project.auth_settings)
+                from langflow.api.v1.schemas import AuthSettings
+
+                # Decrypt sensitive fields before returning
+                decrypted_settings = decrypt_auth_settings(project.auth_settings)
+                auth_settings = AuthSettings(**decrypted_settings) if decrypted_settings else None
 
     except Exception as e:
         msg = f"Error listing project tools: {e!s}"
@@ -244,6 +249,15 @@ async def handle_project_sse(
     current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
     """Handle SSE connections for a specific project."""
+    # Verify project exists and user has access
+    async with session_scope() as session:
+        project = (
+            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
+        ).first()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
     # Get project-specific SSE transport and MCP server
     sse = get_project_sse(project_id)
     project_server = get_project_mcp_server(project_id)
@@ -336,11 +350,33 @@ async def update_project_mcp_settings(
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
 
-            # Update project-level auth settings
-            if request.auth_settings:
-                project.auth_settings = request.auth_settings.model_dump(mode="json")
-            else:
-                project.auth_settings = None
+            # Update project-level auth settings with encryption
+            if "auth_settings" in request.model_fields_set:
+                if request.auth_settings is None:
+                    # Explicitly set to None - clear auth settings
+                    project.auth_settings = None
+                else:
+                    # Use python mode to get raw values without SecretStr masking
+                    auth_model = request.auth_settings
+                    auth_dict = auth_model.model_dump(mode="python", exclude_none=True)
+
+                    # Extract actual secret values before encryption
+                    from pydantic import SecretStr
+
+                    # Handle api_key if it's a SecretStr
+                    api_key_val = getattr(auth_model, "api_key", None)
+                    if isinstance(api_key_val, SecretStr):
+                        auth_dict["api_key"] = api_key_val.get_secret_value()
+
+                    # Handle oauth_client_secret if it's a SecretStr
+                    client_secret_val = getattr(auth_model, "oauth_client_secret", None)
+                    if isinstance(client_secret_val, SecretStr):
+                        auth_dict["oauth_client_secret"] = client_secret_val.get_secret_value()
+
+                    # Encrypt and store
+                    encrypted_settings = encrypt_auth_settings(auth_dict)
+                    project.auth_settings = encrypted_settings
+
             session.add(project)
 
             # Query flows in the project
@@ -458,7 +494,7 @@ async def install_mcp_config(
                 should_generate_api_key = not settings_service.auth_settings.AUTO_LOGIN
             elif project.auth_settings:
                 # When MCP_COMPOSER is enabled, only generate if auth_type is "apikey"
-                auth_settings = AuthSettings(**project.auth_settings)
+                auth_settings = AuthSettings(**project.auth_settings) if project.auth_settings else AuthSettings()
                 should_generate_api_key = auth_settings.auth_type == "apikey"
 
             if should_generate_api_key:
@@ -498,7 +534,7 @@ async def install_mcp_config(
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.PIPE,
                     )
-                    stdout, stderr = await proc.communicate()
+                    stdout, _ = await proc.communicate()
 
                     if proc.returncode == 0 and stdout.strip():
                         wsl_ip = stdout.decode().strip().split()[0]  # Get first IP address
@@ -508,8 +544,8 @@ async def install_mcp_config(
                 except OSError as e:
                     await logger.awarning("Failed to get WSL IP address: %s. Using default URL.", str(e))
 
-        # Build the base args for mcp-proxy
-        args = ["mcp-proxy"]
+        # Base args
+        args = ["mcp-composer"] if FEATURE_FLAGS.mcp_composer else ["mcp-proxy"]
 
         # Add authentication args based on MCP_COMPOSER feature flag and auth settings
         if not FEATURE_FLAGS.mcp_composer:
@@ -518,6 +554,11 @@ async def install_mcp_config(
             if generated_api_key:
                 args.extend(["--headers", "x-api-key", generated_api_key])
         elif project.auth_settings:
+            # Decrypt sensitive fields before using them
+            decrypted_settings = decrypt_auth_settings(project.auth_settings)
+            auth_settings = AuthSettings(**decrypted_settings) if decrypted_settings else AuthSettings()
+            args.extend(["--auth_type", auth_settings.auth_type])
+
             # When MCP_COMPOSER is enabled, only add headers if auth_type is "apikey"
             auth_settings = AuthSettings(**project.auth_settings)
             if auth_settings.auth_type == "apikey" and generated_api_key:
@@ -525,7 +566,10 @@ async def install_mcp_config(
             # If no auth_settings or auth_type is "none", don't add any auth headers
 
         # Add the SSE URL
-        args.append(sse_url)
+        if FEATURE_FLAGS.mcp_composer:
+            args.extend(["--sse-url", sse_url])
+        else:
+            args.append(sse_url)
 
         if os_type == "Windows":
             command = "cmd"
@@ -535,7 +579,7 @@ async def install_mcp_config(
         name = project.name
 
         # Create the MCP configuration
-        server_config = {
+        server_config: dict[str, Any] = {
             "command": command,
             "args": args,
         }
