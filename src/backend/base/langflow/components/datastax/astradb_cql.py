@@ -1,4 +1,6 @@
 import json
+import os
+import re
 import urllib
 from datetime import datetime, timezone
 from http import HTTPStatus
@@ -9,7 +11,16 @@ from langchain_core.tools import StructuredTool, Tool
 from pydantic import BaseModel, Field, create_model
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.io import DictInput, IntInput, SecretStrInput, StrInput, TableInput
+from langflow.io import (
+    DictInput,
+    DropdownInput,
+    HandleInput,
+    IntInput,
+    MultilineInput,
+    SecretStrInput,
+    StrInput,
+    TableInput,
+)
 from langflow.logging import logger
 from langflow.schema.data import Data
 from langflow.schema.table import EditMode
@@ -23,25 +34,40 @@ class AstraDBCQLToolComponent(LCToolComponent):
 
     inputs = [
         StrInput(name="tool_name", display_name="Tool Name", info="The name of the tool.", required=True),
-        StrInput(
+        MultilineInput(
             name="tool_description",
             display_name="Tool Description",
             info="The tool description to be passed to the model.",
             required=True,
+        ),
+        DropdownInput(
+            name="query_mode",
+            display_name="Query Mode",
+            info="Runs CQL command or REST API.",
+            options=["REST API", "CQL"],
+            value="REST API",
+            required=True,
+            real_time_refresh=True,
         ),
         StrInput(
             name="keyspace",
             display_name="Keyspace",
             value="default_keyspace",
             info="The keyspace name within Astra DB where the data is stored.",
-            required=True,
+            required=False,
             advanced=True,
         ),
         StrInput(
             name="table_name",
             display_name="Table Name",
-            info="The name of the table within Astra DB where the data is stored.",
-            required=True,
+            info="The name of the table within Astra DB where the data is stored. "
+            "Leave it empty if you want to use a CQL command.",
+        ),
+        MultilineInput(
+            name="cql_command",
+            display_name="CQL Command",
+            info="CQL command to be executed. Use :<arg_name> to reference the arguments.",
+            show=False,
         ),
         SecretStrInput(
             name="token",
@@ -50,9 +76,9 @@ class AstraDBCQLToolComponent(LCToolComponent):
             value="ASTRA_DB_APPLICATION_TOKEN",
             required=True,
         ),
-        StrInput(
+        SecretStrInput(
             name="api_endpoint",
-            display_name="API Endpoint",
+            display_name="Database" if os.getenv("ASTRA_ENHANCED", "false").lower() == "true" else "API Endpoint",
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
             required=True,
@@ -108,13 +134,13 @@ class AstraDBCQLToolComponent(LCToolComponent):
                     "default": "False",
                 },
                 {
-                    "name": "is_timestamp",
-                    "display_name": "Is Timestamp",
-                    "type": "boolean",
+                    "name": "datatype",
+                    "display_name": "Data Type",
+                    "type": "str",
                     "edit_mode": EditMode.INLINE,
-                    "description": ("Indicate if the field is a timestamp."),
-                    "options": ["True", "False"],
-                    "default": "False",
+                    "description": ("Indicate the data type of the field."),
+                    "options": ["string", "number", "boolean", "timestamp", "vector"],
+                    "default": "string",
                 },
                 {
                     "name": "operator",
@@ -123,7 +149,7 @@ class AstraDBCQLToolComponent(LCToolComponent):
                     "description": "Set the operator for the field. "
                     "https://docs.datastax.com/en/astra-db-serverless/api-reference/documents.html#operators",
                     "default": "$eq",
-                    "options": ["$gt", "$gte", "$lt", "$lte", "$eq", "$ne", "$in", "$nin", "$exists", "$all", "$size"],
+                    "options": ["$gt", "$gte", "$lt", "$lte", "$eq", "$ne", "$in", "$nin"],
                     "edit_mode": EditMode.INLINE,
                 },
             ],
@@ -146,6 +172,15 @@ class AstraDBCQLToolComponent(LCToolComponent):
             advanced=True,
         ),
         DictInput(
+            name="cql_replaces",
+            display_name="CQL Replace Params",
+            is_list=True,
+            info="Replacements to be applied to the CQL command before execution. (attention to whitespaces)",
+            required=False,
+            value={" WHERE AND ": " WHERE ", " WHERE OR ": " WHERE ", ", WHERE ": " WHERE "},
+            advanced=True,
+        ),
+        DictInput(
             name="static_filters",
             display_name="Static Filters",
             is_list=True,
@@ -159,7 +194,22 @@ class AstraDBCQLToolComponent(LCToolComponent):
             advanced=True,
             value=5,
         ),
+        HandleInput(name="embedding", display_name="Embedding Model", input_types=["Embeddings"], show=False),
     ]
+
+    async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
+        """Update build configuration based on field name and value."""
+        if field_name == "query_mode":
+            is_cql = field_value == "CQL"
+            build_config["cql_command"]["show"] = is_cql
+            build_config["embedding"]["show"] = is_cql
+            build_config["table_name"]["show"] = not is_cql
+            build_config["keyspace"]["show"] = not is_cql
+            build_config["projection_fields"]["show"] = not is_cql
+            build_config["partition_keys"]["show"] = not is_cql
+            build_config["clustering_keys"]["show"] = not is_cql
+            build_config["static_filters"]["show"] = not is_cql
+        return build_config
 
     def parse_timestamp(self, timestamp_str: str) -> str:
         """Parse a timestamp string into Astra DB REST API format.
@@ -203,7 +253,11 @@ class AstraDBCQLToolComponent(LCToolComponent):
         raise ValueError(msg)
 
     def astra_rest(self, args):
-        headers = {"Accept": "application/json", "X-Cassandra-Token": f"{self.token}"}
+        headers = {
+            "Accept": "application/json",
+            "X-Cassandra-Token": f"{self.token}",
+            "User-Agent": "langflow-astra-tool-cql",
+        }
         astra_url = f"{self.api_endpoint}/api/rest/v2/keyspaces/{self.keyspace}/{self.table_name}/"
         where = {}
 
@@ -256,18 +310,110 @@ class AstraDBCQLToolComponent(LCToolComponent):
         except ValueError:
             return res.status_code
 
+    def astra_cql(self, args):
+        headers = {
+            "Accept": "application/json",
+            "X-Cassandra-Token": f"{self.token}",
+            "User-Agent": "langflow-astra-cql-tool",
+        }
+        astra_url = f"{self.api_endpoint}/api/rest/v2/cql"
+        cql = self.cql_command
+
+        # replace all texts starting with : with the value of the argument
+        for arg in args:
+            if arg == "limit":
+                cql = cql.replace(f":{arg}", f"{self.number_of_results!s}")
+                continue
+
+            param = next((p for p in self.tools_params if p["name"] == arg), None)
+            if param is None:
+                continue
+            if param["datatype"] == "string" or param["datatype"] == "timestamp":
+                cql = cql.replace(f":{arg}", f"'{args[arg]!s}'")
+            else:
+                cql = cql.replace(f":{arg}", f"{args[arg]!s}")
+
+        # remove all the lines that has some parameter not assigned
+        cql_cleaned = ""
+        for line in cql.split("\n"):
+            if not any(f":{param['name']}" in line for param in self.tools_params):
+                cql_cleaned += line + "\n"
+
+        # remove all linebreaks before cleanup
+        cql_cleaned = cql_cleaned.replace("\n", " ")
+
+        # remove all multiple spaces
+        cql_cleaned = re.sub(r"\s+", " ", cql_cleaned)
+
+        # removes parts of the command that are not needed or get wrong after optional parameters are removed
+        for dirty in self.cql_replaces:
+            cql_cleaned = cql_cleaned.replace(dirty, self.cql_replaces[dirty])
+
+        logger.debug(f"CQL Command: {cql_cleaned}")
+
+        res = requests.request("POST", url=astra_url, headers=headers, timeout=10, data=cql_cleaned)
+
+        if int(res.status_code) >= HTTPStatus.BAD_REQUEST:
+            msg = f"Error on Astra DB CQL Tool {self.tool_name} request: {res.text}"
+            logger.error(msg)
+            raise ValueError(msg)
+
+        try:
+            res_data = res.json()
+            return res_data["data"]
+        except ValueError as e:
+            msg = f"Error on Astra DB CQL Tool {self.tool_name} request: {res.text}"
+            logger.error(msg)
+            raise ValueError(msg) from e
+
     def create_args_schema(self) -> dict[str, BaseModel]:
-        args: dict[str, tuple[Any, Field]] = {}
+        schema_args: dict[str, tuple[Any, Field]] = {}
+        # Map string datatypes to Python types
+        type_mapping = {
+            "string": str,
+            "number": float,
+            "boolean": bool,
+            "integer": int,
+            "timestamp": datetime,
+            "list": list,
+            "dict": dict,
+            "vector": str,  # Vector parameters are passed as strings to the model
+        }
+
+        if self.static_filters is None:
+            self.static_filters = {}
+
+        if self.tools_params is None:
+            self.tools_params = []
 
         for param in self.tools_params:
-            field_name = param["field_name"] if param["field_name"] else param["name"]
-            if field_name not in self.static_filters:
-                if param["mandatory"]:
-                    args[param["name"]] = (str, Field(description=param["description"]))
-                else:
-                    args[param["name"]] = (str | None, Field(description=param["description"], default=None))
+            logger.info(f"Param: {param}")
+            try:
+                logger.info(f"Schema args: {schema_args} {param}")
+                datatype = param["datatype"]
+                python_type = type_mapping.get(datatype, str)
+                if python_type is None:
+                    error_msg = f"Unsupported datatype: {datatype}"
+                    logger.error(error_msg)
+                    raise ValueError(error_msg)
+                logger.info(f"Python type: {python_type}")
 
-        model = create_model("ToolInput", **args, __base__=BaseModel)
+                field_name = param["field_name"] if param["field_name"] else param["name"]
+
+                if field_name not in self.static_filters:
+                    if param["mandatory"]:
+                        schema_args[param["name"]] = (python_type, Field(description=param["description"]))
+                    else:
+                        schema_args[param["name"]] = (
+                            python_type | None,
+                            Field(description=param["description"], default=None),
+                        )
+            except Exception as e:
+                error_msg = f"Error processing parameter {param}: {e!s}"
+                logger.error(error_msg)
+                raise ValueError(error_msg) from e
+
+        model = create_model("ToolInput", **schema_args, __base__=BaseModel)
         return {"ToolInput": model}
 
     def build_tool(self) -> Tool:
@@ -280,6 +426,7 @@ class AstraDBCQLToolComponent(LCToolComponent):
             Tool: The built Astra DB tool.
         """
         schema_dict = self.create_args_schema()
+        logger.info(f"Schema dict: {schema_dict}")
         return StructuredTool.from_function(
             name=self.tool_name,
             args_schema=schema_dict["ToolInput"],
@@ -301,7 +448,25 @@ class AstraDBCQLToolComponent(LCToolComponent):
         return result
 
     def run_model(self, **args) -> Data | list[Data]:
-        results = self.astra_rest(args)
+        args["limit"] = self.number_of_results or 10
+
+        # Build the vector search argument with the embedding model
+        vector_search_param = next((p for p in self.tools_params if p["datatype"] == "vector"), None)
+        if vector_search_param is not None and args.get(vector_search_param["name"]) is not None:
+            if self.embedding is None:
+                msg = "Embedding model is not set. Please set the embedding model."
+                logger.error(msg)
+                raise ValueError(msg)
+            embedding_query = self.embedding.embed_query(args[vector_search_param["name"]])
+            args[vector_search_param["name"]] = embedding_query
+
+        results = None
+        if self.cql_command:
+            logger.debug(f"Running CQL Command {args}")
+            results = self.astra_cql(args)
+        else:
+            logger.debug(f"Running REST Command {args}")
+            results = self.astra_rest(args)
         data: list[Data] = []
 
         if isinstance(results, list):
