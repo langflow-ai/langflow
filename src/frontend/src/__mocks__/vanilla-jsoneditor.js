@@ -20,6 +20,6 @@ module.exports = {
   createJSONEditor,
   Mode: {
     text: "text",
-    tree: "tree"
-  }
+    tree: "tree",
+  },
 };

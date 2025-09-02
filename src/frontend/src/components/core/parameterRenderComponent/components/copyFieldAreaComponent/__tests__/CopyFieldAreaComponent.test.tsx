@@ -9,8 +9,13 @@ jest.mock("@/stores/flowStore");
 
 // Mock IconComponent
 jest.mock("@/components/common/genericIconComponent", () => {
-  return function MockIconComponent({ dataTestId, name, className, ...props }: any) {
-    // Since the actual component structure has onClick on parent div, 
+  return function MockIconComponent({
+    dataTestId,
+    name,
+    className,
+    ...props
+  }: any) {
+    // Since the actual component structure has onClick on parent div,
     // we need to make sure clicks bubble up correctly
     return (
       <span
@@ -95,9 +100,7 @@ describe("CopyFieldAreaComponent", () => {
     });
 
     it("should generate MCP SSE URL when value is MCP_SSE_VALUE", () => {
-      render(
-        <CopyFieldAreaComponent {...defaultProps} value="MCP_SSE" />,
-      );
+      render(<CopyFieldAreaComponent {...defaultProps} value="MCP_SSE" />);
 
       const input = screen.getByDisplayValue(
         "http://localhost:7860/api/v1/mcp/sse",
@@ -174,7 +177,6 @@ describe("CopyFieldAreaComponent", () => {
     });
   });
 
-
   describe("Input Behavior", () => {
     it("should be disabled by default", () => {
       render(<CopyFieldAreaComponent {...defaultProps} />);
@@ -188,11 +190,11 @@ describe("CopyFieldAreaComponent", () => {
       render(<CopyFieldAreaComponent {...defaultProps} />);
 
       const input = screen.getByRole("textbox");
-      
+
       // The input should be disabled but present
       expect(input).toBeInTheDocument();
       expect(input).toBeDisabled();
-      
+
       // Since the input is always disabled, we can't test actual focus/blur
       // but we can verify the initial state
       expect(input).toHaveAttribute("disabled");
