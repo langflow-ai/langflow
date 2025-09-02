@@ -23,12 +23,13 @@ import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-serv
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useShortcutsStore } from "@/stores/shortcuts";
+import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
 import {
   nodeColors,
   SIDEBAR_BUNDLES,
   SIDEBAR_CATEGORIES,
 } from "@/utils/styleUtils";
-import { cn } from "@/utils/utils";
+import { cn, getBooleanFromStorage } from "@/utils/utils";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import type { APIClassType } from "../../../../types/api";
@@ -166,7 +167,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     data: mcpServers,
     isLoading: mcpLoading,
     isSuccess: mcpSuccess,
-    isError: mcpError,
   } = useGetMCPServers({ enabled: ENABLE_NEW_SIDEBAR });
 
   // Get search state from context
@@ -183,12 +183,26 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     handleInputChange = () => {},
   } = context;
 
+  const showBetaStorage = getBooleanFromStorage("showBeta", true);
+  const showLegacyStorage = getBooleanFromStorage("showLegacy", false);
+
   // State
   const [fuse, setFuse] = useState<Fuse<any> | null>(null);
   const [openCategories, setOpenCategories] = useState<string[]>([]);
   const [showConfig, setShowConfig] = useState(false);
-  const [showBeta, setShowBeta] = useState(true);
-  const [showLegacy, setShowLegacy] = useState(false);
+  const [showBeta, setShowBeta] = useState(showBetaStorage);
+  const [showLegacy, setShowLegacy] = useState(showLegacyStorage);
+
+  // Functions to handle state changes with localStorage persistence
+  const handleSetShowBeta = useCallback((value: boolean) => {
+    setShowBeta(value);
+    setLocalStorage("showBeta", value.toString());
+  }, []);
+
+  const handleSetShowLegacy = useCallback((value: boolean) => {
+    setShowLegacy(value);
+    setLocalStorage("showLegacy", value.toString());
+  }, []);
   const [mcpSearchData, setMcpSearchData] = useState<any[]>([]);
 
   // Create base data that includes MCP category when available
@@ -338,11 +352,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       setOpenCategories(newOpenCategories);
     }
   }, [finalFilteredData, search, filterType, getFilterEdge]);
-
-  // Update dataFilter when baseData changes
-  useEffect(() => {
-    setFilterData(baseData);
-  }, [baseData]);
 
   useEffect(() => {
     const options = {
@@ -507,9 +516,9 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
             showConfig={showConfig}
             setShowConfig={setShowConfig}
             showBeta={showBeta}
-            setShowBeta={setShowBeta}
+            setShowBeta={handleSetShowBeta}
             showLegacy={showLegacy}
-            setShowLegacy={setShowLegacy}
+            setShowLegacy={handleSetShowLegacy}
             searchInputRef={searchInputRef}
             isInputFocused={isSearchFocused}
             search={search}
@@ -565,11 +574,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                         nodeColors={nodeColors}
                         onDragStart={onDragStart}
                         openCategories={openCategories}
-                        setOpenCategories={setOpenCategories}
-                        mcpServers={mcpServers}
                         mcpLoading={mcpLoading}
                         mcpSuccess={mcpSuccess}
-                        mcpError={mcpError}
                         search={search}
                         hasMcpServers={hasMcpServers}
                         showSearchConfigTrigger={

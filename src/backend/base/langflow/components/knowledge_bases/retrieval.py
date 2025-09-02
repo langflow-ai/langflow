@@ -5,14 +5,32 @@ from typing import Any
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
 from lfx.custom import Component
-from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
+from lfx.io import (
+    BoolInput,
+    DropdownInput,
+    IntInput,
+    MessageTextInput,
+    Output,
+    SecretStrInput,
+)
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.services.deps import get_settings_service
 from pydantic import SecretStr
 
-from langflow.base.knowledge_bases import get_knowledge_bases
+from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
+from langflow.custom import Component
+from langflow.io import (
+    BoolInput,
+    DropdownInput,
+    IntInput,
+    MessageTextInput,
+    Output,
+    SecretStrInput,
+)
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.services.auth.utils import decrypt_api_key
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import session_scope
@@ -87,7 +105,9 @@ class KnowledgeRetrievalComponent(Component):
         ),
     ]
 
-    async def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002
+    async def update_build_config(
+        self, build_config, field_value, field_name=None
+    ):  # noqa: ARG002
         if field_name == "knowledge_base":
             # Update the knowledge base options dynamically
             build_config["knowledge_base"]["options"] = await get_knowledge_bases(
@@ -96,7 +116,10 @@ class KnowledgeRetrievalComponent(Component):
             )
 
             # If the selected knowledge base is not available, reset it
-            if build_config["knowledge_base"]["value"] not in build_config["knowledge_base"]["options"]:
+            if (
+                build_config["knowledge_base"]["value"]
+                not in build_config["knowledge_base"]["options"]
+            ):
                 build_config["knowledge_base"]["value"] = None
 
         return build_config
@@ -123,13 +146,19 @@ class KnowledgeRetrievalComponent(Component):
                 decrypted_key = decrypt_api_key(metadata["api_key"], settings_service)
                 metadata["api_key"] = decrypted_key
             except (InvalidToken, TypeError, ValueError) as e:
-                logger.error(f"Could not decrypt API key. Please provide it manually. Error: {e}")
+                logger.error(
+                    f"Could not decrypt API key. Please provide it manually. Error: {e}"
+                )
                 metadata["api_key"] = None
         return metadata
 
     def _build_embeddings(self, metadata: dict):
         """Build embedding model from metadata."""
-        runtime_api_key = self.api_key.get_secret_value() if isinstance(self.api_key, SecretStr) else self.api_key
+        runtime_api_key = (
+            self.api_key.get_secret_value()
+            if isinstance(self.api_key, SecretStr)
+            else self.api_key
+        )
         provider = metadata.get("embedding_provider")
         model = metadata.get("embedding_model")
         api_key = runtime_api_key or metadata.get("api_key")
@@ -224,18 +253,26 @@ class KnowledgeRetrievalComponent(Component):
         # If include_embeddings is enabled, get embeddings for the results
         id_to_embedding = {}
         if self.include_embeddings and results:
-            doc_ids = [doc[0].metadata.get("_id") for doc in results if doc[0].metadata.get("_id")]
+            doc_ids = [
+                doc[0].metadata.get("_id")
+                for doc in results
+                if doc[0].metadata.get("_id")
+            ]
 
             # Only proceed if we have valid document IDs
             if doc_ids:
                 # Access underlying client to get embeddings
                 collection = chroma._client.get_collection(name=self.knowledge_base)
-                embeddings_result = collection.get(where={"_id": {"$in": doc_ids}}, include=["metadatas", "embeddings"])
+                embeddings_result = collection.get(
+                    where={"_id": {"$in": doc_ids}}, include=["metadatas", "embeddings"]
+                )
 
                 # Create a mapping from document ID to embedding
                 for i, metadata in enumerate(embeddings_result.get("metadatas", [])):
                     if metadata and "_id" in metadata:
-                        id_to_embedding[metadata["_id"]] = embeddings_result["embeddings"][i]
+                        id_to_embedding[metadata["_id"]] = embeddings_result[
+                            "embeddings"
+                        ][i]
 
         # Build output data based on include_metadata setting
         data_list = []

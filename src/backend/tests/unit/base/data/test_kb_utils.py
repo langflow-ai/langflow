@@ -1,5 +1,8 @@
 import pytest
-from langflow.base.knowledge_bases import compute_bm25, compute_tfidf
+from langflow.base.knowledge_bases.knowledge_base_utils import (
+    compute_bm25,
+    compute_tfidf,
+)
 
 
 class TestKBUtils:
@@ -9,7 +12,12 @@ class TestKBUtils:
     @pytest.fixture
     def sample_documents(self):
         """Sample documents for testing."""
-        return ["the cat sat on the mat", "the dog ran in the park", "cats and dogs are pets", "birds fly in the sky"]
+        return [
+            "the cat sat on the mat",
+            "the dog ran in the park",
+            "cats and dogs are pets",
+            "birds fly in the sky",
+        ]
 
     @pytest.fixture
     def query_terms(self):
@@ -326,9 +334,13 @@ class TestKBUtils:
         # For documents that match, both should be positive
         for i in range(len(sample_documents)):
             if tfidf_scores[i] > 0:
-                assert bm25_scores[i] > 0, f"Document {i} has TF-IDF score but zero BM25 score"
+                assert (
+                    bm25_scores[i] > 0
+                ), f"Document {i} has TF-IDF score but zero BM25 score"
             if bm25_scores[i] > 0:
-                assert tfidf_scores[i] > 0, f"Document {i} has BM25 score but zero TF-IDF score"
+                assert (
+                    tfidf_scores[i] > 0
+                ), f"Document {i} has BM25 score but zero TF-IDF score"
 
     def test_compute_tfidf_special_characters(self):
         """Test TF-IDF with documents containing special characters."""

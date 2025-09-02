@@ -1,9 +1,8 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-from lfx.components.google.google_serper_api_core import GoogleSerperAPICore
-from lfx.schema import DataFrame
+from langflow.components.serper.google_serper_api_core import GoogleSerperAPICore
+from langflow.schema import DataFrame
 
 
 @pytest.fixture
@@ -30,7 +29,7 @@ def mock_search_results():
 
 
 def test_component_initialization(google_serper_component):
-    assert google_serper_component.display_name == "Google Serper API"
+    assert google_serper_component.display_name == "Serper Google Search API"
     assert google_serper_component.icon == "Serper"
 
     input_names = [input_.name for input_ in google_serper_component.inputs]
@@ -41,7 +40,9 @@ def test_component_initialization(google_serper_component):
 
 @patch("langchain_community.utilities.google_serper.requests.get")
 @patch("langchain_community.utilities.google_serper.requests.post")
-def test_search_serper_success(mock_post, mock_get, google_serper_component, mock_search_results):
+def test_search_serper_success(
+    mock_post, mock_get, google_serper_component, mock_search_results
+):
     # Configure mocks
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -71,7 +72,9 @@ def test_search_serper_error_handling(mock_post, mock_get, google_serper_compone
     # Configure mocks to simulate error
     mock_response = MagicMock()
     mock_response.status_code = 403
-    mock_response.raise_for_status.side_effect = ConnectionError("API connection failed")
+    mock_response.raise_for_status.side_effect = ConnectionError(
+        "API connection failed"
+    )
     mock_post.return_value = mock_response
     mock_get.return_value = mock_response
 
@@ -92,7 +95,13 @@ def test_search_serper_error_handling(mock_post, mock_get, google_serper_compone
 def test_text_search_serper(google_serper_component):
     with patch.object(google_serper_component, "search_serper") as mock_search:
         mock_search.return_value = DataFrame(
-            [{"title": "Test Title", "link": "https://test.com", "snippet": "Test snippet"}]
+            [
+                {
+                    "title": "Test Title",
+                    "link": "https://test.com",
+                    "snippet": "Test snippet",
+                }
+            ]
         )
 
         result = google_serper_component.text_search_serper()

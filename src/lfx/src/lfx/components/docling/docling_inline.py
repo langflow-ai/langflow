@@ -56,7 +56,6 @@ class DoclingInlineComponent(BaseFileComponent):
             display_name="Pipeline",
             info="Docling pipeline to use",
             options=["standard", "vlm"],
-            real_time_refresh=False,
             value="standard",
         ),
         DropdownInput(
@@ -64,7 +63,6 @@ class DoclingInlineComponent(BaseFileComponent):
             display_name="OCR Engine",
             info="OCR engine to use. None will disable OCR.",
             options=["None", "easyocr", "tesserocr", "rapidocr", "ocrmac"],
-            real_time_refresh=False,
             value="None",
         ),
         # TODO: expose more Docling options

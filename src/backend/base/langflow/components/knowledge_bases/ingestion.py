@@ -9,7 +9,7 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 from cryptography.fernet import InvalidToken
@@ -18,19 +18,53 @@ from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from lfx.components.processing.converter import convert_to_dataframe
 from lfx.custom import Component
 from lfx.inputs.inputs import HandleInput
-from lfx.io import BoolInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput, TableInput
+from lfx.io import (
+    BoolInput,
+    DropdownInput,
+    IntInput,
+    Output,
+    SecretStrInput,
+    StrInput,
+    TableInput,
+)
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame  # noqa: TC002
 from lfx.schema.dotdict import dotdict  # noqa: TC002
 from lfx.schema.table import EditMode
 
-from langflow.base.knowledge_bases import get_knowledge_bases
+from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
+from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
+from langflow.components.processing.converter import convert_to_dataframe
+from langflow.custom import Component
+from langflow.io import (
+    BoolInput,
+    DropdownInput,
+    HandleInput,
+    IntInput,
+    Output,
+    SecretStrInput,
+    StrInput,
+    TableInput,
+)
+from langflow.schema.data import Data
+from langflow.schema.dotdict import dotdict  # noqa: TC001
+from langflow.schema.table import EditMode
 from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
 from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.deps import get_settings_service, get_variable_service, session_scope
+from langflow.services.deps import (
+    get_settings_service,
+    get_variable_service,
+    session_scope,
+)
 
-HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
+if TYPE_CHECKING:
+    from langflow.schema.dataframe import DataFrame
+
+HUGGINGFACE_MODEL_NAMES = [
+    "sentence-transformers/all-MiniLM-L6-v2",
+    "sentence-transformers/all-mpnet-base-v2",
+]
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
 
 settings = get_settings_service().settings
@@ -64,7 +98,11 @@ class KnowledgeIngestionComponent(Component):
                         "name": "create_knowledge_base",
                         "description": "Create new knowledge in Langflow.",
                         "display_name": "Create new knowledge",
-                        "field_order": ["01_new_kb_name", "02_embedding_model", "03_api_key"],
+                        "field_order": [
+                            "01_new_kb_name",
+                            "02_embedding_model",
+                            "03_api_key",
+                        ],
                         "template": {
                             "01_new_kb_name": StrInput(
                                 name="new_kb_name",
@@ -77,9 +115,17 @@ class KnowledgeIngestionComponent(Component):
                                 display_name="Model Name",
                                 info="Select the embedding model to use for this knowledge base.",
                                 required=True,
-                                options=OPENAI_EMBEDDING_MODEL_NAMES + HUGGINGFACE_MODEL_NAMES + COHERE_MODEL_NAMES,
-                                options_metadata=[{"icon": "OpenAI"} for _ in OPENAI_EMBEDDING_MODEL_NAMES]
-                                + [{"icon": "HuggingFace"} for _ in HUGGINGFACE_MODEL_NAMES]
+                                options=OPENAI_EMBEDDING_MODEL_NAMES
+                                + HUGGINGFACE_MODEL_NAMES
+                                + COHERE_MODEL_NAMES,
+                                options_metadata=[
+                                    {"icon": "OpenAI"}
+                                    for _ in OPENAI_EMBEDDING_MODEL_NAMES
+                                ]
+                                + [
+                                    {"icon": "HuggingFace"}
+                                    for _ in HUGGINGFACE_MODEL_NAMES
+                                ]
                                 + [{"icon": "Cohere"} for _ in COHERE_MODEL_NAMES],
                             ),
                             "03_api_key": SecretStrInput(
@@ -179,7 +225,9 @@ class KnowledgeIngestionComponent(Component):
     ]
 
     # ------ Outputs -------------------------------------------------------
-    outputs = [Output(display_name="Results", name="dataframe_output", method="build_kb_info")]
+    outputs = [
+        Output(display_name="Results", name="dataframe_output", method="build_kb_info")
+    ]
 
     # ------ Internal helpers ---------------------------------------------
     def _get_kb_root(self) -> Path:
@@ -270,7 +318,9 @@ class KnowledgeIngestionComponent(Component):
         if api_key_to_save:
             settings_service = get_settings_service()
             try:
-                encrypted_api_key = encrypt_api_key(api_key_to_save, settings_service=settings_service)
+                encrypted_api_key = encrypt_api_key(
+                    api_key_to_save, settings_service=settings_service
+                )
             except (TypeError, ValueError) as e:
                 self.log(f"Could not encrypt API key: {e}")
                 logger.error(f"Could not encrypt API key: {e}")
@@ -284,7 +334,9 @@ class KnowledgeIngestionComponent(Component):
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
 
-    def _save_embedding_metadata(self, kb_path: Path, embedding_model: str, api_key: str) -> None:
+    def _save_embedding_metadata(
+        self, kb_path: Path, embedding_model: str, api_key: str
+    ) -> None:
         """Save embedding model metadata."""
         embedding_metadata = self._build_embedding_metadata(embedding_model, api_key)
         metadata_path = kb_path / "embedding_metadata.json"
@@ -309,7 +361,9 @@ class KnowledgeIngestionComponent(Component):
         except (OSError, TypeError, ValueError) as e:
             self.log(f"Error saving KB files: {e}")
 
-    def _build_column_metadata(self, config_list: list[dict[str, Any]], df_source: pd.DataFrame) -> dict[str, Any]:
+    def _build_column_metadata(
+        self, config_list: list[dict[str, Any]], df_source: pd.DataFrame
+    ) -> dict[str, Any]:
         """Build detailed column metadata."""
         metadata: dict[str, Any] = {
             "total_columns": len(df_source.columns),
@@ -321,8 +375,12 @@ class KnowledgeIngestionComponent(Component):
 
         for config in config_list:
             col_name = config.get("column_name")
-            vectorize = config.get("vectorize") == "True" or config.get("vectorize") is True
-            identifier = config.get("identifier") == "True" or config.get("identifier") is True
+            vectorize = (
+                config.get("vectorize") == "True" or config.get("vectorize") is True
+            )
+            identifier = (
+                config.get("identifier") == "True" or config.get("identifier") is True
+            )
 
             # Add to columns list
             metadata["columns"].append(
@@ -342,7 +400,11 @@ class KnowledgeIngestionComponent(Component):
         return metadata
 
     async def _create_vector_store(
-        self, df_source: pd.DataFrame, config_list: list[dict[str, Any]], embedding_model: str, api_key: str
+        self,
+        df_source: pd.DataFrame,
+        config_list: list[dict[str, Any]],
+        embedding_model: str,
+        api_key: str,
     ) -> None:
         """Create vector store following Local DB component pattern."""
         try:
@@ -357,7 +419,9 @@ class KnowledgeIngestionComponent(Component):
             embedding_function = self._build_embeddings(embedding_model, api_key)
 
             # Convert DataFrame to Data objects (following Local DB pattern)
-            data_objects = await self._convert_df_to_data_objects(df_source, config_list)
+            data_objects = await self._convert_df_to_data_objects(
+                df_source, config_list
+            )
 
             # Create vector store
             chroma = Chroma(
@@ -375,7 +439,9 @@ class KnowledgeIngestionComponent(Component):
             # Add documents to vector store
             if documents:
                 chroma.add_documents(documents)
-                self.log(f"Added {len(documents)} documents to vector store '{self.knowledge_base}'")
+                self.log(
+                    f"Added {len(documents)} documents to vector store '{self.knowledge_base}'"
+                )
 
         except (OSError, ValueError, RuntimeError) as e:
             self.log(f"Error creating vector store: {e}")
@@ -399,7 +465,11 @@ class KnowledgeIngestionComponent(Component):
         all_docs = chroma.get()
 
         # Extract all _id values from metadata
-        id_list = [metadata.get("_id") for metadata in all_docs["metadatas"] if metadata.get("_id")]
+        id_list = [
+            metadata.get("_id")
+            for metadata in all_docs["metadatas"]
+            if metadata.get("_id")
+        ]
 
         # Get column roles
         content_cols = []
@@ -407,8 +477,12 @@ class KnowledgeIngestionComponent(Component):
 
         for config in config_list:
             col_name = config.get("column_name")
-            vectorize = config.get("vectorize") == "True" or config.get("vectorize") is True
-            identifier = config.get("identifier") == "True" or config.get("identifier") is True
+            vectorize = (
+                config.get("vectorize") == "True" or config.get("vectorize") is True
+            )
+            identifier = (
+                config.get("identifier") == "True" or config.get("identifier") is True
+            )
 
             if vectorize:
                 content_cols.append(col_name)
@@ -418,7 +492,11 @@ class KnowledgeIngestionComponent(Component):
         # Convert each row to a Data object
         for _, row in df_source.iterrows():
             # Build content text from identifier columns using list comprehension
-            identifier_parts = [str(row[col]) for col in content_cols if col in row and pd.notna(row[col])]
+            identifier_parts = [
+                str(row[col])
+                for col in content_cols
+                if col in row and pd.notna(row[col])
+            ]
 
             # Join all parts into a single string
             page_content = " ".join(identifier_parts)
@@ -430,7 +508,11 @@ class KnowledgeIngestionComponent(Component):
 
             # Add identifier columns if they exist
             if identifier_cols:
-                identifier_parts = [str(row[col]) for col in identifier_cols if col in row and pd.notna(row[col])]
+                identifier_parts = [
+                    str(row[col])
+                    for col in identifier_cols
+                    if col in row and pd.notna(row[col])
+                ]
                 page_content = " ".join(identifier_parts)
 
             # Add metadata columns as simple key-value pairs
@@ -455,7 +537,9 @@ class KnowledgeIngestionComponent(Component):
 
         return data_objects
 
-    def is_valid_collection_name(self, name, min_length: int = 3, max_length: int = 63) -> bool:
+    def is_valid_collection_name(
+        self, name, min_length: int = 3, max_length: int = 63
+    ) -> bool:
         """Validates collection name against conditions 1-3.
 
         1. Contains 3-63 characters
@@ -511,7 +595,9 @@ class KnowledgeIngestionComponent(Component):
     async def build_kb_info(self) -> Data:
         """Main ingestion routine → returns a dict with KB metadata."""
         try:
-            input_value = self.input_df[0] if isinstance(self.input_df, list) else self.input_df
+            input_value = (
+                self.input_df[0] if isinstance(self.input_df, list) else self.input_df
+            )
             df_source: DataFrame = convert_to_dataframe(input_value)
 
             # Validate column configuration (using Structured Output patterns)
@@ -533,7 +619,9 @@ class KnowledgeIngestionComponent(Component):
                 try:
                     api_key = decrypt_api_key(metadata["api_key"], settings_service)
                 except (InvalidToken, TypeError, ValueError) as e:
-                    logger.error(f"Could not decrypt API key. Please provide it manually. Error: {e}")
+                    logger.error(
+                        f"Could not decrypt API key. Please provide it manually. Error: {e}"
+                    )
 
             # Check if a custom API key was provided, update metadata if so
             if self.api_key:
@@ -545,7 +633,9 @@ class KnowledgeIngestionComponent(Component):
                 )
 
             # Create vector store following Local DB component pattern
-            await self._create_vector_store(df_source, config_list, embedding_model=embedding_model, api_key=api_key)
+            await self._create_vector_store(
+                df_source, config_list, embedding_model=embedding_model, api_key=api_key
+            )
 
             # Save KB files (using File Component storage patterns)
             self._save_kb_files(kb_path, config_list)
@@ -562,7 +652,9 @@ class KnowledgeIngestionComponent(Component):
             }
 
             # Set status message
-            self.status = f"✅ KB **{self.knowledge_base}** saved · {len(df_source)} chunks."
+            self.status = (
+                f"✅ KB **{self.knowledge_base}** saved · {len(df_source)} chunks."
+            )
 
             return Data(data=meta)
 
@@ -610,7 +702,9 @@ class KnowledgeIngestionComponent(Component):
             if isinstance(field_value, dict) and "01_new_kb_name" in field_value:
                 # Validate the knowledge base name - Make sure it follows these rules:
                 if not self.is_valid_collection_name(field_value["01_new_kb_name"]):
-                    msg = f"Invalid knowledge base name: {field_value['01_new_kb_name']}"
+                    msg = (
+                        f"Invalid knowledge base name: {field_value['01_new_kb_name']}"
+                    )
                     raise ValueError(msg)
 
                 api_key = field_value.get("03_api_key", None)
@@ -624,7 +718,9 @@ class KnowledgeIngestionComponent(Component):
                     raise ValueError(msg)
 
                 # We need to test the API Key one time against the embedding model
-                embed_model = self._build_embeddings(embedding_model=field_value["02_embedding_model"], api_key=api_key)
+                embed_model = self._build_embeddings(
+                    embedding_model=field_value["02_embedding_model"], api_key=api_key
+                )
 
                 # Try to generate a dummy embedding to validate the API key without blocking the event loop
                 try:
@@ -640,7 +736,9 @@ class KnowledgeIngestionComponent(Component):
                     raise ValueError(msg) from e
 
                 # Create the new knowledge base directory
-                kb_path = KNOWLEDGE_BASES_ROOT_PATH / kb_user / field_value["01_new_kb_name"]
+                kb_path = (
+                    KNOWLEDGE_BASES_ROOT_PATH / kb_user / field_value["01_new_kb_name"]
+                )
                 kb_path.mkdir(parents=True, exist_ok=True)
 
                 # Save the embedding metadata
@@ -658,7 +756,10 @@ class KnowledgeIngestionComponent(Component):
             )
 
             # If the selected knowledge base is not available, reset it
-            if build_config["knowledge_base"]["value"] not in build_config["knowledge_base"]["options"]:
+            if (
+                build_config["knowledge_base"]["value"]
+                not in build_config["knowledge_base"]["options"]
+            ):
                 build_config["knowledge_base"]["value"] = None
 
         return build_config
