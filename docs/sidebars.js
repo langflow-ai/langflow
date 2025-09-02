@@ -113,6 +113,7 @@ module.exports = {
               id: "Develop/memory",
               label: "Manage memory"
             },
+            "Concepts/knowledge",
             {
               type: "doc",
               id: "Develop/session-id",
@@ -140,6 +141,7 @@ module.exports = {
                 "Integrations/integrations-langsmith",
                 "Integrations/integrations-langwatch",
                 "Integrations/integrations-opik",
+                "Integrations/integrations-instana-traceloop",
               ],
             },
             "Contributing/contributing-telemetry",
@@ -267,6 +269,7 @@ module.exports = {
               ]
             },
             "Components/components-data",
+            "Components/components-kb",
             "Components/components-vector-stores",
             {
               type: "category",

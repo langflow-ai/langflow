@@ -3,6 +3,8 @@ title: Langflow release notes
 slug: /release-notes
 ---
 
+import Icon from "@site/src/components/icon";
+
 This page summarizes significant changes to Langflow in each release.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
 
@@ -56,44 +58,40 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
   The **Create knowledge** component ingests knowledge into a knowledge base. The **Retrieve knowledge** component is added to flows to access a knowledge base.
   For more information, see Knowledge bases.
 
-- Advanced parsing available for File component
+- Advanced parsing available for the **File** component
 
-  The File component includes advanced parsing capabilities powered by the Docling library.
+  The **File** component supports [advanced parsing with the Docling library](/components-data#advanced-parsing).
 
-  The Docling dependency is now included with the Langflow OSS package.
+- Built-in Docling support
 
-- Additional Structured Output for Agent component
+  The Docling dependency is now included with Langflow, making it easier to use the **Docling** components and the **File** component's new advanced parsing feature.
+
+- Structured output option for the **Agent** component
 
   In addition to the `Message` output, the Agent component now includes a structured output for `Data`.
-  This output parses JSON into a structured `Data` object to make it easier to work with the Agent's output downstream.
+  This output parses JSON into a structured `Data` object to make it easier to work with the agent's output downstream.
+
+- Reorganized visual editor menus and controls
+
+  - [Bundles](/components-bundle-components) moved to <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the visual editor.
+  - Click **MCP servers** to manage all of your MCP server connections without leaving the workspace.
+  - Lock/unlock controls moved to flow details in [**Projects**](/concepts-flows#projects).
+  - Moved the zoom, note, and help controls to the lower-right corner of the visual editor.
 
 - Increased max file upload size
 
   Increased the default max file upload size from `100 MB` to `1024 MB`.
 
-- The Langflow `config_dir` default directory is moved
+- Moved all vector store components to provider-specific <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components)
+- Moved the **Serper Google Search API** component to the **Serper** bundle
+- Added **S3 Bucket Uploader** component
+- Added **Cohere Rerank** component
 
-  The default Langflow `config_dir` is now moved.
-  The directory location can still be modified with the `LANGFLOW_CONFIG_DIR` [environment variable](/environment-variables).
+- New integrations and bundles:
 
-  ```
-  Current:
-  macOS | ~/Library/Caches/langflow/
-  Linux | ~/.cache/langflow/
-  Windows | %LOCALAPPDATA%\langflow\Cache\
-
-  1.6:
-  macOS | ~/Library/Application Support/langflow/
-  Linux | ~/.config/langflow/
-  Windows | %APPDATA%\langflow\
-  ```
-
-- New integrations and bundles
-
-   - Traceloop
+  - [Traceloop](/integrations-instana-traceloop)
 
 ### Deprecations
-
 
 ## 1.5.0
 
