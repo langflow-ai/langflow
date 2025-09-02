@@ -189,6 +189,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   const {
     setHandleDragging,
     setFilterType,
+    setFilterComponent,
     handleDragging,
     filterType,
     onConnect,
@@ -197,6 +198,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       (state) => ({
         setHandleDragging: state.setHandleDragging,
         setFilterType: state.setFilterType,
+        setFilterComponent: state.setFilterComponent,
         handleDragging: state.handleDragging,
         filterType: state.filterType,
         onConnect: state.onConnect,
@@ -286,24 +288,24 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     const handleColorName = connectedEdge
       ? connectedColor
       : uniqueColorCount > 1
-        ? "secondary-foreground"
-        : "datatype-" + firstUniqueColor;
+      ? "secondary-foreground"
+      : "datatype-" + firstUniqueColor;
 
     const handleColor = isNullHandle
       ? dark
         ? "hsl(var(--accent-gray))"
         : "hsl(var(--accent-gray-foreground)"
       : connectedEdge
-        ? "hsl(var(--datatype-" + connectedColor + "))"
-        : uniqueColorCount > 1
-          ? "hsl(var(--secondary-foreground))"
-          : "hsl(var(--datatype-" + firstUniqueColor + "))";
+      ? "hsl(var(--datatype-" + connectedColor + "))"
+      : uniqueColorCount > 1
+      ? "hsl(var(--secondary-foreground))"
+      : "hsl(var(--datatype-" + firstUniqueColor + "))";
 
     const accentForegroundColorName = connectedEdge
       ? "hsl(var(--datatype-" + connectedColor + "-foreground))"
       : uniqueColorCount > 1
-        ? "hsl(var(--input))"
-        : "hsl(var(--datatype-" + firstUniqueColor + "-foreground))";
+      ? "hsl(var(--input))"
+      : "hsl(var(--datatype-" + firstUniqueColor + "-foreground))";
 
     const currentFilter = left
       ? {
@@ -365,10 +367,12 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     const nodes = useFlowStore.getState().nodes;
     setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
     setFilterType(currentFilter);
+    setFilterComponent("");
     if (filterOpenHandle && filterType) {
       onConnect(getConnection(filterType));
       setFilterType(undefined);
       setFilterEdge([]);
+      setFilterComponent("");
     }
   }, [
     myData,
@@ -376,6 +380,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     left,
     setFilterEdge,
     setFilterType,
+    setFilterComponent,
     currentFilter,
     filterOpenHandle,
     filterType,

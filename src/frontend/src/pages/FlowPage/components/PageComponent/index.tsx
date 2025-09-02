@@ -102,6 +102,7 @@ export default function Page({
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
+  const setFilterComponent = useFlowStore((state) => state.setFilterComponent);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const setPositionDictionary = useFlowStore(
     (state) => state.setPositionDictionary,
@@ -580,6 +581,7 @@ export default function Page({
   const onPaneClick = useCallback(
     (event: React.MouseEvent) => {
       setFilterEdge([]);
+      setFilterComponent("");
       if (isAddingNote) {
         const shadowBox = document.getElementById("shadow-box");
         if (shadowBox) {
@@ -613,7 +615,14 @@ export default function Page({
         setIsAddingNote(false);
       }
     },
-    [isAddingNote, setNodes, reactFlowInstance, getNodeId, setFilterEdge],
+    [
+      isAddingNote,
+      setNodes,
+      reactFlowInstance,
+      getNodeId,
+      setFilterEdge,
+      setFilterComponent,
+    ],
   );
 
   const handleEdgeClick = (event, edge) => {
