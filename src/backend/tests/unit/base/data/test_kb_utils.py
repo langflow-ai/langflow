@@ -334,13 +334,9 @@ class TestKBUtils:
         # For documents that match, both should be positive
         for i in range(len(sample_documents)):
             if tfidf_scores[i] > 0:
-                assert (
-                    bm25_scores[i] > 0
-                ), f"Document {i} has TF-IDF score but zero BM25 score"
+                assert bm25_scores[i] > 0, f"Document {i} has TF-IDF score but zero BM25 score"
             if bm25_scores[i] > 0:
-                assert (
-                    tfidf_scores[i] > 0
-                ), f"Document {i} has BM25 score but zero TF-IDF score"
+                assert tfidf_scores[i] > 0, f"Document {i} has BM25 score but zero TF-IDF score"
 
     def test_compute_tfidf_special_characters(self):
         """Test TF-IDF with documents containing special characters."""
