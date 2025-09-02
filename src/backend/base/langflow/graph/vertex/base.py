@@ -6,7 +6,8 @@ import traceback
 import types
 from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Mapping, Optional
+from uuid import UUID
 
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
@@ -20,6 +21,9 @@ from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
 from langflow.services.deps import get_storage_service
+from langflow.services.tracing.schema import Log
+from langflow.utils.async_helpers import run_until_complete
+from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import sync_to_async
 
@@ -404,6 +408,34 @@ class Vertex:
         self._validate_built_object()
 
         self.built = True
+
+    async def _build_instance(self, user_id: Optional[str | UUID] = None, event_manager=None):
+        """
+        Builds the instance of the component.
+        """
+        if self._custom_component is not None:
+            raise ValueError("Component is already built.")
+        custom_component, custom_params = await initialize.loading.instantiate_class(
+            user_id=user_id, vertex=self, event_manager=event_manager
+        )
+        return custom_component, custom_params
+
+    def get_component_instance(self, user_id: Optional[str | UUID] = None):
+        """
+        Retrieves the instance of the component.
+
+        Args:
+            user_id (Optional[str | UUID], optional): The user ID. Defaults to None.
+
+        Returns:
+            Any: The instance of the component.
+
+        Raises:
+            ValueError: If the component is not built.
+        """
+        if not self._custom_component:
+            self._custom_component = run_until_complete(self._build_instance(user_id))[0]
+        return self._custom_component
 
     def extract_messages_from_artifacts(self, artifacts: dict[str, Any]) -> list[dict]:
         """Extracts messages from the artifacts.

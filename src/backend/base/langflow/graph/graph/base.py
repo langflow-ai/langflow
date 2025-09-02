@@ -2020,6 +2020,20 @@ class Graph:
         """Get all vertex IDs in the graph."""
         return [vertex.id for vertex in self.vertices]
 
+    def sort_components(
+        self, stop_component_id: str | None = None, start_component_id: str | None = None
+    ) -> list[str]:
+        """Sorts the vertices in the graph."""
+        vertices_layers = self.sort_vertices(
+            stop_component_id=stop_component_id, start_component_id=start_component_id
+        )
+        # Now get all the vertices instances
+        vertices = [self.get_vertex(vertex_id) for vertex_id in vertices_layers]
+        # Now we need to get the components
+        components = [vertex.get_component_instance() for vertex in vertices if hasattr(vertex, "_custom_component")]
+        return components
+
+
     def sort_vertices(
         self,
         stop_component_id: str | None = None,
