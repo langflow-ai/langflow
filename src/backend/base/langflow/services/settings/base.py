@@ -268,11 +268,6 @@ class Settings(BaseSettings):
     # MCP Composer
     mcp_composer_enabled: bool = True
     """If set to False, Langflow will not start the MCP Composer service."""
-    mcp_composer_port: int = 8001
-    """Port for the MCP Composer service. Subsequent ports will be incremented by 1. If enabled, a service 
-    is created for each project."""
-    mcp_composer_host: str = "localhost"
-    """Host for the MCP Composer service."""
 
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)

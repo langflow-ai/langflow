@@ -206,13 +206,24 @@ def get_lifespan(*, fix_migration=False, version=None):
                 queue_service.start()
             await logger.adebug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Loading mcp servers for projects")
-            await init_mcp_servers()
-            await logger.adebug(f"mcp servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
+
+            # Schedule MCP servers initialization to run after HTTP server is ready
+            async def delayed_init_mcp_servers():
+                # Wait a bit for the HTTP server to be fully ready
+                await asyncio.sleep(2.0)
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Loading mcp servers for projects (delayed until HTTP server ready)")
+                try:
+                    await init_mcp_servers()
+                    await logger.adebug(f"mcp servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+                except Exception as e:
+                    await logger.aexception(f"Failed to initialize MCP servers: {e}")
+            
+            # Start the delayed initialization as a background task
+            asyncio.create_task(delayed_init_mcp_servers())
+            
             yield
 
         except asyncio.CancelledError:
@@ -474,6 +485,6 @@ if __name__ == "__main__":
         port=7860,
         workers=get_number_of_workers(),
         log_level="error",
-        reload=True,
+        # reload=True,
         loop="asyncio",
     )

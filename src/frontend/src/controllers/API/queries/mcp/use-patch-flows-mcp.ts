@@ -18,8 +18,9 @@ interface PatchFlowMCPResponse {
   message: string;
   result?: {
     project_id: string;
-    sse_url: string;
+    sse_url?: string;
     uses_composer: boolean;
+    error_message?: string;
   };
 }
 
@@ -60,8 +61,8 @@ export const usePatchFlowsMCP: useMutationFunctionType<
         });
       }
 
-      // Update the cache with the exact SSE URL from the backend
-      if (data.result?.sse_url) {
+      // Always invalidate the composer URL cache when the result changes
+      if (data.result) {
         queryClient.invalidateQueries({
           queryKey: ["project-composer-url", params.project_id],
         });

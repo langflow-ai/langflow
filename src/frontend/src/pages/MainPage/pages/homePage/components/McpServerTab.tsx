@@ -261,10 +261,13 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     },
   };
 
-  // Use the per-project MCP Composer SSE URL if available, otherwise fallback to direct SSE
+  // Check if OAuth project has MCP Composer errors
+  const hasOAuthError = isOAuthProject && composerUrlData?.error_message;
+  
+  // Use the per-project MCP Composer SSE URL only if project uses composer, otherwise fallback to direct SSE
   const apiUrl = customGetMCPUrl(
     projectId,
-    ENABLE_MCP_COMPOSER && !!composerUrlData?.sse_url,
+    ENABLE_MCP_COMPOSER && !!composerUrlData?.sse_url && composerUrlData?.uses_composer,
     composerUrlData?.sse_url,
   );
 
@@ -317,8 +320,22 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               ? `"uvx",
         `
               : ""
-        }"mcp-proxy",${getAuthHeaders()}
-        "${apiUrl}"
+        }${isOAuthProject ? '"mcp-composer",' : '"mcp-proxy",'}${getAuthHeaders()}${
+          isOAuthProject
+            ? `
+        "--mode",
+        "stdio",
+        "--sse-url",`
+            : ""
+        }
+        "${apiUrl}"${
+          isOAuthProject
+            ? `,
+        "--disable-composer-tools",
+        "--client_auth_type",
+        "oauth"`
+            : ""
+        }
       ]
     }
   }
@@ -429,22 +446,22 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                 ) : (
                   <ShadTooltip
                     content={
-                      (composerUrlData?.port_available ?? true)
+                      (!composerUrlData?.error_message)
                         ? undefined
-                        : `MCP Server is not running: port ${composerUrlData?.port} on ${composerUrlData?.host} is not available. Please check your settings and try again.`
+                        : `MCP Server is not running: ${composerUrlData?.error_message}`
                     }
                   >
                     <span
                       className={cn(
                         "flex gap-2 text-mmd items-center",
-                        (composerUrlData?.port_available ?? true)
+                        (!composerUrlData?.error_message)
                           ? "text-accent-emerald-foreground"
                           : "text-accent-amber-foreground",
                       )}
                     >
                       <ForwardedIconComponent
                         name={
-                          (composerUrlData?.port_available ?? true)
+                          (!composerUrlData?.error_message)
                             ? "Check"
                             : "AlertTriangle"
                         }
@@ -513,24 +530,44 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                   </TabsList>
                 </Tabs>
                 <div className="overflow-hidden rounded-lg border border-border">
-                  <SyntaxHighlighter
-                    style={syntaxHighlighterStyle}
-                    CodeTag={({ children }) => (
-                      <MemoizedCodeTag
-                        isCopied={isCopied}
-                        copyToClipboard={copyToClipboard}
-                        isAuthApiKey={isAuthApiKey}
-                        apiKey={apiKey}
-                        isGeneratingApiKey={isGeneratingApiKey}
-                        generateApiKey={generateApiKey}
-                      >
-                        {children}
-                      </MemoizedCodeTag>
-                    )}
-                    language="json"
-                  >
-                    {MCP_SERVER_JSON}
-                  </SyntaxHighlighter>
+                  {hasOAuthError ? (
+                    <div className="p-4 bg-accent-red-subtle border border-accent-red-border rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ForwardedIconComponent
+                          name="AlertTriangle"
+                          className="h-4 w-4 text-accent-red-foreground"
+                        />
+                        <span className="font-medium text-accent-red-foreground">
+                          MCP Server Configuration Error
+                        </span>
+                      </div>
+                      <p className="text-mmd text-accent-red-foreground">
+                        {composerUrlData?.error_message}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Please fix the OAuth configuration in your project settings to generate the MCP server configuration.
+                      </p>
+                    </div>
+                  ) : (
+                    <SyntaxHighlighter
+                      style={syntaxHighlighterStyle}
+                      CodeTag={({ children }) => (
+                        <MemoizedCodeTag
+                          isCopied={isCopied}
+                          copyToClipboard={copyToClipboard}
+                          isAuthApiKey={isAuthApiKey}
+                          apiKey={apiKey}
+                          isGeneratingApiKey={isGeneratingApiKey}
+                          generateApiKey={generateApiKey}
+                        >
+                          {children}
+                        </MemoizedCodeTag>
+                      )}
+                      language="json"
+                    >
+                      {MCP_SERVER_JSON}
+                    </SyntaxHighlighter>
+                  )}
                 </div>
               </div>
               <div className="px-2 text-mmd text-muted-foreground">

@@ -7,9 +7,7 @@ interface ComposerUrlResponse {
   project_id: string;
   sse_url: string;
   uses_composer: boolean;
-  port_available: boolean;
-  port: string;
-  host: string;
+  error_message?: string;
 }
 
 type UseGetProjectComposerUrlParams = {
