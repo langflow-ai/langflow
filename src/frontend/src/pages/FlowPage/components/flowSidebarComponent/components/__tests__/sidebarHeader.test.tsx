@@ -387,7 +387,10 @@ describe("SidebarHeaderComponent", () => {
       const filterComponent = screen.getByTestId("sidebar-filter");
       expect(filterComponent).toBeInTheDocument();
       expect(filterComponent).toHaveAttribute("data-name", "Input Filter");
-      expect(filterComponent).toHaveAttribute("data-description", "Showing input components");
+      expect(filterComponent).toHaveAttribute(
+        "data-description",
+        "Showing input components",
+      );
     });
 
     it("should pass correct props to filter component", () => {
@@ -401,7 +404,10 @@ describe("SidebarHeaderComponent", () => {
 
       const filterComponent = screen.getByTestId("sidebar-filter");
       expect(filterComponent).toHaveAttribute("data-name", "Output Filter");
-      expect(filterComponent).toHaveAttribute("data-description", "Showing output components");
+      expect(filterComponent).toHaveAttribute(
+        "data-description",
+        "Showing output components",
+      );
       expect(filterComponent).toHaveAttribute(
         "data-reset-filters",
         expect.stringContaining("function"),
@@ -536,7 +542,8 @@ describe("SidebarHeaderComponent", () => {
       const propsWithLongFilters = {
         ...defaultProps,
         filterName: "Very Long Filter Name That Might Cause Issues",
-        filterDescription: "This is a very long description that might contain multiple lines and special characters @#$%",
+        filterDescription:
+          "This is a very long description that might contain multiple lines and special characters @#$%",
       };
 
       expect(() => {
@@ -545,8 +552,14 @@ describe("SidebarHeaderComponent", () => {
 
       const filterComponent = screen.getByTestId("sidebar-filter");
       expect(filterComponent).toBeInTheDocument();
-      expect(filterComponent).toHaveAttribute("data-name", "Very Long Filter Name That Might Cause Issues");
-      expect(filterComponent).toHaveAttribute("data-description", "This is a very long description that might contain multiple lines and special characters @#$%");
+      expect(filterComponent).toHaveAttribute(
+        "data-name",
+        "Very Long Filter Name That Might Cause Issues",
+      );
+      expect(filterComponent).toHaveAttribute(
+        "data-description",
+        "This is a very long description that might contain multiple lines and special characters @#$%",
+      );
     });
   });
 
