@@ -1,6 +1,6 @@
 /** Checks if the tweaks object contains any file-related fields (path for File, file_path for VideoFile, files for ChatInput). */
 export function hasFileTweaks(tweaks: Record<string, any>): boolean {
-  for (const [nodeId, tweak] of Object.entries(tweaks)) {
+  for (const [_nodeId, tweak] of Object.entries(tweaks)) {
     if (!tweak || typeof tweak !== "object") continue;
 
     // File component: { path: [...] }
