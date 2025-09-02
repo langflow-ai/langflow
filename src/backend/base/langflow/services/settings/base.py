@@ -511,6 +511,16 @@ class Settings(BaseSettings):
                 logger.debug(f"Updated {key}")
             logger.debug(f"{key}: {getattr(self, key)}")
 
+    @property
+    def voice_mode_available(self) -> bool:
+        """Check if voice mode is available by testing webrtcvad import."""
+        try:
+            import webrtcvad  # noqa: F401
+        except ImportError:
+            return False
+        else:
+            return True
+
     @classmethod
     @override
     def settings_customise_sources(  # type: ignore[misc]

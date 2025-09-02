@@ -19,6 +19,7 @@ import type { chatViewProps } from "../../../../../types/components";
 import FlowRunningSqueleton from "../../flow-running-squeleton";
 import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
 import ChatMessage from "../chatMessage/chat-message";
+import sortSenderMessages from "../helpers/sort-sender-messages";
 
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
@@ -102,9 +103,10 @@ export default function ChatView({
           properties: message.properties || {},
         };
       });
-    const finalChatHistory = [...messagesFromMessagesStore].sort((a, b) => {
-      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-    });
+
+    const finalChatHistory = [...messagesFromMessagesStore].sort(
+      sortSenderMessages,
+    );
 
     if (messages.length === 0 && !isBuilding && chatInputNode && isTabHidden) {
       setChatValueStore(
