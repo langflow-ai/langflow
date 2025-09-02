@@ -60,7 +60,7 @@ export default function NodeLegacyComponent({
                   size={null}
                   onClick={() => handleFilterComponent(replacement[index])}
                 >
-                  {component}
+                  <span>{component}</span>
                 </Button>
               </>
             ))}
