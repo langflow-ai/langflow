@@ -36,6 +36,7 @@ Replace the following:
 ### Run Langflow from source
 
 You can run Langflow from source after cloning the repository, even if you aren't contributing to the codebase.
+If you plan to contribute code, see [Set up development environment](#set-up-your-langflow-development-environment).
 
 <details>
 <summary>Run from source on macOS/Linux</summary>
@@ -115,14 +116,12 @@ The Langflow frontend is served at `http://localhost:7860`.
 
 ### Set up your Langflow development environment
 
+This section is for contributors who want to develop and test code changes.
+
+If you just want to run Langflow locally without making code changes, see [Run Langflow from source](#run-langflow-from-source).
+
 <Tabs>
 <TabItem value="linux-macos" label="Linux or macOS" default>
-
-:::important Difference between commands
-`make init` sets up the development environment but doesn't start the application.
-`make run_cli` installs dependencies, builds the frontend, and starts the application in one step.
-For development with hot-reload, use `make init`, followed by `make backend` and `make frontend` commands in separate terminals.
-:::
 
 1. Set up the Langflow development environment:
 
@@ -207,11 +206,6 @@ For more information, see the [VSCode documentation](https://code.visualstudio.c
 
 ## Contribute documentation
 
-:::important
-If you're using a dev container, run the documentation build from outside the container on your host terminal, not from within the dev container workspace.
-The documentation build may not work properly when run inside the dev container.
-:::
-
 The documentation is built using [Docusaurus](https://docusaurus.io/) and written in [Markdown](https://docusaurus.io/docs/markdown-features).
 For style guidance, see the [Google Developer Documentation Style Guide](https://developers.google.com/style).
 
@@ -235,6 +229,9 @@ For style guidance, see the [Google Developer Documentation Style Guide](https:/
     ```bash
     cd docs
     ```
+
+    If you're using a dev container, run the documentation build from outside the container on your host terminal, not from within the dev container workspace.
+    The documentation build may not work properly when run inside the dev container.
 
 5. Install dependencies and start a local Docusaurus static site with hot reload:
 

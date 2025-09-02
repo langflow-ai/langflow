@@ -65,13 +65,13 @@ make init
 
 This sets up the development environment by installing backend and frontend dependencies and installing pre-commit hooks. It runs `make install_backend`, `make install_frontend`, and `uvx pre-commit install`.
 
-> [!NOTE]
+> [!TIP]
 > If you want to quickly run Langflow from source without setting up the full development environment, you can use `make run_cli` instead. This command installs dependencies, builds the frontend, and starts the application in one step.
 
 After running `make init`, you have two options for running Langflow:
 
 * Use `make run_cli` to build and run the application immediately.
-* Continue to the next section to run Langflow in Development" mode.
+* Continue to the next section to run Langflow in Development mode.
 
 ## Complete development environment setup
 
