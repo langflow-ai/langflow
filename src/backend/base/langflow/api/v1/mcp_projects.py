@@ -855,7 +855,7 @@ def config_contains_sse_url(config_data: dict, sse_url: str) -> bool:
     for server_name, server_config in mcp_servers.items():
         args = server_config.get("args", [])
         # The SSE URL is typically the last argument in mcp-proxy configurations
-        if args and (args[-1] == sse_url or args[-4] == sse_url):
+        if args and sse_url in args:
             logger.debug("Found matching SSE URL in server: %s", server_name)
             return True
     return False
