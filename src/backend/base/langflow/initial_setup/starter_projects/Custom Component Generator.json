@@ -26,9 +26,9 @@
         "id": "reactflow__edge-ChatInput-eo1g2{œdataTypeœ:œChatInputœ,œidœ:œChatInput-eo1g2œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-cMwv1{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-cMwv1œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-eo1g2",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-eo1g2œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-eo1g2œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-cMwv1",
-        "targetHandle": "{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-cMwv1œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œUSER_INPUTœ, œidœ: œPrompt-cMwv1œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-Memory-4gSCw{œdataTypeœ:œMemoryœ,œidœ:œMemory-4gSCwœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-cMwv1{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-cMwv1œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Memory-4gSCw",
-        "sourceHandle": "{œdataTypeœ:œMemoryœ,œidœ:œMemory-4gSCwœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-4gSCwœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-cMwv1",
-        "targetHandle": "{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-cMwv1œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œCHAT_HISTORYœ, œidœ: œPrompt-cMwv1œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -84,9 +84,9 @@
         "id": "reactflow__edge-URL-h1gAB{œdataTypeœ:œURLœ,œidœ:œURL-h1gABœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-cMwv1{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-cMwv1œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-h1gAB",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-h1gABœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-h1gABœ, œnameœ: œraw_resultsœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-cMwv1",
-        "targetHandle": "{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-cMwv1œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-cMwv1œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "reactflow__edge-URL-G5J7i{œdataTypeœ:œURLœ,œidœ:œURL-G5J7iœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-cMwv1{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-cMwv1œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-G5J7i",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-G5J7iœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-G5J7iœ, œnameœ: œraw_resultsœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-cMwv1",
-        "targetHandle": "{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-cMwv1œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-cMwv1œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -141,9 +141,9 @@
         "id": "reactflow__edge-Prompt-cMwv1{œdataTypeœ:œPromptœ,œidœ:œPrompt-cMwv1œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-SCqm9{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-SCqm9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-cMwv1",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-cMwv1œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-cMwv1œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "LanguageModelComponent-SCqm9",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-SCqm9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-SCqm9œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -171,9 +171,9 @@
         "id": "reactflow__edge-LanguageModelComponent-SCqm9{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-SCqm9œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-VoIob{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-VoIobœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-SCqm9",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-SCqm9œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-SCqm9œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-VoIob",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-VoIobœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-VoIobœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -200,9 +200,9 @@
         "id": "reactflow__edge-URL-gEE5N{œdataTypeœ:œURLœ,œidœ:œURL-gEE5Nœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}-Prompt-cMwv1{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-cMwv1œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-gEE5N",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-gEE5Nœ,œnameœ:œraw_resultsœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-gEE5Nœ, œnameœ: œraw_resultsœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-cMwv1",
-        "targetHandle": "{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-cMwv1œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-cMwv1œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
