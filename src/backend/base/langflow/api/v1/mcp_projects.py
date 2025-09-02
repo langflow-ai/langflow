@@ -1144,6 +1144,21 @@ async def init_mcp_servers():
                             f"Auto-enabled API key authentication for existing project {project.name} "
                             f"({project.id}) due to AUTO_LOGIN=false"
                         )
+                    
+                    # WARN: If oauth projects exist in the database and the MCP Composer is disabled,
+                    # these projects will be reset to "apikey" or "none" authentication, erasing all oauth settings.
+                    if (not settings_service.settings.mcp_composer_enabled and 
+                        project.auth_settings and 
+                        project.auth_settings.get("auth_type") == "oauth"):
+                        # Reset OAuth projects to appropriate auth type based on AUTO_LOGIN setting
+                        fallback_auth_type = "apikey" if not settings_service.auth_settings.AUTO_LOGIN else "none"
+                        clean_auth = AuthSettings(auth_type=fallback_auth_type)
+                        project.auth_settings = clean_auth.model_dump(exclude_none=True)
+                        session.add(project)
+                        await logger.adebug(
+                            f"Updated OAuth project {project.name} ({project.id}) to use {fallback_auth_type} authentication "
+                            f"because MCP Composer is disabled"
+                        )
 
                     get_project_sse(project.id)
                     get_project_mcp_server(project.id)
@@ -1186,9 +1201,12 @@ async def verify_project_access(project_id: UUID, current_user: CurrentActiveMCP
 
 def should_use_mcp_composer(project: Folder) -> bool:
     """Check if project uses OAuth authentication and MCP Composer is enabled."""
+    # If MCP Composer is disabled globally, never use it regardless of project settings
+    if not get_settings_service().settings.mcp_composer_enabled:
+        return False
+        
     return (
-        get_settings_service().settings.mcp_composer_enabled
-        and project.auth_settings is not None
+        project.auth_settings is not None
         and project.auth_settings.get("auth_type", "") == "oauth"
     )
 
