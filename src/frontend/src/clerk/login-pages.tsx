@@ -8,11 +8,7 @@ export function ClerkLoginPage() {
   return (
     <SignedOut>
       <div style={centeredStyle}>
-        <SignIn
-          path="/login"
-          routing="path"
-          afterSignInUrl="/"
-        />
+        <SignIn/>
       </div>
     </SignedOut>
   );

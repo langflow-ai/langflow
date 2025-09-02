@@ -96,15 +96,7 @@ export function ClerkAuthAdapter() {
         "clerk_user";
 
       try {
-        const { justCreated, user } = await ensureLangflowUser(token, username);
-
-        if (justCreated=== true && !user) {
-          console.warn("[ClerkAuthAdapter] User created → Signing out to restart session");
-          await logout();
-          window.location.replace("/login");
-          return;
-        }
-
+        await ensureLangflowUser(token, username);
         const { refresh_token } = await backendLogin(username, token);
         login(token, "login", refresh_token);
         justLoggedIn.current = true;
