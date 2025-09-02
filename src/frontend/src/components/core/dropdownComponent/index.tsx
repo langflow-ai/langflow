@@ -407,28 +407,25 @@ export default function Dropdown({
             data-testid={`value-dropdown-${id}`}
           >
             {value && <>{renderSelectedIcon()}</>}
-            <span className="truncate">
-              {disabled ? (
-                RECEIVING_INPUT_VALUE
-              ) : (
-                <>
-                  {/* this logic is used for the agents component, if you update make sure to test the agent component */}
-                  {options?.includes(value) ? (
-                    value && filteredOptions.includes(value) ? (
-                      value
-                    ) : (
-                      placeholder || SELECT_AN_OPTION
-                    )
-                  ) : (
-                    <span className="text-muted-foreground">
-                      <LoadingTextComponent
-                        text={placeholder || SELECT_AN_OPTION}
-                      />
-                    </span>
-                  )}
-                </>
-              )}
-            </span>
+            {value === null &&
+            sourceOptions?.fields?.data?.node?.name ===
+              "connect_other_models" ? (
+              <span className="text-muted-foreground">
+                <LoadingTextComponent text={placeholder || SELECT_AN_OPTION} />
+              </span>
+            ) : (
+              <span className="truncate">
+                {disabled ? (
+                  RECEIVING_INPUT_VALUE
+                ) : (
+                  <>
+                    {value && filteredOptions.includes(value)
+                      ? value
+                      : placeholder || SELECT_AN_OPTION}{" "}
+                  </>
+                )}
+              </span>
+            )}
           </span>
 
           <ForwardedIconComponent
