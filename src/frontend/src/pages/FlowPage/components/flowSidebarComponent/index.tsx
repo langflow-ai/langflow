@@ -42,6 +42,7 @@ import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
 import SidebarSegmentedNav from "./components/sidebarSegmentedNav";
 import { applyBetaFilter } from "./helpers/apply-beta-filter";
+import { applyComponentFilter } from "./helpers/apply-component-filter";
 import { applyEdgeFilter } from "./helpers/apply-edge-filter";
 import { applyLegacyFilter } from "./helpers/apply-legacy-filter";
 import { combinedResultsFn } from "./helpers/combined-results";
@@ -49,7 +50,6 @@ import { filteredDataFn } from "./helpers/filtered-data";
 import { normalizeString } from "./helpers/normalize-string";
 import sensitiveSort from "./helpers/sensitive-sort";
 import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata";
-import { applyComponentFilter } from "./helpers/apply-component-filter";
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
@@ -538,17 +538,17 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   const filterDescription =
     getFilterComponent !== ""
-      ? baseData[category][component]?.display_name ?? ""
-      : filterType?.type ?? "";
+      ? (baseData[category][component]?.display_name ?? "")
+      : (filterType?.type ?? "");
 
   const filterName =
     getFilterComponent !== ""
       ? "Component"
       : filterType
-      ? !!filterType.source
-        ? "Input"
-        : "Output"
-      : "";
+        ? filterType.source
+          ? "Input"
+          : "Output"
+        : "";
 
   const resetFilters = useCallback(() => {
     setFilterEdge([]);
