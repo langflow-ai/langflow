@@ -7,15 +7,14 @@ import socket
 import subprocess
 from typing import Any
 
-from loguru import logger
-
+from langflow.logging.logger import logger
 from langflow.services.base import Service
 from langflow.services.deps import get_settings_service
 
 
 class MCPComposerError(Exception):
     """Base exception for MCP Composer errors."""
-    def __init__(self, message: str, project_id: str = None):
+    def __init__(self, message: str, project_id: str | None = None):
         self.message = message
         self.project_id = project_id
         super().__init__(message)
@@ -65,16 +64,18 @@ class MCPComposerService(Service):
         """Check if the MCP Composer service is enabled."""
         settings = get_settings_service().settings
         if not settings.mcp_composer_enabled:
-            logger.debug(
+            await logger.adebug(
                 "MCP Composer is disabled in settings. OAuth authentication will not be enabled for MCP Servers."
             )
             return
+        else:
+            await logger.adebug("MCP Composer is enabled in settings. OAuth authentication will be enabled for MCP Servers.")
 
     async def stop(self):
         """Stop all MCP Composer instances."""
         for project_id in list(self.project_composers.keys()):
             await self.stop_project_composer(project_id)
-        logger.debug("All MCP Composer instances stopped")
+        await logger.adebug("All MCP Composer instances stopped")
 
     async def stop_project_composer(self, project_id: str):
         """Stop the MCP Composer instance for a specific project."""
@@ -103,15 +104,15 @@ class MCPComposerService(Service):
             try:
                 # Check if process is still running before trying to terminate
                 if process.poll() is None:
-                    logger.debug(f"Terminating MCP Composer process {process.pid} for project {project_id}")
+                    await logger.adebug(f"Terminating MCP Composer process {process.pid} for project {project_id}")
                     process.terminate()
 
                     # Wait longer for graceful shutdown
                     try:
                         await asyncio.wait_for(self._wait_for_process_exit(process), timeout=3.0)
-                        logger.debug(f"MCP Composer for project {project_id} terminated gracefully")
+                        await logger.adebug(f"MCP Composer for project {project_id} terminated gracefully")
                     except asyncio.TimeoutError:
-                        logger.error(
+                        await logger.aerror(
                             f"MCP Composer for project {project_id} did not terminate gracefully, force killing"
                         )
                         process.kill()
@@ -119,17 +120,17 @@ class MCPComposerService(Service):
                         try:
                             await asyncio.wait_for(self._wait_for_process_exit(process), timeout=2.0)
                         except asyncio.TimeoutError:
-                            logger.error(f"Failed to kill MCP Composer process {process.pid} for project {project_id}")
+                            await logger.aerror(f"Failed to kill MCP Composer process {process.pid} for project {project_id}")
                 else:
-                    logger.debug(f"MCP Composer process for project {project_id} was already terminated")
+                    await logger.adebug(f"MCP Composer process for project {project_id} was already terminated")
 
-                logger.debug(f"MCP Composer stopped for project {project_id}")
+                await logger.adebug(f"MCP Composer stopped for project {project_id}")
 
             except ProcessLookupError:
                 # Process already terminated
-                logger.debug(f"MCP Composer process for project {project_id} was already terminated")
+                await logger.adebug(f"MCP Composer process for project {project_id} was already terminated")
             except Exception as e:
-                logger.error(f"Error stopping MCP Composer for project {project_id}: {e}")
+                await logger.aerror(f"Error stopping MCP Composer for project {project_id}: {e}")
 
         # Remove from tracking
         del self.project_composers[project_id]
@@ -252,14 +253,15 @@ class MCPComposerService(Service):
         Raises:
             MCPComposerError: Various specific errors if startup fails
         """
-        project_host = auth_config.get("oauth_host") if auth_config else "unknown"
-        project_port = auth_config.get("oauth_port") if auth_config else "unknown"
-        logger.debug(f"Starting MCP Composer for project {project_id} on {project_host}:{project_port}")
         if not auth_config: 
             raise MCPComposerConfigError("No auth settings provided", project_id)
         
         # Validate OAuth settings early to provide clear error messages
         self._validate_oauth_settings(auth_config)
+
+        project_host = auth_config.get("oauth_host") if auth_config else "unknown"
+        project_port = auth_config.get("oauth_port") if auth_config else "unknown"
+        await logger.adebug(f"Starting MCP Composer for project {project_id} on {project_host}:{project_port}")
             
         # Use a per-project lock to prevent race conditions
         if project_id not in self._start_locks:
@@ -288,14 +290,14 @@ class MCPComposerService(Service):
                     # Process is running - only restart if config changed
                     auth_changed = self._has_auth_config_changed(existing_auth, auth_config)
                     if auth_changed:
-                        logger.debug(f"Config changed for project {project_id}, restarting MCP Composer")
+                        await logger.adebug(f"Config changed for project {project_id}, restarting MCP Composer")
                         await self._do_stop_project_composer(project_id)
                     else:
-                        logger.debug(f"MCP Composer already running for project {project_id} with current config")
+                        await logger.adebug(f"MCP Composer already running for project {project_id} with current config")
                         return  # Already running with correct config
                 else:
                     # Process died or never started properly, restart it
-                    logger.debug(f"MCP Composer process died for project {project_id}, restarting")
+                    await logger.adebug(f"MCP Composer process died for project {project_id}, restarting")
                     await self._do_stop_project_composer(project_id)
 
             is_port_available = self._is_port_available(project_port)
@@ -309,11 +311,11 @@ class MCPComposerService(Service):
                     )
                     if result.stdout.strip():
                         pid = result.stdout.strip().split('\n')[0]
-                        logger.error(f"Port {project_port} is in use by process {pid} (project {project_id})")
+                        await logger.aerror(f"Port {project_port} is in use by process {pid} (project {project_id})")
                     else:
-                        logger.error(f"Port {project_port} appears to be in use but couldn't identify the process (project {project_id})")
+                        await logger.aerror(f"Port {project_port} appears to be in use but couldn't identify the process (project {project_id})")
                 except Exception:
-                    logger.error(f"Port {project_port} is in use by another service (project {project_id})")
+                    await logger.aerror(f"Port {project_port} is in use by another service (project {project_id})")
                 
                 raise MCPComposerPortError(f"Port {project_port} is already in use", project_id)
 
@@ -321,7 +323,7 @@ class MCPComposerService(Service):
             for attempt in range(max_retries):
                 try:
                     if attempt > 0:
-                        logger.debug(f"Retrying MCP Composer startup (attempt {attempt + 1}/{max_retries})")
+                        await logger.adebug(f"Retrying MCP Composer startup (attempt {attempt + 1}/{max_retries})")
                     process = await self._start_project_composer_process(project_id, project_host, project_port, sse_url, auth_config)
 
                     self.project_composers[project_id] = {
@@ -332,7 +334,7 @@ class MCPComposerService(Service):
                         "auth_config": auth_config,
                     }
 
-                    logger.debug(f"MCP Composer started for project {project_id} on port {project_port} (PID: {process.pid})")
+                    await logger.adebug(f"MCP Composer started for project {project_id} on port {project_port} (PID: {process.pid})")
                     return  # Success
                 except Exception:
                     if attempt == max_retries - 1:
@@ -396,7 +398,7 @@ class MCPComposerService(Service):
         process_running = False
         port_bound = False
         
-        logger.debug(f"Monitoring MCP Composer startup for project {project_id} (PID: {process.pid})")
+        await logger.adebug(f"Monitoring MCP Composer startup for project {project_id} (PID: {process.pid})")
         
         for check in range(max_startup_checks):
             await asyncio.sleep(startup_delay)
@@ -406,39 +408,39 @@ class MCPComposerService(Service):
             
             if poll_result is not None:
                 # Process terminated, get the error output
-                logger.error(f"MCP Composer process {process.pid} terminated with exit code: {poll_result}")
+                await logger.aerror(f"MCP Composer process {process.pid} terminated with exit code: {poll_result}")
                 try:
                     stdout_content, stderr_content = process.communicate(timeout=2)
                     # Log the full error details for debugging
-                    logger.error(f"MCP Composer startup failed for project {project_id}")
-                    logger.error(f"MCP Composer stdout:\n{stdout_content}")
-                    logger.error(f"MCP Composer stderr:\n{stderr_content}")
+                    await logger.aerror(f"MCP Composer startup failed for project {project_id}")
+                    await logger.aerror(f"MCP Composer stdout:\n{stdout_content}")
+                    await logger.aerror(f"MCP Composer stderr:\n{stderr_content}")
                     safe_cmd = self._obfuscate_command_secrets(cmd)
-                    logger.error(f"Command that failed: {' '.join(safe_cmd)}")
+                    await logger.aerror(f"Command that failed: {' '.join(safe_cmd)}")
                     
                     # Return generic error message
                     raise MCPComposerStartupError("Failed to start MCP Composer Server. Check logs for more information", project_id)
                 except subprocess.TimeoutExpired:
                     process.kill()
-                    logger.error(f"MCP Composer process {process.pid} terminated unexpectedly for project {project_id}")
+                    await logger.aerror(f"MCP Composer process {process.pid} terminated unexpectedly for project {project_id}")
                     raise MCPComposerStartupError("Failed to start MCP Composer Server. Check logs for more information", project_id)
             
             # Process is still running, check if port is bound
             port_bound = not self._is_port_available(port)
             
             if port_bound:
-                logger.debug(f"MCP Composer for project {project_id} bound to port {port} (check {check + 1}/{max_startup_checks})")
+                await logger.adebug(f"MCP Composer for project {project_id} bound to port {port} (check {check + 1}/{max_startup_checks})")
                 process_running = True
                 break
             else:
-                logger.debug(f"MCP Composer for project {project_id} not yet bound to port {port} (check {check + 1}/{max_startup_checks})")
+                await logger.adebug(f"MCP Composer for project {project_id} not yet bound to port {port} (check {check + 1}/{max_startup_checks})")
             
             # Try to read any available stderr without blocking (only log if there's an error)
             if process.stderr and select.select([process.stderr], [], [], 0)[0]:
                 try:
                     stderr_line = process.stderr.readline()
                     if stderr_line and "ERROR" in stderr_line:
-                        logger.error(f"MCP Composer error: {stderr_line.strip()}")
+                        await logger.aerror(f"MCP Composer error: {stderr_line.strip()}")
                 except:
                     pass
         
@@ -451,39 +453,39 @@ class MCPComposerService(Service):
                 # Process died
                 try:
                     stdout_content, stderr_content = process.communicate(timeout=2)
-                    logger.error(f"MCP Composer startup failed for project {project_id}:")
-                    logger.error(f"  - Process died with exit code: {poll_result}")
-                    logger.error(f"  - Target: {host}:{port}")
+                    await logger.aerror(f"MCP Composer startup failed for project {project_id}:")
+                    await logger.aerror(f"  - Process died with exit code: {poll_result}")
+                    await logger.aerror(f"  - Target: {host}:{port}")
                     # Obfuscate secrets in command before logging
                     safe_cmd = self._obfuscate_command_secrets(cmd)
-                    logger.error(f"  - Command: {' '.join(safe_cmd)}")
+                    await logger.aerror(f"  - Command: {' '.join(safe_cmd)}")
                     if stderr_content.strip():
-                        logger.error(f"  - Error output: {stderr_content.strip()}")
+                        await logger.aerror(f"  - Error output: {stderr_content.strip()}")
                     if stdout_content.strip():
-                        logger.error(f"  - Standard output: {stdout_content.strip()}")
+                        await logger.aerror(f"  - Standard output: {stdout_content.strip()}")
                 except subprocess.TimeoutExpired:
-                    logger.error(f"MCP Composer for project {project_id} died but couldn't read output")
+                    await logger.aerror(f"MCP Composer for project {project_id} died but couldn't read output")
                     process.kill()
                 
                 raise MCPComposerStartupError("Failed to start MCP Composer Server. Check logs for more information", project_id)
             else:
                 # Process running but port not bound
-                logger.error(f"MCP Composer startup failed for project {project_id}:")
-                logger.error(f"  - Process is running (PID: {process.pid}) but failed to bind to port {port}")
-                logger.error(f"  - Checked {max_startup_checks} times over {max_startup_checks * startup_delay} seconds")
-                logger.error(f"  - Target: {host}:{port}")
+                await logger.aerror(f"MCP Composer startup failed for project {project_id}:")
+                await logger.aerror(f"  - Process is running (PID: {process.pid}) but failed to bind to port {port}")
+                await logger.aerror(f"  - Checked {max_startup_checks} times over {max_startup_checks * startup_delay} seconds")
+                await logger.aerror(f"  - Target: {host}:{port}")
                 
                 # Get any available output before terminating
                 try:
                     process.terminate()
                     stdout_content, stderr_content = process.communicate(timeout=2)
                     if stderr_content.strip():
-                        logger.error(f"  - Process stderr: {stderr_content.strip()}")
+                        await logger.aerror(f"  - Process stderr: {stderr_content.strip()}")
                     if stdout_content.strip():
-                        logger.error(f"  - Process stdout: {stdout_content.strip()}")
+                        await logger.aerror(f"  - Process stdout: {stdout_content.strip()}")
                 except:
                     process.kill()
-                    logger.error(f"  - Could not retrieve process output before termination")
+                    await logger.aerror(f"  - Could not retrieve process output before termination")
                 
                 raise MCPComposerStartupError("Failed to start MCP Composer Server. Check logs for more information", project_id)
         
@@ -503,6 +505,6 @@ class MCPComposerService(Service):
 
     async def teardown(self) -> None:
         """Clean up resources when the service is torn down."""
-        logger.debug("Tearing down MCP Composer service...")
+        await logger.adebug("Tearing down MCP Composer service...")
         await self.stop()
-        logger.debug("MCP Composer service teardown complete")
+        await logger.adebug("MCP Composer service teardown complete")
