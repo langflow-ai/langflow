@@ -567,6 +567,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ getFilterEdge: newState });
   },
   getFilterEdge: [],
+  setFilterComponent: (newState) => {
+    set({ getFilterComponent: newState });
+  },
+  getFilterComponent: "",
   onConnect: (connection) => {
     const _dark = useDarkStore.getState().dark;
     // const commonMarkerProps = {

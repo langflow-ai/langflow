@@ -152,6 +152,8 @@ export type FlowStoreType = {
   cleanFlow: () => void;
   setFilterEdge: (newState) => void;
   getFilterEdge: any[];
+  setFilterComponent: (newState) => void;
+  getFilterComponent: string;
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
   playgroundPage: boolean;
