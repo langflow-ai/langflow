@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin'",
@@ -26,6 +26,7 @@ resolution-markers = [
 members = [
     "langflow",
     "langflow-base",
+    "lfx",
 ]
 overrides = [{ name = "python-pptx", specifier = ">=1.0.2" }]
 
@@ -2337,7 +2338,6 @@ dependencies = [
     { name = "numpy" },
     { name = "packaging" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/03/1f/d0ac8e9d6fc7fc37dc682878f56edb23000c31b74f48cafe9f1a6efaae20/faiss_cpu-1.9.0.post1.tar.gz", hash = "sha256:920725d485aab05dd87d34ef63257332441e9b53d382069f034996465827143a", size = 67799, upload-time = "2024-11-20T02:21:01.609Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/62/85/ee4bafafa70bc99904a61f06e7f5e36d06ab6b37335e687085786f9a248d/faiss_cpu-1.9.0.post1-cp310-cp310-macosx_10_14_x86_64.whl", hash = "sha256:e18602465f5a96c3c973ab440f9263a0881034fb54810be20bc8cdb8b069456d", size = 7672124, upload-time = "2024-11-20T02:20:02.33Z" },
     { url = "https://files.pythonhosted.org/packages/c3/99/50496057d52241a77f0d2a021a73b97f25f6500c6f02a584a7b3d43c3e3f/faiss_cpu-1.9.0.post1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:5dddeecdb68fb95b4a3343a6ff89498fd7c222726706538f360132bfe3d8aebe", size = 3225595, upload-time = "2024-11-20T02:20:04.341Z" },
@@ -5400,6 +5400,7 @@ dependencies = [
     { name = "langchain-experimental" },
     { name = "langchain-ibm" },
     { name = "langchainhub" },
+    { name = "lfx" },
     { name = "loguru" },
     { name = "mcp" },
     { name = "multiprocess" },
@@ -5535,6 +5536,7 @@ requires-dist = [
     { name = "langchain-experimental", specifier = ">=0.3.4,<1.0.0" },
     { name = "langchain-ibm", specifier = ">=0.3.8" },
     { name = "langchainhub", specifier = "~=0.1.15" },
+    { name = "lfx", editable = "src/lfx" },
     { name = "llama-cpp-python", marker = "extra == 'all'", specifier = ">=0.2.0" },
     { name = "llama-cpp-python", marker = "extra == 'local'", specifier = ">=0.2.0" },
     { name = "loguru", specifier = ">=0.7.1,<1.0.0" },
@@ -5768,6 +5770,95 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/6f/6b/c875b30a1ba490860c93da4cabf479e03f584eba06fe5963f6f6644653d8/lazy_loader-0.4.tar.gz", hash = "sha256:47c75182589b91a4e1a85a136c074285a5ad4d9f39c63e0d7fb76391c4574cd1", size = 15431, upload-time = "2024-04-05T13:03:12.261Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/83/60/d497a310bde3f01cb805196ac61b7ad6dc5dcf8dce66634dc34364b20b4f/lazy_loader-0.4-py3-none-any.whl", hash = "sha256:342aa8e14d543a154047afb4ba8ef17f5563baad3fc610d7b15b213b0f119efc", size = 12097, upload-time = "2024-04-05T13:03:10.514Z" },
+]
+
+[[package]]
+name = "lfx"
+version = "0.1.11"
+source = { editable = "src/lfx" }
+dependencies = [
+    { name = "aiofile" },
+    { name = "aiofiles" },
+    { name = "asyncer" },
+    { name = "cachetools" },
+    { name = "chardet" },
+    { name = "defusedxml" },
+    { name = "docstring-parser" },
+    { name = "emoji" },
+    { name = "fastapi" },
+    { name = "httpx", extra = ["http2"] },
+    { name = "json-repair" },
+    { name = "langchain-core" },
+    { name = "nanoid" },
+    { name = "networkx" },
+    { name = "orjson" },
+    { name = "pandas" },
+    { name = "passlib" },
+    { name = "pillow" },
+    { name = "platformdirs" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "python-dotenv" },
+    { name = "rich" },
+    { name = "structlog" },
+    { name = "tomli" },
+    { name = "typer" },
+    { name = "typing-extensions" },
+    { name = "uvicorn" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "asgi-lifespan" },
+    { name = "blockbuster" },
+    { name = "coverage" },
+    { name = "hypothesis" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiofile", specifier = ">=3.8.0" },
+    { name = "aiofiles", specifier = ">=24.1.0" },
+    { name = "asyncer", specifier = ">=0.0.8" },
+    { name = "cachetools", specifier = ">=5.5.2" },
+    { name = "chardet", specifier = ">=5.2.0" },
+    { name = "defusedxml", specifier = ">=0.7.1" },
+    { name = "docstring-parser", specifier = ">=0.16" },
+    { name = "emoji", specifier = ">=2.14.1" },
+    { name = "fastapi", specifier = ">=0.115.13" },
+    { name = "httpx", extras = ["http2"], specifier = ">=0.24.0" },
+    { name = "json-repair", specifier = ">=0.30.3" },
+    { name = "langchain-core", specifier = ">=0.3.66" },
+    { name = "nanoid", specifier = ">=2.0.0" },
+    { name = "networkx", specifier = ">=3.4.2" },
+    { name = "orjson", specifier = ">=3.10.15" },
+    { name = "pandas", specifier = ">=2.0.0" },
+    { name = "passlib", specifier = ">=1.7.4" },
+    { name = "pillow", specifier = ">=10.0.0" },
+    { name = "platformdirs", specifier = ">=4.3.8" },
+    { name = "pydantic", specifier = ">=2.0.0" },
+    { name = "pydantic-settings", specifier = ">=2.10.1" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "rich", specifier = ">=13.0.0" },
+    { name = "structlog" },
+    { name = "tomli", specifier = ">=2.2.1" },
+    { name = "typer", specifier = ">=0.16.0" },
+    { name = "typing-extensions", specifier = ">=4.14.0" },
+    { name = "uvicorn", specifier = ">=0.34.3" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "asgi-lifespan", specifier = ">=2.1.0" },
+    { name = "blockbuster", specifier = ">=1.5.25" },
+    { name = "coverage", specifier = ">=7.9.2" },
+    { name = "hypothesis", specifier = ">=6.136.3" },
+    { name = "pytest", specifier = ">=8.4.1" },
+    { name = "pytest-asyncio", specifier = ">=0.26.0" },
+    { name = "ruff", specifier = ">=0.9.10" },
 ]
 
 [[package]]

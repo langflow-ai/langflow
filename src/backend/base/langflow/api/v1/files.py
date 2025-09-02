@@ -8,12 +8,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from lfx.services.settings.service import SettingsService
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
-from langflow.services.settings.service import SettingsService
 from langflow.services.storage.service import StorageService
 from langflow.services.storage.utils import build_content_type_from_extension
 
