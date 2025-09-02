@@ -6,31 +6,11 @@ test(
   "user should be able to manage MCP server tools and configuration",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    const maxRetries = 3; // Reduce retries due to longer individual attempts
-
-    // Add error listeners for better debugging
-    page.on("pageerror", (error) => {
-      console.error("Page runtime error:", error.message);
-    });
-
-    page.on("requestfailed", (request) => {
-      console.warn(
-        "Failed request:",
-        request.url(),
-        request.failure()?.errorText,
-      );
-    });
+    const maxRetries = 5;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         console.warn(`Attempt ${attempt} of ${maxRetries}`);
-
-        // Validate page is still usable
-        if (page.isClosed()) {
-          console.error("Page is closed, creating new page...");
-          // The page is closed, we can't continue with this attempt
-          throw new Error("Page was closed, cannot continue with this attempt");
-        }
 
         await awaitBootstrapTest(page);
 
@@ -54,7 +34,7 @@ test(
           '[data-testid="generic-node-title-arrangement"]',
           {
             timeout: 3000,
-          },
+          }
         );
 
         await page.getByTestId("generic-node-title-arrangement").click();
@@ -181,7 +161,7 @@ test(
         await page.waitForTimeout(1000);
 
         expect(
-          await page.locator('[data-testid="input_update_name"]').isVisible(),
+          await page.locator('[data-testid="input_update_name"]').isVisible()
         ).toBe(true);
 
         await page.getByTestId("input_update_name").fill("mcp test name");
@@ -221,10 +201,10 @@ test(
 
         // Extract the SSE URL from the configuration
         const sseUrlMatch = configJson?.match(
-          /"args":\s*\[\s*"\/c"\s*,\s*"uvx"\s*,\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
+          /"args":\s*\[\s*"\/c"\s*,\s*"uvx"\s*,\s*"mcp-proxy"\s*,\s*"([^"]+)"/
         );
         expect(sseUrlMatch).not.toBeNull();
-        // SSE URL is validated but not used further
+        const _sseUrl = sseUrlMatch![1];
 
         await page.getByText("macOS/Linux", { exact: true }).click();
 
@@ -238,7 +218,7 @@ test(
         });
 
         const sseUrlMatchLinux = configJsonLinux?.match(
-          /"args":\s*\[\s*"mcp-proxy"\s*,\s*"([^"]+)"/,
+          /"args":\s*\[\s*"mcp-proxy"\s*,\s*"([^"]+)"/
         );
         expect(sseUrlMatchLinux).not.toBeNull();
 
@@ -246,7 +226,7 @@ test(
         await expect(page.getByText("setup guide")).toBeVisible();
         await expect(page.getByText("setup guide")).toHaveAttribute(
           "href",
-          "https://docs.langflow.org/mcp-server#connect-clients-to-use-the-servers-actions",
+          "https://docs.langflow.org/mcp-server#connect-clients-to-use-the-servers-actions"
         );
 
         await awaitBootstrapTest(page);
@@ -301,103 +281,19 @@ test(
 
         await page.getByTestId("add-mcp-server-button").click();
 
-        // CI-specific robust waiting strategy
-        await page.waitForLoadState("domcontentloaded");
-        await page.waitForLoadState("networkidle", { timeout: 15000 });
+        await expect(page.getByTestId("dropdown_str_tool")).toBeVisible({
+          timeout: 30000,
+        });
 
-        // Longer wait for CI environments (they tend to be slower)
-        await page.waitForTimeout(5000);
-
-        // Force a page refresh if needed to ensure state is loaded
-        // Use longer waits for all environments to handle CI slowness
-        console.warn("Using extended wait times for CI compatibility");
-        await page.waitForTimeout(3000);
-
-        // Robust dropdown detection with multiple strategies
-        const dropdownSelector = "dropdown_str_tool";
-        let targetElement: any;
-
-        // Strategy 1: Wait for specific dropdown
-        try {
-          await page.waitForSelector(`[data-testid="${dropdownSelector}"]`, {
+        await page.waitForSelector(
+          '[data-testid="dropdown_str_tool"]:not([disabled])',
+          {
+            timeout: 10000,
             state: "visible",
-            timeout: 60000, // Extended timeout for all environments
-          });
-          targetElement = page.getByTestId(dropdownSelector);
-          console.warn("Found target dropdown via strategy 1");
-        } catch (error) {
-          console.warn("Strategy 1 failed, trying alternative approaches");
-
-          // Strategy 2: Look for any tool-related dropdown
-          try {
-            const toolDropdowns = page.locator(
-              '[data-testid*="dropdown"][data-testid*="tool"]',
-            );
-            const count = await toolDropdowns.count();
-
-            if (count > 0) {
-              await toolDropdowns
-                .first()
-                .waitFor({ state: "visible", timeout: 10000 });
-              targetElement = toolDropdowns.first();
-              console.warn(`Found ${count} tool dropdowns via strategy 2`);
-            } else {
-              throw new Error("No tool dropdowns found");
-            }
-          } catch (strategyError) {
-            // Strategy 3: Check if MCP server was actually added successfully
-            console.warn("Strategy 2 failed, checking page state...");
-
-            // Look for any new elements that might indicate the server was added
-            const allDropdowns = await page
-              .locator('[data-testid*="dropdown"]')
-              .count();
-            const allTools = await page
-              .locator('[data-testid*="tool"]')
-              .count();
-
-            console.warn(
-              `Total dropdowns: ${allDropdowns}, Total tools: ${allTools}`,
-            );
-
-            if (allDropdowns === 0 && allTools === 0) {
-              throw new Error(
-                "MCP server addition appears to have failed - no relevant UI elements found",
-              );
-            }
-
-            // If we have any dropdowns, try to use the first one as last resort
-            if (allDropdowns > 0) {
-              const anyDropdown = page
-                .locator('[data-testid*="dropdown"]')
-                .first();
-              await anyDropdown.waitFor({ state: "visible", timeout: 5000 });
-              targetElement = anyDropdown;
-              console.warn("Using first available dropdown as fallback");
-            } else {
-              throw error; // Re-throw original error if nothing worked
-            }
           }
-        }
+        );
 
-        // Ensure the dropdown is enabled and clickable
-        if (targetElement) {
-          // Wait for the element to be enabled (not disabled)
-          await page.waitForFunction(
-            (element) => {
-              return (
-                !element.disabled && element.getAttribute("disabled") === null
-              );
-            },
-            targetElement,
-            { timeout: 10000 },
-          );
-
-          // Click the dropdown
-          await targetElement.click();
-        } else {
-          throw new Error("No suitable dropdown element found");
-        }
+        await page.getByTestId("dropdown_str_tool").click();
 
         const fetchOptionCount = await page.getByText("mcp_test_name").count();
 
@@ -409,75 +305,17 @@ test(
       } catch (error) {
         console.error(`Attempt ${attempt} failed:`, error);
 
-        // Check if this is a browser/page closure issue
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        if (
-          errorMessage.includes(
-            "Target page, context or browser has been closed",
-          ) ||
-          errorMessage.includes("Browser has been closed") ||
-          errorMessage.includes("peer closed connection") ||
-          page.isClosed()
-        ) {
-          console.error("Browser/page was closed - stopping retry attempts");
-          throw error; // Don't retry on browser closure
-        }
-
-        // Add debugging information about the page state
-        try {
-          const allTestIds = await page.locator("[data-testid]").all();
-          const testIdNames = await Promise.all(
-            allTestIds.slice(0, 20).map(async (el) => {
-              // Limit to first 20 to avoid timeout
-              try {
-                return await el.getAttribute("data-testid");
-              } catch {
-                return "unknown";
-              }
-            }),
-          );
-          console.warn(`Available test IDs on page: ${testIdNames.join(", ")}`);
-
-          // Check if any tool-related elements exist
-          const toolElements = await page
-            .locator('[data-testid*="tool"]')
-            .count();
-          const dropdownElements = await page
-            .locator('[data-testid*="dropdown"]')
-            .count();
-          console.warn(
-            `Tool elements: ${toolElements}, Dropdown elements: ${dropdownElements}`,
-          );
-        } catch (debugError) {
-          console.warn("Failed to get debugging info:", debugError.message);
-        }
-
         if (attempt === maxRetries) {
           console.error(
             `All ${maxRetries} attempts failed. Last error:`,
-            error,
+            error
           );
           throw error;
         }
 
-        // Wait a bit before retrying, but only if page is still valid
-        try {
-          if (!page.isClosed()) {
-            await page.waitForTimeout(2000);
-          } else {
-            console.warn(`Page closed during retry wait on attempt ${attempt}`);
-            // Force break the loop if page is closed - no point in retrying
-            break;
-          }
-        } catch (timeoutError) {
-          console.warn(
-            `Timeout wait failed on attempt ${attempt}:`,
-            timeoutError.message,
-          );
-          // Continue to next attempt anyway
-        }
+        // Wait a bit before retrying
+        await page.waitForTimeout(2000);
       }
     }
-  },
+  }
 );
