@@ -40,7 +40,7 @@ POST /api/v1/responses
 
 ## Example request
 
-```curl
+```bash
 curl -X POST \
   "$LANGFLOW_SERVER_URL/api/v1/responses" \
   -H "x-api-key: $LANGFLOW_API_KEY" \
@@ -157,7 +157,7 @@ Fields set dynamically by Langflow:
 
 When you set `"stream": true` with your request, the API returns a stream where each chunk contains a small piece of the response as it's generated. This provides a real-time experience where users can see the AI's output appear word by word, similar to ChatGPT's typing effect.
 
-```curl
+```bash
 curl -X POST \
   "$LANGFLOW_SERVER_URL/api/v1/responses" \
   -H "x-api-key: $LANGFLOW_API_KEY" \
