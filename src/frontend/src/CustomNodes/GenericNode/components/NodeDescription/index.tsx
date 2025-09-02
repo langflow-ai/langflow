@@ -5,6 +5,10 @@ import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { handleKeyDown } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useTypesStore } from "@/stores/typesStore";
+import { useShallow } from "zustand/react/shallow";
 
 export default function NodeDescription({
   description,
@@ -20,6 +24,8 @@ export default function NodeDescription({
   setEditNameDescription,
   stickyNote,
   setHasChangedNodeDescription,
+  legacy,
+  replacement,
 }: {
   description?: string;
   selected?: boolean;
@@ -34,6 +40,8 @@ export default function NodeDescription({
   setEditNameDescription?: (value: boolean) => void;
   stickyNote?: boolean;
   setHasChangedNodeDescription?: (value: boolean) => void;
+  legacy?: boolean;
+  replacement?: string;
 }) {
   const [nodeDescription, setNodeDescription] = useState<string>(
     description ?? "",
@@ -140,62 +148,105 @@ export default function NodeDescription({
     setNodeDescription(e.target.value);
   };
 
+  const setFilterComponent = useFlowStore((state) => state.setFilterComponent);
+  const setFilterType = useFlowStore((state) => state.setFilterType);
+  const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
+
+  const handleFilterComponent = () => {
+    setFilterComponent(replacement);
+    setFilterType(undefined);
+    setFilterEdge([]);
+  };
+
+  const categoryName = replacement?.split(".")[0];
+  const componentName = replacement?.split(".")[1];
+  const foundComponent = useTypesStore(
+    useShallow(
+      (state) =>
+        categoryName &&
+        componentName &&
+        state.data[categoryName][componentName].display_name,
+    ),
+  );
+
   return (
-    <div
-      className={cn(
-        !editNameDescription ? "overflow-auto" : "overflow-hidden",
-        hasScroll ? "nowheel" : "",
-        charLimit ? "flex flex-col" : "",
-        "w-full",
-      )}
-    >
-      {editNameDescription ? (
-        <>
-          <Textarea
-            maxLength={charLimit}
-            className={cn(
-              "nowheel w-full text-xs focus:border-primary focus:ring-0",
-              stickyNote
-                ? "overflow-auto p-0 px-2 pt-0.5 !text-mmd"
-                : "px-2 py-0.5",
-              inputClassName,
-            )}
-            autoFocus
-            style={style}
-            onBlur={handleBlurFn}
-            value={nodeDescription}
-            onChange={onChange}
-            onKeyDown={handleKeyDownFn}
-          />
-          {charLimit && (nodeDescription?.length ?? 0) >= charLimit - 100 && (
-            <div
-              className={cn(
-                "pt-1 text-left !text-mmd",
-                (nodeDescription?.length ?? 0) >= charLimit
-                  ? "text-error"
-                  : "text-primary",
-                placeholderClassName,
-              )}
-              data-testid="note_char_limit"
-            >
-              {nodeDescription?.length ?? 0}/{charLimit}
-            </div>
+    <>
+      {legacy && (
+        <div className="text-mmd mb-4 flex items-center gap-2">
+          <Badge variant="secondaryStatic" size="xq">
+            Legacy
+          </Badge>
+          {replacement && (
+            <span className="flex items-center gap-1 text-mmd">
+              Replaced with{" "}
+              <Button
+                variant="link"
+                className=" !text-accent-pink-foreground !text-mmd"
+                size={null}
+                onClick={handleFilterComponent}
+              >
+                {foundComponent}
+              </Button>
+            </span>
           )}
-        </>
-      ) : (
-        <div
-          data-testid="generic-node-desc"
-          ref={overflowRef}
-          className={cn(
-            "nodoubleclick generic-node-desc-text h-full cursor-grab text-muted-foreground word-break-break-word",
-            description === "" || !description ? "font-light italic" : "",
-            placeholderClassName,
-          )}
-          onDoubleClick={handleDoubleClickFn}
-        >
-          {renderedDescription}
         </div>
       )}
-    </div>
+      <div
+        className={cn(
+          !editNameDescription ? "overflow-auto" : "overflow-hidden",
+          hasScroll ? "nowheel" : "",
+          charLimit ? "flex flex-col" : "",
+          "w-full",
+        )}
+      >
+        {editNameDescription ? (
+          <>
+            <Textarea
+              maxLength={charLimit}
+              className={cn(
+                "nowheel w-full text-xs focus:border-primary focus:ring-0",
+                stickyNote
+                  ? "overflow-auto p-0 px-2 pt-0.5 !text-mmd"
+                  : "px-2 py-0.5",
+                inputClassName,
+              )}
+              autoFocus
+              style={style}
+              onBlur={handleBlurFn}
+              value={nodeDescription}
+              onChange={onChange}
+              onKeyDown={handleKeyDownFn}
+            />
+            {charLimit && (nodeDescription?.length ?? 0) >= charLimit - 100 && (
+              <div
+                className={cn(
+                  "pt-1 text-left !text-mmd",
+                  (nodeDescription?.length ?? 0) >= charLimit
+                    ? "text-error"
+                    : "text-primary",
+                  placeholderClassName,
+                )}
+                data-testid="note_char_limit"
+              >
+                {nodeDescription?.length ?? 0}/{charLimit}
+              </div>
+            )}
+          </>
+        ) : (
+          <div
+            data-testid="generic-node-desc"
+            ref={overflowRef}
+            className={cn(
+              "nodoubleclick generic-node-desc-text h-full cursor-grab text-muted-foreground word-break-break-word",
+              description === "" || !description ? "font-light italic" : "",
+              placeholderClassName,
+            )}
+            onDoubleClick={handleDoubleClickFn}
+          >
+            {renderedDescription}
+          </div>
+        )}
+      </div>
+    </>
   );
 }

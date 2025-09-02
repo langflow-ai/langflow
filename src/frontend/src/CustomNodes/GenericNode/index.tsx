@@ -573,6 +573,8 @@ function GenericNode({
                 editNameDescription={editNameDescription}
                 setEditNameDescription={set}
                 setHasChangedNodeDescription={setHasChangedNodeDescription}
+                legacy={data.node?.legacy}
+                replacement={data.node?.replacement}
               />
             </div>
           )}
