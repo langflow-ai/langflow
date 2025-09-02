@@ -58,6 +58,7 @@ class WikidataAPIComponent(LCToolComponent):
     name = "WikidataAPI"
     icon = "Wikipedia"
     legacy = True
+    replacement = ["wikipedia.WikidataComponent"]
 
     inputs = [
         MultilineInput(

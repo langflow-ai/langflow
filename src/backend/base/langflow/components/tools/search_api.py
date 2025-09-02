@@ -17,6 +17,7 @@ class SearchAPIComponent(LCToolComponent):
     documentation: str = "https://www.searchapi.io/docs/google"
     icon = "SearchAPI"
     legacy = True
+    replacement = ["searchapi.SearchComponent"]
 
     inputs = [
         MessageTextInput(name="engine", display_name="Engine", value="google"),

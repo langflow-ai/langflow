@@ -55,6 +55,7 @@ to access financial data and market information from Yahoo! Finance."""
     icon = "trending-up"
     name = "YahooFinanceTool"
     legacy = True
+    replacement = ["yahoosearch.YfinanceComponent"]
 
     inputs = [
         MessageTextInput(

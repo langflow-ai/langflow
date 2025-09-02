@@ -35,6 +35,7 @@ class SerpAPIComponent(LCToolComponent):
     name = "SerpAPI"
     icon = "SerpSearch"
     legacy = True
+    replacement = ["serpapi.Serp"]
 
     inputs = [
         SecretStrInput(name="serpapi_api_key", display_name="SerpAPI API Key", required=True),

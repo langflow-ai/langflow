@@ -18,6 +18,7 @@ class CalculatorToolComponent(LCToolComponent):
     icon = "calculator"
     name = "CalculatorTool"
     legacy = True
+    replacement = ["helpers.CalculatorComponent"]
 
     inputs = [
         MessageTextInput(

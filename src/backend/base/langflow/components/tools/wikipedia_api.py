@@ -15,6 +15,7 @@ class WikipediaAPIComponent(LCToolComponent):
     name = "WikipediaAPI"
     icon = "Wikipedia"
     legacy = True
+    replacement = ["wikipedia.WikipediaComponent"]
 
     inputs = [
         MultilineInput(

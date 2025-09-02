@@ -20,6 +20,7 @@ class FlowToolComponent(LCToolComponent):
     trace_type = "tool"
     name = "FlowTool"
     legacy: bool = True
+    replacement = ["logic.RunFlow"]
     icon = "hammer"
 
     async def get_flow_names(self) -> list[str]:
