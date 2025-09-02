@@ -40,7 +40,7 @@ from langflow.api.v1.schemas import (
 )
 from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from langflow.base.mcp.util import sanitize_mcp_name
-from langflow.logging import logger
+from langflow.logging.logger import logger
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.auth.utils import AUTO_LOGIN_WARNING
 from langflow.services.database.models import Flow, Folder
@@ -114,7 +114,7 @@ async def verify_project_auth(
     # For MCP endpoints, always fall back to username lookup when no API key is provided
     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
     if result:
-        logger.warning(AUTO_LOGIN_WARNING)
+        await logger.awarning(AUTO_LOGIN_WARNING)
         return result
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -911,11 +911,11 @@ async def get_url_by_os(host: str, port: int, url: str) -> str:
 
             if proc.returncode == 0 and stdout.strip():
                 wsl_ip = stdout.decode().strip().split()[0]  # Get first IP address
-                logger.debug("Using WSL IP for external access: %s", wsl_ip)
+                await logger.adebug("Using WSL IP for external access: %s", wsl_ip)
                 # Replace the localhost with the WSL IP in the URL
                 url = url.replace(f"http://{host}:{port}", f"http://{wsl_ip}:{port}")
         except OSError as e:
-            logger.warning("Failed to get WSL IP address: %s. Using default URL.", str(e))
+            await logger.awarning("Failed to get WSL IP address: %s. Using default URL.", str(e))
 
     return url
 
@@ -971,7 +971,7 @@ async def get_config_path(client: str) -> Path:
                     msg = "Could not find valid Windows user directory in WSL"
                     raise ValueError(msg)
                 except (OSError, CalledProcessError) as e:
-                    logger.warning("Failed to determine Windows user path in WSL: %s", str(e))
+                    await logger.awarning("Failed to determine Windows user path in WSL: %s", str(e))
                     msg = f"Could not determine Windows Claude config path in WSL: {e!s}"
                     raise ValueError(msg) from e
             # Regular Windows
