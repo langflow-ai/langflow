@@ -83,9 +83,7 @@ def retrieve_file_paths(
 
     glob = "**/*" if recursive else "*"
     paths = walk_level(path_obj, depth) if depth else path_obj.glob(glob)
-    return [
-        str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)
-    ]
+    return [str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
 
 
 def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
@@ -146,15 +144,9 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
         if file_path.endswith(".json"):
             loaded_json = orjson.loads(text)
             if isinstance(loaded_json, dict):
-                loaded_json = {
-                    k: normalize_text(v) if isinstance(v, str) else v
-                    for k, v in loaded_json.items()
-                }
+                loaded_json = {k: normalize_text(v) if isinstance(v, str) else v for k, v in loaded_json.items()}
             elif isinstance(loaded_json, list):
-                loaded_json = [
-                    normalize_text(item) if isinstance(item, str) else item
-                    for item in loaded_json
-                ]
+                loaded_json = [normalize_text(item) if isinstance(item, str) else item for item in loaded_json]
             text = orjson.dumps(loaded_json).decode("utf-8")
 
         elif file_path.endswith((".yaml", ".yml")):

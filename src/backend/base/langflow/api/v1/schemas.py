@@ -191,9 +191,7 @@ class StreamData(BaseModel):
     data: dict
 
     def __str__(self) -> str:
-        return (
-            f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
-        )
+        return f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
 
 
 class CustomComponentRequest(BaseModel):
@@ -288,9 +286,7 @@ class ResultDataResponse(BaseModel):
             The serialized representation of the input value, truncated according to configured
             maximum text length and item count.
         """
-        return serialize(
-            v, max_length=get_max_text_length(), max_items=get_max_items_length()
-        )
+        return serialize(v, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @model_serializer(mode="plain")
     def serialize_model(self) -> dict:
@@ -338,9 +334,7 @@ class VertexBuildResponse(BaseModel):
     """JSON string of the params."""
     data: ResultDataResponse
     """Mapping of vertex ids to result dict containing the param name and result value."""
-    timestamp: datetime | None = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    timestamp: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
     """Timestamp of the build."""
 
     @field_serializer("data")
@@ -354,9 +348,7 @@ class VertexBuildResponse(BaseModel):
             dict: The serialized representation of the data with truncation applied.
         """
         # return serialize(data, max_length=get_max_text_length())  TODO: Safe?
-        return serialize(
-            data, max_length=get_max_text_length(), max_items=get_max_items_length()
-        )
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
 
 class VerticesBuiltResponse(BaseModel):
@@ -366,9 +358,7 @@ class VerticesBuiltResponse(BaseModel):
 class SimplifiedAPIRequest(BaseModel):
     input_value: str | None = Field(default=None, description="The input value")
     input_type: InputType | None = Field(default="chat", description="The input type")
-    output_type: OutputType | None = Field(
-        default="chat", description="The output type"
-    )
+    output_type: OutputType | None = Field(default="chat", description="The output type")
     output_component: str | None = Field(
         default="",
         description="If there are multiple output components, you can specify the component to get the output from.",
