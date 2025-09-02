@@ -132,7 +132,7 @@ export default function ChatMessage({
     updateMessageMutation(
       {
         message: {
-          ...chat,
+          id: chat.id,
           files: convertFiles(chat.files),
           sender_name: chat.sender_name ?? "AI",
           text: message,
@@ -418,8 +418,9 @@ export default function ChatMessage({
                   onCopy={() => {
                     navigator.clipboard.writeText(chatMessage);
                   }}
-                  onDelete={() => {}}
-                  onEdit={() => setEditMessage(true)}
+                  onEdit={
+                    playgroundPage ? undefined : () => setEditMessage(true)
+                  }
                   className="h-fit group-hover:visible"
                   isBotMessage={!chat.isSend}
                   onEvaluate={handleEvaluateAnswer}
