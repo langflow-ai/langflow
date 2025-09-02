@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import hashlib
 import json
 import re
@@ -7,21 +9,27 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
 from loguru import logger
 
+from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
+from langflow.components.processing.converter import convert_to_dataframe
 from langflow.custom import Component
-from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput, TableInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput, TableInput
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict  # noqa: TC001
 from langflow.schema.table import EditMode
 from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
-from langflow.services.deps import get_settings_service
+from langflow.services.database.models.user.crud import get_user_by_id
+from langflow.services.deps import get_settings_service, get_variable_service, session_scope
+
+if TYPE_CHECKING:
+    from langflow.schema.dataframe import DataFrame
 
 HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
@@ -34,14 +42,18 @@ if not knowledge_directory:
 KNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()
 
 
-class KBIngestionComponent(Component):
+class KnowledgeIngestionComponent(Component):
     """Create or append to Langflow Knowledge from a DataFrame."""
 
     # ------ UI metadata ---------------------------------------------------
     display_name = "Knowledge Ingestion"
     description = "Create or update knowledge in Langflow."
-    icon = "database"
-    name = "KBIngestion"
+    icon = "upload"
+    name = "KnowledgeIngestion"
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._cached_kb_path: Path | None = None
 
     @dataclass
     class NewKnowledgeBaseInput:
@@ -76,7 +88,7 @@ class KBIngestionComponent(Component):
                                 display_name="API Key",
                                 info="Provider API key for embedding model",
                                 required=True,
-                                load_from_db=True,
+                                load_from_db=False,
                             ),
                         },
                     },
@@ -91,18 +103,19 @@ class KBIngestionComponent(Component):
             display_name="Knowledge",
             info="Select the knowledge to load data from.",
             required=True,
-            options=[
-                str(d.name) for d in KNOWLEDGE_BASES_ROOT_PATH.iterdir() if not d.name.startswith(".") and d.is_dir()
-            ]
-            if KNOWLEDGE_BASES_ROOT_PATH.exists()
-            else [],
+            options=[],
             refresh_button=True,
+            real_time_refresh=True,
             dialog_inputs=asdict(NewKnowledgeBaseInput()),
         ),
-        DataFrameInput(
+        HandleInput(
             name="input_df",
-            display_name="Data",
-            info="Table with all original columns (already chunked / processed).",
+            display_name="Input",
+            info=(
+                "Table with all original columns (already chunked / processed). "
+                "Accepts Data or DataFrame. If Data is provided, it is converted to a DataFrame automatically."
+            ),
+            input_types=["Data", "DataFrame"],
             required=True,
         ),
         TableInput(
@@ -167,7 +180,7 @@ class KBIngestionComponent(Component):
     ]
 
     # ------ Outputs -------------------------------------------------------
-    outputs = [Output(display_name="DataFrame", name="dataframe", method="build_kb_info")]
+    outputs = [Output(display_name="Results", name="dataframe_output", method="build_kb_info")]
 
     # ------ Internal helpers ---------------------------------------------
     def _get_kb_root(self) -> Path:
@@ -329,22 +342,23 @@ class KBIngestionComponent(Component):
 
         return metadata
 
-    def _create_vector_store(
+    async def _create_vector_store(
         self, df_source: pd.DataFrame, config_list: list[dict[str, Any]], embedding_model: str, api_key: str
     ) -> None:
         """Create vector store following Local DB component pattern."""
         try:
             # Set up vector store directory
-            base_dir = self._get_kb_root()
-
-            vector_store_dir = base_dir / self.knowledge_base
+            vector_store_dir = await self._kb_path()
+            if not vector_store_dir:
+                msg = "Knowledge base path is not set. Please create a new knowledge base first."
+                raise ValueError(msg)
             vector_store_dir.mkdir(parents=True, exist_ok=True)
 
             # Create embeddings model
             embedding_function = self._build_embeddings(embedding_model, api_key)
 
             # Convert DataFrame to Data objects (following Local DB pattern)
-            data_objects = self._convert_df_to_data_objects(df_source, config_list)
+            data_objects = await self._convert_df_to_data_objects(df_source, config_list)
 
             # Create vector store
             chroma = Chroma(
@@ -367,16 +381,18 @@ class KBIngestionComponent(Component):
         except (OSError, ValueError, RuntimeError) as e:
             self.log(f"Error creating vector store: {e}")
 
-    def _convert_df_to_data_objects(self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]) -> list[Data]:
+    async def _convert_df_to_data_objects(
+        self, df_source: pd.DataFrame, config_list: list[dict[str, Any]]
+    ) -> list[Data]:
         """Convert DataFrame to Data objects for vector store."""
         data_objects: list[Data] = []
 
         # Set up vector store directory
-        base_dir = self._get_kb_root()
+        kb_path = await self._kb_path()
 
         # If we don't allow duplicates, we need to get the existing hashes
         chroma = Chroma(
-            persist_directory=str(base_dir / self.knowledge_base),
+            persist_directory=str(kb_path),
             collection_name=self.knowledge_base,
         )
 
@@ -466,24 +482,48 @@ class KBIngestionComponent(Component):
         # Check allowed characters (condition 3)
         return re.match(r"^[a-zA-Z0-9_-]+$", name) is not None
 
+    async def _kb_path(self) -> Path | None:
+        # Check if we already have the path cached
+        cached_path = getattr(self, "_cached_kb_path", None)
+        if cached_path is not None:
+            return cached_path
+
+        # If not cached, compute it
+        async with session_scope() as db:
+            if not self.user_id:
+                msg = "User ID is required for fetching knowledge base path."
+                raise ValueError(msg)
+            current_user = await get_user_by_id(db, self.user_id)
+            if not current_user:
+                msg = f"User with ID {self.user_id} not found."
+                raise ValueError(msg)
+            kb_user = current_user.username
+
+        kb_root = self._get_kb_root()
+
+        # Cache the result
+        self._cached_kb_path = kb_root / kb_user / self.knowledge_base
+
+        return self._cached_kb_path
+
     # ---------------------------------------------------------------------
     #                         OUTPUT METHODS
     # ---------------------------------------------------------------------
-    def build_kb_info(self) -> Data:
+    async def build_kb_info(self) -> Data:
         """Main ingestion routine → returns a dict with KB metadata."""
         try:
-            # Get source DataFrame
-            df_source: pd.DataFrame = self.input_df
+            input_value = self.input_df[0] if isinstance(self.input_df, list) else self.input_df
+            df_source: DataFrame = convert_to_dataframe(input_value)
 
             # Validate column configuration (using Structured Output patterns)
             config_list = self._validate_column_config(df_source)
             column_metadata = self._build_column_metadata(config_list, df_source)
 
-            # Prepare KB folder (using File Component patterns)
-            kb_root = self._get_kb_root()
-            kb_path = kb_root / self.knowledge_base
-
             # Read the embedding info from the knowledge base folder
+            kb_path = await self._kb_path()
+            if not kb_path:
+                msg = "Knowledge base path is not set. Please create a new knowledge base first."
+                raise ValueError(msg)
             metadata_path = kb_path / "embedding_metadata.json"
 
             # If the API key is not provided, try to read it from the metadata file
@@ -506,7 +546,7 @@ class KBIngestionComponent(Component):
                 )
 
             # Create vector store following Local DB component pattern
-            self._create_vector_store(df_source, config_list, embedding_model=embedding_model, api_key=api_key)
+            await self._create_vector_store(df_source, config_list, embedding_model=embedding_model, api_key=api_key)
 
             # Save KB files (using File Component storage patterns)
             self._save_kb_files(kb_path, config_list)
@@ -528,44 +568,80 @@ class KBIngestionComponent(Component):
             return Data(data=meta)
 
         except (OSError, ValueError, RuntimeError, KeyError) as e:
-            self.log(f"Error in KB ingestion: {e}")
-            self.status = f"❌ KB ingestion failed: {e}"
-            return Data(data={"error": str(e), "kb_name": self.knowledge_base})
+            msg = f"Error during KB ingestion: {e}"
+            raise RuntimeError(msg) from e
 
-    def _get_knowledge_bases(self) -> list[str]:
-        """Retrieve a list of available knowledge bases.
+    async def _get_api_key_variable(self, field_value: dict[str, Any]):
+        async with session_scope() as db:
+            if not self.user_id:
+                msg = "User ID is required for fetching global variables."
+                raise ValueError(msg)
+            current_user = await get_user_by_id(db, self.user_id)
+            if not current_user:
+                msg = f"User with ID {self.user_id} not found."
+                raise ValueError(msg)
+            variable_service = get_variable_service()
 
-        Returns:
-            A list of knowledge base names.
-        """
-        # Return the list of directories in the knowledge base root path
-        kb_root_path = self._get_kb_root()
+            # Process the api_key field variable
+            return await variable_service.get_variable(
+                user_id=current_user.id,
+                name=field_value["03_api_key"],
+                field="",
+                session=db,
+            )
 
-        if not kb_root_path.exists():
-            return []
-
-        return [str(d.name) for d in kb_root_path.iterdir() if not d.name.startswith(".") and d.is_dir()]
-
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
+    async def update_build_config(
+        self,
+        build_config: dotdict,
+        field_value: Any,
+        field_name: str | None = None,
+    ) -> dotdict:
         """Update build configuration based on provider selection."""
         # Create a new knowledge base
         if field_name == "knowledge_base":
+            async with session_scope() as db:
+                if not self.user_id:
+                    msg = "User ID is required for fetching knowledge base list."
+                    raise ValueError(msg)
+                current_user = await get_user_by_id(db, self.user_id)
+                if not current_user:
+                    msg = f"User with ID {self.user_id} not found."
+                    raise ValueError(msg)
+                kb_user = current_user.username
             if isinstance(field_value, dict) and "01_new_kb_name" in field_value:
                 # Validate the knowledge base name - Make sure it follows these rules:
                 if not self.is_valid_collection_name(field_value["01_new_kb_name"]):
                     msg = f"Invalid knowledge base name: {field_value['01_new_kb_name']}"
                     raise ValueError(msg)
 
-                # We need to test the API Key one time against the embedding model
-                embed_model = self._build_embeddings(
-                    embedding_model=field_value["02_embedding_model"], api_key=field_value["03_api_key"]
-                )
+                api_key = field_value.get("03_api_key", None)
+                with contextlib.suppress(Exception):
+                    # If the API key is a variable, resolve it
+                    api_key = await self._get_api_key_variable(field_value)
 
-                # Try to generate a dummy embedding to validate the API key
-                embed_model.embed_query("test")
+                # Make sure api_key is a string
+                if not isinstance(api_key, str):
+                    msg = "API key must be a string."
+                    raise ValueError(msg)
+
+                # We need to test the API Key one time against the embedding model
+                embed_model = self._build_embeddings(embedding_model=field_value["02_embedding_model"], api_key=api_key)
+
+                # Try to generate a dummy embedding to validate the API key without blocking the event loop
+                try:
+                    await asyncio.wait_for(
+                        asyncio.to_thread(embed_model.embed_query, "test"),
+                        timeout=10,
+                    )
+                except TimeoutError as e:
+                    msg = "Embedding validation timed out. Please verify network connectivity and key."
+                    raise ValueError(msg) from e
+                except Exception as e:
+                    msg = f"Embedding validation failed: {e!s}"
+                    raise ValueError(msg) from e
 
                 # Create the new knowledge base directory
-                kb_path = KNOWLEDGE_BASES_ROOT_PATH / field_value["01_new_kb_name"]
+                kb_path = KNOWLEDGE_BASES_ROOT_PATH / kb_user / field_value["01_new_kb_name"]
                 kb_path.mkdir(parents=True, exist_ok=True)
 
                 # Save the embedding metadata
@@ -573,11 +649,16 @@ class KBIngestionComponent(Component):
                 self._save_embedding_metadata(
                     kb_path=kb_path,
                     embedding_model=field_value["02_embedding_model"],
-                    api_key=field_value["03_api_key"],
+                    api_key=api_key,
                 )
 
             # Update the knowledge base options dynamically
-            build_config["knowledge_base"]["options"] = self._get_knowledge_bases()
+            build_config["knowledge_base"]["options"] = await get_knowledge_bases(
+                KNOWLEDGE_BASES_ROOT_PATH,
+                user_id=self.user_id,
+            )
+
+            # If the selected knowledge base is not available, reset it
             if build_config["knowledge_base"]["value"] not in build_config["knowledge_base"]["options"]:
                 build_config["knowledge_base"]["value"] = None
 

@@ -3,7 +3,7 @@ from multiprocessing import Queue, get_context
 from queue import Empty
 
 from langflow.base.data import BaseFileComponent
-from langflow.components.docling import docling_worker
+from langflow.base.data.docling_utils import docling_worker
 from langflow.inputs import DropdownInput
 from langflow.schema import Data
 
@@ -61,11 +61,11 @@ class DoclingInlineComponent(BaseFileComponent):
         ),
         DropdownInput(
             name="ocr_engine",
-            display_name="Ocr",
-            info="OCR engine to use",
-            options=["", "easyocr", "tesserocr", "rapidocr", "ocrmac"],
+            display_name="OCR Engine",
+            info="OCR engine to use. None will disable OCR.",
+            options=["None", "easyocr", "tesserocr", "rapidocr", "ocrmac"],
             real_time_refresh=False,
-            value="",
+            value="None",
         ),
         # TODO: expose more Docling options
     ]
@@ -130,6 +130,58 @@ class DoclingInlineComponent(BaseFileComponent):
                 self.log("Warning: Process still alive after SIGKILL")
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
+        try:
+            from docling.datamodel.base_models import InputFormat
+            from docling.datamodel.pipeline_options import (
+                OcrOptions,
+                PdfPipelineOptions,
+                VlmPipelineOptions,
+            )
+            from docling.document_converter import DocumentConverter, FormatOption, PdfFormatOption
+            from docling.models.factories import get_ocr_factory
+            from docling.pipeline.vlm_pipeline import VlmPipeline
+        except ImportError as e:
+            msg = (
+                "Docling is an optional dependency. Install with `uv pip install 'langflow[docling]'` or refer to the "
+                "documentation on how to install optional dependencies."
+            )
+            raise ImportError(msg) from e
+
+        # Configure the standard PDF pipeline
+        def _get_standard_opts() -> PdfPipelineOptions:
+            pipeline_options = PdfPipelineOptions()
+            pipeline_options.do_ocr = self.ocr_engine != "None"
+            if pipeline_options.do_ocr:
+                ocr_factory = get_ocr_factory(
+                    allow_external_plugins=False,
+                )
+
+                ocr_options: OcrOptions = ocr_factory.create_options(
+                    kind=self.ocr_engine,
+                )
+                pipeline_options.ocr_options = ocr_options
+            return pipeline_options
+
+        # Configure the VLM pipeline
+        def _get_vlm_opts() -> VlmPipelineOptions:
+            return VlmPipelineOptions()
+
+        # Configure the main format options and create the DocumentConverter()
+        def _get_converter() -> DocumentConverter:
+            if self.pipeline == "standard":
+                pdf_format_option = PdfFormatOption(
+                    pipeline_options=_get_standard_opts(),
+                )
+            elif self.pipeline == "vlm":
+                pdf_format_option = PdfFormatOption(pipeline_cls=VlmPipeline, pipeline_options=_get_vlm_opts())
+
+            format_options: dict[InputFormat, FormatOption] = {
+                InputFormat.PDF: pdf_format_option,
+                InputFormat.IMAGE: pdf_format_option,
+            }
+
+            return DocumentConverter(format_options=format_options)
+
         file_paths = [file.path for file in file_list if file.path]
 
         if not file_paths:

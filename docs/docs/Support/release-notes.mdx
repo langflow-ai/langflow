@@ -3,6 +3,8 @@ title: Langflow release notes
 slug: /release-notes
 ---
 
+import Icon from "@site/src/components/icon";
+
 This page summarizes significant changes to Langflow in each release.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
 
@@ -50,26 +52,44 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
-- Increased max file upload size
-
-  Increased the default max file upload size from `100 MB` to `1024 MB`.
-
 - Knowledge bases
 
   Knowledge bases create a local vector database of your data, and allow it to be re-used across flows, similar to using a File component.
   The **Create knowledge** component ingests knowledge into a knowledge base. The **Retrieve knowledge** component is added to flows to access a knowledge base.
   For more information, see Knowledge bases.
 
-- LFX engine
+- Advanced parsing available for the **File** component
 
-  The LFX engine runs flows in headless mode with reduced dependencies and no local database.
-  This allows you to run flows with just a JSON file and a PyPI package, making it easier to integrate Langflow into CI/CD pipelines or scaling deplpoyments.
-  For more information, see Run flows with the Langflow Executor (LFX).
+  The **File** component supports [advanced parsing with the Docling library](/components-data#advanced-parsing).
 
-- Additional Structured Output for Agent component
+- Built-in Docling support
 
-  In addition to the `Message` output, the Agent component now includes a structured output.
-  This output parses JSON into a structured `Data` object to make it easier to work with the Agent's output downstream.
+  The Docling dependency is now included with Langflow, making it easier to use the **Docling** components and the **File** component's new advanced parsing feature.
+
+- Structured output option for the **Agent** component
+
+  In addition to the `Message` output, the Agent component now includes a structured output for `Data`.
+  This output parses JSON into a structured `Data` object to make it easier to work with the agent's output downstream.
+
+- Reorganized visual editor menus and controls
+
+  - [Bundles](/components-bundle-components) moved to <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the visual editor.
+  - Click **MCP servers** to manage all of your MCP server connections without leaving the workspace.
+  - Lock/unlock controls moved to flow details in [**Projects**](/concepts-flows#projects).
+  - Moved the zoom, note, and help controls to the lower-right corner of the visual editor.
+
+- Increased max file upload size
+
+  Increased the default max file upload size from `100 MB` to `1024 MB`.
+
+- Moved all vector store components to provider-specific <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components)
+- Moved the **Serper Google Search API** component to the **Serper** bundle
+- Added **S3 Bucket Uploader** component
+- Added **Cohere Rerank** component
+
+- New integrations and bundles:
+
+  - [Traceloop](/integrations-instana-traceloop)
 
 ### Deprecations
 
@@ -137,7 +157,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Enhanced file and flow management system with improved bulk capabilities.
 - Added the **BigQuery** component
 - Added the **Twelve Labs** bundle
-- Added the **NVIDIA System Assistant** component
+- Added the **NVIDIA G-Assist** component
 
 ### Deprecations
 

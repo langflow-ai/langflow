@@ -170,22 +170,65 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | ignore_unsupported_extensions | Ignore Unsupported Extensions | Input parameter. If enabled (true), files with unsupported extensions are accepted but not processed. If disabled (false), the **File** component either can throw an error if an unsupported file type is provided. The default is true. |
 | ignore_unspecified_files | Ignore Unspecified Files | Input parameter. If true, `Data` with no `file_path` property is ignored. If false (default), the component errors when a file isn't specified. |
 | concurrency_multithreading | Processing Concurrency | Input parameter. The number of files to process concurrently if multiple files are uploaded. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. |
+| markdown | Markdown Export | Input parameter. Export processed documents to Markdown format. Only available when advanced mode is enabled in the file component. Default is false. |
+
+### Advanced parsing
+
+In Langflow version 1.6, the **File** component supports advanced document parsing using the [Docling](https://docling-project.github.io/docling/) library.
+Advanced parsing can process any of the **File** component's supported file types except `.csv`, `.xlsx`, and `.parquet` files.
+
+
+#### Advancing parsing limitations
+
+Advanced parsing mode has the following restrictions:
+
+* **Only one file**: Advanced parsing mode processes only one file.
+If you select multiple files, the **File** component processes the first file only, ignoring any additional files.
+
+To process multiple files with advanced parsing, pass each file to a separate **File** components, or use the dedicated [**Docling** components](/integrations-docling).
+
+* **No tabular file types**:  Advanced parsing mode isn't available for tabular file types like `.csv`, `.xlsx`, and `.parquet`.
+Advanced parsing is designed for document processing, such as extracting text from PDFs.
+For structured data analysis, use the [**Parser** component](/components-processing#parser).
+
+#### Advanced parsing parameters
+
+When you enable advanced parsing, you can configure the following advanced parsing parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| pipeline | Pipeline | Input parameter. Which Docling pipeline to use. The `standard` pipeline is the only supported pipeline. For additional pipeline support, use the dedicated [**Docling** components](/integrations-docling). Default: `standard`. |
+| ocr_engine | OCR Engine | Input parameter. Which OCR parser to use. [EasyOCR](https://pypi.org/project/easyocr/) is the only supported OCR engine. For additional OCR engines, use the dedicated [**Docling** components](/integrations-docling). |
+| doc_key | Document Key | Input parameter. The key to use for the `DoclingDocument` column, which holds the structured information extracted from the source document. See [Docling Document](https://docling-project.github.io/docling/concepts/docling_document/) for details. Default: `doc`. |
+| md_image_placeholder | Markdown Image Placeholder | Input parameter. Defines the placeholder for image files in the output Markdown document. Default: `<!-- image -->`. |
+| md_page_break_placeholder | Markdown Page Break Placeholder | Input parameter. Defines the placeholder for page breaks in the output Markdown document. Default: empty string. |
+
+:::tip
+For more Docling features, use the [**Docling** components](/integrations-docling).
+:::
 
 ### File output
 
-The output of the **File** component depends on the number and type of files loaded:
+The output of the **File** component depends on the number of files loaded and whether advanced parsing is enabled:
 
 - **No files**: Throws an error or, if **Silent Errors** is enabled, produces no output.
 
-- **One file**: Produces one of the following depending on the file type. If multiple types are available, you can select the output type by clicking the output field (near the component's output port).
-
-    - **Structured Content**: Available for some tabular and structured data.
-    For `.csv` files, produces a [`DataFrame`](/data-types#dataframe) representing the table data.
-    For `.json` files, produces a [`Data`](/data-types#data) object with the parsed JSON data.
+- **One file without advanced parsing**:
+    - **Structured Content**: Available only for `.csv`, `.xlsx`, `.parquet`, and `.json` files.
+        - For `.csv` files, produces a [`DataFrame`](/data-types#dataframe) representing the table data.
+        - For `.json` files, produces a [`Data`](/data-types#data) object with the parsed JSON data.
     - **Raw Content**: A [`Message`](/data-types#message) containing the file's raw text content.
     - **File Path**: A [`Message`](/data-types#message) containing the path to the file in [Langflow file management](/concepts-file-management).
 
+- **One file with advanced parsing**:
+    - **Structured Output**: A [`DataFrame`](/data-types#dataframe) containing the Docling-processed document data with text elements, page numbers, and metadata.
+    - **Markdown**: A [`Message`](/data-types#message) containing the document exported to Markdown format with image placeholders.
+    - **File Path**: A [`Message`](/data-types#message) containing the path to the file in [Langflow file management](/concepts-file-management).
+
 - **Multiple files**: Produces a **Files** [`DataFrame`](/data-types#dataframe) containing the content and metadata of all selected files.
+
+    Advanced parsing doesn't support multiple files.
+    See [Advanced parsing limitations](#advanced-parsing-limitations).
 
 ## News Search
 

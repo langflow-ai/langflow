@@ -11,7 +11,6 @@ import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
-from loguru import logger
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
@@ -39,11 +38,11 @@ from langflow.exceptions.serialization import SerializationError
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
-from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
+from langflow.logging.logger import logger
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
-from langflow.services.auth.utils import api_key_security, get_current_active_user
+from langflow.services.auth.utils import api_key_security, get_current_active_user, get_webhook_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
@@ -116,6 +115,7 @@ async def simple_run_flow(
     stream: bool = False,
     api_key_user: User | None = None,
     event_manager: EventManager | None = None,
+    context: dict | None = None,
 ):
     validate_input_and_tweaks(input_request)
     try:
@@ -127,7 +127,9 @@ async def simple_run_flow(
             raise ValueError(msg)
         graph_data = flow.data.copy()
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
-        graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name)
+        graph = Graph.from_payload(
+            graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
+        )
         inputs = None
         if input_request.input_value is not None:
             inputs = [
@@ -184,7 +186,7 @@ async def simple_run_flow_task(
         )
 
     except Exception:  # noqa: BLE001
-        logger.exception(f"Error running flow {flow.id} task")
+        await logger.aexception(f"Error running flow {flow.id} task")
 
 
 async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> AsyncGenerator:
@@ -215,7 +217,7 @@ async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio
         yield value
         get_time_yield = time.time()
         client_consumed_queue.put_nowait(event_id)
-        logger.debug(
+        await logger.adebug(
             f"consumed event {event_id} "
             f"(time in queue, {get_time - put_time:.4f}, "
             f"client {get_time_yield - get_time:.4f})"
@@ -228,6 +230,7 @@ async def run_flow_generator(
     api_key_user: User | None,
     event_manager: EventManager,
     client_consumed_queue: asyncio.Queue,
+    context: dict | None = None,
 ) -> None:
     """Executes a flow asynchronously and manages event streaming to the client.
 
@@ -240,6 +243,7 @@ async def run_flow_generator(
         api_key_user (User | None): Optional authenticated user running the flow
         event_manager (EventManager): Manages the streaming of events to the client
         client_consumed_queue (asyncio.Queue): Tracks client consumption of events
+        context (dict | None): Optional context to pass to the flow
 
     Events Generated:
         - "add_message": Sent when new messages are added during flow execution
@@ -260,11 +264,12 @@ async def run_flow_generator(
             stream=True,
             api_key_user=api_key_user,
             event_manager=event_manager,
+            context=context,
         )
         event_manager.on_end(data={"result": result.model_dump()})
         await client_consumed_queue.get()
     except (ValueError, InvalidChatInputError, SerializationError) as e:
-        logger.error(f"Error running flow: {e}")
+        await logger.aerror(f"Error running flow: {e}")
         event_manager.on_error(data={"error": str(e)})
     finally:
         await event_manager.queue.put((None, None, time.time))
@@ -331,7 +336,7 @@ async def simplified_run_flow(
         )
 
         async def on_disconnect() -> None:
-            logger.debug("Client disconnected, closing tasks")
+            await logger.adebug("Client disconnected, closing tasks")
             main_task.cancel()
 
         return StreamingResponse(
@@ -393,16 +398,16 @@ async def simplified_run_flow(
 
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)  # noqa: RUF100, FAST003
 async def webhook_run_flow(
+    flow_id_or_name: str,
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
-    user: Annotated[User, Depends(get_user_by_flow_id_or_endpoint_name)],
     request: Request,
     background_tasks: BackgroundTasks,
 ):
     """Run a flow using a webhook request.
 
     Args:
-        flow (Flow, optional): The flow to be executed. Defaults to Depends(get_flow_by_id).
-        user (User): The flow user.
+        flow_id_or_name (str): The flow ID or endpoint name.
+        flow (Flow): The flow to be executed.
         request (Request): The incoming HTTP request.
         background_tasks (BackgroundTasks): The background tasks manager.
 
@@ -414,8 +419,12 @@ async def webhook_run_flow(
     """
     telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
-    logger.debug("Received webhook request")
+    await logger.adebug("Received webhook request")
     error_msg = ""
+
+    # Get the appropriate user for webhook execution based on auth settings
+    webhook_user = await get_webhook_user(flow_id_or_name, request)
+
     try:
         try:
             data = await request.body()
@@ -442,12 +451,12 @@ async def webhook_run_flow(
                 session_id=None,
             )
 
-            logger.debug("Starting background task")
+            await logger.adebug("Starting background task")
             background_tasks.add_task(
                 simple_run_flow_task,
                 flow=flow,
                 input_request=input_request,
-                api_key_user=user,
+                api_key_user=webhook_user,
             )
         except Exception as exc:
             error_msg = str(exc)
@@ -553,7 +562,7 @@ async def experimental_run_flow(
         except sa.exc.StatementError as exc:
             # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
             if "badly formed hexadecimal UUID string" in str(exc):
-                logger.error(f"Flow ID {flow_id_str} is not a valid UUID")
+                await logger.aerror(f"Flow ID {flow_id_str} is not a valid UUID")
                 # This means the Flow ID is not a valid UUID which means it can't find the flow
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
@@ -600,7 +609,7 @@ async def experimental_run_flow(
 async def process(_flow_id) -> None:
     """Endpoint to process an input with a given flow_id."""
     # Raise a depreciation warning
-    logger.warning(
+    await logger.awarning(
         "The /process endpoint is deprecated and will be removed in a future version. Please use /run instead."
     )
     raise HTTPException(
@@ -643,7 +652,7 @@ async def create_upload_file(
             file_path=file_path,
         )
     except Exception as exc:
-        logger.exception("Error saving file")
+        await logger.aexception("Error saving file")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
@@ -756,7 +765,7 @@ async def get_config() -> ConfigResponse:
     """
     try:
         settings_service: SettingsService = get_settings_service()
-        return ConfigResponse.from_settings(settings_service.settings)
+        return ConfigResponse.from_settings(settings_service.settings, settings_service.auth_settings)
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

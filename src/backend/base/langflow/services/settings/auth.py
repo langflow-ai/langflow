@@ -2,11 +2,11 @@ import secrets
 from pathlib import Path
 from typing import Literal
 
-from loguru import logger
 from passlib.context import CryptContext
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from langflow.logging.logger import logger
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
 
@@ -39,6 +39,10 @@ class AuthSettings(BaseSettings):
     skip_auth_auto_login: bool = True
     """If True, the application will skip authentication when AUTO_LOGIN is enabled.
     This will be removed in v1.6"""
+
+    WEBHOOK_AUTH_ENABLE: bool = False
+    """If True, webhook endpoints will require API key authentication.
+    If False, webhooks run as flow owner without authentication."""
 
     ENABLE_SUPERUSER_CLI: bool = Field(
         default=True,

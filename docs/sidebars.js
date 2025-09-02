@@ -141,6 +141,7 @@ module.exports = {
                 "Integrations/integrations-langsmith",
                 "Integrations/integrations-langwatch",
                 "Integrations/integrations-opik",
+                "Integrations/integrations-instana-traceloop",
               ],
             },
             "Contributing/contributing-telemetry",
@@ -473,7 +474,7 @@ module.exports = {
         {
           type: "doc",
           id: "Support/luna-for-langflow",
-          label: "Enterprise support",
+          label: "IBM Elite Support for Langflow",
         },
       ],
     },
