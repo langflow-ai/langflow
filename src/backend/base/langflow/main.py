@@ -36,12 +36,13 @@ from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure, logger
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.services.deps import get_queue_service, get_service, get_settings_service, get_telemetry_service
-from langflow.services.mcp_composer.service import MCPComposerService
 from langflow.services.schema import ServiceType
 from langflow.services.utils import initialize_services, teardown_services
 
 if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
+
+    from langflow.services.mcp_composer.service import MCPComposerService
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)

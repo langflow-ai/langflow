@@ -46,7 +46,8 @@ def require_composer_enabled(func: Callable) -> Callable:
     def wrapper(self, *args, **kwargs):
         if not get_settings_service().settings.mcp_composer_enabled:
             project_id = kwargs.get("project_id")
-            raise MCPComposerDisabledError("MCP Composer is disabled in settings", project_id)
+            error_msg = "MCP Composer is disabled in settings"
+            raise MCPComposerDisabledError(error_msg, project_id)
 
         return func(self, *args, **kwargs)
 
@@ -146,7 +147,7 @@ class MCPComposerService(Service):
             except ProcessLookupError:
                 # Process already terminated
                 await logger.adebug(f"MCP Composer process for project {project_id} was already terminated")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 await logger.aerror(f"Error stopping MCP Composer for project {project_id}: {e}")
 
         # Remove from tracking
@@ -192,7 +193,8 @@ class MCPComposerService(Service):
             error_parts.append(f"Empty required fields: {', '.join(empty_fields)}")
 
         if error_parts:
-            raise MCPComposerConfigError(f"Invalid OAuth configuration: {'; '.join(error_parts)}")
+            config_error_msg = f"Invalid OAuth configuration: {'; '.join(error_parts)}"
+            raise MCPComposerConfigError(config_error_msg)
 
     def _has_auth_config_changed(self, existing_auth: dict[str, Any] | None, new_auth: dict[str, Any] | None) -> bool:
         """Check if auth configuration has changed in a way that requires restart."""
@@ -269,7 +271,8 @@ class MCPComposerService(Service):
             MCPComposerError: Various specific errors if startup fails
         """
         if not auth_config:
-            raise MCPComposerConfigError("No auth settings provided", project_id)
+            no_auth_error_msg = "No auth settings provided"
+            raise MCPComposerConfigError(no_auth_error_msg, project_id)
 
         # Validate OAuth settings early to provide clear error messages
         self._validate_oauth_settings(auth_config)
@@ -286,11 +289,13 @@ class MCPComposerService(Service):
             # Check if already running (double-check after acquiring lock)
             project_port = auth_config.get("oauth_port")
             if not project_port:
-                raise MCPComposerConfigError("No OAuth port provided", project_id)
+                no_port_error_msg = "No OAuth port provided"
+                raise MCPComposerConfigError(no_port_error_msg, project_id)
 
             project_host = auth_config.get("oauth_host")
             if not project_host:
-                raise MCPComposerConfigError("No OAuth host provided", project_id)
+                no_host_error_msg = "No OAuth host provided"
+                raise MCPComposerConfigError(no_host_error_msg, project_id)
 
             if project_id in self.project_composers:
                 composer_info = self.project_composers[project_id]
@@ -317,7 +322,8 @@ class MCPComposerService(Service):
             is_port_available = self._is_port_available(project_port)
             if not is_port_available:
                 await logger.awarning(f"Port {project_port} is already in use.")
-                raise MCPComposerPortError(f"Port {project_port} is already in use")
+                port_error_msg = f"Port {project_port} is already in use"
+                raise MCPComposerPortError(port_error_msg)
 
             max_retries = 3
             for attempt in range(max_retries):
@@ -327,7 +333,12 @@ class MCPComposerService(Service):
                     process = await self._start_project_composer_process(
                         project_id, project_host, project_port, sse_url, auth_config
                     )
-
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        startup_error_msg = "Failed to start MCP Composer Server. Check logs for more information"
+                        raise MCPComposerStartupError(startup_error_msg, project_id) from e
+                    continue
+                else:
                     self.project_composers[project_id] = {
                         "process": process,
                         "host": project_host,
@@ -340,12 +351,6 @@ class MCPComposerService(Service):
                         f"MCP Composer started for project {project_id} on port {project_port} (PID: {process.pid})"
                     )
                     return  # Success
-                except Exception:
-                    if attempt == max_retries - 1:
-                        raise MCPComposerStartupError(
-                            "Failed to start MCP Composer Server. Check logs for more information", project_id
-                        )
-                    continue
 
     async def _start_project_composer_process(
         self, project_id: str, host: str, port: int, sse_url: str, auth_config: dict[str, Any] | None = None
@@ -394,7 +399,7 @@ class MCPComposerService(Service):
                         cmd.extend(["--env", env_key, str(value)])
 
         # Start the subprocess with both stdout and stderr captured
-        process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)  # noqa: ASYNC220, S603
 
         # Monitor the process startup with multiple checks
         max_startup_checks = 3
@@ -423,29 +428,29 @@ class MCPComposerService(Service):
                     await logger.aerror(f"Command that failed: {' '.join(safe_cmd)}")
 
                     # Return generic error message
-                    raise MCPComposerStartupError(
-                        "Failed to start MCP Composer Server. Check logs for more information", project_id
-                    )
-                except subprocess.TimeoutExpired:
+                    startup_error_msg = "Failed to start MCP Composer Server. Check logs for more information"
+                    raise MCPComposerStartupError(startup_error_msg, project_id)
+                except subprocess.TimeoutExpired as e:
                     process.kill()
                     await logger.aerror(
                         f"MCP Composer process {process.pid} terminated unexpectedly for project {project_id}"
                     )
-                    raise MCPComposerStartupError(
-                        "Failed to start MCP Composer Server. Check logs for more information", project_id
-                    )
+                    startup_error_msg = "Failed to start MCP Composer Server. Check logs for more information"
+                    raise MCPComposerStartupError(startup_error_msg, project_id) from e
 
             # Process is still running, check if port is bound
             port_bound = not self._is_port_available(port)
 
             if port_bound:
                 await logger.adebug(
-                    f"MCP Composer for project {project_id} bound to port {port} (check {check + 1}/{max_startup_checks})"
+                    f"MCP Composer for project {project_id} bound to port {port} "
+                    f"(check {check + 1}/{max_startup_checks})"
                 )
                 process_running = True
                 break
             await logger.adebug(
-                f"MCP Composer for project {project_id} not yet bound to port {port} (check {check + 1}/{max_startup_checks})"
+                f"MCP Composer for project {project_id} not yet bound to port {port} "
+                f"(check {check + 1}/{max_startup_checks})"
             )
 
             # Try to read any available stderr without blocking (only log if there's an error)
@@ -454,7 +459,7 @@ class MCPComposerService(Service):
                     stderr_line = process.stderr.readline()
                     if stderr_line and "ERROR" in stderr_line:
                         await logger.aerror(f"MCP Composer error: {stderr_line.strip()}")
-                except:
+                except Exception:  # noqa: S110, BLE001
                     pass
 
         # After all checks
@@ -480,9 +485,8 @@ class MCPComposerService(Service):
                     await logger.aerror(f"MCP Composer for project {project_id} died but couldn't read output")
                     process.kill()
 
-                raise MCPComposerStartupError(
-                    "Failed to start MCP Composer Server. Check logs for more information", project_id
-                )
+                startup_error_msg = "Failed to start MCP Composer Server. Check logs for more information"
+                raise MCPComposerStartupError(startup_error_msg, project_id)
             # Process running but port not bound
             await logger.aerror(f"MCP Composer startup failed for project {project_id}:")
             await logger.aerror(f"  - Process is running (PID: {process.pid}) but failed to bind to port {port}")
@@ -499,13 +503,12 @@ class MCPComposerService(Service):
                     await logger.aerror(f"  - Process stderr: {stderr_content.strip()}")
                 if stdout_content.strip():
                     await logger.aerror(f"  - Process stdout: {stdout_content.strip()}")
-            except:
+            except Exception:  # noqa: BLE001
                 process.kill()
                 await logger.aerror("  - Could not retrieve process output before termination")
 
-            raise MCPComposerStartupError(
-                "Failed to start MCP Composer Server. Check logs for more information", project_id
-            )
+            startup_error_msg = "Failed to start MCP Composer Server. Check logs for more information"
+            raise MCPComposerStartupError(startup_error_msg, project_id)
 
         # Close the pipes if everything is successful
         if process.stdout:

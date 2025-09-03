@@ -102,7 +102,7 @@ async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
 
                 try:
                     await server.run(streams[0], streams[1], init_options)
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001
                     validation_error = find_validation_error(exc)
                     if validation_error:
                         msg = "Validation error in MCP:" + str(validation_error)

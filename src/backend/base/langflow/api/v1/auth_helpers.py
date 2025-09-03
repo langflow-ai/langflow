@@ -1,5 +1,3 @@
-"""Helper functions for handling auth settings updates across different endpoints."""
-
 from typing import Any
 
 from pydantic import SecretStr
