@@ -386,15 +386,11 @@ body {
   height: 100%;
 }
 
-.theme-doc-sidebar-menu > :nth-last-child(2) {
-  margin-bottom: auto;
-}
-
 /* Sidebar Ad Styles */
 .sidebar-ad {
   margin-left: -0.5rem;
   margin-right: -0.5rem;
-  margin-top: 1rem;
+  margin-top: auto;
   border-radius: 0;
   border-top: 1px solid var(--ifm-color-emphasis-300);
   position: sticky;
