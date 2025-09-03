@@ -1,4 +1,3 @@
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { SignIn, SignUp as ClerkSignUp, useAuth, useUser , useClerk, SignedOut} from "@clerk/clerk-react";
 import { lazy, useEffect, useState } from "react";
 import { ensureLangflowUser, useLogout } from "./auth";
@@ -26,25 +25,13 @@ export function ClerkSignUpPage() {
   useEffect(() => {
     async function handleSignup() {
       if (isSignedIn && user && !processed) {
-        console.debug("[ClerkSignUpPage] User is signed in, processing sign up...");
+        console.debug("[ClerkSignUpPage] User is signed in after signup. Redirecting to /organization...");
         setProcessed(true);
-        const token = await getToken();
-        if (token) {
-          const username =
-            user.username || user.primaryEmailAddress?.emailAddress || user.id;
-          console.debug(`[ClerkSignUpPage] Creating Langflow user for: ${username}`);
-          await ensureLangflowUser(token, username);
-        } else {
-          console.warn("[ClerkSignUpPage] No token received from Clerk.");
-        }
-        console.debug("[ClerkSignUpPage] Signing out user after sign up.");
-        await logout();
-        console.debug("[ClerkSignUpPage] Redirecting to /login after sign up.");
-        navigate("/login");
+        navigate("/organization");
       }
     }
     handleSignup();
-  }, [isSignedIn, user, getToken, logout, navigate, processed]);
+  }, [isSignedIn, user, navigate, processed]);
 
   return (
     <SignedOut>
@@ -74,3 +61,4 @@ const centeredStyle: React.CSSProperties = {
   alignItems: "center",
   minHeight: "100vh",
 };
+

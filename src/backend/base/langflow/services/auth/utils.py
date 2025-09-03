@@ -164,7 +164,7 @@ async def get_current_user_by_jwt(
         token = await token
 
     if settings_service.auth_settings.CLERK_AUTH_ENABLED:
-        return await get_user_from_clerk_payload(token, db)
+        return await get_user_from_clerk_payload(db)
 
     secret_key = settings_service.auth_settings.SECRET_KEY.get_secret_value()
     if secret_key is None:

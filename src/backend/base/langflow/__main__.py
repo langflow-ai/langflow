@@ -472,7 +472,7 @@ def superuser(
 ) -> None:
     """Create a superuser."""
     configure(log_level=log_level)
-    db_service = get_db_service()
+    db_service = get_db_service(use_organisation=False)
 
     async def _create_superuser():
         await initialize_services()
@@ -540,7 +540,7 @@ def copy_db() -> None:
 
 async def _migration(*, test: bool, fix: bool) -> None:
     await initialize_services(fix_migration=fix)
-    db_service = get_db_service()
+    db_service = get_db_service(use_organisation=False)
     if not test:
         await db_service.run_migrations()
     results = await db_service.run_migrations_test()

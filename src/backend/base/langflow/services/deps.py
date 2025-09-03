@@ -130,13 +130,18 @@ def get_settings_service() -> SettingsService:
     return get_service(ServiceType.SETTINGS_SERVICE, SettingsServiceFactory())
 
 
-def get_db_service() -> DatabaseService:
+def get_db_service(*, use_organisation: bool = True) -> DatabaseService:
     """Retrieves the DatabaseService instance from the service manager.
 
     Returns:
         The DatabaseService instance.
 
     """
+    from langflow.services.database.organisation import OrganizationService
+
+    if use_organisation and get_settings_service().auth_settings.CLERK_AUTH_ENABLED:
+        return OrganizationService.get_db_service_for_request()
+
     from langflow.services.database.factory import DatabaseServiceFactory
 
     return get_service(ServiceType.DATABASE_SERVICE, DatabaseServiceFactory())
@@ -154,7 +159,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 @asynccontextmanager
-async def session_scope() -> AsyncGenerator[AsyncSession, None]:
+async def session_scope(*, use_organisation: bool = True) -> AsyncGenerator[AsyncSession, None]:
     """Context manager for managing an async session scope.
 
     This context manager is used to manage an async session scope for database operations.
@@ -168,7 +173,7 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         Exception: If an error occurs during the session scope.
 
     """
-    db_service = get_db_service()
+    db_service = get_db_service(use_organisation=use_organisation)
     async with db_service.with_session() as session:
         try:
             yield session

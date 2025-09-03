@@ -17,7 +17,8 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
     logger.debug("Initializing database")
     from langflow.services.deps import get_db_service
 
-    database_service: DatabaseService = get_db_service()
+    # During initialization we always want the base database service
+    database_service: DatabaseService = get_db_service(use_organisation=False)
     try:
         if database_service.settings_service.settings.database_connection_retry:
             await database_service.create_db_and_tables_with_retry()

@@ -708,7 +708,7 @@ async def load_flows_from_directory() -> None:
         logger.warning("AUTO_LOGIN is disabled, not loading flows from directory")
         return
 
-    async with session_scope() as session:
+    async with session_scope(use_organisation=False) as session:
         user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
         if user is None:
             msg = "Superuser not found in the database"
@@ -767,7 +767,7 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
     if not settings_service.auth_settings.AUTO_LOGIN:
         logger.warning("AUTO_LOGIN is disabled, not loading flows from URLs")
 
-    async with session_scope() as session:
+    async with session_scope(use_organisation=False) as session:
         user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
         if user is None:
             msg = "Superuser not found in the database"
@@ -877,7 +877,7 @@ async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: 
         all_types_dict (dict): Dictionary containing all component types and their templates
         do_create (bool, optional): Whether to create new projects. Defaults to True.
     """
-    async with session_scope() as session:
+    async with session_scope(use_organisation=False) as session:
         new_folder = await create_starter_folder(session)
         starter_projects = await load_starter_projects()
         await delete_start_projects(session, new_folder.id)
@@ -934,7 +934,7 @@ async def initialize_super_user_if_needed() -> None:
         msg = "SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true."
         raise ValueError(msg)
 
-    async with session_scope() as async_session:
+    async with session_scope(use_organisation=False) as async_session:
         super_user = await create_super_user(db=async_session, username=username, password=password)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
         _ = await get_or_create_default_folder(async_session, super_user.id)
@@ -983,7 +983,7 @@ async def sync_flows_from_fs():
     fs_flows_polling_interval = get_settings_service().settings.fs_flows_polling_interval / 1000
     while True:
         try:
-            async with session_scope() as session:
+            async with session_scope(use_organisation=False) as session:
                 stmt = select(Flow).where(col(Flow.fs_path).is_not(None))
                 flows = (await session.exec(stmt)).all()
                 for flow in flows:

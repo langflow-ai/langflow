@@ -1,12 +1,15 @@
-import { ReactNode, useContext, useEffect, useRef } from "react";
+import { lazy, ReactNode, useContext, useEffect, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "@/contexts/authContext";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { useLogout as useLogoutMutation } from "@/controllers/API/queries/auth";
-import { ClerkProvider, useAuth, useClerk, useUser } from "@clerk/clerk-react";
+import { ClerkProvider, useAuth, useClerk, useOrganization, useUser, SignedOut } from "@clerk/clerk-react";
 import { Users } from "@/types/api";
 import { LANGFLOW_ACCESS_TOKEN, LANGFLOW_REFRESH_TOKEN } from "@/constants/constants";
 import { Cookies } from "react-cookie";
+import OrganizationPage from "./OrganizationPage";
+import authStore from "@/stores/authStore";
 
 export const IS_CLERK_AUTH =
   String(import.meta.env.VITE_CLERK_AUTH_ENABLED).toLowerCase() === "true";
@@ -21,12 +24,28 @@ export enum HttpStatusCode {
   INTERNAL_SERVER_ERROR = 500
 }
 
+
+export async function createOrganisation(token: string) {
+  console.log("[createOrganisation] Called with token:", token);
+  try {
+    const [, p] = token.split(".");
+    console.log("[createOrganisation] Parsed token payload:", JSON.parse(atob(p.replace(/-/g, "+").replace(/_/g, "/"))));
+  } catch {
+    return null;
+  }
+  await api.post(
+    getURL("CREATE_ORGANISATION"),
+    {},
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  console.log("[createOrganisation] Organization created via API");
+}
+
 // Backend synchronization helpers
 export async function ensureLangflowUser(token: string, username: string): Promise<{
   justCreated: boolean;
   user: Users | null;
 }> {
-
   try {
     const whoAmIRes = await api.get<Users>(`${getURL("USERS")}/whoami`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -64,82 +83,89 @@ export async function backendLogin(username: string,token:string) {
       },
     },
   );
+  console.debug(`[backendLogin] Login response for ${username}:`, res.data);
   return res.data;
 }
 
-// Component that syncs Clerk session with backend
+function useIsOrgSelected(): boolean {
+  const storeFlag = authStore((s) => s.isOrgSelected);
+  const sessionFlag = sessionStorage.getItem("isOrgSelected") === "true";
+  return storeFlag || sessionFlag;
+}
+
 export function ClerkAuthAdapter() {
-  const { getToken, isSignedIn, sessionId } = useAuth();
-  const { user } = useUser();
-  const { login } = useContext(AuthContext);
-  const { mutateAsync: logout } = useLogout();
-  const prevSession = useRef<string | null>(null);
-  const justLoggedIn = useRef(false);
+  const { getToken, isSignedIn } = useAuth();
   const clerk = useClerk();
+  const { login } = useContext(AuthContext);
   const cookie = new Cookies();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { organization, isLoaded: isOrgLoaded } = useOrganization();
+  const prevTokenRef = useRef<string | null>(null);
 
+  const isOrgSelected = useIsOrgSelected();
+  const currentPath = location.pathname;
+
+  const isAtRoot = currentPath === "/";
+  const isAtLogin = currentPath === "/login";
+  const isAtOrg = currentPath === "/organization";
+  console.log("[ClerkAuthAdapter] Render", {
+    isSignedIn,
+    isOrgSelected,
+    currentPath
+  });
+
+  // ✅ Redirect to /organization if signed in but org not selected
   useEffect(() => {
-    const syncToken = async () => {
-      if (!isSignedIn || sessionId === prevSession.current) return;
+    if (
+      IS_CLERK_AUTH &&
+      isSignedIn &&
+      isOrgLoaded &&
+      !isOrgSelected &&
+      !organization?.id &&
+      (isAtRoot || isAtLogin)
+    ) {
+      console.log("[ClerkAuthAdapter] Redirecting to /organization (no org selected)");
+      navigate("/organization", { replace: true });
+    }
+  }, [isSignedIn, isOrgLoaded, organization?.id, currentPath]);
 
-      prevSession.current = sessionId;
 
-      const token = await getToken();
-      if (!token) {
-        console.warn("[ClerkAuthAdapter] No Clerk token available");
-        return;
-      }
-      const username =
-        user?.username ||
-        user?.primaryEmailAddress?.emailAddress ||
-        user?.id ||
-        "clerk_user";
-
-      try {
-        await ensureLangflowUser(token, username);
-        const { refresh_token } = await backendLogin(username, token);
-        login(token, "login", refresh_token);
-        justLoggedIn.current = true;
-        console.debug("[ClerkAuthAdapter] login complete");
-      } catch (err) {
-        if (!justLoggedIn.current) {
-          console.error("[ClerkAuthAdapter] syncToken error:", err);
-          await logout();
-        } else {
-          console.warn("[ClerkAuthAdapter] Skipping logout due to recent login");
-        }
-      }
-    };
-
-    syncToken();
-  }, [isSignedIn, sessionId, getToken, user, login, logout]);
-
-const prevTokenRef = useRef<string | null>(null);
-useEffect(() => {
+  // ✅ Clerk token listener: backend sync ONLY after org is selected
+  useEffect(() => {
     const unsubscribe = clerk.addListener(async ({ session }) => {
       console.debug("[ClerkAuthAdapter] Token update event received");
       const token = await session?.getToken();
-      if (!token) return;
-      const current = cookie.get(LANGFLOW_ACCESS_TOKEN);
-      if (prevTokenRef.current === null) {
-        // Ignore the initial event triggered on sign-in.
-        prevTokenRef.current = token;
+      const orgSelected = sessionStorage.getItem("isOrgSelected") === "true";
+
+      if (!orgSelected) {
+        console.debug("[ClerkAuthAdapter] Skipping backend sync (org not selected)");
+        prevTokenRef.current = token ?? null;
         return;
       }
-      console.debug("[ClerkAuthAdapter] Is Token Same:", token === current);
-      if (token !== prevTokenRef.current) {
+
+      const prevToken = prevTokenRef.current;
+      const currentRefreshToken = cookie.get(LANGFLOW_REFRESH_TOKEN);
+
+      if (prevToken === null) {
+        prevTokenRef.current = token ?? null;
+        return;
+      }
+      console.debug("[ClerkAuthAdapter] Is Token Same:", token === currentRefreshToken);
+      if (token && token !== prevToken) {
+        console.log("[ClerkAuthAdapter] Detected token change, syncing with backend");
         prevTokenRef.current = token;
-        const current = cookie.get(LANGFLOW_ACCESS_TOKEN);
-        if (token !== current) {
-          const currentRefreshToken = cookie.get(LANGFLOW_REFRESH_TOKEN);
-          login(token,"login",currentRefreshToken)
-        }
+        login(token, "login", currentRefreshToken);
       }
     });
-    return () => {
-      unsubscribe?.();
-    };
+
+    return () => unsubscribe?.();
   }, [clerk]);
+
+  // ✅ Render organization page only when needed
+  if (isAtOrg && !isOrgSelected) {
+    return <OrganizationPage />;
+  }
 
   return null;
 }
@@ -214,5 +240,3 @@ export const mockClerkMutation = {
   data: undefined,
   error: null,
 } as any;
-
-

@@ -11,6 +11,7 @@ export const URLs = {
   STORE: `store`,
   USERS: "users",
   LOGOUT: `logout`,
+  CREATE_ORGANISATION: `create_organisation`,
   LOGIN: `login`,
   AUTOLOGIN: "auto_login",
   REFRESH: "refresh",
