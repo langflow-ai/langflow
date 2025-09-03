@@ -28,7 +28,7 @@ class AuthSettings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     AUTO_LOGIN: bool = Field(
-        default=True,  # TODO: Set to False in v1.6
+        default=False,
         description=(
             "Enable automatic login with default credentials. "
             "SECURITY WARNING: This bypasses authentication and should only be used in development environments. "
@@ -36,9 +36,6 @@ class AuthSettings(BaseSettings):
         ),
     )
     """If True, the application will attempt to log in automatically as a super user."""
-    skip_auth_auto_login: bool = True
-    """If True, the application will skip authentication when AUTO_LOGIN is enabled.
-    This will be removed in v1.6"""
 
     ENABLE_SUPERUSER_CLI: bool = Field(
         default=True,
