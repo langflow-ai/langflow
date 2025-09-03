@@ -15,7 +15,7 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
 
     inputs = [
         StrInput(name="url", display_name="Weaviate URL", value="http://localhost:8080", required=True),
-        SecretStrInput(name="api_key", display_name="API Key", required=False),
+        SecretStrInput(name="api_key", display_name="Weaviate API Key", required=False),
         StrInput(
             name="index_name",
             display_name="Index Name",

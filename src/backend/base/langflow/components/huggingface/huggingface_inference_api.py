@@ -22,7 +22,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
     inputs = [
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
+            display_name="HuggingFace API Key",
             advanced=False,
             info="Required for non-local inference endpoints. Local inference does not require an API Key.",
         ),

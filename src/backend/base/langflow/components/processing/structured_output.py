@@ -197,6 +197,9 @@ class StructuredOutputComponent(Component):
             # handle empty or unexpected type case
             msg = "No structured output returned"
             raise ValueError(msg)
-        data_list = [Data(data=output[0])] if len(output) == 1 else [Data(data=item) for item in output]
-
-        return DataFrame(data_list)
+        if len(output) == 1:
+            return DataFrame(output[0])
+        if len(output) > 1:
+            # Multiple outputs - convert to DataFrame directly
+            return DataFrame(output)
+        return DataFrame()

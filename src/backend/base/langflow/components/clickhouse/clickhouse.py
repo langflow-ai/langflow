@@ -26,7 +26,7 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="database", display_name="database", required=True),
         StrInput(name="table", display_name="Table name", required=True),
         StrInput(name="username", display_name="The ClickHouse user name.", required=True),
-        SecretStrInput(name="password", display_name="The password for username.", required=True),
+        SecretStrInput(name="password", display_name="Clickhouse Password", required=True),
         DropdownInput(
             name="index_type",
             display_name="index_type",

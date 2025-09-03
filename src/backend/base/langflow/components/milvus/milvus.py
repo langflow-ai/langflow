@@ -31,7 +31,7 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
         ),
         SecretStrInput(
             name="password",
-            display_name="Token",
+            display_name="Milvus Token",
             value="",
             info="Ignore this field if no token is required to make connection.",
         ),
