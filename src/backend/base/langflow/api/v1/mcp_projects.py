@@ -607,14 +607,21 @@ async def install_mcp_config(
         # Determine if we need to generate an API key based on feature flag
         should_generate_api_key = False
         if not FEATURE_FLAGS.mcp_composer:
-            # When MCP_COMPOSER is disabled, only generate API key if autologin is disabled
-            # (matches frontend !isAutoLogin check)
+            # When MCP_COMPOSER is disabled, check auth settings or fallback to auto_login setting
             settings_service = get_settings_service()
-            should_generate_api_key = not settings_service.auth_settings.AUTO_LOGIN
+            if project.auth_settings:
+                # Project has auth settings - check if it requires API key
+                decrypted_settings = decrypt_auth_settings(project.auth_settings)
+                if decrypted_settings and decrypted_settings.get("auth_type") == "apikey":
+                    should_generate_api_key = True
+            elif not settings_service.auth_settings.AUTO_LOGIN:
+                # No project auth settings but auto_login is disabled - generate API key
+                should_generate_api_key = True
         elif project.auth_settings:
             # When MCP_COMPOSER is enabled, only generate if auth_type is "apikey"
-            auth_settings = AuthSettings(**project.auth_settings) if project.auth_settings else AuthSettings()
-            should_generate_api_key = auth_settings.auth_type == "apikey"
+            decrypted_settings = decrypt_auth_settings(project.auth_settings)
+            if decrypted_settings and decrypted_settings.get("auth_type") == "apikey":
+                should_generate_api_key = True
 
         # Get settings service to build the SSE URL
         settings_service = get_settings_service()
@@ -1135,15 +1142,26 @@ async def init_mcp_servers():
 
             for project in projects:
                 try:
-                    # Auto-enable API key auth for projects without auth settings when AUTO_LOGIN is false
-                    if not settings_service.auth_settings.AUTO_LOGIN and not project.auth_settings:
-                        default_auth = {"auth_type": "apikey"}
-                        project.auth_settings = encrypt_auth_settings(default_auth)
-                        session.add(project)
-                        await logger.ainfo(
-                            f"Auto-enabled API key authentication for existing project {project.name} "
-                            f"({project.id}) due to AUTO_LOGIN=false"
-                        )
+                    # Auto-enable API key auth for projects without auth settings or with "none" auth when AUTO_LOGIN is false
+                    if not settings_service.auth_settings.AUTO_LOGIN:
+                        should_update_to_apikey = False
+                        
+                        if not project.auth_settings:
+                            # No auth settings at all
+                            should_update_to_apikey = True
+                        else:
+                            # Check if existing auth settings have auth_type "none"
+                            if project.auth_settings.get("auth_type") == "none":
+                                should_update_to_apikey = True
+                        
+                        if should_update_to_apikey:
+                            default_auth = {"auth_type": "apikey"}
+                            project.auth_settings = encrypt_auth_settings(default_auth)
+                            session.add(project)
+                            await logger.ainfo(
+                                f"Auto-enabled API key authentication for existing project {project.name} "
+                                f"({project.id}) due to AUTO_LOGIN=false"
+                            )
                     
                     # WARN: If oauth projects exist in the database and the MCP Composer is disabled,
                     # these projects will be reset to "apikey" or "none" authentication, erasing all oauth settings.
