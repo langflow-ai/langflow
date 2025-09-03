@@ -8,7 +8,7 @@ from urllib.parse import quote
 from uuid import UUID
 
 import orjson
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Params
@@ -195,6 +195,7 @@ async def update_project(
     project_id: UUID,
     project: FolderUpdate,  # Assuming FolderUpdate is a Pydantic model defining updatable fields
     current_user: CurrentActiveUser,
+    background_tasks: BackgroundTasks,
 ):
     try:
         existing_project = (
@@ -253,7 +254,7 @@ async def update_project(
                 f"Auth settings changed to OAuth for project {existing_project.name} ({existing_project.id}), "
                 "starting MCP Composer"
             )
-            _ = asyncio.create_task(register_project_with_composer(existing_project))
+            background_tasks.add_task(register_project_with_composer, existing_project)
 
         # Stop MCP Composer if auth changed FROM OAuth to something else
         elif should_stop_mcp_composer:

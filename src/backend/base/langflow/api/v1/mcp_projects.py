@@ -361,7 +361,11 @@ async def update_project_mcp_settings(
     request: MCPProjectUpdateRequest,
     current_user: CurrentActiveMCPUser,
 ):
-    """Update the MCP settings of all flows in a project and project-level auth settings."""
+    """Update the MCP settings of all flows in a project and project-level auth settings.
+    
+    On MCP Composer failure, this endpoint should return with a 200 status code and an error message in
+    the body of the response to display to the user.
+    """
     try:
         async with session_scope() as session:
             # Fetch the project first to verify it exists and belongs to the current user
@@ -435,6 +439,7 @@ async def update_project_mcp_settings(
                     if new_auth_type == "oauth":
                         # Always try to start/restart MCP Composer for OAuth projects
                         # This handles cases where the server wasn't running or port became available
+                        # Note this won't restart the composer if it's already running, so no service interruptions
                         should_handle_mcp_composer = True
                         should_start_composer = True
                     elif current_auth_type == "oauth" and new_auth_type != "oauth":
@@ -470,7 +475,6 @@ async def update_project_mcp_settings(
 
             if should_handle_mcp_composer:
                 if should_start_composer:
-                    # Log the auth change (composer will be started when getting URL below)
                     await logger.adebug(
                         f"Auth settings changed to OAuth for project {project.name} ({project_id}), "
                         "starting MCP Composer"
@@ -767,7 +771,11 @@ async def get_project_composer_url(
     project_id: UUID,
     current_user: CurrentActiveMCPUser,
 ):
-    """Get the MCP Composer URL for a specific project."""
+    """Get the MCP Composer URL for a specific project.
+    
+    On failure, this endpoint should return with a 200 status code and an error message in
+    the body of the response to display to the user.
+    """
     try:
         project = await verify_project_access(project_id, current_user)
         if not should_use_mcp_composer(project):
@@ -1098,7 +1106,8 @@ project_mcp_servers = {}
 def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:
     """Get or create an MCP server for a specific project."""
     if project_id is None:
-        raise ValueError("Project ID cannot be None when getting project MCP server")
+        error_message = "Project ID cannot be None when getting project MCP server"
+        raise ValueError(error_message)
 
     project_id_str = str(project_id)
     if project_id_str not in project_mcp_servers:

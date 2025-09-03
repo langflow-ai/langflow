@@ -149,9 +149,8 @@ class MCPComposerService(Service):
         del self.project_composers[project_id]
 
     async def _wait_for_process_exit(self, process):
-        """Wait for a process to exit by polling."""
-        while process.poll() is None:
-            await asyncio.sleep(0.1)
+        """Wait for a process to exit."""
+        await asyncio.to_thread(process.wait)
 
     def _validate_oauth_settings(self, auth_config: dict[str, Any]) -> None:
         """Validate that all required OAuth settings are present and non-empty.
@@ -313,22 +312,8 @@ class MCPComposerService(Service):
 
             is_port_available = self._is_port_available(project_port)
             if not is_port_available:
-                # Try to identify what's using the port
-                try:
-                    import subprocess
-                    result = subprocess.run(
-                        ["lsof", "-ti", f":{project_port}"], 
-                        capture_output=True, text=True, timeout=2
-                    )
-                    if result.stdout.strip():
-                        pid = result.stdout.strip().split('\n')[0]
-                        await logger.aerror(f"Port {project_port} is in use by process {pid} (project {project_id})")
-                    else:
-                        await logger.aerror(f"Port {project_port} appears to be in use but couldn't identify the process (project {project_id})")
-                except Exception:
-                    await logger.aerror(f"Port {project_port} is in use by another service (project {project_id})")
-                
-                raise MCPComposerPortError(f"Port {project_port} is already in use", project_id)
+                await logger.awarning(f"Port {project_port} is already in use.")
+                raise MCPComposerPortError(f"Port {project_port} is already in use")
 
             max_retries = 3
             for attempt in range(max_retries):

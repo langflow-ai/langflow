@@ -229,6 +229,7 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await logger.aexception(f"Failed to initialize MCP servers after retry: {e2}")
             
             # Start the delayed initialization as a background task
+            # Allows the server to start first to avoid race conditions with MCP Server startup
             asyncio.create_task(delayed_init_mcp_servers())
             
             yield
@@ -492,6 +493,6 @@ if __name__ == "__main__":
         port=7860,
         workers=get_number_of_workers(),
         log_level="error",
-        # reload=True,
+        reload=True,
         loop="asyncio",
     )
