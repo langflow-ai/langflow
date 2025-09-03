@@ -1,5 +1,5 @@
 import pytest
-from langflow.base.data.kb_utils import compute_bm25, compute_tfidf
+from langflow.base.knowledge_bases import compute_bm25, compute_tfidf
 
 
 class TestKBUtils:
