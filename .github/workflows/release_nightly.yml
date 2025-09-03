@@ -99,7 +99,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
       - name: Install LFX dependencies
-        run: uv sync --dev --package lfx
+        run: cd src/lfx uv sync
 
       - name: Verify Nightly Name and Version
         id: verify
