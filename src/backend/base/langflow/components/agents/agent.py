@@ -23,7 +23,14 @@ from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.custom.utils import update_component_build_config
 from langflow.field_typing import Tool
 from langflow.helpers.base_model import build_model_from_schema
-from langflow.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output, TableInput
+from langflow.io import (
+    BoolInput,
+    DropdownInput,
+    IntInput,
+    MultilineInput,
+    Output,
+    TableInput,
+)
 from langflow.logging import logger
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
@@ -148,7 +155,9 @@ class AgentComponent(ToolCallingAgentComponent):
                     "display_name": "Type",
                     "type": "str",
                     "edit_mode": EditMode.INLINE,
-                    "description": ("Indicate the data type of the output field (e.g., str, int, float, bool, dict)."),
+                    "description": (
+                        "Indicate the data type of the output field (e.g., str, int, float, bool, dict)."
+                    ),
                     "options": ["str", "int", "float", "bool", "dict"],
                     "default": "str",
                 },
@@ -200,7 +209,9 @@ class AgentComponent(ToolCallingAgentComponent):
         if self.add_current_date_tool:
             if not isinstance(self.tools, list):  # type: ignore[has-type]
                 self.tools = []
-            current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
+            current_date_tool = (
+                await CurrentDateComponent(**self.get_base_args()).to_toolkit()
+            ).pop(0)
             if not isinstance(current_date_tool, StructuredTool):
                 msg = "CurrentDateComponent must be converted to a StructuredTool"
                 raise TypeError(msg)
@@ -209,7 +220,9 @@ class AgentComponent(ToolCallingAgentComponent):
 
     async def message_response(self) -> Message:
         try:
-            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+            llm_model, self.chat_history, self.tools = (
+                await self.get_agent_requirements()
+            )
             # Set up and run agent
             self.set(
                 llm=llm_model,
@@ -249,7 +262,13 @@ class AgentComponent(ToolCallingAgentComponent):
             }
             # Ensure multiple is handled correctly
             if isinstance(processed_field["multiple"], str):
-                processed_field["multiple"] = processed_field["multiple"].lower() in ["true", "1", "t", "y", "yes"]
+                processed_field["multiple"] = processed_field["multiple"].lower() in [
+                    "true",
+                    "1",
+                    "t",
+                    "y",
+                    "yes",
+                ]
             processed_schema.append(processed_field)
         return processed_schema
 
@@ -273,7 +292,11 @@ class AgentComponent(ToolCallingAgentComponent):
                 return {"content": content, "error": schema_error_msg}
 
         # If no output schema provided, return parsed JSON without validation
-        if not hasattr(self, "output_schema") or not self.output_schema or len(self.output_schema) == 0:
+        if (
+            not hasattr(self, "output_schema")
+            or not self.output_schema
+            or len(self.output_schema) == 0
+        ):
             return json_data
 
         # Use BaseModel validation with schema
@@ -292,7 +315,9 @@ class AgentComponent(ToolCallingAgentComponent):
                     except ValidationError as e:
                         await logger.aerror(f"Validation error for item: {e}")
                         # Include invalid items with error info
-                        validated_objects.append({"data": item, "validation_error": str(e)})
+                        validated_objects.append(
+                            {"data": item, "validation_error": str(e)}
+                        )
                 return validated_objects
 
             # Single object
@@ -325,7 +350,11 @@ class AgentComponent(ToolCallingAgentComponent):
                 system_components.append(f"Format instructions: {format_instructions}")
 
             # 3. Schema Information from BaseModel
-            if hasattr(self, "output_schema") and self.output_schema and len(self.output_schema) > 0:
+            if (
+                hasattr(self, "output_schema")
+                and self.output_schema
+                and len(self.output_schema) > 0
+            ):
                 try:
                     processed_schema = self._preprocess_schema(self.output_schema)
                     output_model = build_model_from_schema(processed_schema)
@@ -343,11 +372,17 @@ class AgentComponent(ToolCallingAgentComponent):
                     )
                     system_components.append(schema_info)
                 except (ValidationError, ValueError, TypeError, KeyError) as e:
-                    await logger.aerror(f"Could not build schema for prompt: {e}", exc_info=True)
+                    await logger.aerror(
+                        f"Could not build schema for prompt: {e}", exc_info=True
+                    )
 
             # Combine all components
-            combined_instructions = "\n\n".join(system_components) if system_components else ""
-            llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+            combined_instructions = (
+                "\n\n".join(system_components) if system_components else ""
+            )
+            llm_model, self.chat_history, self.tools = (
+                await self.get_agent_requirements()
+            )
             self.set(
                 llm=llm_model,
                 tools=self.tools or [],
@@ -364,7 +399,12 @@ class AgentComponent(ToolCallingAgentComponent):
                 raise
             try:
                 result = await self.run_agent(structured_agent)
-            except (ExceptionWithMessageError, ValueError, TypeError, RuntimeError) as e:
+            except (
+                ExceptionWithMessageError,
+                ValueError,
+                TypeError,
+                RuntimeError,
+            ) as e:
                 await logger.aerror(f"Error with structured agent result: {e}")
                 raise
             # Extract content from structured agent result
@@ -375,7 +415,13 @@ class AgentComponent(ToolCallingAgentComponent):
             else:
                 content = str(result)
 
-        except (ExceptionWithMessageError, ValueError, TypeError, NotImplementedError, AttributeError) as e:
+        except (
+            ExceptionWithMessageError,
+            ValueError,
+            TypeError,
+            NotImplementedError,
+            AttributeError,
+        ) as e:
             await logger.aerror(f"Error with structured chat agent: {e}")
             # Fallback to regular agent
             content_str = "No content returned from agent"
@@ -433,7 +479,9 @@ class AgentComponent(ToolCallingAgentComponent):
             return self._build_llm_model(component_class, inputs, prefix), display_name
 
         except (AttributeError, ValueError, TypeError, RuntimeError) as e:
-            await logger.aerror(f"Error building {self.agent_llm} language model: {e!s}")
+            await logger.aerror(
+                f"Error building {self.agent_llm} language model: {e!s}"
+            )
             msg = f"Failed to initialize language model: {e!s}"
             raise ValueError(msg) from e
 
