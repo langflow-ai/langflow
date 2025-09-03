@@ -198,7 +198,8 @@ class StructuredOutputComponent(Component):
             msg = "No structured output returned"
             raise ValueError(msg)
         if len(output) == 1:
-            return DataFrame(output[0])
+            # For single dictionary, wrap in a list to create DataFrame with one row
+            return DataFrame([output[0]])
         if len(output) > 1:
             # Multiple outputs - convert to DataFrame directly
             return DataFrame(output)

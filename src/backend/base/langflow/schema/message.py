@@ -11,7 +11,7 @@ from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.prompts.chat import BaseChatPromptTemplate, ChatPromptTemplate
 from langchain_core.prompts.prompt import PromptTemplate
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
@@ -231,7 +231,7 @@ class Message(Data):
                 case _ if message.get("type") == "ai":
                     messages.append(AIMessage(content=message.get("content")))
                 case _ if message.get("type") == "tool":
-                    messages.append(Tool(content=message.get("content")))
+                    messages.append(ToolMessage(content=message.get("content")))
 
         self.prompt["kwargs"]["messages"] = messages
         return load(self.prompt)
