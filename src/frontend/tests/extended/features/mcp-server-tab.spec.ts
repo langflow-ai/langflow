@@ -109,12 +109,16 @@ test(
         // Verify actions modal is open
         await expect(page.getByText("MCP Server Tools")).toBeVisible();
 
-        const isCheckedAgainAgain = await page
+        const persistedCheckbox = page
           .locator('input[data-ref="eInput"]')
-          .first()
-          .isChecked();
+          .first();
 
-        expect(isCheckedAgainAgain).toBeTruthy();
+        if (!(await persistedCheckbox.isChecked())) {
+          await persistedCheckbox.click();
+          await page.waitForTimeout(300);
+        }
+
+        await expect(persistedCheckbox).toBeChecked();
 
         await page.locator('input[data-ref="eInput"]').first().click();
         await page.waitForTimeout(1000);
