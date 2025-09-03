@@ -516,7 +516,7 @@ async def update_project_mcp_settings(
                         "stopping MCP Composer"
                     )
                     mcp_composer_service: MCPComposerService = cast(
-                        MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+                        "MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE)
                     )
                     await mcp_composer_service.stop_project_composer(str(project_id))
 
@@ -1131,7 +1131,7 @@ async def register_project_with_composer(project: Folder):
     """Register a project with MCP Composer by starting a dedicated composer instance."""
     try:
         mcp_composer_service: MCPComposerService = cast(
-            MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+            "MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE)
         )
 
         settings = get_settings_service().settings
@@ -1258,7 +1258,7 @@ async def get_or_start_mcp_composer(auth_config: dict, project_name: str, projec
     """
     from langflow.services.mcp_composer.service import MCPComposerConfigError
 
-    mcp_composer_service: MCPComposerService = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
+    mcp_composer_service: MCPComposerService = cast("MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE))
 
     # Prepare current auth config for comparison
     settings = get_settings_service().settings
