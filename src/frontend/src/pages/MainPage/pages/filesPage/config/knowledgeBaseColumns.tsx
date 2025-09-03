@@ -1,6 +1,5 @@
-
-import { formatFileSize } from "@/utils/stringManipulation";
 import type { ColDef } from "ag-grid-community";
+import { formatFileSize } from "@/utils/stringManipulation";
 import {
   formatAverageChunkSize,
   formatNumber,
@@ -84,6 +83,6 @@ export const createKnowledgeBaseColumns = (): ColDef[] => {
       editable: false,
       cellClass: baseCellClass,
       valueFormatter: (params) => formatAverageChunkSize(params.value),
-    }
+    },
   ];
 };
