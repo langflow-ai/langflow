@@ -52,6 +52,16 @@ test(
     if (fileManagement) {
       // Test upload file
       await page.getByTestId("button_open_file_management").click();
+
+      // Test available types
+      await expect(page.getByText("csv, json, pdf")).toBeVisible();
+      await page.getByTestId("info-types").hover();
+      await expect(
+        page.getByText(
+          "adoc, asc, asciidoc, bmp, bz2, docm, docx, dotm, dotx, gz, htm, html, jpeg, js, md, mdx, png, potm, potx, ppsm, ppsx, pptm, pptx, py, sh, sql, tar, tgz, tiff, ts, tsx, txt, webp, xhtml, xls, xlsx, xml, yaml, yml, zip",
+        ),
+      ).toBeVisible();
+
       const drag = await page.getByTestId("drag-files-component");
       const fileChooserPromise = page.waitForEvent("filechooser");
       await drag.click();

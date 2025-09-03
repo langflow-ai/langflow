@@ -702,7 +702,7 @@ export default function Page({
             onNodeDrag={onNodeDrag}
             onNodeDragStart={onNodeDragStart}
             onSelectionDragStart={onSelectionDragStart}
-            elevateEdgesOnSelect={true}
+            elevateEdgesOnSelect={false}
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
             connectionRadius={30}
