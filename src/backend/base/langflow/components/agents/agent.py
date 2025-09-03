@@ -536,7 +536,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 # # Update with custom component
                 custom_component = DropdownInput(
                     name="agent_llm",
-                    display_name="Model Provider",
+                    display_name="Language Model",
                     info="The provider of the language model that the agent will use to generate responses.",
                     options=[*MODEL_PROVIDERS_LIST],
                     real_time_refresh=True,
