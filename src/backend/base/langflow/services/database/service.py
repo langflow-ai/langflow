@@ -65,6 +65,7 @@ class DatabaseService(Service):
         # Monitor the initial engine for connection pool health
         try:
             from .monitoring import monitor_engine
+
             self._engine_id = monitor_engine(self.engine, "init")
         except ImportError:
             # Monitoring is optional
@@ -98,12 +99,14 @@ class DatabaseService(Service):
             if old_engine_id:
                 try:
                     from .monitoring import engine_disposed
+
                     engine_disposed(old_engine_id)
                 except ImportError:
                     pass
 
             # Schedule disposal in background to avoid blocking
             import asyncio
+
             try:
                 # Try to get current event loop
                 loop = asyncio.get_event_loop()
@@ -129,6 +132,7 @@ class DatabaseService(Service):
         # Monitor the new engine
         try:
             from .monitoring import monitor_engine
+
             self._engine_id = monitor_engine(self.engine, "reload")
         except ImportError:
             self._engine_id = None
@@ -544,6 +548,7 @@ class DatabaseService(Service):
             if engine_id:
                 try:
                     from .monitoring import engine_disposed
+
                     engine_disposed(engine_id)
                 except ImportError:
                     pass

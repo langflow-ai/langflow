@@ -10,11 +10,10 @@ import gc
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncEngine
-
 from langflow.services.database.service import DatabaseService
 from langflow.services.deps import get_db_service
 from langflow.services.schema import ServiceType
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 
 class TestConnectionPoolLeak:
@@ -45,7 +44,7 @@ class TestConnectionPoolLeak:
 
     def test_reload_engine_creates_new_engine_without_disposing_old(self, db_service):
         """Test that reload_engine creates new engines without disposing old ones.
-        
+
         This test validates the core issue: reload_engine() creates new AsyncEngine
         instances without properly disposing of the previous ones, leading to
         connection pool leaks.
@@ -155,7 +154,7 @@ class TestConnectionPoolLeak:
     @pytest.mark.asyncio
     async def test_concurrent_database_operations_dont_exhaust_pool(self, db_service):
         """Test that concurrent operations don't exhaust the connection pool.
-        
+
         This test simulates the user-reported issue where the system
         "keeps consuming until hitting the limit" instead of reusing connections.
         """
@@ -199,7 +198,7 @@ class TestConnectionPoolLeak:
     @pytest.mark.asyncio
     async def test_multiple_database_services_share_connection_limits(self):
         """Test that multiple DatabaseService instances can cause pool exhaustion.
-        
+
         This test validates the scenario where multiple services are created
         (even if by mistake) and each consumes connection pool resources.
         """
@@ -211,6 +210,7 @@ class TestConnectionPoolLeak:
         settings = Settings()
         settings.database_url = "sqlite+aiosqlite:///:memory:"
         import tempfile
+
         auth_settings = AuthSettings(CONFIG_DIR=settings.config_dir or tempfile.gettempdir())
         settings_service = SettingsService(settings, auth_settings)
 
@@ -229,7 +229,7 @@ class TestConnectionPoolLeak:
 
     def test_connection_pool_metrics_tracking(self, db_service):
         """Test that we can track connection pool metrics for monitoring.
-        
+
         This test sets up the foundation for monitoring connection pool health.
         """
         engine = db_service.engine

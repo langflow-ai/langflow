@@ -26,9 +26,9 @@ class MockSettingsService:
 
 def test_reload_engine_fix():
     """Test that reload_engine now properly disposes old engines."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("✅ TESTING reload_engine() FIX")
-    print("="*80)
+    print("=" * 80)
 
     mock_settings = MockSettingsService()
     db_service = DatabaseService(mock_settings)
@@ -37,9 +37,11 @@ def test_reload_engine_fix():
 
     def mock_dispose():
         """Mock dispose method that tracks calls."""
+
         async def _dispose():
             engines_disposed.append(id(original_engine))
             print(f"   ✅ Engine {id(original_engine)} properly disposed!")
+
         return _dispose()
 
     # Get original engine
@@ -57,6 +59,7 @@ def test_reload_engine_fix():
             if loop.is_running():
                 # If in async context, just wait a bit
                 import time
+
                 time.sleep(0.1)
         except RuntimeError:
             pass
@@ -82,9 +85,9 @@ def test_reload_engine_fix():
 
 def test_service_manager_update_fix():
     """Test ServiceManager.update() fix (conceptual test)."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("✅ TESTING ServiceManager.update() FIX")
-    print("="*80)
+    print("=" * 80)
 
     # This is a conceptual test since we modified the LFX service manager
     # In practice, the fix ensures teardown is called before service replacement
@@ -139,9 +142,9 @@ def test_service_manager_update_fix():
 
 def test_teardown_enhancement():
     """Test enhanced teardown method."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("✅ TESTING ENHANCED teardown() METHOD")
-    print("="*80)
+    print("=" * 80)
 
     mock_settings = MockSettingsService()
     db_service = DatabaseService(mock_settings)
@@ -151,9 +154,10 @@ def test_teardown_enhancement():
 
     # Mock the actual teardown dependencies
     async def run_teardown():
-        with patch("langflow.services.utils.teardown_superuser") as mock_teardown_superuser, \
-             patch("langflow.services.deps.get_settings_service") as mock_get_settings:
-
+        with (
+            patch("langflow.services.utils.teardown_superuser") as mock_teardown_superuser,
+            patch("langflow.services.deps.get_settings_service") as mock_get_settings,
+        ):
             mock_teardown_superuser.return_value = None
             mock_get_settings.return_value = mock_settings
 
@@ -181,9 +185,9 @@ def test_teardown_enhancement():
 
 def demonstrate_fix_effectiveness():
     """Demonstrate the effectiveness of all fixes combined."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🎯 DEMONSTRATING COMBINED FIX EFFECTIVENESS")
-    print("="*80)
+    print("=" * 80)
 
     print("BEFORE FIXES (simulated old behavior):")
     print("  - reload_engine(): 3 engines leaked out of 4 created (75% leak)")
@@ -233,9 +237,9 @@ if __name__ == "__main__":
 
     fixes_working = demonstrate_fix_effectiveness()
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🎯 FINAL RESULTS")
-    print("="*80)
+    print("=" * 80)
 
     if fixes_working == 3:
         print("✅ CONNECTION POOL LEAK FIXES: FULLY WORKING")
@@ -254,4 +258,4 @@ if __name__ == "__main__":
         print("   - Test in production environment")
         print("   - Monitor connection pool metrics")
 
-    print("="*80)
+    print("=" * 80)

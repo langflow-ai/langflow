@@ -8,9 +8,8 @@ properly disposed, leading to pool exhaustion.
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncEngine
-
 from langflow.services.database.service import DatabaseService
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 
 class MockSettingsService:
@@ -45,7 +44,7 @@ class TestSimpleConnectionPoolLeak:
 
     def test_reload_engine_doesnt_dispose_old_engine(self):
         """Test that reload_engine creates new engines without disposing old ones.
-        
+
         This is the CORE BUG causing connection pool leaks.
         """
         # Create database service with mock settings
@@ -185,14 +184,14 @@ class TestSimpleConnectionPoolLeak:
         total_engines += 1
 
         for i in range(3):
-            print(f"   Step {i+1}: User changes database configuration...")
+            print(f"   Step {i + 1}: User changes database configuration...")
             db_service.reload_engine()  # BUG: Previous engine not disposed
             total_engines += 1
             leaked_engines += 1
 
         # Scenario 2: Service manager updates during development/testing
         for i in range(2):
-            print(f"   Dev/Test {i+1}: Service manager update...")
+            print(f"   Dev/Test {i + 1}: Service manager update...")
             _ = DatabaseService(mock_settings)  # BUG: Old service not cleaned
             total_engines += 1
             leaked_engines += 1
@@ -206,7 +205,7 @@ class TestSimpleConnectionPoolLeak:
         print(f"   Leaked engines: {leaked_engines}")
         print(f"   Total connections allocated: {total_connections}")
         print(f"   Leaked connections: {leaked_connections}")
-        print(f"   Connection waste percentage: {(leaked_connections/total_connections)*100:.1f}%")
+        print(f"   Connection waste percentage: {(leaked_connections / total_connections) * 100:.1f}%")
         print("\n   This is why users report: 'não reutiliza as pools, vai consumindo até bater no limite'")
 
 

@@ -11,9 +11,9 @@ from langflow.services.database.service import DatabaseService
 
 def test_reload_engine_has_disposal_logic():
     """Test that reload_engine method now includes engine disposal logic."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("✅ VALIDATING reload_engine() FIX IS IN PLACE")
-    print("="*80)
+    print("=" * 80)
 
     # Get the source code of reload_engine method
     source = inspect.getsource(DatabaseService.reload_engine)
@@ -46,12 +46,13 @@ def test_reload_engine_has_disposal_logic():
 
 def test_service_manager_has_teardown_logic():
     """Test that ServiceManager.update method now includes teardown logic."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("✅ VALIDATING ServiceManager.update() FIX IS IN PLACE")
-    print("="*80)
+    print("=" * 80)
 
     # Import the ServiceManager and get source
     from lfx.services.manager import ServiceManager
+
     source = inspect.getsource(ServiceManager.update)
 
     # Check for fix indicators
@@ -84,9 +85,9 @@ def test_service_manager_has_teardown_logic():
 
 def test_teardown_has_enhancements():
     """Test that DatabaseService.teardown method has enhancements."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("✅ VALIDATING teardown() ENHANCEMENTS ARE IN PLACE")
-    print("="*80)
+    print("=" * 80)
 
     # Get source of teardown method
     source = inspect.getsource(DatabaseService.teardown)
@@ -121,9 +122,9 @@ def test_teardown_has_enhancements():
 
 def validate_fix_integration():
     """Validate that all fixes work together conceptually."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🎯 VALIDATING INTEGRATED FIX APPROACH")
-    print("="*80)
+    print("=" * 80)
 
     print("Connection Pool Leak Fix Strategy:")
     print("  1. reload_engine() disposes old engines before creating new ones")
@@ -150,9 +151,9 @@ def validate_fix_integration():
 
 def demonstrate_before_after():
     """Show the before and after behavior conceptually."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("📈 BEFORE vs AFTER COMPARISON")
-    print("="*80)
+    print("=" * 80)
 
     print("BEFORE FIXES:")
     print("  ❌ reload_engine(): Creates new engine, old engine leaked")
@@ -187,9 +188,9 @@ if __name__ == "__main__":
 
     total_fixes = sum([reload_fix, service_fix, teardown_fix])
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🎯 FIX VALIDATION SUMMARY")
-    print("="*80)
+    print("=" * 80)
 
     print("Fix Implementation Status:")
     print(f"  reload_engine() fix:     {'✅ IMPLEMENTED' if reload_fix else '❌ MISSING'}")
@@ -215,4 +216,4 @@ if __name__ == "__main__":
         print("❌ Connection pool leaks likely still present")
         print("❌ More work needed before production deployment")
 
-    print("="*80)
+    print("=" * 80)
