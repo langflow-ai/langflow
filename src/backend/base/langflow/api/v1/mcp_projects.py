@@ -38,6 +38,7 @@ from langflow.api.v1.schemas import (
     MCPProjectUpdateRequest,
     MCPSettings,
 )
+from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from langflow.base.mcp.util import sanitize_mcp_name
 from langflow.logging.logger import logger
@@ -387,65 +388,14 @@ async def update_project_mcp_settings(
 
             # Update project-level auth settings with encryption
             if "auth_settings" in request.model_fields_set:
-                # Get current auth type before update
-                current_auth_type = None
-                if project.auth_settings:
-                    decrypted_current = decrypt_auth_settings(project.auth_settings)
-                    if decrypted_current:
-                        current_auth_type = decrypted_current.get("auth_type")
-
-                if request.auth_settings is None:
-                    # Explicitly set to None - clear auth settings
-                    # If we were using OAuth, stop the composer
-                    if current_auth_type == "oauth":
-                        should_handle_mcp_composer = True
-                        should_stop_composer = True
-                    project.auth_settings = None
-                else:
-                    # Use python mode to get raw values without SecretStr masking
-                    auth_model = request.auth_settings
-                    auth_dict = auth_model.model_dump(mode="python", exclude_none=True)
-
-                    # Handle api_key if it's a SecretStr
-                    api_key_val = getattr(auth_model, "api_key", None)
-                    if isinstance(api_key_val, SecretStr):
-                        auth_dict["api_key"] = api_key_val.get_secret_value()
-
-                    # Handle oauth_client_secret if it's a SecretStr
-                    client_secret_val = getattr(auth_model, "oauth_client_secret", None)
-                    if isinstance(client_secret_val, SecretStr):
-                        auth_dict["oauth_client_secret"] = client_secret_val.get_secret_value()
-
-                    new_auth_type = auth_dict.get("auth_type")
-
-                    # Handle masked secret fields from frontend
-                    # If frontend sends back "*******" for a secret field, preserve the existing value
-                    if project.auth_settings:
-                        decrypted_current = decrypt_auth_settings(project.auth_settings)
-                        if decrypted_current:
-                            # Check for masked secret fields and restore original values
-                            secret_fields = ["oauth_client_secret", "api_key"]
-                            for field in secret_fields:
-                                if field in auth_dict and auth_dict[field] == "*******":
-                                    # Frontend sent back masked value, restore the original
-                                    if field in decrypted_current:
-                                        auth_dict[field] = decrypted_current[field]
-
-                    # Now encrypt the auth_dict with properly handled secrets
-                    encrypted_settings = encrypt_auth_settings(auth_dict)
-                    project.auth_settings = encrypted_settings
-
-                    # Determine if we need to handle MCP Composer
-                    if new_auth_type == "oauth":
-                        # Always try to start/restart MCP Composer for OAuth projects
-                        # This handles cases where the server wasn't running or port became available
-                        # Note this won't restart the composer if it's already running, so no service interruptions
-                        should_handle_mcp_composer = True
-                        should_start_composer = True
-                    elif current_auth_type == "oauth" and new_auth_type != "oauth":
-                        # Switching away from OAuth - stop the composer
-                        should_handle_mcp_composer = True
-                        should_stop_composer = True
+                auth_result = handle_auth_settings_update(
+                    existing_project=project,
+                    new_auth_settings=request.auth_settings,
+                )
+                
+                should_handle_mcp_composer = auth_result["should_handle_composer"]
+                should_start_composer = auth_result["should_start_composer"]
+                should_stop_composer = auth_result["should_stop_composer"]
 
             session.add(project)
 

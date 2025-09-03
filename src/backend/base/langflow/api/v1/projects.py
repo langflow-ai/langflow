@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Annotated, cast
 from urllib.parse import quote
 from uuid import UUID
+from pydantic import SecretStr
 
 import orjson
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Response, UploadFile, status
@@ -20,11 +21,12 @@ from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.mcp_projects import register_project_with_composer
 from langflow.api.v1.schemas import FlowListCreate
+from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.logging import logger
-from langflow.services.auth.mcp_encryption import encrypt_auth_settings
+from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
@@ -213,25 +215,13 @@ async def update_project(
 
         # Check if auth_settings is being updated
         if "auth_settings" in project.model_fields_set:  # Check if auth_settings was explicitly provided
-            # Get current and new auth types
-            current_auth_type = None
-            if existing_project.auth_settings:
-                current_auth_type = existing_project.auth_settings.get("auth_type")
-
-            new_auth_type = None
-            if project.auth_settings:
-                new_auth_type = project.auth_settings.get("auth_type")
-
-            # Check if auth_type is changing TO oauth
-            if new_auth_type == "oauth" and current_auth_type != "oauth":
-                should_start_mcp_composer = True
-
-            # Check if auth_type is changing FROM oauth (to something else or cleared)
-            elif current_auth_type == "oauth" and new_auth_type != "oauth":
-                should_stop_mcp_composer = True
-
-            # Update auth_settings (could be None to clear it)
-            existing_project.auth_settings = project.auth_settings
+            auth_result = handle_auth_settings_update(
+                existing_project=existing_project,
+                new_auth_settings=project.auth_settings,
+            )
+            
+            should_start_mcp_composer = auth_result["should_start_composer"]
+            should_stop_mcp_composer = auth_result["should_stop_composer"]
 
         # Handle other updates
         if project.name and project.name != existing_project.name:
