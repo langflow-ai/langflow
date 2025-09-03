@@ -4,11 +4,11 @@ import pytest
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
-from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
-from langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
-from langflow.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
-from langflow.components.models.language_model import LanguageModelComponent
 
+from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
+from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
+from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
+from lfx.components.models.language_model import LanguageModelComponent
 from tests.base import ComponentTestBaseWithoutClient
 
 
