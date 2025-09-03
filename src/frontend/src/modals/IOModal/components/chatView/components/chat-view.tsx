@@ -1,24 +1,25 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
-import { v5 as uuidv5 } from "uuid";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
 import CustomChatInput from "@/customization/components/custom-chat-input";
 import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import useCustomUseFileHandler from "@/customization/hooks/use-custom-use-file-handler";
 import { track } from "@/customization/utils/analytics";
+import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
 import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
 import useFlowStore from "../../../../../stores/flowStore";
-import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import type { ChatMessageType } from "../../../../../types/chat";
 import type { chatViewProps } from "../../../../../types/components";
 import FlowRunningSqueleton from "../../flow-running-squeleton";
 import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
 import ChatMessage from "../chatMessage/chat-message";
+import sortSenderMessages from "../helpers/sort-sender-messages";
 
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
@@ -40,11 +41,8 @@ export default function ChatView({
   sidebarOpen,
 }: chatViewProps): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs);
-  const clientId = useUtilityStore((state) => state.clientId);
   const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const currentFlowId = playgroundPage
-    ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
-    : realFlowId;
+  const currentFlowId = useGetFlowId();
   const [chatHistory, setChatHistory] = useState<ChatMessageType[] | undefined>(
     undefined,
   );
@@ -102,9 +100,10 @@ export default function ChatView({
           properties: message.properties || {},
         };
       });
-    const finalChatHistory = [...messagesFromMessagesStore].sort((a, b) => {
-      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-    });
+
+    const finalChatHistory = [...messagesFromMessagesStore].sort(
+      sortSenderMessages,
+    );
 
     if (messages.length === 0 && !isBuilding && chatInputNode && isTabHidden) {
       setChatValueStore(

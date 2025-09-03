@@ -208,10 +208,22 @@ def configure(
     log_env: str | None = None,
     log_format: str | None = None,
     log_rotation: str | None = None,
+    cache: bool | None = None,
 ) -> None:
     """Configure the logger."""
+    # Early-exit only if structlog is configured AND current min level matches the requested one.
+    cfg = structlog.get_config() if structlog.is_configured() else {}
+    wrapper_class = cfg.get("wrapper_class")
+    current_min_level = getattr(wrapper_class, "min_level", None)
     if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
+
+    requested_min_level = LOG_LEVEL_MAP.get(
+        ((log_level if log_level is not None else os.getenv("LANGFLOW_LOG_LEVEL", "ERROR")).upper()), logging.ERROR
+    )
+    if current_min_level == requested_min_level:
+        return
+
     if log_level is None:
         log_level = "ERROR"
 
@@ -260,15 +272,19 @@ def configure(
     # Get numeric log level
     numeric_level = LOG_LEVEL_MAP.get(log_level.upper(), logging.ERROR)
 
+    # Create wrapper class and attach the min level for later comparison
+    wrapper_class = structlog.make_filtering_bound_logger(numeric_level)
+    wrapper_class.min_level = numeric_level
+
     # Configure structlog
     structlog.configure(
         processors=processors,
-        wrapper_class=structlog.make_filtering_bound_logger(numeric_level),
+        wrapper_class=wrapper_class,
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(file=sys.stdout)
         if not log_file
         else structlog.stdlib.LoggerFactory(),
-        cache_logger_on_first_use=True,
+        cache_logger_on_first_use=cache if cache is not None else True,
     )
 
     # Set up file logging if needed
@@ -366,4 +382,4 @@ class InterceptHandler(logging.Handler):
 # Initialize logger - will be reconfigured when configure() is called
 # Set it to critical level
 logger: structlog.BoundLogger = structlog.get_logger()
-configure(log_level="CRITICAL", disable=True)
+configure(log_level="CRITICAL", cache=False)

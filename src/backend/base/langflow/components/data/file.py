@@ -47,21 +47,15 @@ class FileComponent(BaseFileComponent):
 
     # Docling-supported/compatible extensions; TEXT_FILE_TYPES are supported by the base loader.
     VALID_EXTENSIONS = [
+        *TEXT_FILE_TYPES,
         "adoc",
         "asciidoc",
         "asc",
         "bmp",
-        "csv",
         "dotx",
         "dotm",
         "docm",
-        "docx",
-        "htm",
-        "html",
         "jpeg",
-        "json",
-        "md",
-        "pdf",
         "png",
         "potx",
         "ppsx",
@@ -70,13 +64,10 @@ class FileComponent(BaseFileComponent):
         "ppsm",
         "pptx",
         "tiff",
-        "txt",
         "xls",
         "xlsx",
         "xhtml",
-        "xml",
         "webp",
-        *TEXT_FILE_TYPES,
     ]
 
     # Fixed export settings used when markdown export is requested.
@@ -115,8 +106,8 @@ class FileComponent(BaseFileComponent):
             name="ocr_engine",
             display_name="OCR Engine",
             info="OCR engine to use. Only available when pipeline is set to 'standard'.",
-            options=["", "easyocr"],
-            value="",
+            options=["None", "easyocr"],
+            value="easyocr",
             show=False,
             advanced=True,
         ),
@@ -305,7 +296,7 @@ class FileComponent(BaseFileComponent):
             "md_image_placeholder": str(self.md_image_placeholder),
             "md_page_break_placeholder": str(self.md_page_break_placeholder),
             "pipeline": str(self.pipeline),
-            "ocr_engine": str(self.ocr_engine) if getattr(self, "ocr_engine", "") else None,
+            "ocr_engine": str(self.ocr_engine) if self.ocr_engine and self.ocr_engine is not None else None,
         }
 
         # The child is a tiny, self-contained script to keep memory/state isolated.
