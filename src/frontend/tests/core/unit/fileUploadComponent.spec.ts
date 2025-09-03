@@ -63,6 +63,9 @@ test(
         ),
       ).toBeVisible();
 
+      await page.getByText("My Files").first().hover();
+      await page.waitForTimeout(500);
+
       const drag = await page.getByTestId("drag-files-component");
       const fileChooserPromise = page.waitForEvent("filechooser", {
         timeout: 30000,
