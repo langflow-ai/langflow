@@ -1,7 +1,7 @@
-import { track } from "@/customization/utils/analytics";
 import { Panel } from "@xyflow/react";
 import { memo, useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { track } from "@/customization/utils/analytics";
 import useFlowStore from "../../../stores/flowStore";
 import { useShortcutsStore } from "../../../stores/shortcuts";
 import { cn, isThereModal } from "../../../utils/utils";
