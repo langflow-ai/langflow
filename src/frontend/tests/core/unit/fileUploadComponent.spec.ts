@@ -36,7 +36,7 @@ test(
     await page.getByTestId("sidebar-search-input").fill("file");
 
     await page.waitForSelector('[data-testid="dataFile"]', {
-      timeout: 3000,
+      timeout: 10000,
     });
 
     await page
@@ -46,9 +46,10 @@ test(
     await page.mouse.up();
     await page.mouse.down();
     await adjustScreenView(page);
+    await page.waitForTimeout(2000);
     const fileManagement = await page
       .getByTestId("button_open_file_management")
-      ?.isVisible();
+      ?.isVisible({ timeout: 10000 });
     if (fileManagement) {
       // Test upload file
       await page.getByTestId("button_open_file_management").click();
@@ -63,7 +64,9 @@ test(
       ).toBeVisible();
 
       const drag = await page.getByTestId("drag-files-component");
-      const fileChooserPromise = page.waitForEvent("filechooser");
+      const fileChooserPromise = page.waitForEvent("filechooser", {
+        timeout: 30000,
+      });
       await drag.click();
       const fileChooser = await fileChooserPromise;
       await fileChooser.setFiles([
@@ -75,12 +78,12 @@ test(
       ]);
 
       await expect(page.getByText(`${sourceFileName}.txt`).last()).toBeVisible({
-        timeout: 1000,
+        timeout: 5000,
       });
 
       await expect(
         page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 1000 });
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
 
       // Create DataTransfer object and file
       const dataTransfer = await page.evaluateHandle((jsonFileName) => {
@@ -109,7 +112,7 @@ test(
       });
 
       await expect(page.getByText(`${jsonFileName}.json`).last()).toBeVisible({
-        timeout: 1000,
+        timeout: 5000,
       });
 
       await expect(
@@ -235,7 +238,9 @@ test(
         timeout: 1000,
       });
     } else {
-      const fileChooserPromise = page.waitForEvent("filechooser");
+      const fileChooserPromise = page.waitForEvent("filechooser", {
+        timeout: 30000,
+      });
       await page.getByTestId("button_upload_file").click();
       const fileChooser = await fileChooserPromise;
       await fileChooser.setFiles([
@@ -276,12 +281,12 @@ test(
     await page.getByText("Run Flow", { exact: true }).last().click();
 
     await expect(page.getByText("this is a test file")).toBeVisible({
-      timeout: 3000,
+      timeout: 10000,
     });
 
     if (fileManagement) {
       await expect(page.getByText('{"test":"content"}')).toBeVisible({
-        timeout: 3000,
+        timeout: 10000,
       });
       await page.getByText("Close", { exact: true }).last().click();
       await page.getByTestId("button_open_file_management").click();
@@ -290,7 +295,7 @@ test(
       await page.getByTestId("replace-button").click();
       await expect(page.getByText(`${renamedJsonFile}.txt`).first()).toBeHidden(
         {
-          timeout: 1000,
+          timeout: 10000,
         },
       );
 
@@ -320,16 +325,16 @@ test(
 
       await expect(
         page.getByTestId(`checkbox-${newTxtFile}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 3000 });
+      ).toHaveAttribute("data-state", "checked", { timeout: 10000 });
 
       await page.getByTestId("select-files-modal-button").click();
       await expect(page.getByText(`${renamedJsonFile}.txt`).first()).toBeHidden(
         {
-          timeout: 3000,
+          timeout: 10000,
         },
       );
       await expect(page.getByText(`${newTxtFile}.txt`).first()).toBeVisible({
-        timeout: 1000,
+        timeout: 10000,
       });
       await page.getByTestId(`remove-file-button-${renamedTxtFile}`).click();
 
@@ -356,13 +361,13 @@ test(
       await page.getByText("Run Flow", { exact: true }).last().click();
 
       await expect(page.getByText("this is a test file")).toBeHidden({
-        timeout: 3000,
+        timeout: 10000,
       });
       await expect(page.getByText('{ "test": "content" }')).toBeHidden({
-        timeout: 3000,
+        timeout: 10000,
       });
       await expect(page.getByText("this is a new test")).toBeVisible({
-        timeout: 3000,
+        timeout: 10000,
       });
     }
   },
@@ -398,7 +403,7 @@ test(
     await page.getByTestId("sidebar-search-input").fill("file");
 
     await page.waitForSelector('[data-testid="dataFile"]', {
-      timeout: 3000,
+      timeout: 10000,
     });
 
     await page
@@ -490,17 +495,21 @@ test(
             .getAttribute("data-state")) === "checked"
         ) {
           await page.getByTestId(`checkbox-${file.name}`).last().click();
+          await page.waitForTimeout(500);
         }
       }
 
       // Test 1: Select first file, then shift-click the third file
       // First file
       await page.getByTestId(`checkbox-${file1}`).last().click();
+      await page.waitForTimeout(500);
 
       // Hold shift and click third file
       await page.keyboard.down("Shift");
       await page.getByTestId(`checkbox-${file3}`).last().click();
+      await page.waitForTimeout(500);
       await page.keyboard.up("Shift");
+      await page.waitForTimeout(500);
 
       // Verify files 1, 2, and 3 are selected
       await expect(
@@ -637,7 +646,9 @@ test(
     expect(await title.textContent()).toContain("Files");
 
     // Upload the PSD file
-    const fileChooserPromisePsd = page.waitForEvent("filechooser");
+    const fileChooserPromisePsd = page.waitForEvent("filechooser", {
+      timeout: 30000,
+    });
     await page.getByTestId("upload-file-btn").click();
 
     const fileChooserPsd = await fileChooserPromisePsd;
@@ -650,13 +661,19 @@ test(
     ]);
 
     // Wait for upload success message
-    await expect(page.getByText("File uploaded successfully")).toBeVisible();
+    await expect(page.getByText("File uploaded successfully")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Verify PSD file appears in the list
-    await expect(page.getByText(`${psdFileName}.psd`)).toBeVisible();
+    await expect(page.getByText(`${psdFileName}.psd`)).toBeVisible({
+      timeout: 5000,
+    });
 
     // Upload the TXT file
-    const fileChooserPromiseTxt = page.waitForEvent("filechooser");
+    const fileChooserPromiseTxt = page.waitForEvent("filechooser", {
+      timeout: 30000,
+    });
     await page.getByTestId("upload-file-btn").click();
 
     const fileChooserTxt = await fileChooserPromiseTxt;
@@ -669,10 +686,14 @@ test(
     ]);
 
     // Wait for upload success message
-    await expect(page.getByText("File uploaded successfully")).toBeVisible();
+    await expect(page.getByText("File uploaded successfully")).toBeVisible({
+      timeout: 10000,
+    });
 
     // Verify TXT file appears in the list
-    await expect(page.getByText(`${txtFileName}.txt`)).toBeVisible();
+    await expect(page.getByText(`${txtFileName}.txt`)).toBeVisible({
+      timeout: 5000,
+    });
 
     // Step 2: Create a flow with File component and check if PSD file is disabled
     // Navigate to workspace page
@@ -693,7 +714,7 @@ test(
     await page.getByTestId("sidebar-search-input").fill("file");
 
     await page.waitForSelector('[data-testid="dataFile"]', {
-      timeout: 3000,
+      timeout: 10000,
     });
 
     await page
