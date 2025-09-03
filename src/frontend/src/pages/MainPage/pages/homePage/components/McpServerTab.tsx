@@ -173,8 +173,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const isOAuthProject =
     currentAuthSettings?.auth_type === "oauth" && ENABLE_MCP_COMPOSER;
   const shouldQueryComposerUrl = isOAuthProject && !isPatchingFlowsMCP;
-  
-  
+
   const { data: composerUrlData } = useGetProjectComposerUrl(
     {
       projectId,
