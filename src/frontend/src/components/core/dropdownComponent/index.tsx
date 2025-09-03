@@ -568,7 +568,7 @@ export default function Dropdown({
                           "ml-auto":
                             !filteredMetadata || filteredMetadata.length === 0,
                         })}
-                    >
+                      >
                         <ForwardedIconComponent
                           name="Check"
                           className={cn(
