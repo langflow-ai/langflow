@@ -1,16 +1,11 @@
-import type { ColDef, NewValueParams } from "ag-grid-community";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Button } from "@/components/ui/button";
 import { formatFileSize } from "@/utils/stringManipulation";
+import type { ColDef } from "ag-grid-community";
 import {
   formatAverageChunkSize,
   formatNumber,
 } from "../utils/knowledgeBaseUtils";
 
-export const createKnowledgeBaseColumns = (
-  onRename?: (params: NewValueParams<any, any>) => void,
-  onDelete?: (knowledgeBase: any) => void,
-): ColDef[] => {
+export const createKnowledgeBaseColumns = (): ColDef[] => {
   const baseCellClass =
     "text-muted-foreground cursor-pointer select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none";
 
@@ -35,7 +30,8 @@ export const createKnowledgeBaseColumns = (
     {
       headerName: "Embedding Model",
       field: "embedding_provider",
-      flex: 1.2,
+      flex: 2,
+      sortable: false,
       filter: "agTextColumnFilter",
       editable: false,
       cellClass: baseCellClass,
@@ -45,7 +41,8 @@ export const createKnowledgeBaseColumns = (
     {
       headerName: "Size",
       field: "size",
-      flex: 0.8,
+      flex: 1,
+      sortable: false,
       valueFormatter: (params) => formatFileSize(params.value),
       editable: false,
       cellClass: baseCellClass,
@@ -53,7 +50,8 @@ export const createKnowledgeBaseColumns = (
     {
       headerName: "Words",
       field: "words",
-      flex: 0.8,
+      flex: 1,
+      sortable: false,
       editable: false,
       cellClass: baseCellClass,
       valueFormatter: (params) => formatNumber(params.value),
@@ -69,7 +67,8 @@ export const createKnowledgeBaseColumns = (
     {
       headerName: "Chunks",
       field: "chunks",
-      flex: 0.7,
+      flex: 1,
+      sortable: false,
       editable: false,
       cellClass: baseCellClass,
       valueFormatter: (params) => formatNumber(params.value),
@@ -81,35 +80,6 @@ export const createKnowledgeBaseColumns = (
       editable: false,
       cellClass: baseCellClass,
       valueFormatter: (params) => formatAverageChunkSize(params.value),
-    },
-    {
-      maxWidth: 60,
-      editable: false,
-      resizable: false,
-      cellClass: "cursor-default",
-      cellRenderer: (params) => {
-        const handleDeleteClick = () => {
-          if (onDelete) {
-            onDelete(params.data);
-          }
-        };
-
-        return (
-          <div className="flex h-full cursor-default items-center justify-center">
-            <Button
-              variant="ghost"
-              size="iconMd"
-              onClick={handleDeleteClick}
-              className="hover:bg-destructive/10"
-            >
-              <ForwardedIconComponent
-                name="Trash2"
-                className="h-4 w-4 text-destructive"
-              />
-            </Button>
-          </div>
-        );
-      },
-    },
+    }
   ];
 };
