@@ -93,6 +93,10 @@ test(
 
         await page.waitForTimeout(1000);
 
+        // Close the modal
+        await page.getByText("Close").last().click();
+        await page.waitForTimeout(2000);
+
         await page.reload();
 
         // Navigate to MCP server tab
@@ -277,7 +281,12 @@ test(
           timeout: 30000,
         });
 
-        await page.getByTestId("json-input").fill(configJsonLinux || "");
+        const randomSuffix = Math.floor(Math.random() * 90000) + 10000; // 5-digit random number
+        const testName = `test_server_${randomSuffix}`;
+
+        await page
+          .getByTestId("json-input")
+          .fill(configJsonLinux.replace(/lf-starter_project/g, testName) || "");
 
         await page.getByTestId("add-mcp-server-button").click();
 
