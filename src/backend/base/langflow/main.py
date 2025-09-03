@@ -11,7 +11,6 @@ from urllib.parse import urlencode
 
 import anyio
 import httpx
-from langflow.services.mcp_composer.service import MCPComposerService
 import sqlalchemy
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,6 +36,7 @@ from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure, logger
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.services.deps import get_queue_service, get_service, get_settings_service, get_telemetry_service
+from langflow.services.mcp_composer.service import MCPComposerService
 from langflow.services.schema import ServiceType
 from langflow.services.utils import initialize_services, teardown_services
 
@@ -192,7 +192,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Starting MCP Composer service")
-            mcp_composer_service = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
+            mcp_composer_service = cast("MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE))
             await mcp_composer_service.start()
             await logger.adebug(
                 f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s"
@@ -224,14 +224,16 @@ def get_lifespan(*, fix_migration=False, version=None):
                     await logger.adebug("Retrying mcp servers initialization")
                     try:
                         await init_mcp_servers()
-                        await logger.adebug(f"mcp servers loaded on retry in {asyncio.get_event_loop().time() - current_time:.2f}s")
+                        await logger.adebug(
+                            f"mcp servers loaded on retry in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                        )
                     except Exception as e2:
                         await logger.aexception(f"Failed to initialize MCP servers after retry: {e2}")
-            
+
             # Start the delayed initialization as a background task
             # Allows the server to start first to avoid race conditions with MCP Server startup
             asyncio.create_task(delayed_init_mcp_servers())
-            
+
             yield
 
         except asyncio.CancelledError:

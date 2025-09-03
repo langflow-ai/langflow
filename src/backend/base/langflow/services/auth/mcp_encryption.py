@@ -3,8 +3,8 @@
 from typing import Any
 
 from cryptography.fernet import InvalidToken
-from langflow.logging.logger import logger
 
+from langflow.logging.logger import logger
 from langflow.services.auth import utils as auth_utils
 from langflow.services.deps import get_settings_service
 
@@ -71,7 +71,7 @@ def decrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
             try:
                 decrypted_value = auth_utils.decrypt_api_key(decrypted_settings[field], settings_service)
                 decrypted_settings[field] = decrypted_value
-            except (ValueError, TypeError, KeyError, InvalidToken) as e:
+            except (ValueError, TypeError, KeyError, InvalidToken):
                 # If decryption fails, assume the value is already plaintext
                 # This handles backward compatibility with existing unencrypted data
                 # Keep the original value
