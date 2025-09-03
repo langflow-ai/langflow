@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.9488e50d.css">
-<script src="/assets/js/runtime~main.57fbaa8d.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.d5fe0b04.js" defer="defer"></script>
 <script src="/assets/js/main.14a877c9.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -76,7 +76,8 @@ As an open-source codebase in a rapidly developing field, Langflow welcomes cont
 <li><code>GIT_USERNAME</code>: Your Git username</li>
 </ul>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="run-langflow-from-source">Run Langflow from source<a href="#run-langflow-from-source" class="hash-link" aria-label="Direct link to Run Langflow from source" title="Direct link to Run Langflow from source">​</a></h3>
-<p>You can run Langflow from source after cloning the repository, even if you aren&#x27;t contributing to the codebase.</p>
+<p>You can run Langflow from source after cloning the repository, even if you aren&#x27;t contributing to the codebase.
+If you plan to contribute code, see <a href="#set-up-your-langflow-development-environment">Set up development environment</a>.</p>
 <details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>Run from source on macOS/Linux</summary><div><div class="collapsibleContent_i85q"><p>In your terminal, navigate to the root of the Langflow directory, and then run <code>make run_cli</code>.</p><p>This command does the following:</p><ul>
 <li>Installs frontend and backend dependencies</li>
 <li>Builds the frontend static files</li>
@@ -125,6 +126,8 @@ As an open-source codebase in a rapidly developing field, Langflow welcomes cont
 </li>
 </ul><p>The Langflow frontend is served at <code>http://localhost:7860</code>.</p></div></div></details>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="set-up-your-langflow-development-environment">Set up your Langflow development environment<a href="#set-up-your-langflow-development-environment" class="hash-link" aria-label="Direct link to Set up your Langflow development environment" title="Direct link to Set up your Langflow development environment">​</a></h3>
+<p>This section is for contributors who want to develop and test code changes.</p>
+<p>If you just want to run Langflow locally without making code changes, see <a href="#run-langflow-from-source">Run Langflow from source</a>.</p>
 <div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">Linux or macOS</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Windows</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><ol>
 <li>
 <p>Set up the Langflow development environment:</p>
@@ -195,6 +198,8 @@ For style guidance, see the <a href="https://developers.google.com/style" target
 <li>
 <p>From the root of your local Langflow fork, change to the <code>/docs</code> directory:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>cd docs</span></div></div><br></code></div></div>
+<p>If you&#x27;re using a dev container, run the documentation build from outside the container on your host terminal, not from within the dev container workspace.
+The documentation build may not work properly when run inside the dev container.</p>
 </li>
 <li>
 <p>Install dependencies and start a local Docusaurus static site with hot reload:</p>
