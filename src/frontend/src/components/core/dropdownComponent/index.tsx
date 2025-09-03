@@ -1,3 +1,6 @@
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import Fuse from "fuse.js";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
@@ -11,11 +14,13 @@ import {
   convertStringToHTML,
   getStatusColor,
 } from "@/utils/stringManipulation";
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { DropDownComponent } from "../../../types/components";
-import { cn, filterNullOptions, formatName, groupByFamily } from "../../../utils/utils";
+import {
+  cn,
+  filterNullOptions,
+  formatName,
+  groupByFamily,
+} from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
 import ShadTooltip from "../../common/shadTooltipComponent";
 import { Button } from "../../ui/button";
@@ -66,7 +71,7 @@ export default function Dropdown({
   const [openDialog, setOpenDialog] = useState(false);
   const [waitingForResponse, setWaitingForResponse] = useState(false);
   const [customValue, setCustomValue] = useState("");
-    const nodes = useFlowStore((state) => state.nodes);
+  const nodes = useFlowStore((state) => state.nodes);
 
   const [filteredOptions, setFilteredOptions] = useState(() => {
     // Include the current value in filteredOptions if it's a custom value not in validOptions
@@ -419,7 +424,7 @@ export default function Dropdown({
                 RECEIVING_INPUT_VALUE
               ) : (
                 <>
-                 {/* this logic is used for the agents component, if you update make sure to test the agent component */}
+                  {/* this logic is used for the agents component, if you update make sure to test the agent component */}
                   {options?.includes(value) ? (
                     value && filteredOptions.includes(value) ? (
                       value
@@ -596,7 +601,9 @@ export default function Dropdown({
               if (dialogInputs?.fields) {
                 setOpenDialog(true);
               } else {
-                handleSourceOptions(sourceOptions?.fields?.data?.node?.name! || value);
+                handleSourceOptions(
+                  sourceOptions?.fields?.data?.node?.name! || value,
+                );
               }
             }}
           >
