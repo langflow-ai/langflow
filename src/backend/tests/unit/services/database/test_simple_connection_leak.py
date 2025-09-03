@@ -8,8 +8,9 @@ properly disposed, leading to pool exhaustion.
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.services.database.service import DatabaseService
 from sqlalchemy.ext.asyncio import AsyncEngine
+
+from langflow.services.database.service import DatabaseService
 
 
 class MockSettingsService:
