@@ -386,10 +386,6 @@ body {
   height: 100%;
 }
 
-.theme-doc-sidebar-menu > :nth-last-child(2) {
-  margin-bottom: auto;
-}
-
 /* Sidebar Ad Styles */
 .sidebar-ad {
   margin-left: -0.5rem;
