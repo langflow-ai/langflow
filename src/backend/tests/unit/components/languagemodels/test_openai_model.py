@@ -170,6 +170,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         assert updated_config["temperature"]["show"] is True
         assert updated_config["seed"]["show"] is True
 
+    @pytest.mark.skipif(os.getenv("OPENAI_API_KEY") is None, reason="OPENAI_API_KEY is not set")
     def test_build_model_integration(self):
         component = OpenAIModelComponent()
         component.api_key = os.getenv("OPENAI_API_KEY")

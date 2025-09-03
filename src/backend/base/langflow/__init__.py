@@ -102,6 +102,7 @@ def _setup_compatibility_modules():
         "langflow.base.models.aiml_constants": "lfx.base.models.aiml_constants",
         "langflow.base.models.aws_constants": "lfx.base.models.aws_constants",
         "langflow.base.models.groq_constants": "lfx.base.models.groq_constants",
+        "langflow.base.models.nebius_constants": "lfx.base.models.nebius_constants",
         "langflow.base.models.novita_constants": "lfx.base.models.novita_constants",
         "langflow.base.models.ollama_constants": "lfx.base.models.ollama_constants",
         "langflow.base.models.sambanova_constants": "lfx.base.models.sambanova_constants",
