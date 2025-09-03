@@ -56,24 +56,19 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Knowledge bases
 
   Langflow knowledge bases are local vector databases that exist in Langflow storage and can be re-used across flows.
-  For more information, see Knowledge base components.
+  For more information, see [Knowledge base components](/components-kb).
 
 - Advanced document parsing with built-in Docling support
 
   The **File** component supports [advanced parsing with the Docling library](/components-data#advanced-parsing).
   Additionally, the Docling dependency is now included with Langflow, making it easier to use the **Docling** components and the **File** component's new advanced parsing feature.
 
-- Structured output option for the **Agent** component
-
-  In addition to the `Message` output, the Agent component now includes a structured output for `Data`.
-  This output parses JSON into a structured `Data` object to make it easier to work with the agent's output downstream.
-
 - Reorganized component menus and visual editor controls
 
-  - [Bundles](/components-bundle-components) moved to <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the visual editor.
-  - Click <McpIcon /> **MCP servers** to manage all of your MCP server connections without leaving the workspace.
+  - [Bundles](/components-bundle-components) moved to a separate <Icon name="Blocks" aria-hidden="true" /> **Bundles** menu in the visual editor.
+  - When editing a flow, click <McpIcon /> **MCP servers** to manage all of your MCP server connections without leaving the workspace.
   - Lock/unlock controls moved to flow details in [**Projects**](/concepts-flows#projects).
-  - Moved the zoom, note, and help controls to the lower-right corner of the visual editor.
+  - Moved the zoom, note, and help controls to the lower-right corner of the workspace.
   - Moved all vector store components to provider-specific <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components)
   - Moved the **Serper Google Search API** component to the **Serper** bundle
 
@@ -84,6 +79,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
   - [Traceloop](/integrations-instana-traceloop)
   - [Cohere Rerank](/bundles-cohere)
   - [S3 Bucket Uploader](/bundles-amazon)
+  - [Composio single-service components](/integrations-composio)
 
 ### Deprecations
 
