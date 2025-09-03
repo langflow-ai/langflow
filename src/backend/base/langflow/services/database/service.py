@@ -62,6 +62,14 @@ class DatabaseService(Service):
         else:
             self.engine = self._create_engine()
 
+        # Monitor the initial engine for connection pool health
+        try:
+            from .monitoring import monitor_engine
+            self._engine_id = monitor_engine(self.engine, "init")
+        except ImportError:
+            # Monitoring is optional
+            self._engine_id = None
+
         alembic_log_file = self.settings_service.settings.alembic_log_file
         # Check if the provided path is absolute, cross-platform.
         if Path(alembic_log_file).is_absolute():
@@ -75,11 +83,55 @@ class DatabaseService(Service):
         await anyio.Path(self.alembic_log_path).touch(exist_ok=True)
 
     def reload_engine(self) -> None:
+        """Reload the database engine, properly disposing of the old one first.
+
+        This fixes the connection pool leak where old engines were never disposed,
+        causing the database to hit connection limits as reported in:
+        'não reutiliza as pools, aí vai consumindo até bater no limite.'
+        """
+        # CRITICAL FIX: Dispose old engine before creating new one
+        old_engine = getattr(self, "engine", None)
+        old_engine_id = getattr(self, "_engine_id", None)
+
+        if old_engine:
+            # Mark old engine as disposed in monitoring
+            if old_engine_id:
+                try:
+                    from .monitoring import engine_disposed
+                    engine_disposed(old_engine_id)
+                except ImportError:
+                    pass
+
+            # Schedule disposal in background to avoid blocking
+            import asyncio
+            try:
+                # Try to get current event loop
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If loop is running, create task and store reference
+                    disposal_task = asyncio.create_task(old_engine.dispose())
+                    # We don't await here to avoid blocking, but we store the reference
+                    # to prevent the task from being garbage collected
+                    self._disposal_task = disposal_task
+                else:
+                    # If no loop, run synchronously
+                    asyncio.run(old_engine.dispose())
+            except RuntimeError:
+                # No event loop, run synchronously
+                asyncio.run(old_engine.dispose())
+
         self._sanitize_database_url()
         if self.settings_service.settings.database_connection_retry:
             self.engine = self._create_engine_with_retry()
         else:
             self.engine = self._create_engine()
+
+        # Monitor the new engine
+        try:
+            from .monitoring import monitor_engine
+            self._engine_id = monitor_engine(self.engine, "reload")
+        except ImportError:
+            self._engine_id = None
 
     def _sanitize_database_url(self):
         """Create the engine for the database."""
@@ -482,4 +534,22 @@ class DatabaseService(Service):
                 await teardown_superuser(settings_service, session)
         except Exception:  # noqa: BLE001
             await logger.aexception("Error tearing down database")
-        await self.engine.dispose()
+
+        # ENHANCED FIX: Ensure engine is properly disposed and reference is cleared
+        if hasattr(self, "engine") and self.engine:
+            engine_id = getattr(self, "_engine_id", None)
+            await logger.adebug(f"Disposing engine {id(self.engine)}")
+
+            # Mark engine as disposed in monitoring
+            if engine_id:
+                try:
+                    from .monitoring import engine_disposed
+                    engine_disposed(engine_id)
+                except ImportError:
+                    pass
+
+            await self.engine.dispose()
+            # Clear references to help garbage collection
+            self.engine = None
+            self._engine_id = None
+            await logger.adebug("Database engine disposed and reference cleared")
