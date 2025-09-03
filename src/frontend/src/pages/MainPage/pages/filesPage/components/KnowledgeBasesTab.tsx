@@ -17,10 +17,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { updateIds } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
-import type {
-  RowClickedEvent,
-  SelectionChangedEvent
-} from "ag-grid-community";
+import type { RowClickedEvent, SelectionChangedEvent } from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
 import { useRef, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -156,7 +153,7 @@ const KnowledgeBasesTab = ({
     }
   };
 
-  const columnDefs = createKnowledgeBaseColumns(handleDelete);
+  const columnDefs = createKnowledgeBaseColumns();
 
   if (isLoading || !knowledgeBases || !Array.isArray(knowledgeBases)) {
     return (
