@@ -8,8 +8,9 @@ import asyncio
 import time
 from dataclasses import dataclass, field
 
-from lfx.log.logger import logger
 from sqlalchemy.ext.asyncio import AsyncEngine
+
+from lfx.log.logger import logger
 
 
 @dataclass
