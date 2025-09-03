@@ -3,7 +3,7 @@
 These tests validate the reported issue where connection pools are not being
 properly disposed, leading to pool exhaustion.
 """
-# ruff: noqa: T201, W293, FBT001, FBT002
+# ruff: noqa: T201, FBT001, FBT002
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
