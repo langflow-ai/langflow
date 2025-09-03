@@ -218,9 +218,8 @@ def configure(
     if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
 
-    requested_min_level = LOG_LEVEL_MAP.get(
-        (log_level or os.getenv("LANGFLOW_LOG_LEVEL", "ERROR")).upper(), logging.ERROR
-    )
+    effective_log_level = log_level or os.getenv("LANGFLOW_LOG_LEVEL", "ERROR")
+    requested_min_level = LOG_LEVEL_MAP.get(effective_log_level.upper(), logging.ERROR)
     if current_min_level == requested_min_level:
         return
 
