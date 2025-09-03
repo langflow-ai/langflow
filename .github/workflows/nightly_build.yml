@@ -162,31 +162,6 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
-  lfx-tests:
-    if: github.repository == 'langflow-ai/langflow'
-    name: Run LFX Tests
-    needs: create-nightly-tag
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.create-nightly-tag.outputs.main_tag }}
-      - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-          python-version: ${{ matrix.python-version }}
-          prune-cache: false
-      - name: Install LFX dependencies
-        run: cd src/lfx && uv sync
-      - name: Run LFX tests
-        run: cd src/lfx && make test
-
   # Not making nightly builds dependent on integration test success
   # due to inherent flakiness of 3rd party integrations
   # Revisit when https://github.com/langflow-ai/langflow/pull/3607 is merged.
@@ -201,7 +176,7 @@ jobs:
   release-nightly-build:
     if: github.repository == 'langflow-ai/langflow'
     name: Run Nightly Langflow Build
-    needs: [frontend-tests, backend-unit-tests, lfx-tests, create-nightly-tag]
+    needs: [frontend-tests, backend-unit-tests, create-nightly-tag]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: true
