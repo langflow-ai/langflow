@@ -163,26 +163,12 @@ test(
 
     await page.getByTestId("canvas_controls_dropdown").click();
 
-    await zoomOut(page, 3);
+    await zoomOut(page, 2);
     await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("div-generic-node").nth(5).click();
 
     await page.waitForTimeout(1000);
-
-    await page.waitForSelector('[data-testid="more-options-modal"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("more-options-modal").click();
-
-    await page.waitForTimeout(1000);
-
-    await page.waitForSelector('[data-testid="expand-button-modal"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("expand-button-modal").click();
 
     await page.getByTestId("input-list-plus-btn_urls-0").click();
 
@@ -230,6 +216,8 @@ test(
       .click();
 
     // Build and run
+    await page.getByTestId("title-Chat Output").click();
+    await page.keyboard.press(`ControlOrMeta+.`);
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
