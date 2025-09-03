@@ -1146,9 +1146,7 @@ async def init_mcp_servers():
                         and project.auth_settings.get("auth_type") == "oauth"
                     ):
                         # Reset OAuth projects to appropriate auth type based on AUTO_LOGIN setting
-                        fallback_auth_type = (
-                            "apikey" if not settings_service.auth_settings.AUTO_LOGIN else "none"
-                        )
+                        fallback_auth_type = "apikey" if not settings_service.auth_settings.AUTO_LOGIN else "none"
                         clean_auth = AuthSettings(auth_type=fallback_auth_type)
                         project.auth_settings = clean_auth.model_dump(exclude_none=True)
                         session.add(project)
