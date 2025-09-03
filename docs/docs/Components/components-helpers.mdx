@@ -7,7 +7,7 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-**Helper** components provide utility functions to help manage data and perform simple tasks in your flow.
+Helper components provide utility functions to help manage data and perform simple tasks in your flow.
 
 ## Calculator
 
@@ -39,14 +39,15 @@ The **Current Date** component returns the current date and time in a selected t
 The **Message History** component provides combined chat history and message storage functionality.
 It can store and retrieve chat messages from either [Langflow storage](/memory) _or_ a dedicated chat memory database like Mem0 or Redis.
 
-It replaces the legacy **Chat History** and **Message Store** components.
-
 :::important
-The **Language Model** and **Agent** components have built-in chat memory that is enabled by default and uses Langflow storage.
-
+The **Agent** component has built-in chat memory that is enabled by default and uses Langflow storage.
 This built-in chat memory functionality is sufficient for most use cases.
 
-Use the **Message History** component only if you need to access chat memories outside the chat context, such as sentiment analysis flow that retrieves and analyzes recently stored memories, or you want to store memories in a specific database, separate from Langflow storage.
+Use the **Message History** component for the following use cases:
+
+* You need to store and retrieve chat memory for a language model component (not an agent).
+* You need to retrieve chat memories outside the chat context, such as sentiment analysis flow that retrieves and analyzes recently stored memories.
+* You want to store memories in a specific database that is separate from Langflow storage.
 
 For more information, see [Store chat memory](/memory#store-chat-memory).
 :::
@@ -92,9 +93,9 @@ The following steps explain how to create a chat-based flow that uses **Message 
 
 4. Connect the **Prompt Template** component's output to a **Language Model** component's **System Message** input.
 
-    This example uses a **Language Model** component as the central chat driver, but you can also use an **Agent** component.
+    This example uses the **Language Model** core component as the central chat driver, but you can also use another language model component or the **Agent** component.
 
-5. Add a **Chat Input** component, and then connect it to the **Language Model** component's **Input** input.
+5. Add a **Chat Input** component, and then connect it to the **Language Model** component's **Input** field.
 
 6. Connect the **Language Model** component's output to a **Chat Output** component.
 
@@ -111,14 +112,12 @@ The following steps explain how to create a chat-based flow that uses **Message 
 
 To store and retrieve chat memory from a dedicated, external chat memory database, use the **Message History** component _and_ a provider-specific chat memory component.
 
-Available provider-specific chat memory components include [**Cassandra Chat Memory** component](/bundles-datastax#cassandra-chat-memory), [**Mem0 Chat Memory** component](/bundles-mem0), and [**Redis Chat Memory** component](/bundles-redis).
-For all provider-specific chat memory components, see [Bundles](/components-bundle-components).
-
-The following steps explain how to create a flow that stores and retrieves chat memory from Redis chat memory:
+The following steps explain how to create a flow that stores and retrieves chat memory from a [**Redis Chat Memory** component](/bundles-redis).
+Other options include the [**Mem0 Chat Memory** component](/bundles-mem0) and [**Cassandra Chat Memory** component](/bundles-cassandra#cassandra-chat-memory).
 
 1. Create or edit a flow where you want to use chat memory.
 
-2. At the beginning of the flow, add **Message History** and **Redis Chat Memory** components:
+2. At the beginning of the flow, add **Message History** and a **Redis Chat Memory** component.
 
    1. Configure the **Redis Chat Memory** component to connect to your Redis database. For more information, see the [Redis documentation](https://redis.io/docs/latest/).
    2. Set the **Message History** component to **Retrieve** mode.
@@ -149,7 +148,7 @@ The following steps explain how to create a flow that stores and retrieves chat 
 
 4. Connect the **Prompt Template** component's output to a **Language Model** component's **System Message** input.
 
-    This example uses a **Language Model** component as the central chat driver, but you can also use an **Agent** component.
+    This example uses the **Language Model** core component as the central chat driver, but you can also use another language model component or the **Agent** component.
 
 5. Add a **Chat Input** component, and then connect it to the **Language Model** component's **Input** input.
 
@@ -176,8 +175,9 @@ The following steps explain how to create a flow that stores and retrieves chat 
 
 ### Message History parameters
 
-Many **Message History** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -193,79 +193,22 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 
 ## Legacy Helper components
 
-The following components are legacy components.
-You can use these components in your flows, but they are no longer maintained and may be removed in a future release.
-It is recommended that you replace legacy components with the recommended alternatives as soon as possible.
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
+
+<PartialLegacy />
+
+The following Helper components are in legacy status:
 
 * **Chat History**: Replaced by the [**Message History** component](#message-history)
 * **Message Store**: Replaced by the [**Message History** component](#message-history)
-
-<details>
-<summary>Create List</summary>
-
-This component dynamically creates a record with a specified number of fields.
-
-It accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| n_fields | Integer | Input parameter. The number of fields to be added to the record. |
-| text_key | String | Input parameter. The key used as text. |
-| list | List | Output parameter. The dynamically created list with the specified number of fields. |
-
-</details>
-
-<details>
-<summary>ID Generator</summary>
-
-This component generates a unique ID.
-
-It accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| unique_id | String | Input parameter. The generated unique ID. |
-| id | String | Output parameter. The generated unique ID. |
-
-</details>
-
-<details>
-<summary>Output Parser</summary>
-
-Replace the legacy **Output Parser** component with the [**Structured Output** component](/components-processing#structured-output) and [**Parser** component](/components-processing#parser).
+* **Create List**: Replace with [Processing components](/components-processing)
+* **ID Generator**: Replace with a component that executes arbitrary code to generate an ID or embed an ID generator script your application code (external to your Langflow flows).
+* **Output Parser**: Replace with the [**Structured Output** component](/components-processing#structured-output) and [**Parser** component](/components-processing#parser).
 The components you need depend on the data types and complexity of the parsing task.
 
-The **Output Parser** component transforms the output of a language model into comma-separated values (CSV) format, such as `["item1", "item2", "item3"]`, using LangChain's `CommaSeparatedListOutputParser`.
-The **Structured Output** component is a good alternative for this component because it also formats LLM responses with support for custom schemas and more complex parsing.
+    The **Output Parser** component transformed the output of a language model into comma-separated values (CSV) format, such as `["item1", "item2", "item3"]`, using LangChain's `CommaSeparatedListOutputParser`.
+    The **Structured Output** component is a good alternative for this component because it also formats LLM responses with support for custom schemas and more complex parsing.
 
-**Parsing** components only provide formatting instructions and parsing functionality.
-_They don't include prompts._
-You must connect parsers to **Prompt Template** components to create prompts that LLMs can use.
-
-1. Open a flow that has a **Chat Input**, **Language Model**, and **Chat Output** components.
-
-2. Add **Output Parser** and **Prompt Template** components to your flow.
-
-3. Define your LLM's prompt in the **Prompt Template** component's **Template**, including all instructions and pre-loaded context.
-Make sure to include a `{format_instructions}` variable where you will inject the formatting instructions from the **Output Parser** component.
-For example:
-
-    ```
-    You are a helpful assistant that provides lists of information.
-
-    {format_instructions}
-    ```
-
-    Variables in the template dynamically add fields to the **Prompt Template** component so that your flow can receive definitions for those values from other components, Langflow global variables, or fixed input.
-
-4. Connect the **Output Parser** component's output to the **Prompt Template** component's **format instructions** input.
-
-The **Output Parser** component accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| parser_type | String | Input parameter. Sets the parser type as "CSV". |
-| format_instructions | String | Output parameter. Pass to a prompt template to include formatting instructions for LLM responses. |
-| output_parser | Parser | Output parameter. The constructed output parser that can be used to parse LLM responses. |
-
-</details>
+    **Parsing** components only provide formatting instructions and parsing functionality.
+    _They don't include prompts._
+    You must connect parsers to **Prompt Template** components to create prompts that LLMs can use.
