@@ -163,6 +163,9 @@ class Message(Data):
         elif lc_message.type == "system":
             sender = "System"
             sender_name = "System"
+        elif lc_message.type == "tool":
+            sender = "Tool"
+            sender_name = "Tool"
         else:
             sender = lc_message.type
             sender_name = lc_message.type
@@ -227,6 +230,8 @@ class Message(Data):
                     messages.append(SystemMessage(content=message.get("content")))
                 case _ if message.get("type") == "ai":
                     messages.append(AIMessage(content=message.get("content")))
+                case _ if message.get("type") == "tool":
+                    messages.append(Tool(content=message.get("content")))
 
         self.prompt["kwargs"]["messages"] = messages
         return load(self.prompt)
