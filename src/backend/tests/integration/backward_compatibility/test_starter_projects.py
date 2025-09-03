@@ -1,6 +1,6 @@
 import pytest
-from langflow.schema.message import Message
 
+from lfx.schema.message import Message
 from tests.api_keys import get_openai_api_key
 from tests.integration.utils import download_flow_from_github, run_json_flow
 
