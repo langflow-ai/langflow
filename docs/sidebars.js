@@ -113,6 +113,7 @@ module.exports = {
               id: "Develop/memory",
               label: "Manage memory"
             },
+            "Concepts/knowledge",
             {
               type: "doc",
               id: "Develop/session-id",
@@ -268,6 +269,7 @@ module.exports = {
               ]
             },
             "Components/components-data",
+            "Components/components-kb",
             {
               type: "category",
               label: "Processing",
