@@ -102,7 +102,6 @@ const KnowledgeBasesTab = ({
     setIsDeleteModalOpen(false);
   };
 
-
   const handleDelete = (knowledgeBase: KnowledgeBaseInfo) => {
     setKnowledgeBaseToDelete(knowledgeBase);
     setIsDeleteModalOpen(true);
