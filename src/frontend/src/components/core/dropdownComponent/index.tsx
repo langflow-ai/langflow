@@ -1,3 +1,6 @@
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import Fuse from "fuse.js";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
@@ -11,11 +14,13 @@ import {
   convertStringToHTML,
   getStatusColor,
 } from "@/utils/stringManipulation";
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import Fuse from "fuse.js";
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { DropDownComponent } from "../../../types/components";
-import { cn, filterNullOptions, formatName, groupByFamily } from "../../../utils/utils";
+import {
+  cn,
+  filterNullOptions,
+  formatName,
+  groupByFamily,
+} from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
 import ShadTooltip from "../../common/shadTooltipComponent";
 import { Button } from "../../ui/button";
@@ -384,7 +389,6 @@ export default function Dropdown({
     ) : null;
   };
 
-
   const renderTriggerButton = () => (
     <div className="flex w-full flex-col">
       <PopoverTrigger asChild>
@@ -420,28 +424,28 @@ export default function Dropdown({
                 RECEIVING_INPUT_VALUE
               ) : (
                 <>
-                  {options?.includes(value) ? (
+                  {
+                    options?.includes(value) ? (
                       value
-                    ) : (
-                      // this logic is used for the agents component, if you update make sure to test the agent component
-                      sourceOptions?.fields?.data?.node?.name === "connect_other_models" ? (
-                        <span className="text-muted-foreground"> 
+                    ) : // this logic is used for the agents component, if you update make sure to test the agent component
+                    sourceOptions?.fields?.data?.node?.name ===
+                      "connect_other_models" ? (
+                      <span className="text-muted-foreground">
                         <LoadingTextComponent
                           text={placeholder || SELECT_AN_OPTION}
                         />
-                        </span>
-                      ) : (
+                      </span>
+                    ) : (
                       placeholder || SELECT_AN_OPTION
-                      )
                     )
-                  // ) : (
-                  //   <span className="text-muted-foreground">
-                  //     <LoadingTextComponent
-                  //       text={placeholder || SELECT_AN_OPTION}
-                  //     />
-                  //   </span>
-                  // )}
-                }
+                    // ) : (
+                    //   <span className="text-muted-foreground">
+                    //     <LoadingTextComponent
+                    //       text={placeholder || SELECT_AN_OPTION}
+                    //     />
+                    //   </span>
+                    // )}
+                  }
                 </>
               )}
             </span>
