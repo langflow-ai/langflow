@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.40667d1b.css">
-<script src="/assets/js/runtime~main.c7e61c3e.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.f2ef26c2.js" defer="defer"></script>
 <script src="/assets/js/main.14a877c9.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -63,8 +63,12 @@ It supports addition, subtraction, multiplication, division, and exponentiation 
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="message-history">Message History<a href="#message-history" class="hash-link" aria-label="Direct link to Message History" title="Direct link to Message History">​</a></h2>
 <p>The <strong>Message History</strong> component provides combined chat history and message storage functionality.
 It can store and retrieve chat messages from either <a href="/memory">Langflow storage</a> <em>or</em> a dedicated chat memory database like Mem0 or Redis.</p>
-<p>It replaces the legacy <strong>Chat History</strong> and <strong>Message Store</strong> components.</p>
-<div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>important</div><div class="admonitionContent_BuS1"><p>The <strong>Language Model</strong> and <strong>Agent</strong> components have built-in chat memory that is enabled by default and uses Langflow storage.</p><p>This built-in chat memory functionality is sufficient for most use cases.</p><p>Use the <strong>Message History</strong> component only if you need to access chat memories outside the chat context, such as sentiment analysis flow that retrieves and analyzes recently stored memories, or you want to store memories in a specific database, separate from Langflow storage.</p><p>For more information, see <a href="/memory#store-chat-memory">Store chat memory</a>.</p></div></div>
+<div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>important</div><div class="admonitionContent_BuS1"><p>The <strong>Agent</strong> component has built-in chat memory that is enabled by default and uses Langflow storage.
+This built-in chat memory functionality is sufficient for most use cases.</p><p>Use the <strong>Message History</strong> component for the following use cases:</p><ul>
+<li>You need to store and retrieve chat memory for a language model component (not an agent).</li>
+<li>You need to retrieve chat memories outside the chat context, such as a sentiment analysis flow that retrieves and analyzes recently stored memories.</li>
+<li>You want to store memories in a specific database that is separate from Langflow storage.</li>
+</ul><p>For more information, see <a href="/memory#store-chat-memory">Store chat memory</a>.</p></div></div>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="use-the-message-history-component-in-a-flow">Use the Message History component in a flow<a href="#use-the-message-history-component-in-a-flow" class="hash-link" aria-label="Direct link to Use the Message History component in a flow" title="Direct link to Use the Message History component in a flow">​</a></h3>
 <p>The <strong>Message History</strong> component has two modes, depending on where you want to use it in your flow:</p>
 <ul>
@@ -92,10 +96,10 @@ The template can include any text and variables that you want to supply to the L
 </li>
 <li>
 <p>Connect the <strong>Prompt Template</strong> component&#x27;s output to a <strong>Language Model</strong> component&#x27;s <strong>System Message</strong> input.</p>
-<p>This example uses a <strong>Language Model</strong> component as the central chat driver, but you can also use an <strong>Agent</strong> component.</p>
+<p>This example uses the <strong>Language Model</strong> core component as the central chat driver, but you can also use another language model component or the <strong>Agent</strong> component.</p>
 </li>
 <li>
-<p>Add a <strong>Chat Input</strong> component, and then connect it to the <strong>Language Model</strong> component&#x27;s <strong>Input</strong> input.</p>
+<p>Add a <strong>Chat Input</strong> component, and then connect it to the <strong>Language Model</strong> component&#x27;s <strong>Input</strong> field.</p>
 </li>
 <li>
 <p>Connect the <strong>Language Model</strong> component&#x27;s output to a <strong>Chat Output</strong> component.</p>
@@ -108,8 +112,8 @@ The template can include any text and variables that you want to supply to the L
 <p>Connect the <strong>Chat Output</strong> component&#x27;s output to the <strong>Message History</strong> component&#x27;s <strong>Message</strong> input.</p>
 <p>Each response from the LLM is output from the <strong>Language Model</strong> component to the <strong>Chat Output</strong> component, and then stored in chat memory by the final <strong>Message History</strong> component.</p>
 </li>
-</ol></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><p>To store and retrieve chat memory from a dedicated, external chat memory database, use the <strong>Message History</strong> component <em>and</em> a provider-specific chat memory component.</p><p>Available provider-specific chat memory components include <a href="/bundles-datastax#cassandra-chat-memory"><strong>Cassandra Chat Memory</strong> component</a>, <a href="/bundles-mem0"><strong>Mem0 Chat Memory</strong> component</a>, and <a href="/bundles-redis"><strong>Redis Chat Memory</strong> component</a>.
-For all provider-specific chat memory components, see <a href="/components-bundle-components">Bundles</a>.</p><p>The following steps explain how to create a flow that stores and retrieves chat memory from Redis chat memory:</p><ol>
+</ol></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><p>To store and retrieve chat memory from a dedicated, external chat memory database, use the <strong>Message History</strong> component <em>and</em> a provider-specific chat memory component.</p><p>The following steps explain how to create a flow that stores and retrieves chat memory with a <a href="/bundles-redis"><strong>Redis Chat Memory</strong> component</a>.
+Other options include the <a href="/bundles-mem0"><strong>Mem0 Chat Memory</strong> component</a> and <a href="/bundles-datastax#cassandra-chat-memory"><strong>Cassandra Chat Memory</strong> component</a>.</p><ol>
 <li>
 <p>Create or edit a flow where you want to use chat memory.</p>
 </li>
