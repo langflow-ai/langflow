@@ -109,11 +109,11 @@ class CometAPIModelComponent(LCModelComponent):
             model_list = response.json()
             models = [model["id"] for model in model_list.get("data", [])]
 
-            if not models:
-                logger.warning("No models returned from CometAPI, using default models")
-            else:
+            if models:
                 logger.debug(f"Successfully fetched {len(models)} models from CometAPI")
                 return models
+            logger.warning("No models returned from CometAPI, using default models")
+            return MODEL_NAMES  # noqa: TRY300
 
         except requests.exceptions.Timeout:
             error_msg = f"Timeout fetching models from CometAPI (>{self.REQUEST_TIMEOUT}s)"
