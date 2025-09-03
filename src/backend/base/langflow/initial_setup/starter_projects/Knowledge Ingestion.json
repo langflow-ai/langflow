@@ -1072,9 +1072,7 @@
                 "dynamic": false,
                 "info": "Select the knowledge to load data from.",
                 "name": "knowledge_base",
-                "options": [
-                  "TestKB"
-                ],
+                "options": [],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
