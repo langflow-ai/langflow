@@ -1,10 +1,8 @@
-"""
-Helper functions for handling auth settings updates across different endpoints.
-"""
+"""Helper functions for handling auth settings updates across different endpoints."""
 
 from typing import Any
+
 from pydantic import SecretStr
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.database.models.folder.model import Folder
@@ -14,16 +12,15 @@ def handle_auth_settings_update(
     existing_project: Folder,
     new_auth_settings: dict | Any | None,
 ) -> dict[str, bool]:
-    """
-    Handle auth settings update including encryption/decryption and MCP Composer logic.
-    
+    """Handle auth settings update including encryption/decryption and MCP Composer logic.
+
     Args:
         existing_project: The project being updated (modified in-place)
         new_auth_settings: New auth settings (could be dict, Pydantic model, or None)
-        
+
     Returns:
         Dict containing:
-        - should_start_composer: bool  
+        - should_start_composer: bool
         - should_stop_composer: bool
     """
     # Get current auth type before update (cache decrypted settings)
@@ -63,7 +60,7 @@ def handle_auth_settings_update(
         for field in secret_fields:
             if field in auth_dict and auth_dict[field] == "*******" and field in decrypted_current:
                 auth_dict[field] = decrypted_current[field]
-    
+
     # Encrypt and store the auth settings
     existing_project.auth_settings = encrypt_auth_settings(auth_dict)
 
@@ -73,7 +70,7 @@ def handle_auth_settings_update(
     should_handle_composer = current_auth_type == "oauth" or new_auth_type == "oauth"
 
     return {
-        "should_start_composer": should_start_composer, 
+        "should_start_composer": should_start_composer,
         "should_stop_composer": should_stop_composer,
-        "should_handle_composer": should_handle_composer
+        "should_handle_composer": should_handle_composer,
     }

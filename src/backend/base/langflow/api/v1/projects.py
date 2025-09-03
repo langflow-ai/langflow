@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 from typing import Annotated, cast
 from urllib.parse import quote
 from uuid import UUID
-from pydantic import SecretStr
 
 import orjson
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Response, UploadFile, status
@@ -18,15 +17,15 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params, remove_api_keys
+from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.mcp_projects import register_project_with_composer
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.logging import logger
-from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
+from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
@@ -219,7 +218,7 @@ async def update_project(
                 existing_project=existing_project,
                 new_auth_settings=project.auth_settings,
             )
-            
+
             should_start_mcp_composer = auth_result["should_start_composer"]
             should_stop_mcp_composer = auth_result["should_stop_composer"]
 

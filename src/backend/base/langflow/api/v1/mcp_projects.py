@@ -17,12 +17,12 @@ from fastapi.responses import HTMLResponse
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
-from pydantic import SecretStr
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveMCPUser
+from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.mcp_utils import (
     current_user_ctx,
     handle_call_tool,
@@ -38,7 +38,6 @@ from langflow.api.v1.schemas import (
     MCPProjectUpdateRequest,
     MCPSettings,
 )
-from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from langflow.base.mcp.util import sanitize_mcp_name
 from langflow.logging.logger import logger
@@ -392,7 +391,7 @@ async def update_project_mcp_settings(
                     existing_project=project,
                     new_auth_settings=request.auth_settings,
                 )
-                
+
                 should_handle_mcp_composer = auth_result["should_handle_composer"]
                 should_start_composer = auth_result["should_start_composer"]
                 should_stop_composer = auth_result["should_stop_composer"]
