@@ -32,10 +32,7 @@ api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
 MINIMUM_KEY_LENGTH = 32
-AUTO_LOGIN_ERROR = (
-    "Since v1.5, LANGFLOW_AUTO_LOGIN requires a valid API key. "
-    "Please update your authentication method."
-)
+AUTO_LOGIN_ERROR = "Since v1.5, LANGFLOW_AUTO_LOGIN requires a valid API key. Please update your authentication method."
 
 
 # Source: https://github.com/mrtolkien/fastapi_simple_security/blob/master/fastapi_simple_security/security_api_key.py
@@ -97,11 +94,10 @@ async def ws_api_key_security(
                 )
             if not api_key:
                 raise WebSocketException(
-                        code=status.WS_1008_POLICY_VIOLATION,
-                        reason=AUTO_LOGIN_ERROR,
-                    )
-            else:
-                result = await check_key(db, api_key)
+                    code=status.WS_1008_POLICY_VIOLATION,
+                    reason=AUTO_LOGIN_ERROR,
+                )
+            result = await check_key(db, api_key)
 
         # normal path: must provide an API key
         else:
