@@ -51,7 +51,6 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service, get_settings_service, session_scope
 from langflow.services.mcp_composer.service import MCPComposerError, MCPComposerService
 from langflow.services.schema import ServiceType
-from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
@@ -561,9 +560,9 @@ async def install_mcp_config(
         # Check if project requires API key authentication and generate if needed
         generated_api_key = None
 
-        # Determine if we need to generate an API key based on feature flag
+        # Determine if we need to generate an API key
         should_generate_api_key = False
-        if not FEATURE_FLAGS.mcp_composer:
+        if not get_settings_service().settings.mcp_composer_enabled:
             # When MCP_COMPOSER is disabled, check auth settings or fallback to auto_login setting
             settings_service = get_settings_service()
             if project.auth_settings:
@@ -714,7 +713,7 @@ async def install_mcp_config(
         if removed_servers:
             message += f" (replaced existing servers: {', '.join(removed_servers)})"
         if generated_api_key:
-            auth_type = "API key" if FEATURE_FLAGS.mcp_composer else "legacy API key"
+            auth_type = "API key" if get_settings_service().settings.mcp_composer_enabled else "legacy API key"
             message += f" with {auth_type} authentication (key name: 'MCP Project {project.name} - {body.client}')"
         await logger.adebug(message)
         return {"message": message}
