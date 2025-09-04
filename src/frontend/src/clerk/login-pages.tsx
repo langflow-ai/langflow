@@ -7,7 +7,10 @@ export function ClerkLoginPage() {
   return (
     <SignedOut>
       <div style={centeredStyle}>
-        <SignIn/>
+        <SignIn
+          afterSignInUrl="/organization"
+          redirectUrl="/organization"
+        />
       </div>
     </SignedOut>
   );
@@ -39,7 +42,8 @@ export function ClerkSignUpPage() {
         <ClerkSignUp
           path="/sign-up"
           routing="path"
-          afterSignUpUrl="/login"
+          afterSignUpUrl="/organization"
+          redirectUrl="/organization"
         />
       </div>
     </SignedOut>
@@ -49,6 +53,7 @@ export function ClerkSignUpPage() {
 // Original pages
 import OriginalLoginPage from "../pages/LoginPage";
 import OriginalSignUp from "../pages/SignUpPage";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 const OriginalLoginAdminPage = lazy(() => import("../pages/AdminPage/LoginPage"));
 
 export const LoginPage = IS_CLERK_AUTH ? ClerkLoginPage : OriginalLoginPage;

@@ -7,12 +7,15 @@ import { useRefreshAccessToken } from "@/controllers/API/queries/auth";
 import { CustomNavigate } from "@/customization/components/custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useOrganization, useAuth as useClerkAuth } from "@clerk/clerk-react";
 
 export const ProtectedRoute = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const autoLogin = useAuthStore((state) => state.autoLogin);
-  const isOrgSelected = useAuthStore((state) => state.isOrgSelected);
+  const isOrgSelectedStore = useAuthStore((state) => state.isOrgSelected);
+  const isOrgSelected =
+    isOrgSelectedStore || sessionStorage.getItem("isOrgSelected") === "true";
   const { mutate: mutateRefresh } = useRefreshAccessToken();
   const testMockAutoLogin = sessionStorage.getItem("testMockAutoLogin");
 
@@ -23,7 +26,8 @@ export const ProtectedRoute = ({ children }) => {
 
   
   // Get current path
-  const currentPath = window.location.pathname;
+  const location = useLocation();
+  const currentPath = location.pathname;
   const isLoginPage = currentPath.includes("login");
   const isOrgPage = currentPath.includes("organization");
   const isRootPage = currentPath === "/";
