@@ -3,6 +3,9 @@ title: Langflow release notes
 slug: /release-notes
 ---
 
+import Icon from "@site/src/components/icon";
+import McpIcon from '@site/static/logos/mcp-icon.svg';
+
 This page summarizes significant changes to Langflow in each release.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
 
@@ -43,6 +46,46 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
+## 1.6.0
+
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### New features and enhancements
+
+- Knowledge bases
+
+  Langflow knowledge bases are local vector databases that exist in Langflow storage and can be re-used across flows.
+  For more information, see [Knowledge base components](/components-kb).
+
+- Advanced document parsing with built-in Docling support
+
+  The **File** component supports [advanced parsing with the Docling library](/components-data#advanced-parsing).
+  Additionally, the Docling dependency is now included with Langflow, making it easier to use the **Docling** components and the **File** component's new advanced parsing feature.
+
+- Reorganized component menus and visual editor controls
+
+  - [Bundles](/components-bundle-components) moved to a separate <Icon name="Blocks" aria-hidden="true" /> **Bundles** menu in the visual editor.
+  - When editing a flow, click <McpIcon /> **MCP servers** to manage all of your MCP server connections without leaving the workspace.
+  - Lock/unlock controls moved to flow details in [**Projects**](/concepts-flows#projects).
+  - Moved the zoom, note, and help controls to the lower-right corner of the workspace.
+  - Moved all vector store components to provider-specific <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components)
+  - Moved the **Serper Google Search API** component to the **Serper** bundle
+
+- Increased the default maximum file upload size from `100 MB` to `1024 MB`.
+
+- New integrations and bundles:
+
+  - [Traceloop](/integrations-instana-traceloop)
+  - [Cohere Rerank](/bundles-cohere)
+  - [S3 Bucket Uploader](/bundles-amazon)
+  - [Composio single-service components](/integrations-composio)
+
+### Deprecations
+
+- The **Local DB** component is now in legacy status.
+Replace this component with the [**Chroma DB** component](/bundles-chroma) or [knowledge bases](/components-kb).
+
 ## 1.5.0
 
 Highlights of this release include the following changes.
@@ -59,9 +102,10 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Centralized **Language Model** and **Embedding Model** components
 
     The [**Language Model** component](/components-models) and [**Embedding Model** component](/components-embedding-models) are now core components for your LLM and embeddings flows. They support multiple models and model providers, and allow you to experiment with different models without swapping out single-provider components.
-    Find them in the **Components** menu in the **Models** category.
+    Find them in the visual editor in the **Models** category.
 
-    The single-provider components are still available for your flows in the **Components** menu in the [**Bundles**](/components-bundle-components) section, and you can use them to replace the **Language Model** and **Embedding Model** core components, or connect them to the **Agent** component with the **Custom** provider option.
+    The single-provider components moved to the [**Bundles**](/components-bundle-components) section.
+    You can use them to replace the **Language Model** and **Embedding Model** core components, or connect them to the **Agent** component with the **Custom** provider option.
 
 - MCP server one-click installation
 
@@ -78,15 +122,15 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     The **Input schema** pane replaces the need to manage tweak values in the **API access** pane. When you enable a parameter in the **Input schema** pane, the parameter is automatically added to your flow's code snippets, providing ready-to-use templates for making requests in your preferred programming language.
 
-- **Tools** components are redistributed
+- Tools components are redistributed
 
-    All components in the **Tools** category were moved to other component categories, such as **Helpers** and [bundles](/components-bundle-components), or marked as legacy.
+    All components in the **Tools** category were moved to other component categories, such as **Helpers** and [**Bundles**](/components-bundle-components), or marked as legacy.
 
     The [**MCP Tools** component](/mcp-client) is now under the **Agents** category.
 
     Tools that performed the same function were combined into single components that support multiple providers, such as the [**Web Search** component](/components-data#web-search) and the [**News Search** component](/components-data#news-search).
 
-    For more information, see [**Tools** components](/components-tools).
+    For more information, see [Tools components](/components-tools).
 
 - Stability improvements
 
@@ -107,7 +151,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Enhanced file and flow management system with improved bulk capabilities.
 - Added the **BigQuery** component
 - Added the **Twelve Labs** bundle
-- Added the **NVIDIA G-Assist** component
+- Added the **NVIDIA System-Assist** component
 
 ### Deprecations
 
