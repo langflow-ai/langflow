@@ -29,7 +29,7 @@ def convert_to_data(v: DataFrame | Data | Message | dict) -> Data:
     if isinstance(v, dict):
         return Data(v)
     if isinstance(v, Message):
-        return v.to_data()
+        return Data(data={"text": v.data["text"]})
     return v if isinstance(v, Data) else v.to_data()
 
 
