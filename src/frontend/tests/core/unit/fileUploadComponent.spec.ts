@@ -54,18 +54,6 @@ test(
       // Test upload file
       await page.getByTestId("button_open_file_management").click();
 
-      // Test available types
-      await expect(page.getByText("csv, json, pdf")).toBeVisible();
-      await page.getByTestId("info-types").hover();
-      await expect(
-        page.getByText(
-          "adoc, asc, asciidoc, bmp, bz2, docm, docx, dotm, dotx, gz, htm, html, jpeg, js, md, mdx, png, potm, potx, ppsm, ppsx, pptm, pptx, py, sh, sql, tar, tgz, tiff, ts, tsx, txt, webp, xhtml, xls, xlsx, xml, yaml, yml, zip",
-        ),
-      ).toBeVisible();
-
-      await page.getByText("My Files").first().hover();
-      await page.waitForTimeout(500);
-
       const drag = await page.getByTestId("drag-files-component");
       const fileChooserPromise = page.waitForEvent("filechooser", {
         timeout: 30000,
@@ -79,6 +67,18 @@ test(
           buffer: fileContent,
         },
       ]);
+
+      // Test available types
+      await expect(page.getByText("csv, json, pdf")).toBeVisible();
+      await page.getByTestId("info-types").hover();
+      await expect(
+        page.getByText(
+          "adoc, asc, asciidoc, bmp, bz2, docm, docx, dotm, dotx, gz, htm, html, jpeg, js, md, mdx, png, potm, potx, ppsm, ppsx, pptm, pptx, py, sh, sql, tar, tgz, tiff, ts, tsx, txt, webp, xhtml, xls, xlsx, xml, yaml, yml, zip",
+        ),
+      ).toBeVisible();
+
+      await page.getByText("My Files").first().hover();
+      await page.waitForTimeout(500);
 
       await expect(page.getByText(`${sourceFileName}.txt`).last()).toBeVisible({
         timeout: 5000,
