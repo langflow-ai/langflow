@@ -35,7 +35,8 @@ To follow along with this example, download [`customer-orders.csv`](/files/custo
 3. If you selected **New knowledge**, configure your new knowledge base, and then click **Create**.
 
     * **Knowledge Name**: The name of your knowledge base.
-    * **Model Name**: Select an embedding model to genenerate embeddings for your data.
+    * **Choose Embedding**: Select an embedding model to genenerate embeddings for your data.
+    This cannot be changed later.
 
         The vector dimensions are determined by the chosen embedding model.
         For example, the `text-embedding-3-small` model has a default of 1536 dimensions.
@@ -46,6 +47,8 @@ To follow along with this example, download [`customer-orders.csv`](/files/custo
 
     * **API Key**: Enter your API key to authenticate with your chosen embedding model provider.
     For example, `text-embedding-3-small` requires an OpenAI API key.
+
+        This key is stored in Langflow KMS, so you don't need to provide it again when you use the knowledge base in other flows.
 
 4. To load data into the knowledge base, connect `Data` or `DataFrame` output from another component to the **Knowledge Ingestion** component's **Input** port.
 These data type are required because Langflow knowledge bases only support structured data.
@@ -170,7 +173,7 @@ For an example, see the **Knowledge Ingestion** template in Langflow.
 
 The output is a `Data` object containing metadata about the ingestion, including knowledge base information, number of rows ingested, and the column configuration (names, settings, number of mapped and unmapped columns).
 
-### Knowledge ingestion parameters
+### Knowledge Ingestion parameters
 
 <PartialParams />
 
@@ -189,7 +192,7 @@ The **Knowledge Retrieval** component reads from an existing knowledge base usin
 
 The output is a [`DataFrame`](/data-types#dataframe) containing the top matching results from the queried knowledge base.
 
-### Knowledge retrieval parameters
+### Knowledge Retrieval parameters
 
 <PartialParams />
 
@@ -225,6 +228,24 @@ To change the default `knowledge_bases` directory path, set the `LANGFLOW_KNOWLE
 ```bash
 export LANGFLOW_KNOWLEDGE_BASES_DIR="/path/to/parent/directory"
 ```
+
+## Manage knowledge bases
+
+On the [**Projects** page](/concepts-flows#projects) page, click **Knowledge** below the list of projects to view and manage your knowledge bases.
+
+For each knowledge base, you can see the following information:
+
+* Name
+* Embedding model
+* Size on disk
+* Number of words, characters, and chunks
+* The average length of chunks
+
+Chunking behavior is determined by the embedding model, and the embedding model is set when you create the knowledge base.
+If you need to change the embedding model, you must delete and recreate the knowledge base.
+
+To delete a knowledge base, select the checkbox next to the knowledge base, and then click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
+If any flows use the deleted knowledge base, you must update them to use a different knowledge base.
 
 ## See also
 
