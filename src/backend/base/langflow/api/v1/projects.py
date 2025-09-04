@@ -316,7 +316,7 @@ async def delete_project(
             )
             await mcp_composer_service.stop_project_composer(str(project_id))
             await logger.adebug(f"Stopped MCP Composer for deleted OAuth project {project.name} ({project_id})")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             # Log but don't fail the deletion if MCP Composer cleanup fails
             await logger.aerror(f"Failed to stop MCP Composer for deleted project {project_id}: {e}")
 

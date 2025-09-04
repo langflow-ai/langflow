@@ -14,7 +14,9 @@ from langflow.logging.logger import logger
 from langflow.services.base import Service
 from langflow.services.deps import get_settings_service
 
-GENERIC_STARTUP_ERROR_MSG = "MCP Composer startup failed. Check OAuth configuration and check logs for more information."
+GENERIC_STARTUP_ERROR_MSG = (
+    "MCP Composer startup failed. Check OAuth configuration and check logs for more information."
+)
 
 
 class MCPComposerError(Exception):
@@ -307,7 +309,6 @@ class MCPComposerService(Service):
         # Check for specific error patterns first
         for pattern, friendly_msg in error_patterns:
             if re.search(pattern, combined_output, re.IGNORECASE):
-                print(f"found pattern: {pattern}")
                 return friendly_msg
 
         return GENERIC_STARTUP_ERROR_MSG
@@ -385,7 +386,6 @@ class MCPComposerService(Service):
             process = await self._start_project_composer_process(
                 project_id, project_host, project_port, sse_url, auth_config, max_startup_checks, startup_delay
             )
-            
             self.project_composers[project_id] = {
                 "process": process,
                 "host": project_host,
@@ -490,7 +490,7 @@ class MCPComposerService(Service):
                         f"MCP Composer process {process.pid} terminated unexpectedly for project {project_id}"
                     )
                     startup_error_msg = self._extract_error_message("", "", oauth_server_url)
-                    raise MCPComposerStartupError(startup_error_msg, project_id)
+                    raise MCPComposerStartupError(startup_error_msg, project_id) from None
 
             # Process is still running, check if port is bound
             port_bound = not self._is_port_available(port)
