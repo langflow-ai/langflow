@@ -409,7 +409,7 @@ module.exports = {
         {
           type: "doc",
           id: "API-Reference/api-openai-responses",
-          label: "OpenAI responses endpoints",
+          label: "OpenAI Responses endpoints",
         },
         {
           type: "doc",

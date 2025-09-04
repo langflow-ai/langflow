@@ -6,21 +6,22 @@ slug: /api-openai-responses
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/Tabs';
 
-Langflow includes an OpenAI Responses API-compatible endpoint at `POST /api/v1/responses`.
+Langflow includes an endpoint that is compatible with the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses).
+It is available at `POST /api/v1/responses`.
 
-This endpoint allows you to use existing OpenAI client libraries with minimal code changes - just replace the `model` name, such as `gpt-4`, with your `flow_id`.
-Flow IDs can be found on the code snippets on the [**API access** pane](/concepts-publish#api-access) or in a flow's URL.
-
-For more information on the OpenAI Responses API, see the [OpenAI documentation](https://platform.openai.com/docs/api-reference/responses).
+This endpoint allows you to use existing OpenAI client libraries with minimal code changes.
+You only need to replace the `model` name, such as `gpt-4`, with your `flow_id`.
+You can find Flow IDs in the code snippets on the [**API access** pane](/concepts-publish#api-access) or in a flow's URL.
 
 ## Prerequisites
 
-Your Langflow flow must contain a **ChatInput** component to be compatible with the OpenAI Responses API.
-Flows without this component will return an error. The component types `ChatInput` and `Chat Input` are recognized as chat inputs.
+To be compatible with Langflow's OpenAI Responses API endpoint, you flow and request must adhere to the following requirements:
 
-- **Tools**: The `tools` parameter is not yet supported and will return an error if provided.
-- **Flow Requirements**: Flows must contain a ChatInput component.
-- **Model Names**: The `model` field must contain a valid flow ID or endpoint name.
+- **Chat Input**: Your flow must contain a **Chat Input** component.
+Flows without this component return an error when passed to this endpoint.
+The component types `ChatInput` and `Chat Input` are recognized as chat inputs.
+- **Tools**: The `tools` parameter isn't supported. Returns an error if provided.
+- **Model Names**: In your request, the `model` field must contain a valid flow ID or endpoint name.
 - **Authentication**: All requests require an API key passed in the `x-api-key` header.
 For more information, see [API keys and authentication](/api-keys-and-authentication).
 
