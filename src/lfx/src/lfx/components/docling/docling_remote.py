@@ -103,13 +103,13 @@ class DoclingRemoteComponent(BaseFileComponent):
     ]
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
-        base_url = f"{self.api_url}/v1alpha"
+        base_url = f"{self.api_url}/v1"
 
         def _convert_document(client: httpx.Client, file_path: Path, options: dict[str, Any]) -> Data | None:
             encoded_doc = base64.b64encode(file_path.read_bytes()).decode()
             payload = {
                 "options": options,
-                "file_sources": [{"base64_string": encoded_doc, "filename": file_path.name}],
+                "sources": [{"kind": "file", "base64_string": encoded_doc, "filename": file_path.name}],
             }
 
             response = client.post(f"{base_url}/convert/source/async", json=payload)
@@ -165,7 +165,6 @@ class DoclingRemoteComponent(BaseFileComponent):
         docling_options = {
             "to_formats": ["json"],
             "image_export_mode": "placeholder",
-            "return_as_file": False,
             **(self.docling_serve_opts or {}),
         }
 
