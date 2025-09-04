@@ -80,7 +80,9 @@ async def verify_project_auth(
     if project.auth_settings:
         auth_settings = AuthSettings(**project.auth_settings)
 
-    if (not auth_settings and not settings_service.auth_settings.AUTO_LOGIN) or auth_settings.auth_type == "apikey":
+    if (not auth_settings and not settings_service.auth_settings.AUTO_LOGIN) or (
+        auth_settings and auth_settings.auth_type == "apikey"
+    ):
         # For MCP composer enabled, only use API key
         api_key = query_param or header_param
         if not api_key:
@@ -1089,6 +1091,10 @@ async def register_project_with_composer(project: Folder):
             error_msg = "Langflow host and port must be set in settings to register project with MCP Composer"
             raise ValueError(error_msg)
 
+        if not project.id:
+            error_msg = "Project must have an ID to register with MCP Composer"
+            raise ValueError(error_msg)
+        
         sse_url = await get_project_sse_url(project.id)
         auth_config = await _get_mcp_composer_auth_config(project)
 
