@@ -15,30 +15,15 @@ You can find Flow IDs in the code snippets on the [**API access** pane](/concept
 
 ## Prerequisites
 
-To be compatible with Langflow's OpenAI Responses API endpoint, you flow and request must adhere to the following requirements:
+To be compatible with Langflow's OpenAI Responses API endpoint, your flow and request must adhere to the following requirements:
 
 - **Chat Input**: Your flow must contain a **Chat Input** component.
 Flows without this component return an error when passed to this endpoint.
 The component types `ChatInput` and `Chat Input` are recognized as chat inputs.
-- **Tools**: The `tools` parameter isn't supported. Returns an error if provided.
+- **Tools**: The `tools` parameter isn't supported, and returns an error if provided.
 - **Model Names**: In your request, the `model` field must contain a valid flow ID or endpoint name.
 - **Authentication**: All requests require an API key passed in the `x-api-key` header.
 For more information, see [API keys and authentication](/api-keys-and-authentication).
-
-## Request
-
-```
-POST /api/v1/responses
-```
-
-## Headers
-
-| Header | Required | Description | Example |
-|--------|----------|-------------|---------|
-| Content-Type | Yes | Specifies the JSON format | "application/json" |
-| x-api-key | Yes | Your Langflow API key for authentication | "sk-..." |
-| X-LANGFLOW-GLOBAL-VAR-* | No | Global variables for the flow | "X-LANGFLOW-GLOBAL-VAR-API_KEY: sk-..." |
-
 
 ## Example request
 
@@ -54,8 +39,27 @@ curl -X POST \
   }'
 ```
 
-<details>
-<summary>Result</summary>
+### Headers
+
+| Header | Required | Description | Example |
+|--------|----------|-------------|---------|
+| x-api-key | Yes | Your Langflow API key for authentication | "sk-...". |
+| Content-Type | Yes | Specifies the JSON format | "application/json". |
+| X-LANGFLOW-GLOBAL-VAR-* | No | Global variables for the flow | "X-LANGFLOW-GLOBAL-VAR-API_KEY: sk-...". For more, see [Pass global variables to your flows in headers](#global-var). |
+
+### Request body
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| model | string | Yes | - | The flow ID or endpoint name to execute. |
+| input | string | Yes | - | The input text to process. |
+| stream | boolean | No | false | Whether to stream the response. |
+| background | boolean | No | false | Whether to process in background. |
+| tools | list[Any] | No | null | Tools are not supported yet. |
+| previous_response_id | string | No | null | ID of previous response to continue conversation. For more, see [Continue conversations with response and session IDs](#response-id). |
+| include | list[string] | No | null | Additional response data to include, such as `['tool_call.results']`. For more, see [Retrieve tool call results](#tool-call-results). |
+
+## Example response
 
 ```json
 {
@@ -94,20 +98,6 @@ curl -X POST \
   "metadata": {}
 }
 ```
-
-</details>
-
-### Request body
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| model | string | Yes | - | The flow ID or endpoint name to execute. |
-| input | string | Yes | - | The input text to process. |
-| stream | boolean | No | false | Whether to stream the response. |
-| background | boolean | No | false | Whether to process in background. |
-| tools | list[Any] | No | null | Tools are not supported yet. |
-| previous_response_id | string | No | null | ID of previous response to continue conversation. For more, see [Continue conversations with response and session IDs](#response-id). |
-| include | list[string] | No | null | Additional response data to include, such as `['tool_call.results']`. For more, see [Retrieve tool call results](#tool-call-results). |
 
 ### Response body
 
@@ -155,7 +145,7 @@ Fields set dynamically by Langflow:
 
 </details>
 
-### Example streaming request
+## Example streaming request
 
 When you set `"stream": true` with your request, the API returns a stream where each chunk contains a small piece of the response as it's generated. This provides a real-time experience where users can see the AI's output appear word by word, similar to ChatGPT's typing effect.
 
@@ -188,6 +178,7 @@ curl -X POST \
 ```
 
 </details>
+
 ### Streaming response body
 
 | Field | Type | Description |
@@ -214,171 +205,6 @@ The stream continues until a final chunk with `"status": "completed"` indicates 
   "status": "completed"
 }
 ```
-</details>
-
-## Retrieve tool call results {#tool-call-results}
-
-When you send a request to the `/api/v1/responses` endpoint to run a flow that includes tools or function calls, you can retrieve the raw tool execution details by adding `"include": ["tool_call.results"]` to the request payload.
-
-Without the `include` parameter, tool calls return basic function call information, but not the raw tool results, like this example:
-
-```json
-{
-  "id": "fc_1",
-  "type": "function_call",
-  "status": "completed",
-  "name": "evaluate_expression",
-  "arguments": "{\"expression\": \"15*23\"}"
-},
-```
-
-To get the raw `results` of each tool execution, add the line  `include: ["tool_call.results"]` to the request payload.
-
-```bash
-curl -X POST \
-  "http://LANGFLOW_SERVER_URL/api/v1/responses" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -d '{
-    "model": "FLOW_ID",
-    "input": "Calculate 25 * 13 and show me the result",
-    "stream": false,
-    "include": ["tool_call.results"]
-  }'
-```
-<details closed>
-<summary>Response with results</summary>
-
-```json
-{
-  "id": "a6e5511e-71f8-457a-88d2-7d8c6ea34e36",
-  "object": "response",
-  "created_at": 1756835379,
-  "status": "completed",
-  "error": null,
-  "incomplete_details": null,
-  "instructions": null,
-  "max_output_tokens": null,
-  "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
-  "output": [
-    {
-      "id": "evaluate_expression_1",
-      "queries": [
-        "45+67"
-      ],
-      "status": "completed",
-      "tool_name": "evaluate_expression",
-      "type": "tool_call",
-      "results": {
-        "result": "112"
-      }
-    },
-    {
-      "type": "message",
-      "id": "msg_a6e5511e-71f8-457a-88d2-7d8c6ea34e36",
-      "status": "completed",
-      "role": "assistant",
-      "content": [
-        {
-          "type": "output_text",
-          "text": "The result of 45 + 67 is 112.",
-          "annotations": []
-        }
-      ]
-    }
-  ],
-  "parallel_tool_calls": true,
-  "previous_response_id": null,
-  "reasoning": {
-    "effort": null,
-    "summary": null
-  },
-  "store": true,
-  "temperature": 1.0,
-  "text": {
-    "format": {
-      "type": "text"
-    }
-  },
-  "tool_choice": "auto",
-  "tools": [],
-  "top_p": 1.0,
-  "truncation": "disabled",
-  "usage": null,
-  "user": null,
-  "metadata": {}
-}
-```
-</details>
-
-The response now includes the tool call's results.
-
-```json
-{
-  "id": "evaluate_expression_1",
-  "type": "tool_call",
-  "tool_name": "evaluate_expression",
-  "queries": ["15*23"],
-  "results": {"result": "112"}
-}
-```
-
-## Pass global variables to your flows in headers
-
-Global variables allow you to pass dynamic values to your flows that can be used by components within that flow run.
-This is useful for passing API keys, user IDs, or any other configuration that might change between requests.
-
-The `/responses` endpoint accepts global variables as custom HTTP headers with the format `X-LANGFLOW-GLOBAL-VAR-{VARIABLE_NAME}`.
-Variable names are automatically converted to uppercase.
-
-Variables passed with `X-LANGFLOW-GLOBAL-VAR-{VARIABLE_NAME}` supersede database variables for a single flow run.
-If no variable is found in the database, the flow will fail, unless the `FALLBACK_TO_ENV_VARS` environment variable is `true`, in which case the flow will use the variable set in the `.env` file.
-
-This example shows how global variables work for a single flow run. The variables are only available during that specific request execution and are not persisted.
-
-```bash
-curl -X POST \
-  "$LANGFLOW_SERVER_URL/api/v1/responses" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -H "Content-Type: application/json" \
-  -H "X-LANGFLOW-GLOBAL-VAR-OPENAI_API_KEY: sk-..." \
-  -H "X-LANGFLOW-GLOBAL-VAR-USER_ID: user123" \
-  -H "X-LANGFLOW-GLOBAL-VAR-ENVIRONMENT: production" \
-  -d '{
-    "model": "your-flow-id",
-    "input": "Hello"
-  }'
-```
-
-<details>
-<summary>Response</summary>
-
-```json
-{
-  "id": "4a4d2f24-bb45-4a55-a499-0191305264be",
-  "object": "response",
-  "created_at": 1756839935,
-  "status": "completed",
-  "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
-  "output": [
-    {
-      "type": "message",
-      "id": "msg_4a4d2f24-bb45-4a55-a499-0191305264be",
-      "status": "completed",
-      "role": "assistant",
-      "content": [
-        {
-          "type": "output_text",
-          "text": "Hello! How can I assist you today?",
-          "annotations": []
-        }
-      ]
-    }
-  ],
-  "previous_response_id": null
-}
-```
-
 </details>
 
 ## Continue conversations with response and session IDs {#response-id}
@@ -477,6 +303,7 @@ curl -X POST \
 </details>
 
 You can optionally use your own session ID values in place of `previous_response_id`.
+This request is using the same flow, but the LLM has not yet been introduced to Alice in this session.
 
 ```bash
 curl -X POST \
@@ -520,3 +347,172 @@ curl -X POST \
 ```
 
 </details>
+
+## Retrieve tool call results {#tool-call-results}
+
+When you send a request to the `/api/v1/responses` endpoint to run a flow that includes tools or function calls, you can retrieve the raw tool execution details by adding `"include": ["tool_call.results"]` to the request payload.
+
+Without the `include` parameter, tool calls return basic function call information, but not the raw tool results, like this example:
+
+```json
+{
+  "id": "fc_1",
+  "type": "function_call",
+  "status": "completed",
+  "name": "evaluate_expression",
+  "arguments": "{\"expression\": \"15*23\"}"
+},
+```
+
+To get the raw `results` of each tool execution, add the line  `include: ["tool_call.results"]` to the request payload.
+
+```bash
+curl -X POST \
+  "http://$LANGFLOW_SERVER_URL/api/v1/responses" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+    "model": "FLOW_ID",
+    "input": "Calculate 25 * 13 and show me the result",
+    "stream": false,
+    "include": ["tool_call.results"]
+  }'
+```
+<details closed>
+<summary>Response with results</summary>
+
+```json
+{
+  "id": "a6e5511e-71f8-457a-88d2-7d8c6ea34e36",
+  "object": "response",
+  "created_at": 1756835379,
+  "status": "completed",
+  "error": null,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
+  "output": [
+    {
+      "id": "evaluate_expression_1",
+      "queries": [
+        "45+67"
+      ],
+      "status": "completed",
+      "tool_name": "evaluate_expression",
+      "type": "tool_call",
+      "results": {
+        "result": "112"
+      }
+    },
+    {
+      "type": "message",
+      "id": "msg_a6e5511e-71f8-457a-88d2-7d8c6ea34e36",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "The result of 45 + 67 is 112.",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "parallel_tool_calls": true,
+  "previous_response_id": null,
+  "reasoning": {
+    "effort": null,
+    "summary": null
+  },
+  "store": true,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    }
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": null,
+  "user": null,
+  "metadata": {}
+}
+```
+</details>
+
+The response now includes the tool call's results.
+
+```json
+{
+  "id": "evaluate_expression_1",
+  "type": "tool_call",
+  "tool_name": "evaluate_expression",
+  "queries": ["15*23"],
+  "results": {"result": "112"}
+}
+```
+
+## Pass global variables to your flows in headers {#global-var}
+
+Global variables allow you to pass dynamic values to your flows that can be used by components within that flow run.
+This is useful for passing API keys, user IDs, or any other configuration that might change between requests.
+
+The `/responses` endpoint accepts global variables as custom HTTP headers with the format `X-LANGFLOW-GLOBAL-VAR-{VARIABLE_NAME}`.
+Variables are only available during this specific request execution and are not persisted.
+Variable names are automatically converted to uppercase.
+
+This example demonstrates passing an `OPENAI_API_KEY` variable, which is a variable Langflow automatically detects from environment variables, with two custom variables for `USER_ID` and `ENVIRONMENT`. The variables don't have to be created in Langflow's Global Variables section - you can pass any variable name in the `X-LANGFLOW-GLOBAL-VAR-{VARIABLE_NAME}` header format.
+
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v1/responses" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "X-LANGFLOW-GLOBAL-VAR-OPENAI_API_KEY: sk-..." \
+  -H "X-LANGFLOW-GLOBAL-VAR-USER_ID: user123" \
+  -H "X-LANGFLOW-GLOBAL-VAR-ENVIRONMENT: production" \
+  -d '{
+    "model": "your-flow-id",
+    "input": "Hello"
+  }'
+```
+
+<details>
+<summary>Response</summary>
+
+```json
+{
+  "id": "4a4d2f24-bb45-4a55-a499-0191305264be",
+  "object": "response",
+  "created_at": 1756839935,
+  "status": "completed",
+  "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
+  "output": [
+    {
+      "type": "message",
+      "id": "msg_4a4d2f24-bb45-4a55-a499-0191305264be",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "Hello! How can I assist you today?",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "previous_response_id": null
+}
+```
+
+</details>
+
+Variables passed with `X-LANGFLOW-GLOBAL-VAR-{VARIABLE_NAME}` are always available to your flow, regardless of whether they exist in the database.
+
+If your flow components reference variables that aren't provided via headers and don't exist in the database, the flow will fail, unless the `FALLBACK_TO_ENV_VARS` environment variable is `true`, in which case the flow will use the variable set in the `.env` file.
+
+In the above example, `OPENAI_API_KEY` will fall back to the database variable if not provided in the header, and `USER_ID` and `ENVIRONMENT` will fall back to environment variables (if `FALLBACK_TO_ENV_VARS` is enabled) or cause the flow to fail if not found.
