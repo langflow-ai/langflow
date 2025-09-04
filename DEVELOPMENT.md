@@ -71,9 +71,9 @@ After running `make init`, you have two options for running Langflow:
 - Use `make run_cli` to build and run the application immediately.
 - Continue to the next section to run Langflow in Development mode.
 
-**Troubleshooting frontend build issues:**
+### Troubleshooting frontend build issues
 
-If you encounter frontend build problems or are upgrading from an older version of Langflow, use `make run_clic` at least the first time:
+If you encounter frontend build problems or are upgrading from an older version of Langflow, run `make run_clic` once.
 
 ```bash
 make run_clic
