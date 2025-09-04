@@ -142,34 +142,36 @@ def disable_mcp_composer_by_default():
     """Auto-fixture to disable MCP Composer for all tests by default."""
     with patch("langflow.api.v1.mcp_projects.get_settings_service") as mock_get_settings:
         from langflow.services.deps import get_settings_service
+
         real_service = get_settings_service()
-        
+
         # Create a mock that returns False for mcp_composer_enabled but delegates everything else
         mock_service = MagicMock()
         mock_service.settings = MagicMock()
         mock_service.settings.mcp_composer_enabled = False
-        
+
         # Copy any other settings that might be needed
         mock_service.auth_settings = real_service.auth_settings
-        
+
         mock_get_settings.return_value = mock_service
         yield
 
 
 @pytest.fixture
 def enable_mcp_composer():
-    """Fixture to explicitly enable MCP Composer for specific tests.""" 
+    """Fixture to explicitly enable MCP Composer for specific tests."""
     with patch("langflow.api.v1.mcp_projects.get_settings_service") as mock_get_settings:
         from langflow.services.deps import get_settings_service
+
         real_service = get_settings_service()
-        
+
         mock_service = MagicMock()
         mock_service.settings = MagicMock()
         mock_service.settings.mcp_composer_enabled = True
-        
+
         # Copy any other settings that might be needed
         mock_service.auth_settings = real_service.auth_settings
-        
+
         mock_get_settings.return_value = mock_service
         yield
 
@@ -306,7 +308,7 @@ async def test_update_project_mcp_settings_other_user_project_with_composer(
 ):
     """Test accessing a project belonging to another user when MCP Composer is enabled."""
     # When MCP Composer is enabled, JWT tokens are not accepted for MCP endpoints
-    
+
     # Try to access the other user's project using active_user's JWT credentials
     response = await client.get(f"api/v1/mcp/project/{other_test_project.id}/sse", headers=logged_in_headers)
 

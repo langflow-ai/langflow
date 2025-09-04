@@ -1093,7 +1093,7 @@ async def register_project_with_composer(project: Folder):
         if not project.id:
             error_msg = "Project must have an ID to register with MCP Composer"
             raise ValueError(error_msg)
-        
+
         sse_url = await get_project_sse_url(project.id)
         auth_config = await _get_mcp_composer_auth_config(project)
 
