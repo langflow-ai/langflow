@@ -14,13 +14,13 @@ from langflow.logging.logger import logger
 from langflow.services.base import Service
 from langflow.services.deps import get_settings_service
 
-GENERIC_STARTUP_ERROR_MSG = "MCP Composer startup failed. Check logs for more information."
+GENERIC_STARTUP_ERROR_MSG = "MCP Composer startup failed. Check OAuth configuration and check logs for more information."
 
 
 class MCPComposerError(Exception):
     """Base exception for MCP Composer errors."""
 
-    def __init__(self, message: str, project_id: str | None = None):
+    def __init__(self, message: str | None, project_id: str | None = None):
         if not message:
             message = GENERIC_STARTUP_ERROR_MSG
         self.message = message
@@ -319,7 +319,7 @@ class MCPComposerService(Service):
         sse_url: str,
         auth_config: dict[str, Any] | None,
         max_startup_checks: int = 3,
-        startup_delay: float = 1.0,
+        startup_delay: float = 2.0,
     ) -> None:
         """Start an MCP Composer instance for a specific project.
 
@@ -381,33 +381,22 @@ class MCPComposerService(Service):
                 port_error_msg = f"Port {project_port} is already in use"
                 raise MCPComposerPortError(port_error_msg)
 
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    if attempt > 0:
-                        await logger.adebug(f"Retrying MCP Composer startup (attempt {attempt + 1}/{max_retries})")
-                    process = await self._start_project_composer_process(
-                        project_id, project_host, project_port, sse_url, auth_config, max_startup_checks, startup_delay
-                    )
-                except MCPComposerError:
-                    raise
-                except Exception as e:
-                    if attempt == max_retries - 1:
-                        raise MCPComposerStartupError(GENERIC_STARTUP_ERROR_MSG, project_id) from e
-                    continue
-                else:
-                    self.project_composers[project_id] = {
-                        "process": process,
-                        "host": project_host,
-                        "port": project_port,
-                        "sse_url": sse_url,
-                        "auth_config": auth_config,
-                    }
+            # Start the MCP Composer process (single attempt, no outer retry loop)
+            process = await self._start_project_composer_process(
+                project_id, project_host, project_port, sse_url, auth_config, max_startup_checks, startup_delay
+            )
+            
+            self.project_composers[project_id] = {
+                "process": process,
+                "host": project_host,
+                "port": project_port,
+                "sse_url": sse_url,
+                "auth_config": auth_config,
+            }
 
-                    await logger.adebug(
-                        f"MCP Composer started for project {project_id} on port {project_port} (PID: {process.pid})"
-                    )
-                    return  # Success
+            await logger.adebug(
+                f"MCP Composer started for project {project_id} on port {project_port} (PID: {process.pid})"
+            )
 
     async def _start_project_composer_process(
         self,
@@ -479,6 +468,7 @@ class MCPComposerService(Service):
             # Check if process is still running
             poll_result = process.poll()
 
+            startup_error_msg = None
             if poll_result is not None:
                 # Process terminated, get the error output
                 await logger.aerror(f"MCP Composer process {process.pid} terminated with exit code: {poll_result}")
@@ -533,6 +523,7 @@ class MCPComposerService(Service):
 
             if poll_result is not None:
                 # Process died
+                startup_error_msg = None
                 try:
                     stdout_content, stderr_content = process.communicate(timeout=2)
                     # Extract meaningful error message
@@ -562,6 +553,7 @@ class MCPComposerService(Service):
             await logger.aerror(f"  - Target: {host}:{port}")
 
             # Get any available output before terminating
+            startup_error_msg = None
             try:
                 process.terminate()
                 stdout_content, stderr_content = process.communicate(timeout=2)
