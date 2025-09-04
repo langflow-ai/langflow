@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
+from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.graph.vertex.param_handler import ParameterHandler
 from langflow.interface import initialize
 from langflow.interface.listing import lazy_load_dict
@@ -101,7 +101,6 @@ class Vertex:
         self.use_result = False
         self.build_times: list[float] = []
         self.state = VertexStates.ACTIVE
-        self.log_transaction_tasks: set[asyncio.Task] = set()
         self.output_names: list[str] = [
             output["name"] for output in self.outputs if isinstance(output, dict) and "name" in output
         ]
@@ -516,7 +515,7 @@ class Vertex:
         async with self._lock:
             return await self._get_result(requester, target_handle_name)
 
-    async def _log_transaction_async(
+    def _log_transaction(
         self,
         flow_id: str | UUID,
         source: Vertex,
@@ -524,7 +523,10 @@ class Vertex:
         target: Vertex | None = None,
         error=None,
     ) -> None:
-        """Log a transaction asynchronously with proper task handling and cancellation.
+        """Queue a transaction to be logged later in batch.
+
+        This avoids database contention during parallel vertex execution.
+        All transactions are flushed at the end of graph execution.
 
         Args:
             flow_id: The ID of the flow
@@ -533,15 +535,9 @@ class Vertex:
             target: Optional target vertex
             error: Optional error information
         """
-        if self.log_transaction_tasks:
-            # Safely await and remove completed tasks
-            task = self.log_transaction_tasks.pop()
-            await task
-
-            # Create and track new task
-        task = asyncio.create_task(log_transaction(flow_id, source, status, target, error))
-        self.log_transaction_tasks.add(task)
-        task.add_done_callback(self.log_transaction_tasks.discard)
+        # Queue the transaction instead of logging immediately
+        if self.graph:
+            self.graph.queue_transaction(flow_id, source, status, target, error)
 
     async def _get_result(
         self,
@@ -558,13 +554,13 @@ class Vertex:
         flow_id = self.graph.flow_id
         if not self.built:
             if flow_id:
-                await self._log_transaction_async(str(flow_id), source=self, target=requester, status="error")
+                self._log_transaction(str(flow_id), source=self, target=requester, status="error")
             msg = f"Component {self.display_name} has not been built yet"
             raise ValueError(msg)
 
         result = self.built_result if self.use_result else self.built_object
         if flow_id:
-            await self._log_transaction_async(str(flow_id), source=self, target=requester, status="success")
+            self._log_transaction(str(flow_id), source=self, target=requester, status="success")
         return result
 
     async def _build_vertex_and_update_params(self, key, vertex: Vertex) -> None:
