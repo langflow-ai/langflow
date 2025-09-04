@@ -6,6 +6,7 @@ slug: /components-processing
 import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 Langflow's **Processing** components process and transform data within a flow.
 They have many uses, including:
@@ -18,7 +19,7 @@ They have many uses, including:
 
 ## Prompt Template
 
-See [Prompt Template](/components-prompts).
+See [**Prompt Template** component](/components-prompts).
 
 ## Batch Run
 
@@ -64,8 +65,7 @@ For example, `Create a business card for each name.`
 
 ### Batch Run parameters
 
-Some **Batch Run** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -151,7 +151,7 @@ For more information about the webhook endpoint, see [Trigger flows with webhook
 
 ### Data Operations parameters
 
-Many **Data Operations** component input parameters are conditional based on the selected **Operation** (`operation`).
+Many parameters are conditional based on the selected **Operation** (`operation`).
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -196,7 +196,7 @@ The only requirement is that the preceding component must create `DataFrame` out
 1. Create a new flow or use an existing flow.
 
     <details>
-    <summary>API response extraction flow example</summary>
+    <summary>Example: API response extraction flow</summary>
 
     The following example flow uses five components to extract `Data` from an API response, transform it to a `DataFrame`, and then perform further processing on the tabular data using a **DataFrame Operations** component.
     The sixth component, **Chat Output**, is optional in this example.
@@ -380,8 +380,7 @@ The **Chat Input** and **Chat Output** components create a seamless chat interac
 
 ### LLM Router parameters
 
-Some **LLM Router** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -428,10 +427,9 @@ The output is a `Message` containing the parsed text.
 This is a versatile component for data extraction and manipulation in your flows.
 For examples of **Parser** components in flows, see the following:
 
-* [**Batch Run** component](#batch-run)
-* [**Structured Output** component](#structured-output)
+* [**Batch Run** component example](#batch-run)
+* [**Structured Output** component example](#structured-output)
 * **Financial Report Parser** template
-* [**Vector Store** components](/components-vector-stores)
 * [Trigger flows with webhooks](/webhook)
 * [Create a vector RAG chatbot](/chat-with-rag)
 
@@ -493,7 +491,7 @@ The resulting text for each row is output as a [`Message`](/data-types#message).
 </details>
 
 The following parameters are available in **Parser** mode.
-To view and edit all available parameters, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -509,7 +507,7 @@ Use **Stringify** mode to convert the entire input directly to text.
 This mode doesn't support templates or key selection.
 
 The following parameters are available in **Stringify** mode.
-To view and edit all available parameters, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -718,8 +716,7 @@ From there, the LLM generates a filter function that extracts email addresses fr
 
 ### Smart Function parameters
 
-Some **Smart Function** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -748,8 +745,7 @@ The **Split Text** component's parameters control how the text is split into chu
 To test the chunking behavior, add a **Text Input** or **File** component with some sample data to chunk, click <Icon name="Play" aria-hidden="True" /> **Run component** on the **Split Text** component, and then click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** to view the list of chunks and their metadata. The **text** column contains the actual text chunks created from your chunking settings.
 If the chunks aren't split as you expect, adjust the parameters, rerun the component, and then inspect the new output.
 
-Some **Split Text** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -799,10 +795,10 @@ This can come from practically any component, but it is typically a **Chat Input
 
 3. Attach a [**Language Model** component](/components-models) that is set to emit [`LanguageModel`](/data-types#languagemodel) output.
 
-    The **Language Model** component uses the **Input Message** and **Format Instructions** from the **Structured Output** component to extract specific pieces of data from the input text.
+    The LLM uses the **Input Message** and **Format Instructions** from the **Structured Output** component to extract specific pieces of data from the input text.
     The output schema is applied to the model's response to produce the final `Data` or `DataFrame` structured object.
 
-4. Optional: Typically, the structured output is passed to downstream components that use the extracted data for other processes, such as other **Processing** components like the **Parser** or **Data Operations** components.
+4. Optional: Typically, the structured output is passed to downstream components that use the extracted data for other processes, such as the **Parser** or **Data Operations** components.
 
 ![A basic flow with Structured Output, Language Model, Type Convert, and Chat Input and Output components.](/img/component-structured-output.png)
 
@@ -845,8 +841,7 @@ EBITDA: 900 million , Net Income: 500 million , GROSS_PROFIT: 1.2 billion
 
 ### Structured Output parameters
 
-Some **Structured Output** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Type | Description |
 |------|------|-------------|
