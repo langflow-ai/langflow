@@ -150,7 +150,7 @@ async def verify_project_auth_conditional(
         api_key_header_value = request.headers.get("x-api-key")
 
         # Check if this project requires API key only authentication
-        if FEATURE_FLAGS.mcp_composer:
+        if get_settings_service().settings.mcp_composer_enabled:
             return await verify_project_auth(session, project_id, api_key_query_value, api_key_header_value)
 
         # For all other cases, use standard MCP authentication (allows JWT + API keys)
@@ -1157,7 +1157,7 @@ async def init_mcp_servers():
                     get_project_mcp_server(project.id)
 
                     # Only register with MCP Composer if OAuth authentication is configured
-                    if FEATURE_FLAGS.mcp_composer and project.auth_settings:
+                    if get_settings_service().settings.mcp_composer_enabled and project.auth_settings:
                         auth_type = project.auth_settings.get("auth_type")
                         if auth_type == "oauth":
                             await logger.adebug(

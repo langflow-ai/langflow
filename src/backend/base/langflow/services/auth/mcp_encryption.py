@@ -33,17 +33,20 @@ def encrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
     for field in SENSITIVE_FIELDS:
         if encrypted_settings.get(field):
             try:
+                field_to_encrypt = encrypted_settings[field]
                 # Only encrypt if the value is not already encrypted
                 # Try to decrypt first - if it fails, it's not encrypted
                 try:
-                    auth_utils.decrypt_api_key(encrypted_settings[field], settings_service)
+                    result = auth_utils.decrypt_api_key(field_to_encrypt, settings_service)
+                    if not result:
+                        raise ValueError(f"Failed to decrypt field {field}")
+
                     # If decrypt succeeds, it's already encrypted
                     logger.debug(f"Field {field} is already encrypted")
                 except (ValueError, TypeError, KeyError, InvalidToken):
                     # If decrypt fails, the value is plaintext and needs encryption
-                    encrypted_value = auth_utils.encrypt_api_key(encrypted_settings[field], settings_service)
+                    encrypted_value = auth_utils.encrypt_api_key(field_to_encrypt, settings_service)
                     encrypted_settings[field] = encrypted_value
-                    logger.debug(f"Encrypted field {field}")
             except (ValueError, TypeError, KeyError) as e:
                 logger.error(f"Failed to encrypt field {field}: {e}")
                 raise
@@ -69,17 +72,22 @@ def decrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
     for field in SENSITIVE_FIELDS:
         if decrypted_settings.get(field):
             try:
-                decrypted_value = auth_utils.decrypt_api_key(decrypted_settings[field], settings_service)
+                field_to_decrypt = decrypted_settings[field]
+
+                decrypted_value = auth_utils.decrypt_api_key(field_to_decrypt, settings_service)
+                if not decrypted_value:
+                    raise ValueError(f"Failed to decrypt field {field}")
+
                 decrypted_settings[field] = decrypted_value
-                logger.debug(f"Successfully decrypted field {field}")
             except (ValueError, TypeError, KeyError, InvalidToken) as e:
                 # If decryption fails, check if the value appears encrypted
-                field_value = decrypted_settings[field]
+                field_value = field_to_decrypt
                 if isinstance(field_value, str) and field_value.startswith("gAAAAAB"):
                     # Value appears to be encrypted but decryption failed
                     logger.error(f"Failed to decrypt encrypted field {field}: {e}")
                     # For OAuth flows, we need the decrypted value, so raise the error
                     raise ValueError(f"Unable to decrypt {field}. Check encryption key configuration.") from e
+
                 # Value doesn't appear encrypted, assume it's plaintext (backward compatibility)
                 logger.debug(f"Field {field} appears to be plaintext, keeping original value")
 
