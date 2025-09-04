@@ -226,6 +226,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       dismissedNodes: JSON.parse(
         localStorage.getItem(`dismiss_${flow?.id}`) ?? "[]",
       ) as string[],
+      dismissedNodesLegacy: JSON.parse(
+        localStorage.getItem(`dismiss_legacy_${flow?.id}`) ?? "[]",
+      ) as string[],
     });
     unselectAllNodesEdges(nodes, newEdges);
     if (flow?.id) {
@@ -567,6 +570,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ getFilterEdge: newState });
   },
   getFilterEdge: [],
+  setFilterComponent: (newState) => {
+    set({ getFilterComponent: newState });
+  },
+  getFilterComponent: "",
   onConnect: (connection) => {
     const _dark = useDarkStore.getState().dark;
     // const commonMarkerProps = {
@@ -1067,6 +1074,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       JSON.stringify(newDismissedNodes),
     );
     set({ dismissedNodes: newDismissedNodes });
+  },
+  dismissedNodesLegacy: [],
+  addDismissedNodesLegacy: (dismissedNodes: string[]) => {
+    const newDismissedNodes = Array.from(
+      new Set([...get().dismissedNodesLegacy, ...dismissedNodes]),
+    );
+    localStorage.setItem(
+      `dismiss_legacy_${get().currentFlow?.id}`,
+      JSON.stringify(newDismissedNodes),
+    );
+    set({ dismissedNodesLegacy: newDismissedNodes });
   },
   helperLineEnabled: false,
   setHelperLineEnabled: (helperLineEnabled: boolean) => {
