@@ -57,37 +57,23 @@ Install Pre-Requisites:
 
 ### Initial Environment Validation
 
-Setup and validate the initial environment by running:
+To setup and validate the initial environment, run:
 
 ```bash
 make init
 ```
 
-This will set up the development environment by installing backend and frontend dependencies, building the frontend static files, and initializing the project. It runs `make install_backend`, `make install_frontend`, `make build_frontend`, and finally `uv run langflow run` to start the application.
+This sets up the development environment by installing backend and frontend dependencies and installing pre-commit hooks. It runs `make install_backend`, `make install_frontend`, and `uvx pre-commit install`.
 
-Once the application is running, the command output should look similar to:
+> [!TIP]
+> If you want to quickly run Langflow from source without setting up the full development environment, you can use `make run_cli` instead. This command installs dependencies, builds the frontend, and starts the application in one step.
 
-```
-╭───────────────────────────────────────────────────────────────────────╮
-│ Welcome to Langflow                                                   │
-│                                                                       │
-│ 🌟 GitHub: Star for updates → https://github.com/langflow-ai/langflow  │
-│ 💬 Discord: Join for support → https://discord.com/invite/EqksyE2EX9   │
-│                                                                       │
-│ We collect anonymous usage data to improve Langflow.                  │
-│ To opt out, set: DO_NOT_TRACK=true in your environment.               │
-│                                                                       │
-│ 🟢 Open Langflow → http://localhost:7860                               │
-╰───────────────────────────────────────────────────────────────────────╯
-```
+After running `make init`, you have two options for running Langflow:
 
-At this point, validate you can access the UI by opening the URL shown.
+* Use `make run_cli` to build and run the application immediately.
+* Continue to the next section to run Langflow in Development mode.
 
-This is how the application would normally run: the (static) front-end pages are compiled, and then this "frontend" is served by the FastAPI server; the "backend" APIs are also serviced by the FastAPI server.
-
-However, as a developer,  you will want to proceed to the next step. Shutdown Langflow by hitting `Control (or Command)-C`.
-
-## Completing Development environment Setup
+## Complete development environment setup
 
 There are some other steps to consider before you are ready to begin development.
 
@@ -105,7 +91,7 @@ uv sync
 uv run pre-commit install
 ```
 
-## Run Langflow in "Development" Mode
+## Run Langflow in Development mode
 
 With the above validation, you can now run the backend (FastAPI) and frontend (Node) services in a way that will "hot-reload" your changes. In this mode, the FastAPI server requires a Node.js server to serve the frontend pages rather than serving them directly.
 
@@ -160,7 +146,10 @@ You will get output similar to:
 
 At this point, you can navigate to http://localhost:3000/ in a browser and access the Langflow User Interface.
 
-### Build and Display Documentation
+### Build and display documentation
+
+> [!IMPORTANT]
+> If you're using a dev container, run the documentation build from outside the container in your host terminal, not from within the dev container workspace. The documentation build may not work properly when run inside the dev container.
 
 If you are contributing changes to documentation (always welcome!), these are built using [Docusaurus](https://docusaurus.io/) and served separately, also using Node.js.
 
@@ -178,7 +167,8 @@ If the frontend service is running on port `3000` you might be prompted `Would y
 [SUCCESS] Docusaurus website is running at: http://localhost:3001/
 ```
 
-At which point you can navigate to http://localhost:3001/ in a browser and view the documentation. Documentation updates will be visible as they are saved, though sometimes the browser page will also need to be refreshed.
+Navigate to http://localhost:3001/ in a browser and view the documentation. Documentation updates will be visible as they are saved, though sometimes the browser page will also need to be refreshed.
+
 
 ## Adding or Modifying a Component
 
