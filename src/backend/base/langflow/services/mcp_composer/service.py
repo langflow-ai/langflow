@@ -2,10 +2,10 @@
 
 import asyncio
 import os
+import re
 import select
 import socket
 import subprocess
-import re
 from collections.abc import Callable
 from functools import wraps
 from typing import Any
@@ -14,8 +14,9 @@ from langflow.logging.logger import logger
 from langflow.services.base import Service
 from langflow.services.deps import get_settings_service
 
-
 GENERIC_STARTUP_ERROR_MSG = "MCP Composer startup failed. Check logs for more information."
+
+
 class MCPComposerError(Exception):
     """Base exception for MCP Composer errors."""
 
@@ -267,14 +268,16 @@ class MCPComposerService(Service):
 
         return safe_cmd
 
-    def _extract_error_message(self, stdout_content: str, stderr_content: str, oauth_server_url: str | None = None) -> str:
+    def _extract_error_message(
+        self, stdout_content: str, stderr_content: str, oauth_server_url: str | None = None
+    ) -> str:
         """Attempts to extract a user-friendly error message from subprocess output.
-        
+
         Args:
             stdout_content: Standard output from the subprocess
             stderr_content: Standard error from the subprocess
             oauth_server_url: OAuth server URL
-            
+
         Returns:
             User-friendly error message or a generic message if no specific pattern is found
         """
@@ -282,29 +285,42 @@ class MCPComposerService(Service):
         combined_output = (stderr_content + "\n" + stdout_content).strip()
         if not oauth_server_url:
             oauth_server_url = "OAuth server URL"
-        
+
         # Common error patterns with user-friendly messages
         error_patterns = [
             (r"address already in use", f"Address {oauth_server_url} is already in use."),
             (r"permission denied", f"Permission denied starting MCP Composer on address {oauth_server_url}."),
-            (r"connection refused", f"Connection refused on address {oauth_server_url}. The address may be blocked or unavailable."),
-            (r"bind.*failed", f"Failed to bind to address {oauth_server_url}. The address may be in use or unavailable."),
+            (
+                r"connection refused",
+                f"Connection refused on address {oauth_server_url}. The address may be blocked or unavailable.",
+            ),
+            (
+                r"bind.*failed",
+                f"Failed to bind to address {oauth_server_url}. The address may be in use or unavailable.",
+            ),
             (r"timeout", "MCP Composer startup timed out. Please try again."),
             (r"invalid.*configuration", "Invalid MCP Composer configuration. Please check your settings."),
             (r"oauth.*error", "OAuth configuration error. Please check your OAuth settings."),
             (r"authentication.*failed", "Authentication failed. Please check your credentials."),
         ]
-        
+
         # Check for specific error patterns first
         for pattern, friendly_msg in error_patterns:
             if re.search(pattern, combined_output, re.IGNORECASE):
                 print(f"found pattern: {pattern}")
                 return friendly_msg
-        
+
         return GENERIC_STARTUP_ERROR_MSG
 
     @require_composer_enabled
-    async def start_project_composer(self, project_id: str, sse_url: str, auth_config: dict[str, Any] | None, max_startup_checks: int = 3, startup_delay: float = 1.0) -> None:
+    async def start_project_composer(
+        self,
+        project_id: str,
+        sse_url: str,
+        auth_config: dict[str, Any] | None,
+        max_startup_checks: int = 3,
+        startup_delay: float = 1.0,
+    ) -> None:
         """Start an MCP Composer instance for a specific project.
 
         Raises:
@@ -373,7 +389,7 @@ class MCPComposerService(Service):
                     process = await self._start_project_composer_process(
                         project_id, project_host, project_port, sse_url, auth_config, max_startup_checks, startup_delay
                     )
-                except MCPComposerError as e:
+                except MCPComposerError:
                     raise
                 except Exception as e:
                     if attempt == max_retries - 1:
@@ -394,7 +410,14 @@ class MCPComposerService(Service):
                     return  # Success
 
     async def _start_project_composer_process(
-        self, project_id: str, host: str, port: int, sse_url: str, auth_config: dict[str, Any] | None = None, max_startup_checks: int = 3, startup_delay: float = 1.0
+        self,
+        project_id: str,
+        host: str,
+        port: int,
+        sse_url: str,
+        auth_config: dict[str, Any] | None = None,
+        max_startup_checks: int = 3,
+        startup_delay: float = 1.0,
     ) -> subprocess.Popen:
         """Start the MCP Composer subprocess for a specific project."""
         cmd = [
@@ -409,7 +432,6 @@ class MCPComposerService(Service):
 
         # Set environment variables
         env = os.environ.copy()
-
 
         oauth_server_url = auth_config.get("oauth_server_url") if auth_config else None
         if auth_config:
@@ -472,7 +494,7 @@ class MCPComposerService(Service):
                     # Extract meaningful error message
                     startup_error_msg = self._extract_error_message(stdout_content, stderr_content, oauth_server_url)
                     raise MCPComposerStartupError(startup_error_msg, project_id)
-                except subprocess.TimeoutExpired as e:
+                except subprocess.TimeoutExpired:
                     process.kill()
                     await logger.aerror(
                         f"MCP Composer process {process.pid} terminated unexpectedly for project {project_id}"

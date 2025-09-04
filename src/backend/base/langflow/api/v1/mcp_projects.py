@@ -189,8 +189,6 @@ def get_project_sse(project_id: UUID | None) -> SseServerTransport:
     return project_sse_transports[project_id_str]
 
 
-
-
 @router.get("/{project_id}")
 async def list_project_tools(
     project_id: UUID,
@@ -1095,7 +1093,11 @@ async def register_project_with_composer(project: Folder):
         auth_config = await _get_mcp_composer_auth_config(project)
 
         error_message = await mcp_composer_service.start_project_composer(
-            project_id=str(project.id), sse_url=sse_url, auth_config=auth_config, max_startup_checks=5, startup_delay=3.0
+            project_id=str(project.id),
+            sse_url=sse_url,
+            auth_config=auth_config,
+            max_startup_checks=5,
+            startup_delay=3.0,
         )
         if error_message is not None:
             raise RuntimeError(error_message)
