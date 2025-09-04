@@ -10,10 +10,11 @@ import gc
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncEngine
+
 from langflow.services.database.service import DatabaseService
 from langflow.services.deps import get_db_service
 from langflow.services.schema import ServiceType
-from sqlalchemy.ext.asyncio import AsyncEngine
 
 
 class TestConnectionPoolLeak:
