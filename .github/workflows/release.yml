@@ -208,11 +208,12 @@ jobs:
   test-cross-platform:
     name: Test Cross-Platform Installation
     if: inputs.release_package_base == true || inputs.release_package_main == true
-    needs: [build-base, build-main]
+    needs: [build-base, build-main, build-lfx]
     uses: ./.github/workflows/cross-platform-test.yml
     with:
       base-artifact-name: "dist-base"
       main-artifact-name: "dist-main"
+      lfx-artifact-name: ${{ inputs.release_lfx == true && 'dist-lfx' || '' }}
 
   test-lfx-cross-platform:
     name: Test LFX Cross-Platform Installation
