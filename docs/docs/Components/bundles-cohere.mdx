@@ -46,7 +46,7 @@ For more information about using embedding model components in flows, see [**Emb
 
 | Name | Type | Description |
 |------|------|-------------|
-| cohere_api_key | String | Input parameter. The API key required to authenticate with the Cohere service. |
+| cohere_api_key | SecretString | Input parameter. The API key required to authenticate with the Cohere service. |
 | model | String | Input parameter. The language model used for embedding text documents and performing queries. Default: `embed-english-v2.0` |
 | truncate | Boolean | Input parameter. How to handle input that exceeds the model's token limit. One of `NONE`, `START`, or `END` (default). For more information, see the [Cohere `truncate` API reference](https://docs.cohere.com/reference/embed#request.body.truncate). |
 | max_retries | Integer | Input parameter. The maximum number of retry attempts for failed requests. Default: `3` |
