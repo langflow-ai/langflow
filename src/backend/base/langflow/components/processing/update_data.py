@@ -21,6 +21,7 @@ class UpdateDataComponent(Component):
     MAX_FIELDS = 15  # Define a constant for maximum number of fields
     icon = "FolderSync"
     legacy = True
+    replacement = ["processing.DataOperations"]
 
     inputs = [
         DataInput(
