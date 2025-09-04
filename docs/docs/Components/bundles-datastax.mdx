@@ -18,9 +18,9 @@ This page describes the components that are available in the **DataStax** bundle
 :::important
 It is recommend that you create any databases, keyspaces, and collections you need before configuring the **Astra DB** component.
 
-However, Langflow's **Agent** component includes built-in chat memory that is enabled by default.
-Your agentic flows don't need an external database to store chat memory.
-For more information, see [Memory management options](/memory).
+You can create new databases and collections through this component, but this is only possible in the Langflow visual editor, not at runtime, and you must wait while the database or collection initializes before proceeding with flow configuration.
+Additionally, not all database and collection configuration options are available through the **Astra DB** component, such as hybrid search options, PCU groups, vectorize integration management, and multi-region deployments.
+:::
 
 The **Astra DB** component read and writes to Astra DB Serverless databases, using an instance of `AstraDBVectorStore` to call the Data API and DevOps API.
 
