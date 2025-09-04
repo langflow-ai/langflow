@@ -175,12 +175,6 @@ class AgentComponent(ToolCallingAgentComponent):
     ]
     outputs = [
         Output(name="response", display_name="Response", method="message_response"),
-        Output(
-            name="structured_response",
-            display_name="Structured Response",
-            method="json_response",
-            tool_mode=False,
-        ),
     ]
 
     async def get_agent_requirements(self):
