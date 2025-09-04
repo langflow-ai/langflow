@@ -52,6 +52,8 @@ def convert_to_dataframe(v: DataFrame | Data | Message | dict) -> DataFrame:
     if isinstance(v, pd.DataFrame):
         # Convert pandas DataFrame to our DataFrame by creating Data objects
         return DataFrame(data=v)
+    if isinstance(v, Message):
+        return Data(data={"text": v.data["text"]}).to_dataframe()
     # For other types, call to_dataframe method
     return v.to_dataframe()
 
