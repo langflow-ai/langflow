@@ -309,7 +309,7 @@ async def test_update_project_mcp_settings_other_user_project_with_composer(
     """Test accessing a project belonging to another user when MCP Composer is enabled."""
     # When MCP Composer is enabled, JWT tokens are not accepted for MCP endpoints
     assert enable_mcp_composer  # Fixture ensures MCP Composer is enabled
-    
+
     # Try to access the other user's project using active_user's JWT credentials
     response = await client.get(f"api/v1/mcp/project/{other_test_project.id}/sse", headers=logged_in_headers)
 
