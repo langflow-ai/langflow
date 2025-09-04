@@ -159,7 +159,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const { data: mcpProjectData } = useGetFlowsMCP({ projectId });
+  const { data: mcpProjectData, isLoading: isLoadingMCPProjectData } =
+    useGetFlowsMCP({ projectId });
   const { mutate: patchFlowsMCP, isPending: isPatchingFlowsMCP } =
     usePatchFlowsMCP({ project_id: projectId });
 
@@ -388,6 +389,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const hasAuthentication =
     currentAuthSettings?.auth_type && currentAuthSettings.auth_type !== "none";
 
+  const isLoadingMCPProjectAuth = isLoadingMCPProjectData || isPatchingFlowsMCP;
+
   return (
     <div>
       <div className="flex justify-between gap-4 items-start">
@@ -465,7 +468,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                     <span
                       className={cn(
                         "flex gap-2 text-mmd items-center",
-                        isPatchingFlowsMCP
+                        isLoadingMCPProjectAuth
                           ? "text-muted-foreground"
                           : !composerUrlData?.error_message
                           ? "text-accent-emerald-foreground"
@@ -474,7 +477,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                     >
                       <ForwardedIconComponent
                         name={
-                          isPatchingFlowsMCP
+                          isLoadingMCPProjectAuth
                             ? "Loader2"
                             : !composerUrlData?.error_message
                             ? "Check"
@@ -482,10 +485,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                         }
                         className={cn(
                           "h-4 w-4 shrink-0",
-                          isPatchingFlowsMCP && "animate-spin",
+                          isLoadingMCPProjectAuth && "animate-spin",
                         )}
                       />
-                      {isPatchingFlowsMCP
+                      {isLoadingMCPProjectAuth
                         ? "Loading..."
                         : AUTH_METHODS[
                             currentAuthSettings.auth_type as keyof typeof AUTH_METHODS
