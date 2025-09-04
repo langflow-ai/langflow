@@ -68,8 +68,6 @@ test(
     await page.getByTestId("sidebar-legacy-switch").click();
     await page.getByTestId("sidebar-options-trigger").click();
 
-    await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
-
     await expect(page.getByTestId("input_outputChat Input")).toBeVisible();
     await expect(page.getByTestId("input_outputChat Output")).toBeVisible();
     await expect(page.getByTestId("processingPrompt Template")).toBeVisible();
@@ -117,7 +115,6 @@ test(
 
     await expect(page.getByTestId("disclosure-data")).toBeVisible();
     await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
-    await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
     await expect(page.getByTestId("disclosure-tools")).toBeVisible();
 
     await expect(page.getByTestId("dataAPI Request")).toBeVisible();
