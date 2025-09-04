@@ -8,6 +8,9 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from anyio import Path
 from httpx import AsyncClient
+from sqlalchemy.orm import selectinload
+from sqlmodel import select
+
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
     detect_github_url,
@@ -21,9 +24,6 @@ from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, session_scope
-from sqlalchemy.orm import selectinload
-from sqlmodel import select
-
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.directory_reader.utils import abuild_custom_component_list_from_path
 

@@ -1,3 +1,5 @@
+from pydantic import BaseModel
+
 from langflow.custom import Component
 
 # Import all input types
@@ -19,8 +21,6 @@ from langflow.io import (
     StrInput,
     TableInput,
 )
-from pydantic import BaseModel
-
 from lfx.base.tools.component_tool import ComponentToolkit
 from lfx.schema import Data
 
