@@ -4,6 +4,7 @@ slug: /components-kb
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 import PartialKbSummary from '@site/docs/_partial-kb-summary.mdx';
 
 <PartialKbSummary />
@@ -68,7 +69,7 @@ This can help prevent duplicate writes, improve search quality, and ensure that 
         * **Column Name**: The name of the column, such as `customer_id`.
 
         * **Vectorize**: Enable this setting to generate embeddings for the content in this column using the knowledge base's selected embedding model.
-        Only enable this setting for the column that contains the main content that you want to search semantically.
+        Enable this setting for only one column that contains the content that you want to search semantically.
 
         * **Identifier**: Enable this setting to specify the unique identifier (primary key) column.
         There should only be one identifier.
@@ -83,7 +84,7 @@ This can help prevent duplicate writes, improve search quality, and ensure that 
         This column is selected for this example because it contains common, natural language terms that users would search for.
         Make sure **Vectorize** is disabled for all other columns.
 
-        * Other columns: You don't need to specify any other columns because all unspecified columns are loaded as metadata (not embedded).
+        * Other columns: You don't need to specify any other columns because all unspecified columns are loaded as metadata without embeddings.
 
 6. To load the data into your knowledge base, click <Icon name="Play" aria-hidden="true"/> **Run component** on the **Knowledge Ingestion** component, and then click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** to see how the `DataFrame` columns were processed.
 
@@ -171,10 +172,7 @@ The output is a `Data` object containing metadata about the ingestion, including
 
 ### Knowledge ingestion parameters
 
-<!-- TODO: Replace with partial -->
-
-Some **Knowledge Ingestion** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -193,10 +191,7 @@ The output is a [`DataFrame`](/data-types#dataframe) containing the top matching
 
 ### Knowledge retrieval parameters
 
-<!-- TODO: Replace with partial -->
-
-Some **Knowledge Retrieval** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|

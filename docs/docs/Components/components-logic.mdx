@@ -4,8 +4,9 @@ slug: /components-logic
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
-Langflow's **Logic** components provide functionalities for routing, conditional processing, and flow management.
+Logic components provide functionalities for routing, conditional processing, and flow management.
 
 ## If-Else (conditional router) {#if-else}
 
@@ -82,8 +83,7 @@ The chat output should reflect the instructions in your prompts based on the reg
 
 ### If-Else parameters
 
-Some **If-Else** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name           | Type     | Description                                                       |
 |----------------|----------|-------------------------------------------------------------------|
@@ -182,8 +182,7 @@ When you select a flow for the **Run Flow** component, it uses the target flow's
 
 ### Run Flow parameters
 
-Some **Run Flow** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name              | Type     | Description                                                    |
 |-------------------|----------|----------------------------------------------------------------|
@@ -195,11 +194,11 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 
 ## Legacy Logic components
 
-The following **Logic** components are legacy components.
-You can still use them in your flows, but they are no longer supported and can be removed in a future release.
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
 
-Replace these components with suggested alternatives as soon as possible.
-Components marked deprecated in addition to legacy should be replaced immediately.
+<PartialLegacy />
+
+The following Logic components are in legacy status:
 
 <details>
 <summary>Condition/Data Conditional Router</summary>
@@ -260,7 +259,7 @@ It accepts the following parameters:
 </details>
 
 <details>
-<summary>Flow As Tool (deprecated)</summary>
+<summary>Flow As Tool</summary>
 
 This component constructed a tool from a function that ran a loaded flow.
 
@@ -269,7 +268,7 @@ It was deprecated in Langflow version 1.1.2 and replaced by the [**Run Flow** co
 </details>
 
 <details>
-<summary>Sub Flow (deprecated)</summary>
+<summary>Sub Flow</summary>
 
 This component integrated entire flows as components within a larger workflow.
 It dynamically generated inputs based on the selected flow and executed the flow with provided parameters.
