@@ -114,5 +114,5 @@ test(
     expect(await page.getByText("llama").count()).toBeGreaterThanOrEqual(0);
     expect(await page.getByText("claude").count()).toBe(0);
     expect(await page.getByText("gpt").count()).toBe(0);
-  }
+  },
 );
