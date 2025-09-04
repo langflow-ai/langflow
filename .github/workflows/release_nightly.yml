@@ -99,7 +99,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
       - name: Install LFX dependencies
-        run: uv sync --dev --package lfx
+        run: cd src/lfx && uv sync
 
       - name: Verify Nightly Name and Version
         id: verify
@@ -298,11 +298,12 @@ jobs:
 
   test-cross-platform:
     name: Test Cross-Platform Installation
-    needs: [build-nightly-base, build-nightly-main]
+    needs: [build-nightly-lfx, build-nightly-base, build-nightly-main]
     uses: ./.github/workflows/cross-platform-test.yml
     with:
       base-artifact-name: "dist-nightly-base"
       main-artifact-name: "dist-nightly-main"
+      lfx-artifact-name: "dist-nightly-lfx"
 
   publish-nightly-lfx:
     name: Publish LFX Nightly to PyPI
