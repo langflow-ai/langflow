@@ -51,6 +51,16 @@ This command does the following:
 
 The Langflow frontend is served at `http://localhost:7860`.
 
+**Troubleshooting frontend build issues:**
+
+If you encounter frontend build problems or are upgrading from an older version of Langflow, use `make run_clic` at least the first time:
+
+```bash
+make run_clic
+```
+
+This command cleans the build cache and rebuilds everything from scratch, which resolves most frontend-related issues when switching between versions.
+
 </details>
 
 <details>
