@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_cli_cached
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -213,7 +213,7 @@ lint: install_backend ## run linters
 
 
 
-run_cli: clean_frontend_build install_frontend install_backend build_frontend ## run the CLI with fresh frontend build
+run_clic: clean_frontend_build install_frontend install_backend build_frontend ## run the CLI with fresh frontend build
 	@echo 'Running the CLI with fresh frontend build'
 	@uv run langflow run \
 		--frontend-path $(path) \
@@ -223,7 +223,7 @@ run_cli: clean_frontend_build install_frontend install_backend build_frontend ##
 		$(if $(env),--env-file $(env),) \
 		$(if $(filter false,$(open_browser)),--no-open-browser)
 
-run_cli_cached: install_frontend install_backend build_frontend ## run the CLI quickly (without cleaning build cache)
+run_cli: install_frontend install_backend build_frontend ## run the CLI quickly (without cleaning build cache)
 	@echo 'Running the CLI quickly (reusing existing build cache if available)'
 	@uv run langflow run \
 		--frontend-path $(path) \
