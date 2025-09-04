@@ -185,7 +185,7 @@ LANGFLOW_SUPERUSER_PASSWORD=securepassword
 They are required if `LANGFLOW_AUTO_LOGIN=False`.
 Otherwise, they aren't relevant.
 
-If required and not set in when you [start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled), then the default values are `langflow` and `langflow` for system auto-login behavior.
+When you [start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled), if these variables are required but _not_ set, then Langflow uses the default values of `langflow` and `langflow`.
 These defaults don't apply when using the Langflow CLI command [`langflow superuser`](/configuration-cli#langflow-superuser).
 
 ### LANGFLOW_SECRET_KEY {#langflow-secret-key}
