@@ -5,6 +5,7 @@ import os
 import select
 import socket
 import subprocess
+import re
 from collections.abc import Callable
 from functools import wraps
 from typing import Any
@@ -14,10 +15,13 @@ from langflow.services.base import Service
 from langflow.services.deps import get_settings_service
 
 
+GENERIC_STARTUP_ERROR_MSG = "MCP Composer startup failed. Check logs for more information."
 class MCPComposerError(Exception):
     """Base exception for MCP Composer errors."""
 
     def __init__(self, message: str, project_id: str | None = None):
+        if not message:
+            message = GENERIC_STARTUP_ERROR_MSG
         self.message = message
         self.project_id = project_id
         super().__init__(message)
@@ -263,6 +267,42 @@ class MCPComposerService(Service):
 
         return safe_cmd
 
+    def _extract_error_message(self, stdout_content: str, stderr_content: str, oauth_server_url: str | None = None) -> str:
+        """Attempts to extract a user-friendly error message from subprocess output.
+        
+        Args:
+            stdout_content: Standard output from the subprocess
+            stderr_content: Standard error from the subprocess
+            oauth_server_url: OAuth server URL
+            
+        Returns:
+            User-friendly error message or a generic message if no specific pattern is found
+        """
+        # Combine both outputs and clean them up
+        combined_output = (stderr_content + "\n" + stdout_content).strip()
+        if not oauth_server_url:
+            oauth_server_url = "OAuth server URL"
+        
+        # Common error patterns with user-friendly messages
+        error_patterns = [
+            (r"address already in use", f"Address {oauth_server_url} is already in use."),
+            (r"permission denied", f"Permission denied starting MCP Composer on address {oauth_server_url}."),
+            (r"connection refused", f"Connection refused on address {oauth_server_url}. The address may be blocked or unavailable."),
+            (r"bind.*failed", f"Failed to bind to address {oauth_server_url}. The address may be in use or unavailable."),
+            (r"timeout", "MCP Composer startup timed out. Please try again."),
+            (r"invalid.*configuration", "Invalid MCP Composer configuration. Please check your settings."),
+            (r"oauth.*error", "OAuth configuration error. Please check your OAuth settings."),
+            (r"authentication.*failed", "Authentication failed. Please check your credentials."),
+        ]
+        
+        # Check for specific error patterns first
+        for pattern, friendly_msg in error_patterns:
+            if re.search(pattern, combined_output, re.IGNORECASE):
+                print(f"found pattern: {pattern}")
+                return friendly_msg
+        
+        return GENERIC_STARTUP_ERROR_MSG
+
     @require_composer_enabled
     async def start_project_composer(self, project_id: str, sse_url: str, auth_config: dict[str, Any] | None, max_startup_checks: int = 3, startup_delay: float = 1.0) -> None:
         """Start an MCP Composer instance for a specific project.
@@ -333,10 +373,11 @@ class MCPComposerService(Service):
                     process = await self._start_project_composer_process(
                         project_id, project_host, project_port, sse_url, auth_config, max_startup_checks, startup_delay
                     )
+                except MCPComposerError as e:
+                    raise
                 except Exception as e:
                     if attempt == max_retries - 1:
-                        startup_error_msg = "Failed to start MCP Composer Server. Check logs for more information"
-                        raise MCPComposerStartupError(startup_error_msg, project_id) from e
+                        raise MCPComposerStartupError(GENERIC_STARTUP_ERROR_MSG, project_id) from e
                     continue
                 else:
                     self.project_composers[project_id] = {
@@ -369,8 +410,11 @@ class MCPComposerService(Service):
         # Set environment variables
         env = os.environ.copy()
 
+
+        oauth_server_url = auth_config.get("oauth_server_url") if auth_config else None
         if auth_config:
             auth_type = auth_config.get("auth_type")
+
             if auth_type == "oauth":
                 cmd.extend(["--auth_type", "oauth"])
 
@@ -425,16 +469,16 @@ class MCPComposerService(Service):
                     safe_cmd = self._obfuscate_command_secrets(cmd)
                     await logger.aerror(f"Command that failed: {' '.join(safe_cmd)}")
 
-                    # Return generic error message
-                    startup_error_msg = "Failed to start MCP Composer Server. Check logs for more information"
+                    # Extract meaningful error message
+                    startup_error_msg = self._extract_error_message(stdout_content, stderr_content, oauth_server_url)
                     raise MCPComposerStartupError(startup_error_msg, project_id)
                 except subprocess.TimeoutExpired as e:
                     process.kill()
                     await logger.aerror(
                         f"MCP Composer process {process.pid} terminated unexpectedly for project {project_id}"
                     )
-                    startup_error_msg = "Failed to start MCP Composer Server. Check logs for more information"
-                    raise MCPComposerStartupError(startup_error_msg, project_id) from e
+                    startup_error_msg = self._extract_error_message("", "", oauth_server_url)
+                    raise MCPComposerStartupError(startup_error_msg, project_id)
 
             # Process is still running, check if port is bound
             port_bound = not self._is_port_available(port)
@@ -469,6 +513,8 @@ class MCPComposerService(Service):
                 # Process died
                 try:
                     stdout_content, stderr_content = process.communicate(timeout=2)
+                    # Extract meaningful error message
+                    startup_error_msg = self._extract_error_message(stdout_content, stderr_content, oauth_server_url)
                     await logger.aerror(f"MCP Composer startup failed for project {project_id}:")
                     await logger.aerror(f"  - Process died with exit code: {poll_result}")
                     await logger.aerror(f"  - Target: {host}:{port}")
@@ -479,11 +525,11 @@ class MCPComposerService(Service):
                         await logger.aerror(f"  - Error output: {stderr_content.strip()}")
                     if stdout_content.strip():
                         await logger.aerror(f"  - Standard output: {stdout_content.strip()}")
+                    await logger.aerror(f"  - Error message: {startup_error_msg}")
                 except subprocess.TimeoutExpired:
                     await logger.aerror(f"MCP Composer for project {project_id} died but couldn't read output")
                     process.kill()
 
-                startup_error_msg = "Failed to start MCP Composer Server. Check logs for more information"
                 raise MCPComposerStartupError(startup_error_msg, project_id)
             # Process running but port not bound
             await logger.aerror(f"MCP Composer startup failed for project {project_id}:")
@@ -497,6 +543,7 @@ class MCPComposerService(Service):
             try:
                 process.terminate()
                 stdout_content, stderr_content = process.communicate(timeout=2)
+                startup_error_msg = self._extract_error_message(stdout_content, stderr_content, oauth_server_url)
                 if stderr_content.strip():
                     await logger.aerror(f"  - Process stderr: {stderr_content.strip()}")
                 if stdout_content.strip():
@@ -505,7 +552,6 @@ class MCPComposerService(Service):
                 process.kill()
                 await logger.aerror("  - Could not retrieve process output before termination")
 
-            startup_error_msg = "Failed to start MCP Composer Server. Check logs for more information"
             raise MCPComposerStartupError(startup_error_msg, project_id)
 
         # Close the pipes if everything is successful
