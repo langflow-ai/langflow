@@ -21,13 +21,14 @@ def handle_auth_settings_update(
         - should_start_composer: bool
         - should_stop_composer: bool
     """
-    # Get current auth type before update (cache decrypted settings)
-    decrypted_current = None
+    # Get current auth type before update
     current_auth_type = None
+    decrypted_current = None
     if existing_project.auth_settings:
-        decrypted_current = decrypt_auth_settings(existing_project.auth_settings)
-        if decrypted_current:
-            current_auth_type = decrypted_current.get("auth_type")
+        current_auth_type = existing_project.auth_settings.get("auth_type")
+        # Only decrypt if we need access to sensitive fields (for preserving masked values)
+        if current_auth_type in ["oauth", "apikey"]:
+            decrypted_current = decrypt_auth_settings(existing_project.auth_settings)
 
     if new_auth_settings is None:
         # Explicitly set to None - clear auth settings

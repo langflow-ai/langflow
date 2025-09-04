@@ -566,16 +566,14 @@ async def install_mcp_config(
             settings_service = get_settings_service()
             if project.auth_settings:
                 # Project has auth settings - check if it requires API key
-                decrypted_settings = decrypt_auth_settings(project.auth_settings)
-                if decrypted_settings and decrypted_settings.get("auth_type") == "apikey":
+                if project.auth_settings.get("auth_type") == "apikey":
                     should_generate_api_key = True
             elif not settings_service.auth_settings.AUTO_LOGIN:
                 # No project auth settings but auto_login is disabled - generate API key
                 should_generate_api_key = True
         elif project.auth_settings:
             # When MCP_COMPOSER is enabled, only generate if auth_type is "apikey"
-            decrypted_settings = decrypt_auth_settings(project.auth_settings)
-            if decrypted_settings and decrypted_settings.get("auth_type") == "apikey":
+            if project.auth_settings.get("auth_type") == "apikey":
                 should_generate_api_key = True
 
         # Get settings service to build the SSE URL

@@ -71,11 +71,17 @@ def decrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any
             try:
                 decrypted_value = auth_utils.decrypt_api_key(decrypted_settings[field], settings_service)
                 decrypted_settings[field] = decrypted_value
-            except (ValueError, TypeError, KeyError, InvalidToken):
-                # If decryption fails, assume the value is already plaintext
-                # This handles backward compatibility with existing unencrypted data
-                # Keep the original value
-                pass
+                logger.debug(f"Successfully decrypted field {field}")
+            except (ValueError, TypeError, KeyError, InvalidToken) as e:
+                # If decryption fails, check if the value appears encrypted
+                field_value = decrypted_settings[field]
+                if isinstance(field_value, str) and field_value.startswith("gAAAAAB"):
+                    # Value appears to be encrypted but decryption failed
+                    logger.error(f"Failed to decrypt encrypted field {field}: {e}")
+                    # For OAuth flows, we need the decrypted value, so raise the error
+                    raise ValueError(f"Unable to decrypt {field}. Check encryption key configuration.") from e
+                # Value doesn't appear encrypted, assume it's plaintext (backward compatibility)
+                logger.debug(f"Field {field} appears to be plaintext, keeping original value")
 
     return decrypted_settings
 
