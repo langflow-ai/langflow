@@ -66,7 +66,6 @@ async def verify_project_auth(
     This function provides authentication for MCP endpoints when using MCP Composer and no API key is provided,
     or checks if the API key is valid.
     """
-    # MCP-specific authentication logic - always behaves as if skip_auth_auto_login is True
     settings_service = get_settings_service()
     result: ApiKey | User | None
 
@@ -102,7 +101,7 @@ async def verify_project_auth(
         ).first()
 
         if not project_access:
-            raise HTTPException(status_code=403, detail="Access denied to this project")
+            raise HTTPException(status_code=404, detail="Project not found")
 
         return user
 
