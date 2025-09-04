@@ -32,30 +32,23 @@ export const ProtectedRoute = ({ children }) => {
   const isOrgPage = currentPath.includes("organization");
   const isRootPage = currentPath === "/";
   const isFlowsPage = currentPath.includes("/flows");
-  
-  console.log("[ProtectedRoute] Render", {
-  isAuthenticated,
+
+  console.debug("[ProtectedRoute] Render", {
+    isAuthenticated,
     autoLogin,
     isOrgSelected,
     orgId,
-    currentPath
+    currentPath,
   });
-  /**
-   * 1️⃣ Redirect unauthenticated users to /login
-   */
+
+  // 1️⃣ Redirect to login if not authenticated
   const shouldRedirectToLogin =
     isOrgLoaded &&
     (!isAuthenticated || !isSignedIn) &&
     autoLogin !== undefined &&
     (!autoLogin || !IS_AUTO_LOGIN);
 
-  /**
-   * 2️⃣ Always redirect to /organization if:
-   * - User is authenticated
-   * - Clerk session exists
-   * - No org selected yet (manual step required)
-   * - Not already on /organization or /login
-   */
+  // 2️⃣ Redirect to organization selection if signed in but no org yet
   const shouldRedirectToOrg =
     isOrgLoaded &&
     isAuthenticated &&
@@ -64,9 +57,7 @@ export const ProtectedRoute = ({ children }) => {
     !isOrgPage &&
     !isLoginPage;
 
-  /**
-   * 3️⃣ If user lands on "/" but already selected org → go to flows
-   */
+  // ✅ 3️⃣ Redirect "/" to "/flows" ONLY if fully authenticated and org selected
   const shouldRedirectHome =
     isOrgLoaded &&
     isAuthenticated &&
@@ -74,9 +65,7 @@ export const ProtectedRoute = ({ children }) => {
     isOrgSelected &&
     isRootPage;
 
-  /**
-   * 🔄 Setup token auto-refresh only if authenticated
-   */
+  // 🔄 Setup token refresh
   useEffect(() => {
     const refreshTime = isNaN(LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV)
       ? LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS
@@ -97,9 +86,10 @@ export const ProtectedRoute = ({ children }) => {
     }
   }, [isAuthenticated, autoLogin, mutateRefresh]);
 
-  /**
-   * 🔹 Force redirect to login if unauthenticated
-   */
+  if (!isOrgLoaded || autoLogin === undefined) {
+    return null;
+  }
+
   if (shouldRedirectToLogin || testMockAutoLogin) {
     const isHomePath = isRootPage || isFlowsPage;
     return (
@@ -113,22 +103,16 @@ export const ProtectedRoute = ({ children }) => {
     );
   }
 
-  /**
-   * 🔹 Force redirect to organization page for org selection
-   */
+  // 🔹 Redirect to /organization
   if (shouldRedirectToOrg) {
     return <CustomNavigate to="/organization" replace />;
   }
 
-  /**
-   * 🔹 Redirect "/" to "/flows" if org already selected
-   */
+  // 🔹 Redirect "/" to "/flows" only if safe
   if (shouldRedirectHome) {
     return <CustomNavigate to="/flows" replace />;
   }
 
-  /**
-   * ✅ Otherwise, render the children
-   */
+  // ✅ Otherwise render the page
   return children;
 };
