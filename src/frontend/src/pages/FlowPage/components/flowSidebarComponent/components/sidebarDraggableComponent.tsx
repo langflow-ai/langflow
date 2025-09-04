@@ -1,3 +1,4 @@
+import { type DragEventHandler, forwardRef, useRef, useState } from "react";
 import IconComponent, {
   ForwardedIconComponent,
 } from "@/components/common/genericIconComponent";
@@ -22,7 +23,6 @@ import {
   getNodeId,
 } from "@/utils/reactflowUtils";
 import { cn, removeCountFromString } from "@/utils/utils";
-import { type DragEventHandler, forwardRef, useRef, useState } from "react";
 
 export const SidebarDraggableComponent = forwardRef(
   (

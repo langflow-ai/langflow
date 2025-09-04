@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -5,7 +6,6 @@ import {
   SidebarMenu,
 } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
-import { memo, useMemo } from "react";
 import type { SidebarGroupProps } from "../types";
 import { BundleItem } from "./bundleItems";
 import { SearchConfigTrigger } from "./searchConfigTrigger";

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -6,7 +7,6 @@ import {
 } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { SIDEBAR_BUNDLES } from "@/utils/styleUtils";
-import { memo } from "react";
 import type { CategoryGroupProps } from "../types";
 import { CategoryDisclosure } from "./categoryDisclouse";
 import { SearchConfigTrigger } from "./searchConfigTrigger";

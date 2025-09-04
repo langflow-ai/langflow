@@ -1,3 +1,4 @@
+import { useState } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +13,6 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import type { APIClassType } from "@/types/api";
 import { removeCountFromString } from "@/utils/utils";
-import { useState } from "react";
 import { SearchConfigTrigger } from "./searchConfigTrigger";
 import SidebarDraggableComponent from "./sidebarDraggableComponent";
 

@@ -1,3 +1,17 @@
+import Fuse from "fuse.js";
+import { cloneDeep } from "lodash";
+import {
+  createContext,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
 import {
   Sidebar,
   SidebarContent,
@@ -16,20 +30,6 @@ import {
   SIDEBAR_CATEGORIES,
 } from "@/utils/styleUtils";
 import { cn, getBooleanFromStorage } from "@/utils/utils";
-import Fuse from "fuse.js";
-import { cloneDeep } from "lodash";
-import {
-  createContext,
-  memo,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { useHotkeys } from "react-hotkeys-hook";
-import { useShallow } from "zustand/react/shallow";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import type { APIClassType } from "../../../../types/api";

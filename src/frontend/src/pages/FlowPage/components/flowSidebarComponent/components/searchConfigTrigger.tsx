@@ -22,10 +22,7 @@ export const SearchConfigTrigger = ({
           className="hover:text-primary text-muted-foreground"
           style={{ padding: "0px" }}
         >
-          <ForwardedIconComponent
-            name="Settings2"
-            className="h-4 w-4"
-          />
+          <ForwardedIconComponent name="Settings2" className="h-4 w-4" />
         </Button>
       </ShadTooltip>
     </div>
