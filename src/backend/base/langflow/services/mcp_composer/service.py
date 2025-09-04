@@ -264,7 +264,7 @@ class MCPComposerService(Service):
         return safe_cmd
 
     @require_composer_enabled
-    async def start_project_composer(self, project_id: str, sse_url: str, auth_config: dict[str, Any] | None) -> None:
+    async def start_project_composer(self, project_id: str, sse_url: str, auth_config: dict[str, Any] | None, max_startup_checks: int = 3, startup_delay: float = 1.0) -> None:
         """Start an MCP Composer instance for a specific project.
 
         Raises:
@@ -331,7 +331,7 @@ class MCPComposerService(Service):
                     if attempt > 0:
                         await logger.adebug(f"Retrying MCP Composer startup (attempt {attempt + 1}/{max_retries})")
                     process = await self._start_project_composer_process(
-                        project_id, project_host, project_port, sse_url, auth_config
+                        project_id, project_host, project_port, sse_url, auth_config, max_startup_checks, startup_delay
                     )
                 except Exception as e:
                     if attempt == max_retries - 1:
@@ -353,7 +353,7 @@ class MCPComposerService(Service):
                     return  # Success
 
     async def _start_project_composer_process(
-        self, project_id: str, host: str, port: int, sse_url: str, auth_config: dict[str, Any] | None = None
+        self, project_id: str, host: str, port: int, sse_url: str, auth_config: dict[str, Any] | None = None, max_startup_checks: int = 3, startup_delay: float = 1.0
     ) -> subprocess.Popen:
         """Start the MCP Composer subprocess for a specific project."""
         cmd = [
@@ -402,8 +402,6 @@ class MCPComposerService(Service):
         process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)  # noqa: ASYNC220, S603
 
         # Monitor the process startup with multiple checks
-        max_startup_checks = 3
-        startup_delay = 1.0  # seconds between checks
         process_running = False
         port_bound = False
 
