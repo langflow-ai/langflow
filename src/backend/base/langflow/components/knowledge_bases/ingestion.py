@@ -20,18 +20,34 @@ from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bas
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.components.processing.converter import convert_to_dataframe
 from langflow.custom import Component
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput, TableInput
+from langflow.io import (
+    BoolInput,
+    DropdownInput,
+    HandleInput,
+    IntInput,
+    Output,
+    SecretStrInput,
+    StrInput,
+    TableInput,
+)
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict  # noqa: TC001
 from langflow.schema.table import EditMode
 from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
 from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.deps import get_settings_service, get_variable_service, session_scope
+from langflow.services.deps import (
+    get_settings_service,
+    get_variable_service,
+    session_scope,
+)
 
 if TYPE_CHECKING:
     from langflow.schema.dataframe import DataFrame
 
-HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
+HUGGINGFACE_MODEL_NAMES = [
+    "sentence-transformers/all-MiniLM-L6-v2",
+    "sentence-transformers/all-mpnet-base-v2",
+]
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
 
 settings = get_settings_service().settings
@@ -65,7 +81,11 @@ class KnowledgeIngestionComponent(Component):
                         "name": "create_knowledge_base",
                         "description": "Create new knowledge in Langflow.",
                         "display_name": "Create new knowledge",
-                        "field_order": ["01_new_kb_name", "02_embedding_model", "03_api_key"],
+                        "field_order": [
+                            "01_new_kb_name",
+                            "02_embedding_model",
+                            "03_api_key",
+                        ],
                         "template": {
                             "01_new_kb_name": StrInput(
                                 name="new_kb_name",
@@ -75,7 +95,7 @@ class KnowledgeIngestionComponent(Component):
                             ),
                             "02_embedding_model": DropdownInput(
                                 name="embedding_model",
-                                display_name="Model Name",
+                                display_name="Choose Embedding",
                                 info="Select the embedding model to use for this knowledge base.",
                                 required=True,
                                 options=OPENAI_EMBEDDING_MODEL_NAMES + HUGGINGFACE_MODEL_NAMES + COHERE_MODEL_NAMES,
@@ -343,7 +363,11 @@ class KnowledgeIngestionComponent(Component):
         return metadata
 
     async def _create_vector_store(
-        self, df_source: pd.DataFrame, config_list: list[dict[str, Any]], embedding_model: str, api_key: str
+        self,
+        df_source: pd.DataFrame,
+        config_list: list[dict[str, Any]],
+        embedding_model: str,
+        api_key: str,
     ) -> None:
         """Create vector store following Local DB component pattern."""
         try:
