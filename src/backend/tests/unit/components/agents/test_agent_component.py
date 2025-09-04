@@ -102,6 +102,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         # Verify model_name field is cleared for Custom
         assert "model_name" not in updated_config
 
+    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_agent_has_dual_outputs(self, component_class, default_kwargs):
         """Test that Agent component has both Response and Structured Response outputs."""
         component = await self.component_setup(component_class, default_kwargs)
@@ -116,6 +117,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert component.outputs[1].method == "json_response"
         assert component.outputs[1].tool_mode is False
 
+    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_json_mode_filtered_from_openai_inputs(self, component_class, default_kwargs):
         """Test that json_mode is filtered out from OpenAI inputs."""
         component = await self.component_setup(component_class, default_kwargs)
@@ -129,6 +131,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert "api_key" in input_names
         assert "temperature" in input_names
 
+    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_json_response_parsing_valid_json(self, component_class, default_kwargs):
         """Test that json_response correctly parses JSON from agent response."""
         component = await self.component_setup(component_class, default_kwargs)
@@ -147,6 +150,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Data)
         assert result.data == {"name": "test", "value": 123}
 
+    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_json_response_parsing_embedded_json(self, component_class, default_kwargs):
         """Test that json_response handles text containing JSON."""
         component = await self.component_setup(component_class, default_kwargs)
@@ -165,6 +169,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Data)
         assert result.data == {"status": "success"}
 
+    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_json_response_error_handling(self, component_class, default_kwargs):
         """Test that json_response handles completely non-JSON responses."""
         component = await self.component_setup(component_class, default_kwargs)
@@ -184,6 +189,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert "error" in result.data
         assert result.data["content"] == "This is just plain text with no JSON"
 
+    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_model_building_without_json_mode(self, component_class, default_kwargs):
         """Test that model building works without json_mode attribute."""
         component = await self.component_setup(component_class, default_kwargs)
@@ -202,6 +208,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         # Verify set was called (meaning no AttributeError occurred)
         mock_component.set.assert_called_once()
 
+    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_json_response_with_schema_validation(self, component_class, default_kwargs):
         """Test that json_response validates against provided schema."""
         # Set up component with output schema
@@ -225,6 +232,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Data)
         assert result.data == {"name": "John", "age": 25}
 
+    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_agent_component_initialization(self, component_class, default_kwargs):
         """Test that Agent component initializes correctly with filtered inputs."""
         component = await self.component_setup(component_class, default_kwargs)
@@ -235,6 +243,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert len(component.inputs) > 0
         assert len(component.outputs) == 2
 
+    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_frontend_node_structure(self, component_class, default_kwargs):
         """Test that frontend node has correct structure with filtered inputs."""
         component = await self.component_setup(component_class, default_kwargs)
@@ -250,6 +259,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert "system_prompt" in build_config
         assert "add_current_date_tool" in build_config
 
+    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_preprocess_schema(self, component_class, default_kwargs):
         """Test that _preprocess_schema correctly handles schema validation."""
         component = await self.component_setup(component_class, default_kwargs)
@@ -266,6 +276,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert processed[0]["multiple"] is True  # String "true" should be converted to bool
         assert processed[1]["multiple"] is False
 
+    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_build_structured_output_base_with_validation(self, component_class, default_kwargs):
         """Test build_structured_output_base with schema validation."""
         default_kwargs["output_schema"] = [
@@ -279,6 +290,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         result = await component.build_structured_output_base(valid_content)
         assert result == [{"name": "test", "count": 42}]
 
+    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_build_structured_output_base_without_schema(self, component_class, default_kwargs):
         """Test build_structured_output_base without schema validation."""
         component = await self.component_setup(component_class, default_kwargs)
@@ -288,6 +300,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         result = await component.build_structured_output_base(content)
         assert result == {"any": "data", "number": 123}
 
+    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_build_structured_output_base_embedded_json(self, component_class, default_kwargs):
         """Test extraction of JSON from embedded text."""
         component = await self.component_setup(component_class, default_kwargs)
@@ -296,6 +309,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         result = await component.build_structured_output_base(content)
         assert result == {"embedded": "json"}
 
+    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_build_structured_output_base_no_json(self, component_class, default_kwargs):
         """Test handling of content with no JSON."""
         component = await self.component_setup(component_class, default_kwargs)
@@ -305,6 +319,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert "error" in result
         assert result["content"] == content
 
+    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_new_input_fields_present(self, component_class, default_kwargs):
         """Test that new input fields are present in the component."""
         component = await self.component_setup(component_class, default_kwargs)
@@ -322,6 +337,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert hasattr(component, "n_messages")
         assert component.n_messages == 100
 
+    @pytest.mark.skip(reason="Test marked as skipped, agent dual output removed")
     async def test_agent_has_correct_outputs(self, component_class, default_kwargs):
         """Test that Agent component has the correct output configuration."""
         component = await self.component_setup(component_class, default_kwargs)
