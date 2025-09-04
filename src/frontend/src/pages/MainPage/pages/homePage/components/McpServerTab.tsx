@@ -317,8 +317,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         selectedPlatform === "windows"
           ? "cmd"
           : selectedPlatform === "wsl"
-          ? "wsl"
-          : "uvx"
+            ? "wsl"
+            : "uvx"
       }",
       "args": [
         ${
@@ -327,27 +327,27 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "uvx",
         `
             : selectedPlatform === "wsl"
-            ? `"uvx",
+              ? `"uvx",
         `
-            : ""
+              : ""
         }${
-    isOAuthProject ? '"mcp-composer",' : '"mcp-proxy",'
-  }${getAuthHeaders()}${
-    isOAuthProject
-      ? `
+          isOAuthProject ? '"mcp-composer",' : '"mcp-proxy",'
+        }${getAuthHeaders()}${
+          isOAuthProject
+            ? `
         "--mode",
         "stdio",
         "--sse-url",`
-      : ""
-  }
+            : ""
+        }
         "${apiUrl}"${
-    isOAuthProject
-      ? `,
+          isOAuthProject
+            ? `,
         "--disable-composer-tools",
         "--client_auth_type",
         "oauth"`
-      : ""
-  }
+            : ""
+        }
       ]
     }
   }
@@ -471,8 +471,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                         isLoadingMCPProjectAuth
                           ? "text-muted-foreground"
                           : !composerUrlData?.error_message
-                          ? "text-accent-emerald-foreground"
-                          : "text-accent-amber-foreground",
+                            ? "text-accent-emerald-foreground"
+                            : "text-accent-amber-foreground",
                       )}
                     >
                       <ForwardedIconComponent
@@ -480,8 +480,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                           isLoadingMCPProjectAuth
                             ? "Loader2"
                             : !composerUrlData?.error_message
-                            ? "Check"
-                            : "AlertTriangle"
+                              ? "Check"
+                              : "AlertTriangle"
                         }
                         className={cn(
                           "h-4 w-4 shrink-0",
@@ -696,8 +696,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                             installedMCP?.includes(installer.name)
                               ? "Check"
                               : loadingMCP.includes(installer.name)
-                              ? "Loader2"
-                              : "Plus"
+                                ? "Loader2"
+                                : "Plus"
                           }
                           className={cn(
                             "h-4 w-4 absolute top-0 left-0 opacity-100",
