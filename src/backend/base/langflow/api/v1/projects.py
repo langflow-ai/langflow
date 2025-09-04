@@ -308,6 +308,18 @@ async def delete_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    # Check if project has OAuth authentication and stop MCP Composer if needed
+    if project.auth_settings and project.auth_settings.get("auth_type") == "oauth":
+        try:
+            mcp_composer_service: MCPComposerService = cast(
+                MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+            )
+            await mcp_composer_service.stop_project_composer(str(project_id))
+            await logger.adebug(f"Stopped MCP Composer for deleted OAuth project {project.name} ({project_id})")
+        except Exception as e:
+            # Log but don't fail the deletion if MCP Composer cleanup fails
+            await logger.aerror(f"Failed to stop MCP Composer for deleted project {project_id}: {e}")
+
     try:
         await session.delete(project)
         await session.commit()
