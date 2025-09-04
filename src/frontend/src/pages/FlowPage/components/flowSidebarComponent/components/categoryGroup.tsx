@@ -1,4 +1,3 @@
-import { memo } from "react";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -7,6 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { SIDEBAR_BUNDLES } from "@/utils/styleUtils";
+import { memo } from "react";
 import type { CategoryGroupProps } from "../types";
 import { CategoryDisclosure } from "./categoryDisclouse";
 import { SearchConfigTrigger } from "./searchConfigTrigger";
@@ -25,9 +25,9 @@ export const CategoryGroup = memo(function CategoryGroup({
   setShowConfig,
 }: CategoryGroupProps) {
   return (
-    <SidebarGroup className="p-3 pt-0">
+    <SidebarGroup className="p-3">
       {ENABLE_NEW_SIDEBAR && (
-        <SidebarGroupLabel className="cursor-default flex items-center justify-between">
+        <SidebarGroupLabel className="cursor-default flex items-center justify-between w-full">
           <span>Components</span>
           <SearchConfigTrigger
             showConfig={showConfig}

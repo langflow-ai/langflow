@@ -1,4 +1,3 @@
-import { useState } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +12,7 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import type { APIClassType } from "@/types/api";
 import { removeCountFromString } from "@/utils/utils";
+import { useState } from "react";
 import { SearchConfigTrigger } from "./searchConfigTrigger";
 import SidebarDraggableComponent from "./sidebarDraggableComponent";
 
@@ -108,7 +108,7 @@ const McpSidebarGroup = ({
   }
 
   return (
-    <SidebarGroup className={`p-3 pt-0${!hasMcpServers ? " h-full" : ""}`}>
+    <SidebarGroup className={`p-3 ${!hasMcpServers ? " h-full" : ""}`}>
       {hasMcpServers && (
         <SidebarGroupLabel className="cursor-default w-full flex items-center justify-between">
           <span>MCP Servers</span>

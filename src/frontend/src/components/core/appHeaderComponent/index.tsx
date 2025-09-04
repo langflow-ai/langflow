@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from "react";
 import AlertDropdown from "@/alerts/alertDropDown";
 import DataStaxLogo from "@/assets/DataStaxLogo.svg?react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
@@ -14,6 +13,7 @@ import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import useAlertStore from "@/stores/alertStore";
+import { useEffect, useRef, useState } from "react";
 import FlowMenu from "./components/FlowMenu";
 
 export default function AppHeader(): JSX.Element {
@@ -51,7 +51,7 @@ export default function AppHeader(): JSX.Element {
 
   return (
     <div
-      className={`z-10 flex h-[48px] w-full items-center justify-between border-b px-6 dark:bg-background`}
+      className={`z-10 flex h-[48px] w-full items-center justify-between border-b pr-5 pl-2.5 dark:bg-background`}
       data-testid="app-header"
     >
       {/* Left Section */}
@@ -68,7 +68,7 @@ export default function AppHeader(): JSX.Element {
           {ENABLE_DATASTAX_LANGFLOW ? (
             <DataStaxLogo className="fill-black dark:fill-[white]" />
           ) : (
-            <LangflowLogo className="h-6 w-6" />
+            <LangflowLogo className="h-5 w-5" />
           )}
         </Button>
         {ENABLE_DATASTAX_LANGFLOW && (

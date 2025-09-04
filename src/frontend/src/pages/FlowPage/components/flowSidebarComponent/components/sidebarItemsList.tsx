@@ -1,8 +1,8 @@
-import { useMemo } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import useFlowStore from "@/stores/flowStore";
 import { checkChatInput, checkWebhookInput } from "@/utils/reactflowUtils";
 import { removeCountFromString } from "@/utils/utils";
+import { useMemo } from "react";
 import { disableItem } from "../helpers/disable-item";
 import { getDisabledTooltip } from "../helpers/get-disabled-tooltip";
 import type { UniqueInputsComponents } from "../types";
@@ -16,7 +16,7 @@ const SidebarItemsList = ({
   sensitiveSort,
 }) => {
   return (
-    <div className="flex flex-col gap-1 py-2">
+    <div className="flex flex-col gap-1 py-1">
       {Object.keys(dataFilter[item.name])
         .sort((a, b) => {
           const itemA = dataFilter[item.name][a];
