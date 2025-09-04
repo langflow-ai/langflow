@@ -1,5 +1,5 @@
 ---
-title:  Use Langflow as an MCP server
+title: Use Langflow as an MCP server
 slug: /mcp-server
 ---
 
@@ -120,9 +120,11 @@ If your client isn't supported or installed remotely from your Langflow server, 
 
 1. Install [Cursor](https://docs.cursor.com/get-started/installation), Claude, or Windsurf local to your Langflow instance.
 
-2. In Langflow, on the **Projects** page, click the **MCP Server** tab.
+2. Recommended: Configure [authentication](#authentication) for your MCP server.
 
-3. On the **Auto install** tab, find your MCP client provider, and then click <Icon name="Plus" aria-hidden="True"/> **Add**.
+3. In Langflow, on the **Projects** page, click the **MCP Server** tab.
+
+4. On the **Auto install** tab, find your MCP client provider, and then click <Icon name="Plus" aria-hidden="True"/> **Add**.
 
 Your Langflow project's MCP server is automatically added to the configuration file for your local Cursor, Claude, or Windsurf client.
 For example, with Cursor, the server configuration is added to the `mcp.json` configuration file.
@@ -144,9 +146,11 @@ You can modify this process for any [MCP-compatible client](https://modelcontext
 
 2. In Cursor, go to **Cursor Settings**, select **MCP**, and then click **Add New Global MCP Server** to open Cursor's global `mcp.json` configuration file.
 
-3. In Langflow, on the **Projects** page, click the **MCP Server** tab.
+3. Recommended: Configure [authentication](#authentication) for your MCP server.
 
-4. Click the **JSON** tab, copy the code snippet for your operating system, and then paste it into Cursor's `mcp.json` file.
+4. In Langflow, on the **Projects** page, click the **MCP Server** tab.
+
+5. Click the **JSON** tab, copy the code snippet for your operating system, and then paste it into Cursor's `mcp.json` file.
 For example:
 
     ```json
@@ -171,9 +175,9 @@ For example:
     If your Langflow server requires authentication, you must include your Langflow API key in the configuration.
     For more information, see [MCP server authentication and environment variables](#authentication).
 
-5. In Cursor, save and close the `mcp.json` file.
+6. In Cursor, save and close the `mcp.json` file.
 
-6. Confirm that your Langflow MCP server is on Cursor's **MCP Servers** list.
+7. Confirm that your Langflow MCP server is on Cursor's **MCP Servers** list.
 
 </TabItem>
 </Tabs>
