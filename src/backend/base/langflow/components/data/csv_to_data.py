@@ -13,6 +13,7 @@ class CSVToDataComponent(Component):
     icon = "file-spreadsheet"
     name = "CSVtoData"
     legacy = True
+    replacement = ["data.File"]
 
     inputs = [
         FileInput(
