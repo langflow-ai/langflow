@@ -119,7 +119,7 @@ Fields set dynamically by Langflow:
 | output | list[dict] | Array of output items (messages, tool calls, etc.). |
 | previous_response_id | string | ID of previous response if continuing conversation. |
 
-<details closed>
+<details>
 <summary>Fields with OpenAI-compatible default values</summary>
 
 | Field | Type | Default Value | Description |
@@ -161,8 +161,8 @@ curl -X POST \
   }'
 ```
 
-<details closed>
-<summary>Streaming response</summary>
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -192,7 +192,7 @@ curl -X POST \
 
 The stream continues until a final chunk with `"status": "completed"` indicates the response is finished.
 
-<details closed>
+<details>
 <summary>Final completion chunk</summary>
 
 ```
@@ -227,7 +227,7 @@ curl -X POST \
 ```
 
 <details>
-<summary>Response</summary>
+<summary>Result</summary>
 
 ```json
 {
@@ -272,7 +272,7 @@ curl -X POST \
 ```
 
 <details>
-<summary>Response</summary>
+<summary>Result</summary>
 
 ```json
 {
@@ -302,8 +302,7 @@ curl -X POST \
 
 </details>
 
-You can optionally use your own session ID values in place of `previous_response_id`.
-This request is using the same flow, but the LLM has not yet been introduced to Alice in this session.
+Optionally, you can use your own session ID values for the `previous_response_id`:
 
 ```bash
 curl -X POST \
@@ -318,7 +317,9 @@ curl -X POST \
 ```
 
 <details>
-<summary>Response</summary>
+<summary>Result</summary>
+
+This example uses the same flow as the other `previous_response_id` examples, but the LLM had not yet been introduced to Alice in the specified session:
 
 ```json
 {
@@ -352,7 +353,8 @@ curl -X POST \
 
 When you send a request to the `/api/v1/responses` endpoint to run a flow that includes tools or function calls, you can retrieve the raw tool execution details by adding `"include": ["tool_call.results"]` to the request payload.
 
-Without the `include` parameter, tool calls return basic function call information, but not the raw tool results, like this example:
+Without the `include` parameter, tool calls return basic function call information, but not the raw tool results.
+For example:
 
 ```json
 {
@@ -364,7 +366,7 @@ Without the `include` parameter, tool calls return basic function call informati
 },
 ```
 
-To get the raw `results` of each tool execution, add the line  `include: ["tool_call.results"]` to the request payload.
+To get the raw `results` of each tool execution, add  `include: ["tool_call.results"]` to the request payload:
 
 ```bash
 curl -X POST \
@@ -378,8 +380,23 @@ curl -X POST \
     "include": ["tool_call.results"]
   }'
 ```
-<details closed>
-<summary>Response with results</summary>
+
+
+The response now includes the tool call's results.
+For example:
+
+```json
+{
+  "id": "evaluate_expression_1",
+  "type": "tool_call",
+  "tool_name": "evaluate_expression",
+  "queries": ["15*23"],
+  "results": {"result": "112"}
+}
+```
+
+<details>
+<summary>Result</summary>
 
 ```json
 {
@@ -443,25 +460,13 @@ curl -X POST \
 ```
 </details>
 
-The response now includes the tool call's results.
-
-```json
-{
-  "id": "evaluate_expression_1",
-  "type": "tool_call",
-  "tool_name": "evaluate_expression",
-  "queries": ["15*23"],
-  "results": {"result": "112"}
-}
-```
-
 ## Pass global variables to your flows in headers {#global-var}
 
 Global variables allow you to pass dynamic values to your flows that can be used by components within that flow run.
 This is useful for passing API keys, user IDs, or any other configuration that might change between requests.
 
 The `/responses` endpoint accepts global variables as custom HTTP headers with the format `X-LANGFLOW-GLOBAL-VAR-{VARIABLE_NAME}`.
-Variables are only available during this specific request execution and are not persisted.
+Variables are only available during this specific request execution and aren't persisted.
 Variable names are automatically converted to uppercase.
 
 This example demonstrates passing an `OPENAI_API_KEY` variable, which is a variable Langflow automatically detects from environment variables, with two custom variables for `USER_ID` and `ENVIRONMENT`. The variables don't have to be created in Langflow's Global Variables section - you can pass any variable name in the `X-LANGFLOW-GLOBAL-VAR-{VARIABLE_NAME}` header format.
@@ -481,7 +486,7 @@ curl -X POST \
 ```
 
 <details>
-<summary>Response</summary>
+<summary>Result</summary>
 
 ```json
 {
@@ -513,6 +518,9 @@ curl -X POST \
 
 Variables passed with `X-LANGFLOW-GLOBAL-VAR-{VARIABLE_NAME}` are always available to your flow, regardless of whether they exist in the database.
 
-If your flow components reference variables that aren't provided via headers and don't exist in the database, the flow will fail, unless the `FALLBACK_TO_ENV_VARS` environment variable is `true`, in which case the flow will use the variable set in the `.env` file.
+If your flow components reference variables that aren't provided in headers or your Langflow database, the flow fails by default.
+To avoid this, you can set the `FALLBACK_TO_ENV_VARS` environment variable is `true`, which allows the flow to use values from the `.env` file if they aren't otherwise specified.
 
-In the above example, `OPENAI_API_KEY` will fall back to the database variable if not provided in the header, and `USER_ID` and `ENVIRONMENT` will fall back to environment variables (if `FALLBACK_TO_ENV_VARS` is enabled) or cause the flow to fail if not found.
+In the above example, `OPENAI_API_KEY` will fall back to the database variable if not provided in the header.
+`USER_ID` and `ENVIRONMENT` will fall back to environment variables if `FALLBACK_TO_ENV_VARS` is enabled.
+Otherwise, the flow fails.
