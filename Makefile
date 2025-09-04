@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_all
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -86,6 +86,14 @@ clean_npm_cache:
 	$(call CLEAR_DIRS,src/frontend/node_modules src/frontend/build src/backend/base/langflow/frontend)
 	rm -f src/frontend/package-lock.json
 	@echo "$(GREEN)NPM cache and frontend directories cleaned.$(NC)"
+
+clean_frontend_build: ## clean frontend build artifacts to ensure fresh build
+	@echo "Cleaning frontend build artifacts..."
+	@echo "  - Removing src/frontend/build directory"
+	$(call CLEAR_DIRS,src/frontend/build)
+	@echo "  - Removing built frontend files from backend"
+	$(call CLEAR_DIRS,src/backend/base/langflow/frontend)
+	@echo "$(GREEN)Frontend build artifacts cleaned - fresh build guaranteed.$(NC)"
 
 clean_all: clean_python_cache clean_npm_cache # clean all caches and temporary directories
 	@echo "$(GREEN)All caches and temporary directories cleaned.$(NC)"
@@ -205,8 +213,18 @@ lint: install_backend ## run linters
 
 
 
-run_cli: install_frontend install_backend build_frontend ## run the CLI
-	@echo 'Running the CLI'
+run_clic: clean_frontend_build install_frontend install_backend build_frontend ## run the CLI with fresh frontend build
+	@echo 'Running the CLI with fresh frontend build'
+	@uv run langflow run \
+		--frontend-path $(path) \
+		--log-level $(log_level) \
+		--host $(host) \
+		--port $(port) \
+		$(if $(env),--env-file $(env),) \
+		$(if $(filter false,$(open_browser)),--no-open-browser)
+
+run_cli: install_frontend install_backend build_frontend ## run the CLI quickly (without cleaning build cache)
+	@echo 'Running the CLI quickly (reusing existing build cache if available)'
 	@uv run langflow run \
 		--frontend-path $(path) \
 		--log-level $(log_level) \
