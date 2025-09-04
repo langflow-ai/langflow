@@ -158,7 +158,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const queryClient = useQueryClient();
 
   const { data: mcpProjectData } = useGetFlowsMCP({ projectId });
   const { mutate: patchFlowsMCP, isPending: isPatchingFlowsMCP } =
@@ -317,8 +316,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         selectedPlatform === "windows"
           ? "cmd"
           : selectedPlatform === "wsl"
-            ? "wsl"
-            : "uvx"
+          ? "wsl"
+          : "uvx"
       }",
       "args": [
         ${
@@ -327,25 +326,27 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "uvx",
         `
             : selectedPlatform === "wsl"
-              ? `"uvx",
+            ? `"uvx",
         `
-              : ""
-        }${isOAuthProject ? '"mcp-composer",' : '"mcp-proxy",'}${getAuthHeaders()}${
-          isOAuthProject
-            ? `
+            : ""
+        }${
+    isOAuthProject ? '"mcp-composer",' : '"mcp-proxy",'
+  }${getAuthHeaders()}${
+    isOAuthProject
+      ? `
         "--mode",
         "stdio",
         "--sse-url",`
-            : ""
-        }
+      : ""
+  }
         "${apiUrl}"${
-          isOAuthProject
-            ? `,
+    isOAuthProject
+      ? `,
         "--disable-composer-tools",
         "--client_auth_type",
         "oauth"`
-            : ""
-        }
+      : ""
+  }
       ]
     }
   }
@@ -464,22 +465,31 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                     <span
                       className={cn(
                         "flex gap-2 text-mmd items-center",
-                        !composerUrlData?.error_message
+                        isPatchingFlowsMCP
+                          ? "text-muted-foreground"
+                          : !composerUrlData?.error_message
                           ? "text-accent-emerald-foreground"
                           : "text-accent-amber-foreground",
                       )}
                     >
                       <ForwardedIconComponent
                         name={
-                          !composerUrlData?.error_message
+                          isPatchingFlowsMCP
+                            ? "Loader2"
+                            : !composerUrlData?.error_message
                             ? "Check"
                             : "AlertTriangle"
                         }
-                        className="h-4 w-4 shrink-0"
+                        className={cn(
+                          "h-4 w-4 shrink-0",
+                          isPatchingFlowsMCP && "animate-spin",
+                        )}
                       />
-                      {AUTH_METHODS[
-                        currentAuthSettings.auth_type as keyof typeof AUTH_METHODS
-                      ]?.label || currentAuthSettings.auth_type}
+                      {isPatchingFlowsMCP
+                        ? "Loading..."
+                        : AUTH_METHODS[
+                            currentAuthSettings.auth_type as keyof typeof AUTH_METHODS
+                          ]?.label || currentAuthSettings.auth_type}
                     </span>
                   </ShadTooltip>
                 )}
@@ -683,8 +693,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                             installedMCP?.includes(installer.name)
                               ? "Check"
                               : loadingMCP.includes(installer.name)
-                                ? "Loader2"
-                                : "Plus"
+                              ? "Loader2"
+                              : "Plus"
                           }
                           className={cn(
                             "h-4 w-4 absolute top-0 left-0 opacity-100",
