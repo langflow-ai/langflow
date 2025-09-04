@@ -64,10 +64,13 @@ Do one of the following:
 
 * To run Langflow from the Windows Command Line:
 
-    1. Build the Langflow frontend:
+    1. Run the following commands separately to build the Langflow frontend:
 
         ```
-        cd src/frontend && npm install && npm run build && npm run start
+        cd src/frontend
+        npm install
+        npm run build
+        npm run start
         ```
 
     2. Copy the contents of the built `src/frontend/build` directory to `src/backend/base/langflow/frontend`.
