@@ -32,8 +32,7 @@ class TestTypeConverterComponent(ComponentTestBaseWithoutClient):
         component = component_class(input_data=Message(text="Hello"), output_type="Data")
         result = component.convert_to_data()
         assert isinstance(result, Data)
-        assert "text" in result.data
-        assert result.data["text"] == "Hello"
+        assert result.data == {"text": "Hello"}
 
     def test_message_to_dataframe(self, component_class):
         """Test converting Message to DataFrame."""
