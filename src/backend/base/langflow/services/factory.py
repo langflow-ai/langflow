@@ -1,26 +1,27 @@
 import importlib
 import inspect
-from typing import TYPE_CHECKING, get_type_hints
+from typing import get_type_hints
 
 from cachetools import LRUCache, cached
-from loguru import logger
+from lfx.log.logger import logger
 
+from langflow.services.base import Service
 from langflow.services.schema import ServiceType
-
-if TYPE_CHECKING:
-    from langflow.services.base import Service
 
 
 class ServiceFactory:
     def __init__(
         self,
-        service_class,
+        service_class: type[Service] | None = None,
     ) -> None:
+        if service_class is None:
+            msg = "service_class is required"
+            raise ValueError(msg)
         self.service_class = service_class
         self.dependencies = infer_service_types(self, import_all_services_into_a_dict())
 
     def create(self, *args, **kwargs) -> "Service":
-        raise self.service_class(*args, **kwargs)
+        return self.service_class(*args, **kwargs)
 
 
 def hash_factory(factory: ServiceFactory) -> str:
@@ -40,7 +41,9 @@ def hash_infer_service_types_args(factory: ServiceFactory, available_services=No
 @cached(cache=LRUCache(maxsize=10), key=hash_infer_service_types_args)
 def infer_service_types(factory: ServiceFactory, available_services=None) -> list["ServiceType"]:
     create_method = factory.create
+
     type_hints = get_type_hints(create_method, globalns=available_services)
+
     service_types = []
     for param_name, param_type in type_hints.items():
         # Skip the return type if it's included in type hints
@@ -85,4 +88,8 @@ def import_all_services_into_a_dict():
             logger.exception(exc)
             msg = "Could not initialize services. Please check your settings."
             raise RuntimeError(msg) from exc
+    # Import settings service from lfx
+    from lfx.services.settings.service import SettingsService
+
+    services["SettingsService"] = SettingsService
     return services

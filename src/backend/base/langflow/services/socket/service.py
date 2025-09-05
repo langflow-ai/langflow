@@ -1,7 +1,7 @@
 from typing import Any
 
 import socketio
-from loguru import logger
+from lfx.log.logger import logger
 
 from langflow.services.base import Service
 from langflow.services.cache.base import AsyncBaseCacheService, CacheService
@@ -30,11 +30,11 @@ class SocketIOService(Service):
         await self.sio.emit("error", to=sid, data=error)
 
     async def connect(self, sid, environ) -> None:
-        logger.info(f"Socket connected: {sid}")
+        await logger.ainfo(f"Socket connected: {sid}")
         self.sessions[sid] = environ
 
     async def disconnect(self, sid) -> None:
-        logger.info(f"Socket disconnected: {sid}")
+        await logger.ainfo(f"Socket disconnected: {sid}")
         self.sessions.pop(sid, None)
 
     async def message(self, sid, data=None) -> None:

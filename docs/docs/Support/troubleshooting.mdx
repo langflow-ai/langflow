@@ -124,6 +124,21 @@ There are two possible reasons for this error:
 Environment variables set in your terminal aren't automatically available to GUI-based applications like Langflow Desktop when launched through the Finder or the Start Menu.
 To set environment variables for Langflow Desktop, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
 
+### Access Langflow Desktop startup logs
+
+If you encounter issues with Langflow Desktop, you might need to [access Langflow Desktop startup logs](/logging#desktop-logs) for debugging.
+
+### User not found or inactive when running multiple flows
+
+When running multiple local Langflow OSS instances on different ports, such as `localhost:7860` and `localhost:7861`, you might see authentication errors in the logs.
+For example:
+
+```text
+[07/22/25 10:57:07] INFO     2025-07-22 10:57:07 - INFO     - utils - User not found or inactive.
+```
+
+To resolve this error, use separate browser instances or browser profiles to access each Langflow instance.
+
 ### Package is not installed
 
 In Langflow OSS, you can follow the error message's instructions to install the missing dependency.
@@ -146,12 +161,21 @@ The following error can occur during Langflow upgrades when the new version can'
 
 To resolve this error, clear the cache by deleting the contents of your Langflow cache folder.
 The filepath depends on your operating system, installation type, and configuration options.
-For more information and default filepaths, see [Memory management options](/memory#flow-storage-and-logs).
+For more information and default filepaths, see [Memory management options](/memory).
 
 :::important
 Clearing the cache erases your settings.
 If you want to retain your settings files, create a backup of those files before clearing the cache folder.
 :::
+
+### Langflow Desktop says it is running the latest version, but it is actually behind
+
+If you are running Langflow Desktop version 1.4.2 or earlier, the UI might incorrectly report that you are on the latest version when a newer version is available.
+
+This happens because the automatic update feature in the UI was introduced in version 1.4.2.
+Earlier versions can't automatically detect or apply updates.
+
+To resolve this issue, uninstall Langflow Desktop, and then [download and install the latest version of Langflow Desktop](https://langflow.org/desktop).
 
 ## Langflow uninstall issues
 
@@ -174,11 +198,40 @@ To fully remove a Langflow Desktop macOS installation, you must also delete `~/.
 - [Use MCP Inspector to test and debug flows](/mcp-server#test-and-debug-flows)
 - [Troubleshooting MCP server](/mcp-server#troubleshooting-mcp-server)
 
+## Token length limit errors in Embedding Model components
+
+Token length errors can happen if your chunking strategy doesn't align with your embedding model's tokenization limits.
+For more information, see [Tokenization errors due to chunk size](/components-processing#chunk-size).
+
 ## Custom components and integrations issues
 
 For troubleshooting advice for a third-party integration, see the information about that integration in the Langflow documentation and the provider's documentation.
 
 If you are building a custom component, see [Error handling and logging for custom Python components](/components-custom-components#error-handling-and-logging).
+
+### Custom components not appearing in the visual editor
+
+If your custom components are not appearing in the Langflow visual editor, try the following troubleshooting steps:
+
+1. Ensure your components follow the [required directory structure](https://docs.langflow.org/components-custom-components#directory-structure-requirements).
+    ```
+    /your/custom/components/path/       # Base directory set by LANGFLOW_COMPONENTS_PATH
+        └── category_name/              # Required category subfolder that determines menu name
+            ├── __init__.py             # Required
+            └── custom_component.py     # Component file
+    ```
+
+2. Verify each category directory includes an `__init__.py` file.
+This is required for Python to recognize the directory as a module.
+
+3. Use the command line argument instead of the environment variable for `LANGFLOW_COMPONENTS_PATH`.
+If you're using the `LANGFLOW_COMPONENTS_PATH` environment variable and components aren't loading, try the `--components-path` command line argument instead:
+
+    ```bash
+    uv run langflow run --components-path /path/to/your/custom/components
+    ```
+
+If you continue to experience issues, please [report them on GitHub](https://github.com/langflow-ai/langflow/issues) with details about your directory structure and component setup.
 
 ## See also
 

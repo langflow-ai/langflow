@@ -93,7 +93,7 @@ describe("getAuthCookie", () => {
   });
 
   it("should handle empty string token names", () => {
-    const result = getAuthCookie(mockCookies, "");
+    const _result = getAuthCookie(mockCookies, "");
 
     expect(mockCookies.get).toHaveBeenCalledWith("");
   });

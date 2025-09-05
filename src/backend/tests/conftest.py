@@ -17,8 +17,6 @@ from blockbuster import blockbuster_ctx
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from langflow.components.input_output import ChatInput
-from langflow.graph import Graph
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
@@ -30,7 +28,6 @@ from langflow.services.database.models.user.model import User, UserCreate, UserR
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, session_scope
-from loguru import logger
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -38,6 +35,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
+from lfx.components.input_output import ChatInput
+from lfx.graph import Graph
+from lfx.log.logger import logger
 from tests.api_keys import get_openai_api_key
 
 load_dotenv()
@@ -152,6 +152,17 @@ def get_text():
         assert path.exists(), f"File {path} does not exist. Available files: {list(data_path.iterdir())}"
 
 
+def pytest_collection_modifyitems(config, items):  # noqa: ARG001
+    """Automatically add markers based on test file location."""
+    for item in items:
+        if "tests/unit/" in str(item.fspath):
+            item.add_marker(pytest.mark.unit)
+        elif "tests/integration/" in str(item.fspath):
+            item.add_marker(pytest.mark.integration)
+        elif "tests/slow/" in str(item.fspath):
+            item.add_marker(pytest.mark.slow)
+
+
 async def delete_transactions_by_flow_id(db: AsyncSession, flow_id: UUID):
     if not flow_id:
         return
@@ -177,19 +188,6 @@ async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
 
 
 @pytest.fixture
-def caplog(caplog: pytest.LogCaptureFixture):
-    handler_id = logger.add(
-        caplog.handler,
-        format="{message}",
-        level=0,
-        filter=lambda record: record["level"].no >= caplog.handler.level,
-        enqueue=False,  # Set to 'True' if your test is spawning child processes.
-    )
-    yield caplog
-    logger.remove(handler_id)
-
-
-@pytest.fixture
 async def async_client() -> AsyncGenerator:
     app = create_app()
     async with AsyncClient(app=app, base_url="http://testserver", http2=True) as client:
@@ -198,11 +196,18 @@ async def async_client() -> AsyncGenerator:
 
 @pytest.fixture(name="session")
 def session_fixture():
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        yield session
-    SQLModel.metadata.drop_all(engine)  # Add this line to clean up tables
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    try:
+        SQLModel.metadata.create_all(engine)
+        with Session(engine) as session:
+            yield session
+    finally:
+        SQLModel.metadata.drop_all(engine)
+        engine.dispose()
 
 
 @pytest.fixture
@@ -374,7 +379,7 @@ def deactivate_tracing(monkeypatch):
 def use_noop_session(monkeypatch):
     monkeypatch.setenv("LANGFLOW_USE_NOOP_DATABASE", "1")
     # Optionally patch the Settings object if needed
-    # from langflow.services.settings.base import Settings
+    # from lfx.services.settings.base import Settings
     # monkeypatch.setattr(Settings, "use_noop_database", True)
     yield
     monkeypatch.undo()
@@ -404,10 +409,10 @@ async def client_fixture(
                 monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
                 monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
             # Clear the services cache
-            from langflow.services.manager import service_manager
+            from lfx.services.manager import get_service_manager
 
-            service_manager.factories.clear()
-            service_manager.services.clear()  # Clear the services cache
+            get_service_manager().factories.clear()
+            get_service_manager().services.clear()  # Clear the services cache
             app = create_app()
             db_service = get_db_service()
             db_service.database_url = f"sqlite:///{db_path}"

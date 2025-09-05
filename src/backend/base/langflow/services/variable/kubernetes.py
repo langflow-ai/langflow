@@ -4,7 +4,7 @@ import asyncio
 import os
 from typing import TYPE_CHECKING
 
-from loguru import logger
+from lfx.log.logger import logger
 from typing_extensions import override
 
 from langflow.services.auth import utils as auth_utils
@@ -17,10 +17,9 @@ from langflow.services.variable.kubernetes_secrets import KubernetesSecretManage
 if TYPE_CHECKING:
     from uuid import UUID
 
+    from lfx.services.settings.service import SettingsService
     from sqlmodel import Session
     from sqlmodel.ext.asyncio.session import AsyncSession
-
-    from langflow.services.settings.service import SettingsService
 
 
 class KubernetesSecretService(VariableService, Service):
@@ -33,12 +32,12 @@ class KubernetesSecretService(VariableService, Service):
     async def initialize_user_variables(self, user_id: UUID | str, session: AsyncSession) -> None:
         # Check for environment variables that should be stored in the database
         should_or_should_not = "Should" if self.settings_service.settings.store_environment_variables else "Should not"
-        logger.info(f"{should_or_should_not} store environment variables in the kubernetes.")
+        await logger.ainfo(f"{should_or_should_not} store environment variables in the kubernetes.")
         if self.settings_service.settings.store_environment_variables:
             variables = {}
             for var in self.settings_service.settings.variables_to_get_from_environment:
                 if var in os.environ:
-                    logger.debug(f"Creating {var} variable from environment.")
+                    await logger.adebug(f"Creating {var} variable from environment.")
                     value = os.environ[var]
                     if isinstance(value, str):
                         value = value.strip()

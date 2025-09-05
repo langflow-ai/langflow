@@ -8,7 +8,6 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from anyio import Path
 from httpx import AsyncClient
-from langflow.custom.directory_reader.utils import abuild_custom_component_list_from_path
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
     detect_github_url,
@@ -17,13 +16,16 @@ from langflow.initial_setup.setup import (
     load_starter_projects,
     update_projects_components_with_latest_component_versions,
 )
-from langflow.interface.components import aget_all_types_dict
+from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, session_scope
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
+
+from lfx.constants import BASE_COMPONENTS_PATH
+from lfx.custom.directory_reader.utils import abuild_custom_component_list_from_path
 
 
 async def test_load_starter_projects():
@@ -141,7 +143,8 @@ def add_edge(source, target, from_output, to_input):
 
 
 async def test_refresh_starter_projects():
-    data_path = str(await Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
+    # Use lfx components path since components have been moved there
+    data_path = BASE_COMPONENTS_PATH
     components = await abuild_custom_component_list_from_path(data_path)
 
     chat_input = find_component_by_name(components, "ChatInput")
@@ -155,7 +158,7 @@ async def test_refresh_starter_projects():
         ],
         "edges": [add_edge("ChatInput" + "chat-input-1", "ChatOutput" + "chat-output-1", "message", "input_value")],
     }
-    all_types = await aget_all_types_dict([data_path])
+    all_types = await get_and_cache_all_types_dict(get_settings_service())
     new_change = update_projects_components_with_latest_component_versions(graph_data, all_types)
     assert graph_data["nodes"][1]["data"]["node"]["template"]["code"]["value"] == "changed !"
     assert new_change["nodes"][1]["data"]["node"]["template"]["code"]["value"] != "changed !"
