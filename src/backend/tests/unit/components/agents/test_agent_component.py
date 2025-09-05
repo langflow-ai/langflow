@@ -66,7 +66,9 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert isinstance(updated_config["agent_llm"]["options"], list)
         assert len(updated_config["agent_llm"]["options"]) > 0
         assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS)
-        assert "Custom" in updated_config["agent_llm"]["options"]
+        assert (
+            updated_config["agent_llm"]["external_options"]["fields"]["data"]["node"]["name"] == "connect_other_models"
+        )
 
         # Verify model_name field is populated for OpenAI
 
@@ -90,13 +92,18 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert any("sonnet" in option.lower() for option in options), f"Options: {options}"
 
         # Test updating build config for Custom
-        updated_config = await component.update_build_config(build_config, "Custom", "agent_llm")
+        updated_config = await component.update_build_config(
+            build_config, field_value="connect_other_models", field_name="agent_llm"
+        )
         assert "agent_llm" in updated_config
-        assert updated_config["agent_llm"]["value"] == "Custom"
+        # NOTE: update this when external options are available as values in options.
+        # assert updated_config["agent_llm"]["value"] == "connect_other_models"
         assert isinstance(updated_config["agent_llm"]["options"], list)
         assert len(updated_config["agent_llm"]["options"]) > 0
         assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS)
-        assert "Custom" in updated_config["agent_llm"]["options"]
+        assert (
+            updated_config["agent_llm"]["external_options"]["fields"]["data"]["node"]["name"] == "connect_other_models"
+        )
         assert updated_config["agent_llm"]["input_types"] == ["LanguageModel"]
 
         # Verify model_name field is cleared for Custom

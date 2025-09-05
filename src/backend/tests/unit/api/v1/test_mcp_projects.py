@@ -137,6 +137,45 @@ async def other_test_project(other_test_user):
             await session.commit()
 
 
+@pytest.fixture(autouse=True)
+def disable_mcp_composer_by_default():
+    """Auto-fixture to disable MCP Composer for all tests by default."""
+    with patch("langflow.api.v1.mcp_projects.get_settings_service") as mock_get_settings:
+        from langflow.services.deps import get_settings_service
+
+        real_service = get_settings_service()
+
+        # Create a mock that returns False for mcp_composer_enabled but delegates everything else
+        mock_service = MagicMock()
+        mock_service.settings = MagicMock()
+        mock_service.settings.mcp_composer_enabled = False
+
+        # Copy any other settings that might be needed
+        mock_service.auth_settings = real_service.auth_settings
+
+        mock_get_settings.return_value = mock_service
+        yield
+
+
+@pytest.fixture
+def enable_mcp_composer():
+    """Fixture to explicitly enable MCP Composer for specific tests."""
+    with patch("langflow.api.v1.mcp_projects.get_settings_service") as mock_get_settings:
+        from langflow.services.deps import get_settings_service
+
+        real_service = get_settings_service()
+
+        mock_service = MagicMock()
+        mock_service.settings = MagicMock()
+        mock_service.settings.mcp_composer_enabled = True
+
+        # Copy any other settings that might be needed
+        mock_service.auth_settings = real_service.auth_settings
+
+        mock_get_settings.return_value = mock_service
+        yield True
+
+
 async def test_handle_project_messages_success(
     client: AsyncClient, user_test_project, mock_sse_transport, logged_in_headers
 ):
@@ -254,6 +293,7 @@ async def test_update_project_mcp_settings_other_user_project(
 ):
     """Test accessing a project belonging to another user."""
     # We're using the GET endpoint since it works correctly and tests the same security constraints
+    # This test disables MCP Composer to test JWT token-based access control
 
     # Try to access the other user's project using active_user's credentials
     response = await client.get(f"api/v1/mcp/project/{other_test_project.id}/sse", headers=logged_in_headers)
@@ -261,6 +301,21 @@ async def test_update_project_mcp_settings_other_user_project(
     # Verify the response
     assert response.status_code == 404
     assert response.json()["detail"] == "Project not found"
+
+
+async def test_update_project_mcp_settings_other_user_project_with_composer(
+    client: AsyncClient, other_test_project, logged_in_headers, enable_mcp_composer
+):
+    """Test accessing a project belonging to another user when MCP Composer is enabled."""
+    # When MCP Composer is enabled, JWT tokens are not accepted for MCP endpoints
+    assert enable_mcp_composer  # Fixture ensures MCP Composer is enabled
+
+    # Try to access the other user's project using active_user's JWT credentials
+    response = await client.get(f"api/v1/mcp/project/{other_test_project.id}/sse", headers=logged_in_headers)
+
+    # Verify the response - should get 401 because JWT tokens aren't accepted
+    assert response.status_code == 401
+    assert "API key required" in response.json()["detail"]
 
 
 async def test_update_project_mcp_settings_empty_settings(client: AsyncClient, user_test_project, logged_in_headers):

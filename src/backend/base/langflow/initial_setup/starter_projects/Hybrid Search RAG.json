@@ -1109,7 +1109,7 @@
                   },
                   {
                     "name": "langflow",
-                    "version": null
+                    "version": "1.5"
                   }
                 ],
                 "total_dependencies": 4
