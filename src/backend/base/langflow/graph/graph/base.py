@@ -890,8 +890,8 @@ class Graph:
     def reset_inactivated_vertices(self) -> None:
         """Resets the inactivated vertices in the graph."""
         for vertex_id in self.inactivated_vertices.copy():
+            print(f"Frazier - reset_inactivated_vertices: marking vertex {vertex_id} as ACTIVE")
             self.mark_vertex(vertex_id, "ACTIVE")
-        self.inactivated_vertices = set()
         self.inactivated_vertices = set()
 
     def mark_all_vertices(self, state: str) -> None:
@@ -902,6 +902,7 @@ class Graph:
     def mark_vertex(self, vertex_id: str, state: str) -> None:
         """Marks a vertex in the graph."""
         vertex = self.get_vertex(vertex_id)
+        print(f"Frazier - mark_vertex: setting vertex {vertex_id} state from {vertex.state} to {state}")
         vertex.set_state(state)
         if state == VertexStates.INACTIVE:
             self.run_manager.remove_from_predecessors(vertex_id)
@@ -910,26 +911,38 @@ class Graph:
         self, vertex_id: str, state: str, visited: set | None = None, output_name: str | None = None
     ) -> set:
         """Marks a branch of the graph."""
+        print(f"Frazier - _mark_branch called with vertex_id={vertex_id}, state={state}, visited={visited}, output_name={output_name}")
         if visited is None:
+            print(f"Frazier - _mark_branch: visited is None, creating new set (NOT marking vertex {vertex_id})")
             visited = set()
         else:
+            print(f"Frazier - _mark_branch: visited exists, marking vertex {vertex_id} as {state}")
             self.mark_vertex(vertex_id, state)
         if vertex_id in visited:
+            print(f"Frazier - _mark_branch: vertex {vertex_id} already visited, returning")
             return visited
         visited.add(vertex_id)
+        print(f"Frazier - _mark_branch: added {vertex_id} to visited, now checking children")
 
         for child_id in self.parent_child_map[vertex_id]:
             # Only child_id that have an edge with the vertex_id through the output_name
             # should be marked
+            print(f"Frazier - _mark_branch: checking child {child_id} of {vertex_id}")
             if output_name:
                 edge = self.get_edge(vertex_id, child_id)
+                print(f"Frazier - _mark_branch: edge from {vertex_id} to {child_id}: {edge.source_handle.name if edge else 'None'}")
                 if edge and edge.source_handle.name != output_name:
+                    print(f"Frazier - _mark_branch: skipping child {child_id} because edge source_handle.name '{edge.source_handle.name}' != '{output_name}'")
                     continue
+                print(f"Frazier - _mark_branch: including child {child_id} because edge source_handle.name '{edge.source_handle.name if edge else 'None'}' matches '{output_name}'")
+            else:
+                print(f"Frazier - _mark_branch: no output_name filter, including child {child_id}")
             self._mark_branch(child_id, state, visited)
         return visited
 
     def mark_branch(self, vertex_id: str, state: str, output_name: str | None = None) -> None:
         visited = self._mark_branch(vertex_id=vertex_id, state=state, output_name=output_name)
+        print(f"Frazier - Graph {self.flow_id} marked branch {vertex_id} with state {state} and output name {output_name}, visited: {visited}")
         new_predecessor_map, _ = self.build_adjacency_maps(self.edges)
         new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
         if vertex_id in self.cycle_vertices:
@@ -942,6 +955,7 @@ class Graph:
             run_predecessors=new_predecessor_map,
             vertices_to_run=self.vertices_to_run,
         )
+        print(f"Frazier - Graph {self.flow_id} updated run state with new predecessor map: {new_predecessor_map}")
 
     def get_edge(self, source_id: str, target_id: str) -> CycleEdge | None:
         """Returns the edge between two vertices."""
@@ -1344,7 +1358,8 @@ class Graph:
         if self.stop_vertex and self.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [self.stop_vertex]
         self.extend_run_queue(next_runnable_vertices)
-        self.reset_inactivated_vertices()
+        # Note: reset_inactivated_vertices() removed here - should only happen at end of execution cycle
+        # The API endpoints (build.py/chat.py) handle the reset properly after capturing the list
         self.reset_activated_vertices()
 
         await chat_service.set_cache(str(self.flow_id or self._run_id), self)

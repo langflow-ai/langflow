@@ -3,6 +3,7 @@ import re
 from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageInput, MessageTextInput, Output
 from langflow.schema.message import Message
+from langflow.logging.logger import logger
 
 
 class ConditionalRouterComponent(Component):
@@ -15,6 +16,7 @@ class ConditionalRouterComponent(Component):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__iteration_updated = False
+        logger.debug(f"ConditionalRouter {self._id}: initialized")
 
     inputs = [
         MessageTextInput(
@@ -90,6 +92,7 @@ class ConditionalRouterComponent(Component):
     ]
 
     def _pre_run_setup(self):
+        logger.debug(f"ConditionalRouter {self._id}: _pre_run_setup() called")
         self.__iteration_updated = False
 
     def evaluate_condition(self, input_text: str, match_text: str, operator: str, *, case_sensitive: bool) -> bool:
@@ -130,31 +133,46 @@ class ConditionalRouterComponent(Component):
 
     def iterate_and_stop_once(self, route_to_stop: str):
         if not self.__iteration_updated:
+            logger.debug(f"ConditionalRouter {self._id}: updating iteration context")
             self.update_ctx({f"{self._id}_iteration": self.ctx.get(f"{self._id}_iteration", 0) + 1})
             self.__iteration_updated = True
-            if self.ctx.get(f"{self._id}_iteration", 0) >= self.max_iterations and route_to_stop == self.default_route:
-                route_to_stop = "true_result" if route_to_stop == "false_result" else "false_result"
+            current_iteration = self.ctx.get(f"{self._id}_iteration", 0)
+            logger.debug(f"ConditionalRouter {self._id}: iteration {current_iteration}, max_iterations={self.max_iterations}")
+            if current_iteration >= self.max_iterations:
+                logger.debug(f"ConditionalRouter {self._id}: max iterations reached, using default route {self.default_route}")
+                # When max iterations reached, stop the route that's NOT the default route
+                route_to_stop = "true_result" if self.default_route == "false_result" else "false_result"
+                logger.debug(f"ConditionalRouter {self._id}: stopping non-default route {route_to_stop}")
+            logger.debug(f"ConditionalRouter {self._id}: stopping route {route_to_stop}")
             self.stop(route_to_stop)
 
     def true_response(self) -> Message:
+        logger.debug(f"ConditionalRouter {self._id}: true_response() called")
         result = self.evaluate_condition(
             self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive
         )
+        logger.debug(f"ConditionalRouter {self._id}: condition result = {result}")
         if result:
+            logger.debug(f"ConditionalRouter {self._id}: condition TRUE - returning true_case_message")
             self.status = self.true_case_message
             self.iterate_and_stop_once("false_result")
             return self.true_case_message
+        logger.debug(f"ConditionalRouter {self._id}: condition FALSE - returning empty message from true_response")
         self.iterate_and_stop_once("true_result")
         return Message(content="")
 
     def false_response(self) -> Message:
+        logger.debug(f"ConditionalRouter {self._id}: false_response() called")
         result = self.evaluate_condition(
             self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive
         )
+        logger.debug(f"ConditionalRouter {self._id}: condition result = {result}")
         if not result:
+            logger.debug(f"ConditionalRouter {self._id}: condition FALSE - returning false_case_message")
             self.status = self.false_case_message
             self.iterate_and_stop_once("true_result")
             return self.false_case_message
+        logger.debug(f"ConditionalRouter {self._id}: condition TRUE - returning empty message from false_response")
         self.iterate_and_stop_once("false_result")
         return Message(content="")
 

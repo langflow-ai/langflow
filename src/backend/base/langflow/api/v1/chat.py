@@ -353,8 +353,6 @@ async def build_vertex(
         result_data_response.timedelta = timedelta
         vertex.add_build_time(timedelta)
         inactivated_vertices = list(graph.inactivated_vertices)
-        graph.reset_inactivated_vertices()
-        graph.reset_activated_vertices()
 
         await chat_service.set_cache(flow_id_str, graph)
 
@@ -366,6 +364,9 @@ async def build_vertex(
             next_runnable_vertices = [graph.stop_vertex]
 
         if not graph.run_manager.vertices_being_run and not next_runnable_vertices:
+            # Only reset vertices when execution is completely done
+            graph.reset_inactivated_vertices()
+            graph.reset_activated_vertices()
             background_tasks.add_task(graph.end_all_traces_in_context())
 
         build_response = VertexBuildResponse(

@@ -127,6 +127,7 @@ class CustomComponent(BaseComponent):
             msg = "Vertex is not set"
             raise ValueError(msg)
         try:
+            print(f"Frazier - CustomComponent {self.display_name} stopping vertex {self._vertex.id} with output name: {output_name}")
             self.graph.mark_branch(vertex_id=self._vertex.id, output_name=output_name, state="INACTIVE")
         except Exception as e:
             msg = f"Error stopping {self.display_name}: {e}"
