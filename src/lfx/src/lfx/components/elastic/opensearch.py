@@ -1,20 +1,13 @@
 import json
 from typing import Any
 
+from fastapi.encoders import jsonable_encoder
 from langchain_community.vectorstores import OpenSearchVectorSearch
+from langchain_core.documents import Document
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
-from lfx.io import (
-    BoolInput,
-    DropdownInput,
-    FloatInput,
-    HandleInput,
-    IntInput,
-    MultilineInput,
-    SecretStrInput,
-    StrInput,
-)
+from lfx.io import BoolInput, DropdownInput, FloatInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
 from lfx.schema.data import Data
 
 
@@ -37,8 +30,52 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         StrInput(
             name="index_name",
             display_name="Index Name",
-            value="langflow",
+            value="documents",
             info="The index name where the vectors will be stored in OpenSearch cluster.",
+        ),
+        StrInput(
+            name="vector_field",
+            display_name="Vector Field",
+            value="chunk_embedding",
+            info="Document field embeddings are stored in.",
+            advanced=True,
+        ),
+        StrInput(
+            name="text_field",
+            display_name="Text Field",
+            value="text",
+            info="Document field the text of the document is stored in.",
+            advanced=True,
+        ),
+        DropdownInput(
+            name="engine",
+            display_name="Engine",
+            options=["nmslib", "faiss", "lucene"],
+            value="nmslib",
+            info="Vector search engine to use.",
+            advanced=True,
+        ),
+        DropdownInput(
+            name="space_type",
+            display_name="Space Type",
+            options=["l2", "l1", "cosinesimil", "linf", "innerproduct"],
+            value="l2",
+            info="Distance metric for vector similarity.",
+            advanced=True,
+        ),
+        IntInput(
+            name="ef_construction",
+            display_name="EF Construction",
+            value=100,
+            info="Size of the dynamic list used during k-NN graph creation.",
+            advanced=True,
+        ),
+        IntInput(
+            name="m",
+            display_name="M Parameter",
+            value=16,
+            info="Number of bidirectional links created for each new element.",
+            advanced=True,
         ),
         *LCVectorStoreComponent.inputs,
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
@@ -72,7 +109,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         SecretStrInput(
             name="password",
             display_name="Password",
-            value="admin",
+            value="OPENSEARCH_PASSWORD",
             advanced=True,
         ),
         BoolInput(
@@ -119,6 +156,12 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 verify_certs=self.verify_certs,
                 ssl_assert_hostname=False,
                 ssl_show_warn=False,
+                engine=self.engine,
+                vector_field=self.vector_field,
+                text_field=self.text_field,
+                space_type=self.space_type,
+                ef_construction=self.ef_construction,
+                m=self.m,
             )
         except Exception as e:
             error_message = f"Failed to create OpenSearchVectorSearch instance: {e}"
@@ -138,7 +181,10 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
-                documents.append(_input.to_lc_document())
+                doc = Document(
+                    page_content=_input.get_text(), metadata=jsonable_encoder(_input.data) if _input.data else {}
+                )
+                documents.append(doc)
             else:
                 error_message = f"Expected Data object, got {type(_input)}"
                 self.log(error_message)
@@ -147,7 +193,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         if documents and self.embedding is not None:
             self.log(f"Adding {len(documents)} documents to the Vector Store.")
             try:
-                vector_store.add_documents(documents)
+                vector_store.add_documents(documents, vector_field=self.vector_field, text_field=self.text_field)
             except Exception as e:
                 error_message = f"Error adding documents to Vector Store: {e}"
                 self.log(error_message)
@@ -157,9 +203,8 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
 
     def search(self, query: str | None = None) -> list[dict[str, Any]]:
         """Search for similar documents in the vector store or retrieve all documents if no query is provided."""
+        vector_store = self.build_vector_store()
         try:
-            vector_store = self.build_vector_store()
-
             query = query or ""
 
             if self.hybrid_search_query.strip():
@@ -175,7 +220,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 processed_results = []
                 for hit in results.get("hits", {}).get("hits", []):
                     source = hit.get("_source", {})
-                    text = source.get("text", "")
+                    text = source.get(self.text_field, "")
                     metadata = source.get("metadata", {})
 
                     if isinstance(text, dict):
@@ -189,7 +234,11 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                     )
                 return processed_results
 
-            search_kwargs = {"k": self.number_of_results}
+            search_kwargs = {
+                "k": self.number_of_results,
+                "vector_field": self.vector_field,
+                "text_field": self.text_field,
+            }
             search_type = self.search_type.lower()
 
             if search_type == "similarity":
