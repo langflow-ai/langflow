@@ -370,7 +370,7 @@ jobs:
       - name: Download blob reports from GitHub Actions Artifacts
 
         if: ${{ steps.should_merge_reports.outputs.should_merge_reports == 'true' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: all-blob-reports
           pattern: blob-report-*
