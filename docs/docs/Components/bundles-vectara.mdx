@@ -1,0 +1,60 @@
+---
+title: Vectara
+slug: /bundles-vectara
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Vectara** bundle.
+
+## Vectara vector store
+
+The **Vectara** component reads and writes to Vectara vector stores using an instance of `Vectara` vector store.
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+<PartialVectorSearchResults />
+
+### Vectara vector store parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Vectara documentation](https://docs.vectara.com/docs/) or inspect [component code](/concepts-components#component-code).
+
+| Name             | Type         | Description                               |
+| ---------------- | ------------ | ----------------------------------------- |
+| vectara_customer_id | String     | Input parameter. The Vectara customer ID.                       |
+| vectara_corpus_id   | String     | Input parameter. The Vectara corpus ID.                         |
+| vectara_api_key   | SecretString | Input parameter. The Vectara API key.                           |
+| embedding         | Embeddings   | Input parameter. The embedding function to use (optional).      |
+| ingest_data       | List[Document/Data] | Input parameter. The data to be ingested into the vector store. |
+| search_query      | String       | Input parameter. The query for similarity search.               |
+| number_of_results | Integer      | Input parameter. The number of results to return in search.     |
+
+## Vectara RAG
+
+This component enables Vectara's full end-to-end RAG capabilities with reranking options.
+
+This component uses a `Vectara` vector store to execute the vector search and reranking functions, and then outputs an **Answer** string in [`Message`](/data-types#message) format.
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>

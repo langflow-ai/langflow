@@ -1,0 +1,118 @@
+---
+title: Cassandra
+slug: /bundles-cassandra
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Cassandra** bundle, including components that read and write to Apache Cassandra clusters, such as OSS Cassandra and Astra DB databases.
+
+## Cassandra vector store
+
+Use the **Cassandra** component to read or write to a Cassandra-based vector store using a `CassandraVectorStore` instance.
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+<PartialVectorSearchResults />
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
+
+### Cassandra parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see [Vector search in Cassandra](https://cassandra.apache.org/doc/latest/cassandra/vector-search/overview.html) or inspect [component code](/concepts-components#component-code).
+
+| Name | Type | Description |
+|------|------|-------------|
+| database_ref | String | Input parameter. Contact points for the database or an Astra database ID. |
+| username | String | Input parameter. Username for the database. Leave empty for Astra DB. |
+| token | SecretString | Input parameter. User password for the database or an Astra application token. |
+| keyspace | String | Input parameter. The name of the keyspace containing the vector store specified in **Table Name** (`table_name`). |
+| table_name | String | Input parameter. The name of the table or collection that is the vector store. |
+| ttl_seconds | Integer | Input parameter. Time-to-live for added texts, if supported by the cluster. Only relevant for writes. |
+| batch_size | Integer | Input parameter. Amount of records to process in a single batch. |
+| setup_mode | String | Input parameter. Configuration mode for setting up a Cassandra table. |
+| cluster_kwargs | Dict | Input parameter. Additional keyword arguments for a Cassandra cluster. |
+| search_query | String | Input parameter. Query string for similarity search. Only relevant for reads. |
+| ingest_data | Data | Input parameter. Data to be loaded into the vector store as raw chunks and embeddings. Only relevant for writes. |
+| embedding | Embeddings | Input parameter. Embedding function to use. |
+| number_of_results | Integer | Input parameter. Number of results to return in search. Only relevant for reads. |
+| search_type | String | Input parameter. Type of search to perform. Only relevant for reads. |
+| search_score_threshold | Float | Input parameter. Minimum similarity score for search results. Only relevant for reads. |
+| search_filter | Dict | Input parameter. An optional dictionary of metadata search filters to apply in addition to vector search. Only relevant for reads. |
+| body_search | String | Input parameter. Document textual search terms. Only relevant for reads. |
+| enable_body_search | Boolean | Input parameter. Flag to enable body search. Only relevant for reads. |
+
+## Cassandra Chat Memory
+
+The **Cassandra Chat Memory** component retrieves and stores chat messages using an Apache Cassandra-based database.
+
+Chat memories are passed between memory storage components as the [`Memory`](/data-types#memory) data type.
+Specifically, the component creates an instance of `CassandraChatMessageHistory`, which is a LangChain chat message history class that uses a Cassandra database for storage.
+
+For more information about using external chat memory in flows, see the [**Message History** component](/components-helpers#message-history).
+
+### Cassandra Chat Memory parameters
+
+<PartialParams />
+
+| Name           | Type          | Description   |
+|----------------|---------------|-----------------------------|
+| database_ref   | MessageText   | Input parameter. The contact points for the Cassandra database or Astra DB database ID. Required. |
+| username       | MessageText   | Input parameter. The username for Cassandra. Leave empty for Astra DB. |
+| token          | SecretString  | Input parameter. The password for Cassandra or the token for Astra DB. Required. |
+| keyspace       | MessageText   | Input parameter. The keyspace in Cassandra or namespace in Astra DB. Required. |
+| table_name     | MessageText   | Input parameter. The name of the table or collection for storing messages. Required. |
+| session_id     | MessageText   | Input parameter. The unique identifier for the chat session. Optional. |
+| cluster_kwargs | Dictionary    | Input parameter. Additional keyword arguments for the Cassandra cluster configuration. Optional. |
+
+## Cassandra Graph
+
+The **Cassandra Graph** component uses `CassandraGraphVectorStore`, an instance of [LangChain graph vector store](https://python.langchain.com/api_reference/community/graph_vectorstores.html), for graph traversal and graph-based document retrieval in a compatible Cassandra-based cluster.
+It also supports writing to the vector store.
+
+<PartialVectorSearchResults />
+
+### Cassandra Graph parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| database_ref | Contact Points / Astra Database ID | Input parameter. The contact points for the database or an Astra database ID. Required. |
+| username | Username | Input parameter. The username for the database. Leave empty for Astra DB. |
+| token | Password / Astra DB Token | Input parameter. The user password for the database or an Astra application token. Required. |
+| keyspace | Keyspace | Input parameter. The name of the keyspace containing the vector store specified in **Table Name** (`table_name`). Required. |
+| table_name | Table Name | Input parameter. The name of the table or collection that is the vector store. Required. |
+| setup_mode | Setup Mode | Input parameter. The configuration mode for setting up the Cassandra table. The options are `Sync` (default) or `Off`. |
+| cluster_kwargs | Cluster arguments | Input parameter. An optional dictionary of additional keyword arguments for the Cassandra cluster. |
+| search_query | Search Query | Input parameter. The query string for similarity search. Only relevant for reads. |
+| ingest_data | Ingest Data | Input parameter. Data to be loaded into the vector store as raw chunks and embeddings. Only relevant for writes. |
+| embedding | Embedding | Input parameter. The embedding model to use. |
+| number_of_results | Number of Results | Input parameter. The number of results to return in similarity search. Only relevant for reads. Default: 4. |
+| search_type | Search Type | Input parameter. The search type to use. The options are `Traversal` (default), `MMR Traversal`, `Similarity`, `Similarity with score threshold`, or `MMR (Max Marginal Relevance)`. |
+| depth | Depth of traversal | Input parameter. The maximum depth of edges to traverse. Only relevant if **Search Type** (`search_type`) is `Traversal` or `MMR Traversal`. Default: 1. |
+| search_score_threshold | Search Score Threshold | Input parameter. The minimum similarity score threshold for search results. Only relevant for reads using the `Similarity with score threshold` search type. |
+| search_filter | Search Metadata Filter | Input parameter. An optional dictionary of metadata search filters to apply in addition to graph traversal and similarity search. |
+
+### See also
+
+* [**DataStax** bundle](/bundles-datastax)
