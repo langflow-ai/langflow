@@ -1,17 +1,5 @@
-import Fuse from "fuse.js";
-import { cloneDeep } from "lodash";
-import {
-  createContext,
-  memo,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { useHotkeys } from "react-hotkeys-hook";
-import { useShallow } from "zustand/react/shallow";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -30,6 +18,20 @@ import {
   SIDEBAR_CATEGORIES,
 } from "@/utils/styleUtils";
 import { cn, getBooleanFromStorage } from "@/utils/utils";
+import Fuse from "fuse.js";
+import { cloneDeep } from "lodash";
+import {
+  createContext,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { useShallow } from "zustand/react/shallow";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import type { APIClassType } from "../../../../types/api";
@@ -668,6 +670,21 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                         showConfig={showConfig}
                         setShowConfig={setShowConfig}
                       />
+                    )}
+                    {showComponents && (
+                      <Button
+                        onClick={() => setActiveSection("bundles")}
+                        variant="ghost"
+                        className="bg-muted hover:bg-muted/70 mx-3 px-2.5 !text-[13px] h-[40px] font-normal line-height-[16px] mb-3 group"
+                      >
+                        <span className="text-muted-foreground flex items-center">
+                          <ForwardedIconComponent
+                            name="blocks"
+                            className="h-4 w-4"
+                          />
+                        </span>
+                        Discover more components
+                      </Button>
                     )}
                   </>
                 ) : (
