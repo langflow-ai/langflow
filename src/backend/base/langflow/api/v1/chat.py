@@ -353,7 +353,7 @@ async def build_vertex(
         result_data_response.timedelta = timedelta
         vertex.add_build_time(timedelta)
         inactivated_vertices = list(graph.inactivated_vertices)
-        
+
         # Reset inactivated vertices AFTER capturing them for the response
         # This allows cycles to continue while preserving conditional routing info
         graph.reset_inactivated_vertices()
