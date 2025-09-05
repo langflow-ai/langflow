@@ -484,7 +484,7 @@ const SideBarFoldersButtonsComponent = ({
               className="text-sm"
             >
               <ForwardedIconComponent name="Library" className="h-4 w-4" />
-              Knowledge
+              Knowledge Bases
             </SidebarMenuButton>
             <SidebarMenuButton
               onClick={handleFilesNavigation}

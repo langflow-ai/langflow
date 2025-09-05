@@ -66,6 +66,7 @@ class KnowledgeIngestionComponent(Component):
     description = "Create or update knowledge in Langflow."
     icon = "upload"
     name = "KnowledgeIngestion"
+    beta = True
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)

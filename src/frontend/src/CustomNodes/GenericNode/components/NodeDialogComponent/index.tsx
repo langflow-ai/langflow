@@ -269,7 +269,7 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
           ))}
         </div>
 
-        <DialogFooter className="px-5 pt-3">
+        <DialogFooter className="px-5 pt-4">
           <Button variant="secondary" onClick={handleCloseDialog}>
             Cancel
           </Button>

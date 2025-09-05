@@ -187,7 +187,7 @@ const KnowledgeBasesTab = ({
           className="flex items-center gap-2 font-semibold"
           onClick={handleCreateKnowledge}
         >
-          <ForwardedIconComponent name="Plus" /> Create knowledge
+          <ForwardedIconComponent name="Plus" /> New KB Template
         </Button>
       </div>
 

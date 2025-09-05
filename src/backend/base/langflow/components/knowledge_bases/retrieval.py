@@ -9,7 +9,14 @@ from pydantic import SecretStr
 
 from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from langflow.custom import Component
-from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
+from langflow.io import (
+    BoolInput,
+    DropdownInput,
+    IntInput,
+    MessageTextInput,
+    Output,
+    SecretStrInput,
+)
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.services.auth.utils import decrypt_api_key
@@ -29,6 +36,7 @@ class KnowledgeRetrievalComponent(Component):
     description = "Search and retrieve data from knowledge."
     icon = "download"
     name = "KnowledgeRetrieval"
+    beta = True
 
     inputs = [
         DropdownInput(
@@ -86,7 +94,7 @@ class KnowledgeRetrievalComponent(Component):
         ),
     ]
 
-    async def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002
+    async def update_build_config(self, build_config, field_value, field_name=None):
         if field_name == "knowledge_base":
             # Update the knowledge base options dynamically
             build_config["knowledge_base"]["options"] = await get_knowledge_bases(
