@@ -191,7 +191,7 @@ For more information, see the MCP documentation for your client, such as [Cursor
 
 ### MCP server authentication and environment variables {#authentication}
 
-Each Langflow [Project](/concepts-flows#projects) has its own isolated MCP server with authentication configured per project.
+Each [Langflow project](/concepts-flows#projects) has its own MCP server with it's own MCP server authentication settings.
 
 You can selectively expose individual flows within your project as tools, choosing which specific flows to make available to the MCP client.
 
@@ -199,9 +199,9 @@ Langflow MCP servers support these authentication types:
 
 - **API Key**: Use this to authenticate using a Langflow API key.
 - **OAuth**: Use this to integrate with enterprise identity providers and OAuth 2.0 services for enhanced security.
-- **None**: No authentication required - Use this for development or when your Langflow server is running in a trusted environment.
+- **None**: No authentication. Use this when your Langflow server is running in a trusted environment.
 
-To configure authentication, in the **MCP Server** tab, click <Icon name="Fingerprint" aria-hidden="true"/> **Add Auth** and follow the steps below.
+To configure authentication for a Langflow MCP server, go to the **Projects** page in Langflow, click the **MCP Server** tab, click <Icon name="Fingerprint" aria-hidden="true"/> **Add Auth**, and then select your preferred authentication method:
 
 <Tabs>
 <TabItem value="API key" label="API key">
@@ -219,18 +219,18 @@ When OAuth is enabled, Langflow automatically starts an [MCP Composer](https://p
 To configure OAuth authentication:
 
 1. Select **OAuth** as the authentication type.
-2. Configure the OAuth settings with the values from your OAuth deployment.
+2. Configure the OAuth settings with the values from your OAuth deployment:
 
-   - **Host**: OAuth server host.
-   - **Port**: OAuth server port.
-   - **Server URL**: Full OAuth server URL.
-   - **Callback Path**: OAuth callback URL.
-   - **Client ID**: Your OAuth client identifier.
-   - **Client Secret**: Your OAuth client secret.
-   - **Authorization URL**: OAuth authorization endpoint.
-   - **Token URL**: OAuth token endpoint.
-   - **MCP Scope**: Scope for MCP operations.
-   - **Provider Scope**: OAuth provider scope.
+   - **Host**: OAuth server host
+   - **Port**: OAuth server port
+   - **Server URL**: Full OAuth server URL
+   - **Callback Path**: OAuth callback URL
+   - **Client ID**: Your OAuth client identifier
+   - **Client Secret**: Your OAuth client secret
+   - **Authorization URL**: OAuth authorization endpoint
+   - **Token URL**: OAuth token endpoint
+   - **MCP Scope**: Scope for MCP operations
+   - **Provider Scope**: OAuth provider scope
 
     The OAuth credentials are encrypted and stored securely in your Langflow database.
 
@@ -241,7 +241,7 @@ Your MCP server's JSON file is updated with values for OAuth.
 <TabItem value="None" label="None">
 
 When no authentication is configured, your MCP server becomes a public endpoint that anyone can access without providing credentials.
-Only use this option in development or in trusted environments.
+Only use this option when Langflow is running in a trusted environment.
 
 </TabItem>
 </Tabs>
