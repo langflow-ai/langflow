@@ -889,8 +889,11 @@ class Graph:
 
     def reset_inactivated_vertices(self) -> None:
         """Resets the inactivated vertices in the graph."""
+        import traceback
         for vertex_id in self.inactivated_vertices.copy():
             print(f"Frazier - reset_inactivated_vertices: marking vertex {vertex_id} as ACTIVE")
+            print(f"Frazier - reset_inactivated_vertices called from:")
+            traceback.print_stack()
             self.mark_vertex(vertex_id, "ACTIVE")
         self.inactivated_vertices = set()
 
