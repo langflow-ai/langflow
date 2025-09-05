@@ -36,6 +36,7 @@ Replace the following:
 ### Run Langflow from source
 
 You can run Langflow from source after cloning the repository, even if you aren't contributing to the codebase.
+If you plan to contribute code, see [Set up development environment](#set-up-your-langflow-development-environment).
 
 <details>
 <summary>Run from source on macOS/Linux</summary>
@@ -49,7 +50,6 @@ This command does the following:
 - Starts the application with default settings
 
 The Langflow frontend is served at `http://localhost:7860`.
-
 </details>
 
 <details>
@@ -114,6 +114,10 @@ The Langflow frontend is served at `http://localhost:7860`.
 </details>
 
 ### Set up your Langflow development environment
+
+This section is for contributors who want to develop and test code changes.
+
+If you just want to run Langflow locally without making code changes, see [Run Langflow from source](#run-langflow-from-source).
 
 <Tabs>
 <TabItem value="linux-macos" label="Linux or macOS" default>
@@ -186,9 +190,19 @@ The frontend is served at `http://localhost:7860`.
 </TabItem>
 </Tabs>
 
+### Troubleshoot frontend build issues
+
+If you encounter frontend build problems or are upgrading from an older version of Langflow, run `make run_clic` once.
+
+```bash
+make run_clic
+```
+
+This command cleans the build cache and rebuilds everything from scratch, which resolves most frontend-related issues when switching between versions.
+
 ### Debug
 
-The repo includes a `.vscode/launch.json` file for debugging the backend in VSCode, which is faster than debugging with Docker Compose. To debug Langflow with the `launch.json` file in VSCode:
+The repo includes a `.vscode/launch.json` file for debugging the backend in VSCode, which is faster than debugging with Docker Compose.
 
 For more information, see the [VSCode documentation](https://code.visualstudio.com/docs/debugtest/debugging#_start-a-debugging-session).
 
@@ -224,6 +238,9 @@ For style guidance, see the [Google Developer Documentation Style Guide](https:/
     ```bash
     cd docs
     ```
+
+    If you're using a dev container, run the documentation build from outside the container on your host terminal, not from within the dev container workspace.
+    The documentation build may not work properly when run inside the dev container.
 
 5. Install dependencies and start a local Docusaurus static site with hot reload:
 

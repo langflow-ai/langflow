@@ -8,8 +8,9 @@ import anyio
 from langflow.services.base import Service
 
 if TYPE_CHECKING:
+    from lfx.services.settings.service import SettingsService
+
     from langflow.services.session.service import SessionService
-    from langflow.services.settings.service import SettingsService
 
 
 class StorageService(Service):

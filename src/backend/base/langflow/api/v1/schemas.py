@@ -4,6 +4,9 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
+from lfx.graph.schema import RunOutputs
+from lfx.services.settings.base import Settings
+from lfx.services.settings.feature_flags import FEATURE_FLAGS, FeatureFlags
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -14,7 +17,6 @@ from pydantic import (
     model_serializer,
 )
 
-from langflow.graph.schema import RunOutputs
 from langflow.schema.dotdict import dotdict
 from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType, OutputValue
@@ -23,8 +25,6 @@ from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow.model import FlowCreate, FlowRead
 from langflow.services.database.models.user.model import UserRead
-from langflow.services.settings.base import Settings
-from langflow.services.settings.feature_flags import FEATURE_FLAGS, FeatureFlags
 from langflow.services.tracing.schema import Log
 
 
@@ -333,41 +333,6 @@ class VertexBuildResponse(BaseModel):
 
 class VerticesBuiltResponse(BaseModel):
     vertices: list[VertexBuildResponse]
-
-
-class InputValueRequest(BaseModel):
-    components: list[str] | None = []
-    input_value: str | None = None
-    session: str | None = None
-    type: InputType | None = Field(
-        "any",
-        description="Defines on which components the input value should be applied. "
-        "'any' applies to all input components.",
-    )
-
-    # add an example
-    model_config = ConfigDict(
-        json_schema_extra={
-            "examples": [
-                {
-                    "components": ["components_id", "Component Name"],
-                    "input_value": "input_value",
-                    "session": "session_id",
-                },
-                {"components": ["Component Name"], "input_value": "input_value"},
-                {"input_value": "input_value"},
-                {
-                    "components": ["Component Name"],
-                    "input_value": "input_value",
-                    "session": "session_id",
-                },
-                {"input_value": "input_value", "session": "session_id"},
-                {"type": "chat", "input_value": "input_value"},
-                {"type": "json", "input_value": '{"key": "value"}'},
-            ]
-        },
-        extra="forbid",
-    )
 
 
 class SimplifiedAPIRequest(BaseModel):
