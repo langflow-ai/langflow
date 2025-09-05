@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Badge } from "@/components/ui/badge";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import { useEffect, useRef, useState } from "react";
 import KnowledgeBaseDrawer from "../filesPage/components/KnowledgeBaseDrawer";
 import KnowledgeBasesTab from "../filesPage/components/KnowledgeBasesTab";
 
@@ -114,7 +115,10 @@ export const KnowledgePage = () => {
                     </SidebarTrigger>
                   </div>
                 </div>
-                Knowledge
+                Knowledge Bases
+                <Badge variant="pinkStatic" size="xq" className="ml-2 shrink-0">
+                  Beta
+                </Badge>
               </div>
               <div className="flex h-full flex-col">
                 <KnowledgeBasesTab {...tabProps} />
