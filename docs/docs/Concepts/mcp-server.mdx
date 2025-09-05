@@ -6,7 +6,6 @@ slug: /mcp-server
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
-import PartialOauthSuccess from '@site/docs/_partial-oauth-success.mdx';
 
 Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) as both an MCP server and an MCP client.
 
@@ -110,12 +109,12 @@ Langflow provides automatic installation and code snippets to help you deploy yo
 <Tabs>
 <TabItem value="auto" label="Auto install" default>
 
-1. Install [Cursor](https://docs.cursor.com/get-started/installation), [Claude](https://claude.ai/download), or [Windsurf](https://windsurf.com/download/editor) local to your Langflow server.
+1. Install [Cursor](https://docs.cursor.com/get-started/installation), [Claude](https://claude.ai/download), or [Windsurf](https://windsurf.com/download/editor) on the same computer where your Langflow server is running.
 
     :::info
     The auto install option is available only for specific MCP clients.
-    The client must be installed locally to your Langflow server.
-    If your client isn't supported or installed remotely from your Langflow server, use the **JSON** option.
+    Auto install requires the client to be installed locally so Langflow can automatically update the client's configuration files.
+    If your client isn't supported or is installed remotely, use the **JSON** option.
     :::
 
 2. Recommended: Configure [authentication](#authentication) for your MCP server.
@@ -123,8 +122,6 @@ Langflow provides automatic installation and code snippets to help you deploy yo
 3. In Langflow, on the **Projects** page, click the **MCP Server** tab.
 
 4. On the **Auto install** tab, find your MCP client provider, and then click <Icon name="Plus" aria-hidden="true"/> **Add**.
-
-    <PartialOauthSuccess />
 
     Your Langflow project's MCP server is automatically added to the configuration file for your local Cursor, Claude, or Windsurf client.
     For example, with Cursor, the server configuration is added to the `mcp.json` configuration file.
@@ -177,8 +174,6 @@ For example:
 
 6. Save and close your client's MCP configuration file.
 
-    <PartialOauthSuccess />
-
 7. Confirm that your Langflow MCP server is on the client's list of MCP servers.
 If necessary, restart your client to apply the modified configuration file.
 
@@ -193,17 +188,11 @@ For more information, see the MCP documentation for your client, such as [Cursor
 
 Each [Langflow project](/concepts-flows#projects) has its own MCP server with it's own MCP server authentication settings.
 
-You can selectively expose individual flows within your project as tools, choosing which specific flows to make available to the MCP client.
-
-Langflow MCP servers support these authentication types:
-
-- **API Key**: Use this to authenticate using a Langflow API key.
-- **OAuth**: Use this to integrate with enterprise identity providers and OAuth 2.0 services for enhanced security.
-- **None**: No authentication. Use this when your Langflow server is running in a trusted environment.
+Langflow MCP servers support these authentication types.
 
 To configure authentication for a Langflow MCP server, go to the **Projects** page in Langflow, click the **MCP Server** tab, click <Icon name="Fingerprint" aria-hidden="true"/> **Add Auth**, and then select your preferred authentication method:
 
-<Tabs>
+<Tabs groupId="auth-type">
 <TabItem value="API key" label="API key">
 
 When authenticating your MCP server with an Langflow API key, the code template in your project's **MCP Server** tab automatically includes the `--headers` and `x-api-key` arguments.
@@ -235,7 +224,17 @@ To configure OAuth authentication:
     The OAuth credentials are encrypted and stored securely in your Langflow database.
 
 3. To complete server setup, click **Save**.
-Your MCP server's JSON file is updated with values for OAuth.
+Your MCP server's JSON configuration is updated with OAuth values.
+
+    An OAuth callback page will now appear each time your MCP client attempts to authenticate with the server.
+    A successful authentication displays `Authentication complete. You may close this window.`
+
+4. After enabling OAuth, you need to update your MCP client configuration to use the new OAuth settings.
+    The client update method depends on how the client was installed.
+
+    - **Auto install**: Manually update your client's config file using the updated JSON snippet from the **JSON** tab, or repeat the steps in [Auto-install](#connect-clients-to-use-the-servers-actions) to re-install the client with the updated settings.
+    - **JSON option**: Copy the updated JSON snippet from the **JSON** tab and replace your existing configuration.
+    - **New connections**: Use either **Auto install** or **JSON** option. The OAuth settings are included automatically.
 
 </TabItem>
 <TabItem value="None" label="None">
@@ -277,8 +276,11 @@ To deploy your Langflow MCP server externally, see [Deploy a public Langflow ser
 
 ## Use MCP Inspector to test and debug flows {#test-and-debug-flows}
 
+:::info Node prerequisite
+MCP Inspector requires any LTS version of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) installed on your computer.
+:::
 [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) is a common tool for testing and debugging MCP servers.
-You can use MCP Inspector to monitor your flows and get insights into how they are being consumed by the MCP server:
+You can use MCP Inspector to monitor your flows and get insights into how they are being consumed by the MCP server.
 
 1. Install MCP Inspector:
 
@@ -317,8 +319,10 @@ The default address is `http://localhost:6274`.
       <TabItem value="None" label="None">
 
         - **Transport Type**: Select **SSE**.
-        - **URL**: Enter the Langflow MCP server's `sse` endpoint. For example: `http://localhost:7860/api/v1/mcp/project/d359cbd4-6fa2-4002-9d53-fa05c645319c/sse`
-
+        - **URL**: Enter the Langflow MCP server's `sse` endpoint. For example:
+            ```bash
+            http://localhost:7860/api/v1/mcp/project/d359cbd4-6fa2-4002-9d53-fa05c645319c/sse
+            ```
 
       </TabItem>
     </Tabs>
@@ -326,7 +330,6 @@ The default address is `http://localhost:6274`.
 4. Click **Connect**.
 
     If the connection was successful, you should see your project's flows in the **Tools** tab.
-    <PartialOauthSuccess />
     From this tab, you can monitor how your flows are being registered as tools by MCP, as well as test the tools with custom input values.
 
 5. To quit MCP Inspector, press <kbd>Control+C</kbd> in the same terminal window where you started it.
