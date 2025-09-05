@@ -86,6 +86,14 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - The **Local DB** component is now in legacy status.
 Replace this component with the [**Chroma DB** component](/bundles-chroma) or [knowledge bases](/components-kb).
 
+### Breaking changes
+
+- Removed `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` environment variable
+
+    The `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` environment variable has been removed in version 1.6.
+    This means that when `LANGFLOW_AUTO_LOGIN=True`, API requests still require a valid Langflow API key for authentication.
+    For more information, see [API keys and authentication](/api-keys-and-authentication).
+
 ## 1.5.0
 
 Highlights of this release include the following changes.
