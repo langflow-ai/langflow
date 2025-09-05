@@ -977,7 +977,7 @@ class Graph:
             self.conditional_exclusion_sources[vertex_id] = excluded
 
     def _exclude_branch_conditionally(
-        self, vertex_id: str, visited: set, excluded: set, output_name: str | None = None, skip_first: bool = False
+        self, vertex_id: str, visited: set, excluded: set, output_name: str | None = None, *, skip_first: bool = False
     ) -> None:
         """Recursively excludes vertices in a branch for conditional routing."""
         if vertex_id in visited:
