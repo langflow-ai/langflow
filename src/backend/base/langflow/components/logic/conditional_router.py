@@ -2,8 +2,8 @@ import re
 
 from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageInput, MessageTextInput, Output
-from langflow.schema.message import Message
 from langflow.logging.logger import logger
+from langflow.schema.message import Message
 
 
 class ConditionalRouterComponent(Component):
@@ -137,9 +137,13 @@ class ConditionalRouterComponent(Component):
             self.update_ctx({f"{self._id}_iteration": self.ctx.get(f"{self._id}_iteration", 0) + 1})
             self.__iteration_updated = True
             current_iteration = self.ctx.get(f"{self._id}_iteration", 0)
-            logger.debug(f"ConditionalRouter {self._id}: iteration {current_iteration}, max_iterations={self.max_iterations}")
+            logger.debug(
+                f"ConditionalRouter {self._id}: iteration {current_iteration}, max_iterations={self.max_iterations}"
+            )
             if current_iteration >= self.max_iterations:
-                logger.debug(f"ConditionalRouter {self._id}: max iterations reached, using default route {self.default_route}")
+                logger.debug(
+                    f"ConditionalRouter {self._id}: max iterations reached, using default route {self.default_route}"
+                )
                 # When max iterations reached, stop the route that's NOT the default route
                 route_to_stop = "true_result" if self.default_route == "false_result" else "false_result"
                 logger.debug(f"ConditionalRouter {self._id}: stopping non-default route {route_to_stop}")

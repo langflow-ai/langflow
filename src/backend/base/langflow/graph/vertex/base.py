@@ -136,7 +136,9 @@ class Vertex:
         if self.state == VertexStates.INACTIVE and self.graph.in_degree_map[self.id] <= 1:
             # If the vertex is inactive and has only one in degree
             # it means that it is not a merge point in the graph
-            print(f"Frazier - set_state: adding vertex {self.id} to inactivated_vertices (in_degree={self.graph.in_degree_map[self.id]})")
+            print(
+                f"Frazier - set_state: adding vertex {self.id} to inactivated_vertices (in_degree={self.graph.in_degree_map[self.id]})"
+            )
             self.graph.inactivated_vertices.add(self.id)
         elif self.state == VertexStates.ACTIVE and self.id in self.graph.inactivated_vertices:
             print(f"Frazier - set_state: removing vertex {self.id} from inactivated_vertices")

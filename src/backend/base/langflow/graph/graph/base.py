@@ -911,7 +911,9 @@ class Graph:
         self, vertex_id: str, state: str, visited: set | None = None, output_name: str | None = None
     ) -> set:
         """Marks a branch of the graph."""
-        print(f"Frazier - _mark_branch called with vertex_id={vertex_id}, state={state}, visited={visited}, output_name={output_name}")
+        print(
+            f"Frazier - _mark_branch called with vertex_id={vertex_id}, state={state}, visited={visited}, output_name={output_name}"
+        )
         if visited is None:
             print(f"Frazier - _mark_branch: visited is None, creating new set (NOT marking vertex {vertex_id})")
             visited = set()
@@ -930,11 +932,17 @@ class Graph:
             print(f"Frazier - _mark_branch: checking child {child_id} of {vertex_id}")
             if output_name:
                 edge = self.get_edge(vertex_id, child_id)
-                print(f"Frazier - _mark_branch: edge from {vertex_id} to {child_id}: {edge.source_handle.name if edge else 'None'}")
+                print(
+                    f"Frazier - _mark_branch: edge from {vertex_id} to {child_id}: {edge.source_handle.name if edge else 'None'}"
+                )
                 if edge and edge.source_handle.name != output_name:
-                    print(f"Frazier - _mark_branch: skipping child {child_id} because edge source_handle.name '{edge.source_handle.name}' != '{output_name}'")
+                    print(
+                        f"Frazier - _mark_branch: skipping child {child_id} because edge source_handle.name '{edge.source_handle.name}' != '{output_name}'"
+                    )
                     continue
-                print(f"Frazier - _mark_branch: including child {child_id} because edge source_handle.name '{edge.source_handle.name if edge else 'None'}' matches '{output_name}'")
+                print(
+                    f"Frazier - _mark_branch: including child {child_id} because edge source_handle.name '{edge.source_handle.name if edge else 'None'}' matches '{output_name}'"
+                )
             else:
                 print(f"Frazier - _mark_branch: no output_name filter, including child {child_id}")
             self._mark_branch(child_id, state, visited)
@@ -942,7 +950,9 @@ class Graph:
 
     def mark_branch(self, vertex_id: str, state: str, output_name: str | None = None) -> None:
         visited = self._mark_branch(vertex_id=vertex_id, state=state, output_name=output_name)
-        print(f"Frazier - Graph {self.flow_id} marked branch {vertex_id} with state {state} and output name {output_name}, visited: {visited}")
+        print(
+            f"Frazier - Graph {self.flow_id} marked branch {vertex_id} with state {state} and output name {output_name}, visited: {visited}"
+        )
         new_predecessor_map, _ = self.build_adjacency_maps(self.edges)
         new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
         if vertex_id in self.cycle_vertices:
