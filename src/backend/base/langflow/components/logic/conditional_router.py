@@ -151,6 +151,18 @@ class ConditionalRouterComponent(Component):
             self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive
         )
         logger.debug(f"ConditionalRouter {self._id}: condition result = {result}")
+        
+        # Check if NEXT iteration would exceed max iterations and this is the default route
+        current_iteration = self.ctx.get(f"{self._id}_iteration", 0)
+        if (current_iteration + 1) >= self.max_iterations and self.default_route == "true_result":
+            logger.debug(f"ConditionalRouter {self._id}: max iterations will be reached, forcing default route true_result")
+            # Just increment iteration count and return default message - reset logic will handle reactivation
+            if not self.__iteration_updated:
+                self.update_ctx({f"{self._id}_iteration": current_iteration + 1})
+                self.__iteration_updated = True
+            self.status = self.true_case_message
+            return self.true_case_message
+        
         if result:
             logger.debug(f"ConditionalRouter {self._id}: condition TRUE - returning true_case_message")
             self.status = self.true_case_message
@@ -166,6 +178,18 @@ class ConditionalRouterComponent(Component):
             self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive
         )
         logger.debug(f"ConditionalRouter {self._id}: condition result = {result}")
+        
+        # Check if NEXT iteration would exceed max iterations and this is the default route
+        current_iteration = self.ctx.get(f"{self._id}_iteration", 0)
+        if (current_iteration + 1) >= self.max_iterations and self.default_route == "false_result":
+            logger.debug(f"ConditionalRouter {self._id}: max iterations will be reached, forcing default route false_result")
+            # Just increment iteration count and return default message - reset logic will handle reactivation
+            if not self.__iteration_updated:
+                self.update_ctx({f"{self._id}_iteration": current_iteration + 1})
+                self.__iteration_updated = True
+            self.status = self.false_case_message
+            return self.false_case_message
+        
         if not result:
             logger.debug(f"ConditionalRouter {self._id}: condition FALSE - returning false_case_message")
             self.status = self.false_case_message
