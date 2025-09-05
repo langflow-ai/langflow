@@ -43,21 +43,21 @@ curl -X POST \
 
 | Header | Required | Description | Example |
 |--------|----------|-------------|---------|
-| x-api-key | Yes | Your Langflow API key for authentication | "sk-...". |
-| Content-Type | Yes | Specifies the JSON format | "application/json". |
-| X-LANGFLOW-GLOBAL-VAR-* | No | Global variables for the flow | "X-LANGFLOW-GLOBAL-VAR-API_KEY: sk-...". For more, see [Pass global variables to your flows in headers](#global-var). |
+| `x-api-key` | Yes | Your Langflow API key for authentication | `"sk-..."` |
+| `Content-Type` | Yes | Specifies the JSON format | `"application/json"` |
+| `X-LANGFLOW-GLOBAL-VAR-*` | No | Global variables for the flow | `"X-LANGFLOW-GLOBAL-VAR-API_KEY: sk-..."` For more, see [Pass global variables to your flows in headers](#global-var). |
 
 ### Request body
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| model | string | Yes | - | The flow ID or endpoint name to execute. |
-| input | string | Yes | - | The input text to process. |
-| stream | boolean | No | false | Whether to stream the response. |
-| background | boolean | No | false | Whether to process in background. |
-| tools | list[Any] | No | null | Tools are not supported yet. |
-| previous_response_id | string | No | null | ID of previous response to continue conversation. For more, see [Continue conversations with response and session IDs](#response-id). |
-| include | list[string] | No | null | Additional response data to include, such as `['tool_call.results']`. For more, see [Retrieve tool call results](#tool-call-results). |
+| `model` | `string` | Yes | - | The flow ID or endpoint name to execute. |
+| `input` | `string` | Yes | - | The input text to process. |
+| `stream` | `boolean` | No | `false` | Whether to stream the response. |
+| `background` | `boolean` | No | `false` | Whether to process in background. |
+| `tools` | `list[Any]` | No | `null` | Tools are not supported yet. |
+| `previous_response_id` | `string` | No | `null` | ID of previous response to continue conversation. For more, see [Continue conversations with response and session IDs](#response-id). |
+| `include` | `list[string]` | No | `null` | Additional response data to include, such as `['tool_call.results']`. For more, see [Retrieve tool call results](#tool-call-results). |
 
 ## Example response
 
@@ -113,35 +113,35 @@ Fields set dynamically by Langflow:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| id | string | Unique response identifier. |
-| created_at | int | Unix timestamp of response creation. |
-| model | string | The flow ID that was executed. |
-| output | list[dict] | Array of output items (messages, tool calls, etc.). |
-| previous_response_id | string | ID of previous response if continuing conversation. |
+| `id` | `string` | Unique response identifier. |
+| `created_at` | `int` | Unix timestamp of response creation. |
+| `model` | `string` | The flow ID that was executed. |
+| `output` | `list[dict]` | Array of output items (messages, tool calls, etc.). |
+| `previous_response_id` | `string` | ID of previous response if continuing conversation. |
 
 <details>
 <summary>Fields with OpenAI-compatible default values</summary>
 
 | Field | Type | Default Value | Description |
 |-------|------|---------------|-------------|
-| object | string | "response" | Always "response". |
-| status | string | "completed" | Response status: "completed", "in_progress", or "failed". |
-| error | dict | null | Error details (if any). |
-| incomplete_details | dict | null | Incomplete response details (if any). |
-| instructions | string | null | Response instructions (if any). |
-| max_output_tokens | int | null | Maximum output tokens (if any). |
-| parallel_tool_calls | boolean | true | Whether parallel tool calls are enabled. |
-| reasoning | dict | `{"effort": null, "summary": null}` | Reasoning information with effort and summary. |
-| store | boolean | true | Whether response is stored. |
-| temperature | float | 1.0 | Temperature setting. |
-| text | dict | `{"format": {"type": "text"}}` | Text format configuration. |
-| tool_choice | string | "auto" | Tool choice setting. |
-| tools | list[dict] | [] | Available tools. |
-| top_p | float | 1.0 | Top-p setting. |
-| truncation | string | "disabled" | Truncation setting. |
-| usage | dict | null | Usage statistics (if any). |
-| user | string | null | User identifier (if any). |
-| metadata | dict | {} | Additional metadata. |
+| `object` | `string` | `"response"` | Always `"response"`. |
+| `status` | `string` | `"completed"` | Response status: `"completed"`, `"in_progress"`, or `"failed"`. |
+| `error` | `dict` | `null` | Error details (if any). |
+| `incomplete_details` | `dict` | `null` | Incomplete response details (if any). |
+| `instructions` | `string` | `null` | Response instructions (if any). |
+| `max_output_tokens` | `int` | `null` | Maximum output tokens (if any). |
+| `parallel_tool_calls` | `boolean` | `true` | Whether parallel tool calls are enabled. |
+| `reasoning` | `dict` | `{"effort": null, "summary": null}` | Reasoning information with effort and summary. |
+| `store` | `boolean` | `true` | Whether response is stored. |
+| `temperature` | `float` | `1.0` | Temperature setting. |
+| `text` | `dict` | `{"format": {"type": "text"}}` | Text format configuration. |
+| `tool_choice` | `string` | `"auto"` | Tool choice setting. |
+| `tools` | `list[dict]` | `[]` | Available tools. |
+| `top_p` | `float` | `1.0` | Top-p setting. |
+| `truncation` | `string` | `"disabled"` | Truncation setting. |
+| `usage` | `dict` | `null` | Usage statistics (if any). |
+| `user` | `string` | `null` | User identifier (if any). |
+| `metadata` | `dict` | `{}` | Additional metadata. |
 
 </details>
 
@@ -183,12 +183,12 @@ curl -X POST \
 
 | Field | Type | Description |
 |-------|------|-------------|
-| id | string | Unique response identifier. |
-| object | string | Always "response.chunk". |
-| created | int | Unix timestamp of chunk creation. |
-| model | string | The flow ID that was executed. |
-| delta | dict | The new content chunk. |
-| status | string | Response status: "completed", "in_progress", or "failed" (optional). |
+| `id` | `string` | Unique response identifier. |
+| `object` | `string` | Always `"response.chunk"`. |
+| `created` | `int` | Unix timestamp of chunk creation. |
+| `model` | `string` | The flow ID that was executed. |
+| `delta` | `dict` | The new content chunk. |
+| `status` | `string` | Response status: `"completed"`, `"in_progress"`, or `"failed"` (optional). |
 
 The stream continues until a final chunk with `"status": "completed"` indicates the response is finished.
 
