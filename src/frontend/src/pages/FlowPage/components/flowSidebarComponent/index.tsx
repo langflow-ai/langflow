@@ -675,7 +675,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                       <Button
                         onClick={() => setActiveSection("bundles")}
                         variant="ghost"
-                        className="bg-muted hover:bg-muted/70 mx-3 px-2.5 !text-[13px] h-[40px] font-normal line-height-[16px] mb-3 group -mt-3"
+                        className="bg-muted hover:bg-muted/70 mx-3 px-2.5 !text-[13px] font-normal line-height-[16px] mb-3 group -mt-3 h-[34px]"
                       >
                         <span className="text-muted-foreground flex items-center">
                           <ForwardedIconComponent
