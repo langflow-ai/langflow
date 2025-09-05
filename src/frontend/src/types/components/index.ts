@@ -541,13 +541,6 @@ export type ChatInputType = {
     current: any;
   };
   noInput: boolean;
-  sendMessage: ({
-    repeat,
-    files,
-  }: {
-    repeat: number;
-    files?: string[];
-  }) => Promise<void>;
   playgroundPage: boolean;
 };
 
@@ -714,6 +707,10 @@ export type newFlowModalPropsType = {
   setOpen: (open: boolean) => void;
 };
 
+export type PlaygroundModalPropsType = {
+  playgroundPage?: boolean;
+};
+
 export type IOModalPropsType = {
   children: JSX.Element;
   open: boolean;
@@ -721,8 +718,6 @@ export type IOModalPropsType = {
   disable?: boolean;
   isPlayground?: boolean;
   cleanOnClose?: boolean;
-  canvasOpen?: boolean;
-  playgroundPage?: boolean;
 };
 
 export type buttonBoxPropsType = {
@@ -827,21 +822,6 @@ export type IOFieldViewProps = {
 };
 
 export type UndrawCardComponentProps = { flow: FlowType };
-
-export type chatViewProps = {
-  sidebarOpen: boolean;
-  sendMessage: ({
-    repeat,
-    files,
-  }: {
-    repeat: number;
-    files?: string[];
-  }) => Promise<void>;
-  visibleSession?: string;
-  focusChat?: string;
-  closeChat?: () => void;
-  playgroundPage?: boolean;
-};
 
 export type IOFileInputProps = {
   field: InputFieldType;
