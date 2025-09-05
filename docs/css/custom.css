@@ -481,3 +481,100 @@ body {
   color: var(--ifm-color-emphasis-500) !important;
   size: 16px !important;
 }
+
+/* Environment Variables Table Styling */
+.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 14px;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-global-radius);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.markdown table thead {
+  background-color: var(--ifm-color-emphasis-100);
+}
+
+.markdown table thead th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--ifm-color-emphasis-800);
+  border-bottom: 2px solid var(--ifm-color-emphasis-300);
+  font-size: 14px;
+}
+
+.markdown table tbody tr {
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  transition: background-color 0.2s ease;
+}
+
+.markdown table tbody tr:hover {
+  background-color: var(--ifm-color-emphasis-50);
+}
+
+.markdown table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.markdown table td {
+  padding: 1rem;
+  vertical-align: top;
+  border-right: 1px solid var(--ifm-color-emphasis-200);
+  line-height: 1.5;
+}
+
+.markdown table td:last-child {
+  border-right: none;
+}
+
+/* First column (Variable) styling */
+.markdown table td:first-child {
+  font-family: var(--ifm-font-family-monospace);
+  font-weight: 600;
+  color: var(--ifm-color-emphasis-800);
+  white-space: nowrap;
+  min-width: 200px;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+}
+
+/* Second column (Format) styling */
+.markdown table td:nth-child(2) {
+  font-family: var(--ifm-font-family-monospace);
+  color: var(--ifm-color-emphasis-700);
+  min-width: 100px;
+}
+
+/* Third column (Default) styling */
+.markdown table td:nth-child(3) {
+  font-family: var(--ifm-font-family-monospace);
+  color: var(--ifm-color-emphasis-600);
+  min-width: 120px;
+}
+
+/* Fourth column (Description) styling */
+.markdown table td:nth-child(4) {
+  color: var(--ifm-color-emphasis-700);
+  line-height: 1.6;
+}
+
+/* Responsive table */
+@media (max-width: 768px) {
+  .markdown table {
+    font-size: 12px;
+  }
+
+  .markdown table thead th,
+  .markdown table td {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .markdown table td:first-child {
+    min-width: 150px;
+  }
+}
