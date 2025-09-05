@@ -1,5 +1,5 @@
 ---
-title:  Use Langflow as an MCP server
+title: Use Langflow as an MCP server
 slug: /mcp-server
 ---
 
@@ -51,7 +51,6 @@ It is recommended to provide clear, descriptive names and descriptions for all t
 
 To edit the names and descriptions of flow tools on a Langflow MCP server, do the following:
 
-
 1. Click the **MCP Server** tab on the [**Projects** page](/concepts-flows#projects), or, when editing a flow, click **Share**, and then select **MCP Server**.
 
 2. Click <Icon name="Settings2" aria-hidden="true"/> **Edit Tools**.
@@ -68,7 +67,7 @@ To edit the names and descriptions of flow tools on a Langflow MCP server, do th
 
 MCP clients use tool names and descriptions to determine which actions to use when generating responses.
 
-Because MCP clients treat your Langflow project as a single MCP server with all of your enabled flows listed as tools, unclear names and descriptions can cause the agent to  select tools incorrectly or inconsistently.
+Because MCP clients treat your Langflow project as a single MCP server with all of your enabled flows listed as tools, unclear names and descriptions can cause the agent to select tools incorrectly or inconsistently.
 
 For example, a flow's default tool name is the flow ID, such as `adbbf8c7-0a34-493b-90ea-5e8b42f78b66`.
 This provides no information to an agent about the type of flow or it's purpose.
@@ -111,16 +110,19 @@ Langflow provides automatic installation and code snippets to help you deploy yo
 <Tabs>
 <TabItem value="auto" label="Auto install" default>
 
-:::info
-The auto install option is available only for specific MCP clients, and the client must be installed locally to your Langflow server.
-If your client isn't supported or installed remotely from your Langflow server, use the **JSON** option.
-:::
+1. Install [Cursor](https://docs.cursor.com/get-started/installation), [Claude](https://claude.ai/download), or [Windsurf](https://windsurf.com/download/editor) local to your Langflow server.
 
-1. Install [Cursor](https://docs.cursor.com/get-started/installation), Claude, or Windsurf local to your Langflow instance.
+    :::info
+    The auto install option is available only for specific MCP clients.
+    The client must be installed locally to your Langflow server.
+    If your client isn't supported or installed remotely from your Langflow server, use the **JSON** option.
+    :::
 
-2. In Langflow, on the **Projects** page, click the **MCP Server** tab.
+2. Recommended: Configure [authentication](#authentication) for your MCP server.
 
-3. On the **Auto install** tab, find your MCP client provider, and then click <Icon name="Plus" aria-hidden="True"/> **Add**.
+3. In Langflow, on the **Projects** page, click the **MCP Server** tab.
+
+4. On the **Auto install** tab, find your MCP client provider, and then click <Icon name="Plus" aria-hidden="true"/> **Add**.
 
     <PartialOauthSuccess />
 
@@ -134,19 +136,21 @@ If your client isn't supported or installed remotely from your Langflow server, 
 <TabItem value="JSON" label="JSON">
 
 The JSON option allows you to connect a Langflow MCP server to any local or remote MCP client.
-
 You can modify this process for any [MCP-compatible client](https://modelcontextprotocol.io/clients).
 
-1. Install [Cursor](https://docs.cursor.com/get-started/installation) or any other [MCP-compatible client](https://modelcontextprotocol.io/clients).
+1. Install any [MCP-compatible client](https://modelcontextprotocol.io/clients).
 
-    These steps use Cursor as an example.
-    Modify them as needed for other clients.
+    These steps use Cursor as an example, but the process is generally the same for all clients, with slight differences in client-specific details like file names.
 
-2. In Cursor, go to **Cursor Settings**, select **MCP**, and then click **Add New Global MCP Server** to open Cursor's global `mcp.json` configuration file.
+2. In your client, add a new MCP server using the client's UI or configuration file.
 
-3. In Langflow, on the **Projects** page, click the **MCP Server** tab.
+    For example, in Cursor, go to **Cursor Settings**, select **MCP**, and then click **Add New Global MCP Server** to open Cursor's global `mcp.json` configuration file.
 
-4. Click the **JSON** tab, copy the code snippet for your operating system, and then paste it into Cursor's `mcp.json` file.
+3. Recommended: Configure [authentication](#authentication) for your MCP server.
+
+4. In Langflow, on the **Projects** page, click the **MCP Server** tab.
+
+5. Click the **JSON** tab, copy the code snippet for your operating system, and then paste it into your client's MCP configuration file.
 For example:
 
     ```json
@@ -171,18 +175,18 @@ For example:
     If your Langflow server requires authentication, you must include your Langflow API key or OAuth settings in the configuration.
     For more information, see [MCP server authentication and environment variables](#authentication).
 
-5. In Cursor, save and close the `mcp.json` file.
+6. Save and close your client's MCP configuration file.
 
     <PartialOauthSuccess />
 
-6. Confirm that your Langflow MCP server is on Cursor's **MCP Servers** list.
+7. Confirm that your Langflow MCP server is on the client's list of MCP servers.
+If necessary, restart your client to apply the modified configuration file.
 
 </TabItem>
 </Tabs>
 
 Once your MCP client is connected to your Langflow project's MCP server, your flows are registered as tools.
 Cursor determines when to use tools based on your queries, and requests permissions when necessary.
-
 For more information, see the MCP documentation for your client, such as [Cursor's MCP documentation](https://docs.cursor.com/context/model-context-protocol).
 
 ### MCP server authentication and environment variables {#authentication}

@@ -408,6 +408,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "API-Reference/api-openai-responses",
+          label: "OpenAI Responses endpoints",
+        },
+        {
+          type: "doc",
           id: "API-Reference/api-flows",
           label: "Flow management endpoints",
         },

@@ -5,12 +5,11 @@ slug: /agents
 
 import Icon from "@site/src/components/icon";
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialAgentsWork from '@site/docs/_partial-agents-work.mdx';
 
 Langflow's [**Agent** component](/components-agents) is critical for building agent flows.
 This component provides everything you need to create an agent, including multiple Large Language Model (LLM) providers, tool calling, and custom instructions.
 It simplifies agent configuration so you can focus on application development.
-
-import PartialAgentsWork from '@site/docs/_partial-agents-work.mdx';
 
 <PartialAgentsWork />
 
@@ -138,7 +137,7 @@ For more information, see [Store chat memory](/memory#store-chat-memory) and [**
 
 ### Additional parameters
 
-With the **Agent** component, the available parameters can change depending on the selected provider and model, which can support additional modes, arguments, or features like chat memory and temperature.
+With the **Agent** component, the available parameters can change depending on the selected provider and model, including support for additional modes, arguments, or features like chat memory and temperature.
 For example:
 
 * **Current Date** (`add_current_date_tool`): When enabled (true), this setting adds a tool to the agent that can retrieve the current date.
