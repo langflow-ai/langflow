@@ -122,9 +122,7 @@ def detect_embedding_model(kb_path: Path) -> str:
                     if model_value and model_value.lower() != "unknown":
                         return model_value
         except (OSError, json.JSONDecodeError) as _:
-            logger.exception(
-                "Error reading embedding metadata file '%s'", metadata_file
-            )
+            logger.exception("Error reading embedding metadata file '%s'", metadata_file)
 
     # Check other JSON config files for model information
     for config_file in kb_path.glob("*.json"):
@@ -205,9 +203,7 @@ def get_text_columns(df: pd.DataFrame, schema_data: list | None = None) -> list[
     return [col for col in df.columns if df[col].dtype == "object"]
 
 
-def calculate_text_metrics(
-    df: pd.DataFrame, text_columns: list[str]
-) -> tuple[int, int]:
+def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[int, int]:
     """Calculate total words and characters from text columns."""
     total_words = 0
     total_characters = 0
@@ -243,17 +239,11 @@ def get_kb_metadata(kb_path: Path) -> dict:
                     embedding_metadata = json.load(f)
                     if isinstance(embedding_metadata, dict):
                         if "embedding_provider" in embedding_metadata:
-                            metadata["embedding_provider"] = embedding_metadata[
-                                "embedding_provider"
-                            ]
+                            metadata["embedding_provider"] = embedding_metadata["embedding_provider"]
                         if "embedding_model" in embedding_metadata:
-                            metadata["embedding_model"] = embedding_metadata[
-                                "embedding_model"
-                            ]
+                            metadata["embedding_model"] = embedding_metadata["embedding_model"]
             except (OSError, json.JSONDecodeError) as _:
-                logger.exception(
-                    "Error reading embedding metadata file '%s'", metadata_file
-                )
+                logger.exception("Error reading embedding metadata file '%s'", metadata_file)
 
         # Fallback to detection if not found in metadata file
         if metadata["embedding_provider"] == "Unknown":
@@ -306,9 +296,7 @@ def get_kb_metadata(kb_path: Path) -> dict:
 
                 # Calculate average chunk size
                 if int(metadata["chunks"]) > 0:
-                    metadata["avg_chunk_size"] = round(
-                        int(characters) / int(metadata["chunks"]), 1
-                    )
+                    metadata["avg_chunk_size"] = round(int(characters) / int(metadata["chunks"]), 1)
 
         except (OSError, ValueError, TypeError) as _:
             logger.exception("Error processing Chroma DB '%s'", kb_path.name)
@@ -362,26 +350,20 @@ async def list_knowledge_bases(
 
             except OSError as _:
                 # Log the exception and skip directories that can't be read
-                await logger.aexception(
-                    "Error reading knowledge base directory '%s'", kb_dir
-                )
+                await logger.aexception("Error reading knowledge base directory '%s'", kb_dir)
                 continue
 
         # Sort by name alphabetically
         knowledge_bases.sort(key=lambda x: x.name)
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error listing knowledge bases: {e!s}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Error listing knowledge bases: {e!s}") from e
     else:
         return knowledge_bases
 
 
 @router.get("/{kb_name}", status_code=HTTPStatus.OK)
-async def get_knowledge_base(
-    kb_name: str, current_user: CurrentActiveUser
-) -> KnowledgeBaseInfo:
+async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> KnowledgeBaseInfo:
     """Get detailed information about a specific knowledge base."""
     try:
         kb_root_path = get_kb_root_path()
@@ -389,9 +371,7 @@ async def get_knowledge_base(
         kb_path = kb_root_path / kb_user / kb_name
 
         if not kb_path.exists() or not kb_path.is_dir():
-            raise HTTPException(
-                status_code=404, detail=f"Knowledge base '{kb_name}' not found"
-            )
+            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
 
         # Get size of the directory
         size = get_directory_size(kb_path)
@@ -414,15 +394,11 @@ async def get_knowledge_base(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error getting knowledge base '{kb_name}': {e!s}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Error getting knowledge base '{kb_name}': {e!s}") from e
 
 
 @router.delete("/{kb_name}", status_code=HTTPStatus.OK)
-async def delete_knowledge_base(
-    kb_name: str, current_user: CurrentActiveUser
-) -> dict[str, str]:
+async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> dict[str, str]:
     """Delete a specific knowledge base."""
     try:
         kb_root_path = get_kb_root_path()
@@ -430,9 +406,7 @@ async def delete_knowledge_base(
         kb_path = kb_root_path / kb_user / kb_name
 
         if not kb_path.exists() or not kb_path.is_dir():
-            raise HTTPException(
-                status_code=404, detail=f"Knowledge base '{kb_name}' not found"
-            )
+            raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
 
         # Delete the entire knowledge base directory
         shutil.rmtree(kb_path)
@@ -440,18 +414,14 @@ async def delete_knowledge_base(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error deleting knowledge base '{kb_name}': {e!s}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Error deleting knowledge base '{kb_name}': {e!s}") from e
     else:
         return {"message": f"Knowledge base '{kb_name}' deleted successfully"}
 
 
 @router.delete("", status_code=HTTPStatus.OK)
 @router.delete("/", status_code=HTTPStatus.OK)
-async def delete_knowledge_bases_bulk(
-    request: BulkDeleteRequest, current_user: CurrentActiveUser
-) -> dict[str, object]:
+async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: CurrentActiveUser) -> dict[str, object]:
     """Delete multiple knowledge bases."""
     try:
         kb_root_path = get_kb_root_path()
@@ -472,9 +442,7 @@ async def delete_knowledge_bases_bulk(
                 shutil.rmtree(kb_path)
                 deleted_count += 1
             except (OSError, PermissionError) as e:
-                await logger.aexception(
-                    "Error deleting knowledge base '%s': %s", kb_name, e
-                )
+                await logger.aexception("Error deleting knowledge base '%s': %s", kb_name, e)
                 # Continue with other deletions even if one fails
 
         if not_found_kbs and deleted_count == 0:
@@ -494,8 +462,6 @@ async def delete_knowledge_bases_bulk(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error deleting knowledge bases: {e!s}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Error deleting knowledge bases: {e!s}") from e
     else:
         return result
