@@ -25,7 +25,7 @@ export const CategoryGroup = memo(function CategoryGroup({
   setShowConfig,
 }: CategoryGroupProps) {
   return (
-    <SidebarGroup className="p-3 pt-0">
+    <SidebarGroup className="p-3">
       {ENABLE_NEW_SIDEBAR && (
         <SidebarGroupLabel className="cursor-default flex items-center justify-between">
           <span>Components</span>
