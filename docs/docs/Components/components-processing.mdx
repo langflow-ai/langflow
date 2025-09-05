@@ -59,7 +59,7 @@ For example, `Create a business card for each name.`
     record_number: {batch_index}, name: {text_input}, summary: {model_response}
     ```
 
-7. To test the processing, click the **Parser** component, click <Icon name="Play" aria-hidden="True" /> **Run component**, and then click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** to view the final `DataFrame`.
+7. To test the processing, click the **Parser** component, click <Icon name="Play" aria-hidden="true" /> **Run component**, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to view the final `DataFrame`.
 
     You can also connect a **Chat Output** component to the **Parser** component if you want to see the output in the **Playground**.
 
@@ -103,7 +103,7 @@ For this example, select the **Select Keys** operation.
     :::
 
 3. Under **Select Keys**, add keys for `name`, `username`, and `email`.
-Click <Icon name="Plus" aria-hidden="True" /> **Add more** to add a field for each key.
+Click <Icon name="Plus" aria-hidden="true" /> **Add more** to add a field for each key.
 
     For this example, assume that the webhook will receive consistent payloads that always contain `name`, `username`, and `email` keys.
     The **Select Keys** operation extracts the value of these keys from each incoming payload.
@@ -674,7 +674,7 @@ To configure the **Save File** component and use it in a flow, do the following:
     To avoid unintended overwrites, use unique file names and paths.
     :::
 
-4. To test the **Save File** component, click <Icon name="Play" aria-hidden="True" /> **Run component**, and then click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** to get the filepath where the file was saved.
+4. To test the **Save File** component, click <Icon name="Play" aria-hidden="true" /> **Run component**, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to get the filepath where the file was saved.
 
     The component's literal output is a `Message` containing the original data type, the file name and extension, and the absolute filepath to the file based on the **File Name** parameter.
     For example:
@@ -742,7 +742,7 @@ The **DataFrame** output returns the list of chunks as a structured [`DataFrame`
 
 The **Split Text** component's parameters control how the text is split into chunks, specifically the `chunk_size`, `chunk_overlap`, and `separator` parameters.
 
-To test the chunking behavior, add a **Text Input** or **File** component with some sample data to chunk, click <Icon name="Play" aria-hidden="True" /> **Run component** on the **Split Text** component, and then click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** to view the list of chunks and their metadata. The **text** column contains the actual text chunks created from your chunking settings.
+To test the chunking behavior, add a **Text Input** or **File** component with some sample data to chunk, click <Icon name="Play" aria-hidden="true" /> **Run component** on the **Split Text** component, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to view the list of chunks and their metadata. The **text** column contains the actual text chunks created from your chunking settings.
 If the chunks aren't split as you expect, adjust the parameters, rerun the component, and then inspect the new output.
 
 <PartialParams />
