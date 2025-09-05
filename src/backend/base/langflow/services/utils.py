@@ -76,8 +76,15 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
     else:
         # Remove the default superuser if it exists
         await teardown_superuser(settings_service, session)
-        username = settings_service.auth_settings.SUPERUSER
-        password = settings_service.auth_settings.SUPERUSER_PASSWORD
+        # If AUTO_LOGIN is disabled, attempt to use configured credentials
+        # or fall back to default credentials if none are provided.
+        username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
+        # SUPERUSER_PASSWORD is now SecretStr; get the underlying value safely
+        password = (
+            settings_service.auth_settings.SUPERUSER_PASSWORD.get_secret_value()
+            if hasattr(settings_service.auth_settings.SUPERUSER_PASSWORD, "get_secret_value")
+            else settings_service.auth_settings.SUPERUSER_PASSWORD
+        ) or DEFAULT_SUPERUSER_PASSWORD
 
     if not username or not password:
         msg = "Username and password must be set"
@@ -96,6 +103,7 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         msg = "Could not create superuser. Please create a superuser manually."
         raise RuntimeError(msg) from exc
     finally:
+        # Scrub credentials from in-memory settings after setup
         settings_service.auth_settings.reset_credentials()
 
 
