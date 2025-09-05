@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
@@ -17,6 +16,7 @@ import { track } from "@/customization/utils/analytics";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import type { APIClassType, InputFieldType } from "@/types/api";
+import { useState } from "react";
 
 interface NodeDialogProps {
   open: boolean;
@@ -269,7 +269,7 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
           ))}
         </div>
 
-        <DialogFooter className="px-5 pt-3">
+        <DialogFooter className="px-5 pt-4">
           <Button variant="secondary" onClick={handleCloseDialog}>
             Cancel
           </Button>
