@@ -1,3 +1,19 @@
+import { DefaultEdge } from "@/CustomEdges";
+import NoteNode from "@/CustomNodes/NoteNode";
+import FlowToolbar from "@/components/core/flowToolbarComponent";
+import {
+  COLOR_OPTIONS,
+  NOTE_NODE_MIN_HEIGHT,
+  NOTE_NODE_MIN_WIDTH,
+} from "@/constants/constants";
+import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
+import CustomLoader from "@/customization/components/custom-loader";
+import { track } from "@/customization/utils/analytics";
+import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
+import useUploadFlow from "@/hooks/flows/use-upload-flow";
+import { useAddComponent } from "@/hooks/use-add-component";
+import { nodeColorsName } from "@/utils/styleUtils";
+import { isSupportedNodeTypes } from "@/utils/utils";
 import {
   type Connection,
   type Edge,
@@ -19,22 +35,6 @@ import {
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
-import { DefaultEdge } from "@/CustomEdges";
-import NoteNode from "@/CustomNodes/NoteNode";
-import FlowToolbar from "@/components/core/flowToolbarComponent";
-import {
-  COLOR_OPTIONS,
-  NOTE_NODE_MIN_HEIGHT,
-  NOTE_NODE_MIN_WIDTH,
-} from "@/constants/constants";
-import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
-import CustomLoader from "@/customization/components/custom-loader";
-import { track } from "@/customization/utils/analytics";
-import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
-import useUploadFlow from "@/hooks/flows/use-upload-flow";
-import { useAddComponent } from "@/hooks/use-add-component";
-import { nodeColorsName } from "@/utils/styleUtils";
-import { isSupportedNodeTypes } from "@/utils/utils";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import {
   INVALID_SELECTION_ERROR_ALERT,
@@ -63,21 +63,21 @@ import {
   validateSelection,
 } from "../../../../utils/reactflowUtils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
-import FlowBuildingComponent from "../flowBuildingComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import UpdateAllComponents from "../UpdateAllComponents";
-import HelperLines from "./components/helper-lines";
-import {
-  getHelperLines,
-  getSnapPosition,
-  type HelperLinesState,
-} from "./helpers/helper-lines";
+import FlowBuildingComponent from "../flowBuildingComponent";
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
   MemoizedLogCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
+import HelperLines from "./components/helper-lines";
+import {
+  getHelperLines,
+  getSnapPosition,
+  type HelperLinesState,
+} from "./helpers/helper-lines";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
@@ -613,6 +613,8 @@ export default function Page({
         };
         setNodes((nds) => nds.concat(newNode));
         setIsAddingNote(false);
+        // Signal sidebar to revert add_note active state
+        window.dispatchEvent(new Event("lf:end-add-note"));
       }
     },
     [
@@ -656,6 +658,24 @@ export default function Page({
       document.removeEventListener("mousemove", handleGlobalMouseMove);
     };
   }, [isAddingNote, shadowBoxWidth, shadowBoxHeight]);
+
+  // Listen for a global event to start the add-note flow from outside components
+  useEffect(() => {
+    const handleStartAddNote = () => {
+      setIsAddingNote(true);
+      const shadowBox = document.getElementById("shadow-box");
+      if (shadowBox) {
+        shadowBox.style.display = "block";
+        shadowBox.style.left = `${position.current.x - shadowBoxWidth / 2}px`;
+        shadowBox.style.top = `${position.current.y - shadowBoxHeight / 2}px`;
+      }
+    };
+
+    window.addEventListener("lf:start-add-note", handleStartAddNote);
+    return () => {
+      window.removeEventListener("lf:start-add-note", handleStartAddNote);
+    };
+  }, [shadowBoxWidth, shadowBoxHeight]);
 
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 2;

@@ -1,11 +1,11 @@
 "use client";
 
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeft } from "lucide-react";
 import * as React from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useIsMobile } from "@/hooks/use-mobile";
 import isWrappedWithClass from "../../pages/FlowPage/components/PageComponent/utils/is-wrapped-with-class";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { cn } from "../../utils/utils";
@@ -23,7 +23,7 @@ const SIDEBAR_WIDTH = "19rem";
 const SIDEBAR_WIDTH_ICON = "4rem";
 const SEGMENTED_SIDEBAR_ICON_WIDTH = "40px";
 
-export type SidebarSection = "search" | "components" | "bundles" | "mcp";
+export type SidebarSection = "search" | "components" | "bundles" | "mcp" | "add_note";
 
 // Helper function to get cookie value
 function getCookie(name: string): string | null {
@@ -865,5 +865,6 @@ export {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
-  useSidebar,
+  useSidebar
 };
+

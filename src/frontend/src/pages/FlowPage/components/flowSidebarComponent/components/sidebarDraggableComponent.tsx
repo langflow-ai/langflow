@@ -1,4 +1,3 @@
-import { type DragEventHandler, forwardRef, useRef, useState } from "react";
 import IconComponent, {
   ForwardedIconComponent,
 } from "@/components/common/genericIconComponent";
@@ -23,6 +22,7 @@ import {
   getNodeId,
 } from "@/utils/reactflowUtils";
 import { cn, removeCountFromString } from "@/utils/utils";
+import { type DragEventHandler, forwardRef, useRef, useState } from "react";
 
 export const SidebarDraggableComponent = forwardRef(
   (
@@ -141,7 +141,7 @@ export const SidebarDraggableComponent = forwardRef(
                 "group/draggable flex cursor-grab items-center gap-2 rounded-md bg-muted p-1 px-2 hover:bg-secondary-hover/75",
                 error && "cursor-not-allowed select-none",
                 disabled
-                  ? "pointer-events-none bg-accent text-placeholder-foreground"
+                  ? "pointer-events-none bg-accent text-placeholder-foreground h-8"
                   : "bg-muted text-foreground",
               )}
               draggable={!error}

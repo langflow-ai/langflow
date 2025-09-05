@@ -1,5 +1,6 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Separator } from "@/components/ui/separator";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -8,6 +9,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/utils/utils";
+import { useEffect, useState } from "react";
 import { useSearchContext } from "../index";
 
 export type { SidebarSection };
@@ -44,51 +46,78 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Bundles",
     tooltip: "Bundles",
   },
+  {
+    id: "add_note",
+    icon: "sticky-note",
+    label: "Sticky Notes",
+    tooltip: "Add Sticky Notes",
+  },
 ];
 
-export default function SidebarSegmentedNav() {
+const SidebarSegmentedNav = () => {
   const { activeSection, setActiveSection, toggleSidebar, open } = useSidebar();
   const { focusSearch, setSearch } = useSearchContext();
+  const [isAddNoteActive, setIsAddNoteActive] = useState(false);
+  const handleAddNote = () => {
+    window.dispatchEvent(new Event("lf:start-add-note"));
+    setIsAddNoteActive(true);
+  };
+
+  useEffect(() => {
+    const onEnd = () => setIsAddNoteActive(false);
+    window.addEventListener("lf:end-add-note", onEnd);
+    return () => window.removeEventListener("lf:end-add-note", onEnd);
+  }, []);
+
   return (
     <div className="flex h-full flex-col border-r border-border bg-background">
-      <SidebarMenu className="gap-2 p-1">
+      <SidebarMenu className="gap-2">
         {NAV_ITEMS.map((item) => (
-          <SidebarMenuItem key={item.id}>
-            <ShadTooltip content={item.tooltip} side="right">
-              <SidebarMenuButton
-                size="md"
-                onClick={() => {
-                  setSearch?.("");
-                  if (activeSection === item.id && open) {
-                    toggleSidebar();
-                  } else {
-                    setActiveSection(item.id);
-                    if (!open) {
+          <>
+            {item.id === "add_note" && <Separator className="w-full" />}
+            <SidebarMenuItem key={item.id} className="px-1">
+              <ShadTooltip content={item.tooltip} side="right">
+                <SidebarMenuButton
+                  size="md"
+                  onClick={(e) => {
+                    if (item.id === "add_note") {
+                      e.stopPropagation();
+                      handleAddNote();
+                      return;
+                    }
+
+                    setSearch?.("");
+                    if (activeSection === item.id && open) {
                       toggleSidebar();
+                    } else {
+                      setActiveSection(item.id);
+                      if (!open) {
+                        toggleSidebar();
+                      }
+                      if (item.id === "search") {
+                        setTimeout(() => focusSearch(), 100);
+                      }
                     }
-                    // Focus search input when search section is selected
-                    if (item.id === "search") {
-                      // Add a small delay to ensure the sidebar is open and input is rendered
-                      setTimeout(() => focusSearch(), 100);
-                    }
-                  }
-                }}
-                isActive={activeSection === item.id}
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-md p-0 transition-all duration-200",
-                  activeSection === item.id
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                )}
-                data-testid={`sidebar-nav-${item.id}`}
-              >
-                <ForwardedIconComponent name={item.icon} className="h-5 w-5" />
-                <span className="sr-only">{item.label}</span>
-              </SidebarMenuButton>
-            </ShadTooltip>
-          </SidebarMenuItem>
+                  }}
+                  isActive={item.id === "add_note" ? isAddNoteActive : activeSection === item.id}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-md p-0 transition-all duration-200",
+                    (item.id === "add_note" ? isAddNoteActive : activeSection === item.id)
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  )}
+                  data-testid={`sidebar-nav-${item.id}`}
+                >
+                  <ForwardedIconComponent name={item.icon} className="h-5 w-5" />
+                  <span className="sr-only">{item.label}</span>
+                </SidebarMenuButton>
+              </ShadTooltip>
+            </SidebarMenuItem>
+          </>
         ))}
       </SidebarMenu>
     </div>
   );
-}
+};
+
+export default SidebarSegmentedNav;
