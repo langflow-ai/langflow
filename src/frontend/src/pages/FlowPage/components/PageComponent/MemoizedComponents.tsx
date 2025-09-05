@@ -17,7 +17,6 @@ export const MemoizedBackground = memo(() => (
 
 interface MemoizedCanvasControlsProps {
   setIsAddingNote: (value: boolean) => void;
-  position: { x: number; y: number };
   shadowBoxWidth: number;
   shadowBoxHeight: number;
 }
@@ -27,7 +26,6 @@ export const MemoizedLogCanvasControls = memo(() => <LogCanvasControls />);
 export const MemoizedCanvasControls = memo(
   ({
     setIsAddingNote,
-    position,
     shadowBoxWidth,
     shadowBoxHeight,
   }: MemoizedCanvasControlsProps) => (
@@ -43,9 +41,9 @@ export const MemoizedCanvasControls = memo(
           setIsAddingNote(true);
           const shadowBox = document.getElementById("shadow-box");
           if (shadowBox) {
+            shadowBox.style.left = `${e.clientX - shadowBoxWidth / 2}px`;
+            shadowBox.style.top = `${e.clientY - shadowBoxHeight / 2}px`;
             shadowBox.style.display = "block";
-            shadowBox.style.left = `${position.x - shadowBoxWidth / 2}px`;
-            shadowBox.style.top = `${position.y - shadowBoxHeight / 2}px`;
           }
         }}
       >
