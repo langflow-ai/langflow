@@ -149,6 +149,11 @@ export const SidebarDraggableComponent = forwardRef(
                 borderLeftColor: color,
               }}
               onDragStart={onDragStart}
+              onDoubleClick={() => {
+                if (!disabled) {
+                  addComponent(apiClass, itemName);
+                }
+              }}
               onDragEnd={() => {
                 if (
                   document.getElementsByClassName("cursor-grabbing").length > 0
