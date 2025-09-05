@@ -50,7 +50,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   currentFlowId,
   playgroundPage,
 }) => {
-  const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto custom-scroll`;
+  const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto`;
 
   // Check if voice mode is available
   const { data: config } = useGetConfig();
@@ -59,7 +59,19 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
     <div className="flex w-full flex-col-reverse">
       <div
         data-testid="input-wrapper"
-        className="flex w-full flex-col rounded-md border border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary"
+        className="flex w-full flex-col rounded-md border cursor-text border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary"
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+        }}
+        onClick={(e) => {
+          if (inputRef.current && inputRef.current !== document.activeElement) {
+            inputRef.current?.focus();
+          } else {
+            e.stopPropagation();
+            e.preventDefault();
+          }
+        }}
       >
         <TextAreaWrapper
           isBuilding={isBuilding}
@@ -73,6 +85,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
           files={files}
           isDragging={isDragging}
         />
+
         <div className={classNameFilePreview}>
           {files.map((file) => (
             <FilePreview
