@@ -142,10 +142,6 @@ export const MenuBar = memo((): JSX.Element => {
               >
                 {currentFlowName || "Untitled Flow"}
               </span>
-              {isFlowLocked && (
-                <IconComponent name="Lock" className="h-5 w-3.5" />
-              )}
-
               <IconComponent
                 name="pencil"
                 className={cn(

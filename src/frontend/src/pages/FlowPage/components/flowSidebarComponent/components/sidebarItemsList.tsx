@@ -16,7 +16,7 @@ const SidebarItemsList = ({
   sensitiveSort,
 }) => {
   return (
-    <div className="flex flex-col gap-1 py-2">
+    <div className="flex flex-col gap-1 py-1">
       {Object.keys(dataFilter[item.name])
         .sort((a, b) => {
           const itemA = dataFilter[item.name][a];
