@@ -4,6 +4,7 @@ slug: /bundles-huggingface
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
@@ -24,8 +25,6 @@ Use the **Language Model** output when you want to use a Hugging Face model as t
 For more information, see [Language model components](/components-models).
 
 ### Hugging Face text generation parameters
-
-import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 <PartialParams />
 
@@ -52,9 +51,9 @@ For more information about using embedding model components in flows, see [Embed
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| API Key | API Key | Input parameter. Your [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) for accessing the Hugging Face Inference API, if required. Local inference models don't require an API key. |
-| API URL | API URL | Input parameter. The URL of the Hugging Face Inference API. |
-| Model Name | Model Name | Input parameter. The name of the model to use for embeddings. |
+| api_key | API Key | Input parameter. Your [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) for accessing the Hugging Face Inference API, if required. Local inference models don't require an API key. |
+| api_url | API URL | Input parameter. The URL of the Hugging Face Inference API. |
+| model_name | Model Name | Input parameter. The name of the model to use for embeddings. |
 
 ### Use a local Hugging Face embeddings model {#local-hugging-face-model}
 
