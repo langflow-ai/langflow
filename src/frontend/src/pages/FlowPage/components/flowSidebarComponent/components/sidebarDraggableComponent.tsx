@@ -1,4 +1,3 @@
-import { type DragEventHandler, forwardRef, useRef, useState } from "react";
 import IconComponent, {
   ForwardedIconComponent,
 } from "@/components/common/genericIconComponent";
@@ -23,6 +22,7 @@ import {
   getNodeId,
 } from "@/utils/reactflowUtils";
 import { cn, removeCountFromString } from "@/utils/utils";
+import { type DragEventHandler, forwardRef, useRef, useState } from "react";
 
 export const SidebarDraggableComponent = forwardRef(
   (
@@ -149,6 +149,11 @@ export const SidebarDraggableComponent = forwardRef(
                 borderLeftColor: color,
               }}
               onDragStart={onDragStart}
+                            onDoubleClick={() => {
+                if (!disabled) {
+                  addComponent(apiClass, itemName);
+                }
+              }}
               onDragEnd={() => {
                 if (
                   document.getElementsByClassName("cursor-grabbing").length > 0
