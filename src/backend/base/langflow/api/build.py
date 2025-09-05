@@ -303,15 +303,15 @@ async def generate_flow_events(
                 params = vertex_build_result.params
                 valid = vertex_build_result.valid
                 artifacts = vertex_build_result.artifacts
-                
+
                 # Capture inactivated vertices before reset for response
                 inactivated_vertices = list(graph.inactivated_vertices)
-                
+
                 # Reset inactivated vertices AFTER vertex build but BEFORE getting next runnable vertices
                 # This allows conditional routing to work while preserving cycle functionality
                 graph.reset_inactivated_vertices()
                 graph.reset_activated_vertices()
-                
+
                 next_runnable_vertices = await graph.get_next_runnable_vertices(lock, vertex=vertex, cache=False)
                 top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
 
