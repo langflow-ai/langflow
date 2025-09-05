@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Separator } from "@/components/ui/separator";
@@ -9,7 +10,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/utils/utils";
-import { useEffect, useState } from "react";
 import { useSearchContext } from "../index";
 
 export type { SidebarSection };
@@ -99,16 +99,27 @@ const SidebarSegmentedNav = () => {
                       }
                     }
                   }}
-                  isActive={item.id === "add_note" ? isAddNoteActive : activeSection === item.id}
+                  isActive={
+                    item.id === "add_note"
+                      ? isAddNoteActive
+                      : activeSection === item.id
+                  }
                   className={cn(
                     "flex h-8 w-8 items-center justify-center rounded-md p-0 transition-all duration-200",
-                    (item.id === "add_note" ? isAddNoteActive : activeSection === item.id)
+                    (
+                      item.id === "add_note"
+                        ? isAddNoteActive
+                        : activeSection === item.id
+                    )
                       ? "bg-accent text-accent-foreground"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                   )}
                   data-testid={`sidebar-nav-${item.id}`}
                 >
-                  <ForwardedIconComponent name={item.icon} className="h-5 w-5" />
+                  <ForwardedIconComponent
+                    name={item.icon}
+                    className="h-5 w-5"
+                  />
                   <span className="sr-only">{item.label}</span>
                 </SidebarMenuButton>
               </ShadTooltip>
