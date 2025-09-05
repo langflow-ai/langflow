@@ -41,7 +41,7 @@ export const MemoizedSidebarGroup = memo(
     }, [BUNDLES, search, sortedCategories, dataFilter]);
 
     return (
-      <SidebarGroup className="p-3 pt-0">
+      <SidebarGroup className="p-3">
         <SidebarGroupLabel className="cursor-default w-full flex items-center justify-between">
           <span>Bundles</span>
           {showSearchConfigTrigger && ENABLE_NEW_SIDEBAR && (
