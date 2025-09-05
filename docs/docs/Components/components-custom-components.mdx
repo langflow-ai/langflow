@@ -39,13 +39,13 @@ class MyCsvReader(Component):
     documentation = "http://docs.example.com/csv_reader"
 ```
 
-* `display_name`: A user-friendly label shown in the **Components** menu and on the component itself when you add it to a flow.
+* `display_name`: A user-friendly label shown in the visual editor.
 * `description`: A brief summary shown in tooltips and printed below the component name when added to a flow.
 * `icon`: A decorative icon from Langflow's icon library, printed next to the name.
 
     Langflow uses [Lucide](https://lucide.dev/icons) for icons. To assign an icon to your component, set the icon attribute to the name of a Lucide icon as a string, such as `icon = "file-text"`. Langflow renders icons from the Lucide library automatically.
 
-* `name`: A unique internal identifier.
+* `name`: A unique internal identifier, typically the same name as the folder containing your component code.
 * `documentation`: An optional link to external documentation, such as API or product documentation.
 
 ### Structure of a custom component

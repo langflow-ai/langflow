@@ -110,7 +110,7 @@ This component is different from the [**SQL Database** core component](/componen
 
 ## Text Splitters
 
-The LangChain bundle includes the following text splitter components:
+The **LangChain** bundle includes the following text splitter components:
 
 - **Character Text Splitter**
 - **Language Recursive Text Splitter**
@@ -158,7 +158,7 @@ For more information, see the [LangChain XML Agent documentation](https://python
 
 ## Other LangChain components
 
-Other components in the LangChain bundle include the following:
+Other components in the **LangChain** bundle include the following:
 
 - **Fake Embeddings**
 - **HTML Link Extractor**
@@ -176,48 +176,8 @@ You can still use these components in your flows, but they are no longer maintai
 * **Natural Language to SQL**
 * **Retrieval QA**
 * **Self Query Retriever**
+* **JSON Agent**
+* **Vector Store Info/Agent**
+* **VectorStoreRouterAgent**
 
-<details>
-<summary>JSON Agent</summary>
-
-This component creates a JSON agent from a JSON or YAML file and an LLM.
-
-It accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | Input parameter. The language model to use for the agent. |
-| path | File | Input parameter. The path to the JSON or YAML file. |
-| agent | AgentExecutor | Output parameter. The JSON agent instance. |
-
-</details>
-
-<details>
-<summary>Vector Store Info/Agent</summary>
-
-This component creates a Vector Store Agent using LangChain.
-
-It accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | Input parameter. The language model to use for the agent. |
-| vectorstore | VectorStoreInfo | Input parameter. The vector store information for the agent to use. |
-| agent | AgentExecutor | Output parameter. The Vector Store Agent instance. |
-
-</details>
-
-<details>
-<summary>VectorStoreRouterAgent</summary>
-
-This component creates a Vector Store Router Agent using LangChain.
-
-It accepts the following parameters:
-
-| Name | Type | Description |
-|------|------|-------------|
-| llm | LanguageModel | Input parameter. The language model to use for the agent. |
-| vectorstores | List[VectorStoreInfo] | Input parameter. The list of vector store information for the agent to route between. |
-| agent | AgentExecutor | Output parameter. The Vector Store Router Agent instance. |
-
-</details>
+To replace these components, consider other components in the **LangChain** bundle or general Langflow components, such as the [**Agent** component](/components-agents) or the [**SQL Database** component](/components-data#sql-database).

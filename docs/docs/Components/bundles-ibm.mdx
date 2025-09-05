@@ -4,6 +4,7 @@ slug: /bundles-ibm
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 [Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
@@ -20,8 +21,7 @@ You can use this component anywhere you need a language model in a flow.
 
 ### IBM watsonx.ai parameters {#ibm-watsonxai-parameters}
 
-Many **IBM watsonx.ai** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -44,7 +44,7 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 
 The **IBM watsonx.ai** component can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
 
-Use the **Language Model** output when you want to use an IBM watsonx.ai model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+Use the **Language Model** output when you want to use an IBM watsonx.ai model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
 For more information, see [**Language Model** components](/components-models).
 
 The `LanguageModel` output from the **IBM watsonx.ai** component is an instance of [ChatWatsonx](https://python.langchain.com/docs/integrations/chat/ibm_watsonx/) configured according to the [component's parameters](#ibm-watsonxai-parameters).
@@ -61,8 +61,7 @@ For more information about using embedding model components in flows, see [**Emb
 
 ### IBM watsonx.ai Embeddings parameters
 
-Some **IBM watsonx.ai Embeddings** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|

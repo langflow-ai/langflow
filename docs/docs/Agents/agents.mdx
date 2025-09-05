@@ -4,29 +4,14 @@ slug: /agents
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialAgentsWork from '@site/docs/_partial-agents-work.mdx';
 
 Langflow's [**Agent** component](/components-agents) is critical for building agent flows.
 This component provides everything you need to create an agent, including multiple Large Language Model (LLM) providers, tool calling, and custom instructions.
 It simplifies agent configuration so you can focus on application development.
 
-<details>
-<summary>How do agents work?</summary>
-
-Agents extend LLMs by integrating _tools_, which are functions that provide additional context and enable autonomous task execution.
-These integrations make agents more specialized and powerful than standalone LLMs.
-
-Whereas an LLM might generate acceptable, inert responses to general queries and tasks, an agent can leverage the integrated context and tools to provide more relevant responses and even take action.
-For example, you might create an agent that can access your company's knowledge base, repositories, and other resources to help your team with tasks that require knowledge of your specific products, customers, and code.
-
-Agents use LLMs as a reasoning engine to process input, determine which actions to take to address the query, and then generate a response.
-The response could be a typical text-based LLM response, or it could involve an action, like editing a file, running a script, or calling an external API.
-
-In an agentic context, tools are functions that the agent can run to perform tasks or access external resources.
-A function is wrapped as a `Tool` object with a common interface that the agent understands.
-Agents become aware of tools through tool registration, which is when the agent is provided a list of available tools typically at agent initialization.
-The `Tool` object's description tells the agent what the tool can do so that it can decide whether the tool is appropriate for a given request.
-
-</details>
+<PartialAgentsWork />
 
 ## Use the Agent component in a flow
 
@@ -94,10 +79,7 @@ For a multi-agent example, see [Use an agent as a tool](/agents-tools#use-an-age
 
 You can configure the **Agent** component to use your preferred provider and model, custom instructions, and tools.
 
-:::tip
-Many optional **Agent** component input parameters are hidden by default in the visual editor.
-You can access all component parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
-:::
+<PartialParams />
 
 ### Provider and model
 
@@ -148,22 +130,21 @@ It is recommended to use custom session IDs if you need to segregate chat memory
 
 By default, the **Agent** component uses your Langflow installation's storage, and it retrieves a limited number of chat messages, which you can configure with the **Number of Chat History Messages** parameter.
 
-Although the **Message History** component isn't required for default chat memory, it provides more options for sorting, filtering, and limiting memories, and the **Message History** component is required to use external chat memory like Mem0.
+The **Message History** component isn't required for default chat memory, but it is required if you want to use external chat memory like Mem0.
+Additionally, the **Message History** component provides more options for sorting, filtering, and limiting memories. Although, most of these options are built-in to the **Agent** component with default values.
 
 For more information, see [Store chat memory](/memory#store-chat-memory) and [**Message History** component](/components-helpers#message-history).
 
 ### Additional parameters
 
-With the **Agent** component, the available parameters can change depending on the selected provider and model.
-For example, some models support additional modes, arguments, or features like chat memory and temperature.
-
-Some additional input parameters include the following:
+With the **Agent** component, the available parameters can change depending on the selected provider and model, including support for additional modes, arguments, or features like chat memory and temperature.
+For example:
 
 * **Current Date** (`add_current_date_tool`): When enabled (true), this setting adds a tool to the agent that can retrieve the current date.
 * **Handle Parse Errors** (`handle_parsing_errors`): When enabled (true), this setting allows the agent to fix errors, like typos, when analyzing user input.
 * **Verbose** (`verbose`): When enabled (true), this setting records detailed logging output for debugging and analysis.
 
-To view and configure all parameters, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 ## Agent component output
 

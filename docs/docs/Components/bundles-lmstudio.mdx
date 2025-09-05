@@ -4,6 +4,7 @@ slug: /bundles-lmstudio
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 [Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
@@ -16,14 +17,13 @@ The **LM Studio** component generates text using LM Studio's local language mode
 
 It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
 
-Use the **Language Model** output when you want to use an LM Studio model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+Use the **Language Model** output when you want to use an LM Studio model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
 
 For more information, see [**Language Model** components](/components-models).
 
 ### LM Studio text generation parameters
 
-Many **LM Studio** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -45,8 +45,7 @@ For more information about using embedding model components in flows, see [**Emb
 
 ### LM Studio Embeddings parameters
 
-Many **LM Studio Embeddings** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
