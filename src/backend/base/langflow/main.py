@@ -6,7 +6,7 @@ import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from urllib.parse import urlencode
 
 import anyio
@@ -35,11 +35,14 @@ from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure, logger
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.deps import get_queue_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import get_queue_service, get_service, get_settings_service, get_telemetry_service
+from langflow.services.schema import ServiceType
 from langflow.services.utils import initialize_services, teardown_services
 
 if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
+
+    from langflow.services.mcp_composer.service import MCPComposerService
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -189,6 +192,14 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug(f"started telemetry service in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Starting MCP Composer service")
+            mcp_composer_service = cast("MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE))
+            await mcp_composer_service.start()
+            await logger.adebug(
+                f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s"
+            )
+
+            current_time = asyncio.get_event_loop().time()
             await logger.adebug("Loading flows")
             await load_flows_from_directory()
             sync_flows_from_fs_task = asyncio.create_task(sync_flows_from_fs())
@@ -197,13 +208,33 @@ def get_lifespan(*, fix_migration=False, version=None):
                 queue_service.start()
             await logger.adebug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Loading mcp servers for projects")
-            await init_mcp_servers()
-            await logger.adebug(f"mcp servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
+
+            async def delayed_init_mcp_servers():
+                await asyncio.sleep(3.0)
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Loading mcp servers for projects")
+                try:
+                    await init_mcp_servers()
+                    await logger.adebug(f"mcp servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"First MCP server initialization attempt failed: {e}")
+                    await asyncio.sleep(3.0)
+                    current_time = asyncio.get_event_loop().time()
+                    await logger.adebug("Retrying mcp servers initialization")
+                    try:
+                        await init_mcp_servers()
+                        await logger.adebug(
+                            f"mcp servers loaded on retry in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                        )
+                    except Exception as e2:  # noqa: BLE001
+                        await logger.aexception(f"Failed to initialize MCP servers after retry: {e2}")
+
+            # Start the delayed initialization as a background task
+            # Allows the server to start first to avoid race conditions with MCP Server startup
+            _mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())  # noqa: RUF006
+
             yield
 
         except asyncio.CancelledError:
