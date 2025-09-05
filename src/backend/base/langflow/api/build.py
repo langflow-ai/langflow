@@ -348,7 +348,10 @@ async def generate_flow_events(
             inactivated_vertices = list(graph.inactivated_vertices.union(graph.conditionally_excluded_vertices))
             graph.reset_inactivated_vertices()
             graph.reset_activated_vertices()
-            # Note: We do NOT reset conditionally_excluded_vertices - they persist for the entire execution
+
+            # Note: Do not reset conditionally_excluded_vertices each iteration
+            # This is handled by the ConditionalRouter component
+            
             # graph.stop_vertex tells us if the user asked
             # to stop the build of the graph at a certain vertex
             # if it is in next_vertices_ids, we need to remove other

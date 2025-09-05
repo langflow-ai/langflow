@@ -2173,7 +2173,7 @@ class Graph:
             if predecessor_id in visited:
                 return
             visited.add(predecessor_id)
-            # Use the Graph's is_vertex_runnable which includes conditional exclusion check
+
             if self.is_vertex_runnable(predecessor_id):
                 runnable_vertices.append(predecessor_id)
             else:
