@@ -351,7 +351,7 @@ async def generate_flow_events(
 
             # Note: Do not reset conditionally_excluded_vertices each iteration
             # This is handled by the ConditionalRouter component
-            
+
             # graph.stop_vertex tells us if the user asked
             # to stop the build of the graph at a certain vertex
             # if it is in next_vertices_ids, we need to remove other

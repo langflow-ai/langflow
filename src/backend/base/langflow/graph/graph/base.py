@@ -948,15 +948,15 @@ class Graph:
 
     def exclude_branch_conditionally(self, vertex_id: str, output_name: str | None = None) -> None:
         """Marks a branch as conditionally excluded (for conditional routing).
-        
+
         This system is separate from the ACTIVE/INACTIVE state used for cycle management:
         - ACTIVE/INACTIVE: Reset after each cycle iteration to allow cycles to continue
         - Conditional exclusion: Persists until explicitly cleared by the same source vertex
-        
+
         Used by ConditionalRouter to ensure only one branch executes per condition evaluation.
-        If this vertex has previously excluded branches, they are cleared first to allow 
+        If this vertex has previously excluded branches, they are cleared first to allow
         re-evaluation on subsequent iterations (e.g., in cycles where condition may change).
-        
+
         Args:
             vertex_id: The source vertex making the exclusion decision
             output_name: The output name to follow when excluding downstream vertices
@@ -966,16 +966,16 @@ class Graph:
             previous_exclusions = self.conditional_exclusion_sources[vertex_id]
             self.conditionally_excluded_vertices -= previous_exclusions
             del self.conditional_exclusion_sources[vertex_id]
-        
+
         # Now exclude the new branch
         visited = set()
         excluded = set()
         self._exclude_branch_conditionally(vertex_id, visited, excluded, output_name, skip_first=True)
-        
+
         # Track which vertices this source excluded
         if excluded:
             self.conditional_exclusion_sources[vertex_id] = excluded
-        
+
     def _exclude_branch_conditionally(
         self, vertex_id: str, visited: set, excluded: set, output_name: str | None = None, skip_first: bool = False
     ) -> None:
@@ -983,12 +983,12 @@ class Graph:
         if vertex_id in visited:
             return
         visited.add(vertex_id)
-        
+
         # Don't exclude the first vertex (the router itself)
         if not skip_first:
             self.conditionally_excluded_vertices.add(vertex_id)
             excluded.add(vertex_id)
-            
+
         for child_id in self.parent_child_map[vertex_id]:
             # If we're at the router (skip_first=True) and have an output_name,
             # only follow edges from that specific output
