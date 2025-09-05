@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.9488e50d.css">
-<script src="/assets/js/runtime~main.ae1f3a5b.js" defer="defer"></script>
-<script src="/assets/js/main.14a877c9.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.e0adb39a.js" defer="defer"></script>
+<script src="/assets/js/main.e2332c07.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -201,18 +201,18 @@ See <a href="https://www.assemblyai.com/docs/getting-started/supported-languages
 <li>
 <p>Select an audio or video file for the <strong>Start Transcript</strong> component.</p>
 <p>Optional: After adding a file to the <strong>Start Transcript</strong> component, run and <a href="/concepts-components#freeze-a-component">freeze the component</a> so you only submit the file once, no matter how many times you run the flow.
-To do this, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="True"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Run component</strong> to preload the file, and then click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg> <strong>Show More</strong> and select <strong>Freeze</strong> to lock the result.
+To do this, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Run component</strong> to preload the file, and then click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg> <strong>Show More</strong> and select <strong>Freeze</strong> to lock the result.
 Subsequent flow runs use the frozen component&#x27;s cached output.</p>
 </li>
 <li>
-<p>Test the transcription by clicking <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="True"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Run component</strong> on the <strong>Parser</strong> component. Make sure that the specified template is <code>{text}</code>.</p>
+<p>Test the transcription by clicking <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Run component</strong> on the <strong>Parser</strong> component. Make sure that the specified template is <code>{text}</code>.</p>
 <p>Running one component runs all upstream components as well as the selected component and then stops the flow run.
 In this case, the <strong>Start Transcript</strong> and <strong>Poll Transcript</strong> components are upstream from the <strong>Parser</strong> component.
 If you froze the <strong>Start Transcript</strong> component, the flow sends the cached output from <strong>Start Transcript</strong>, runs the <strong>Poll Transcript</strong> component, to get the transcription result.
 Check the flow logs or inspect the output of the <strong>Parser</strong> component to see the transcribed text result.</p>
 </li>
 <li>
-<p>To generate subtitles and run the full flow, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="True"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Run component</strong> on the <strong>List Transcript</strong> component.</p>
+<p>To generate subtitles and run the full flow, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Run component</strong> on the <strong>List Transcript</strong> component.</p>
 </li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="customization">Customization<a href="#customization" class="hash-link" aria-label="Direct link to Customization" title="Direct link to Customization">​</a></h2>

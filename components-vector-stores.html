@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.9488e50d.css">
-<script src="/assets/js/runtime~main.ae1f3a5b.js" defer="defer"></script>
-<script src="/assets/js/main.14a877c9.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.e0adb39a.js" defer="defer"></script>
+<script src="/assets/js/main.e2332c07.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -101,7 +101,7 @@ For example, use additional components to prepare the chat input before running 
 </li>
 <li>
 <p>Run the <strong>Load Data</strong> subflow to populate your vector store.
-In the <strong>File</strong> component, select one or more files, and then click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="True"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Run component</strong> on the <strong>Vector Store</strong> component in the <strong>Load Data</strong> subflow.</p>
+In the <strong>File</strong> component, select one or more files, and then click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Run component</strong> on the <strong>Vector Store</strong> component in the <strong>Load Data</strong> subflow.</p>
 <p>The <strong>Load Data</strong> subflow loads files from your local machine, chunks them, generates embeddings for the chunks, and then stores the chunks and their embeddings in the vector database.</p>
 <p><img decoding="async" loading="lazy" alt="Embedding data into a vector store" src="/assets/images/vector-store-document-ingestion-6157311fb4d16e7f944d55254f0cc0e2.png" width="4000" height="2512" class="img_ev3q"></p>
 <p>The <strong>Load Data</strong> subflow is separate from the <strong>Retriever</strong> subflow because you probably won&#x27;t run it every time you use the chat.
@@ -117,7 +117,7 @@ The LLM uses the vector search results along with its internal training data and
 <p>To avoid passing the entire block of raw search results to the LLM, the <strong>Parser</strong> component extracts <code>text</code> strings from the search results <code>Data</code> object, and then passes them to the <strong>Prompt Template</strong> component in <code>Message</code> format.
 From there, the strings and other template content are compiled into natural language instructions for the LLM.</p>
 <p>You can use other components for this transformation, such as the <strong>Data Operations</strong> component, depending on how you want to use the search results.</p>
-<p>To view the raw search results, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-text-search" aria-hidden="True"><path d="M21 6H3"></path><path d="M10 12H3"></path><path d="M10 18H3"></path><circle cx="17" cy="15" r="3"></circle><path d="m21 19-1.9-1.9"></path></svg> <strong>Inspect output</strong> on the <strong>Vector Store</strong> component after running the <strong>Retriever</strong> subflow.</p>
+<p>To view the raw search results, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-text-search" aria-hidden="true"><path d="M21 6H3"></path><path d="M10 12H3"></path><path d="M10 18H3"></path><circle cx="17" cy="15" r="3"></circle><path d="m21 19-1.9-1.9"></path></svg> <strong>Inspect output</strong> on the <strong>Vector Store</strong> component after running the <strong>Retriever</strong> subflow.</p>
 </li>
 </ol>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="hidden-parameters">Hidden parameters<a href="#hidden-parameters" class="hash-link" aria-label="Direct link to Hidden parameters" title="Direct link to Hidden parameters">​</a></h3>

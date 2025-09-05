@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.9488e50d.css">
-<script src="/assets/js/runtime~main.ae1f3a5b.js" defer="defer"></script>
-<script src="/assets/js/main.14a877c9.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.e0adb39a.js" defer="defer"></script>
+<script src="/assets/js/main.e2332c07.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -50,13 +50,13 @@
       </li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item"><span class="breadcrumbs__link">Model Context Protocol (MCP)</span></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">Use Langflow as an MCP server</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Use Langflow as an MCP server</h1></header><style>[data-ch-theme="github-dark"] {  --ch-t-colorScheme: dark;--ch-t-foreground: #c9d1d9;--ch-t-background: #0d1117;--ch-t-lighter-inlineBackground: #0d1117e6;--ch-t-editor-background: #0d1117;--ch-t-editor-foreground: #c9d1d9;--ch-t-editor-lineHighlightBackground: #6e76811a;--ch-t-editor-rangeHighlightBackground: #ffffff0b;--ch-t-editor-infoForeground: #3794FF;--ch-t-editor-selectionBackground: #264F78;--ch-t-focusBorder: #1f6feb;--ch-t-tab-activeBackground: #0d1117;--ch-t-tab-activeForeground: #c9d1d9;--ch-t-tab-inactiveBackground: #010409;--ch-t-tab-inactiveForeground: #8b949e;--ch-t-tab-border: #30363d;--ch-t-tab-activeBorder: #0d1117;--ch-t-editorGroup-border: #30363d;--ch-t-editorGroupHeader-tabsBackground: #010409;--ch-t-editorLineNumber-foreground: #6e7681;--ch-t-input-background: #0d1117;--ch-t-input-foreground: #c9d1d9;--ch-t-input-border: #30363d;--ch-t-icon-foreground: #8b949e;--ch-t-sideBar-background: #010409;--ch-t-sideBar-foreground: #c9d1d9;--ch-t-sideBar-border: #30363d;--ch-t-list-activeSelectionBackground: #6e768166;--ch-t-list-activeSelectionForeground: #c9d1d9;--ch-t-list-hoverBackground: #6e76811a;--ch-t-list-hoverForeground: #c9d1d9; }</style>
 <!-- -->
 <p>Langflow integrates with the <a href="https://modelcontextprotocol.io/introduction" target="_blank" rel="noopener noreferrer">Model Context Protocol (MCP)</a> as both an MCP server and an MCP client.</p>
-<p>This page describes how to use Langflow as an MCP server.</p>
-<p>For information about using Langflow as an MCP client, see <a href="/mcp-client">Use Langflow as an MCP client</a>.</p>
-<p>As an MCP server, Langflow exposes your flows as <a href="https://modelcontextprotocol.io/docs/concepts/tools" target="_blank" rel="noopener noreferrer">tools</a> that <a href="https://modelcontextprotocol.io/clients" target="_blank" rel="noopener noreferrer">MCP clients</a> can use to take actions.</p>
+<p>This page describes how to use Langflow as an MCP server that exposes your flows as <a href="https://modelcontextprotocol.io/docs/concepts/tools" target="_blank" rel="noopener noreferrer">tools</a> that <a href="https://modelcontextprotocol.io/clients" target="_blank" rel="noopener noreferrer">MCP clients</a> can use when generating responses.</p>
+<p>For information about using Langflow as an MCP client and managing MCP server connections within flows, see <a href="/mcp-client">Use Langflow as an MCP client</a>.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prerequisites">Prerequisites<a href="#prerequisites" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h2>
 <ul>
 <li>
-<p>A <a href="/concepts-flows#projects">Langflow project</a> with at least one flow.</p>
+<p>A <a href="/concepts-flows#projects">Langflow project</a> with at least one flow that has a <a href="/components-io#chat-output"><strong>Chat Output</strong> component</a>.</p>
+<p>The <strong>Chat Output</strong> component is required to use a flow as an MCP tool.</p>
 </li>
 <li>
 <p>Any LTS version of <a href="https://docs.npmjs.com/downloading-and-installing-node-js-and-npm" target="_blank" rel="noopener noreferrer">Node.js</a> installed on your computer if you want to use MCP Inspector to <a href="#test-and-debug-flows">test and debug flows</a>.</p>
@@ -65,93 +65,126 @@
 <p><a href="https://ngrok.com/docs/getting-started/#1-install-ngrok" target="_blank" rel="noopener noreferrer">ngrok installed</a> and an <a href="https://dashboard.ngrok.com/get-started/your-authtoken" target="_blank" rel="noopener noreferrer">ngrok authtoken</a> if you want to <a href="/deployment-public-server">deploy a public Langflow server</a>.</p>
 </li>
 </ul>
-<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="select-flows-to-serve">Select and configure flows to expose as MCP tools<a href="#select-flows-to-serve" class="hash-link" aria-label="Direct link to Select and configure flows to expose as MCP tools" title="Direct link to Select and configure flows to expose as MCP tools">​</a></h2>
+<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="select-flows-to-serve">Serve flows as MCP tools<a href="#select-flows-to-serve" class="hash-link" aria-label="Direct link to Serve flows as MCP tools" title="Direct link to Serve flows as MCP tools">​</a></h2>
 <div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>MCP flow requirements</div><div class="admonitionContent_BuS1"><p>A flow must contain a <a href="/components-io#chat-output"><strong>Chat Output</strong> component</a> to be used as a tool by MCP clients.</p></div></div>
-<p>Each <a href="/concepts-flows#projects">Langflow project</a> has an MCP server that exposes the project&#x27;s flows as tools that MCP clients can use to generate responses.</p>
-<p>By default, all flows in a project are exposed as tools on the project&#x27;s MCP server.</p>
-<p>The following steps explain how to limit the exposed flows and, optionally, rename flows for agentic use:</p>
+<p>Each <a href="/concepts-flows#projects">Langflow project</a> has an MCP server that exposes the project&#x27;s flows as tools for use by MCP clients.</p>
+<p>By default, all flows in a project are exposed as tools on the project&#x27;s MCP server.
+You can change the exposed flows and tool metadata by managing the MCP server settings:</p>
 <ol>
 <li>
-<p>From the Langflow dashboard, select the project that contains the flows you want to serve as tools, and then click the <strong>MCP Server</strong> tab.
-Alternatively, you can quickly access the <strong>MCP Server</strong> tab from within any flow by selecting <strong>Share &gt; MCP Server</strong>.</p>
-<p>The <strong>Auto install</strong> and <strong>JSON</strong> tabs display options for connecting MCP clients to the project&#x27;s MCP server.</p>
-<p>The <strong>Flows/Tools</strong> section lists the flows that are currently being served as tools.</p>
+<p>Click the <strong>MCP Server</strong> tab on the <a href="/concepts-flows#projects"><strong>Projects</strong> page</a>, or, when editing a flow, click <strong>Share</strong>, and then select <strong>MCP Server</strong>.</p>
 <p><img decoding="async" loading="lazy" alt="MCP server projects page" src="/assets/images/mcp-server-53850e4ac7599dec00dd7d01922ba79f.png" width="4000" height="2174" class="img_ev3q"></p>
+<p>The <strong>Flows/Tools</strong> section lists the flows that are currently being served as tools on this MCP server.</p>
+</li>
+<li>
+<p>To toggle exposed flows, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings2" aria-hidden="true"><path d="M20 7h-9"></path><path d="M14 17H5"></path><circle cx="17" cy="17" r="3"></circle><circle cx="7" cy="7" r="3"></circle></svg> <strong>Edit Tools</strong>, and then select the flows that you want exposed as tools.
+To prevent a flow from being used as a tool, clear the checkbox in the first column.</p>
+</li>
+<li>
+<p>Close the <strong>MCP Server Tools</strong> dialog to save your changes.</p>
+<p><img decoding="async" loading="lazy" alt="MCP Server Tools" src="/assets/images/mcp-server-tools-ddc0f1dc04109b9f3daf6a2f380073c4.png" width="4000" height="2030" class="img_ev3q"></p>
+</li>
+</ol>
+<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="edit-flow-tool-names-and-descriptions">Edit flow tool names and descriptions<a href="#edit-flow-tool-names-and-descriptions" class="hash-link" aria-label="Direct link to Edit flow tool names and descriptions" title="Direct link to Edit flow tool names and descriptions">​</a></h3>
+<p>Tool names and descriptions help MCP clients determine which actions your flows provide and when to use those actions.
+It is recommended to provide clear, descriptive names and descriptions for all tools that you serve to MCP clients.</p>
+<p>To edit the names and descriptions of flow tools on a Langflow MCP server, do the following:</p>
+<ol>
+<li>
+<p>Click the <strong>MCP Server</strong> tab on the <a href="/concepts-flows#projects"><strong>Projects</strong> page</a>, or, when editing a flow, click <strong>Share</strong>, and then select <strong>MCP Server</strong>.</p>
 </li>
 <li>
 <p>Click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings2" aria-hidden="true"><path d="M20 7h-9"></path><path d="M14 17H5"></path><circle cx="17" cy="17" r="3"></circle><circle cx="7" cy="7" r="3"></circle></svg> <strong>Edit Tools</strong>.</p>
 </li>
 <li>
-<p>In the <strong>MCP Server Tools</strong> window, select the flows that you want exposed as tools.</p>
-<p><img decoding="async" loading="lazy" alt="MCP Server Tools" src="/assets/images/mcp-server-tools-ddc0f1dc04109b9f3daf6a2f380073c4.png" width="4000" height="2030" class="img_ev3q"></p>
-</li>
-<li>
-<p>Recommended: Edit the <strong>Tool Name</strong> and <strong>Tool Description</strong> to help MCP clients determine which actions your flows provide and when to use those actions:</p>
+<p>Click the <strong>Description</strong> or <strong>Tool</strong> that you want to edit:</p>
 <ul>
 <li>
-<p><strong>Tool Name</strong>: Enter a name that makes it clear what the flow does when used as a tool by an agent.</p>
+<p><strong>Tool name</strong>: Enter a name that makes it clear what the flow does when used as a tool by an agent.</p>
 </li>
 <li>
-<p><strong>Tool Description</strong>: Enter a description that accurately describes the specific actions the flow performs.</p>
+<p><strong>Tool description</strong>: Enter a description that completely and accurately describes the specific actions the flow performs.</p>
 </li>
 </ul>
-<details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>Name and describe your flows for agentic use</summary><div><div class="collapsibleContent_i85q"><p>MCP clients use the <strong>Tool Name</strong> and <strong>Tool Description</strong> to determine which action to use.</p><p>MCP clients like <a href="https://www.cursor.com/" target="_blank" rel="noopener noreferrer">Cursor</a> treat your Langflow project as a single MCP server with all of your enabled flows listed as tools.</p><p>This can confuse agents if the flows have unclear names or descriptions.
-For example, a flow&#x27;s default name is the flow ID, such as <code>adbbf8c7-0a34-493b-90ea-5e8b42f78b66</code>.
-This provides no information to an agent about the type of flow or it&#x27;s purpose.</p><p>To provide more context about your flows, make sure to name and describe your flows clearly when configuring your Langflow project&#x27;s MCP server.</p><p>It&#x27;s helpful to think of the names and descriptions as function names and code comments, using clear statements describing the problems your flows solve.</p><p>For example, assume you create a flow based on the <strong>Document Q&amp;A</strong> template that uses an LLM to chat about resumes, and then you give the flow the following name and description:</p><ul>
-<li>
-<p><strong>Tool Name</strong>: <code>document_qa_for_resume</code></p>
 </li>
 <li>
-<p><strong>Tool Description</strong>: <code>A flow for analyzing Emily&#x27;s resume.</code></p>
+<p>Close the <strong>MCP Server Tools</strong> dialog to save your changes.</p>
+</li>
+</ol>
+<h4 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="importance-of-tool-names-and-descriptions">Importance of tool names and descriptions<a href="#importance-of-tool-names-and-descriptions" class="hash-link" aria-label="Direct link to Importance of tool names and descriptions" title="Direct link to Importance of tool names and descriptions">​</a></h4>
+<p>MCP clients use tool names and descriptions to determine which actions to use when generating responses.</p>
+<p>Because MCP clients treat your Langflow project as a single MCP server with all of your enabled flows listed as tools, unclear names and descriptions can cause the agent to select tools incorrectly or inconsistently.</p>
+<p>For example, a flow&#x27;s default tool name is the flow ID, such as <code>adbbf8c7-0a34-493b-90ea-5e8b42f78b66</code>.
+This provides no information to an agent about the type of flow or its purpose.</p>
+<p>To provide more context about your flows, make sure to name and describe your flows clearly when configuring your Langflow project&#x27;s MCP server.</p>
+<p>Think of these names and descriptions as function names and code comments.
+Use clear statements to describe the problems your flows solve.</p>
+<details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>Example: Tool name and description usage</summary><div><div class="collapsibleContent_i85q"><p>For example, assume you create a flow based on the <strong>Document Q&amp;A</strong> template that uses an LLM to chat about resumes, and then you give the flow the following name and description:</p><ul>
+<li>
+<p><strong>Tool name</strong>: <code>document_qa_for_resume</code></p>
+</li>
+<li>
+<p><strong>Tool description</strong>: <code>A flow for analyzing Emily&#x27;s resume.</code></p>
 </li>
 </ul><p>After connecting your Langflow MCP server to Cursor, you can ask Cursor about the resume, such as <code>What job experience does Emily have?</code>.
 Using the context provided by your tool name and description, the agent can decide to use the <code>document_qa_for_resume</code> MCP tool to create a response about Emily&#x27;s resume.
 If necessary, the agent asks permission to use the flow tool before generating the response.</p><p>If you ask about a different resume, such as <code>What job experience does Alex have?</code>, the agent can decide that <code>document_qa_for_resume</code> isn&#x27;t relevant to this request, because the tool description specifies that the flow is for Emily&#x27;s resume.
 In this case, the agent might use another available tool, or it can inform you that it doesn&#x27;t have access to information about Alex&#x27;s.
 For example:</p><div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>I notice you&#x27;re asking about Alex&#x27;s job experience.</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>Based on the available tools, I can see there is a Document QA for Resume flow that&#x27;s designed for analyzing resumes.</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>However, the description mentions it&#x27;s for &quot;Emily&#x27;s resume&quot; not Alex&#x27;s. I don&#x27;t have access to Alex&#x27;s resume or job experience information.</span></div></div><br></code></div></div></div></div></details>
-</li>
-<li>
-<p>Close the <strong>MCP Server Tools</strong> window to save your changes.</p>
-</li>
-</ol>
 <!-- -->
-<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="connect-clients-to-use-the-servers-actions">Connect clients to Langflow&#x27;s MCP server<a href="#connect-clients-to-use-the-servers-actions" class="hash-link" aria-label="Direct link to Connect clients to Langflow&#x27;s MCP server" title="Direct link to Connect clients to Langflow&#x27;s MCP server">​</a></h2>
-<p>The following procedure describes how to connect <a href="https://www.cursor.com/" target="_blank" rel="noopener noreferrer">Cursor</a> to your Langflow project&#x27;s MCP server to consume your flows as tools.
-However, you can connect any <a href="https://modelcontextprotocol.io/clients" target="_blank" rel="noopener noreferrer">MCP-compatible client</a> following similar steps.</p>
-<div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">Auto install</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">JSON</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>important</div><div class="admonitionContent_BuS1"><p>Auto installation only works if your HTTP client and Langflow server are on the same local machine.
-If this isn&#x27;t the case, use the <strong>JSON</strong> option to configure the MCP server.</p></div></div><ol>
-<li>Install <a href="https://docs.cursor.com/get-started/installation" target="_blank" rel="noopener noreferrer">Cursor</a>.</li>
-<li>In the Langflow dashboard, select the project that contains the flows you want to serve, and then click the <strong>MCP Server</strong> tab.</li>
-<li>To auto install your current Langflow project as an MCP server, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus" aria-hidden="True"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> <strong>Add</strong>.</li>
-</ol><p>The installation adds the server&#x27;s configuration file to Cursor&#x27;s <code>mcp.json</code> configuration file.</p></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><ol>
+<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="connect-clients-to-use-the-servers-actions">Connect clients to your Langflow MCP server<a href="#connect-clients-to-use-the-servers-actions" class="hash-link" aria-label="Direct link to Connect clients to your Langflow MCP server" title="Direct link to Connect clients to your Langflow MCP server">​</a></h2>
+<p>Langflow provides automatic installation and code snippets to help you deploy your Langflow MCP servers to your local MCP clients.</p>
+<div class="tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">Auto install</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">JSON</li></ul><div class="margin-top--md"><div role="tabpanel" class="tabItem_Ymn6"><div class="theme-admonition theme-admonition-info admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>info</div><div class="admonitionContent_BuS1"><p>The auto install option is available only for specific MCP clients, and the client must be installed locally to your Langflow server.
+If your client isn&#x27;t supported or installed remotely from your Langflow server, use the <strong>JSON</strong> option.</p></div></div><ol>
 <li>
-<p>Install <a href="https://docs.cursor.com/get-started/installation" target="_blank" rel="noopener noreferrer">Cursor</a>.</p>
+<p>Install <a href="https://docs.cursor.com/get-started/installation" target="_blank" rel="noopener noreferrer">Cursor</a>, Claude, or Windsurf local to your Langflow instance.</p>
 </li>
 <li>
-<p>In Cursor, go to <strong>Cursor Settings &gt; MCP</strong>, and then click <strong>Add New Global MCP Server</strong>.
-This opens Cursor&#x27;s global MCP configuration file, <code>mcp.json</code>.</p>
+<p>Recommended: Configure <a href="#authentication">authentication</a> for your MCP server.</p>
 </li>
 <li>
-<p>In the Langflow dashboard, select the project that contains the flows you want to serve, and then click the <strong>MCP Server</strong> tab.</p>
+<p>In Langflow, on the <strong>Projects</strong> page, click the <strong>MCP Server</strong> tab.</p>
 </li>
 <li>
-<p>Copy the code template from the <strong>JSON</strong> tab, and then paste it into <code>mcp.json</code> in Cursor.
+<p>On the <strong>Auto install</strong> tab, find your MCP client provider, and then click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> <strong>Add</strong>.</p>
+</li>
+</ol><p>Your Langflow project&#x27;s MCP server is automatically added to the configuration file for your local Cursor, Claude, or Windsurf client.
+For example, with Cursor, the server configuration is added to the <code>mcp.json</code> configuration file.</p><p>Langflow attempts to add this configuration even if the selected client isn&#x27;t installed.
+To verify the installation, check the available MCP servers in your client.</p></div><div role="tabpanel" class="tabItem_Ymn6" hidden=""><p>The JSON option allows you to connect a Langflow MCP server to any local or remote MCP client.</p><p>You can modify this process for any <a href="https://modelcontextprotocol.io/clients" target="_blank" rel="noopener noreferrer">MCP-compatible client</a>.</p><ol>
+<li>
+<p>Install <a href="https://docs.cursor.com/get-started/installation" target="_blank" rel="noopener noreferrer">Cursor</a> or any other <a href="https://modelcontextprotocol.io/clients" target="_blank" rel="noopener noreferrer">MCP-compatible client</a>.</p>
+<p>These steps use Cursor as an example.
+Modify them as needed for other clients.</p>
+</li>
+<li>
+<p>In Cursor, go to <strong>Cursor Settings</strong>, select <strong>MCP</strong>, and then click <strong>Add New Global MCP Server</strong> to open Cursor&#x27;s global <code>mcp.json</code> configuration file.</p>
+</li>
+<li>
+<p>Recommended: Configure <a href="#authentication">authentication</a> for your MCP server.</p>
+</li>
+<li>
+<p>In Langflow, on the <strong>Projects</strong> page, click the <strong>MCP Server</strong> tab.</p>
+</li>
+<li>
+<p>Click the <strong>JSON</strong> tab, copy the code snippet for your operating system, and then paste it into Cursor&#x27;s <code>mcp.json</code> file.
 For example:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>{</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>  &quot;mcpServers&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>    &quot;PROJECT_NAME&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>      &quot;command&quot;: &quot;uvx&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>      &quot;args&quot;: [</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>        &quot;mcp-proxy&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>        &quot;http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>      ]</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>    }</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>  }</span></div></div><div><span class="ch-code-line-number">_<!-- -->11</span><div style="display:inline-block;margin-left:16px"><span>}</span></div></div><br></code></div></div>
-<p>The <strong>MCP Server</strong> tab automatically includes the correct <code>PROJECT_NAME</code>, <code>LANGFLOW_SERVER_ADDRESS</code>, and <code>PROJECT_ID</code> values.
-The default Langflow server address is <code>http://localhost:7860</code>.</p>
-<p>If you have <a href="/deployment-public-server">deployed a public Langflow server</a>, the address is automatically included.</p>
+<p>The <strong>MCP Server</strong> tab automatically populates the <code>PROJECT_NAME</code>, <code>LANGFLOW_SERVER_ADDRESS</code>, and <code>PROJECT_ID</code> values.</p>
+<p>The default Langflow server address is <code>http://localhost:7860</code>.
+If you are using a <a href="/deployment-public-server">public Langflow server</a>, the server address is automatically included.</p>
 <p>If your Langflow server requires authentication, you must include your Langflow API key in the configuration.
 For more information, see <a href="#authentication">MCP server authentication and environment variables</a>.</p>
 </li>
 <li>
-<p>Save and close the <code>mcp.json</code> file in Cursor.
-The newly added MCP server will appear in the <strong>MCP Servers</strong> section.</p>
+<p>In Cursor, save and close the <code>mcp.json</code> file.</p>
+</li>
+<li>
+<p>Confirm that your Langflow MCP server is on Cursor&#x27;s <strong>MCP Servers</strong> list.</p>
 </li>
 </ol></div></div></div>
-<p>Cursor is now connected to your project&#x27;s MCP server and your flows are registered as tools.
+<p>Once your MCP client is connected to your Langflow project&#x27;s MCP server, your flows are registered as tools.
 Cursor determines when to use tools based on your queries, and requests permissions when necessary.
-For more information, see the <a href="https://docs.cursor.com/context/model-context-protocol" target="_blank" rel="noopener noreferrer">Cursor&#x27;s MCP documentation</a>.</p>
+For more information, see the MCP documentation for your client, such as <a href="https://docs.cursor.com/context/model-context-protocol" target="_blank" rel="noopener noreferrer">Cursor&#x27;s MCP documentation</a>.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="authentication">MCP server authentication and environment variables<a href="#authentication" class="hash-link" aria-label="Direct link to MCP server authentication and environment variables" title="Direct link to MCP server authentication and environment variables">​</a></h3>
 <p>You must provide a Langflow API key in your MCP client configuration if your <a href="/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled">Langflow server has authentication enabled</a>.</p>
 <p>When this is the case, the code template in your project&#x27;s <strong>MCP Server</strong> tab automatically includes the <code>--header</code> and <code>x-api-key</code> arguments:</p>
@@ -162,8 +195,8 @@ Alternatively, you can replace <code>YOUR_API_KEY</code> with an existing Langfl
 <p>To include other environment variables with your MCP server command, use the <code>env</code> object with key-value pairs of environment variables:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>{</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>  &quot;mcpServers&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>    &quot;PROJECT_NAME&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>      &quot;command&quot;: &quot;uvx&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>      &quot;args&quot;: [</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>        &quot;mcp-proxy&quot;,</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>        &quot;http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>      ],</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>      &quot;env&quot;: {</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>        &quot;KEY&quot;: &quot;VALUE&quot;</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>      }</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>    }</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>  }</span></div></div><div><span class="ch-code-line-number">_<!-- -->14</span><div style="display:inline-block;margin-left:16px"><span>}</span></div></div><br></code></div></div>
 <!-- -->
-<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="deploy-your-server-externally">Deploy your MCP server externally<a href="#deploy-your-server-externally" class="hash-link" aria-label="Direct link to Deploy your MCP server externally" title="Direct link to Deploy your MCP server externally">​</a></h3>
-<p>To deploy your MCP server externally with ngrok, see <a href="/deployment-public-server">Deploy a public Langflow server</a>.</p>
+<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="deploy-your-server-externally">Deploy your Langflow MCP server externally<a href="#deploy-your-server-externally" class="hash-link" aria-label="Direct link to Deploy your Langflow MCP server externally" title="Direct link to Deploy your Langflow MCP server externally">​</a></h3>
+<p>To deploy your Langflow MCP server externally, see <a href="/deployment-public-server">Deploy a public Langflow server</a>.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="test-and-debug-flows">Use MCP Inspector to test and debug flows<a href="#test-and-debug-flows" class="hash-link" aria-label="Direct link to Use MCP Inspector to test and debug flows" title="Direct link to Use MCP Inspector to test and debug flows">​</a></h2>
 <p><a href="https://modelcontextprotocol.io/docs/tools/inspector" target="_blank" rel="noopener noreferrer">MCP Inspector</a> is a common tool for testing and debugging MCP servers.
 You can use MCP Inspector to monitor your flows and get insights into how they are being consumed by the MCP server:</p>
@@ -200,7 +233,7 @@ From this tab, you can monitor how your flows are being registered as tools by M
 <p>To quit MCP Inspector, press <kbd>Control+C</kbd> in the same terminal window where you started it.</p>
 </li>
 </ol>
-<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="troubleshooting-mcp-server">Troubleshooting MCP server<a href="#troubleshooting-mcp-server" class="hash-link" aria-label="Direct link to Troubleshooting MCP server" title="Direct link to Troubleshooting MCP server">​</a></h2>
+<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="troubleshooting-mcp-server">Troubleshoot Langflow MCP servers<a href="#troubleshooting-mcp-server" class="hash-link" aria-label="Direct link to Troubleshoot Langflow MCP servers" title="Direct link to Troubleshoot Langflow MCP servers">​</a></h2>
 <p>If Claude for Desktop isn&#x27;t using your server&#x27;s tools correctly, you may need to explicitly define the path to your local <code>uvx</code> or <code>npx</code> executable file in the <code>claude_desktop_config.json</code> configuration file.</p>
 <ol>
 <li>
@@ -216,7 +249,7 @@ From this tab, you can monitor how your flows are being registered as tools by M
 <ul>
 <li><a href="/mcp-client">Use Langflow as an MCP client</a></li>
 <li><a href="/mcp-component-astra">Use a DataStax Astra DB MCP server</a></li>
-</ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/mcp-client"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Use Langflow as an MCP client</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/mcp-component-astra"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Connect an Astra DB MCP server to Langflow</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prerequisites" class="table-of-contents__link toc-highlight">Prerequisites</a></li><li><a href="#select-flows-to-serve" class="table-of-contents__link toc-highlight">Select and configure flows to expose as MCP tools</a></li><li><a href="#connect-clients-to-use-the-servers-actions" class="table-of-contents__link toc-highlight">Connect clients to Langflow&#39;s MCP server</a><ul><li><a href="#authentication" class="table-of-contents__link toc-highlight">MCP server authentication and environment variables</a></li><li><a href="#deploy-your-server-externally" class="table-of-contents__link toc-highlight">Deploy your MCP server externally</a></li></ul></li><li><a href="#test-and-debug-flows" class="table-of-contents__link toc-highlight">Use MCP Inspector to test and debug flows</a></li><li><a href="#troubleshooting-mcp-server" class="table-of-contents__link toc-highlight">Troubleshooting MCP server</a></li><li><a href="#see-also" class="table-of-contents__link toc-highlight">See also</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
+</ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/mcp-client"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Use Langflow as an MCP client</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/mcp-component-astra"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Connect an Astra DB MCP server to Langflow</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#prerequisites" class="table-of-contents__link toc-highlight">Prerequisites</a></li><li><a href="#select-flows-to-serve" class="table-of-contents__link toc-highlight">Serve flows as MCP tools</a><ul><li><a href="#edit-flow-tool-names-and-descriptions" class="table-of-contents__link toc-highlight">Edit flow tool names and descriptions</a></li></ul></li><li><a href="#connect-clients-to-use-the-servers-actions" class="table-of-contents__link toc-highlight">Connect clients to your Langflow MCP server</a><ul><li><a href="#authentication" class="table-of-contents__link toc-highlight">MCP server authentication and environment variables</a></li><li><a href="#deploy-your-server-externally" class="table-of-contents__link toc-highlight">Deploy your Langflow MCP server externally</a></li></ul></li><li><a href="#test-and-debug-flows" class="table-of-contents__link toc-highlight">Use MCP Inspector to test and debug flows</a></li><li><a href="#troubleshooting-mcp-server" class="table-of-contents__link toc-highlight">Troubleshoot Langflow MCP servers</a></li><li><a href="#see-also" class="table-of-contents__link toc-highlight">See also</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2025 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="https://langflow.org/preferences">Manage Privacy Choices</a></span>
                   </div></li></ul></div></div></div></footer><div style="position:fixed;right:21px;bottom:21px;z-index:100;display:flex;align-items:center;gap:10px;cursor:pointer"><div style="background-color:#f6f6f6;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1)"><img src="/img/langflow-icon-black-transparent.svg" style="width:40px" alt="Search"></div></div></div>

@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.9488e50d.css">
-<script src="/assets/js/runtime~main.ae1f3a5b.js" defer="defer"></script>
-<script src="/assets/js/main.14a877c9.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.e0adb39a.js" defer="defer"></script>
+<script src="/assets/js/main.e2332c07.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -105,7 +105,7 @@ For more information, see <a href="/configuration-global-variables">global varia
 </ol>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="mcp-sse-mode">Connect a Langflow MCP server<a href="#mcp-sse-mode" class="hash-link" aria-label="Direct link to Connect a Langflow MCP server" title="Direct link to Connect a Langflow MCP server">​</a></h3>
 <p>Every Langflow project runs a separate MCP server that exposes the project&#x27;s flows as MCP tools.
-For more information about your projects&#x27; MCP servers, including how to manage exposed flows, see <a href="/mcp-server">Use Langflow as an MCP server</a>.</p>
+For more information about your projects&#x27; MCP servers, including exposing flows as MCP tools, see <a href="/mcp-server">Use Langflow as an MCP server</a>.</p>
 <p>To leverage flows-as-tools, use the <strong>MCP Tools</strong> component in <strong>Server-Sent Events (SSE)</strong> mode to connect to a project&#x27;s <code>/api/v1/mcp/sse</code> endpoint:</p>
 <ol>
 <li>
@@ -136,8 +136,8 @@ In SSE mode, all flows available from the targeted server are treated as tools.<
 <table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>command</td><td>String</td><td>Input parameter. Stdio mode only. The MCP server startup command. Default: <code>uvx mcp-sse-shim@latest</code>.</td></tr><tr><td>sse_url</td><td>String</td><td>Input parameter. SSE mode only. The SSE URL for a Langflow project&#x27;s MCP server. Default for Langflow Desktop: <code>http://localhost:7868/</code>. Default for other installations: <code>http://localhost:7860/api/v1/mcp/sse</code></td></tr><tr><td>tools</td><td>List[Tool]</td><td>Output parameter. <a href="/data-types#tool"><code>Tool</code></a> object containing a list of tools exposed by the MCP server.</td></tr></tbody></table>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="manage-connected-mcp-servers">Manage connected MCP servers<a href="#manage-connected-mcp-servers" class="hash-link" aria-label="Direct link to Manage connected MCP servers" title="Direct link to Manage connected MCP servers">​</a></h2>
 <p>To manage MCP servers connected to your Langflow client, go to <strong>Settings</strong>, and then click <strong>MCP Servers</strong>.</p>
-<p>To add a new MCP server, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> <strong>Add MCP Server</strong>, and then follow the steps in <a href="#use-the-mcp-tools-component">Use the MCP Tools component</a> to configure the connection.</p>
-<p>Click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg> <strong>More</strong> to edit or delete an MCP server.</p>
+<p>To add a new MCP server, click <strong>Add MCP Server</strong>, and then follow the steps in <a href="#use-the-mcp-tools-component">Use the MCP Tools component</a> to configure the connection and use the server in a flow.</p>
+<p>Click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg> <strong>More</strong> to edit or delete an MCP server connection.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="see-also">See also<a href="#see-also" class="hash-link" aria-label="Direct link to See also" title="Direct link to See also">​</a></h2>
 <ul>
 <li><a href="/mcp-server">Use Langflow as an MCP server</a></li>

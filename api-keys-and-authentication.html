@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.9488e50d.css">
-<script src="/assets/js/runtime~main.ae1f3a5b.js" defer="defer"></script>
-<script src="/assets/js/main.14a877c9.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.e0adb39a.js" defer="defer"></script>
+<script src="/assets/js/main.e2332c07.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -146,7 +146,7 @@ For more information, see <a href="/configuration-cli#langflow-superuser"><code>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>LANGFLOW_SUPERUSER=administrator</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>LANGFLOW_SUPERUSER_PASSWORD=securepassword</span></div></div><br></code></div></div>
 <p>They are required if <code>LANGFLOW_AUTO_LOGIN=False</code>.
 Otherwise, they aren&#x27;t relevant.</p>
-<p>If required and not set in when you <a href="#start-a-langflow-server-with-authentication-enabled">start a Langflow server with authentication enabled</a>, then the default values are <code>langflow</code> and <code>langflow</code> for system auto-login behavior.
+<p>When you <a href="#start-a-langflow-server-with-authentication-enabled">start a Langflow server with authentication enabled</a>, if these variables are required but <em>not</em> set, then Langflow uses the default values of <code>langflow</code> and <code>langflow</code>.
 These defaults don&#x27;t apply when using the Langflow CLI command <a href="/configuration-cli#langflow-superuser"><code>langflow superuser</code></a>.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="langflow-secret-key">LANGFLOW_SECRET_KEY<a href="#langflow-secret-key" class="hash-link" aria-label="Direct link to LANGFLOW_SECRET_KEY" title="Direct link to LANGFLOW_SECRET_KEY">​</a></h3>
 <p>This environment variable stores a secret key used for encrypting sensitive data like API keys.

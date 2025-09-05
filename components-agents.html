@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.9488e50d.css">
-<script src="/assets/js/runtime~main.ae1f3a5b.js" defer="defer"></script>
-<script src="/assets/js/main.14a877c9.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.e0adb39a.js" defer="defer"></script>
+<script src="/assets/js/main.e2332c07.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -51,7 +51,7 @@
 These components define the behavior and capabilities of AI agents in your flows.</p>
 <details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>How do agents work?</summary><div><div class="collapsibleContent_i85q"><p>Agents extend Large Language Models (LLMs) by integrating <em>tools</em>, which are functions that provide additional context and enable autonomous task execution.
 These integrations make agents more specialized and powerful than standalone LLMs.</p><p>Whereas an LLM might generate acceptable, inert responses to general queries and tasks, an agent can leverage the integrated context and tools to provide more relevant responses and even take action.
-For example, you might create an agent that can access your company&#x27;s knowledge base, repositories, and other resources to help your team with tasks that require knowledge of your specific products, customers, and code.</p><p>Agents use LLMs as a reasoning engine to process input, determine which actions to take to address the query, and then generate a response.
+For example, you might create an agent that can access your company&#x27;s documentation, repositories, and other resources to help your team with tasks that require knowledge of your specific products, customers, and code.</p><p>Agents use LLMs as a reasoning engine to process input, determine which actions to take to address the query, and then generate a response.
 The response could be a typical text-based LLM response, or it could involve an action, like editing a file, running a script, or calling an external API.</p><p>In an agentic context, tools are functions that the agent can run to perform tasks or access external resources.
 A function is wrapped as a <code>Tool</code> object with a common interface that the agent understands.
 Agents become aware of tools through tool registration, which is when the agent is provided a list of available tools typically at agent initialization.
@@ -80,11 +80,11 @@ You can connect any Langflow component as a tool, including other <strong>Agent<
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="mcp-connection">MCP Tools component<a href="#mcp-connection" class="hash-link" aria-label="Direct link to MCP Tools component" title="Direct link to MCP Tools component">​</a></h2>
 <p>The <strong>MCP Tools</strong> component connects to a Model Context Protocol (MCP) server and exposes the MCP server&#x27;s functions as tools for Langflow agents to use to respond to input.</p>
 <p>In addition to publicly available MCP servers and your own custom-built MCP servers, you can connect Langflow MCP servers, which allow your agent to use your Langflow flows as tools.
-To do this, use the <strong>MCP Tools</strong> component&#x27;s <a href="/mcp-client#mcp-sse-mode">SSE mode</a> to connect to your Langflow MCP server at the <code>/api/v1/mcp/sse</code> endpoint.</p>
-<p>For more information about using this component and serving flows as MCP tools, see <a href="/mcp-client">Use Langflow as an MCP client</a> and <a href="/mcp-server">Use Langflow as an MCP server</a>.</p>
+To do this, use the <strong>MCP Tools</strong> component&#x27;s <a href="/mcp-client#mcp-sse-mode">SSE mode</a> to connect to your Langflow project&#x27;s MCP server at the <code>/api/v1/mcp/sse</code> endpoint.</p>
+<p>For more information, see <a href="/mcp-client">Use Langflow as an MCP client</a> and <a href="/mcp-server">Use Langflow as an MCP server</a>.</p>
 <details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>Earlier versions of the MCP Tools component</summary><div><div class="collapsibleContent_i85q"><ul>
 <li>In Langflow version 1.5, the <strong>MCP Connection</strong> component was renamed to the <strong>MCP Tools</strong> component.</li>
-<li>In Langflow version 1.3, the <strong>MCP Tools (stdio)</strong> and <strong>MCP Tools (SSE)</strong> components were deprecated and replaced by the unified <strong>MCP Connection</strong> component, which was later renamed to <strong>MCP Tools</strong>.</li>
+<li>In Langflow version 1.3, the <strong>MCP Tools (stdio)</strong> and <strong>MCP Tools (SSE)</strong> components were removed and replaced by the unified <strong>MCP Connection</strong> component, which was later renamed to <strong>MCP Tools</strong>.</li>
 </ul></div></div></details>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="legacy-agent-components">Legacy Agent components<a href="#legacy-agent-components" class="hash-link" aria-label="Direct link to Legacy Agent components" title="Direct link to Legacy Agent components">​</a></h2>
 <p>The following components are legacy components.
