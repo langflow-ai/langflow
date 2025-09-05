@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { memo, type ReactNode, useCallback, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -12,6 +13,7 @@ import {
   useGetFlowsMCP,
   usePatchFlowsMCP,
 } from "@/controllers/API/queries/mcp";
+import { useGetProjectComposerUrl } from "@/controllers/API/queries/mcp/use-get-composer-url";
 import { useGetInstalledMCP } from "@/controllers/API/queries/mcp/use-get-installed-mcp";
 import { usePatchInstallMCP } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
@@ -157,12 +159,27 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const { data: mcpProjectData } = useGetFlowsMCP({ projectId });
-  const { mutate: patchFlowsMCP } = usePatchFlowsMCP({ project_id: projectId });
+  const { data: mcpProjectData, isLoading: isLoadingMCPProjectData } =
+    useGetFlowsMCP({ projectId });
+  const { mutate: patchFlowsMCP, isPending: isPatchingFlowsMCP } =
+    usePatchFlowsMCP({ project_id: projectId });
 
   // Extract tools and auth_settings from the response
   const flowsMCP = mcpProjectData?.tools || [];
   const currentAuthSettings = mcpProjectData?.auth_settings;
+
+  // Only get composer URL for OAuth projects
+  // Disable the query during mutations to prevent stale auth state issues
+  const isOAuthProject =
+    currentAuthSettings?.auth_type === "oauth" && ENABLE_MCP_COMPOSER;
+  const shouldQueryComposerUrl = isOAuthProject && !isPatchingFlowsMCP;
+
+  const { data: composerUrlData } = useGetProjectComposerUrl(
+    {
+      projectId,
+    },
+    { enabled: !!projectId && shouldQueryComposerUrl },
+  );
 
   const { mutate: patchInstallMCP } = usePatchInstallMCP({
     project_id: projectId,
@@ -252,9 +269,19 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     },
   };
 
-  const apiUrl = customGetMCPUrl(projectId);
+  // Check if OAuth project has MCP Composer errors
+  const hasOAuthError = isOAuthProject && composerUrlData?.error_message;
 
-  // Generate auth headers based on the authentication type
+  // Use the per-project MCP Composer SSE URL only if project uses composer, otherwise fallback to direct SSE
+  const apiUrl = customGetMCPUrl(
+    projectId,
+    isOAuthProject &&
+      !!composerUrlData?.sse_url &&
+      composerUrlData?.uses_composer,
+    composerUrlData?.sse_url,
+  );
+
+  // Generate auth headers based on authentication type
   const getAuthHeaders = () => {
     // If MCP auth is disabled, use the previous API key behavior
     if (!ENABLE_MCP_COMPOSER) {
@@ -303,8 +330,24 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               ? `"uvx",
         `
               : ""
-        }"mcp-proxy",${getAuthHeaders()}
-        "${apiUrl}"
+        }${
+          isOAuthProject ? '"mcp-composer",' : '"mcp-proxy",'
+        }${getAuthHeaders()}${
+          isOAuthProject
+            ? `
+        "--mode",
+        "stdio",
+        "--sse-url",`
+            : ""
+        }
+        "${apiUrl}"${
+          isOAuthProject
+            ? `,
+        "--disable-composer-tools",
+        "--client_auth_type",
+        "oauth"`
+            : ""
+        }
       ]
     }
   }
@@ -346,6 +389,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const hasAuthentication =
     currentAuthSettings?.auth_type && currentAuthSettings.auth_type !== "none";
 
+  const isLoadingMCPProjectAuth = isLoadingMCPProjectData || isPatchingFlowsMCP;
+
   return (
     <div>
       <div className="flex justify-between gap-4 items-start">
@@ -375,7 +420,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               content="Flows in this project can be exposed as callable MCP tools."
               side="right"
             >
-              <div className="flex items-center text-mmd font-medium hover:cursor-help">
+              <div className="flex items-center text-sm font-medium hover:cursor-help">
                 Flows/Tools
                 <ForwardedIconComponent
                   name="info"
@@ -402,8 +447,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         <div className="flex flex-1 flex-col gap-4 overflow-hidden">
           {ENABLE_MCP_COMPOSER && (
             <div className="flex justify-between">
-              <span className="flex gap-2 items-center">
-                Auth:
+              <span className="flex gap-2 items-center text-sm cursor-default">
+                <span className=" font-medium">Auth:</span>
                 {!hasAuthentication ? (
                   <span className="text-accent-amber-foreground flex gap-2 text-mmd items-center">
                     <ForwardedIconComponent
@@ -413,20 +458,49 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                     None (public)
                   </span>
                 ) : (
-                  <span className="text-accent-emerald-foreground flex gap-2 text-mmd items-center">
-                    <ForwardedIconComponent
-                      name="Check"
-                      className="h-4 w-4 shrink-0"
-                    />
-                    {AUTH_METHODS[
-                      currentAuthSettings.auth_type as keyof typeof AUTH_METHODS
-                    ]?.label || currentAuthSettings.auth_type}
-                  </span>
+                  <ShadTooltip
+                    content={
+                      !composerUrlData?.error_message
+                        ? undefined
+                        : `MCP Server is not running: ${composerUrlData?.error_message}`
+                    }
+                  >
+                    <span
+                      className={cn(
+                        "flex gap-2 text-mmd items-center",
+                        isLoadingMCPProjectAuth
+                          ? "text-muted-foreground"
+                          : !composerUrlData?.error_message
+                            ? "text-accent-emerald-foreground"
+                            : "text-accent-amber-foreground",
+                      )}
+                    >
+                      <ForwardedIconComponent
+                        name={
+                          isLoadingMCPProjectAuth
+                            ? "Loader2"
+                            : !composerUrlData?.error_message
+                              ? "Check"
+                              : "AlertTriangle"
+                        }
+                        className={cn(
+                          "h-4 w-4 shrink-0",
+                          isLoadingMCPProjectAuth && "animate-spin",
+                        )}
+                      />
+                      {isLoadingMCPProjectAuth
+                        ? "Loading..."
+                        : AUTH_METHODS[
+                            currentAuthSettings.auth_type as keyof typeof AUTH_METHODS
+                          ]?.label || currentAuthSettings.auth_type}
+                    </span>
+                  </ShadTooltip>
                 )}
               </span>
               <Button
                 variant="outline"
                 size="sm"
+                className="!text-mmd !font-normal"
                 onClick={() => setAuthModalOpen(true)}
               >
                 <ForwardedIconComponent
@@ -479,24 +553,45 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                   </TabsList>
                 </Tabs>
                 <div className="overflow-hidden rounded-lg border border-border">
-                  <SyntaxHighlighter
-                    style={syntaxHighlighterStyle}
-                    CodeTag={({ children }) => (
-                      <MemoizedCodeTag
-                        isCopied={isCopied}
-                        copyToClipboard={copyToClipboard}
-                        isAuthApiKey={isAuthApiKey}
-                        apiKey={apiKey}
-                        isGeneratingApiKey={isGeneratingApiKey}
-                        generateApiKey={generateApiKey}
-                      >
-                        {children}
-                      </MemoizedCodeTag>
-                    )}
-                    language="json"
-                  >
-                    {MCP_SERVER_JSON}
-                  </SyntaxHighlighter>
+                  {hasOAuthError ? (
+                    <div className="p-4 bg-accent-red-subtle border border-accent-red-border rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ForwardedIconComponent
+                          name="AlertTriangle"
+                          className="h-4 w-4 text-accent-red-foreground"
+                        />
+                        <span className="font-medium text-accent-red-foreground">
+                          MCP Server Configuration Error
+                        </span>
+                      </div>
+                      <p className="text-mmd text-accent-red-foreground">
+                        {composerUrlData?.error_message}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Please fix the OAuth configuration in your project
+                        settings to generate the MCP server configuration.
+                      </p>
+                    </div>
+                  ) : (
+                    <SyntaxHighlighter
+                      style={syntaxHighlighterStyle}
+                      CodeTag={({ children }) => (
+                        <MemoizedCodeTag
+                          isCopied={isCopied}
+                          copyToClipboard={copyToClipboard}
+                          isAuthApiKey={isAuthApiKey}
+                          apiKey={apiKey}
+                          isGeneratingApiKey={isGeneratingApiKey}
+                          generateApiKey={generateApiKey}
+                        >
+                          {children}
+                        </MemoizedCodeTag>
+                      )}
+                      language="json"
+                    >
+                      {MCP_SERVER_JSON}
+                    </SyntaxHighlighter>
+                  )}
                 </div>
               </div>
               <div className="px-2 text-mmd text-muted-foreground">

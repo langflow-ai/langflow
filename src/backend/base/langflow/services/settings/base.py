@@ -265,6 +265,10 @@ class Settings(BaseSettings):
     mcp_server_enable_progress_notifications: bool = False
     """If set to False, Langflow will not send progress notifications in the MCP server."""
 
+    # MCP Composer
+    mcp_composer_enabled: bool = True
+    """If set to False, Langflow will not start the MCP Composer service."""
+
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
     """The interval in seconds at which public temporary flows will be cleaned up.
