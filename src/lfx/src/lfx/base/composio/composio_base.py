@@ -1,11 +1,11 @@
 import copy
 import re
 from typing import Any
+import json
 
 from composio import Composio
 from composio_langchain import LangchainProvider
 from langchain_core.tools import Tool
-
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import AuthInput, FileInput, InputTypes, MessageTextInput, SecretStrInput, SortableListInput
 from lfx.io import Output
@@ -15,42 +15,18 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.schema.message import Message
-
-
-def _patch_graph_clean_null_input_types() -> None:
-    """Monkey-patch Graph._create_vertex to clean legacy templates."""
-    try:
-        from lfx.graph.graph.base import Graph
-
-        if getattr(Graph, "_composio_patch_applied", False):
-            return
-
-        original_create_vertex = Graph._create_vertex
-
-        def _create_vertex_with_cleanup(self, frontend_data):
-            try:
-                node_id: str | None = frontend_data.get("id") if isinstance(frontend_data, dict) else None
-                if node_id and "Composio" in node_id:
-                    template = frontend_data.get("data", {}).get("node", {}).get("template", {})
-                    if isinstance(template, dict):
-                        for field_cfg in template.values():
-                            if isinstance(field_cfg, dict) and field_cfg.get("input_types") is None:
-                                field_cfg["input_types"] = []
-            except (AttributeError, TypeError, KeyError) as e:
-                logger.debug(f"Composio template cleanup encountered error: {e}")
-
-            return original_create_vertex(self, frontend_data)
-
-        Graph._create_vertex = _create_vertex_with_cleanup  # type: ignore[method-assign]
-        Graph._composio_patch_applied = True  # type: ignore[attr-defined]
-        logger.debug("Applied Composio template cleanup patch to Graph._create_vertex")
-
-    except (AttributeError, TypeError) as e:
-        logger.debug(f"Failed to apply Composio Graph patch: {e}")
-
-
-# Apply the patch at import time
-_patch_graph_clean_null_input_types()
+from lfx.inputs.inputs import (
+    AuthInput,
+    FileInput,
+    InputTypes,
+    MessageTextInput,
+    SecretStrInput,
+    SortableListInput,
+    DropdownInput,
+    StrInput,
+    TabInput,
+    MultilineInput,
+)
 
 
 class ComposioBaseComponent(Component):
@@ -96,7 +72,7 @@ class ComposioBaseComponent(Component):
 
     _name_sanitizer = re.compile(r"[^a-zA-Z0-9_-]")
 
-    # Class-level caches
+    # Class-level caches 
     _actions_cache: dict[str, dict[str, Any]] = {}
     _action_schema_cache: dict[str, dict[str, Any]] = {}
 
@@ -356,8 +332,11 @@ class ComposioBaseComponent(Component):
                         attachment_related_found = False
                         file_upload_fields = set()
 
-                        # Check original schema properties for file_uploadable fields
-                        original_props = parameters_schema.get("properties", {})
+                        # Determine top-level fields that should be treated as single JSON inputs
+                        json_parent_fields = set()
+                        for top_name, top_schema in original_props.items():
+                            if isinstance(top_schema, dict) and top_schema.get("type") in {"object", "array"}:
+                                json_parent_fields.add(top_name)
                         for field_name, field_schema in original_props.items():
                             if isinstance(field_schema, dict):
                                 clean_field_name = field_name.replace("[0]", "")
@@ -373,6 +352,11 @@ class ComposioBaseComponent(Component):
 
                         for field in raw_action_fields:
                             clean_field = field.replace("[0]", "")
+                            # Skip subfields of JSON parents (including array prefixes like parent[0].x)
+                            top_prefix_raw = field.split(".")[0]
+                            top_prefix_base = top_prefix_raw.replace("[0]", "")
+                            if top_prefix_base in json_parent_fields and ("." in field or "[" in field):
+                                continue
                             # Check if this field is attachment-related
                             if clean_field.lower().startswith("attachment."):
                                 attachment_related_found = True
@@ -390,6 +374,11 @@ class ComposioBaseComponent(Component):
                         if attachment_related_found:
                             action_fields.append("attachment")
                             file_upload_fields.add("attachment")  # Attachment fields are also file upload fields
+
+                        # Ensure parents for object/array are present as fields (single JSON field)
+                        for parent in json_parent_fields:
+                            if parent not in action_fields:
+                                action_fields.append(parent)
 
                         # Track boolean parameters so we can coerce them later
                         properties = flat_schema.get("properties", {})
@@ -593,8 +582,22 @@ class ComposioBaseComponent(Component):
                 if attachment_related_fields:  # If we consolidated attachment fields
                     file_upload_fields = file_upload_fields | {"attachment"}
 
+                # Identify top-level JSON parents (object/array)
+                top_json_parents = set()
+                try:
+                    for top_name, top_schema in parameters_schema.get("properties", {}).items():
+                        if isinstance(top_schema, dict) and top_schema.get("type") in {"object", "array"}:
+                            top_json_parents.add(top_name)
+                except Exception:
+                    pass
+
                 for inp in result:
                     if hasattr(inp, "name") and inp.name is not None:
+                        # Skip flattened subfields of JSON parents
+                        raw_prefix = inp.name.split(".")[0]
+                        base_prefix = raw_prefix.replace("[0]", "")
+                        if base_prefix in top_json_parents and ("." in inp.name or "[" in inp.name):
+                            continue
                         # Check if this specific field is a file upload field
                         if inp.name.lower() in file_upload_fields or inp.name.lower() == "attachment":
                             # Replace with FileInput for file upload fields
@@ -654,6 +657,26 @@ class ComposioBaseComponent(Component):
                             processed_inputs.append(inp)
                     else:
                         processed_inputs.append(inp)
+
+                # Add one MultilineInput per top-level JSON parent
+                try:
+                    for top_name in top_json_parents:
+                        if any(getattr(i, "name", None) == top_name for i in processed_inputs):
+                            continue
+                        top_schema = parameters_schema.get("properties", {}).get(top_name, {})
+                        processed_inputs.append(
+                            MultilineInput(
+                                name=top_name,
+                                display_name=top_schema.get("title") or top_name.replace("_", " ").title(),
+                                info=(
+                                    top_schema.get("description")
+                                    or "Provide JSON for this parameter (object or array)."
+                                ),
+                                required=top_name in required_fields_set,
+                            )
+                        )
+                except Exception:
+                    pass
 
                 return processed_inputs
             return result  # noqa: TRY300
@@ -1228,21 +1251,20 @@ class ComposioBaseComponent(Component):
                 if value is None or value == "" or (isinstance(value, list) and len(value) == 0):
                     continue
 
-                # For optional fields, be more strict about including them
-                # Only include if the user has explicitly provided a meaningful value
-                if field not in required_fields:
-                    # Get the default value from the schema
-                    field_schema = schema_properties.get(field, {})
-                    schema_default = field_schema.get("default")
+                # Normalize value types for object/array after reading user input (Multiline JSON)
+                prop_schema = schema_properties.get(field, {})
+                if isinstance(value, str) and prop_schema.get("type") in {"array", "object"}:
+                    try:
+                        value = json.loads(value)
+                    except Exception:
+                        if prop_schema.get("type") == "array":
+                            value = [item.strip() for item in value.split(",") if item.strip() != ""]
 
-                    # Skip if the current value matches the schema default
+                # For optional fields, only include if different from default (after normalization)
+                if field not in required_fields:
+                    schema_default = prop_schema.get("default")
                     if value == schema_default:
                         continue
-
-                # Convert comma-separated to list for array parameters (heuristic)
-                prop_schema = schema_properties.get(field, {})
-                if prop_schema.get("type") == "array" and isinstance(value, str):
-                    value = [item.strip() for item in value.split(",")]
 
                 if field in self._bool_variables:
                     value = bool(value)
