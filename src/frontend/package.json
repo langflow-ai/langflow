@@ -50,6 +50,7 @@
     "fuse.js": "^7.0.0",
     "lodash": "^4.17.21",
     "lucide-react": "^0.503.0",
+    "mermaid": "^11.4.0",
     "million": "^3.1.11",
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.48",
