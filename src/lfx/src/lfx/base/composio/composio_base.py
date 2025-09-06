@@ -1,13 +1,22 @@
 import copy
+import json
 import re
 from typing import Any
-import json
 
 from composio import Composio
 from composio_langchain import LangchainProvider
 from langchain_core.tools import Tool
+
 from lfx.custom.custom_component.component import Component
-from lfx.inputs.inputs import AuthInput, FileInput, InputTypes, MessageTextInput, SecretStrInput, SortableListInput
+from lfx.inputs.inputs import (
+    AuthInput,
+    FileInput,
+    InputTypes,
+    MessageTextInput,
+    MultilineInput,
+    SecretStrInput,
+    SortableListInput,
+)
 from lfx.io import Output
 from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
 from lfx.log.logger import logger
@@ -15,18 +24,6 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.schema.message import Message
-from lfx.inputs.inputs import (
-    AuthInput,
-    FileInput,
-    InputTypes,
-    MessageTextInput,
-    SecretStrInput,
-    SortableListInput,
-    DropdownInput,
-    StrInput,
-    TabInput,
-    MultilineInput,
-)
 
 
 class ComposioBaseComponent(Component):
@@ -72,7 +69,7 @@ class ComposioBaseComponent(Component):
 
     _name_sanitizer = re.compile(r"[^a-zA-Z0-9_-]")
 
-    # Class-level caches 
+    # Class-level caches
     _actions_cache: dict[str, dict[str, Any]] = {}
     _action_schema_cache: dict[str, dict[str, Any]] = {}
 
@@ -588,7 +585,7 @@ class ComposioBaseComponent(Component):
                     for top_name, top_schema in parameters_schema.get("properties", {}).items():
                         if isinstance(top_schema, dict) and top_schema.get("type") in {"object", "array"}:
                             top_json_parents.add(top_name)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     pass
 
                 for inp in result:
@@ -675,7 +672,7 @@ class ComposioBaseComponent(Component):
                                 required=top_name in required_fields_set,
                             )
                         )
-                except Exception:
+                except Exception:  # noqa: BLE001
                     pass
 
                 return processed_inputs
@@ -1256,7 +1253,7 @@ class ComposioBaseComponent(Component):
                 if isinstance(value, str) and prop_schema.get("type") in {"array", "object"}:
                     try:
                         value = json.loads(value)
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         if prop_schema.get("type") == "array":
                             value = [item.strip() for item in value.split(",") if item.strip() != ""]
 
