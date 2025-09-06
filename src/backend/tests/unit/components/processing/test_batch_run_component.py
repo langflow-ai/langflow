@@ -15,10 +15,10 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         return BatchRunComponent
 
     @pytest.fixture
-    def default_kwargs(self):
+    def default_kwargs(self, mock_llm):
         """Return the default kwargs for the component."""
         return {
-            "model": MockLanguageModel(),
+            "model": mock_llm,
             "df": DataFrame({"text": ["Hello"]}),
             "column_name": "text",
             "enable_metadata": True,
