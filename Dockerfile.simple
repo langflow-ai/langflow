@@ -3,7 +3,7 @@ FROM python:3.12-slim
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
-ENV NODE_VERSION=20
+ENV RUSTFLAGS="--cfg reqwest_unstable"
 
 WORKDIR /app
 
@@ -14,37 +14,42 @@ RUN apt-get update && apt-get install -y \
     git \
     ca-certificates \
     gnupg \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Node.js
-RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
-    && apt-get install -y nodejs \
+    npm \
+    rustc cargo pkg-config libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv for faster Python package management
 RUN pip install uv
 
-# Copy the entire project
-COPY . /app
+# Copy only necessary files for dependency resolution first
+COPY uv.lock /app/uv.lock
+COPY README.md /app/README.md
+COPY pyproject.toml /app/pyproject.toml
+COPY src/backend/base/README.md /app/src/backend/base/README.md
+COPY src/backend/base/uv.lock /app/src/backend/base/uv.lock
+COPY src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
 
 # Install backend dependencies
-RUN cd src/backend/base && \
-    uv sync --no-dev --extra postgresql
+RUN uv sync --frozen --no-install-project --no-editable --extra postgresql
 
-# Install frontend dependencies and build
-RUN cd src/frontend && \
-    npm install && \
-    npm run build
+# Copy source code
+COPY ./src /app/src
 
-# Copy built frontend to backend static directory
-RUN mkdir -p src/backend/base/langflow/frontend && \
-    cp -r src/frontend/build/* src/backend/base/langflow/frontend/
+# Build frontend
+COPY src/frontend /tmp/src/frontend
+WORKDIR /tmp/src/frontend
+RUN npm ci && \
+    npm run build && \
+    mkdir -p /app/src/backend/langflow/frontend && \
+    cp -r build/* /app/src/backend/langflow/frontend/ && \
+    rm -rf /tmp/src/frontend
+
+# Return to app directory and install the project
+WORKDIR /app
+RUN uv sync --frozen --no-dev --no-editable --extra postgresql
 
 # Expose ports
 EXPOSE 7860
 
-# Set working directory to backend
-WORKDIR /app/src/backend/base
-
 # Start the backend server
-CMD ["uv", "run", "langflow-base", "run", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["uv", "run", "langflow", "run", "--host", "0.0.0.0", "--port", "7860"]
