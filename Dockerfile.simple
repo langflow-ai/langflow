@@ -1,0 +1,50 @@
+FROM python:3.12-slim
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV NODE_VERSION=20
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    ca-certificates \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for faster Python package management
+RUN pip install uv
+
+# Copy the entire project
+COPY . /app
+
+# Install backend dependencies
+RUN cd src/backend/base && \
+    uv sync --no-dev --extra postgresql
+
+# Install frontend dependencies and build
+RUN cd src/frontend && \
+    npm install && \
+    npm run build
+
+# Copy built frontend to backend static directory
+RUN mkdir -p src/backend/base/langflow/frontend && \
+    cp -r src/frontend/build/* src/backend/base/langflow/frontend/
+
+# Expose ports
+EXPOSE 7860
+
+# Set working directory to backend
+WORKDIR /app/src/backend/base
+
+# Start the backend server
+CMD ["uv", "run", "langflow-base", "run", "--host", "0.0.0.0", "--port", "7860"]
