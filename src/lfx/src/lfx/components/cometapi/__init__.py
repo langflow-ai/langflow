@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from lfx.components.cometapi.cometapi import CometAPIModelComponent
+    from lfx.components.cometapi.cometapi import CometAPIComponent
 
 _dynamic_imports = {
-    "CometAPIModelComponent": "cometapi",
+    "CometAPIComponent": "cometapi",
 }
 
-__all__ = ["CometAPIModelComponent"]
+__all__ = ["CometAPIComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:

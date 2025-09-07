@@ -1,3 +1,5 @@
+import json
+
 import requests
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
@@ -28,7 +30,13 @@ class CometAPIComponent(LCModelComponent):
 
     inputs = [
         *LCModelComponent.get_base_inputs(),
-        SecretStrInput(name="api_key", display_name="CometAPI Key", required=True, info="Your CometAPI key"),
+        SecretStrInput(
+            name="api_key",
+            display_name="CometAPI Key",
+            required=True,
+            info="Your CometAPI key",
+            real_time_refresh=True,
+        ),
         StrInput(
             name="app_name",
             display_name="App Name",
@@ -79,16 +87,26 @@ class CometAPIComponent(LCModelComponent):
         ),
     ]
 
-    def get_models(self) -> list[str]:
+    def get_models(self, token_override: str | None = None) -> list[str]:
         base_url = "https://api.cometapi.com/v1"
         url = f"{base_url}/models"
 
         headers = {"Content-Type": "application/json"}
+        # Add Bearer Authorization when API key is available
+        api_key_source = token_override if token_override else getattr(self, "api_key", None)
+        if api_key_source:
+            token = api_key_source.get_secret_value() if isinstance(api_key_source, SecretStr) else str(api_key_source)
+            headers["Authorization"] = f"Bearer {token}"
 
         try:
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
-            model_list = response.json()
+            # Safely parse JSON; fallback to defaults on failure
+            try:
+                model_list = response.json()
+            except (json.JSONDecodeError, ValueError) as e:
+                self.status = f"Error decoding models response: {e}"
+                return MODEL_NAMES
             return [model["id"] for model in model_list.get("data", [])]
         except requests.RequestException as e:
             self.status = f"Error fetching models: {e}"
@@ -96,9 +114,21 @@ class CometAPIComponent(LCModelComponent):
 
     @override
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        if field_name in {"api_key", "model_name"}:
-            models = self.get_models()
-            build_config["model_name"]["options"] = models
+        if field_name == "api_key":
+            models = self.get_models(field_value)
+            model_cfg = build_config.get("model_name", {})
+            # Preserve placeholder (fallback to existing value or a generic prompt)
+            placeholder = model_cfg.get("placeholder", model_cfg.get("value", "Select a model"))
+            current_value = model_cfg.get("value")
+
+            options = list(models) if models else []
+            # Ensure current value stays visible even if not present in fetched options
+            if current_value and current_value not in options:
+                options = [current_value, *options]
+
+            model_cfg["options"] = options
+            model_cfg["placeholder"] = placeholder
+            build_config["model_name"] = model_cfg
         return build_config
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
@@ -109,11 +139,16 @@ class CometAPIComponent(LCModelComponent):
         model_kwargs = getattr(self, "model_kwargs", {}) or {}
         json_mode = self.json_mode
         seed = self.seed
-
+        # Ensure a valid model was selected
+        if not model_name or model_name == "Select a model":
+            msg = "Please select a valid CometAPI model."
+            raise ValueError(msg)
         try:
+            # Extract raw API key safely
+            _api_key = api_key.get_secret_value() if isinstance(api_key, SecretStr) else api_key
             output = ChatOpenAI(
                 model=model_name,
-                api_key=(SecretStr(api_key).get_secret_value() if api_key else None),
+                api_key=_api_key or None,
                 max_tokens=max_tokens or None,
                 temperature=temperature,
                 model_kwargs=model_kwargs,
@@ -121,7 +156,7 @@ class CometAPIComponent(LCModelComponent):
                 seed=seed,
                 base_url="https://api.cometapi.com/v1",
             )
-        except Exception as e:
+        except (TypeError, ValueError) as e:
             msg = "Could not connect to CometAPI."
             raise ValueError(msg) from e
 
