@@ -74,9 +74,9 @@ class AuthSettings(BaseSettings):
     def reset_credentials(self) -> None:
         # For AUTO_LOGIN workflows, keep username at default. Otherwise, preserve the
         # configured username but scrub the password from memory to avoid plaintext exposure.
-        if self.AUTO_LOGIN:
-            self.SUPERUSER = DEFAULT_SUPERUSER
-        self.SUPERUSER_PASSWORD = SecretStr("")
+        # Auto login case is handled in the validator
+        self.SUPERUSER=""
+        self.SUPERUSER_PASSWORD=SecretStr("")
 
     # If autologin is true, then we need to set the credentials to
     # the default values
