@@ -5,13 +5,15 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from lfx.components.nebius.nebius import NebiusModelComponent
+    from .nebius_models import NebiusModelComponent
 
 _dynamic_imports = {
-    "NebiusModelComponent": "nebius",
+    "NebiusModelComponent": "nebius_models",
 }
 
-__all__ = ["NebiusModelComponent"]
+__all__ = [
+    "NebiusModelComponent",
+]
 
 
 def __getattr__(attr_name: str) -> Any:

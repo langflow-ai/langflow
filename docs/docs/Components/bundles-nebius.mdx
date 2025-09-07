@@ -4,32 +4,31 @@ slug: /bundles-nebius
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 [Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
 This page describes the components that are available in the **Nebius** bundle.
 
-## Nebius AI Studio
+For more information about Nebius features and functionality used by Nebius components, see the [Nebius documentation](https://python.langchain.com/docs/integrations/providers/nebius/).
 
-This component generates text using [Nebius AI Studio's language models](https://studio.nebius.com/).
+## Nebius Models
 
-It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+This component generates text using Nebius models.
 
-Use the **Language Model** output when you want to use a Nebius model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+It can output a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a Nebius model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
 
 For more information, see [**Language Model** components](/components-models).
 
-### Nebius AI Studio parameters
+### Parameters
 
-Many **Nebius AI Studio** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Type | Description |
 |------|------|-------------|
-| api_key | SecretString | Input parameter. Your Nebius AI Studio API Key. |
-| model | String | Input parameter. The id of the Nebius AI Studio model to use. |
-| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
-| temperature | Float | Input parameter. Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.7. |
-| top_p | Float | Input parameter. Controls the nucleus sampling. Range: [0.0, 1.0]. Default: 1.0. |
-| frequency_penalty | Float | Input parameter. Controls the frequency penalty. Range: [0.0, 2.0]. Default: 0.0. |
-| presence_penalty | Float | Input parameter. Controls the presence penalty. Range: [0.0, 2.0]. Default: 0.0. |
+| Input Value | String | Input text for the model. |
+| Nebius API Key | SecretString | The Nebius API Key to use for the Nebius model. It can also be set as the `NEBIUS_API_KEY` environment variable. |
+| Model Name | Dropdown | The name of the Nebius model to use. |
+| Temperature | Float | (Advanced) Controls randomness. Lower values are more deterministic, higher values are more creative. Defaults to `0.6`. |
