@@ -5,7 +5,6 @@ from astrapy.admin import parse_api_endpoint
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
-from lfx.serialization import serialize
 from lfx.inputs.inputs import (
     BoolInput,
     DictInput,
@@ -17,6 +16,7 @@ from lfx.inputs.inputs import (
     StrInput,
 )
 from lfx.schema.data import Data
+from lfx.serialization import serialize
 
 
 class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
