@@ -68,17 +68,21 @@ class AuthSettings(BaseSettings):
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
+    clear_superuser_credentials: bool = False
+    """If True, the superuser credentials can be cleared from memory successfully. """
+
     def reset_credentials(self) -> None:
-        # Preserve the configured username but scrub the password from memory to avoid plaintext exposure.
+        self.clear_superuser_credentials = True
+        # Field validators are run on assignment, so set the value to trigger the validator
         self.SUPERUSER_PASSWORD = SecretStr("")
 
-    # If autologin is true, then we need to set the credentials to
-    # the default values
-    # so we need to validate the superuser and superuser_password
-    # fields
     @field_validator("SUPERUSER", "SUPERUSER_PASSWORD", mode="before")
     @classmethod
     def validate_superuser(cls, value, info):
+        """Validate the superuser and superuser_password fields.
+        If AUTO_LOGIN is enabled, force superuser to use default values.
+        If clear_superuser_credentials is True, clear the superuser credentials from memory.
+        """
         # When AUTO_LOGIN is enabled, force superuser to use default values.
         if info.data.get("AUTO_LOGIN"):
             logger.debug("Auto login is enabled, forcing superuser to use default values")
@@ -89,6 +93,11 @@ class AuthSettings(BaseSettings):
             if info.field_name == "SUPERUSER_PASSWORD":
                 if value != DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
                     logger.debug("Resetting superuser password to default value")
+
+                if info.data.get("clear_superuser_credentials"):
+                    logger.debug("Clearing superuser credentials from memory")
+                    return SecretStr("")
+
                 return DEFAULT_SUPERUSER_PASSWORD
 
         return value

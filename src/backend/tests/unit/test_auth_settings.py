@@ -13,20 +13,20 @@ def test_superuser_password_is_secretstr(auto_login, tmp_path: Path):
     assert isinstance(settings.SUPERUSER_PASSWORD, SecretStr)
 
 
-def test_auto_login_true_forces_default_and_scrubs_password(tmp_path: Path):
+def test_auto_login_true_forces_defaults(tmp_path: Path):
     cfg_dir = tmp_path.as_posix()
     settings = AuthSettings(
         CONFIG_DIR=cfg_dir,
         AUTO_LOGIN=True,
         SUPERUSER="custom",
-        SUPERUSER_PASSWORD=DEFAULT_SUPERUSER_PASSWORD.get_secret_value() + "_changed",
+        SUPERUSER_PASSWORD=SecretStr("custom_password_changed"),
     )
     # Validator forces default username and scrubs password
     assert settings.SUPERUSER == DEFAULT_SUPERUSER
     assert isinstance(settings.SUPERUSER_PASSWORD, SecretStr)
-    assert settings.SUPERUSER_PASSWORD.get_secret_value() == ""
+    assert settings.SUPERUSER_PASSWORD.get_secret_value() == DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
 
-    # reset_credentials keeps default username (AUTO_LOGIN on) and keeps password scrubbed
+    # reset_credentials keeps default username (AUTO_LOGIN on) and clears password
     settings.reset_credentials()
     assert settings.SUPERUSER == DEFAULT_SUPERUSER
     assert settings.SUPERUSER_PASSWORD.get_secret_value() == ""
@@ -38,7 +38,7 @@ def test_auto_login_false_preserves_username_and_scrubs_password_on_reset(tmp_pa
         CONFIG_DIR=cfg_dir,
         AUTO_LOGIN=False,
         SUPERUSER="admin",
-        SUPERUSER_PASSWORD="strongpass",  # noqa: S106
+        SUPERUSER_PASSWORD=SecretStr("strongpass"),
     )
     # Values preserved at init
     assert settings.SUPERUSER == "admin"
