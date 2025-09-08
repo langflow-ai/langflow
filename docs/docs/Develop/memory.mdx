@@ -87,6 +87,18 @@ LANGFLOW_CACHE_TYPE=async
 Alternative caching options can be configured, but options other than the default asynchronous, in-memory cache aren't supported.
 The default behavior is suitable for most use cases.
 
+### Cache Environment Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `LANGFLOW_CACHE_TYPE` | String | `async` | Set the cache type for Langflow's internal caching system. |
+| `LANGFLOW_LANGCHAIN_CACHE` | String | `InMemoryCache` | Set the cache type for Langchain's caching system. |
+| `LANGFLOW_REDIS_HOST` | String | `localhost` | Redis server hostname. |
+| `LANGFLOW_REDIS_PORT` | Integer | `6379` | Redis server port. |
+| `LANGFLOW_REDIS_DB` | Integer | `0` | Redis database number. |
+| `LANGFLOW_REDIS_CACHE_EXPIRE` | Integer | `3600` | Cache expiration time in seconds. |
+| `LANGFLOW_REDIS_PASSWORD` | String | Not set | Redis authentication password (optional). |
+
 ## Store chat memory
 
 Chat-based flows with a **Chat Input** or **Chat Output** component produce chat history that is stored in the Langflow `messages` table.
