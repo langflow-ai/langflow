@@ -309,6 +309,7 @@ export default function Page({
   }
 
   function handleDelete(e: KeyboardEvent) {
+    if (isLocked) return;
     if (!isWrappedWithClass(e, "nodelete") && lastSelection) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
@@ -481,6 +482,7 @@ export default function Page({
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
+      if (isLocked) return;
       const grabbingElement =
         document.getElementsByClassName("cursor-grabbing");
       if (grabbingElement.length > 0) {
@@ -638,6 +640,13 @@ export default function Page({
     reactFlowWrapper.current?.style.setProperty("--selected", accentColor);
   };
 
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (isLocked) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
   useEffect(() => {
     const handleGlobalMouseMove = (event) => {
       if (isAddingNote) {
@@ -694,6 +703,8 @@ export default function Page({
               onEdgesChange={onEdgesChange}
               onConnect={isLocked ? undefined : onConnectMod}
               disableKeyboardA11y={true}
+              nodesFocusable={!isLocked}
+              edgesFocusable={!isLocked}
               onInit={setReactFlowInstance}
               nodeTypes={nodeTypes}
               onReconnect={isLocked ? undefined : onEdgeUpdate}
@@ -716,6 +727,7 @@ export default function Page({
               fitView={isEmptyFlow.current ? false : true}
               fitViewOptions={fitViewOptions}
               className="theme-attribution"
+              tabIndex={isLocked ? -1 : undefined}
               minZoom={MIN_ZOOM}
               maxZoom={MAX_ZOOM}
               zoomOnScroll={!view}
@@ -725,6 +737,7 @@ export default function Page({
               proOptions={{ hideAttribution: true }}
               onPaneClick={onPaneClick}
               onEdgeClick={handleEdgeClick}
+              onKeyDown={handleKeyDown}
             >
               <FlowBuildingComponent />
               <UpdateAllComponents />
