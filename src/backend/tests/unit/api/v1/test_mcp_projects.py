@@ -679,11 +679,11 @@ async def test_mcp_longterm_token_fails_without_superuser():
 
     # Now attempt to create long-term token -> expect HTTPException 400
     async with get_db_service().with_session() as session:
-        with pytest.raises(HTTPException, match="Super user hasn't been created"):
+        with pytest.raises(HTTPException, match="Auto login required to create a long-term token"):
             await create_user_longterm_token(session)
 
 
-@pytest.mark.asyncio
+@pytest.mark.skip("MCP Projects can only create long-term tokens if AUTO_LOGIN is enabled")
 async def test_mcp_longterm_token_succeeds_with_headless_fallback():
     """When AUTO_LOGIN is false and no credentials are provided.
 
