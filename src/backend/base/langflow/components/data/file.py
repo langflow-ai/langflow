@@ -600,8 +600,7 @@ class FileComponent(BaseFileComponent):
         if not hasattr(df, "text"):
             if hasattr(df, "error"):
                 raise ValueError(df.error[0])
-            else:
-                raise ValueError("No content generated.")
+            raise ValueError("No content generated.")
 
         return df
 
@@ -613,7 +612,6 @@ class FileComponent(BaseFileComponent):
         if not hasattr(df, "text"):
             if hasattr(df, "error"):
                 raise ValueError(df.error[0])
-            else:
-                raise ValueError("No content generated.")
-        
+            raise ValueError("No content generated.")
+
         return Message(text=str(df.text[0]))
