@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+test.use({ trace: "off", video: "off" });
+
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 
@@ -67,12 +71,18 @@ test(
     const fetchByNameCount = await fetchByName.count();
     if (fetchByNameCount > 0) {
       await fetchByName.click();
-      await page.waitForSelector('[role="dialog"]', { state: 'detached', timeout: 10000 });
+      await page.waitForSelector('[role="dialog"]', {
+        state: "detached",
+        timeout: 10000,
+      });
     } else {
       // If the UI exposes the slug test id instead.
       const fetchBySlug = page.getByTestId("list_item_GMAIL_FETCH_EMAILS");
       await fetchBySlug.click();
-      await page.waitForSelector('[role="dialog"]', { state: 'detached', timeout: 10000 });
+      await page.waitForSelector('[role="dialog"]', {
+        state: "detached",
+        timeout: 10000,
+      });
     }
 
     // Optionally tweak params (e.g., max_results).
@@ -99,7 +109,9 @@ test(
     if ((await gmailDfBtn.count()) > 0) {
       await gmailDfBtn.click();
     } else {
-      const anyDfBtn = page.locator("[data-testid^='output-inspection-dataframe-']").first();
+      const anyDfBtn = page
+        .locator("[data-testid^='output-inspection-dataframe-']")
+        .first();
       if ((await anyDfBtn.count()) > 0) {
         await anyDfBtn.click();
       }
@@ -111,4 +123,4 @@ test(
       expect(cells).toBeGreaterThan(0);
     }).toPass({ timeout: 30000 });
   },
-); 
+);
