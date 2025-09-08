@@ -36,7 +36,7 @@ async def test_teardown_superuser_removes_default_if_never_logged():
         if not user:
             user = User(
                 username=DEFAULT_SUPERUSER,
-                password=DEFAULT_SUPERUSER_PASSWORD,
+                password=DEFAULT_SUPERUSER_PASSWORD.get_secret_value(),
                 is_superuser=True,
                 is_active=True,
             )
@@ -74,7 +74,7 @@ async def test_teardown_superuser_preserves_logged_in_default():
         if not user:
             user = User(
                 username=DEFAULT_SUPERUSER,
-                password=DEFAULT_SUPERUSER_PASSWORD,
+                password=DEFAULT_SUPERUSER_PASSWORD.get_secret_value(),
                 is_superuser=True,
                 is_active=True,
             )

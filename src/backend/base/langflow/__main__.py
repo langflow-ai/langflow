@@ -669,7 +669,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
     if settings_service.auth_settings.AUTO_LOGIN:
         # Force default credentials for AUTO_LOGIN mode
         username = DEFAULT_SUPERUSER
-        password = DEFAULT_SUPERUSER_PASSWORD
+        password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
     else:
         # Production mode - prompt for credentials if not provided
         if not username:

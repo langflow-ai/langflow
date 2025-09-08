@@ -49,7 +49,7 @@ class AuthSettings(BaseSettings):
     NEW_USER_IS_ACTIVE: bool = False
     SUPERUSER: str = DEFAULT_SUPERUSER
     # Store password as SecretStr to prevent accidental plaintext exposure
-    SUPERUSER_PASSWORD: SecretStr = Field(default=SecretStr(DEFAULT_SUPERUSER_PASSWORD))
+    SUPERUSER_PASSWORD: SecretStr = Field(default=DEFAULT_SUPERUSER_PASSWORD)
 
     REFRESH_SAME_SITE: Literal["lax", "strict", "none"] = "none"
     """The SameSite attribute of the refresh token cookie."""
@@ -72,10 +72,7 @@ class AuthSettings(BaseSettings):
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
     def reset_credentials(self) -> None:
-        # For AUTO_LOGIN workflows, keep username at default. Otherwise, preserve the
-        # configured username but scrub the password from memory to avoid plaintext exposure.
-        # Auto login case is handled in the validator
-        self.SUPERUSER = ""
+        # Preserve the configured username but scrub the password from memory to avoid plaintext exposure.
         self.SUPERUSER_PASSWORD = SecretStr("")
 
     # If autologin is true, then we need to set the credentials to
@@ -85,17 +82,17 @@ class AuthSettings(BaseSettings):
     @field_validator("SUPERUSER", "SUPERUSER_PASSWORD", mode="before")
     @classmethod
     def validate_superuser(cls, value, info):
-        # When AUTO_LOGIN is enabled, force the username to the default but do not
-        # keep any sensitive password material in plaintext beyond initialization.
+        # When AUTO_LOGIN is enabled, force superuser to use default values. 
         if info.data.get("AUTO_LOGIN"):
+            logger.debug("Auto login is enabled, forcing superuser to use default values")
             if info.field_name == "SUPERUSER":
                 if value != DEFAULT_SUPERUSER:
                     logger.debug("Resetting superuser to default value")
                 return DEFAULT_SUPERUSER
             if info.field_name == "SUPERUSER_PASSWORD":
-                # During validation, avoid persisting a real password in memory.
-                # The setup workflow will use DEFAULT_SUPERUSER_PASSWORD directly when needed.
-                return SecretStr("")
+                if value != DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
+                    logger.debug("Resetting superuser password to default value")
+                return DEFAULT_SUPERUSER_PASSWORD
 
         return value
 
