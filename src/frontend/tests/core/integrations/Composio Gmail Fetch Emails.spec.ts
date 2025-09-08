@@ -1,9 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+test.use({ trace: "off", video: "off" });
+
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
-
 test(
   "Gmail Fetch Emails",
   { tag: ["@release", "@components", "@composio"] },
