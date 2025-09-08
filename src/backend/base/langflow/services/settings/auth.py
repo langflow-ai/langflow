@@ -80,6 +80,7 @@ class AuthSettings(BaseSettings):
     @classmethod
     def validate_superuser(cls, value, info):
         """Validate the superuser and superuser_password fields.
+        
         If AUTO_LOGIN is enabled, force superuser to use default values.
         If clear_superuser_credentials is True, clear the superuser credentials from memory.
         """
