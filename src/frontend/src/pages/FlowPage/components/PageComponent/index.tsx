@@ -676,74 +676,75 @@ export default function Page({
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
-        <div id="react-flow-id" className="h-full w-full bg-canvas">
-          {!view && (
-            <>
-              <MemoizedLogCanvasControls />
-              <MemoizedCanvasControls
-                setIsAddingNote={setIsAddingNote}
-                position={position.current}
-                shadowBoxWidth={shadowBoxWidth}
-                shadowBoxHeight={shadowBoxHeight}
-              />
-              <FlowToolbar />
-            </>
-          )}
-          <MemoizedSidebarTrigger />
-          <SelectionMenu
-            lastSelection={lastSelection}
-            isVisible={selectionMenuVisible}
-            nodes={lastSelection?.nodes}
-            onClick={handleGroupNode}
-          />
-          <ReactFlow<AllNodeType, EdgeType>
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChangeWithHelperLines}
-            onEdgesChange={onEdgesChange}
-            onConnect={isLocked ? undefined : onConnectMod}
-            disableKeyboardA11y={true}
-            nodesFocusable={!isLocked}
-            edgesFocusable={!isLocked}
-            onInit={setReactFlowInstance}
-            nodeTypes={nodeTypes}
-            onReconnect={isLocked ? undefined : onEdgeUpdate}
-            onReconnectStart={isLocked ? undefined : onEdgeUpdateStart}
-            onReconnectEnd={isLocked ? undefined : onEdgeUpdateEnd}
-            onNodeDrag={onNodeDrag}
-            onNodeDragStart={onNodeDragStart}
-            onSelectionDragStart={onSelectionDragStart}
-            elevateEdgesOnSelect={false}
-            onSelectionEnd={onSelectionEnd}
-            onSelectionStart={onSelectionStart}
-            connectionRadius={30}
-            edgeTypes={edgeTypes}
-            connectionLineComponent={ConnectionLineComponent}
-            onDragOver={onDragOver}
-            onNodeDragStop={onNodeDragStop}
-            onDrop={onDrop}
-            onSelectionChange={onSelectionChange}
-            deleteKeyCode={[]}
-            fitView={isEmptyFlow.current ? false : true}
-            fitViewOptions={fitViewOptions}
-            className="theme-attribution"
-            tabIndex={isLocked ? -1 : undefined}
-            minZoom={MIN_ZOOM}
-            maxZoom={MAX_ZOOM}
-            zoomOnScroll={!view}
-            zoomOnPinch={!view}
-            panOnDrag={!view}
-            panActivationKeyCode={""}
-            proOptions={{ hideAttribution: true }}
-            onPaneClick={onPaneClick}
-            onEdgeClick={handleEdgeClick}
-            onKeyDown={handleKeyDown}
-          >
-            <FlowBuildingComponent />
-            <UpdateAllComponents />
-            <MemoizedBackground />
-            {helperLineEnabled && <HelperLines helperLines={helperLines} />}
-          </ReactFlow>
+        <>
+          <div id="react-flow-id" className="h-full w-full bg-canvas relative">
+            {!view && (
+              <>
+                <MemoizedLogCanvasControls />
+                <MemoizedCanvasControls
+                  setIsAddingNote={setIsAddingNote}
+                  shadowBoxWidth={shadowBoxWidth}
+                  shadowBoxHeight={shadowBoxHeight}
+                />
+                <FlowToolbar />
+              </>
+            )}
+            <MemoizedSidebarTrigger />
+            <SelectionMenu
+              lastSelection={lastSelection}
+              isVisible={selectionMenuVisible}
+              nodes={lastSelection?.nodes}
+              onClick={handleGroupNode}
+            />
+            <ReactFlow<AllNodeType, EdgeType>
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChangeWithHelperLines}
+              onEdgesChange={onEdgesChange}
+              onConnect={isLocked ? undefined : onConnectMod}
+              disableKeyboardA11y={true}
+              nodesFocusable={!isLocked}
+              edgesFocusable={!isLocked}
+              onInit={setReactFlowInstance}
+              nodeTypes={nodeTypes}
+              onReconnect={isLocked ? undefined : onEdgeUpdate}
+              onReconnectStart={isLocked ? undefined : onEdgeUpdateStart}
+              onReconnectEnd={isLocked ? undefined : onEdgeUpdateEnd}
+              onNodeDrag={onNodeDrag}
+              onNodeDragStart={onNodeDragStart}
+              onSelectionDragStart={onSelectionDragStart}
+              elevateEdgesOnSelect={false}
+              onSelectionEnd={onSelectionEnd}
+              onSelectionStart={onSelectionStart}
+              connectionRadius={30}
+              edgeTypes={edgeTypes}
+              connectionLineComponent={ConnectionLineComponent}
+              onDragOver={onDragOver}
+              onNodeDragStop={onNodeDragStop}
+              onDrop={onDrop}
+              onSelectionChange={onSelectionChange}
+              deleteKeyCode={[]}
+              fitView={isEmptyFlow.current ? false : true}
+              fitViewOptions={fitViewOptions}
+              className="theme-attribution"
+              tabIndex={isLocked ? -1 : undefined}
+              minZoom={MIN_ZOOM}
+              maxZoom={MAX_ZOOM}
+              zoomOnScroll={!view}
+              zoomOnPinch={!view}
+              panOnDrag={!view}
+              panActivationKeyCode={""}
+              proOptions={{ hideAttribution: true }}
+              onPaneClick={onPaneClick}
+              onEdgeClick={handleEdgeClick}
+              onKeyDown={handleKeyDown}
+            >
+              <FlowBuildingComponent />
+              <UpdateAllComponents />
+              <MemoizedBackground />
+              {helperLineEnabled && <HelperLines helperLines={helperLines} />}
+            </ReactFlow>
+          </div>
           <div
             id="shadow-box"
             style={{
@@ -757,7 +758,7 @@ export default function Page({
               display: "none",
             }}
           ></div>
-        </div>
+        </>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
           <CustomLoader remSize={30} />
