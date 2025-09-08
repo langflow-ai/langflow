@@ -506,7 +506,7 @@ async def get_current_user_mcp(
     if token:
         return await get_current_user_by_jwt(token, db)
 
-    # MCP-specific authentication logic - always behaves as if skip_auth_auto_login is True
+    # MCP-specific authentication logic - does not require API keys if AUTO_LOGIN is enabled
     settings_service = get_settings_service()
     result: ApiKey | User | None
 
