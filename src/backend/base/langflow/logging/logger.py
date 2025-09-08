@@ -269,11 +269,12 @@ def configure(
     if log_env.lower() == "container" or log_env.lower() == "container_json":
         processors.append(structlog.processors.JSONRenderer())
     elif log_env.lower() == "container_csv":
-        processors.append(
-            structlog.processors.KeyValueRenderer(
-                key_order=["timestamp", "level", "caller", "module", "event"], drop_missing=True
-            )
-        )
+        # Include callsite fields in key order when DEV is enabled
+        key_order = ["timestamp", "level", "event"]
+        if DEV:
+            key_order += ["filename", "func_name", "lineno"]
+
+        processors.append(structlog.processors.KeyValueRenderer(key_order=key_order, drop_missing=True))
     else:
         # Use rich console for pretty printing based on environment variable
         log_stdout_pretty = os.getenv("LANGFLOW_PRETTY_LOGS", "true").lower() == "true"
