@@ -430,9 +430,6 @@ async def client_fixture(
             service_manager.factories.clear()
             service_manager.services.clear()  # Clear the services cache
             app = create_app()
-            db_service = get_db_service()
-            db_service.database_url = f"sqlite:///{db_path}"
-            db_service.reload_engine()
             return app, db_path
 
         app, db_path = await asyncio.to_thread(init_app)
