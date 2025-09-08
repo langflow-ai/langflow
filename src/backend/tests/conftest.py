@@ -366,11 +366,40 @@ def deactivate_tracing(monkeypatch):
 
 @pytest.fixture
 def use_noop_session(monkeypatch):
+    """Fixture to enable NoopSession for database operations.
+    
+    This fixture ensures that database operations use a NoopSession
+    instead of hitting a real database, even if services are already initialized.
+    """
+    # Set the environment variable (for any new service initialization)
     monkeypatch.setenv("LANGFLOW_USE_NOOP_DATABASE", "1")
-    # Optionally patch the Settings object if needed
-    # from langflow.services.settings.base import Settings
-    # monkeypatch.setattr(Settings, "use_noop_database", True)
+    
+    # Import here to avoid circular imports
+    from langflow.services.manager import service_manager
+    from langflow.services.schema import ServiceType
+    
+    # Patch any existing settings service instances
+    try:
+        settings_service = service_manager.get(ServiceType.SETTINGS_SERVICE)
+        if settings_service and hasattr(settings_service, 'settings'):
+            original_value = settings_service.settings.use_noop_database
+            monkeypatch.setattr(settings_service.settings, "use_noop_database", True)
+    except Exception:
+        # Settings service might not be initialized yet
+        pass
+    
+    # Patch any existing database service instances
+    try:
+        db_service = service_manager.get(ServiceType.DATABASE_SERVICE)
+        if db_service and hasattr(db_service, 'settings_service'):
+            if hasattr(db_service.settings_service, 'settings'):
+                monkeypatch.setattr(db_service.settings_service.settings, "use_noop_database", True)
+    except Exception:
+        # Database service might not be initialized yet
+        pass
+    
     yield
+    
     monkeypatch.undo()
 
 
