@@ -243,17 +243,27 @@ def configure(
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.CallsiteParameterAdder(
-            parameters=[
-                structlog.processors.CallsiteParameter.FILENAME,
-                structlog.processors.CallsiteParameter.FUNC_NAME,
-                structlog.processors.CallsiteParameter.LINENO,
-            ]
-        ),
-        add_serialized,
-        remove_exception_in_production,
-        buffer_writer,
     ]
+
+    # Add callsite information only when LANGFLOW_DEV is set
+    if DEV:
+        processors.append(
+            structlog.processors.CallsiteParameterAdder(
+                parameters=[
+                    structlog.processors.CallsiteParameter.FILENAME,
+                    structlog.processors.CallsiteParameter.FUNC_NAME,
+                    structlog.processors.CallsiteParameter.LINENO,
+                ]
+            )
+        )
+
+    processors.extend(
+        [
+            add_serialized,
+            remove_exception_in_production,
+            buffer_writer,
+        ]
+    )
 
     # Configure output based on environment
     if log_env.lower() == "container" or log_env.lower() == "container_json":
