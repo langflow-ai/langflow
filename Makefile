@@ -129,6 +129,7 @@ unit_tests: ## run unit tests
 	if [ "$(ff)" = "true" ]; then \
 		EXTRA_ARGS="$$EXTRA_ARGS --ff"; \
 	fi; \
+	uv pip install blockbuster asgi_lifespan
 	uv run pytest src/backend/tests/unit \
 	--ignore=src/backend/tests/integration \
 	--ignore=src/backend/tests/unit/template \
