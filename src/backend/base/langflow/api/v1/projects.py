@@ -207,7 +207,6 @@ async def update_project(
     if not existing_project:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    # Single query to get all flows, then separate in Python
     result = await session.exec(
         select(Flow.id, Flow.is_component).where(
             Flow.folder_id == existing_project.id, 
