@@ -1,7 +1,7 @@
 import copy
+import json
 import re
 from typing import Any
-import json
 
 from composio import Composio
 from composio_langchain import LangchainProvider
@@ -11,16 +11,15 @@ from lfx.base.mcp.util import create_input_schema_from_json_schema
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import (
     AuthInput,
+    DropdownInput,
     FileInput,
     InputTypes,
     MessageTextInput,
+    MultilineInput,
     SecretStrInput,
     SortableListInput,
-    DropdownInput,
     StrInput,
     TabInput,
-    MultilineInput,
-    CodeInput,
 )
 from lfx.io import Output
 from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
@@ -28,8 +27,6 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
-
-
 
 
 class ComposioBaseComponent(Component):
@@ -126,12 +123,8 @@ class ComposioBaseComponent(Component):
         # Build DataFrame and avoid exposing a 'data' attribute via column access,
         # which interferes with logging utilities that probe for '.data'.
         df = DataFrame(result)
-        try:
-            if "data" in df.columns:
-                df = df.rename(columns={"data": "_data"})
-        except Exception:
-            # If any unexpected structure, return the DataFrame as-is
-            pass
+        if "data" in df.columns:
+            df = df.rename(columns={"data": "_data"})
         return df
 
     def as_data(self) -> Data:
@@ -553,8 +546,8 @@ class ComposioBaseComponent(Component):
                     clean_field_name = f"{self.app_name}_status"
                     # Update the field schema description to reflect the name change
                     field_schema_copy = field_schema.copy()
-                    field_schema_copy["description"] = (
-                        f"Status for {self.app_name.title()}: " + field_schema.get("description", "")
+                    field_schema_copy["description"] = f"Status for {self.app_name.title()}: " + field_schema.get(
+                        "description", ""
                     )
                 else:
                     # Use the original field schema for all other fields
@@ -609,12 +602,10 @@ class ComposioBaseComponent(Component):
 
                 # Identify top-level JSON parents (object/array) to render as single CodeInput
                 top_props_for_json = set()
-                try:
-                    for top_name, top_schema in parameters_schema.get("properties", {}).items():
-                        if isinstance(top_schema, dict) and top_schema.get("type") in {"object", "array"}:
-                            top_props_for_json.add(top_name)
-                except Exception:
-                    pass
+                props_dict = parameters_schema.get("properties", {}) if isinstance(parameters_schema, dict) else {}
+                for top_name, top_schema in props_dict.items():
+                    if isinstance(top_schema, dict) and top_schema.get("type") in {"object", "array"}:
+                        top_props_for_json.add(top_name)
 
                 for inp in result:
                     if hasattr(inp, "name") and inp.name is not None:
@@ -684,25 +675,22 @@ class ComposioBaseComponent(Component):
                         processed_inputs.append(inp)
 
                 # Add single CodeInput for each JSON parent field
-                try:
-                    for top_name in top_props_for_json:
-                        # Avoid duplicates if already present
-                        if any(getattr(i, "name", None) == top_name for i in processed_inputs):
-                            continue
-                        top_schema = parameters_schema.get("properties", {}).get(top_name, {})
-                        processed_inputs.append(
-                            MultilineInput(
-                                name=top_name,
-                                display_name=top_schema.get("title") or top_name.replace("_", " ").title(),
-                                info=(
-                                    top_schema.get("description")
-                                    or "Provide JSON for this parameter (object or array)."
-                                ),
-                                required=top_name in required_fields_set,
-                            )
+                props_dict = parameters_schema.get("properties", {}) if isinstance(parameters_schema, dict) else {}
+                for top_name in top_props_for_json:
+                    # Avoid duplicates if already present
+                    if any(getattr(i, "name", None) == top_name for i in processed_inputs):
+                        continue
+                    top_schema = props_dict.get(top_name, {})
+                    processed_inputs.append(
+                        MultilineInput(
+                            name=top_name,
+                            display_name=top_schema.get("title") or top_name.replace("_", " ").title(),
+                            info=(
+                                top_schema.get("description") or "Provide JSON for this parameter (object or array)."
+                            ),
+                            required=top_name in required_fields_set,
                         )
-                except Exception:
-                    pass
+                    )
 
                 return processed_inputs
             return result  # noqa: TRY300
@@ -820,7 +808,7 @@ class ComposioBaseComponent(Component):
             logger.info(f"OAuth connection initiated for {app_name}: {redirect_url} (ID: {connection_id})")
             return redirect_url, connection_id  # noqa: TRY300
 
-        except Exception as e:
+        except (ValueError, ConnectionError, TypeError, AttributeError) as e:
             logger.error(f"Error initiating connection for {app_name}: {e}")
             msg = f"Failed to initiate OAuth connection: {e}"
             raise ValueError(msg) from e
@@ -870,10 +858,11 @@ class ComposioBaseComponent(Component):
                 auth_config = getattr(connection.__dict__, "auth_config", None)
             scheme = getattr(auth_config, "auth_scheme", None) if auth_config else None
             is_managed = getattr(auth_config, "is_composio_managed", None) if auth_config else None
-            return scheme, is_managed
-        except Exception as e:
+        except (AttributeError, ValueError, ConnectionError, TypeError) as e:
             logger.debug(f"Could not retrieve auth info for connection {connection_id}: {e}")
             return None, None
+        else:
+            return scheme, is_managed
 
     def _disconnect_specific_connection(self, connection_id: str) -> None:
         """Disconnect a specific Composio connection by ID."""
@@ -897,15 +886,16 @@ class ComposioBaseComponent(Component):
             if hasattr(obj, "model_dump"):
                 try:
                     return self._to_plain_dict(obj.model_dump())
-                except Exception:
+                except (TypeError, AttributeError, ValueError):
                     pass
             if hasattr(obj, "__dict__") and not isinstance(obj, (str, bytes)):
                 try:
                     return self._to_plain_dict({k: v for k, v in obj.__dict__.items() if not k.startswith("_")})
-                except Exception:
+                except (TypeError, AttributeError, ValueError):
                     pass
+        except (TypeError, ValueError, AttributeError, RecursionError):
             return obj
-        except Exception:
+        else:
             return obj
 
     def _get_toolkit_schema(self) -> dict[str, Any] | None:
@@ -920,7 +910,7 @@ class ComposioBaseComponent(Component):
                 return None
             try:
                 schema = composio.toolkits.retrieve(slug=app_slug)
-            except Exception:
+            except (AttributeError, ValueError, ConnectionError, TypeError):
                 schema = None
                 for method_name, kwargs in (
                     ("retrieve", {"toolkit_slug": app_slug}),
@@ -932,13 +922,14 @@ class ComposioBaseComponent(Component):
                         schema = method(**kwargs)
                         if schema:
                             break
-                    except Exception:
+                    except (AttributeError, ValueError, ConnectionError, TypeError):
                         continue
             self._toolkit_schema = self._to_plain_dict(schema)
-            return self._toolkit_schema
-        except Exception as e:
+        except (AttributeError, ValueError, ConnectionError, TypeError) as e:
             logger.debug(f"Could not retrieve toolkit schema for {getattr(self, 'app_name', '')}: {e}")
             return None
+        else:
+            return self._toolkit_schema
 
     def _extract_auth_modes_from_schema(self, schema: dict[str, Any] | None) -> list[str]:
         """Return available auth modes (e.g., OAUTH2, API_KEY) from toolkit schema."""
@@ -979,7 +970,7 @@ class ComposioBaseComponent(Component):
                     ).to_dict()
                     pill["show"] = True
                     build_config["auth_mode"] = pill
-                except Exception:
+                except (TypeError, ValueError, AttributeError):
                     build_config["auth_mode"] = {
                         "name": "auth_mode",
                         "display_name": "Auth Mode",
@@ -997,7 +988,7 @@ class ComposioBaseComponent(Component):
                 if "auth_mode_display" in build_config:
                     build_config["auth_mode_display"]["show"] = False
             auth_mode_cfg["helper_text"] = "Choose how to authenticate with the toolkit."
-        except Exception as e:
+        except (TypeError, ValueError, AttributeError) as e:
             logger.debug(f"Failed to render auth_mode dropdown: {e}")
 
     def _clear_auth_dynamic_fields(self, build_config: dict) -> None:
@@ -1006,7 +997,16 @@ class ComposioBaseComponent(Component):
                 build_config.pop(fname, None)
         self._auth_dynamic_fields.clear()
 
-    def _add_text_field(self, build_config: dict, name: str, display_name: str, info: str | None, required: bool, default_value: str | None = None) -> None:
+    def _add_text_field(
+        self,
+        build_config: dict,
+        name: str,
+        display_name: str,
+        info: str | None,
+        *,
+        required: bool,
+        default_value: str | None = None,
+    ) -> None:
         """Add a simple text input (StrInput) for custom auth forms, prefilled with schema defaults when available."""
         field = StrInput(
             name=name,
@@ -1020,7 +1020,6 @@ class ComposioBaseComponent(Component):
             field["value"] = default_value
         build_config[name] = field
         self._auth_dynamic_fields.add(name)
-
 
     def _render_custom_auth_fields(self, build_config: dict, schema: dict[str, Any], mode: str) -> None:
         """Render fields for custom auth based on schema auth_config_details sections."""
@@ -1070,7 +1069,12 @@ class ComposioBaseComponent(Component):
         details = schema.get("auth_config_details") or schema.get("authConfigDetails") or []
         for item in details:
             fields = (item.get("fields") or {}) if isinstance(item, dict) else {}
-            for section_key in ("auth_config_creation", "authConfigCreation", "connected_account_initiation", "connectedAccountInitiation"):
+            for section_key in (
+                "auth_config_creation",
+                "authConfigCreation",
+                "connected_account_initiation",
+                "connectedAccountInitiation",
+            ):
                 section = fields.get(section_key) or {}
                 for bucket in ("required", "optional"):
                     for entry in section.get(bucket, []) or []:
@@ -1153,7 +1157,7 @@ class ComposioBaseComponent(Component):
                 if selected_mode and not (isinstance(managed, list) and selected_mode in managed):
                     self._clear_auth_dynamic_fields(build_config)
                     self._render_custom_auth_fields(build_config, schema or {}, selected_mode)
-            except Exception:
+            except (TypeError, ValueError, AttributeError):
                 pass
 
         # CRITICAL: Set action options if we have actions (either from fresh population or cache)
@@ -1207,16 +1211,16 @@ class ComposioBaseComponent(Component):
                     helper_text="Choose how to authenticate with the toolkit.",
                 ).to_dict()
                 build_config["auth_mode"] = dd
-            except Exception:
+            except (TypeError, ValueError, AttributeError):
                 pass
             # NEW: Clear any selected action and hide generated fields when API key is re-entered
             try:
                 if "action_button" in build_config and isinstance(build_config["action_button"], dict):
                     build_config["action_button"]["value"] = "disabled"
                 self._hide_all_action_fields(build_config)
-            except Exception:
+            except (TypeError, ValueError, AttributeError):
                 pass
-            
+
         # Handle disconnect operations when tool mode is enabled
         if field_name == "auth_link" and field_value == "disconnect":
             # Soft disconnect: do not delete remote account; only clear local state
@@ -1275,7 +1279,7 @@ class ComposioBaseComponent(Component):
                         ).to_dict()
                         pill["show"] = True
                         build_config["auth_mode"] = pill
-                    except Exception:
+                    except (TypeError, ValueError, AttributeError):
                         build_config["auth_mode"] = {
                             "name": "auth_mode",
                             "display_name": "Auth Mode",
@@ -1347,21 +1351,36 @@ class ComposioBaseComponent(Component):
                         # Validate required fields before creating any auth config
                         required_missing = []
                         if mode == "OAUTH2":
-                            req_names_pre = self._get_schema_field_names(schema, "OAUTH2", "auth_config_creation", "required")
+                            req_names_pre = self._get_schema_field_names(
+                                schema,
+                                "OAUTH2",
+                                "auth_config_creation",
+                                "required",
+                            )
                             for fname in req_names_pre:
                                 if fname in build_config:
                                     val = build_config[fname].get("value")
                                     if val in (None, ""):
                                         required_missing.append(fname)
                         elif mode == "API_KEY":
-                            req_names_pre = self._get_schema_field_names(schema, "API_KEY", "connected_account_initiation", "required")
+                            req_names_pre = self._get_schema_field_names(
+                                schema,
+                                "API_KEY",
+                                "connected_account_initiation",
+                                "required",
+                            )
                             for fname in req_names_pre:
                                 if fname in build_config:
                                     val = build_config[fname].get("value")
                                     if val in (None, ""):
                                         required_missing.append(fname)
                         else:
-                            req_names_pre = self._get_schema_field_names(schema, mode, "connected_account_initiation", "required")
+                            req_names_pre = self._get_schema_field_names(
+                                schema,
+                                mode,
+                                "connected_account_initiation",
+                                "required",
+                            )
                             for fname in req_names_pre:
                                 if fname in build_config:
                                     val = build_config[fname].get("value")
@@ -1375,24 +1394,29 @@ class ComposioBaseComponent(Component):
                                     build_config[fname]["helper_text_metadata"] = {"variant": "destructive"}
                                     # Also reflect in info for guaranteed visibility
                                     existing_info = build_config[fname].get("info") or ""
-                                    prefix = "Required: " if not existing_info else "Required: "
-                                    build_config[fname]["info"] = f"{prefix}{existing_info}".strip()
+                                    build_config[fname]["info"] = f"Required: {existing_info}".strip()
                                     build_config[fname]["show"] = True
                             # Add a visible top-level hint near Auth Mode as well
                             build_config.setdefault("auth_mode", {})
-                            build_config["auth_mode"]["helper_text"] = f"Missing required: {', '.join(required_missing)}"
+                            missing_joined = ", ".join(required_missing)
+                            build_config["auth_mode"]["helper_text"] = f"Missing required: {missing_joined}"
                             build_config["auth_mode"]["helper_text_metadata"] = {"variant": "destructive"}
                             build_config["auth_link"]["value"] = "connect"
-                            build_config["auth_link"]["auth_tooltip"] = f"Missing: {', '.join(required_missing)}"
+                            build_config["auth_link"]["auth_tooltip"] = f"Missing: {missing_joined}"
                             return build_config
                         composio = self._build_wrapper()
-                        if mode == "OAUTH2": 
+                        if mode == "OAUTH2":
                             # If an auth_config was already created via the button, use it and include initiation fields
                             stored_ac_id = (build_config.get("auth_link") or {}).get("auth_config_id")
                             if stored_ac_id:
                                 # Build val from schema-declared connected_account_initiation required + rendered fields
                                 val_payload = {}
-                                init_req = self._get_schema_field_names(schema, "OAUTH2", "connected_account_initiation", "required")
+                                init_req = self._get_schema_field_names(
+                                    schema,
+                                    "OAUTH2",
+                                    "connected_account_initiation",
+                                    "required",
+                                )
                                 candidate_names = set(self._auth_dynamic_fields) | init_req
                                 for fname in candidate_names:
                                     if fname in build_config:
@@ -1418,7 +1442,12 @@ class ComposioBaseComponent(Component):
                             credentials = {}
                             missing = []
                             # Collect required names from schema
-                            req_names = self._get_schema_field_names(schema, "OAUTH2", "auth_config_creation", "required")
+                            req_names = self._get_schema_field_names(
+                                schema,
+                                "OAUTH2",
+                                "auth_config_creation",
+                                "required",
+                            )
                             candidate_names = set(self._auth_dynamic_fields) | req_names
                             for fname in candidate_names:
                                 if fname in build_config:
@@ -1438,7 +1467,12 @@ class ComposioBaseComponent(Component):
                             )
                             auth_config_id = getattr(ac, "id", None)
                             # If the schema declares initiation required fields, render them and defer initiation
-                            init_req = self._get_schema_field_names(schema, "OAUTH2", "connected_account_initiation", "required")
+                            init_req = self._get_schema_field_names(
+                                schema,
+                                "OAUTH2",
+                                "connected_account_initiation",
+                                "required",
+                            )
                             if init_req:
                                 self._clear_auth_dynamic_fields(build_config)
                                 for name in init_req:
@@ -1455,7 +1489,10 @@ class ComposioBaseComponent(Component):
                                 build_config["auth_link"]["auth_tooltip"] = "Connect"
                                 return build_config
                             # Otherwise initiate immediately
-                            redirect = composio.connected_accounts.initiate(user_id=self.entity_id, auth_config_id=auth_config_id)
+                            redirect = composio.connected_accounts.initiate(
+                                user_id=self.entity_id,
+                                auth_config_id=auth_config_id,
+                            )
                             redirect_url = getattr(redirect, "redirect_url", None)
                             connection_id = getattr(redirect, "id", None)
                             if redirect_url:
@@ -1468,7 +1505,7 @@ class ComposioBaseComponent(Component):
                             build_config["action_button"]["helper_text"] = ""
                             build_config["action_button"]["helper_text_metadata"] = {}
                             return build_config
-                        elif mode == "API_KEY":
+                        if mode == "API_KEY":
                             ac = composio.auth_configs.create(
                                 toolkit=toolkit_slug,
                                 options={"type": "use_custom_auth", "auth_scheme": "API_KEY", "credentials": {}},
@@ -1478,7 +1515,12 @@ class ComposioBaseComponent(Component):
                             val_payload = {}
                             missing = []
                             # Collect required names from schema
-                            req_names = self._get_schema_field_names(schema, "API_KEY", "connected_account_initiation", "required")
+                            req_names = self._get_schema_field_names(
+                                schema,
+                                "API_KEY",
+                                "connected_account_initiation",
+                                "required",
+                            )
                             # Merge rendered dynamic fields and schema-required names
                             candidate_names = set(self._auth_dynamic_fields) | req_names
                             for fname in candidate_names:
@@ -1509,37 +1551,41 @@ class ComposioBaseComponent(Component):
                             build_config["action_button"]["helper_text"] = ""
                             build_config["action_button"]["helper_text_metadata"] = {}
                             return build_config
+                        # Generic custom auth flow for any other mode (treat like API_KEY)
+                        ac = composio.auth_configs.create(
+                            toolkit=toolkit_slug,
+                            options={"type": "use_custom_auth", "auth_scheme": mode, "credentials": {}},
+                        )
+                        auth_config_id = getattr(ac, "id", None)
+                        val_payload = {}
+                        req_names = self._get_schema_field_names(
+                            schema,
+                            mode,
+                            "connected_account_initiation",
+                            "required",
+                        )
+                        candidate_names = set(self._auth_dynamic_fields) | req_names
+                        for fname in candidate_names:
+                            if fname in build_config:
+                                val = build_config[fname].get("value")
+                                if val not in (None, ""):
+                                    val_payload[fname] = val
+                        initiation = composio.connected_accounts.initiate(
+                            user_id=self.entity_id,
+                            auth_config_id=auth_config_id,
+                            config={"auth_scheme": mode, "val": val_payload},
+                        )
+                        connection_id = getattr(initiation, "id", None)
+                        redirect_url = getattr(initiation, "redirect_url", None)
+                        # Do not store connection_id on initiation; only when ACTIVE
+                        if redirect_url:
+                            build_config["auth_link"]["value"] = redirect_url
+                            build_config["auth_link"]["auth_tooltip"] = "Disconnect"
                         else:
-                            # Generic custom auth flow for any other mode (treat like API_KEY)
-                            ac = composio.auth_configs.create(
-                                toolkit=toolkit_slug,
-                                options={"type": "use_custom_auth", "auth_scheme": mode, "credentials": {}},
-                            )
-                            auth_config_id = getattr(ac, "id", None)
-                            val_payload = {}
-                            req_names = self._get_schema_field_names(schema, mode, "connected_account_initiation", "required")
-                            candidate_names = set(self._auth_dynamic_fields) | req_names
-                            for fname in candidate_names:
-                                if fname in build_config:
-                                    val = build_config[fname].get("value")
-                                    if val not in (None, ""):
-                                        val_payload[fname] = val
-                            initiation = composio.connected_accounts.initiate(
-                                user_id=self.entity_id,
-                                auth_config_id=auth_config_id,
-                                config={"auth_scheme": mode, "val": val_payload},
-                            )
-                            connection_id = getattr(initiation, "id", None)
-                            redirect_url = getattr(initiation, "redirect_url", None)
-                            # Do not store connection_id on initiation; only when ACTIVE
-                            if redirect_url:
-                                build_config["auth_link"]["value"] = redirect_url
-                                build_config["auth_link"]["auth_tooltip"] = "Disconnect"
-                            else:
-                                build_config["auth_link"]["value"] = "validated"
-                                build_config["auth_link"]["auth_tooltip"] = "Disconnect"
-                            return build_config
-                    except (ValueError, ConnectionError, Exception) as e:
+                            build_config["auth_link"]["value"] = "validated"
+                            build_config["auth_link"]["auth_tooltip"] = "Disconnect"
+                        return build_config
+                    except (ValueError, ConnectionError, TypeError) as e:
                         logger.error(f"Error creating connection: {e}")
                         build_config["auth_link"]["value"] = "connect"
                         build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
@@ -1601,7 +1647,7 @@ class ComposioBaseComponent(Component):
                         ).to_dict()
                         pill["show"] = True
                         build_config["auth_mode"] = pill
-                    except Exception:
+                    except (TypeError, ValueError, AttributeError):
                         build_config["auth_mode"] = {
                             "name": "auth_mode",
                             "display_name": "Auth Mode",
@@ -1638,7 +1684,16 @@ class ComposioBaseComponent(Component):
             for field_name_in_config in build_config:  # noqa: PLC0206
                 # Skip base fields like api_key, tool_mode, action, etc., and dynamic auth fields
                 if (
-                    field_name_in_config not in ["api_key", "tool_mode", "action_button", "auth_link", "entity_id", "auth_mode", "auth_mode_pill"]
+                    field_name_in_config
+                    not in [
+                        "api_key",
+                        "tool_mode",
+                        "action_button",
+                        "auth_link",
+                        "entity_id",
+                        "auth_mode",
+                        "auth_mode_pill",
+                    ]
                     and field_name_in_config not in getattr(self, "_auth_dynamic_fields", set())
                     and isinstance(build_config[field_name_in_config], dict)
                     and "show" in build_config[field_name_in_config]
@@ -1658,10 +1713,13 @@ class ComposioBaseComponent(Component):
                 schema = self._get_toolkit_schema()
                 mode = (build_config.get("auth_mode") or {}).get("value")
                 managed = (schema or {}).get("composio_managed_auth_schemes") or []
-                if mode and not (isinstance(managed, list) and mode in managed):
-                    if not getattr(self, "_auth_dynamic_fields", set()):
-                        self._render_custom_auth_fields(build_config, schema or {}, mode)
-            except Exception:
+                if (
+                    mode
+                    and not (isinstance(managed, list) and mode in managed)
+                    and not getattr(self, "_auth_dynamic_fields", set())
+                ):
+                    self._render_custom_auth_fields(build_config, schema or {}, mode)
+            except (TypeError, ValueError, AttributeError):
                 pass
             # Do NOT return here; allow auth flow to run in Tool Mode
 
@@ -1679,15 +1737,14 @@ class ComposioBaseComponent(Component):
         if field_name == "action_button":
             # If selection is cancelled/cleared, remove generated fields
             def _is_cleared(val: Any) -> bool:
-                if not val:
-                    return True
-                if isinstance(val, list) and len(val) == 0:
-                    return True
-                if isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict) and not val[0].get("name"):
-                    return True
-                if isinstance(val, str) and val in ("", "disabled", "placeholder"):
-                    return True
-                return False
+                return (
+                    not val
+                    or (
+                        isinstance(val, list)
+                        and (len(val) == 0 or (len(val) > 0 and isinstance(val[0], dict) and not val[0].get("name")))
+                    )
+                    or (isinstance(val, str) and val in ("", "disabled", "placeholder"))
+                )
 
             if _is_cleared(field_value):
                 self._hide_all_action_fields(build_config)
@@ -1763,7 +1820,7 @@ class ComposioBaseComponent(Component):
                     logger.error(f"Failed to create new auth config for {toolkit_slug}")
                     build_config["auth_link"]["value"] = "error"
                     build_config["auth_link"]["auth_tooltip"] = "Create Auth Config failed"
-            except (ValueError, ConnectionError, Exception) as e:
+            except (ValueError, ConnectionError, TypeError) as e:
                 logger.error(f"Error creating new auth config: {e}")
                 build_config["auth_link"]["value"] = "error"
                 build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
@@ -1793,7 +1850,7 @@ class ComposioBaseComponent(Component):
                     helper_text="Choose how to authenticate with the toolkit.",
                 ).to_dict()
                 build_config["auth_mode"] = dd
-            except Exception:
+            except (TypeError, ValueError, AttributeError):
                 build_config.setdefault("auth_mode", {})
                 build_config["auth_mode"]["show"] = True
                 build_config["auth_mode"].pop("value", None)
@@ -1802,7 +1859,7 @@ class ComposioBaseComponent(Component):
                 if "action_button" in build_config and isinstance(build_config["action_button"], dict):
                     build_config["action_button"]["value"] = "disabled"
                 self._hide_all_action_fields(build_config)
-            except Exception:
+            except (TypeError, ValueError, AttributeError):
                 pass
             return build_config
 
@@ -1962,7 +2019,7 @@ class ComposioBaseComponent(Component):
                 if isinstance(value, str) and prop_schema.get("type") in {"array", "object"}:
                     try:
                         value = json.loads(value)
-                    except Exception:
+                    except json.JSONDecodeError:
                         # Fallback for simple arrays of primitives
                         if prop_schema.get("type") == "array":
                             value = [item.strip() for item in value.split(",") if item.strip() != ""]
@@ -2019,7 +2076,13 @@ class ComposioBaseComponent(Component):
     def set_default_tools(self):
         """Set the default tools."""
 
-    def _get_schema_field_names(self, schema: dict[str, Any] | None, mode: str, section_kind: str, bucket: str) -> set[str]:
+    def _get_schema_field_names(
+        self,
+        schema: dict[str, Any] | None,
+        mode: str,
+        section_kind: str,
+        bucket: str,
+    ) -> set[str]:
         names: set[str] = set()
         if not schema:
             return names
@@ -2028,16 +2091,25 @@ class ComposioBaseComponent(Component):
             if (item.get("mode") or item.get("auth_method")) != mode:
                 continue
             fields = item.get("fields") or {}
-            section = fields.get(section_kind) or fields.get(
-                "authConfigCreation" if section_kind == "auth_config_creation" else "connectedAccountInitiation"
-            ) or {}
+            section = (
+                fields.get(section_kind)
+                or fields.get(
+                    "authConfigCreation" if section_kind == "auth_config_creation" else "connectedAccountInitiation"
+                )
+                or {}
+            )
             for entry in section.get(bucket, []) or []:
                 name = entry.get("name") if isinstance(entry, dict) else None
                 if name:
                     names.add(name)
         return names
 
-    def _get_schema_required_entries(self, schema: dict[str, Any] | None, mode: str, section_kind: str) -> list[dict[str, Any]]:
+    def _get_schema_required_entries(
+        self,
+        schema: dict[str, Any] | None,
+        mode: str,
+        section_kind: str,
+    ) -> list[dict[str, Any]]:
         if not schema:
             return []
         details = schema.get("auth_config_details") or schema.get("authConfigDetails") or []
@@ -2045,16 +2117,16 @@ class ComposioBaseComponent(Component):
             if (item.get("mode") or item.get("auth_method")) != mode:
                 continue
             fields = item.get("fields") or {}
-            section = fields.get(section_kind) or fields.get(
-                "authConfigCreation" if section_kind == "auth_config_creation" else "connectedAccountInitiation"
-            ) or {}
+            section = (
+                fields.get(section_kind)
+                or fields.get(
+                    "authConfigCreation" if section_kind == "auth_config_creation" else "connectedAccountInitiation"
+                )
+                or {}
+            )
             req = section.get("required", []) or []
             # Normalize dict-like entries
-            result = []
-            for entry in req:
-                if isinstance(entry, dict):
-                    result.append(entry)
-            return result
+            return [entry for entry in req if isinstance(entry, dict)]
         return []
 
     def _hide_all_action_fields(self, build_config: dict) -> None:
