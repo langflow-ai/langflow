@@ -318,7 +318,9 @@ async def create_super_user(
 async def create_user_longterm_token(db: AsyncSession) -> tuple[UUID, dict]:
     settings_service = get_settings_service()
     if not settings_service.auth_settings.AUTO_LOGIN:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Auto login required to create a long-term token")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Auto login required to create a long-term token"
+        )
 
     # Prefer configured username; fall back to default or any existing superuser
     # NOTE: This user name cannot be a dynamic current user name since it is only used when autologin is True

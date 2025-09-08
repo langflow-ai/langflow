@@ -82,7 +82,7 @@ class AuthSettings(BaseSettings):
     @field_validator("SUPERUSER", "SUPERUSER_PASSWORD", mode="before")
     @classmethod
     def validate_superuser(cls, value, info):
-        # When AUTO_LOGIN is enabled, force superuser to use default values. 
+        # When AUTO_LOGIN is enabled, force superuser to use default values.
         if info.data.get("AUTO_LOGIN"):
             logger.debug("Auto login is enabled, forcing superuser to use default values")
             if info.field_name == "SUPERUSER":

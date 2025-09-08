@@ -145,7 +145,9 @@ def get_lifespan(*, fix_migration=False, version=None):
                 current_time = asyncio.get_event_loop().time()
                 await logger.adebug("Initializing default super user")
                 await initialize_auto_login_default_superuser()
-                await logger.adebug(f"Default super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
+                await logger.adebug(
+                    f"Default super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                )
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Loading bundles")
