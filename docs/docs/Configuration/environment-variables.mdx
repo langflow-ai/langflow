@@ -179,6 +179,8 @@ Langflow supports many environment variables for configuration. They are organiz
 | `LANGFLOW_DISABLE_TRACK_APIKEY_USAGE` | Boolean | False | Whether to track API key usage. If true, disables tracking of API key usage (`total_uses` and `last_used_at`) to avoid database contention under high concurrency. |
 | `LANGFLOW_WEBHOOK_AUTH_ENABLE` | Boolean | False | Enable API key authentication for webhook endpoints. If false, webhooks run as flow owner without authentication. |
 
+For detailed information about authentication configuration, see [API keys and authentication](/api-keys-and-authentication#authentication-configuration-variables).
+
 ### Database configuration
 
 | Variable | Format | Default | Description |
@@ -192,6 +194,8 @@ Langflow supports many environment variables for configuration. They are organiz
 | `LANGFLOW_SAVE_DB_IN_CONFIG_DIR` | Boolean | False | If false (default), the Langflow database is saved in the `langflow` root directory. This means the database isn't shared between different virtual environments, and the database is deleted when you uninstall Langflow. If true, the database is saved in the `LANGFLOW_CONFIG_DIR`. |
 | `LANGFLOW_USE_NOOP_DATABASE` | Boolean | False | If true, disables all database operations and uses a no-op session. Useful for testing. |
 
+For detailed information about database configuration, see [Memory management options](/memory).
+
 ### Caching configuration
 
 | Variable | Format | Default | Description |
@@ -203,6 +207,8 @@ Langflow supports many environment variables for configuration. They are organiz
 | `LANGFLOW_REDIS_DB` | Integer | `0` | Redis database number for cache. See `LANGFLOW_CACHE_TYPE`. |
 | `LANGFLOW_REDIS_PASSWORD` | String | Not set | Password for Redis authentication when using Redis cache type. |
 | `LANGFLOW_REDIS_CACHE_EXPIRE` | Integer | `3600` | Cache expiration time in seconds. See `LANGFLOW_CACHE_TYPE`. |
+
+For detailed information about cache configuration, see [Memory management options](/memory#configure-cache-memory).
 
 ### Logging configuration
 
@@ -216,6 +222,8 @@ Langflow supports many environment variables for configuration. They are organiz
 | `LANGFLOW_LOG_FORMAT` | String | Not set | Set the log format configuration. |
 | `LANGFLOW_PRETTY_LOGS` | Boolean | True | Enable pretty log formatting with colors and rich console output. |
 | `LANGFLOW_ALEMBIC_LOG_FILE` | String | `alembic/alembic.log` | Path to the Alembic log file for SQLAlchemy migrations. |
+
+For detailed information about logging configuration, see [Logs](/logging#configure-log-options).
 
 ### File and data management
 
@@ -232,6 +240,8 @@ Langflow supports many environment variables for configuration. They are organiz
 | `LANGFLOW_MAX_VERTEX_BUILDS_TO_KEEP` | Integer | `3000` | Maximum number of vertex builds to keep in the database. |
 | `LANGFLOW_MAX_VERTEX_BUILDS_PER_VERTEX` | Integer | `2` | Maximum number of builds to keep per vertex. Older builds will be deleted. |
 
+For detailed information about file management configuration, see [Manage files](/concepts-file-management#file-management-configuration).
+
 ### Flow and project management
 
 | Variable | Format | Default | Description |
@@ -245,6 +255,8 @@ Langflow supports many environment variables for configuration. They are organiz
 | `LANGFLOW_FS_FLOWS_POLLING_INTERVAL` | Integer | `10000` | The polling interval in milliseconds for synchronizing flows from the file system. |
 | `LANGFLOW_LAZY_LOAD_COMPONENTS` | Boolean | False | If true, Langflow only partially loads components at startup and fully loads them on demand. This significantly reduces startup time but may cause a slight delay when a component is first used. |
 | `LANGFLOW_EVENT_DELIVERY` | String | `streaming` | How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'. |
+
+For detailed information about flow configuration, see [Build flows](/concepts-flows#flow-configuration).
 
 ### Public flow settings
 
@@ -288,6 +300,8 @@ Langflow supports many environment variables for configuration. They are organiz
 | `LANGFLOW_MCP_SERVER_ENABLE_PROGRESS_NOTIFICATIONS` | Boolean | False | If this option is set to True, Langflow sends progress notifications in the MCP server. |
 | `LANGFLOW_MCP_SERVER_TIMEOUT` | Integer | `20` | The number of seconds to wait before timing out MCP server operations. |
 | `LANGFLOW_MCP_MAX_SESSIONS_PER_SERVER` | Integer | `10` | Maximum number of MCP sessions to keep per unique server. |
+
+For detailed information about MCP server configuration, see [Use Langflow as an MCP server](/mcp-server#mcp-server-configuration).
 
 ### Telemetry
 
