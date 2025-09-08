@@ -56,25 +56,20 @@ LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
 
 For an example, see [Configure an external PostgreSQL database](/configuration-custom-database).
 
-### Configure the external database connection
+The `LANGFLOW_DB_CONNECTION_SETTINGS` is a JSON configuration for database connection pool settings that allows you to fine-tune your database connection pool and timeout settings.
 
-The following settings allow you to fine-tune your database connection pool and timeout settings:
 
-**Environment Variable**:
 ```bash
 LANGFLOW_DB_CONNECTION_SETTINGS='{"pool_size": 20, "max_overflow": 30, "pool_timeout": 30, "pool_pre_ping": true, "pool_recycle": 1800, "echo": false}'
 ```
 
 **Connection Pool Parameters**:
-- `pool_size`: Maximum number of database connections to keep in the pool. Default: 20 seconds.
-- `max_overflow`: Maximum number of connections that can be created beyond the pool_size. Default: 30 seconds.
+- `pool_size`: Maximum number of database connections to keep in the pool. Default: 20 connections.
+- `max_overflow`: Maximum number of connections that can be created beyond the pool_size. Default: 30 connections.
 - `pool_timeout`: Number of seconds to wait before timing out on getting a connection from the pool. Default: 30 seconds.
 - `pool_pre_ping`: If `true`, the pool tests connections for liveness upon each checkout. Default: `true`.
 - `pool_recycle`: Number of seconds after which a connection is automatically recycled. Default: 1800 seconds(30 minutes).
 - `echo`: If `true`, SQL queries are logged for debugging purposes. Default: `false`.
-
-**Separate Connection Settings**:
-- `LANGFLOW_DB_CONNECT_TIMEOUT`: Maximum number of seconds to wait when establishing a new database connection. This is separate from the connection pool settings and is primarily used for SQLite connections. Default: 30 seconds.
 
 ## Configure cache memory
 
