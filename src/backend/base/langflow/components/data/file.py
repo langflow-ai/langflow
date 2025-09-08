@@ -346,11 +346,14 @@ class FileComponent(BaseFileComponent):
                     raise ImportError(f"Docling imports failed: {e}") from e
 
             def create_converter(strategy, input_format, DocumentConverter, pipeline, ocr_engine):
-                if strategy == "latest" and pipeline == "standard":
+                # --- Standard PDF/IMAGE pipeline (your existing behavior), with optional OCR ---
+                if pipeline == "standard":
                     try:
                         from docling.datamodel.pipeline_options import PdfPipelineOptions  # type: ignore
                         from docling.document_converter import PdfFormatOption  # type: ignore
+
                         pipe = PdfPipelineOptions()
+
                         if ocr_engine:
                             try:
                                 from docling.models.factories import get_ocr_factory  # type: ignore
@@ -358,15 +361,39 @@ class FileComponent(BaseFileComponent):
                                 fac = get_ocr_factory(allow_external_plugins=False)
                                 pipe.ocr_options = fac.create_options(kind=ocr_engine)
                             except Exception:
+                                # If OCR setup fails, gracefully disable it (matches your current pattern).
                                 pipe.do_ocr = False
+
                         fmt = {}
                         if hasattr(input_format, "PDF"):
                             fmt[getattr(input_format, "PDF")] = PdfFormatOption(pipeline_options=pipe)
                         if hasattr(input_format, "IMAGE"):
                             fmt[getattr(input_format, "IMAGE")] = PdfFormatOption(pipeline_options=pipe)
+
                         return DocumentConverter(format_options=fmt)
                     except Exception:
                         return DocumentConverter()
+
+                # --- Vision-Language Model (VLM) pipeline ---
+                if pipeline == "vlm":
+                    try:
+                        from docling.datamodel.pipeline_options import VlPipelineOptions  # type: ignore
+                        from docling.document_converter import VlFormatOption  # type: ignore
+
+                        vl_pipe = VlPipelineOptions()
+
+                        # VLM paths generally don't need OCR; keep OCR off by default here.
+                        fmt = {}
+                        if hasattr(input_format, "PDF"):
+                            fmt[getattr(input_format, "PDF")] = VlFormatOption(pipeline_options=vl_pipe)
+                        if hasattr(input_format, "IMAGE"):
+                            fmt[getattr(input_format, "IMAGE")] = VlFormatOption(pipeline_options=vl_pipe)
+
+                        return DocumentConverter(format_options=fmt)
+                    except Exception:
+                        return DocumentConverter()
+
+                # --- Fallback: default converter with no special options ---
                 return DocumentConverter()
 
             def export_markdown(document, ImageRefMode, image_mode, img_ph, pg_ph):
