@@ -595,10 +595,25 @@ class FileComponent(BaseFileComponent):
     def load_files_advanced(self) -> DataFrame:
         """Load files using advanced Docling processing and export to an advanced format."""
         self.markdown = False
-        return self.load_files()
+        df = self.load_files()
+
+        if not hasattr(df, "text"):
+            if hasattr(df, "error"):
+                raise ValueError(df.error[0])
+            else:
+                raise ValueError("No content generated.")
+
+        return df
 
     def load_files_markdown(self) -> Message:
         """Load files using advanced Docling processing and export to Markdown format."""
         self.markdown = True
-        result = self.load_files()
-        return Message(text=str(result.text[0]))
+        df = self.load_files()
+
+        if not hasattr(df, "text"):
+            if hasattr(df, "error"):
+                raise ValueError(df.error[0])
+            else:
+                raise ValueError("No content generated.")
+        
+        return Message(text=str(df.text[0]))
