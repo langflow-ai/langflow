@@ -210,23 +210,19 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
                 # Check for specific dependency errors and raise custom exception
                 if "ocrmac is not correctly installed" in error_msg:
                     raise DoclingDependencyError(
-                        "ocrmac",
-                        "Please install it via `pip install ocrmac` to use this OCR engine."
+                        "ocrmac", "Please install it via `pip install ocrmac` to use this OCR engine."
                     )
-                elif "easyocr" in error_msg and "not installed" in error_msg:
+                if "easyocr" in error_msg and "not installed" in error_msg:
                     raise DoclingDependencyError(
-                        "easyocr",
-                        "Please install it via `pip install easyocr` to use this OCR engine."
+                        "easyocr", "Please install it via `pip install easyocr` to use this OCR engine."
                     )
-                elif "tesserocr" in error_msg and "not installed" in error_msg:
+                if "tesserocr" in error_msg and "not installed" in error_msg:
                     raise DoclingDependencyError(
-                        "tesserocr",
-                        "Please install it via `pip install tesserocr` to use this OCR engine."
+                        "tesserocr", "Please install it via `pip install tesserocr` to use this OCR engine."
                     )
-                elif "rapidocr" in error_msg and "not installed" in error_msg:
+                if "rapidocr" in error_msg and "not installed" in error_msg:
                     raise DoclingDependencyError(
-                        "rapidocr",
-                        "Please install it via `pip install rapidocr-onnxruntime` to use this OCR engine."
+                        "rapidocr", "Please install it via `pip install rapidocr-onnxruntime` to use this OCR engine."
                     )
 
                 # If not a dependency error, log and continue with other files
@@ -238,8 +234,7 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
                 error_msg = str(file_error)
                 if any(ocr in error_msg.lower() for ocr in ["ocrmac", "easyocr", "tesserocr", "rapidocr"]):
                     raise DoclingDependencyError(
-                        "OCR dependency",
-                        f"Please install the required OCR engine: {error_msg}"
+                        "OCR dependency", f"Please install the required OCR engine: {error_msg}"
                     )
                 raise  # Re-raise if not OCR related
 
@@ -264,12 +259,14 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
     except DoclingDependencyError as e:
         # Send dependency error with special formatting
         logger.error(f"Dependency error: {e}")
-        queue.put({
-            "error": str(e),
-            "error_type": "dependency_error",
-            "dependency_name": e.dependency_name,
-            "install_command": e.install_command
-        })
+        queue.put(
+            {
+                "error": str(e),
+                "error_type": "dependency_error",
+                "dependency_name": e.dependency_name,
+                "install_command": e.install_command,
+            }
+        )
         return
 
     except KeyboardInterrupt:
