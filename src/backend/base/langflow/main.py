@@ -26,7 +26,7 @@ from langflow.api import health_check_router, log_router, router
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
-    initialize_super_user_if_needed,
+    initialize_auto_login_default_superuser,
     load_bundles_from_urls,
     load_flows_from_directory,
     sync_flows_from_fs,
@@ -144,9 +144,27 @@ def get_lifespan(*, fix_migration=False, version=None):
             setup_llm_caching()
             await logger.adebug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            if get_settings_service().auth_settings.AUTO_LOGIN:
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Initializing default super user")
+                await initialize_auto_login_default_superuser()
+                await logger.adebug(
+                    f"Default super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                )
+
             current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Loading bundles")
+            temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
+            get_settings_service().settings.components_path.extend(bundles_components_paths)
+            await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Caching types")
+            all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
+            await logger.adebug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
             await logger.adebug("Initializing super user")
-            await initialize_super_user_if_needed()
+            await initialize_auto_login_default_superuser()
             await logger.adebug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
