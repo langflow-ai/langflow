@@ -162,34 +162,8 @@ If you want to automatically set fallback values for your global variables from 
 
 ## Default environment variables
 
-Langflow automatically detects and converts some environment variables into global variables of the type **Credential**, which are applied to the specific fields in components that require them. Currently, the following variables are supported:
+Langflow automatically detects and converts some environment variables into global variables of the type **Credential**, which are applied to the specific fields in components that require them.
 
-- `ANTHROPIC_API_KEY`
-- `ASTRA_DB_API_ENDPOINT`
-- `ASTRA_DB_APPLICATION_TOKEN`
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `AZURE_OPENAI_API_DEPLOYMENT_NAME`
-- `AZURE_OPENAI_API_EMBEDDINGS_DEPLOYMENT_NAME`
-- `AZURE_OPENAI_API_INSTANCE_NAME`
-- `AZURE_OPENAI_API_KEY`
-- `AZURE_OPENAI_API_VERSION`
-- `COHERE_API_KEY`
-- `COMPOSIO_API_KEY`
-- `GOOGLE_API_KEY`
-- `GROQ_API_KEY`
-- `HUGGINGFACEHUB_API_TOKEN`
-- `NOVITA_API_KEY`
-- `OPENAI_API_KEY`
-- `PINECONE_API_KEY`
-- `SAMBANOVA_API_KEY`
-- `SEARCHAPI_API_KEY`
-- `SERPAPI_API_KEY`
-- `TAVILY_API_KEY`
-- `UPSTASH_VECTOR_REST_TOKEN`
-- `UPSTASH_VECTOR_REST_URL`
-- `VECTARA_API_KEY`
-- `VECTARA_CORPUS_ID`
-- `VECTARA_CUSTOMER_ID`
+The supported variables are listed in [constants.py](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/services/settings/constants.py).
 
 For information about other environment variables and their usage, see [Environment Variables](/environment-variables).
