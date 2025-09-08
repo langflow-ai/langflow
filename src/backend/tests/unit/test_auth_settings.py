@@ -19,7 +19,7 @@ def test_auto_login_true_forces_default_and_scrubs_password(tmp_path: Path):
         CONFIG_DIR=cfg_dir,
         AUTO_LOGIN=True,
         SUPERUSER="custom",
-        SUPERUSER_PASSWORD=DEFAULT_SUPERUSER_PASSWORD + "_changed",
+        SUPERUSER_PASSWORD=DEFAULT_SUPERUSER_PASSWORD.get_secret_value() + "_changed",
     )
     # Validator forces default username and scrubs password
     assert settings.SUPERUSER == DEFAULT_SUPERUSER
