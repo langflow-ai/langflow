@@ -249,6 +249,13 @@ To generate a secret encryption key for `LANGFLOW_SECRET_KEY`, do the following:
     LANGFLOW_SECRET_KEY=dBuu...2kM2_fb
     ```
 
+    If you're running Langflow on Docker, reference the `LANGFLOW_SECRET_KEY` from your `.env` file in the `docker-compose.yml` file like this:
+
+        ```yaml
+        environment:
+          - LANGFLOW_SECRET_KEY=${LANGFLOW_SECRET_KEY}
+        ```
+
 ### LANGFLOW_NEW_USER_IS_ACTIVE {#langflow-new-user-is-active}
 
 When `LANGFLOW_NEW_USER_IS_ACTIVE=False` (default), a superuser must explicitly activate a new user's account before they can sign in to the visual editor.
