@@ -48,4 +48,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   eventDelivery: EventDeliveryType.POLLING,
   setEventDelivery: (eventDelivery: EventDeliveryType) =>
     set({ eventDelivery }),
+  setAwaitInputAgentModel: (isSetting: boolean) =>
+    set({ awaitInputAgentModel: isSetting }),
+  awaitInputAgentModel: false,
 }));
