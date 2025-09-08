@@ -249,7 +249,7 @@ def configure(
                 structlog.processors.CallsiteParameter.FUNC_NAME,
                 structlog.processors.CallsiteParameter.LINENO,
             ]
-        ),  # Add caller information
+        ),
         add_serialized,
         remove_exception_in_production,
         buffer_writer,
