@@ -2,7 +2,6 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-
 from langflow.components.crewai import CrewAIAgentComponent, SequentialTaskComponent
 from langflow.components.custom_component import CustomComponent
 from langflow.components.input_output import ChatInput, ChatOutput

@@ -9,6 +9,7 @@ from langflow.custom.utils import (
     build_custom_component_template_from_inputs,
 )
 
+
 class TestCodeHashGeneration:
     """Test the _generate_code_hash function."""
 

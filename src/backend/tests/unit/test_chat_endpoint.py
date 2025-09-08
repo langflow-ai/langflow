@@ -9,8 +9,6 @@ from langflow.logging.logger import logger
 from langflow.memory import aget_messages
 from langflow.services.database.models.flow import FlowUpdate
 
-from langflow.memory import aget_messages
-from langflow.services.database.models.flow import FlowUpdate
 from tests.unit.build_utils import build_flow, consume_and_assert_stream, create_flow, get_build_events
 
 

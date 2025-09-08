@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.datastax import (
     AssistantsCreateAssistant,
     AssistantsCreateThread,
@@ -7,6 +6,7 @@ from langflow.components.datastax import (
     AssistantsListAssistants,
     AssistantsRun,
 )
+
 from tests.integration.utils import run_single_component
 
 
