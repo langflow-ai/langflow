@@ -219,7 +219,7 @@ def configure(
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
 
     requested_min_level = LOG_LEVEL_MAP.get(
-        ((log_level if log_level is not None else os.getenv("LANGFLOW_LOG_LEVEL", "ERROR")).upper()), logging.ERROR
+        (log_level or os.getenv("LANGFLOW_LOG_LEVEL", "ERROR")).upper(), logging.ERROR
     )
     if current_min_level == requested_min_level:
         return
@@ -243,6 +243,13 @@ def configure(
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.CallsiteParameterAdder(
+            parameters=[
+                structlog.processors.CallsiteParameter.FILENAME,
+                structlog.processors.CallsiteParameter.FUNC_NAME,
+                structlog.processors.CallsiteParameter.LINENO,
+            ]
+        ),  # Add caller information
         add_serialized,
         remove_exception_in_production,
         buffer_writer,
@@ -254,7 +261,7 @@ def configure(
     elif log_env.lower() == "container_csv":
         processors.append(
             structlog.processors.KeyValueRenderer(
-                key_order=["timestamp", "level", "module", "event"], drop_missing=True
+                key_order=["timestamp", "level", "caller", "module", "event"], drop_missing=True
             )
         )
     else:
