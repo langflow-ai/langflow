@@ -5,6 +5,7 @@ from astrapy.admin import parse_api_endpoint
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
+from lfx.serialization import serialize
 from lfx.inputs.inputs import (
     BoolInput,
     DictInput,
@@ -235,6 +236,11 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
             else:
                 msg = "Vector Store Inputs must be Data objects."
                 raise TypeError(msg)
+
+        # Serialize metadata to handle Properties objects and other non-JSON serializable types
+        documents = [
+            Document(page_content=doc.page_content, metadata=serialize(doc.metadata, to_str=True)) for doc in documents
+        ]
 
         if documents:
             self.log(f"Adding {len(documents)} documents to the Vector Store.")
