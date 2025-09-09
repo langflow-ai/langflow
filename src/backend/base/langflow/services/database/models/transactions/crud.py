@@ -114,15 +114,17 @@ async def cleanup_old_transactions_for_flow(db: AsyncSession, flow_id: UUID, max
         max_entries = get_settings_service().settings.max_transactions_to_keep
 
     try:
-        # Delete older entries, keeping only the newest max_entries
+        # Delete older entries, keeping only the newest max_entries.
+        # More portable and deterministic: keep top-N by (timestamp DESC, id DESC)
+        newest_ids_stmt = (
+            select(TransactionTable.id)
+            .where(TransactionTable.flow_id == flow_id)
+            .order_by(col(TransactionTable.timestamp).desc(), col(TransactionTable.id).desc())
+            .limit(max_entries)
+        )
         delete_stmt = delete(TransactionTable).where(
             TransactionTable.flow_id == flow_id,
-            col(TransactionTable.id).in_(
-                select(TransactionTable.id)
-                .where(TransactionTable.flow_id == flow_id)
-                .order_by(col(TransactionTable.timestamp).desc())
-                .offset(max_entries)
-            ),
+            col(TransactionTable.id).notin_(newest_ids_stmt),
         )
 
         result = await db.exec(delete_stmt)
