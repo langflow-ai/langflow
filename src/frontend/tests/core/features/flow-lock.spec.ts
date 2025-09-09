@@ -18,9 +18,7 @@ test.describe("Flow Lock Feature", () => {
       });
 
       // Verify initially the flow is not locked (no lock icon should be visible)
-      const initialLockIcon = page.locator(
-        '[data-testid="menu_bar_display"] [data-testid="icon-Lock"]',
-      );
+      const initialLockIcon = page.getByTestId("icon-Lock");
       await expect(initialLockIcon).toHaveCount(0);
 
       // Open flow settings by clicking on the flow name
@@ -74,9 +72,7 @@ test.describe("Flow Lock Feature", () => {
       });
 
       // Verify lock icon now appears in the flow header
-      const lockIconInHeader = page
-        .locator('[data-testid="menu_bar_display"]')
-        .locator('[data-testid="icon-Lock"]');
+      const lockIconInHeader = page.getByTestId("icon-Lock");
       await expect(lockIconInHeader).toBeVisible();
 
       // Try to open settings again to unlock
@@ -119,8 +115,9 @@ test.describe("Flow Lock Feature", () => {
         timeout: 10000,
       });
 
-      // Verify lock icon is no longer visible in the flow header
-      await expect(lockIconInHeader).toHaveCount(0);
+      await expect(page.getByTestId("icon-Lock")).toBeHidden({
+        timeout: 5000,
+      });
     },
   );
 
@@ -140,23 +137,24 @@ test.describe("Flow Lock Feature", () => {
       });
 
       // Open flow settings
-      await page.getByTestId("menu_bar_display").click();
+      await page.getByTestId("flow_name").click();
       await page.waitForSelector('[data-testid="lock-flow-switch"]', {
         timeout: 30000,
       });
 
       // Initially should show unlock icon (flow is unlocked)
-      const unlockIcon = page.locator('[data-testid="icon-Unlock"]');
+      const dialog = page.locator('[role="dialog"]');
+      const unlockIcon = dialog.locator('[data-testid="icon-Unlock"]');
       await expect(unlockIcon).toBeVisible();
 
       // Lock the flow
-      const lockSwitch = page.getByTestId("lock-flow-switch");
+      const lockSwitch = dialog.getByTestId("lock-flow-switch");
       await lockSwitch.click();
 
       // Should now show lock icon
-      const lockIcon = page.locator('[data-testid="icon-Lock"]');
+      const lockIcon = dialog.locator('[data-testid="icon-Lock"]');
       await expect(lockIcon).toBeVisible({ timeout: 5000 });
-      await expect(unlockIcon).toHaveCount(0);
+      await expect(unlockIcon).toBeHidden({ timeout: 5000 });
     },
   );
 });
