@@ -9,7 +9,6 @@ import base64
 import os
 
 import pytest
-
 from langflow.utils.image import create_image_content_dict
 
 
