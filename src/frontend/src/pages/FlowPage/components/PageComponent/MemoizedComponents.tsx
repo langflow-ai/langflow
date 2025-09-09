@@ -1,6 +1,3 @@
-import { Background, Panel } from "@xyflow/react";
-import { memo } from "react";
-import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControlButton from "@/components/core/canvasControlsComponent/CanvasControlButton";
 import CanvasControls from "@/components/core/canvasControlsComponent/CanvasControls";
@@ -10,6 +7,9 @@ import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
+import { Background, Panel } from "@xyflow/react";
+import { memo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useSearchContext } from "../flowSidebarComponent";
 import { NAV_ITEMS } from "../flowSidebarComponent/components/sidebarSegmentedNav";
 
@@ -39,11 +39,11 @@ export const MemoizedCanvasControls = memo(
       <CanvasControls>
         <Button
           unstyled
-          unselectable="off"
+          unselectable="on"
           size="icon"
           data-testid="lock-status"
-          className="flex items-center justify-center px-2 rounded-none gap-1"
-          title="Lock status"
+          className="flex items-center justify-center px-2 rounded-none gap-1 cursor-default"
+          title={`Lock status: ${isLocked ? "Locked" : "Unlocked"}`}
         >
           <ForwardedIconComponent
             name={isLocked ? "Lock" : "Unlock"}
