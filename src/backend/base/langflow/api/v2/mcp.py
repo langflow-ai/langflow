@@ -6,9 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v2.files import MCP_SERVERS_FILE, delete_file, download_file, get_file_by_name, upload_user_file
+from langflow.base.agents.utils import safe_cache_get, safe_cache_set
 from langflow.base.mcp.util import update_tools
 from langflow.logging import logger
-from langflow.services.deps import get_settings_service, get_storage_service
+from langflow.services.deps import get_settings_service, get_shared_component_cache_service, get_storage_service
 
 router = APIRouter(tags=["MCP"], prefix="/mcp")
 
@@ -234,6 +235,14 @@ async def update_server(
     await upload_server_config(
         server_list, current_user, session, storage_service=storage_service, settings_service=settings_service
     )
+
+    shared_component_cache_service = get_shared_component_cache_service()
+    # Clear the servers cache
+    servers_cache = safe_cache_get(shared_component_cache_service, "servers", {})
+    if isinstance(servers_cache, dict):
+        servers = safe_cache_get(shared_component_cache_service, "servers", {})
+        del servers[server_name]
+        safe_cache_set(shared_component_cache_service, "servers", servers)
 
     return await get_server(
         server_name,
