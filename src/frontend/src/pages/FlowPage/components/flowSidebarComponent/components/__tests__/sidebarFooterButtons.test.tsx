@@ -48,11 +48,17 @@ jest.mock("@/components/ui/sidebar", () => ({
   SidebarMenuButton: ({
     children,
     asChild,
+    className,
   }: {
     children: React.ReactNode;
     asChild?: boolean;
+    className?: string;
   }) => (
-    <div data-testid="sidebar-menu-button" data-as-child={asChild}>
+    <div
+      data-testid="sidebar-menu-button"
+      data-as-child={asChild}
+      className={className}
+    >
       {children}
     </div>
   ),
@@ -352,9 +358,23 @@ describe("SidebarMenuButtons", () => {
       const addButton = screen.getByTestId("sidebar-add-mcp-server-button");
       const manageButton = screen.getByTestId("sidebar-manage-servers-button");
 
-      expect(addButton).toHaveClass("flex", "items-center", "gap-2");
+      expect(addButton).toHaveClass(
+        "flex",
+        "items-center",
+        "w-full",
+        "h-full",
+        "gap-3",
+        "hover:bg-muted",
+      );
       expect(addButton).toHaveAttribute("data-unstyled", "true");
-      expect(manageButton).toHaveClass("flex", "items-center", "gap-2");
+      expect(manageButton).toHaveClass(
+        "flex",
+        "items-center",
+        "w-full",
+        "h-full",
+        "gap-3",
+        "hover:bg-muted",
+      );
       expect(manageButton).toHaveAttribute("data-unstyled", "true");
     });
 
@@ -609,6 +629,30 @@ describe("SidebarMenuButtons", () => {
       expect(customSpan).toHaveClass(
         "group-data-[state=open]/collapsible:font-semibold",
       );
+    });
+
+    it("should apply correct styling to custom component button", () => {
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      const customButton = screen.getByTestId(
+        "sidebar-custom-component-button",
+      );
+      expect(customButton).toHaveClass(
+        "flex",
+        "items-center",
+        "w-full",
+        "h-full",
+        "gap-3",
+        "hover:bg-muted",
+      );
+      expect(customButton).toHaveAttribute("data-unstyled", "true");
+    });
+
+    it("should apply group class to custom component SidebarMenuButton", () => {
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      const sidebarMenuButton = screen.getByTestId("sidebar-menu-button");
+      expect(sidebarMenuButton).toHaveClass("group");
     });
   });
 
