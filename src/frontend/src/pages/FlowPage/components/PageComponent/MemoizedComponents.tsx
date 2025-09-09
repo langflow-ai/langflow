@@ -1,3 +1,6 @@
+import { Background, Panel } from "@xyflow/react";
+import { memo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControlButton from "@/components/core/canvasControlsComponent/CanvasControlButton";
 import CanvasControls from "@/components/core/canvasControlsComponent/CanvasControls";
@@ -7,9 +10,6 @@ import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
-import { Background, Panel } from "@xyflow/react";
-import { memo } from "react";
-import { useShallow } from "zustand/react/shallow";
 import { useSearchContext } from "../flowSidebarComponent";
 import { NAV_ITEMS } from "../flowSidebarComponent/components/sidebarSegmentedNav";
 
