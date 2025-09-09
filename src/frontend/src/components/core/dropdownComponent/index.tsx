@@ -214,8 +214,7 @@ export default function Dropdown({
             : [templateField.type]) || [];
 
         // Use the actual field type if no specific input types are defined
-        const effectiveInputTypes =
-          inputTypes.length > 0 ? inputTypes : [templateField.type || ""];
+        const effectiveInputTypes = inputTypes.length > 0 ? inputTypes : [];
 
         const tooltipTitle: string =
           (effectiveInputTypes && effectiveInputTypes.length > 0
