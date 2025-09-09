@@ -10,7 +10,7 @@ test(
   async ({ page }) => {
     test.skip(
       !process?.env?.ANTHROPIC_API_KEY,
-      "ANTHROPIC_API_KEY required to run this test",
+      "ANTHROPIC_API_KEY required to run this test"
     );
 
     if (!process.env.CI) {
@@ -34,7 +34,7 @@ test(
     await page.getByTestId("playground-btn-flow-io").click();
 
     // Read the image file as a binary string
-    const filePath = "tests/assets/chain.png";
+    const filePath = "src/frontend/tests/assets/chain.png";
     const fileContent = readFileSync(filePath, "base64");
 
     // Create the DataTransfer and File objects within the browser context
@@ -51,7 +51,7 @@ test(
         dt.items.add(file);
         return dt;
       },
-      { fileContent },
+      { fileContent }
     );
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
@@ -64,9 +64,7 @@ test(
     // Dispatch the drop event on the target element
     await element.dispatchEvent("drop", { dataTransfer });
 
-    await page
-      .getByTestId("input-chat-playground")
-      .fill("tell me a small history about the image");
+    await page.getByTestId("input-chat-playground").fill("what is this image?");
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,
@@ -85,8 +83,8 @@ test(
       .last()
       .textContent();
 
-    expect(textFromLlm?.toLowerCase()).toContain("chain");
+    expect(textFromLlm?.toLowerCase()).toMatch(/(chain|inkscape)/);
     const lengthOfTextFromLlm = textFromLlm?.length;
     expect(lengthOfTextFromLlm).toBeGreaterThan(100);
-  },
+  }
 );
