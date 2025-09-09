@@ -824,11 +824,9 @@
                   "Anthropic",
                   "Azure OpenAI",
                   "Google Generative AI",
-                  "Groq",
                   "NVIDIA",
                   "OpenAI",
-                  "SambaNova",
-                  "Custom"
+                  "SambaNova"
                 ],
                 "options_metadata": [
                   {
@@ -843,9 +841,7 @@
                   {
                     "icon": "GoogleGenerativeAI"
                   },
-                  {
-                    "icon": "Groq"
-                  },
+              
                   {
                     "icon": "NVIDIA"
                   },
@@ -854,9 +850,6 @@
                   },
                   {
                     "icon": "SambaNova"
-                  },
-                  {
-                    "icon": "brain"
                   }
                 ],
                 "placeholder": "",
@@ -865,6 +858,17 @@
                 "show": true,
                 "title_case": false,
                 "toggle": false,
+                        "external_options" : {  
+                  "fields": {
+                      "data": {
+                          "node": {
+                              "name": "connect_other_models",
+                              "display_name": "Connect other models",
+                              "icon": "CornerDownLeft"
+                          }
+                      }
+                  }
+                },
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",

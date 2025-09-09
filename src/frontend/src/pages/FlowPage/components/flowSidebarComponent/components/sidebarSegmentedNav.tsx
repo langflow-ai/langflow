@@ -1,15 +1,15 @@
+import { useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Separator } from "@/components/ui/separator";
 import {
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-    type SidebarSection,
-    useSidebar,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  type SidebarSection,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/utils/utils";
-import { useEffect, useState } from "react";
 import { useSearchContext } from "../index";
 
 export type { SidebarSection };

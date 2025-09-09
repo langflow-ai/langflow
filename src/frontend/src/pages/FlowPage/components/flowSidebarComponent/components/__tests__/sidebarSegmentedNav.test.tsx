@@ -1,5 +1,5 @@
-import type { SidebarSection } from "@/components/ui/sidebar";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { SidebarSection } from "@/components/ui/sidebar";
 import SidebarSegmentedNav, { NAV_ITEMS } from "../sidebarSegmentedNav";
 
 // Mock the hooks and components
