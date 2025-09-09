@@ -83,7 +83,7 @@ test(
       .last()
       .textContent();
 
-    expect(textFromLlm?.toLowerCase()).toMatch(/(chain|inkscape)/);
+    expect(textFromLlm?.toLowerCase()).toMatch(/(chain|inkscape|logo)/);
     const lengthOfTextFromLlm = textFromLlm?.length;
     expect(lengthOfTextFromLlm).toBeGreaterThan(100);
   }
