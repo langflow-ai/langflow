@@ -243,7 +243,11 @@ async def test_load_bundles_from_urls():
     async with session_scope() as session:
         await create_super_user(
             username=settings_service.auth_settings.SUPERUSER,
-            password=settings_service.auth_settings.SUPERUSER_PASSWORD,
+            password=(
+                settings_service.auth_settings.SUPERUSER_PASSWORD.get_secret_value()
+                if hasattr(settings_service.auth_settings.SUPERUSER_PASSWORD, "get_secret_value")
+                else settings_service.auth_settings.SUPERUSER_PASSWORD
+            ),
             db=session,
         )
 
