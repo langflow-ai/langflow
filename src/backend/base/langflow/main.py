@@ -296,7 +296,7 @@ def get_lifespan(*, fix_migration=False, version=None):
                         # Wait for all tasks to complete, capturing exceptions
                         results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
                         # Log any non-cancellation exceptions
-                        for task, result in zip(tasks_to_cancel, results):
+                        for result in results:
                             if isinstance(result, Exception) and not isinstance(result, asyncio.CancelledError):
                                 await logger.aerror(f"Error during task cleanup: {result}", exc_info=result)
 
