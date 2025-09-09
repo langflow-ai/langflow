@@ -81,7 +81,7 @@ async def get_messages(
         if sender_name:
             stmt = stmt.where(MessageTable.sender_name == sender_name)
         if order_by:
-            stmt = stmt.order_by(getattr(MessageTable, "timestamp").asc(), getattr(MessageTable, "sender").desc())
+            stmt = stmt.order_by(MessageTable.timestamp.asc(), MessageTable.sender.desc())
         else:
             stmt = stmt.order_by(getattr(MessageTable, order_by).asc())
         messages = await session.exec(stmt)
