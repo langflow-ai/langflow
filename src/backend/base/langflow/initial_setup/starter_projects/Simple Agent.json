@@ -969,17 +969,17 @@
                 "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                    "external_options": {
-                "fields": {
-                    "data": {
-                        "node": {
-                            "name": "connect_other_models",
-                            "display_name": "Connect other models",
-                            "icon": "CornerDownLeft"
-                        }
-                    }
-                }
-            },
+                "external_options" : {  
+                  "fields": {
+                      "data": {
+                          "node": {
+                              "name": "connect_other_models",
+                              "display_name": "Connect other models",
+                              "icon": "CornerDownLeft"
+                          }
+                      }
+                  }
+                },
                 "type": "str",
                 "value": "OpenAI"
               },
