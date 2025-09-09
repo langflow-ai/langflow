@@ -131,6 +131,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
         temp_dirs: list[TemporaryDirectory] = []
         sync_flows_from_fs_task = None
+        mcp_init_task = None
 
         try:
             start_time = asyncio.get_event_loop().time()
@@ -251,7 +252,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             # Start the delayed initialization as a background task
             # Allows the server to start first to avoid race conditions with MCP Server startup
-            _mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())  # noqa: RUF006
+            mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
 
             yield
 
@@ -284,9 +285,15 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 1: Cancelling Background Tasks
                 with shutdown_progress.step(1):
+                    tasks_to_cancel = []
                     if sync_flows_from_fs_task:
                         sync_flows_from_fs_task.cancel()
-                        await asyncio.wait([sync_flows_from_fs_task])
+                        tasks_to_cancel.append(sync_flows_from_fs_task)
+                    if mcp_init_task and not mcp_init_task.done():
+                        mcp_init_task.cancel()
+                        tasks_to_cancel.append(mcp_init_task)
+                    if tasks_to_cancel:
+                        await asyncio.wait(tasks_to_cancel)
 
                 # Step 2: Cleaning Up Services
                 with shutdown_progress.step(2):

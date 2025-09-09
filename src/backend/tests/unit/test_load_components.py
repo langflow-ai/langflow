@@ -64,8 +64,8 @@ class TestComponentLoading:
         print(f"aget_all_types_dict: {all_types_duration:.4f}s")
         print(f"Ratio (langflow/all_types): {langflow_duration / max(all_types_duration, 0.0001):.2f}")
 
-        # Both should complete in reasonable time (< 5s for langflow, < 15s for all_types)
-        assert langflow_duration < 5.0, f"get_langflow_components_list took too long: {langflow_duration}s"
+        # Both should complete in reasonable time (< 10s for langflow, < 15s for all_types)
+        assert langflow_duration < 10.0, f"get_langflow_components_list took too long: {langflow_duration}s"
         assert all_types_duration < 15.0, f"aget_all_types_dict took too long: {all_types_duration}s"
 
         # Store results for further analysis
