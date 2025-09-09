@@ -1408,7 +1408,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4o"
+                "value": "gpt-4.1"
               },
               "n_messages": {
                 "_input_type": "IntInput",
