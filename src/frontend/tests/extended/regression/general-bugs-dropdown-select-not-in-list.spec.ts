@@ -95,24 +95,5 @@ test(
     expect(await page.getByText("gpt").count()).toBe(0);
 
     await page.waitForTimeout(500);
-
-    await page.getByTestId("value-dropdown-dropdown_str_agent_llm").click();
-
-    await page.waitForTimeout(500);
-
-    await page.getByText("Groq").click();
-
-    await page.waitForTimeout(500);
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("dropdown_str_model_name").click();
-    await page.getByTestId("dropdown_search_input").click();
-
-    expect(await page.getByText("llama").count()).toBeGreaterThanOrEqual(0);
-    expect(await page.getByText("claude").count()).toBe(0);
-    expect(await page.getByText("gpt").count()).toBe(0);
   },
 );

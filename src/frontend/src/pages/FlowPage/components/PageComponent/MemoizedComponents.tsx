@@ -19,7 +19,6 @@ export const MemoizedBackground = memo(() => (
 
 interface MemoizedCanvasControlsProps {
   setIsAddingNote: (value: boolean) => void;
-  position: { x: number; y: number };
   shadowBoxWidth: number;
   shadowBoxHeight: number;
 }
@@ -29,7 +28,6 @@ export const MemoizedLogCanvasControls = memo(() => <LogCanvasControls />);
 export const MemoizedCanvasControls = memo(
   ({
     setIsAddingNote,
-    position,
     shadowBoxWidth,
     shadowBoxHeight,
   }: MemoizedCanvasControlsProps) => {
