@@ -270,6 +270,51 @@ LANGFLOW_NEW_USER_IS_ACTIVE=False
 Only superusers can manage user accounts for a Langflow server, but user management only matters if your server has authentication enabled.
 For more information, see [Start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled).
 
+### CORS Configuration for Authentication {#cors-configuration-for-authentication}
+
+Cross-Origin Resource Sharing (CORS) configuration affects how authentication credentials are handled when your Langflow frontend and backend are served from different origins (domains, ports, or protocols).
+
+By default, Langflow allows all origins (`*`) and disables credentials for security.
+
+```text
+LANGFLOW_CORS_ORIGINS=*
+LANGFLOW_CORS_ALLOW_CREDENTIALS=false
+```
+
+With the default settings:
+- Any website can make requests to your Langflow API
+- Authentication cookies and authorization headers are not sent with requests
+- API requests must include the `x-api-key` header for authentication
+
+For production deployments where your frontend and backend are on different origins, configure CORS to allow specific origins and enable credentials:
+
+```text
+LANGFLOW_CORS_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
+LANGFLOW_CORS_ALLOW_CREDENTIALS=true
+```
+
+With this configuration:
+- Only your specified domains can make requests to the server
+- Cookies and authorization headers are sent with requests
+- Supports session-based authentication in addition to API key authentication
+
+With CORS credentials enabled, you can use JWT authentication for your backend requests with a JWT token from your authentication service.
+
+```bash
+curl -X POST \
+  "https://your-langflow-backend.com/api/v1/run/your-flow-id" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer **YOUR_JWT_TOKEN**" \
+  -d '{
+    "inputs": {
+      "text": "Hello, Langflow!"
+    },
+    "tweaks": {}
+  }'
+```
+
+For more information about CORS environment variables, see [Environment variables](/environment-variables#supported-variables).
+
 ## Start a Langflow server with authentication enabled
 
 This section shows you how to use the [authentication environment variables](/api-keys-and-authentication#authentication-environment-variables) to deploy a Langflow server with authentication enabled.
@@ -291,6 +336,8 @@ Additionally, you must sign in as a superuser to manage users and [create a Lang
     LANGFLOW_SECRET_KEY=
     LANGFLOW_NEW_USER_IS_ACTIVE=False
     LANGFLOW_ENABLE_SUPERUSER_CLI=False
+    LANGFLOW_CORS_ORIGINS=*
+    LANGFLOW_CORS_ALLOW_CREDENTIALS=false
     ```
 
     Your `.env` file can have other environment variables.
@@ -316,6 +363,8 @@ Additionally, you must sign in as a superuser to manage users and [create a Lang
     LANGFLOW_SECRET_KEY=dBuu...2kM2_fb
     LANGFLOW_NEW_USER_IS_ACTIVE=False
     LANGFLOW_ENABLE_SUPERUSER_CLI=False
+    LANGFLOW_CORS_ORIGINS=*
+    LANGFLOW_CORS_ALLOW_CREDENTIALS=false
     ```
 
 5. Start Langflow with the configuration from your `.env` file:
