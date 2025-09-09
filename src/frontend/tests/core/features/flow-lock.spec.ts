@@ -24,7 +24,7 @@ test.describe("Flow Lock Feature", () => {
       await expect(initialLockIcon).toHaveCount(0);
 
       // Open flow settings by clicking on the flow name
-      await page.getByTestId("menu_bar_display").click();
+      await page.getByTestId("flow_name").click();
 
       // Wait for the settings modal to open
       await page.waitForSelector('[data-testid="lock-flow-switch"]', {
@@ -63,7 +63,9 @@ test.describe("Flow Lock Feature", () => {
       if (await saveButton.isEnabled({ timeout: 3000 })) {
         await saveButton.click();
       }
-      await page.waitForTimeout(1000);
+      await expect(saveButton).toBeHidden({
+        timeout: 5000,
+      });
 
       // Wait for the modal to close by waiting for the popover to be detached
       await page.waitForSelector('[role="dialog"]', {
@@ -78,7 +80,7 @@ test.describe("Flow Lock Feature", () => {
       await expect(lockIconInHeader).toBeVisible();
 
       // Try to open settings again to unlock
-      await page.getByTestId("menu_bar_display").click();
+      await page.getByTestId("flow_name").click();
 
       // Wait for the settings modal to open again
       await page.waitForSelector('[data-testid="lock-flow-switch"]', {
@@ -106,6 +108,10 @@ test.describe("Flow Lock Feature", () => {
       // Save the unlocked state by clicking the save button
       await page.getByTestId("save-flow-settings").isEnabled({ timeout: 3000 });
       await page.getByTestId("save-flow-settings").click();
+
+      await expect(saveButton).toBeHidden({
+        timeout: 5000,
+      });
 
       // Wait for the modal to close by waiting for the popover to be detached
       await page.waitForSelector('[role="dialog"]', {
@@ -149,7 +155,7 @@ test.describe("Flow Lock Feature", () => {
 
       // Should now show lock icon
       const lockIcon = page.locator('[data-testid="icon-Lock"]');
-      await expect(lockIcon).toBeVisible();
+      await expect(lockIcon).toBeVisible({ timeout: 5000 });
       await expect(unlockIcon).toHaveCount(0);
     },
   );
