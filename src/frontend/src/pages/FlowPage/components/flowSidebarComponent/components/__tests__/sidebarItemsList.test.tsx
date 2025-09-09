@@ -169,7 +169,7 @@ describe("SidebarItemsList", () => {
       const { container } = render(<SidebarItemsList {...defaultProps} />);
 
       const mainContainer = container.firstChild as HTMLElement;
-      expect(mainContainer).toHaveClass("flex", "flex-col", "gap-1", "py-2");
+      expect(mainContainer).toHaveClass("flex", "flex-col", "gap-1", "py-1");
     });
 
     it("should render all components from dataFilter", () => {
@@ -540,7 +540,7 @@ describe("SidebarItemsList", () => {
       const { container } = render(<SidebarItemsList {...defaultProps} />);
 
       const mainContainer = container.firstChild as HTMLElement;
-      expect(mainContainer).toHaveClass("flex", "flex-col", "gap-1", "py-2");
+      expect(mainContainer).toHaveClass("flex", "flex-col", "gap-1", "py-1");
     });
 
     it("should contain all expected child elements", () => {
