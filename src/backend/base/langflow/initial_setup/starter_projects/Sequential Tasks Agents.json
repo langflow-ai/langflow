@@ -437,9 +437,7 @@
                 "options": [
                   "Anthropic",
                   "Google Generative AI",
-                  "Groq",
-                  "OpenAI",
-                  "Custom"
+                  "OpenAI"
                 ],
                 "options_metadata": [
                   {
@@ -449,19 +447,24 @@
                     "icon": "GoogleGenerativeAI"
                   },
                   {
-                    "icon": "Groq"
-                  },
-                  {
                     "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "brain"
                   }
                 ],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
+                "external_options" : {  
+                  "fields": {
+                      "data": {
+                          "node": {
+                              "name": "connect_other_models",
+                              "display_name": "Connect other models",
+                              "icon": "CornerDownLeft"
+                          }
+                      }
+                  }
+                },
                 "title_case": false,
                 "toggle": false,
                 "tool_mode": false,
@@ -988,9 +991,7 @@
                 "options": [
                   "Anthropic",
                   "Google Generative AI",
-                  "Groq",
-                  "OpenAI",
-                  "Custom"
+                  "OpenAI"
                 ],
                 "options_metadata": [
                   {
@@ -1000,13 +1001,7 @@
                     "icon": "GoogleGenerativeAI"
                   },
                   {
-                    "icon": "Groq"
-                  },
-                  {
                     "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "brain"
                   }
                 ],
                 "placeholder": "",
@@ -1015,6 +1010,17 @@
                 "show": true,
                 "title_case": false,
                 "toggle": false,
+                "external_options" : {  
+                  "fields": {
+                      "data": {
+                          "node": {
+                              "name": "connect_other_models",
+                              "display_name": "Connect other models",
+                              "icon": "CornerDownLeft"
+                          }
+                      }
+                  }
+                },
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -2287,9 +2293,7 @@
                 "options": [
                   "Anthropic",
                   "Google Generative AI",
-                  "Groq",
-                  "OpenAI",
-                  "Custom"
+                  "OpenAI"
                 ],
                 "options_metadata": [
                   {
@@ -2299,19 +2303,24 @@
                     "icon": "GoogleGenerativeAI"
                   },
                   {
-                    "icon": "Groq"
-                  },
-                  {
                     "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "brain"
                   }
                 ],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
+                "external_options" : {  
+                  "fields": {
+                      "data": {
+                          "node": {
+                              "name": "connect_other_models",
+                              "display_name": "Connect other models",
+                              "icon": "CornerDownLeft"
+                          }
+                      }
+                  }
+                },
                 "title_case": false,
                 "toggle": false,
                 "tool_mode": false,
