@@ -205,41 +205,36 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
                 check_shutdown()
 
             except ImportError as import_error:
-                # Handle import errors that might indicate missing dependencies
-                error_msg = str(import_error)
-                if any(ocr in error_msg.lower() for ocr in ["ocrmac", "easyocr", "tesserocr", "rapidocr"]):
-                    engine = "OCR dependency"
-                    msg = (
-                        f"Please install the required OCR engine: {error_msg}, or "
-                        "install all Docling dependencies with `uv pip install 'langflow[docling]'`."
-                    )
-                    raise DoclingDependencyError(engine, msg) from import_error
-                # Re-raise if not OCR related
-                raise
+                # Simply pass ImportError to main process for handling
+                queue.put(
+                    {"error": str(import_error), "error_type": "import_error", "original_exception": "ImportError"}
+                )
+                return
 
             except (OSError, ValueError, RuntimeError) as file_error:
                 error_msg = str(file_error)
 
-                # Check for specific dependency errors in runtime/system errors
+                # Check for specific dependency errors and identify the dependency name
+                dependency_name = None
                 if "ocrmac is not correctly installed" in error_msg:
-                    engine = "ocrmac"
-                    msg = "Please install it via `pip install ocrmac` to use this OCR engine."
-                    raise DoclingDependencyError(engine, msg) from file_error
+                    dependency_name = "ocrmac"
+                elif "easyocr" in error_msg and "not installed" in error_msg:
+                    dependency_name = "easyocr"
+                elif "tesserocr" in error_msg and "not installed" in error_msg:
+                    dependency_name = "tesserocr"
+                elif "rapidocr" in error_msg and "not installed" in error_msg:
+                    dependency_name = "rapidocr"
 
-                if "easyocr" in error_msg and "not installed" in error_msg:
-                    engine = "easyocr"
-                    msg = "Please install it via `pip install easyocr` to use this OCR engine."
-                    raise DoclingDependencyError(engine, msg) from file_error
-
-                if "tesserocr" in error_msg and "not installed" in error_msg:
-                    engine = "tesserocr"
-                    msg = "Please install it via `pip install tesserocr` to use this OCR engine."
-                    raise DoclingDependencyError(engine, msg) from file_error
-
-                if "rapidocr" in error_msg and "not installed" in error_msg:
-                    engine = "rapidocr"
-                    msg = "Please install it via `pip install rapidocr-onnxruntime` to use this OCR engine."
-                    raise DoclingDependencyError(engine, msg) from file_error
+                if dependency_name:
+                    queue.put(
+                        {
+                            "error": error_msg,
+                            "error_type": "dependency_error",
+                            "dependency_name": dependency_name,
+                            "original_exception": type(file_error).__name__,
+                        }
+                    )
+                    return
 
                 # If not a dependency error, log and continue with other files
                 logger.error(f"Error processing file {file_path}: {file_error}")
@@ -262,19 +257,6 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
 
         logger.info(f"Successfully processed {len([d for d in processed_data if d])} files")
         queue.put(processed_data)
-
-    except DoclingDependencyError as e:
-        # Send dependency error with special formatting
-        logger.error(f"Dependency error: {e}")
-        queue.put(
-            {
-                "error": str(e),
-                "error_type": "dependency_error",
-                "dependency_name": e.dependency_name,
-                "install_command": e.install_command,
-            }
-        )
-        return
 
     except KeyboardInterrupt:
         logger.warning("KeyboardInterrupt during processing, exiting gracefully...")
