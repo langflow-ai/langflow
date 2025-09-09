@@ -1,5 +1,6 @@
 import { Background, Panel } from "@xyflow/react";
 import { memo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControlButton from "@/components/core/canvasControlsComponent/CanvasControlButton";
 import CanvasControls from "@/components/core/canvasControlsComponent/CanvasControls";
@@ -7,6 +8,7 @@ import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
+import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../flowSidebarComponent";
 import { NAV_ITEMS } from "../flowSidebarComponent/components/sidebarSegmentedNav";
@@ -28,32 +30,35 @@ export const MemoizedCanvasControls = memo(
     setIsAddingNote,
     shadowBoxWidth,
     shadowBoxHeight,
-  }: MemoizedCanvasControlsProps) => (
-    <CanvasControls>
-      <Button
-        variant="ghost"
-        size="icon"
-        data-testid="add_note"
-        className="group flex items-center justify-center px-2 rounded-none"
-        title="Add sticky note"
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsAddingNote(true);
-          const shadowBox = document.getElementById("shadow-box");
-          if (shadowBox) {
-            shadowBox.style.left = `${e.clientX - shadowBoxWidth / 2}px`;
-            shadowBox.style.top = `${e.clientY - shadowBoxHeight / 2}px`;
-            shadowBox.style.display = "block";
-          }
-        }}
-      >
-        <ForwardedIconComponent
-          name="sticky-note"
-          className="!h-5 !w-5 text-muted-foreground group-hover:text-primary"
-        />
-      </Button>
-    </CanvasControls>
-  ),
+  }: MemoizedCanvasControlsProps) => {
+    const isLocked = useFlowStore(
+      useShallow((state) => state.currentFlow?.locked),
+    );
+
+    return (
+      <CanvasControls>
+        <Button
+          unstyled
+          unselectable="off"
+          size="icon"
+          data-testid="lock-status"
+          className="flex items-center justify-center px-2 rounded-none gap-1"
+          title="Lock status"
+        >
+          <ForwardedIconComponent
+            name={isLocked ? "Lock" : "Unlock"}
+            className={cn(
+              "!h-[18px] !w-[18px] text-muted-foreground",
+              isLocked && "text-destructive",
+            )}
+          />
+          {isLocked && (
+            <span className="text-xs text-destructive">Flow Locked</span>
+          )}
+        </Button>
+      </CanvasControls>
+    );
+  },
 );
 
 export const MemoizedSidebarTrigger = memo(() => {
