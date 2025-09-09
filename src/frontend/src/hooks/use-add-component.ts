@@ -4,11 +4,11 @@ import { useShallow } from "zustand/react/shallow";
 import { NODE_WIDTH } from "@/constants/constants";
 import { track } from "@/customization/utils/analytics";
 import useFlowStore from "@/stores/flowStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import type { APIClassType } from "@/types/api";
 import type { AllNodeType } from "@/types/flow";
 import { getNodeId } from "@/utils/reactflowUtils";
 import { getNodeRenderType } from "@/utils/utils";
-import { useUtilityStore } from "@/stores/utilityStore";
 
 export function useAddComponent() {
   const store = useStoreApi();
@@ -25,20 +25,20 @@ export function useAddComponent() {
       setFilterType: state.setFilterType,
       setFilterComponent: state.setFilterComponent,
       setHandleDragging: state.setHandleDragging,
-    }))
+    })),
   );
   const isAwaitingInputAgentModel = useUtilityStore(
-    (state) => state.awaitInputAgentModel
+    (state) => state.awaitInputAgentModel,
   );
   const setAwaitInputAgentModel = useUtilityStore(
-    (state) => state.setAwaitInputAgentModel
+    (state) => state.setAwaitInputAgentModel,
   );
 
   const addComponent = useCallback(
     (
       component: APIClassType,
       type: string,
-      position?: { x: number; y: number }
+      position?: { x: number; y: number },
     ) => {
       track("Component Added", { componentType: component.display_name });
 
@@ -113,7 +113,7 @@ export function useAddComponent() {
       setHandleDragging,
       isAwaitingInputAgentModel,
       setAwaitInputAgentModel,
-    ]
+    ],
   );
 
   return addComponent;
