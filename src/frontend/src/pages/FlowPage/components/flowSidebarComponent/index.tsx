@@ -105,7 +105,7 @@ export function FlowSearchProvider({
     (event: React.ChangeEvent<HTMLInputElement>) => {
       setSearch(event.target.value);
     },
-    []
+    [],
   );
 
   const searchContextValue = useMemo(
@@ -127,7 +127,7 @@ export function FlowSearchProvider({
       handleInputFocus,
       handleInputBlur,
       handleInputChange,
-    ]
+    ],
   );
 
   return (
@@ -159,7 +159,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       filterType: state.filterType,
       getFilterComponent: state.getFilterComponent,
       setFilterComponent: state.setFilterComponent,
-    }))
+    })),
   );
 
   const { activeSection, setOpen, setActiveSection } = useSidebar();
@@ -194,7 +194,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
         setActiveSection("search");
       }
     },
-    [originalHandleInputChange, search, setActiveSection]
+    [originalHandleInputChange, search, setActiveSection],
   );
 
   const showBetaStorage = getBooleanFromStorage("showBeta", true);
@@ -284,7 +284,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     const filteredData = filteredDataFn(
       baseData,
       searchResults.combinedResults,
-      searchResults.traditionalResults
+      searchResults.traditionalResults,
     );
 
     return filteredData;
@@ -297,7 +297,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       searchResults.fuseCategories.indexOf(b) <
       searchResults.fuseCategories.indexOf(a)
         ? 1
-        : -1
+        : -1,
     );
   }, [searchResults, searchFilteredData, CATEGORIES, BUNDLES]);
 
@@ -335,7 +335,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
         (Object.keys(items).length > 0 &&
           (CATEGORIES.find((c) => c.name === category) ||
             BUNDLES.find((b) => b.name === category))) ||
-        (dataFilter["MCP"] && Object.keys(dataFilter["MCP"]).length > 0)
+        (dataFilter["MCP"] && Object.keys(dataFilter["MCP"]).length > 0),
     );
   }, [dataFilter]);
 
@@ -346,11 +346,11 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
         setOpenCategories((prev) =>
           prev.includes(name)
             ? prev.filter((cat) => cat !== name)
-            : [...prev, name]
+            : [...prev, name],
         );
       }
     },
-    []
+    [],
   );
 
   const handleClearSearch = useCallback(() => {
@@ -376,7 +376,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       getFilterComponent !== ""
     ) {
       const newOpenCategories = Object.keys(finalFilteredData).filter(
-        (cat) => Object.keys(finalFilteredData[cat]).length > 0
+        (cat) => Object.keys(finalFilteredData[cat]).length > 0,
       );
       setOpenCategories(newOpenCategories);
     }
@@ -407,7 +407,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
         ...value,
         category,
         key,
-      }))
+      })),
     );
 
     // MCP data is already included in baseData, but we still need mcpSearchData for non-search display
@@ -452,7 +452,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   }, [search, getFilterEdge, getFilterComponent]);
 
   const searchComponentsSidebar = useShortcutsStore(
-    (state) => state.searchComponentsSidebar
+    (state) => state.searchComponentsSidebar,
   );
 
   useHotkeys(
@@ -465,7 +465,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     },
     {
       preventDefault: true,
-    }
+    },
   );
 
   useHotkeys(
@@ -477,13 +477,13 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     {
       enableOnFormTags: true,
       enabled: isSearchFocused,
-    }
+    },
   );
 
   const onDragStart = useCallback(
     (
       event: React.DragEvent<any>,
-      data: { type: string; node?: APIClassType }
+      data: { type: string; node?: APIClassType },
     ) => {
       var crt = event.currentTarget.cloneNode(true);
       crt.style.position = "absolute";
@@ -495,13 +495,13 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       event.dataTransfer.setDragImage(crt, 0, 0);
       event.dataTransfer.setData("genericNode", JSON.stringify(data));
     },
-    []
+    [],
   );
 
   const hasCoreComponents = useMemo(() => {
     const categoriesWithItems = CATEGORIES.filter(
       (item) =>
-        dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0
+        dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0,
     );
     const result = categoriesWithItems.length > 0;
     return result;
@@ -510,7 +510,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const hasBundleItems = useMemo(() => {
     const bundlesWithItems = BUNDLES.filter(
       (item) =>
-        dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0
+        dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0,
     );
     const result = bundlesWithItems.length > 0;
     return result;
@@ -543,8 +543,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   const filterDescription =
     getFilterComponent !== ""
-      ? baseData[category]?.[component]?.display_name ?? ""
-      : filterType?.type ?? "";
+      ? (baseData[category]?.[component]?.display_name ?? "")
+      : (filterType?.type ?? "");
 
   const getFilterName = () => {
     if (getFilterComponent !== "") {
@@ -584,7 +584,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
         <div
           className={cn(
             "flex flex-col h-full w-full group-data-[collapsible=icon]:hidden",
-            ENABLE_NEW_SIDEBAR && "sidebar-segmented"
+            ENABLE_NEW_SIDEBAR && "sidebar-segmented",
           )}
         >
           <SidebarHeaderComponent
@@ -715,11 +715,11 @@ export default memo(
   FlowSidebarComponent,
   (
     prevProps: FlowSidebarComponentProps,
-    nextProps: FlowSidebarComponentProps
+    nextProps: FlowSidebarComponentProps,
   ) => {
     return (
       prevProps.showLegacy === nextProps.showLegacy &&
       prevProps.setShowLegacy === nextProps.setShowLegacy
     );
-  }
+  },
 );

@@ -1,7 +1,10 @@
 import { create } from "zustand";
 import { EventDeliveryType } from "@/constants/enums";
 import type { Pagination, Tag } from "@/types/utils/types";
-import type { UtilityStoreType } from "@/types/zustand/utility";
+import type {
+  UtilityStoreType,
+  WaitForConnectionConfig,
+} from "@/types/zustand/utility";
 
 export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   clientId: "",
@@ -48,7 +51,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   eventDelivery: EventDeliveryType.POLLING,
   setEventDelivery: (eventDelivery: EventDeliveryType) =>
     set({ eventDelivery }),
-  setAwaitInputAgentModel: (isSetting: boolean) =>
-    set({ awaitInputAgentModel: isSetting }),
-  awaitInputAgentModel: false,
+  setAwaitConnectionConfig: (config: WaitForConnectionConfig | null) =>
+    set({ awaitConnectionConfig: config }),
+  awaitConnectionConfig: null,
 }));

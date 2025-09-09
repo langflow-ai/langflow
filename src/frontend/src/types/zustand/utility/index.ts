@@ -1,6 +1,13 @@
 import type { EventDeliveryType } from "@/constants/enums";
 import type { Pagination, Tag } from "@/types/utils/types";
 
+export interface WaitForConnectionConfig {
+  nodeId: string;
+  fieldName: string;
+  targetTypes: string[];
+  sourceHandle?: string;
+}
+
 export type UtilityStoreType = {
   selectedItems: any[];
   setSelectedItems: (itemId: any) => void;
@@ -28,6 +35,6 @@ export type UtilityStoreType = {
   setEventDelivery: (eventDelivery: EventDeliveryType) => void;
   serializationMaxItemsLength: number;
   setSerializationMaxItemsLength: (serializationMaxItemsLength: number) => void;
-  awaitInputAgentModel: boolean;
-  setAwaitInputAgentModel: (isSetting: boolean) => void;
+  awaitConnectionConfig: WaitForConnectionConfig | null;
+  setAwaitConnectionConfig: (config: WaitForConnectionConfig | null) => void;
 };
