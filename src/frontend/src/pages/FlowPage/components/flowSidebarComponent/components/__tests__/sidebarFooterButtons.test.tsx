@@ -5,7 +5,7 @@ import SidebarMenuButtons from "../sidebarFooterButtons";
 // Mock the UI components
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name, className }: any) => (
+  default: ({ name, className }: { name: string; className?: string }) => (
     <span data-testid={`icon-${name}`} className={className}>
       {name}
     </span>
@@ -20,8 +20,16 @@ jest.mock("@/components/ui/button", () => ({
     disabled,
     unstyled,
     ...props
-  }: any) => (
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    className?: string;
+    disabled?: boolean;
+    unstyled?: boolean;
+    [key: string]: unknown;
+  }) => (
     <button
+      type="button"
       onClick={onClick}
       className={className}
       disabled={disabled}
@@ -37,7 +45,13 @@ jest.mock("@/components/ui/button", () => ({
 const mockUseSidebar = jest.fn();
 
 jest.mock("@/components/ui/sidebar", () => ({
-  SidebarMenuButton: ({ children, asChild }: any) => (
+  SidebarMenuButton: ({
+    children,
+    asChild,
+  }: {
+    children: React.ReactNode;
+    asChild?: boolean;
+  }) => (
     <div data-testid="sidebar-menu-button" data-as-child={asChild}>
       {children}
     </div>
@@ -59,9 +73,17 @@ jest.mock("@/customization/hooks/use-custom-navigate", () => ({
 // Mock modal component
 jest.mock("@/modals/addMcpServerModal", () => ({
   __esModule: true,
-  default: ({ open, setOpen }: any) => (
+  default: ({
+    open,
+    setOpen,
+  }: {
+    open: boolean;
+    setOpen: (open: boolean) => void;
+  }) => (
     <div data-testid="add-mcp-server-modal" data-open={open}>
-      <button onClick={() => setOpen(false)}>Close Modal</button>
+      <button type="button" onClick={() => setOpen(false)}>
+        Close Modal
+      </button>
     </div>
   ),
 }));
