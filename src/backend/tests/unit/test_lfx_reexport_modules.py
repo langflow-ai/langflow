@@ -34,7 +34,6 @@ Core System Modules (13):
 - langflow.template.field (from lfx.template.field)
 """
 
-import contextlib
 import importlib
 import inspect
 import time
@@ -88,7 +87,6 @@ class TestLfxReexportModules:
 
     def test_direct_reexport_modules_importable(self):
         """Test that all direct re-export modules can be imported."""
-        failed_imports = []
         successful_imports = 0
 
         for langflow_module, lfx_module in self.DIRECT_REEXPORT_MODULES.items():
@@ -98,24 +96,17 @@ class TestLfxReexportModules:
                 assert lf_module is not None, f"Langflow module {langflow_module} is None"
 
                 # Import the corresponding lfx module to compare
-                try:
-                    lfx_mod = importlib.import_module(lfx_module)
-                    assert lfx_mod is not None, f"LFX module {lfx_module} is None"
-                except ImportError:
-                    # If lfx module doesn't exist, we can't validate but langflow should still work
-                    continue
+
+                lfx_mod = importlib.import_module(lfx_module)
+                assert lfx_mod is not None, f"LFX module {lfx_module} is None"
 
                 successful_imports += 1
 
             except Exception as e:
-                failed_imports.append(f"{langflow_module}: {e!s}")
-
-        if failed_imports:
-            pytest.fail(f"Failed to import {len(failed_imports)} direct re-export modules: {failed_imports}")
+                pytest.fail(f"Failed to import direct re-export module {langflow_module}: {e!s}")
 
     def test_wildcard_reexport_modules_importable(self):
         """Test that modules using wildcard imports work correctly."""
-        failed_imports = []
         successful_imports = 0
 
         for langflow_module, lfx_module in self.WILDCARD_REEXPORT_MODULES.items():
@@ -125,31 +116,22 @@ class TestLfxReexportModules:
                 assert lf_module is not None, f"Langflow module {langflow_module} is None"
 
                 # Wildcard imports should expose most/all attributes from lfx module
-                try:
-                    lfx_mod = importlib.import_module(lfx_module)
+                lfx_mod = importlib.import_module(lfx_module)
 
-                    # Check that common attributes are available
-                    # We don't check all attributes due to wildcard complexity
-                    if hasattr(lfx_mod, "__all__"):
-                        sample_attrs = list(lfx_mod.__all__)[:3]  # Test first few
-                        for attr in sample_attrs:
-                            if hasattr(lfx_mod, attr):
-                                assert hasattr(lf_module, attr), f"Attribute {attr} missing from {langflow_module}"
-
-                except ImportError:
-                    continue
+                # Check that all attributes are available
+                if hasattr(lfx_mod, "__all__"):
+                    all_attrs = list(lfx_mod.__all__)  # Test all attributes
+                    for attr in all_attrs:
+                        if hasattr(lfx_mod, attr):
+                            assert hasattr(lf_module, attr), f"Attribute {attr} missing from {langflow_module}"
 
                 successful_imports += 1
 
             except Exception as e:
-                failed_imports.append(f"{langflow_module}: {e!s}")
-
-        if failed_imports:
-            pytest.fail(f"Failed to import {len(failed_imports)} wildcard re-export modules: {failed_imports}")
+                pytest.fail(f"Failed to import wildcard re-export module {langflow_module}: {e!s}")
 
     def test_complex_reexport_modules_importable(self):
         """Test that modules with complex/mixed import patterns work correctly."""
-        failed_imports = []
         successful_imports = 0
 
         for langflow_module in self.COMPLEX_REEXPORT_MODULES:
@@ -162,25 +144,22 @@ class TestLfxReexportModules:
                 assert hasattr(lf_module, "__all__"), f"Complex module {langflow_module} missing __all__"
                 assert len(lf_module.__all__) > 0, f"Complex module {langflow_module} has empty __all__"
 
-                # Try to access a few items from __all__
-                sample_items = lf_module.__all__[:3]  # Test first few items
-                for item in sample_items:
-                    with contextlib.suppress(AttributeError):
-                        # Some items might be dynamically loaded, that's ok
+                # Try to access all items from __all__
+                all_items = lf_module.__all__  # Test all items
+                for item in all_items:
+                    try:
                         attr = getattr(lf_module, item)
                         assert attr is not None, f"Attribute {item} is None in {langflow_module}"
+                    except AttributeError:
+                        pytest.fail(f"Complex module {langflow_module} missing expected attribute {item} from __all__")
 
                 successful_imports += 1
 
             except Exception as e:
-                failed_imports.append(f"{langflow_module}: {e!s}")
-
-        if failed_imports:
-            pytest.fail(f"Failed to import {len(failed_imports)} complex re-export modules: {failed_imports}")
+                pytest.fail(f"Failed to import complex re-export module {langflow_module}: {e!s}")
 
     def test_dynamic_reexport_modules_importable(self):
         """Test that modules with __getattr__ dynamic loading work correctly."""
-        failed_imports = []
         successful_imports = 0
 
         for langflow_module in self.DYNAMIC_REEXPORT_MODULES:
@@ -197,22 +176,19 @@ class TestLfxReexportModules:
                     # Test some known field typing constants
                     test_attrs = ["Data", "Text", "LanguageModel"]
                     for attr in test_attrs:
-                        with contextlib.suppress(AttributeError):
-                            # This might be expected for some attributes
+                        try:
                             value = getattr(lf_module, attr)
                             assert value is not None, f"Dynamic attribute {attr} is None"
+                        except AttributeError:
+                            pytest.fail(f"Dynamic module {langflow_module} missing expected attribute {attr}")
 
                 successful_imports += 1
 
             except Exception as e:
-                failed_imports.append(f"{langflow_module}: {e!s}")
-
-        if failed_imports:
-            pytest.fail(f"Failed to import {len(failed_imports)} dynamic re-export modules: {failed_imports}")
+                pytest.fail(f"Failed to import dynamic re-export module {langflow_module}: {e!s}")
 
     def test_all_reexport_modules_have_required_structure(self):
         """Test that re-export modules have the expected structure."""
-        failed_modules = []
         all_modules = {}
         all_modules.update(self.DIRECT_REEXPORT_MODULES)
         all_modules.update(self.WILDCARD_REEXPORT_MODULES)
@@ -236,10 +212,7 @@ class TestLfxReexportModules:
                 assert hasattr(lf_module, "__file__") or hasattr(lf_module, "__path__")
 
             except Exception as e:
-                failed_modules.append(f"{langflow_module}: {e!s}")
-
-        if failed_modules:
-            pytest.fail(f"Module structure issues: {failed_modules}")
+                pytest.fail(f"Module structure issue with {langflow_module}: {e!s}")
 
     def test_reexport_modules_backward_compatibility(self):
         """Test that common import patterns still work for backward compatibility."""
@@ -248,15 +221,13 @@ class TestLfxReexportModules:
             ("langflow.schema", "Data"),
             ("langflow.inputs", "StrInput"),
             ("langflow.inputs", "IntInput"),
-            ("langflow.base", "Component"),  # From wildcard
+            ("langflow.custom", "Component"),  # Base component class
             ("langflow.custom", "CustomComponent"),
             ("langflow.field_typing", "Text"),  # Dynamic
             ("langflow.field_typing", "Data"),  # Dynamic
             ("langflow.load", "load_flow_from_json"),
             ("langflow.logging", "logger"),
         ]
-
-        failed_imports = []
 
         for module_name, symbol_name in backward_compatible_imports:
             try:
@@ -269,10 +240,7 @@ class TestLfxReexportModules:
                     assert callable(symbol)
 
             except Exception as e:
-                failed_imports.append(f"{module_name}.{symbol_name}: {e!s}")
-
-        # Don't fail the test completely - some backward compatibility might be expected to break
-        # Just record the failures for information
+                pytest.fail(f"Backward compatibility issue with {module_name}.{symbol_name}: {e!s}")
 
     def test_no_circular_imports_in_reexports(self):
         """Test that there are no circular import issues in re-export modules."""
@@ -295,9 +263,10 @@ class TestLfxReexportModules:
                     if hasattr(module, "__all__") and module.__all__:
                         # Try to access first item in __all__
                         first_item = module.__all__[0]
-                        with contextlib.suppress(AttributeError):
-                            # Might be dynamically loaded, that's ok
+                        try:
                             getattr(module, first_item)
+                        except AttributeError:
+                            pytest.fail(f"Module {module_name} missing expected attribute {first_item} from __all__")
 
             except Exception as e:
                 pytest.fail(f"Circular import issue with order {order}: {e!s}")
