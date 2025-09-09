@@ -3,9 +3,6 @@ title: OpenAI Responses API
 slug: /api-openai-responses
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/Tabs';
-
 Langflow includes an endpoint that is compatible with the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses).
 It is available at `POST /api/v1/responses`.
 
@@ -375,7 +372,7 @@ curl -X POST \
   -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
     "model": "FLOW_ID",
-    "input": "Calculate 25 * 13 and show me the result",
+    "input": "Calculate 23 * 15 and show me the result",
     "stream": false,
     "include": ["tool_call.results"]
   }'
@@ -391,7 +388,7 @@ For example:
   "type": "tool_call",
   "tool_name": "evaluate_expression",
   "queries": ["15*23"],
-  "results": {"result": "112"}
+  "results": {"result": "345"}
 }
 ```
 
@@ -413,13 +410,13 @@ For example:
     {
       "id": "evaluate_expression_1",
       "queries": [
-        "45+67"
+        "15*23"
       ],
       "status": "completed",
       "tool_name": "evaluate_expression",
       "type": "tool_call",
       "results": {
-        "result": "112"
+        "result": "345"
       }
     },
     {
@@ -430,7 +427,7 @@ For example:
       "content": [
         {
           "type": "output_text",
-          "text": "The result of 45 + 67 is 112.",
+          "text": "The result of 23 * 15 is 345.",
           "annotations": []
         }
       ]

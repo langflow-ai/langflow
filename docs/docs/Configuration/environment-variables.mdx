@@ -174,7 +174,7 @@ The following table lists the environment variables supported by Langflow.
 | `LANGFLOW_LOG_LEVEL` | String | `INFO` | Set the logging level for Langflow. Possible values: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. |
 | `LANGFLOW_LOG_FILE` | String | Not set | Path to the log file. If this option isn't set, logs are written to stdout. |
 | `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` | Integer | `10000` | Set the buffer size for log retrieval. Only used if `LANGFLOW_ENABLE_LOG_RETRIEVAL` is enabled. |
-| `LANGFLOW_MAX_FILE_SIZE_UPLOAD` | Integer | `100` | Set the maximum file size for the upload in megabytes. See [`langflow run`](/configuration-cli#langflow-run). |
+| `LANGFLOW_MAX_FILE_SIZE_UPLOAD` | Integer | `1024` | Set the maximum file size for the upload in megabytes. See [`langflow run`](/configuration-cli#langflow-run). |
 | `LANGFLOW_MAX_ITEMS_LENGTH` | Integer | `100` | Maximum number of items to store and display in the visual editor. Lists longer than this will be truncated when displayed in the visual editor. Doesn't affect data passed between components nor outputs. |
 | `LANGFLOW_MAX_TEXT_LENGTH` | Integer | `1000` | Maximum number of characters to store and display in the visual editor. Responses longer than this will be truncated when displayed in the visual editor. Doesn't truncate responses between components nor outputs. |
 | `LANGFLOW_MCP_SERVER_ENABLED` | Boolean | True | If this option is set to False, Langflow doesn't enable the MCP server. |
