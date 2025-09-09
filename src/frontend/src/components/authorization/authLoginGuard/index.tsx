@@ -9,23 +9,30 @@ export const ProtectedLoginRoute = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const location = useLocation();
 
-  // ✅ Only enforce this wrapper on the actual login page
-  const isLoginPage = location.pathname.includes("login");
-  if (!isLoginPage) return children;
+  // // ✅ Only enforce this wrapper on the actual login page
+  // const isLoginPage = location.pathname.includes("login");
+  // if (!isLoginPage) return children;
 
   let organizationId: string | undefined = undefined;
   let isOrgLoaded = true; // default true if not using Clerk
 
   if (IS_CLERK_AUTH) {
-    try {
-      const { organization, isLoaded } = useOrganization();
-      organizationId = organization?.id;
-      isOrgLoaded = isLoaded;
-    } catch (err) {
-      console.warn("[ProtectedLoginRoute] useOrganization failed:", err);
-    }
+    // try {
+    //   const { organization, isLoaded } = useOrganization();
+    //   organizationId = organization?.id;
+    //   isOrgLoaded = isLoaded;
+    // } catch (err) {
+    //   console.warn("[ProtectedLoginRoute] useOrganization failed:", err);
+    // }
+    const { organization, isLoaded } = useOrganization();
+    organizationId = organization?.id;
+    isOrgLoaded = isLoaded;
   }
 
+    // ✅ Only enforce this wrapper on the actual login page
+  const isLoginPage = location.pathname.includes("login");
+  if (!isLoginPage) return children;
+  
   const isOrgSelected = IS_CLERK_AUTH ? !!organizationId : true;
 
   const canRedirect =

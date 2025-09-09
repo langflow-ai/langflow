@@ -43,11 +43,13 @@ class OrganizationService:
         service = cls._db_service_cache.get(org_id)
         if service:
             cls._db_service_cache.move_to_end(org_id)
+            logger.info(f"[OrgDB] Returning cached DB service for org_id={org_id}, DB URL={service.settings_service.settings.database_url}")
             return service
 
         settings_service = get_settings_service()
         base_url = settings_service.settings.database_url
         new_url = cls._build_database_url_for_org(base_url, org_id)
+        logger.info(f"[OrgDB] Creating new DB service for org_id={org_id}, DB URL={new_url}")
         new_settings = settings_service.settings.model_copy()
         new_settings.database_url = new_url
         new_settings_service = SettingsService(new_settings, settings_service.auth_settings)
@@ -88,6 +90,38 @@ class OrganizationService:
 
         logger.debug(f"Derived organisation database URL: {new_url}")
         return new_url
+    
+    @staticmethod
+    async def _ensure_database_exists(base_url: str, org_id: str) -> None:
+        """Create the organisation database if it doesn't already exist.
+
+        This currently supports PostgreSQL by connecting to the admin
+        database and issuing a ``CREATE DATABASE`` statement for the
+        organisation. For SQLite, databases are created as files elsewhere
+        in the flow.
+        """
+
+        if base_url.startswith("sqlite"):
+            return
+
+        url_obj = sa.engine.make_url(base_url)
+
+        # Normalise the driver name for async operations
+        driver = url_obj.drivername
+        if driver in {"postgres", "postgresql"}:
+            driver = "postgresql+psycopg"
+
+        admin_url = url_obj.set(drivername=driver, database=url_obj.database or "postgres")
+        engine = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
+        async with engine.connect() as conn:
+            result = await conn.execute(
+                sa.text("SELECT 1 FROM pg_database WHERE datname=:name"),
+                {"name": org_id},
+            )
+            exists = result.scalar() is not None
+            if not exists:
+                await conn.execute(sa.text(f'CREATE DATABASE "{org_id}"'))
+        await engine.dispose()
 
     async def create_database_and_tables_other_initializations_with_org(self) -> None:
         logger.info("[OrgInit] Starting organization DB initialization process")
@@ -116,7 +150,10 @@ class OrganizationService:
         new_url = self._build_database_url_for_org(base_url, org_id)
         logger.info(f"[OrgInit] Using DB URL for org_id={org_id}: {new_url}")
 
-        # --- Ensure SQLite file exists BEFORE creating DatabaseService ---
+        # Ensure the organisation database exists (for Postgres)
+        await self._ensure_database_exists(base_url, org_id)
+
+        # If SQLite: make sure the DB file exists
         if new_url.startswith("sqlite+aiosqlite:///"):
             db_path = Path(new_url.split("///", 1)[1])
             db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -135,21 +172,17 @@ class OrganizationService:
         new_db_service = DatabaseService(new_settings_service)
 
         try:
-            # If tables already exist → reuse DB
-            if await self._organisation_db_exists(new_db_service):
-                logger.info(f"[OrgInit] DB already initialized for org_id={org_id}")
-                self._remember_org(org_id, new_db_service)
-                return
+            logger.warning("🔥 [DEBUG] Org DB Init STARTED")
+            # Create tables
+            logger.info(f"[OrgInit] Creating tables for org_id={org_id}")
+            await new_db_service.create_db_and_tables()
+            logger.warning("🔥 [DEBUG] Tables created for org_id=%s", org_id)
 
-            logger.info(f"[OrgInit] Running first-time DB init for org_id={org_id}")
-            if new_db_service.settings_service.settings.database_connection_retry:
-                await new_db_service.create_db_and_tables_with_retry()
-            else:
-                await new_db_service.create_db_and_tables()
-
+            # Run migrations if needed
             logger.info(f"[OrgInit] Running migrations for org_id={org_id}")
             await new_db_service.run_migrations()
 
+            # Setup superuser
             logger.info(f"[OrgInit] Setting up superuser for org_id={org_id}")
             async with new_db_service.with_session() as session:
                 await setup_superuser(new_settings_service, session)
@@ -183,6 +216,17 @@ class OrganizationService:
                 await anyio.Path(db_path).unlink(missing_ok=True)
             except Exception:  # noqa: BLE001
                 logger.exception("Error removing database file %s during cleanup", db_path)
+        elif database_url.startswith("postgres"):
+            try:
+                url_obj = sa.engine.make_url(database_url)
+                driver = "postgresql+psycopg" if url_obj.drivername.startswith("postgres") else url_obj.drivername
+                admin_url = url_obj.set(drivername=driver, database="postgres")
+                engine = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
+                async with engine.connect() as conn:
+                    await conn.execute(sa.text(f'DROP DATABASE IF EXISTS "{url_obj.database}"'))
+                await engine.dispose()
+            except Exception:  # noqa: BLE001
+                logger.exception("Error removing database %s during cleanup", database_url)
 
     @staticmethod
     async def _organisation_db_exists(db_service: DatabaseService) -> bool:

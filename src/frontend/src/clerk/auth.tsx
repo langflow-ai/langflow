@@ -162,11 +162,6 @@ export function ClerkAuthAdapter() {
     return () => unsubscribe?.();
   }, [clerk]);
 
-  // ✅ Render organization page only when needed
-  if (isAtOrg && !isOrgSelected) {
-    return <OrganizationPage />;
-  }
-
   return null;
 }
 
