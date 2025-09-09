@@ -12,6 +12,8 @@ import {
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -681,6 +683,21 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                         setShowConfig={setShowConfig}
                       />
                     )}
+                    {showComponents && (
+                      <Button
+                        onClick={() => setActiveSection("bundles")}
+                        variant="ghost"
+                        className="bg-muted hover:bg-muted/70 mx-3 px-2.5 !text-[13px] font-normal line-height-[16px] mb-3 group -mt-3 h-[34px]"
+                      >
+                        <span className="text-muted-foreground flex items-center">
+                          <ForwardedIconComponent
+                            name="blocks"
+                            className="h-4 w-4"
+                          />
+                        </span>
+                        Discover more components
+                      </Button>
+                    )}
                   </>
                 ) : (
                   <NoResultsMessage
@@ -695,7 +712,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
           {ENABLE_NEW_SIDEBAR &&
           activeSection === "mcp" &&
           !hasMcpServers ? null : (
-            <SidebarFooter className="border-t p-4 py-3 group-data-[collapsible=icon]:hidden">
+            <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-0">
               <SidebarMenuButtons
                 customComponent={customComponent}
                 addComponent={addComponent}

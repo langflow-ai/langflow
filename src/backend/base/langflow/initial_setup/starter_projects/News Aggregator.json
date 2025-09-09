@@ -1363,9 +1363,7 @@
                 "options": [
                   "Anthropic",
                   "Google Generative AI",
-                  "Groq",
-                  "OpenAI",
-                  "Custom"
+                  "OpenAI"
                 ],
                 "options_metadata": [
                   {
@@ -1374,14 +1372,9 @@
                   {
                     "icon": "GoogleGenerativeAI"
                   },
-                  {
-                    "icon": "Groq"
-                  },
+              
                   {
                     "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "brain"
                   }
                 ],
                 "placeholder": "",
@@ -1392,6 +1385,17 @@
                 "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                        "external_options" : {  
+                  "fields": {
+                      "data": {
+                          "node": {
+                              "name": "connect_other_models",
+                              "display_name": "Connect other models",
+                              "icon": "CornerDownLeft"
+                          }
+                      }
+                  }
+                },
                 "type": "str",
                 "value": "OpenAI"
               },
