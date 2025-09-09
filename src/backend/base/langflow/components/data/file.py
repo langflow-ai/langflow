@@ -1,8 +1,7 @@
-"""Enhanced file component with clearer structure and Docling isolation.
+"""Enhanced file component with Docling support and process isolation.
 
 Notes:
 -----
-- Functionality is preserved with minimal behavioral changes.
 - ALL Docling parsing/export runs in a separate OS process to prevent memory
   growth and native library state from impacting the main Langflow process.
 - Standard text/structured parsing continues to use existing BaseFileComponent
@@ -299,7 +298,7 @@ class FileComponent(BaseFileComponent):
             "ocr_engine": str(self.ocr_engine) if self.ocr_engine and self.ocr_engine is not None else None,
         }
 
-        # The child is a tiny, self-contained script to keep memory/state isolated.
+        # Child script for isolating the docling processing
         child_script = textwrap.dedent(
             r"""
             import json, sys
@@ -361,7 +360,7 @@ class FileComponent(BaseFileComponent):
                                 fac = get_ocr_factory(allow_external_plugins=False)
                                 pipe.ocr_options = fac.create_options(kind=ocr_engine)
                             except Exception:
-                                # If OCR setup fails, gracefully disable it (matches your current pattern).
+                                # If OCR setup fails, disable it
                                 pipe.do_ocr = False
 
                         fmt = {}
@@ -600,7 +599,8 @@ class FileComponent(BaseFileComponent):
         if not hasattr(df, "text"):
             if hasattr(df, "error"):
                 raise ValueError(df.error[0])
-            raise ValueError("No content generated.")
+            msg = "No content generated."
+            raise ValueError(msg)
 
         return df
 
@@ -612,6 +612,7 @@ class FileComponent(BaseFileComponent):
         if not hasattr(df, "text"):
             if hasattr(df, "error"):
                 raise ValueError(df.error[0])
-            raise ValueError("No content generated.")
+            msg = "No content generated."
+            raise ValueError(msg)
 
         return Message(text=str(df.text[0]))
