@@ -212,7 +212,7 @@ class URLComponent(Component):
         Returns:
             RecursiveUrlLoader: Configured loader instance
         """
-        headers_dict = {header["key"]: header["value"] for header in self.headers}
+        headers_dict = {header["key"]: header["value"] for header in self.headers if header["value"] is not None}
         extractor = (lambda x: x) if self.format == "HTML" else (lambda x: BeautifulSoup(x, "lxml").get_text())
 
         return RecursiveUrlLoader(
