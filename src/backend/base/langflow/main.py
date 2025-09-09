@@ -293,7 +293,12 @@ def get_lifespan(*, fix_migration=False, version=None):
                         mcp_init_task.cancel()
                         tasks_to_cancel.append(mcp_init_task)
                     if tasks_to_cancel:
-                        await asyncio.wait(tasks_to_cancel)
+                        # Wait for all tasks to complete, capturing exceptions
+                        results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
+                        # Log any non-cancellation exceptions
+                        for task, result in zip(tasks_to_cancel, results):
+                            if isinstance(result, Exception) and not isinstance(result, asyncio.CancelledError):
+                                await logger.aerror(f"Error during task cleanup: {result}", exc_info=result)
 
                 # Step 2: Cleaning Up Services
                 with shutdown_progress.step(2):
