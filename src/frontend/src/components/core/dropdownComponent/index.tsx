@@ -64,7 +64,7 @@ export default function Dropdown({
 }: BaseInputProps & DropDownComponent): JSX.Element {
   const validOptions = useMemo(
     () => filterNullOptions(options),
-    [options, value],
+    [options, value]
   );
 
   // Initialize state and refs
@@ -72,7 +72,6 @@ export default function Dropdown({
   const [openDialog, setOpenDialog] = useState(false);
   const [waitingForResponse, setWaitingForResponse] = useState(false);
   const [customValue, setCustomValue] = useState("");
-  const nodes = useFlowStore((state) => state.nodes);
 
   const [filteredOptions, setFilteredOptions] = useState(() => {
     // Include the current value in filteredOptions if it's a custom value not in validOptions
@@ -115,10 +114,10 @@ export default function Dropdown({
   // Utility functions
   const filterMetadataKeys = (
     metadata: Record<string, any> = {},
-    excludeKeys: string[] = ["api_endpoint", "icon", "status", "org_id"],
+    excludeKeys: string[] = ["api_endpoint", "icon", "status", "org_id"]
   ) => {
     return Object.fromEntries(
-      Object.entries(metadata).filter(([key]) => !excludeKeys.includes(key)),
+      Object.entries(metadata).filter(([key]) => !excludeKeys.includes(key))
     );
   };
 
@@ -130,7 +129,7 @@ export default function Dropdown({
       // If search is cleared, show all options
       // Preserve any custom values that were in filteredOptions
       const customValuesInFiltered = filteredOptions.filter(
-        (option) => !validOptions.includes(option) && option === customValue,
+        (option) => !validOptions.includes(option) && option === customValue
       );
       setFilteredOptions([...validOptions, ...customValuesInFiltered]);
       setFilteredMetadata(optionsMetaData);
@@ -143,10 +142,10 @@ export default function Dropdown({
 
     // If the search value exactly matches one of the custom options, include it
     const customOptions = filteredOptions.filter(
-      (option) => !validOptions.includes(option),
+      (option) => !validOptions.includes(option)
     );
     const matchingCustomOption = customOptions.find(
-      (option) => option.toLowerCase() === value.toLowerCase(),
+      (option) => option.toLowerCase() === value.toLowerCase()
     );
 
     // Include matching custom options or allow adding the current search if combobox is true
@@ -183,94 +182,120 @@ export default function Dropdown({
   };
 
   const setAwaitConnectionConfig = useUtilityStore(
-    (state) => state.setAwaitConnectionConfig,
+    (state) => state.setAwaitConnectionConfig
   );
 
   const handleSourceOptions = async (value: string) => {
     setWaitingForResponse(true);
     setOpen(false);
 
-    await mutateTemplate(
-      value,
-      nodeId,
-      nodeClass!,
-      handleNodeClass,
-      postTemplateValue,
-      setErrorData,
-      name,
-    );
+    if (value === "connect_other_models") {
+      // Use the callback parameter to execute logic after mutation completes
+      const handleConnectionLogic = () => {
+        try {
+          const store = useFlowStore.getState();
+          const node = store.getNode(nodeId!);
+          const templateField = node?.data?.node?.template?.[name!];
 
-    try {
-      if (value === "connect_other_models") {
-        const store = useFlowStore.getState();
-        const node = store.getNode(nodeId!);
-        const templateField = node?.data?.node?.template?.[name!];
-        if (!templateField) return;
+          if (!templateField) {
+            return;
+          }
 
-        // Generic type detection instead of hardcoded LanguageModel
-        const inputTypes: string[] =
-          (Array.isArray(templateField.input_types)
-            ? templateField.input_types
-            : [templateField.type]) || [];
+          // Generic type detection instead of hardcoded LanguageModel
+          const inputTypes: string[] =
+            (Array.isArray(templateField.input_types)
+              ? templateField.input_types
+              : [templateField.type]) || [];
 
-        // Use the actual field type if no specific input types are defined
-        const effectiveInputTypes = inputTypes.length > 0 ? inputTypes : [];
+          // Use the actual field type if no specific input types are defined
+          const effectiveInputTypes =
+            inputTypes.length > 0 ? inputTypes : [templateField.type || ""];
 
-        const tooltipTitle: string =
-          (effectiveInputTypes && effectiveInputTypes.length > 0
-            ? effectiveInputTypes.join("\n")
-            : templateField.type) || "";
+          const tooltipTitle: string =
+            (effectiveInputTypes && effectiveInputTypes.length > 0
+              ? effectiveInputTypes.join("\n")
+              : templateField.type) || "";
 
-        const typesData = useTypesStore.getState().data;
-        const grouped = groupByFamily(
-          typesData,
-          tooltipTitle,
-          true,
-          store.nodes,
+          const typesData = useTypesStore.getState().data;
+          const grouped = groupByFamily(
+            typesData,
+            tooltipTitle,
+            true,
+            store.nodes
+          );
+
+          // Build a pseudo source handle with generic types
+          const pseudoSourceHandle = scapedJSONStringfy({
+            id: "connect_other_models_source",
+            name: templateField.display_name || name!,
+            output_types: effectiveInputTypes,
+            dataType: effectiveInputTypes[0] || templateField.type,
+          });
+
+          // Create generic connection config
+          const connectionConfig = {
+            nodeId: nodeId!,
+            fieldName: name!,
+            targetTypes: effectiveInputTypes,
+            sourceHandle: pseudoSourceHandle,
+          };
+
+          const filterObj = {
+            source: "connect_other_models_node",
+            sourceHandle: pseudoSourceHandle,
+            target: undefined,
+            targetHandle: undefined,
+            type: effectiveInputTypes[0] || templateField.type,
+            color: "secondary-foreground",
+          } as any;
+
+          // Show compatible handles glow
+          store.setFilterEdge(grouped);
+          store.setFilterType(filterObj);
+
+          // Set generic connection state
+          setAwaitConnectionConfig(connectionConfig);
+
+          // Also simulate dragging to emphasize active state
+          store.setHandleDragging(filterObj);
+          const clearDrag = () => {
+            useFlowStore.getState().setHandleDragging(undefined);
+            document.removeEventListener("mouseup", clearDrag);
+          };
+          document.addEventListener("mouseup", clearDrag);
+        } catch (error) {
+          console.error("Error in connection logic:", error);
+        } finally {
+          setWaitingForResponse(false);
+        }
+      };
+
+      await mutateTemplate(
+        value,
+        nodeId,
+        nodeClass!,
+        handleNodeClass,
+        postTemplateValue,
+        setErrorData,
+        name,
+        handleConnectionLogic
+      );
+    } else {
+      try {
+        await mutateTemplate(
+          value,
+          nodeId,
+          nodeClass!,
+          handleNodeClass,
+          postTemplateValue,
+          setErrorData,
+          name
         );
-
-        // Build a pseudo source handle with generic types
-        const pseudoSourceHandle = scapedJSONStringfy({
-          id: "connect_other_models_source",
-          name: templateField.display_name || name!,
-          output_types: effectiveInputTypes,
-          dataType: effectiveInputTypes[0] || templateField.type,
-        });
-
-        // Create generic connection config
-        const connectionConfig = {
-          nodeId: nodeId!,
-          fieldName: name!,
-          targetTypes: effectiveInputTypes,
-          sourceHandle: pseudoSourceHandle,
-        };
-
-        const filterObj = {
-          source: "connect_other_models_node",
-          sourceHandle: pseudoSourceHandle,
-          target: undefined,
-          targetHandle: undefined,
-          type: effectiveInputTypes[0] || templateField.type,
-          color: "secondary-foreground",
-        } as any;
-
-        // Show compatible handles glow
-        store.setFilterEdge(grouped);
-        store.setFilterType(filterObj);
-
-        // Set generic connection state
-        setAwaitConnectionConfig(connectionConfig);
-
-        // Also simulate dragging to emphasize active state
-        store.setHandleDragging(filterObj);
-        const clearDrag = () => {
-          useFlowStore.getState().setHandleDragging(undefined);
-          document.removeEventListener("mouseup", clearDrag);
-        };
-        document.addEventListener("mouseup", clearDrag);
+      } catch (error) {
+        console.error("Error in handleSourceOptions:", error);
+      } finally {
+        setWaitingForResponse(false);
       }
-    } finally {
-      setWaitingForResponse(false);
     }
   };
 
@@ -284,7 +309,7 @@ export default function Dropdown({
       nodeClass!,
       handleNodeClass,
       postTemplateValue,
-      setErrorData,
+      setErrorData
     )?.then(() => {
       setTimeout(() => {
         setRefreshOptions(false);
@@ -322,7 +347,7 @@ export default function Dropdown({
     if (open) {
       // Check if filteredOptions contains any custom values not in validOptions
       const customValuesInFiltered = filteredOptions.filter(
-        (option) => !validOptions.includes(option) && option === customValue,
+        (option) => !validOptions.includes(option) && option === customValue
       );
 
       // If there are custom values, preserve them when resetting filtered options
@@ -339,7 +364,7 @@ export default function Dropdown({
           });
 
           const newMetadata = [...validOptions, ...customValuesInFiltered].map(
-            (option) => metadataMap[option],
+            (option) => metadataMap[option]
           );
           setFilteredMetadata(newMetadata);
         }
@@ -382,7 +407,7 @@ export default function Dropdown({
 
   const renderSelectedIcon = () => {
     const selectedIndex = filteredOptions.findIndex(
-      (option) => option === value,
+      (option) => option === value
     );
     const iconMetadata =
       selectedIndex >= 0 ? filteredMetadata?.[selectedIndex]?.icon : undefined;
@@ -417,7 +442,7 @@ export default function Dropdown({
             editNode
               ? "dropdown-component-outline input-edit-node"
               : "dropdown-component-false-outline py-2",
-            "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
+            "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground"
           )}
         >
           <span
@@ -463,7 +488,7 @@ export default function Dropdown({
               "ml-2 h-4 w-4 shrink-0 text-foreground",
               disabled
                 ? "text-placeholder-foreground hover:text-placeholder-foreground"
-                : "hover:text-foreground",
+                : "hover:text-foreground"
             )}
           />
         </Button>
@@ -536,7 +561,7 @@ export default function Dropdown({
                       {filteredMetadata?.[index]?.status && (
                         <span
                           className={`flex items-center pl-2 text-xs ${getStatusColor(
-                            filteredMetadata?.[index]?.status,
+                            filteredMetadata?.[index]?.status
                           )}`}
                         >
                           <LoadingTextComponent
@@ -550,11 +575,10 @@ export default function Dropdown({
                       {filteredMetadata && filteredMetadata?.length > 0 && (
                         <div className="ml-auto flex items-center overflow-hidden pl-2 text-muted-foreground">
                           {Object.entries(
-                            filterMetadataKeys(filteredMetadata?.[index] || {}),
+                            filterMetadataKeys(filteredMetadata?.[index] || {})
                           )
                             .filter(
-                              ([key, value]) =>
-                                value !== null && key !== "icon",
+                              ([key, value]) => value !== null && key !== "icon"
                             )
                             .map(([key, value], i, arr) => (
                               <div
@@ -587,7 +611,7 @@ export default function Dropdown({
                           name="Check"
                           className={cn(
                             "h-4 w-4 shrink-0 text-primary",
-                            value === option ? "opacity-100" : "opacity-0",
+                            value === option ? "opacity-100" : "opacity-0"
                           )}
                         />
                       </div>
@@ -616,7 +640,7 @@ export default function Dropdown({
                 setOpenDialog(true);
               } else {
                 handleSourceOptions(
-                  sourceOptions?.fields?.data?.node?.name! || value,
+                  sourceOptions?.fields?.data?.node?.name! || value
                 );
               }
             }}

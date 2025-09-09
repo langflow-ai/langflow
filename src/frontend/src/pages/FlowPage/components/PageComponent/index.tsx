@@ -80,6 +80,7 @@ import {
 } from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
+import { useUtilityStore } from "@/stores/utilityStore";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -105,11 +106,11 @@ export default function Page({
   const setFilterComponent = useFlowStore((state) => state.setFilterComponent);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const setPositionDictionary = useFlowStore(
-    (state) => state.setPositionDictionary,
+    (state) => state.setPositionDictionary
   );
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
-    (state) => state.setReactFlowInstance,
+    (state) => state.setReactFlowInstance
   );
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -125,10 +126,10 @@ export default function Page({
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const paste = useFlowStore((state) => state.paste);
   const lastCopiedSelection = useFlowStore(
-    (state) => state.lastCopiedSelection,
+    (state) => state.lastCopiedSelection
   );
   const setLastCopiedSelection = useFlowStore(
-    (state) => state.setLastCopiedSelection,
+    (state) => state.setLastCopiedSelection
   );
   const onConnect = useFlowStore((state) => state.onConnect);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -136,8 +137,16 @@ export default function Page({
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
   const edgeUpdateSuccessful = useRef(true);
 
-  const isLocked = useFlowStore(
-    useShallow((state) => state.currentFlow?.locked),
+  const setAwaitConnectionConfig = useUtilityStore(
+    (state) => state.setAwaitConnectionConfig
+  );
+
+  const { setFilterType, setHandleDragging, isLocked } = useFlowStore(
+    useShallow((state) => ({
+      setFilterType: state.setFilterType,
+      setHandleDragging: state.setHandleDragging,
+      isLocked: state.currentFlow?.locked,
+    }))
   );
 
   const position = useRef({ x: 0, y: 0 });
@@ -172,7 +181,7 @@ export default function Page({
         clonedSelection!,
         clonedNodes,
         clonedEdges,
-        getRandomName(),
+        getRandomName()
       );
 
       const newGroupNode = generateNodeFromFlow(newFlow, getNodeId);
@@ -181,8 +190,8 @@ export default function Page({
         ...clonedNodes.filter(
           (oldNodes) =>
             !clonedSelection?.nodes.some(
-              (selectionNode) => selectionNode.id === oldNodes.id,
-            ),
+              (selectionNode) => selectionNode.id === oldNodes.id
+            )
         ),
         newGroupNode,
       ]);
@@ -256,7 +265,7 @@ export default function Page({
         {
           x: position.current.x,
           y: position.current.y,
-        },
+        }
       );
     }
   }
@@ -363,7 +372,7 @@ export default function Page({
       onConnect(params);
       track("New Component Connection Added");
     },
-    [takeSnapshot, onConnect],
+    [takeSnapshot, onConnect]
   );
 
   const [helperLines, setHelperLines] = useState<HelperLinesState>({});
@@ -377,7 +386,7 @@ export default function Page({
         setHelperLines(currentHelperLines);
       }
     },
-    [helperLineEnabled, nodes],
+    [helperLineEnabled, nodes]
   );
 
   const onNodeDragStart: OnNodeDrag = useCallback(
@@ -387,7 +396,7 @@ export default function Page({
       setIsDragging(true);
       // 👉 you can place your event handlers here
     },
-    [takeSnapshot],
+    [takeSnapshot]
   );
 
   const onNodeDragStop: OnNodeDrag = useCallback(
@@ -406,7 +415,7 @@ export default function Page({
       edges,
       reactFlowInstance,
       setPositionDictionary,
-    ],
+    ]
   );
 
   const onNodesChangeWithHelperLines = useCallback(
@@ -463,7 +472,7 @@ export default function Page({
 
       onNodesChange(modifiedChanges);
     },
-    [onNodesChange, nodes, isDragging, helperLineEnabled],
+    [onNodesChange, nodes, isDragging, helperLineEnabled]
   );
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
@@ -492,12 +501,12 @@ export default function Page({
         takeSnapshot();
 
         const datakey = event.dataTransfer.types.find((type) =>
-          isSupportedNodeTypes(type),
+          isSupportedNodeTypes(type)
         );
 
         // Extract the data from the drag event and parse it as a JSON object
         const data: { type: string; node?: APIClassType } = JSON.parse(
-          event.dataTransfer.getData(datakey!),
+          event.dataTransfer.getData(datakey!)
         );
 
         addComponent(data.node!, data.type, {
@@ -526,7 +535,7 @@ export default function Page({
         });
       }
     },
-    [takeSnapshot, addComponent],
+    [takeSnapshot, addComponent]
   );
 
   const onEdgeUpdateStart = useCallback(() => {
@@ -544,7 +553,7 @@ export default function Page({
         setEdges((els) => reconnectEdge(oldEdge, newConnection, els));
       }
     },
-    [setEdges],
+    [setEdges]
   );
 
   const onEdgeUpdateEnd = useCallback((_, edge: Edge): void => {
@@ -577,13 +586,17 @@ export default function Page({
     (flow: OnSelectionChangeParams): void => {
       setLastSelection(flow);
     },
-    [],
+    []
   );
 
   const onPaneClick = useCallback(
     (event: React.MouseEvent) => {
+      setAwaitConnectionConfig(null);
       setFilterEdge([]);
+      setFilterType(undefined);
       setFilterComponent("");
+      setHandleDragging(undefined);
+
       if (isAddingNote) {
         const shadowBox = document.getElementById("shadow-box");
         if (shadowBox) {
@@ -624,7 +637,7 @@ export default function Page({
       getNodeId,
       setFilterEdge,
       setFilterComponent,
-    ],
+    ]
   );
 
   const handleEdgeClick = (event, edge) => {
