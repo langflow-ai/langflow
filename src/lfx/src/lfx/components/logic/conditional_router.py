@@ -145,7 +145,7 @@ class ConditionalRouterComponent(Component):
         )
         if result:
             # Use true_case_message if provided, otherwise use input_text as default
-            if self.true_case_message and hasattr(self.true_case_message, 'text') and self.true_case_message.text:
+            if self.true_case_message and hasattr(self.true_case_message, "text") and self.true_case_message.text:
                 output_message = self.true_case_message
                 self.status = self.true_case_message.text
             elif self.true_case_message and isinstance(self.true_case_message, str) and self.true_case_message.strip():
@@ -154,7 +154,7 @@ class ConditionalRouterComponent(Component):
             else:
                 output_message = Message(text=self.input_text)
                 self.status = f"True condition met - returning input: {self.input_text}"
-            
+
             self.iterate_and_stop_once("false_result")
             return output_message
         self.iterate_and_stop_once("true_result")
@@ -166,16 +166,18 @@ class ConditionalRouterComponent(Component):
         )
         if not result:
             # Use false_case_message if provided, otherwise use input_text as default
-            if self.false_case_message and hasattr(self.false_case_message, 'text') and self.false_case_message.text:
+            if self.false_case_message and hasattr(self.false_case_message, "text") and self.false_case_message.text:
                 output_message = self.false_case_message
                 self.status = self.false_case_message.text
-            elif self.false_case_message and isinstance(self.false_case_message, str) and self.false_case_message.strip():
+            elif (
+                self.false_case_message and isinstance(self.false_case_message, str) and self.false_case_message.strip()
+            ):
                 output_message = Message(text=self.false_case_message)
                 self.status = self.false_case_message
             else:
                 output_message = Message(text=self.input_text)
                 self.status = f"False condition met - returning input: {self.input_text}"
-            
+
             self.iterate_and_stop_once("true_result")
             return output_message
         self.iterate_and_stop_once("false_result")
@@ -192,7 +194,7 @@ class ConditionalRouterComponent(Component):
                 )
                 if case_sensitive_input:
                     build_config["case_sensitive"] = case_sensitive_input.to_dict()
-            
+
             # Hide match_text for empty operators
             if field_value == "is empty":
                 build_config.pop("match_text", None)
