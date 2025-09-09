@@ -254,14 +254,6 @@ export default function Dropdown({
         // Show compatible handles glow
         store.setFilterEdge(grouped);
         store.setFilterType(filterObj);
-
-        // Also simulate dragging to emphasize active state
-        store.setHandleDragging(filterObj);
-        const clearDrag = () => {
-          useFlowStore.getState().setHandleDragging(undefined);
-          document.removeEventListener("mouseup", clearDrag);
-        };
-        document.addEventListener("mouseup", clearDrag);
       }
     } finally {
       setWaitingForResponse(false);
