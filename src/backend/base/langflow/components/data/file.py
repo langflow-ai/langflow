@@ -90,6 +90,7 @@ class FileComponent(BaseFileComponent):
             info=(
                 "Enable advanced document processing and export with Docling for PDFs, images, and office documents. "
                 "Available only for single file processing."
+                "Note that advanced document processing can consume significant resources."
             ),
             show=False,
         ),
@@ -100,6 +101,7 @@ class FileComponent(BaseFileComponent):
             options=["standard", "vlm"],
             value="standard",
             advanced=True,
+            real_time_refresh=True,
         ),
         DropdownInput(
             name="ocr_engine",
@@ -189,16 +191,25 @@ class FileComponent(BaseFileComponent):
                     if f in build_config:
                         build_config[f]["show"] = False
 
+        # Docling Processing
         elif field_name == "advanced_mode":
             for f in ("pipeline", "ocr_engine", "doc_key", "md_image_placeholder", "md_page_break_placeholder"):
                 if f in build_config:
                     build_config[f]["show"] = bool(field_value)
 
+        elif field_name == "pipeline":
+            if field_value == "standard":
+                build_config["ocr_engine"]["show"] = True
+                build_config["ocr_engine"]["value"] = "easyocr"
+            else:
+                build_config["ocr_engine"]["show"] = False
+                build_config["ocr_engine"]["value"] = "None"
+
         return build_config
 
     def update_outputs(self, frontend_node: dict[str, Any], field_name: str, field_value: Any) -> dict[str, Any]:  # noqa: ARG002
         """Dynamically show outputs based on file count/type and advanced mode."""
-        if field_name not in ["path", "advanced_mode"]:
+        if field_name not in ["path", "advanced_mode", "pipeline"]:
             return frontend_node
 
         template = frontend_node.get("template", {})
@@ -221,10 +232,10 @@ class FileComponent(BaseFileComponent):
             advanced_mode = frontend_node.get("template", {}).get("advanced_mode", {}).get("value", False)
             if advanced_mode:
                 frontend_node["outputs"].append(
-                    Output(display_name="Structured Output", name="advanced", method="load_files_advanced"),
+                    Output(display_name="Structured Output", name="advanced_dataframe", method="load_files_dataframe"),
                 )
                 frontend_node["outputs"].append(
-                    Output(display_name="Markdown", name="markdown", method="load_files_markdown"),
+                    Output(display_name="Markdown", name="advanced_markdown", method="load_files_markdown"),
                 )
                 frontend_node["outputs"].append(
                     Output(display_name="File Path", name="path", method="load_files_path"),
@@ -295,8 +306,17 @@ class FileComponent(BaseFileComponent):
             "md_image_placeholder": str(self.md_image_placeholder),
             "md_page_break_placeholder": str(self.md_page_break_placeholder),
             "pipeline": str(self.pipeline),
-            "ocr_engine": str(self.ocr_engine) if self.ocr_engine and self.ocr_engine is not None else None,
+            "ocr_engine": (
+                self.ocr_engine
+                if self.ocr_engine
+                and self.ocr_engine != "None"
+                and self.pipeline != "vlm"
+                else None
+            ),
         }
+
+        self.log(f"Starting Docling subprocess for file: {file_path}")
+        self.log(args)
 
         # Child script for isolating the docling processing
         child_script = textwrap.dedent(
@@ -591,28 +611,25 @@ class FileComponent(BaseFileComponent):
 
     # ------------------------------ Output helpers -----------------------------------
 
-    def load_files_advanced(self) -> DataFrame:
-        """Load files using advanced Docling processing and export to an advanced format."""
-        self.markdown = False
-        df = self.load_files()
+    def load_files_helper(self) -> DataFrame:
+        result = self.load_files()
 
-        if not hasattr(df, "text"):
-            if hasattr(df, "error"):
-                raise ValueError(df.error[0])
+        # Error condition - raise error if no text and an error is present
+        if not hasattr(result, "text"):
+            if hasattr(result, "error"):
+                raise ValueError(result.error[0])
             msg = "No content generated."
             raise ValueError(msg)
 
-        return df
+        return result
+
+    def load_files_dataframe(self) -> DataFrame:
+        """Load files using advanced Docling processing and export to DataFrame format."""
+        self.markdown = False
+        return self.load_files_helper()
 
     def load_files_markdown(self) -> Message:
         """Load files using advanced Docling processing and export to Markdown format."""
         self.markdown = True
-        df = self.load_files()
-
-        if not hasattr(df, "text"):
-            if hasattr(df, "error"):
-                raise ValueError(df.error[0])
-            msg = "No content generated."
-            raise ValueError(msg)
-
-        return Message(text=str(df.text[0]))
+        result = self.load_files_helper()
+        return Message(text=str(result.text[0]))
