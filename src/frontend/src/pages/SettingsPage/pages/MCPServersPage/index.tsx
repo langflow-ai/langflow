@@ -78,7 +78,7 @@ export default function MCPServersPage() {
             data-testid="add-mcp-server-button-page"
           >
             <ForwardedIconComponent name="Plus" className="w-4" />
-            Add MCP Server
+            <span>Add MCP Server</span>
           </Button>
           <AddMcpServerModal open={addOpen} setOpen={setAddOpen} />
         </div>
@@ -117,8 +117,10 @@ export default function MCPServersPage() {
                               : "Error"
                             : "Loading..."
                           : !server.toolsCount
-                            ? "No tools found"
-                            : `${server.toolsCount} tool${server.toolsCount === 1 ? "" : "s"}`}
+                          ? "No tools found"
+                          : `${server.toolsCount} tool${
+                              server.toolsCount === 1 ? "" : "s"
+                            }`}
                       </span>
                     </ShadTooltip>
                   </div>
