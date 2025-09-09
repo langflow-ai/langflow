@@ -36,15 +36,132 @@ Core System Modules (13):
 
 import importlib
 import inspect
+import pkgutil
+import re
 import time
+from pathlib import Path
 
 import pytest
+
+
+def get_all_reexport_modules():
+    """Get all known re-export modules for parametrized testing."""
+    # Define the modules here so they can be accessed by parametrize
+    direct_reexport_modules = {
+        "langflow.base.agents": "lfx.base.agents",
+        "langflow.base.data": "lfx.base.data",
+        "langflow.base.embeddings": "lfx.base.embeddings",
+        "langflow.base.io": "lfx.base.io",
+        "langflow.base.memory": "lfx.base.memory",
+        "langflow.base.models": "lfx.base.models",
+        "langflow.base.prompts": "lfx.base.prompts",
+        "langflow.base.textsplitters": "lfx.base.textsplitters",
+        "langflow.base.tools": "lfx.base.tools",
+        "langflow.base.vectorstores": "lfx.base.vectorstores",
+        "langflow.custom.custom_component": "lfx.custom.custom_component",
+        "langflow.graph": "lfx.graph",
+        "langflow.inputs": "lfx.inputs.inputs",
+        "langflow.interface": "lfx.interface",
+        "langflow.load": "lfx.load",
+        "langflow.logging": "lfx.log",
+        "langflow.schema": "lfx.schema",
+        "langflow.template.field": "lfx.template.field",
+    }
+
+    wildcard_reexport_modules = {
+        "langflow.base": "lfx.base",
+        "langflow.template": "lfx.template",
+    }
+
+    complex_reexport_modules = {
+        "langflow.custom": ["lfx.custom", "lfx.custom.custom_component", "lfx.custom.utils"],
+        "langflow.io": ["lfx.io", "lfx.template"],
+    }
+
+    dynamic_reexport_modules = {
+        "langflow.field_typing": "lfx.field_typing",
+    }
+
+    return list(
+        {
+            **direct_reexport_modules,
+            **wildcard_reexport_modules,
+            **complex_reexport_modules,
+            **dynamic_reexport_modules,
+        }.keys()
+    )
 
 
 class TestLfxReexportModules:
     """Test that all langflow modules that re-export from lfx work correctly."""
 
-    # Define all the modules that re-export from lfx
+    @classmethod
+    def _discover_langflow_modules(cls) -> list[str]:
+        """Dynamically discover all langflow modules."""
+        langflow_modules = []
+        try:
+            import langflow
+
+            for _importer, modname, _ispkg in pkgutil.walk_packages(langflow.__path__, langflow.__name__ + "."):
+                langflow_modules.append(modname)
+        except ImportError:
+            pass
+        return langflow_modules
+
+    @classmethod
+    def _detect_reexport_pattern(cls, module_name: str) -> dict[str, str | None]:
+        """Detect what kind of re-export pattern a module uses."""
+        try:
+            module = importlib.import_module(module_name)
+
+            # Check if module has source code that mentions lfx
+            source_file = getattr(module, "__file__", None)
+            if source_file:
+                try:
+                    with Path(source_file).open() as f:
+                        content = f.read()
+                        if "from lfx" in content:
+                            # Try to extract the lfx module being imported
+                            patterns = [
+                                r"from (lfx\.[.\w]+) import",
+                                r"from (lfx\.[.\w]+) import \*",
+                                r"import (lfx\.[.\w]+)",
+                            ]
+                            for pattern in patterns:
+                                match = re.search(pattern, content)
+                                if match:
+                                    return {"type": "direct", "source": match.group(1)}
+
+                        if "__getattr__" in content and "lfx" in content:
+                            return {"type": "dynamic", "source": None}
+
+                        # If we get here, file exists but no patterns matched
+                        return {"type": "none", "source": None}
+
+                except (OSError, UnicodeDecodeError):
+                    return {"type": "none", "source": None}
+            else:
+                return {"type": "none", "source": None}
+
+        except ImportError:
+            return {"type": "import_error", "source": None}
+
+    @classmethod
+    def _get_expected_symbols(cls, lfx_source: str | None = None) -> list[str]:
+        """Get expected symbols that should be available in a module."""
+        if not lfx_source:
+            return []
+
+        try:
+            lfx_module = importlib.import_module(lfx_source)
+            if hasattr(lfx_module, "__all__"):
+                return list(lfx_module.__all__)
+            # Return public attributes (not starting with _)
+            return [name for name in dir(lfx_module) if not name.startswith("_")]
+        except ImportError:
+            return []
+
+    # Define all the modules that re-export from lfx (kept for backward compatibility)
     DIRECT_REEXPORT_MODULES = {
         # Base modules with direct re-exports
         "langflow.base.agents": "lfx.base.agents",
@@ -316,6 +433,49 @@ class TestLfxReexportModules:
         assert actual_count >= 20, f"Too few modules being tested: {actual_count}"
         assert actual_count <= 30, f"Too many modules being tested: {actual_count}"
 
+    # Dynamic test methods using the discovery functions
+    def test_dynamic_module_discovery(self):
+        """Test that we can dynamically discover langflow modules."""
+        modules = self._discover_langflow_modules()
+        assert len(modules) > 0, "Should discover at least some langflow modules"
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+        # Check that known modules are found
+        expected_modules = ["langflow.schema", "langflow.inputs", "langflow.custom"]
+        found_modules = [mod for mod in expected_modules if mod in modules]
+        assert len(found_modules) > 0, f"Expected to find some of {expected_modules}, but found: {found_modules}"
+
+    @pytest.mark.parametrize("module_name", get_all_reexport_modules())
+    def test_parametrized_module_import_and_pattern_detection(self, module_name: str):
+        """Parametrized test that checks module import and pattern detection."""
+        # Test that module can be imported
+        try:
+            module = importlib.import_module(module_name)
+            assert module is not None, f"Module {module_name} should not be None"
+        except ImportError:
+            pytest.fail(f"Could not import {module_name}")
+
+        # Test pattern detection
+        pattern_info = self._detect_reexport_pattern(module_name)
+        assert isinstance(pattern_info, dict), "Pattern detection should return a dict"
+        assert "type" in pattern_info, "Pattern info should have 'type' key"
+        assert pattern_info["type"] in ["direct", "dynamic", "none", "import_error"], (
+            f"Unknown pattern type: {pattern_info['type']}"
+        )
+
+    def test_generate_backward_compatibility_imports(self):
+        """Test generating backward compatibility imports dynamically."""
+        # Test with a known module that has lfx imports
+        test_cases = [("langflow.schema", "lfx.schema"), ("langflow.custom", "lfx.custom")]
+
+        for lf_module, _expected_lfx_source in test_cases:
+            pattern_info = self._detect_reexport_pattern(lf_module)
+            if pattern_info["type"] == "direct" and pattern_info["source"]:
+                symbols = self._get_expected_symbols(pattern_info["source"])
+                assert len(symbols) > 0, f"Should find some symbols in {pattern_info['source']}"
+
+                # Test that at least some symbols are accessible in the langflow module
+                module = importlib.import_module(lf_module)
+                available_symbols = [sym for sym in symbols[:3] if hasattr(module, sym)]  # Test first 3
+                assert len(available_symbols) > 0, (
+                    f"Module {lf_module} should have some symbols from {pattern_info['source']}"
+                )
