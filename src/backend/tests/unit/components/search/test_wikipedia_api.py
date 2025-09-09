@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock
 
 import pytest
-
 from langflow.components.wikipedia import WikipediaComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template

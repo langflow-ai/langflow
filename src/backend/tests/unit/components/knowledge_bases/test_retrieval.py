@@ -5,10 +5,10 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic import SecretStr
-
 from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from langflow.components.knowledge_bases.retrieval import KnowledgeRetrievalComponent
+from pydantic import SecretStr
+
 from tests.base import ComponentTestBaseWithoutClient
 
 

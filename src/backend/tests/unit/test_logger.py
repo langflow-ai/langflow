@@ -20,7 +20,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 import structlog
-
 from langflow.logging.logger import (
     LOG_LEVEL_MAP,
     VALID_LOG_LEVELS,

@@ -2,8 +2,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_ollama import ChatOllama
-
 from langflow.components.ollama.ollama import ChatOllamaComponent
+
 from tests.base import ComponentTestBaseWithoutClient
 
 
