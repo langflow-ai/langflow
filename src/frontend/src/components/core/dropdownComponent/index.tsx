@@ -235,20 +235,20 @@ export default function Dropdown({
 
         // Build a pseudo source so compatible target handles (left side) glow
         const pseudoSourceHandle = scapedJSONStringfy({
-          id: "connect_other_models_source",
-          name: "Language Model",
-          output_types: effectiveInputTypes,
-          dataType: effectiveInputTypes[0] || "LanguageModel",
+          fieldName: name,
+          id: nodeId,
+          inputTypes: effectiveInputTypes,
+          type: "str",
         });
 
         const filterObj = {
-          source: "connect_other_models_node",
-          sourceHandle: pseudoSourceHandle,
-          target: undefined,
-          targetHandle: undefined,
+          source: undefined,
+          sourceHandle: undefined,
+          target: nodeId,
+          targetHandle: pseudoSourceHandle,
           type: "LanguageModel",
           // Use a generic color; exact tone is resolved when user hovers/clicks handles
-          color: "secondary-foreground",
+          color: "datatype-fuchsia",
         } as any;
 
         // Show compatible handles glow
