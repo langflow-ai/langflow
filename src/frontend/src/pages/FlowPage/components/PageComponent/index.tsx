@@ -615,6 +615,8 @@ export default function Page({
         };
         setNodes((nds) => nds.concat(newNode));
         setIsAddingNote(false);
+        // Signal sidebar to revert add_note active state
+        window.dispatchEvent(new Event("lf:end-add-note"));
       }
     },
     [
@@ -665,6 +667,24 @@ export default function Page({
       document.removeEventListener("mousemove", handleGlobalMouseMove);
     };
   }, [isAddingNote, shadowBoxWidth, shadowBoxHeight]);
+
+  // Listen for a global event to start the add-note flow from outside components
+  useEffect(() => {
+    const handleStartAddNote = () => {
+      setIsAddingNote(true);
+      const shadowBox = document.getElementById("shadow-box");
+      if (shadowBox) {
+        shadowBox.style.display = "block";
+        shadowBox.style.left = `${position.current.x - shadowBoxWidth / 2}px`;
+        shadowBox.style.top = `${position.current.y - shadowBoxHeight / 2}px`;
+      }
+    };
+
+    window.addEventListener("lf:start-add-note", handleStartAddNote);
+    return () => {
+      window.removeEventListener("lf:start-add-note", handleStartAddNote);
+    };
+  }, [shadowBoxWidth, shadowBoxHeight]);
 
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 2;

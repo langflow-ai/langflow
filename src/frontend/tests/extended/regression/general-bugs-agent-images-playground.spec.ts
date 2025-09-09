@@ -10,7 +10,7 @@ test(
   async ({ page }) => {
     test.skip(
       !process?.env?.ANTHROPIC_API_KEY,
-      "ANTHROPIC_API_KEY required to run this test"
+      "ANTHROPIC_API_KEY required to run this test",
     );
 
     if (!process.env.CI) {
@@ -51,7 +51,7 @@ test(
         dt.items.add(file);
         return dt;
       },
-      { fileContent }
+      { fileContent },
     );
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
@@ -86,5 +86,5 @@ test(
     expect(textFromLlm?.toLowerCase()).toMatch(/(chain|inkscape|logo)/);
     const lengthOfTextFromLlm = textFromLlm?.length;
     expect(lengthOfTextFromLlm).toBeGreaterThan(100);
-  }
+  },
 );
