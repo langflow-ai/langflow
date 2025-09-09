@@ -70,6 +70,13 @@ class ChatOutput(ChatComponent):
             advanced=True,
             info="Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
         ),
+        BoolInput(
+            name="clean_data",
+            display_name="Basic Clean Data",
+            value=True,
+            info="Whether to clean the data",
+            advanced=True,
+        ),
     ]
     outputs = [
         Output(
@@ -162,7 +169,6 @@ class ChatOutput(ChatComponent):
         """Convert input data to string with proper error handling."""
         self._validate_input()
         if isinstance(self.input_value, list):
-            self.clean_data = self.clean_data if hasattr(self, "clean_data") else False
             return "\n".join([safe_convert(item, clean_data=self.clean_data) for item in self.input_value])
         if isinstance(self.input_value, Generator):
             return self.input_value
