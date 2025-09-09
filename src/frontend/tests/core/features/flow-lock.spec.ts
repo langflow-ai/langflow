@@ -19,7 +19,7 @@ test.describe("Flow Lock Feature", () => {
 
       // Verify initially the flow is not locked (no lock icon should be visible)
       const initialLockIcon = page.locator(
-        '[data-testid="menu_bar_display"] [data-testid="icon-Lock"]'
+        '[data-testid="menu_bar_display"] [data-testid="icon-Lock"]',
       );
       await expect(initialLockIcon).toHaveCount(0);
 
@@ -114,7 +114,7 @@ test.describe("Flow Lock Feature", () => {
 
       // Verify lock icon is no longer visible in the flow header
       await expect(lockIconInHeader).toHaveCount(0);
-    }
+    },
   );
 
   test(
@@ -150,6 +150,6 @@ test.describe("Flow Lock Feature", () => {
       const lockIcon = page.locator('[data-testid="icon-Lock"]');
       await expect(lockIcon).toBeVisible();
       await expect(unlockIcon).toHaveCount(1);
-    }
+    },
   );
 });
