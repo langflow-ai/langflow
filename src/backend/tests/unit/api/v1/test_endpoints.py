@@ -95,8 +95,8 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
         f"Current model names: {current_model_names}, New model names: {result['template']['model_name']['options']}"
     )
     # Now test with Custom provider
-    template["agent_llm"]["value"] = "Custom"
-    request.field_value = "Custom"
+    template["agent_llm"]["value"] = "connect_other_models"
+    request.field_value = "connect_other_models"
     request.template = template
 
     response = await client.post("api/v1/custom_component/update", json=request.model_dump(), headers=logged_in_headers)

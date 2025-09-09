@@ -12,6 +12,7 @@ class MessageToDataComponent(Component):
     beta = True
     name = "MessagetoData"
     legacy = True
+    replacement = ["processing.TypeConverterComponent"]
 
     inputs = [
         MessageInput(

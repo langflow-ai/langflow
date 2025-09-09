@@ -137,9 +137,8 @@ describe("SidebarSegmentedNav", () => {
     expect(componentsButton).toHaveAttribute("data-active", "false");
   });
 
-  it("sets active state for search when search is focused", () => {
-    mockUseSidebar.activeSection = "components";
-    mockUseSearchContext.isSearchFocused = true;
+  it("sets active state for search when activeSection is search", () => {
+    mockUseSidebar.activeSection = "search";
     render(<SidebarSegmentedNav />);
 
     const searchButton = screen.getByTestId("sidebar-nav-search");
@@ -289,7 +288,7 @@ describe("SidebarSegmentedNav", () => {
   });
 
   it("exports NAV_ITEMS correctly", () => {
-    expect(NAV_ITEMS).toHaveLength(4);
+    expect(NAV_ITEMS).toHaveLength(5);
     expect(NAV_ITEMS[0]).toEqual({
       id: "search",
       icon: "search",
@@ -301,6 +300,12 @@ describe("SidebarSegmentedNav", () => {
       icon: "blocks",
       label: "Bundles",
       tooltip: "Bundles",
+    });
+    expect(NAV_ITEMS[4]).toEqual({
+      id: "add_note",
+      icon: "sticky-note",
+      label: "Sticky Notes",
+      tooltip: "Add Sticky Notes",
     });
   });
 });

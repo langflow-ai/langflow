@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langflow.components.google.google_serper_api_core import GoogleSerperAPICore
+from langflow.components.serper.google_serper_api_core import GoogleSerperAPICore
 from langflow.schema import DataFrame
 
 
@@ -29,7 +29,7 @@ def mock_search_results():
 
 
 def test_component_initialization(google_serper_component):
-    assert google_serper_component.display_name == "Google Serper API"
+    assert google_serper_component.display_name == "Serper Google Search API"
     assert google_serper_component.icon == "Serper"
 
     input_names = [input_.name for input_ in google_serper_component.inputs]

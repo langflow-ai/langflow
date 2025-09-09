@@ -18,7 +18,7 @@ class OlivyaComponent(Component):
     inputs = [
         MessageTextInput(
             name="api_key",
-            display_name="API Key",
+            display_name="Olivya API Key",
             info="Your API key for authentication",
             value="",
             required=True,

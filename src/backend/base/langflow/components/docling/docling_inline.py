@@ -56,16 +56,14 @@ class DoclingInlineComponent(BaseFileComponent):
             display_name="Pipeline",
             info="Docling pipeline to use",
             options=["standard", "vlm"],
-            real_time_refresh=False,
             value="standard",
         ),
         DropdownInput(
             name="ocr_engine",
-            display_name="Ocr",
-            info="OCR engine to use",
-            options=["", "easyocr", "tesserocr", "rapidocr", "ocrmac"],
-            real_time_refresh=False,
-            value="",
+            display_name="OCR Engine",
+            info="OCR engine to use. None will disable OCR.",
+            options=["None", "easyocr", "tesserocr", "rapidocr", "ocrmac"],
+            value="None",
         ),
         # TODO: expose more Docling options
     ]
@@ -130,6 +128,58 @@ class DoclingInlineComponent(BaseFileComponent):
                 self.log("Warning: Process still alive after SIGKILL")
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
+        try:
+            from docling.datamodel.base_models import InputFormat
+            from docling.datamodel.pipeline_options import (
+                OcrOptions,
+                PdfPipelineOptions,
+                VlmPipelineOptions,
+            )
+            from docling.document_converter import DocumentConverter, FormatOption, PdfFormatOption
+            from docling.models.factories import get_ocr_factory
+            from docling.pipeline.vlm_pipeline import VlmPipeline
+        except ImportError as e:
+            msg = (
+                "Docling is an optional dependency. Install with `uv pip install 'langflow[docling]'` or refer to the "
+                "documentation on how to install optional dependencies."
+            )
+            raise ImportError(msg) from e
+
+        # Configure the standard PDF pipeline
+        def _get_standard_opts() -> PdfPipelineOptions:
+            pipeline_options = PdfPipelineOptions()
+            pipeline_options.do_ocr = self.ocr_engine != "None"
+            if pipeline_options.do_ocr:
+                ocr_factory = get_ocr_factory(
+                    allow_external_plugins=False,
+                )
+
+                ocr_options: OcrOptions = ocr_factory.create_options(
+                    kind=self.ocr_engine,
+                )
+                pipeline_options.ocr_options = ocr_options
+            return pipeline_options
+
+        # Configure the VLM pipeline
+        def _get_vlm_opts() -> VlmPipelineOptions:
+            return VlmPipelineOptions()
+
+        # Configure the main format options and create the DocumentConverter()
+        def _get_converter() -> DocumentConverter:
+            if self.pipeline == "standard":
+                pdf_format_option = PdfFormatOption(
+                    pipeline_options=_get_standard_opts(),
+                )
+            elif self.pipeline == "vlm":
+                pdf_format_option = PdfFormatOption(pipeline_cls=VlmPipeline, pipeline_options=_get_vlm_opts())
+
+            format_options: dict[InputFormat, FormatOption] = {
+                InputFormat.PDF: pdf_format_option,
+                InputFormat.IMAGE: pdf_format_option,
+            }
+
+            return DocumentConverter(format_options=format_options)
+
         file_paths = [file.path for file in file_list if file.path]
 
         if not file_paths:
@@ -167,17 +217,33 @@ class DoclingInlineComponent(BaseFileComponent):
                     # Ignore cleanup errors, but log them
                     self.log(f"Warning: Error during queue cleanup - {e}")
 
-        # Check if there was an error in the worker
+        # Enhanced error checking with dependency-specific handling
         if isinstance(result, dict) and "error" in result:
-            msg = result["error"]
-            if msg.startswith("Docling is not installed"):
-                raise ImportError(msg)
-            # Handle interrupt gracefully - return empty result instead of raising error
-            if "Worker interrupted by SIGINT" in msg or "shutdown" in result:
+            error_msg = result["error"]
+
+            # Handle dependency errors specifically
+            if result.get("error_type") == "dependency_error":
+                dependency_name = result.get("dependency_name", "Unknown dependency")
+                install_command = result.get("install_command", "Please check documentation")
+
+                # Create a user-friendly error message
+                user_message = (
+                    f"Missing OCR dependency: {dependency_name}. "
+                    f"{install_command} "
+                    f"Alternatively, you can set OCR Engine to 'None' to disable OCR processing."
+                )
+                raise ImportError(user_message)
+
+            # Handle other specific errors
+            if error_msg.startswith("Docling is not installed"):
+                raise ImportError(error_msg)
+
+            # Handle graceful shutdown
+            if "Worker interrupted by SIGINT" in error_msg or "shutdown" in result:
                 self.log("Docling process cancelled by user")
                 result = []
             else:
-                raise RuntimeError(msg)
+                raise RuntimeError(error_msg)
 
         processed_data = [Data(data={"doc": r["document"], "file_path": r["file_path"]}) if r else None for r in result]
         return self.rollup_data(file_list, processed_data)

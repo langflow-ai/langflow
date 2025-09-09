@@ -5,19 +5,19 @@ from typing import TYPE_CHECKING, Any
 from langflow.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from .python_function import PythonFunctionComponent
+    from langflow.components.knowledge_bases.ingestion import KnowledgeIngestionComponent
+    from langflow.components.knowledge_bases.retrieval import KnowledgeRetrievalComponent
 
 _dynamic_imports = {
-    "PythonFunctionComponent": "python_function",
+    "KnowledgeIngestionComponent": "ingestion",
+    "KnowledgeRetrievalComponent": "retrieval",
 }
 
-__all__ = [
-    "PythonFunctionComponent",
-]
+__all__ = ["KnowledgeIngestionComponent", "KnowledgeRetrievalComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:
-    """Lazily import prototype components on attribute access."""
+    """Lazily import input/output components on attribute access."""
     if attr_name not in _dynamic_imports:
         msg = f"module '{__name__}' has no attribute '{attr_name}'"
         raise AttributeError(msg)
