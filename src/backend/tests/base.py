@@ -5,13 +5,12 @@ from unittest.mock import Mock
 from uuid import uuid4
 
 import pytest
-from typing_extensions import TypedDict
-
 from langflow.custom.custom_component.component import Component
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import Vertex
 from tests.constants import SUPPORTED_VERSIONS
 from tests.integration.utils import build_component_instance_for_tests
+from typing_extensions import TypedDict
 
 
 class VersionComponentMapping(TypedDict):
