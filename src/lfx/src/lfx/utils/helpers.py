@@ -5,6 +5,8 @@ from __future__ import annotations
 import mimetypes
 from typing import TYPE_CHECKING
 
+from lfx.utils.constants import EXTENSION_TO_CONTENT_TYPE
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -26,3 +28,7 @@ def get_mime_type(file_path: str | Path) -> str:
         msg = f"Could not determine MIME type for: {file_path}"
         raise ValueError(msg)
     return mime_type
+
+
+def build_content_type_from_extension(extension: str):
+    return EXTENSION_TO_CONTENT_TYPE.get(extension.lower(), "application/octet-stream")
