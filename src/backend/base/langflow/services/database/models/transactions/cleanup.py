@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 class TransactionCleanupTask:
     """Periodic task to clean up old transactions and vertex builds with graceful failure handling."""
 
-    def __init__(self, interval_seconds: int = 600):  # Default: 10 minutes
+    def __init__(self, interval_seconds: int = 600):
         self.interval_seconds = interval_seconds
         self._task: asyncio.Task | None = None
         self._running = False

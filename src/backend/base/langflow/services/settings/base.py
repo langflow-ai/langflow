@@ -208,6 +208,8 @@ class Settings(BaseSettings):
     telemetry_base_url: str = "https://langflow.gateway.scarf.sh"
     transactions_storage_enabled: bool = True
     """If set to True, Langflow will track transactions between flows."""
+    transaction_cleanup_interval_seconds: int = 600
+    """Interval in seconds for cleaning up old transactions."""
     vertex_builds_storage_enabled: bool = True
     """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
 
