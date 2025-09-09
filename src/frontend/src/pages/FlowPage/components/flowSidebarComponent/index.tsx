@@ -545,17 +545,17 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   const filterDescription =
     getFilterComponent !== ""
-      ? (baseData[category][component]?.display_name ?? "")
-      : (filterType?.type ?? "");
+      ? baseData[category][component]?.display_name ?? ""
+      : filterType?.type ?? "";
 
   const filterName =
     getFilterComponent !== ""
       ? "Component"
       : filterType
-        ? filterType.source
-          ? "Input"
-          : "Output"
-        : "";
+      ? filterType.source
+        ? "Input"
+        : "Output"
+      : "";
 
   const resetFilters = useCallback(() => {
     setFilterEdge([]);
@@ -700,7 +700,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
           {ENABLE_NEW_SIDEBAR &&
           activeSection === "mcp" &&
           !hasMcpServers ? null : (
-            <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-0">
+            <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
               <SidebarMenuButtons
                 customComponent={customComponent}
                 addComponent={addComponent}

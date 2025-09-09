@@ -19,72 +19,73 @@ const SidebarMenuButtons = ({
     setAddMcpOpen(true);
   };
 
-  return (
-    <div className="flex w-full h-full">
-      {ENABLE_NEW_SIDEBAR && activeSection === "mcp" ? (
-        <>
-          <SidebarMenuButton asChild>
-            <Button
-              unstyled
-              disabled={isLoading}
-              onClick={handleAddMcpServerClick}
-              data-testid="sidebar-add-mcp-server-button"
-              className="flex items-center gap-2 w-full p-0"
-            >
-              <ForwardedIconComponent
-                name="Plus"
-                className="h-4 w-4 text-muted-foreground"
-              />
-              <span className="group-data-[state=open]/collapsible:font-semibold">
-                Add MCP Server
-              </span>
-            </Button>
-          </SidebarMenuButton>
-          <SidebarMenuButton asChild>
-            <Button
-              unstyled
-              disabled={isLoading}
-              onClick={() => {
-                navigate("/settings/mcp-servers");
-              }}
-              data-testid="sidebar-manage-servers-button"
-              className="flex items-center gap-2"
-            >
-              <ForwardedIconComponent
-                name="ArrowUpRight"
-                className="h-4 w-4 text-muted-foreground"
-              />
-              <span className="group-data-[state=open]/collapsible:font-semibold">
-                Manage Servers
-              </span>
-            </Button>
-          </SidebarMenuButton>
-          <AddMcpServerModal open={addMcpOpen} setOpen={setAddMcpOpen} />
-        </>
-      ) : (
-        // <SidebarMenuButton asChild className="group">
+  return ENABLE_NEW_SIDEBAR && activeSection === "mcp" ? (
+    <>
+      <SidebarMenuButton asChild>
         <Button
           unstyled
           disabled={isLoading}
-          onClick={() => {
-            if (customComponent) {
-              addComponent(customComponent, "CustomComponent");
-            }
-          }}
-          data-testid="sidebar-custom-component-button"
-          className="flex items-center w-full h-full p-3 gap-2 hover:bg-muted"
+          onClick={handleAddMcpServerClick}
+          data-testid="sidebar-add-mcp-server-button"
+          className="flex items-center w-full h-full gap-3 hover:bg-muted"
         >
           <ForwardedIconComponent
             name="Plus"
             className="h-4 w-4 text-muted-foreground"
           />
+<<<<<<< HEAD
           <span className="ml-2 group-data-[state=open]/collapsible:font-semibold text-sm">
             New Custom Component
+=======
+          <span className="group-data-[state=open]/collapsible:font-semibold">
+            Add MCP Server
+>>>>>>> 61920ccfe7 (fixed sidebar footer buttons and test)
           </span>
         </Button>
-        // </SidebarMenuButton>
-      )}
-    </div>
+      </SidebarMenuButton>
+      <SidebarMenuButton asChild>
+        <Button
+          unstyled
+          disabled={isLoading}
+          onClick={() => {
+            navigate("/settings/mcp-servers");
+          }}
+          data-testid="sidebar-manage-servers-button"
+          className="flex items-center w-full h-full gap-3 hover:bg-muted"
+        >
+          <ForwardedIconComponent
+            name="ArrowUpRight"
+            className="h-4 w-4 text-muted-foreground"
+          />
+          <span className="group-data-[state=open]/collapsible:font-semibold">
+            Manage Servers
+          </span>
+        </Button>
+      </SidebarMenuButton>
+      <AddMcpServerModal open={addMcpOpen} setOpen={setAddMcpOpen} />
+    </>
+  ) : (
+    <SidebarMenuButton asChild className="group">
+      <Button
+        unstyled
+        disabled={isLoading}
+        onClick={() => {
+          if (customComponent) {
+            addComponent(customComponent, "CustomComponent");
+          }
+        }}
+        data-testid="sidebar-custom-component-button"
+        className="flex items-center w-full h-full gap-3 hover:bg-muted"
+      >
+        <ForwardedIconComponent
+          name="Plus"
+          className="h-4 w-4 text-muted-foreground"
+        />
+        <span className="group-data-[state=open]/collapsible:font-semibold">
+          New Custom Component
+        </span>
+      </Button>
+    </SidebarMenuButton>
   );
 };
 
