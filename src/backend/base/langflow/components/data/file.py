@@ -307,11 +307,7 @@ class FileComponent(BaseFileComponent):
             "md_page_break_placeholder": str(self.md_page_break_placeholder),
             "pipeline": str(self.pipeline),
             "ocr_engine": (
-                self.ocr_engine
-                if self.ocr_engine
-                and self.ocr_engine != "None"
-                and self.pipeline != "vlm"
-                else None
+                self.ocr_engine if self.ocr_engine and self.ocr_engine != "None" and self.pipeline != "vlm" else None
             ),
         }
 
