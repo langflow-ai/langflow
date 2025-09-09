@@ -81,7 +81,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
     let element = await page.getByTestId("note_node");
 
-    let hasStyles = await element?.evaluate(el => {
+    let hasStyles = await element?.evaluate((el) => {
       const style = window.getComputedStyle(el);
       return (
         style.backgroundColor === "rgb(252, 211, 77)" ||
@@ -102,7 +102,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
     element = await page.getByTestId("note_node");
 
-    hasStyles = await element?.evaluate(el => {
+    hasStyles = await element?.evaluate((el) => {
       const style = window.getComputedStyle(el);
 
       return (
@@ -144,5 +144,5 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     titleNumber = await page.getByText(randomTitle).count();
 
     expect(titleNumber).toBe(2);
-  }
+  },
 );
