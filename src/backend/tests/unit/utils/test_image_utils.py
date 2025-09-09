@@ -125,8 +125,8 @@ def test_create_image_content_dict_format_compatibility(sample_image):
 
     # Verify the structure matches OpenAI's expected format
     # OpenAI expects: {"type": "image_url", "image_url": {"url": "data:..."}}
-    assert all(key in ["type", "image_url"] for key in content_dict.keys())
-    assert all(key in ["url"] for key in content_dict["image_url"].keys())
+    assert all(key in ["type", "image_url"] for key in content_dict)
+    assert all(key in ["url"] for key in content_dict["image_url"])
 
 
 def test_image_content_dict_google_gemini_compatibility(sample_image):
@@ -210,7 +210,7 @@ def test_image_content_dict_no_legacy_fields(sample_image):
         assert field not in content_dict.get("image_url", {}), f"Legacy field '{field}' should not be in image_url"
 
 
-def test_image_content_dict_multiple_formats(sample_image, tmp_path):
+def test_image_content_dict_multiple_formats(tmp_path):
     """Test that the format works consistently across different image types."""
     # Test with different image formats
     formats_to_test = [
