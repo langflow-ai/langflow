@@ -368,6 +368,7 @@ class FileComponent(BaseFileComponent):
                         from docling.document_converter import PdfFormatOption  # type: ignore
 
                         pipe = PdfPipelineOptions()
+                        pipe.do_ocr = False
 
                         if ocr_engine:
                             try:
@@ -392,17 +393,17 @@ class FileComponent(BaseFileComponent):
                 # --- Vision-Language Model (VLM) pipeline ---
                 if pipeline == "vlm":
                     try:
-                        from docling.datamodel.pipeline_options import VlPipelineOptions  # type: ignore
-                        from docling.document_converter import VlFormatOption  # type: ignore
+                        from docling.pipeline.vlm_pipeline import VlmPipeline
+                        from docling.document_converter import PdfFormatOption  # type: ignore
 
-                        vl_pipe = VlPipelineOptions()
+                        vl_pipe = VlmPipelineOptions()
 
                         # VLM paths generally don't need OCR; keep OCR off by default here.
                         fmt = {}
                         if hasattr(input_format, "PDF"):
-                            fmt[getattr(input_format, "PDF")] = VlFormatOption(pipeline_options=vl_pipe)
+                            fmt[getattr(input_format, "PDF")] = PdfFormatOption(pipeline_cls=VlmPipeline)
                         if hasattr(input_format, "IMAGE"):
-                            fmt[getattr(input_format, "IMAGE")] = VlFormatOption(pipeline_options=vl_pipe)
+                            fmt[getattr(input_format, "IMAGE")] = PdfFormatOption(pipeline_cls=VlmPipeline)
 
                         return DocumentConverter(format_options=fmt)
                     except Exception:
