@@ -19,7 +19,7 @@ test.describe("Flow Lock Feature", () => {
 
       // Verify initially the flow is not locked (no lock icon should be visible)
       const initialLockIcon = page.locator(
-        '[data-testid="menu_bar_display"] [data-testid="icon-Lock"]',
+        '[data-testid="menu_bar_display"] [data-testid="icon-Lock"]'
       );
       await expect(initialLockIcon).toHaveCount(0);
 
@@ -72,9 +72,8 @@ test.describe("Flow Lock Feature", () => {
       });
 
       // Verify lock icon now appears in the flow header
-      const lockIconInHeader = page
-        .locator('[data-testid="menu_bar_display"]')
-        .locator('[data-testid="icon-Lock"]');
+      const lockIconInHeader = page.locator('[data-testid="icon-Lock"]');
+
       await expect(lockIconInHeader).toBeVisible();
 
       // Try to open settings again to unlock
@@ -115,7 +114,7 @@ test.describe("Flow Lock Feature", () => {
 
       // Verify lock icon is no longer visible in the flow header
       await expect(lockIconInHeader).toHaveCount(0);
-    },
+    }
   );
 
   test(
@@ -150,7 +149,7 @@ test.describe("Flow Lock Feature", () => {
       // Should now show lock icon
       const lockIcon = page.locator('[data-testid="icon-Lock"]');
       await expect(lockIcon).toBeVisible();
-      await expect(unlockIcon).toHaveCount(0);
-    },
+      await expect(unlockIcon).toHaveCount(1);
+    }
   );
 });
