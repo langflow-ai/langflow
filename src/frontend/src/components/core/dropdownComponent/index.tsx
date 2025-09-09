@@ -64,7 +64,7 @@ export default function Dropdown({
 }: BaseInputProps & DropDownComponent): JSX.Element {
   const validOptions = useMemo(
     () => filterNullOptions(options),
-    [options, value]
+    [options, value],
   );
 
   // Initialize state and refs
@@ -114,10 +114,10 @@ export default function Dropdown({
   // Utility functions
   const filterMetadataKeys = (
     metadata: Record<string, any> = {},
-    excludeKeys: string[] = ["api_endpoint", "icon", "status", "org_id"]
+    excludeKeys: string[] = ["api_endpoint", "icon", "status", "org_id"],
   ) => {
     return Object.fromEntries(
-      Object.entries(metadata).filter(([key]) => !excludeKeys.includes(key))
+      Object.entries(metadata).filter(([key]) => !excludeKeys.includes(key)),
     );
   };
 
@@ -129,7 +129,7 @@ export default function Dropdown({
       // If search is cleared, show all options
       // Preserve any custom values that were in filteredOptions
       const customValuesInFiltered = filteredOptions.filter(
-        (option) => !validOptions.includes(option) && option === customValue
+        (option) => !validOptions.includes(option) && option === customValue,
       );
       setFilteredOptions([...validOptions, ...customValuesInFiltered]);
       setFilteredMetadata(optionsMetaData);
@@ -142,10 +142,10 @@ export default function Dropdown({
 
     // If the search value exactly matches one of the custom options, include it
     const customOptions = filteredOptions.filter(
-      (option) => !validOptions.includes(option)
+      (option) => !validOptions.includes(option),
     );
     const matchingCustomOption = customOptions.find(
-      (option) => option.toLowerCase() === value.toLowerCase()
+      (option) => option.toLowerCase() === value.toLowerCase(),
     );
 
     // Include matching custom options or allow adding the current search if combobox is true
@@ -182,7 +182,7 @@ export default function Dropdown({
   };
 
   const setAwaitConnectionConfig = useUtilityStore(
-    (state) => state.setAwaitConnectionConfig
+    (state) => state.setAwaitConnectionConfig,
   );
 
   const handleSourceOptions = async (value: string) => {
@@ -221,7 +221,7 @@ export default function Dropdown({
             typesData,
             tooltipTitle,
             true,
-            store.nodes
+            store.nodes,
           );
 
           // Build a pseudo source handle with generic types
@@ -278,7 +278,7 @@ export default function Dropdown({
         postTemplateValue,
         setErrorData,
         name,
-        handleConnectionLogic
+        handleConnectionLogic,
       );
     } else {
       try {
@@ -289,7 +289,7 @@ export default function Dropdown({
           handleNodeClass,
           postTemplateValue,
           setErrorData,
-          name
+          name,
         );
       } catch (error) {
         console.error("Error in handleSourceOptions:", error);
@@ -309,7 +309,7 @@ export default function Dropdown({
       nodeClass!,
       handleNodeClass,
       postTemplateValue,
-      setErrorData
+      setErrorData,
     )?.then(() => {
       setTimeout(() => {
         setRefreshOptions(false);
@@ -347,7 +347,7 @@ export default function Dropdown({
     if (open) {
       // Check if filteredOptions contains any custom values not in validOptions
       const customValuesInFiltered = filteredOptions.filter(
-        (option) => !validOptions.includes(option) && option === customValue
+        (option) => !validOptions.includes(option) && option === customValue,
       );
 
       // If there are custom values, preserve them when resetting filtered options
@@ -364,7 +364,7 @@ export default function Dropdown({
           });
 
           const newMetadata = [...validOptions, ...customValuesInFiltered].map(
-            (option) => metadataMap[option]
+            (option) => metadataMap[option],
           );
           setFilteredMetadata(newMetadata);
         }
@@ -407,7 +407,7 @@ export default function Dropdown({
 
   const renderSelectedIcon = () => {
     const selectedIndex = filteredOptions.findIndex(
-      (option) => option === value
+      (option) => option === value,
     );
     const iconMetadata =
       selectedIndex >= 0 ? filteredMetadata?.[selectedIndex]?.icon : undefined;
@@ -442,7 +442,7 @@ export default function Dropdown({
             editNode
               ? "dropdown-component-outline input-edit-node"
               : "dropdown-component-false-outline py-2",
-            "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground"
+            "no-focus-visible w-full justify-between font-normal disabled:bg-muted disabled:text-muted-foreground",
           )}
         >
           <span
@@ -488,7 +488,7 @@ export default function Dropdown({
               "ml-2 h-4 w-4 shrink-0 text-foreground",
               disabled
                 ? "text-placeholder-foreground hover:text-placeholder-foreground"
-                : "hover:text-foreground"
+                : "hover:text-foreground",
             )}
           />
         </Button>
@@ -561,7 +561,7 @@ export default function Dropdown({
                       {filteredMetadata?.[index]?.status && (
                         <span
                           className={`flex items-center pl-2 text-xs ${getStatusColor(
-                            filteredMetadata?.[index]?.status
+                            filteredMetadata?.[index]?.status,
                           )}`}
                         >
                           <LoadingTextComponent
@@ -575,10 +575,11 @@ export default function Dropdown({
                       {filteredMetadata && filteredMetadata?.length > 0 && (
                         <div className="ml-auto flex items-center overflow-hidden pl-2 text-muted-foreground">
                           {Object.entries(
-                            filterMetadataKeys(filteredMetadata?.[index] || {})
+                            filterMetadataKeys(filteredMetadata?.[index] || {}),
                           )
                             .filter(
-                              ([key, value]) => value !== null && key !== "icon"
+                              ([key, value]) =>
+                                value !== null && key !== "icon",
                             )
                             .map(([key, value], i, arr) => (
                               <div
@@ -611,7 +612,7 @@ export default function Dropdown({
                           name="Check"
                           className={cn(
                             "h-4 w-4 shrink-0 text-primary",
-                            value === option ? "opacity-100" : "opacity-0"
+                            value === option ? "opacity-100" : "opacity-0",
                           )}
                         />
                       </div>
@@ -640,7 +641,7 @@ export default function Dropdown({
                 setOpenDialog(true);
               } else {
                 handleSourceOptions(
-                  sourceOptions?.fields?.data?.node?.name! || value
+                  sourceOptions?.fields?.data?.node?.name! || value,
                 );
               }
             }}
