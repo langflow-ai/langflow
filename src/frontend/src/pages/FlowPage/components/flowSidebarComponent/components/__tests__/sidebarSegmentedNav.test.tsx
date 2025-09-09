@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { SidebarSection } from "@/components/ui/sidebar";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import SidebarSegmentedNav, { NAV_ITEMS } from "../sidebarSegmentedNav";
 
 // Mock the hooks and components
@@ -288,7 +288,7 @@ describe("SidebarSegmentedNav", () => {
   });
 
   it("exports NAV_ITEMS correctly", () => {
-    expect(NAV_ITEMS).toHaveLength(4);
+    expect(NAV_ITEMS).toHaveLength(5);
     expect(NAV_ITEMS[0]).toEqual({
       id: "search",
       icon: "search",
@@ -300,6 +300,12 @@ describe("SidebarSegmentedNav", () => {
       icon: "blocks",
       label: "Bundles",
       tooltip: "Bundles",
+    });
+    expect(NAV_ITEMS[4]).toEqual({
+      id: "add_note",
+      icon: "sticky-note",
+      label: "Sticky Notes",
+      tooltip: "Add Sticky Notes",
     });
   });
 });
