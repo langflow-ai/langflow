@@ -4551,6 +4551,21 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-docling"
+version = "1.0.0"
+source = { git = "https://github.com/docling-project/docling-langchain?branch=feat-pic-desc-plugin#dad7a54440b1330d42600d2b26170666a59d775e" }
+dependencies = [
+    { name = "docling" },
+    { name = "langchain-core" },
+]
+
+[package.optional-dependencies]
+plugin = [
+    { name = "langchain-openai", version = "0.3.23", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "langchain-openai", version = "0.3.32", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+]
+
+[[package]]
 name = "langchain-elasticsearch"
 version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -5108,6 +5123,7 @@ couchbase = [
 ]
 docling = [
     { name = "docling" },
+    { name = "langchain-docling", extra = ["plugin"] },
     { name = "ocrmac", marker = "sys_platform == 'darwin'" },
     { name = "rapidocr-onnxruntime" },
     { name = "tesserocr" },
@@ -5227,6 +5243,7 @@ requires-dist = [
     { name = "langchain-chroma", specifier = "==0.1.4" },
     { name = "langchain-cohere", specifier = "==0.3.3" },
     { name = "langchain-community", specifier = "~=0.3.21" },
+    { name = "langchain-docling", extras = ["plugin"], marker = "extra == 'docling'", git = "https://github.com/docling-project/docling-langchain?branch=feat-pic-desc-plugin" },
     { name = "langchain-elasticsearch", specifier = "==0.3.0" },
     { name = "langchain-google-calendar-tools", specifier = "==0.0.1" },
     { name = "langchain-google-community", specifier = "==2.0.3" },

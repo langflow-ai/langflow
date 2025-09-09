@@ -2,9 +2,11 @@ import time
 from multiprocessing import Queue, get_context
 from queue import Empty
 
+from langchain_openai import ChatOpenAI
+
 from lfx.base.data import BaseFileComponent
 from lfx.base.data.docling_utils import docling_worker
-from lfx.inputs import DropdownInput
+from lfx.inputs import BoolInput, DropdownInput, HandleInput, StrInput
 from lfx.schema import Data
 
 
@@ -66,6 +68,26 @@ class DoclingInlineComponent(BaseFileComponent):
             options=["None", "easyocr", "tesserocr", "rapidocr", "ocrmac"],
             real_time_refresh=False,
             value="None",
+        ),
+        BoolInput(
+            name="do_picture_classification",
+            display_name="Picture classification",
+            info="If enabled, the Docling pipeline will classify the pictures type.",
+            value=False,
+        ),
+        HandleInput(
+            name="pic_desc_llm",
+            display_name="Picture description LLM",
+            info="If connected, the model to use for running the picture description task.",
+            input_types=["LanguageModel"],
+            required=False,
+        ),
+        StrInput(
+            name="pic_desc_prompt",
+            display_name="Picture description prompt",
+            value="Describe the image in three sentences. Be consise and accurate.",
+            info="The user prompt to use when invoking the model.",
+            advanced=True,
         ),
         # TODO: expose more Docling options
     ]
@@ -184,11 +206,30 @@ class DoclingInlineComponent(BaseFileComponent):
             self.log("No files to process.")
             return file_list
 
+        pic_desc_config: dict | None = None
+        if self.pic_desc_llm is not None:
+            if not isinstance(self.pic_desc_llm, ChatOpenAI):
+                msg = "Picture description LLM only supports models of type ChatOpenAI."
+                raise RuntimeError(msg)
+            pic_desc_config = self.pic_desc_llm.model_dump(mode="json")
+            if isinstance(self.pic_desc_llm.openai_api_key, str):
+                pic_desc_config["openai_api_key"] = self.pic_desc_llm.openai_api_key
+            else:
+                pic_desc_config["openai_api_key"] = self.pic_desc_llm.openai_api_key.get_secret_value()
+
         ctx = get_context("spawn")
         queue: Queue = ctx.Queue()
         proc = ctx.Process(
             target=docling_worker,
-            args=(file_paths, queue, self.pipeline, self.ocr_engine),
+            kwargs={
+                "file_paths": file_paths,
+                "queue": queue,
+                "pipeline": self.pipeline,
+                "ocr_engine": self.ocr_engine,
+                "do_picture_classification": self.do_picture_classification,
+                "pic_desc_config": pic_desc_config,
+                "pic_desc_prompt": self.pic_desc_prompt,
+            },
         )
 
         result = None

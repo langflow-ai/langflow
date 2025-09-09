@@ -4,6 +4,8 @@ import traceback
 from contextlib import suppress
 
 from docling_core.types.doc import DoclingDocument
+from langchain_openai import ChatOpenAI
+from pydantic import TypeAdapter
 
 from lfx.log.logger import logger
 from lfx.schema.data import Data
@@ -57,7 +59,16 @@ def extract_docling_documents(data_inputs: Data | list[Data] | DataFrame, doc_ke
     return documents
 
 
-def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str):
+def docling_worker(
+    *,
+    file_paths: list[str],
+    queue,
+    pipeline: str,
+    ocr_engine: str,
+    do_picture_classification: bool,
+    pic_desc_config: dict | None,
+    pic_desc_prompt: str,
+):
     """Worker function for processing files with Docling in a separate process."""
     # Signal handling for graceful shutdown
     shutdown_requested = False
@@ -106,6 +117,7 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
         from docling.document_converter import DocumentConverter, FormatOption, PdfFormatOption
         from docling.models.factories import get_ocr_factory
         from docling.pipeline.vlm_pipeline import VlmPipeline
+        from langchain_docling.picture_description import PictureDescriptionLangChainOptions
 
         # Check for shutdown after imports
         check_shutdown()
@@ -143,6 +155,21 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
                 kind=ocr_engine,
             )
             pipeline_options.ocr_options = ocr_options
+
+        pipeline_options.do_picture_classification = do_picture_classification
+
+        if pic_desc_config:
+            adapter = TypeAdapter(ChatOpenAI)
+            pic_desc_llm = adapter.validate_python(pic_desc_config)
+
+            logger.info("Docling enabling the picture description stage.")
+            pipeline_options.do_picture_description = True
+            pipeline_options.allow_external_plugins = True
+            pipeline_options.picture_description_options = PictureDescriptionLangChainOptions(
+                llm=pic_desc_llm,
+                prompt=pic_desc_prompt,
+            )
+
         return pipeline_options
 
     # Configure the VLM pipeline
