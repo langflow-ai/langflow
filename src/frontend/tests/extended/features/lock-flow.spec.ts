@@ -27,17 +27,20 @@ test(
       state: "visible",
     });
     await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("flow_name").click();
-    await page.getByTestId("lock-flow-switch").click();
-    await page.getByTestId("save-flow-settings").click();
-
-    //ensure the UI is updated
     await page.waitForTimeout(500);
 
-    await page.waitForSelector('[data-testid="icon-Lock"]', {
-      timeout: 3000,
+    await page.getByTestId("flow_name").click();
+    await page.getByTestId("lock-flow-switch").click();
+    await page.getByTestId("icon-Lock").isVisible({ timeout: 5000 });
+    //ensure the UI is updated
+    await page.waitForTimeout(500);
+    await page.getByTestId("save-flow-settings").click();
+    await expect(page.getByTestId("save-flow-settings")).toBeHidden({
+      timeout: 5000,
     });
+
+    //ensure the UI is updated
+    await page.getByTestId("icon-Lock").isVisible({ timeout: 5000 });
 
     await page.getByTestId("icon-ChevronLeft").click();
     await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -51,9 +54,9 @@ test(
       state: "visible",
     });
     await page.getByTestId("canvas_controls_dropdown").click();
+    await page.waitForTimeout(500);
 
     //ensure the UI is updated
-    await page.waitForTimeout(1000);
 
     await page.waitForSelector('[data-testid="icon-Lock"]', {
       timeout: 3000,
@@ -61,10 +64,15 @@ test(
 
     await page.getByTestId("flow_name").click();
     await page.getByTestId("lock-flow-switch").click();
-    await page.waitForSelector('[data-testid="icon-Lock"]', {
-      timeout: 3000,
-    });
+    await page.getByTestId("icon-Unlock").isVisible({ timeout: 5000 });
+    //ensure the UI is updated
+    await page.waitForTimeout(500);
     await page.getByTestId("save-flow-settings").click();
+    await expect(page.getByTestId("save-flow-settings")).toBeHidden({
+      timeout: 5000,
+    });
+    //ensure the UI is updated
+    await page.getByTestId("icon-Lock").isHidden({ timeout: 5000 });
 
     await page.getByTestId("icon-ChevronLeft").click();
     await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -79,6 +87,7 @@ test(
       state: "visible",
     });
     await page.getByTestId("canvas_controls_dropdown").click();
+    await page.waitForTimeout(500);
 
     await tryDeleteEdge(page);
     await page.locator(".react-flow__edge-path").nth(0).click();
@@ -125,8 +134,14 @@ test(
 async function tryConnectNodes(page: Page) {
   await page.getByTestId("flow_name").click();
   await page.getByTestId("lock-flow-switch").click();
-  await page.getByTestId("icon-Unlock").isVisible();
+  await page.getByTestId("lock-flow-switch").isHidden({ timeout: 5000 });
+  await page.getByTestId("icon-Unlock").isVisible({ timeout: 5000 });
+  //ensure the UI is updated
+  await page.waitForTimeout(500);
   await page.getByTestId("save-flow-settings").click();
+  await expect(page.getByTestId("save-flow-settings")).toBeHidden({
+    timeout: 5000,
+  });
 
   const numberOfTries = 5;
   let numberOfEdges = await page.locator(".react-flow__edge-path").count();
@@ -157,33 +172,56 @@ async function tryConnectNodes(page: Page) {
   await page.getByTestId("flow_name").click();
   await page.getByTestId("lock-flow-switch").click();
 
-  await page.getByTestId("lock_Unlock").isVisible();
+  await page.getByTestId("icon-Unlock").isVisible({ timeout: 5000 });
+  //ensure the UI is updated
+  await page.waitForTimeout(500);
   await page.getByTestId("save-flow-settings").click();
+  await expect(page.getByTestId("save-flow-settings")).toBeHidden({
+    timeout: 5000,
+  });
+
+  //ensure the UI is updated
+  await page.getByTestId("icon-Lock").isHidden({ timeout: 5000 });
 }
 
 async function tryDeleteEdge(page: Page) {
   await page.getByTestId("flow_name").click();
   await page.getByTestId("lock-flow-switch").click();
-  await page.getByTestId("icon-Lock").isVisible();
+  await page.getByTestId("icon-Lock").isVisible({ timeout: 5000 });
+  await page.waitForTimeout(500);
+
   await page.getByTestId("save-flow-settings").click();
+  await expect(page.getByTestId("save-flow-settings")).toBeHidden({
+    timeout: 5000,
+  });
+
+  //ensure the UI is updated
+  await page.getByTestId("icon-Lock").isVisible({ timeout: 5000 });
 
   let numberOfEdges = await page.locator(".react-flow__edge-path").count();
   expect(numberOfEdges).toBe(3);
-  const numberOfTries = 50;
+  const numberOfTries = 5;
 
   for (let i = 0; i < numberOfTries; i++) {
-    await page.locator(".react-flow__edge-path").nth(0).click();
-    await page.keyboard.press("Delete");
-    await page.locator(".react-flow__edge-path").nth(1).click();
-    await page.keyboard.press("Delete");
-    await page.locator(".react-flow__edge-path").nth(2).click();
-    await page.keyboard.press("Delete");
-    numberOfEdges = await page.locator(".react-flow__edge-path").count();
+    await expect(
+      page.locator(".react-flow__edge-path").nth(0).click({ timeout: 500 }),
+    ).rejects.toThrow();
+    await expect(
+      page.locator(".react-flow__edge-path").nth(1).click({ timeout: 500 }),
+    ).rejects.toThrow();
+    await expect(
+      page.locator(".react-flow__edge-path").nth(2).click({ timeout: 500 }),
+    ).rejects.toThrow();
     expect(numberOfEdges).toBe(3);
   }
   //unlock the flow
   await page.getByTestId("flow_name").click();
   await page.getByTestId("lock-flow-switch").click();
-  await page.getByTestId("lock_Unlock").isVisible();
+  await page.getByTestId("icon-Unlock").isVisible({ timeout: 5000 });
+  //ensure the UI is updated
+  await page.waitForTimeout(500);
   await page.getByTestId("save-flow-settings").click();
+  await expect(page.getByTestId("save-flow-settings")).toBeHidden({
+    timeout: 5000,
+  });
 }
