@@ -81,7 +81,8 @@ async def get_messages(
         if sender_name:
             stmt = stmt.where(MessageTable.sender_name == sender_name)
         if order_by:
-            stmt = stmt.order_by(MessageTable.timestamp.asc(), MessageTable.sender.desc())
+            col = getattr(MessageTable, order_by).asc()
+            stmt = stmt.order_by(col)
         messages = await session.exec(stmt)
         return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
     except Exception as e:
