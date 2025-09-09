@@ -57,9 +57,7 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
     return table
 
 
-async def log_transactions_batch(
-    db: AsyncSession, transactions: list[TransactionBase]
-) -> list[TransactionTable] | None:
+async def log_transactions_batch(db: AsyncSession, transactions: list[TransactionBase]) -> list[TransactionTable]:
     """Log multiple transactions in a single batch operation without cleanup.
 
     This function only inserts transactions to avoid deadlocks entirely.
@@ -73,7 +71,7 @@ async def log_transactions_batch(
         List of created TransactionTable entries
     """
     if not transactions:
-        return None
+        return []
 
     tables = []
 
