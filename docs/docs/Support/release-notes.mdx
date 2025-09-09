@@ -53,10 +53,12 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
-- Knowledge bases
+- OpenAI Responses API compatibility
 
-  Langflow knowledge bases are local vector databases that exist in Langflow storage and can be re-used across flows.
-  For more information, see [Knowledge base components](/components-kb).
+  Langflow now includes an endpoint that is compatible with the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses) at `POST /api/v1/responses`.
+  This allows you to use existing OpenAI client libraries with minimal code changes by replacing the `model` name with your `flow_id`.
+  The endpoint supports streaming responses, conversation continuity, tool call results, and global variable passing through headers.
+  For more information, see [OpenAI Responses API](/api-openai-responses).
 
 - Advanced document parsing with built-in Docling support
 
@@ -83,7 +85,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 ### Deprecations
 
 - The **Local DB** component is now in legacy status.
-Replace this component with the [**Chroma DB** component](/bundles-chroma) or [knowledge bases](/components-kb).
+Replace this component with the [**Chroma DB** component](/bundles-chroma).
 
 ## 1.5.0
 
