@@ -968,8 +968,8 @@ class Graph:
             del self.conditional_exclusion_sources[vertex_id]
 
         # Now exclude the new branch
-        visited = set()
-        excluded = set()
+        visited: set = set()
+        excluded: set = set()
         self._exclude_branch_conditionally(vertex_id, visited, excluded, output_name, skip_first=True)
 
         # Track which vertices this source excluded
