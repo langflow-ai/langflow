@@ -2251,14 +2251,7 @@
                   "gpt-3.5-turbo",
                   "gpt-5",
                   "gpt-5-mini",
-                  "gpt-5-nano",
-                  "gpt-5-chat-latest",
-                  "o1",
-                  "o3-mini",
-                  "o3",
-                  "o3-pro",
-                  "o4-mini",
-                  "o4-mini-high"
+                  "gpt-5-nano"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
