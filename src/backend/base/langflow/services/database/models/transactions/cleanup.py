@@ -4,10 +4,10 @@ import asyncio
 import contextlib
 from typing import TYPE_CHECKING
 
-from loguru import logger
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.logging.logger import logger
 from langflow.services.database.models.transactions.crud import cleanup_old_transactions_for_flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.utils import session_getter
@@ -89,7 +89,7 @@ class TransactionCleanupTask:
 
         except Exception as e:  # noqa: BLE001
             # Silently handle any database errors (locks, connection issues, etc.) - broad handling is intentional
-            logger.debug(f"Transaction cleanup failed gracefully: {e}")
+            await logger.awarning(f"Transaction cleanup failed gracefully: {e}")
 
     async def _cleanup_vertex_builds(self) -> None:
         """Clean up vertex builds with graceful failure handling."""
