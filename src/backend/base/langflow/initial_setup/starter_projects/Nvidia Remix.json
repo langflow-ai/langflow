@@ -841,7 +841,7 @@
                   {
                     "icon": "GoogleGenerativeAI"
                   },
-              
+
                   {
                     "icon": "NVIDIA"
                   },
@@ -858,7 +858,7 @@
                 "show": true,
                 "title_case": false,
                 "toggle": false,
-                        "external_options" : {  
+                        "external_options" : {
                   "fields": {
                       "data": {
                           "node": {

@@ -1268,7 +1268,7 @@
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
-                "external_options" : {  
+                "external_options" : {
                   "fields": {
                       "data": {
                           "node": {

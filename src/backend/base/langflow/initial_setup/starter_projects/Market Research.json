@@ -2068,7 +2068,7 @@
                   {
                     "icon": "OpenAI"
                   }
-              
+
                 ],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -2077,7 +2077,7 @@
                 "title_case": false,
                 "toggle": false,
                 "tool_mode": false,
-                        "external_options" : {  
+                        "external_options" : {
                   "fields": {
                       "data": {
                           "node": {

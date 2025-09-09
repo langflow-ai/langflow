@@ -1372,7 +1372,7 @@
                   {
                     "icon": "GoogleGenerativeAI"
                   },
-              
+
                   {
                     "icon": "OpenAI"
                   }
@@ -1385,7 +1385,7 @@
                 "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                        "external_options" : {  
+                        "external_options" : {
                   "fields": {
                       "data": {
                           "node": {
