@@ -204,41 +204,48 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
                 results.extend(single_result)
                 check_shutdown()
 
+            except ImportError as import_error:
+                # Handle import errors that might indicate missing dependencies
+                error_msg = str(import_error)
+                if any(ocr in error_msg.lower() for ocr in ["ocrmac", "easyocr", "tesserocr", "rapidocr"]):
+                    engine = "OCR dependency"
+                    msg = (
+                        f"Please install the required OCR engine: {error_msg}, or "
+                        "install all Docling dependencies with `uv pip install 'langflow[docling]'`."
+                    )
+                    raise DoclingDependencyError(engine, msg) from import_error
+                # Re-raise if not OCR related
+                raise
+
             except (OSError, ValueError, RuntimeError) as file_error:
                 error_msg = str(file_error)
 
-                # Check for specific dependency errors and raise custom exception
+                # Check for specific dependency errors in runtime/system errors
                 if "ocrmac is not correctly installed" in error_msg:
-                    raise DoclingDependencyError(
-                        "ocrmac", "Please install it via `pip install ocrmac` to use this OCR engine."
-                    )
+                    engine = "ocrmac"
+                    msg = "Please install it via `pip install ocrmac` to use this OCR engine."
+                    raise DoclingDependencyError(engine, msg) from file_error
+
                 if "easyocr" in error_msg and "not installed" in error_msg:
-                    raise DoclingDependencyError(
-                        "easyocr", "Please install it via `pip install easyocr` to use this OCR engine."
-                    )
+                    engine = "easyocr"
+                    msg = "Please install it via `pip install easyocr` to use this OCR engine."
+                    raise DoclingDependencyError(engine, msg) from file_error
+
                 if "tesserocr" in error_msg and "not installed" in error_msg:
-                    raise DoclingDependencyError(
-                        "tesserocr", "Please install it via `pip install tesserocr` to use this OCR engine."
-                    )
+                    engine = "tesserocr"
+                    msg = "Please install it via `pip install tesserocr` to use this OCR engine."
+                    raise DoclingDependencyError(engine, msg) from file_error
+
                 if "rapidocr" in error_msg and "not installed" in error_msg:
-                    raise DoclingDependencyError(
-                        "rapidocr", "Please install it via `pip install rapidocr-onnxruntime` to use this OCR engine."
-                    )
+                    engine = "rapidocr"
+                    msg = "Please install it via `pip install rapidocr-onnxruntime` to use this OCR engine."
+                    raise DoclingDependencyError(engine, msg) from file_error
 
                 # If not a dependency error, log and continue with other files
                 logger.error(f"Error processing file {file_path}: {file_error}")
                 check_shutdown()
 
-            except ImportError as file_error:
-                # Handle import errors that might indicate missing dependencies
-                error_msg = str(file_error)
-                if any(ocr in error_msg.lower() for ocr in ["ocrmac", "easyocr", "tesserocr", "rapidocr"]):
-                    raise DoclingDependencyError(
-                        "OCR dependency", f"Please install the required OCR engine: {error_msg}"
-                    )
-                raise  # Re-raise if not OCR related
-
-            except Exception as file_error:
+            except Exception as file_error:  # noqa: BLE001
                 logger.error(f"Unexpected error processing file {file_path}: {file_error}")
                 check_shutdown()
 
