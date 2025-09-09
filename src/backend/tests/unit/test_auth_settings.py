@@ -1,9 +1,10 @@
 from pathlib import Path
 
 import pytest
+from pydantic import SecretStr
+
 from langflow.services.settings.auth import AuthSettings
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
-from pydantic import SecretStr
 
 
 @pytest.mark.parametrize("auto_login", [True, False])
