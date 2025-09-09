@@ -238,10 +238,10 @@ async def update_server(
 
     shared_component_cache_service = get_shared_component_cache_service()
     # Clear the servers cache
-    servers_cache = safe_cache_get(shared_component_cache_service, "servers", {})
-    if isinstance(servers_cache, dict):
-        servers = safe_cache_get(shared_component_cache_service, "servers", {})
-        del servers[server_name]
+    servers = safe_cache_get(shared_component_cache_service, "servers", {})
+    if isinstance(servers, dict):
+        if server_name in servers:
+            del servers[server_name]
         safe_cache_set(shared_component_cache_service, "servers", servers)
 
     return await get_server(
