@@ -442,7 +442,9 @@ describe("SidebarMenuButtons", () => {
     it("should render custom component button with correct attributes", () => {
       render(<SidebarMenuButtons {...defaultProps} />);
 
-      const customButton = screen.getByTestId("sidebar-custom-component-button");
+      const customButton = screen.getByTestId(
+        "sidebar-custom-component-button",
+      );
       expect(customButton).toHaveAttribute("data-unstyled", "true");
     });
 
