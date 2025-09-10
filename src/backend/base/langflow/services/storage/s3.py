@@ -110,5 +110,5 @@ class S3StorageService(StorageService):
             await logger.ainfo(f"File {file_name} retrieved successfully from folder {flow_id}.")
             return response["ContentLength"]
         except ClientError:
-            logger.aexception(f"Error getting file size for {file_name} in flow_id {flow_id}: {e}")
+            logger.aexception(f"Error getting file size for {file_name} in flow_id {flow_id}")
             raise
