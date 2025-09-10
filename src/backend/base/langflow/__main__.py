@@ -87,7 +87,24 @@ class ProcessManager:
                 self.webapp_process.join()
             self.print_farewell_message()
 
-        sys.exit(0)
+        # Only call sys.exit() when the shutdown wasn't triggered by atexit handlers.
+        # During atexit, calling sys.exit() can interfere with multiprocess cleanup.
+        # The SIGTERM/SIGINT handlers will reach this code normally, but atexit
+        # handlers from multiprocess should not trigger another sys.exit().
+        try:
+            # Check if we're in atexit cleanup by attempting to register a dummy function
+            import atexit
+
+            def dummy_atexit():
+                pass
+
+            atexit.register(dummy_atexit)
+            atexit.unregister(dummy_atexit)
+            # If we reach here, atexit is still accepting registrations, so safe to exit
+            sys.exit(0)
+        except RuntimeError:
+            # atexit is already running, so don't call sys.exit() to avoid recursion
+            pass
 
     def print_farewell_message(self) -> None:
         """Print a nice farewell message after shutdown is complete."""
