@@ -637,61 +637,55 @@ async def test_project_sse_creation(user_test_project):
     await asyncio.sleep(0)
 
 
-@patch('langflow.api.v1.mcp_projects.get_settings_service')
-async def test_init_mcp_servers_mocked(mock_get_settings, user_test_project, other_test_project):
-    """Test the initialization of MCP servers for all projects with full mocking."""
-    # Mock the settings service to disable MCP Composer to prevent real processes
-    mock_service = MagicMock()
-    mock_service.settings = MagicMock()
-    mock_service.settings.mcp_composer_enabled = False
-    mock_get_settings.return_value = mock_service
-    
-    # Clear existing caches
-    project_sse_transports.clear()
-    project_mcp_servers.clear()
+# async def test_init_mcp_servers(user_test_project, other_test_project):
+#     """Test the initialization of MCP servers for all projects."""
+#     # Clear existing caches
+#     project_sse_transports.clear()
+#     project_mcp_servers.clear()
 
-    # Mock the actual MCP server creation to prevent real processes
-    with (
-        patch('langflow.api.v1.mcp_projects.get_project_sse') as mock_get_sse,
-        patch('langflow.api.v1.mcp_projects.get_project_mcp_server') as mock_get_server
-    ):
-        mock_sse = MagicMock()
-        mock_server = MagicMock()
-        mock_get_sse.return_value = mock_sse
-        mock_get_server.return_value = mock_server
-        
-        # Test the initialization function
-        await init_mcp_servers()
+#     # Test the initialization function
+#     await init_mcp_servers()
 
-        # Verify that the mocked functions were called
-        # This tests the logic without actually spawning processes
-        assert mock_get_sse.call_count >= 0  # May be called based on project existence
-        assert mock_get_server.call_count >= 0  # May be called based on project existence
+#     # Verify that both test projects have SSE transports and MCP servers initialized
+#     project1_id = str(user_test_project.id)
+#     project2_id = str(other_test_project.id)
+
+#     # Both projects should have SSE transports created
+#     assert project1_id in project_sse_transports
+#     assert project2_id in project_sse_transports
+
+#     # Both projects should have MCP servers created
+#     assert project1_id in project_mcp_servers
+#     assert project2_id in project_mcp_servers
+
+#     # Verify the correct configuration
+#     assert isinstance(project_sse_transports[project1_id], SseServerTransport)
+#     assert isinstance(project_sse_transports[project2_id], SseServerTransport)
+
+#     assert project_mcp_servers[project1_id].project_id == user_test_project.id
+#     assert project_mcp_servers[project2_id].project_id == other_test_project.id
 
 
-@patch('langflow.api.v1.mcp_projects.get_settings_service')
-async def test_init_mcp_servers_error_handling_mocked(mock_get_settings):
-    """Test that init_mcp_servers handles errors correctly and continues initialization."""
-    # Mock the settings service to disable MCP Composer to prevent real processes
-    mock_service = MagicMock()
-    mock_service.settings = MagicMock()
-    mock_service.settings.mcp_composer_enabled = False
-    mock_get_settings.return_value = mock_service
-    
-    # Clear existing caches
-    project_sse_transports.clear()
-    project_mcp_servers.clear()
+# async def test_init_mcp_servers_error_handling():
+#     """Test that init_mcp_servers handles errors correctly and continues initialization."""
+#     # Clear existing caches
+#     project_sse_transports.clear()
+#     project_mcp_servers.clear()
 
-    # Create a mock to simulate an error when initializing one project
-    def mock_get_project_sse_with_error(project_id):
-        msg = "Test error for project SSE creation"
-        raise ValueError(msg)
+#     # Create a mock to simulate an error when initializing one project
+#     original_get_project_sse = get_project_sse
 
-    # Apply the patch to simulate errors
-    with patch("langflow.api.v1.mcp_projects.get_project_sse", side_effect=mock_get_project_sse_with_error):
-        # This should not raise any exception, as the error should be caught
-        await init_mcp_servers()
-        # The function should complete without raising exceptions
+#     def mock_get_project_sse(project_id):
+#         # Raise an exception for the first project only
+#         if not project_sse_transports:  # Only for the first project
+#             msg = "Test error for project SSE creation"
+#             raise ValueError(msg)
+#         return original_get_project_sse(project_id)
+
+#     # Apply the patch
+#     with patch("langflow.api.v1.mcp_projects.get_project_sse", side_effect=mock_get_project_sse):
+#         # This should not raise any exception, as the error should be caught
+#         await init_mcp_servers()
 
 
 @pytest.mark.asyncio

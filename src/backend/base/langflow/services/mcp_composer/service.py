@@ -99,7 +99,6 @@ class MCPComposerService(Service):
             await self.stop_project_composer(project_id)
         await logger.adebug("All MCP Composer instances stopped")
 
-    @require_composer_enabled
     async def stop_project_composer(self, project_id: str):
         """Stop the MCP Composer instance for a specific project."""
         if project_id not in self.project_composers:
@@ -161,8 +160,17 @@ class MCPComposerService(Service):
         del self.project_composers[project_id]
 
     async def _wait_for_process_exit(self, process):
-        """Wait for a process to exit."""
-        await asyncio.to_thread(process.wait)
+        """Wait for a process to exit with polling instead of blocking wait."""
+        max_wait = 30  # Total time to wait
+        poll_interval = 0.5
+        
+        for _ in range(int(max_wait / poll_interval)):
+            if process.poll() is not None:  # Non-blocking check
+                return  # Process has exited
+            await asyncio.sleep(poll_interval)
+        
+        # If we get here, process didn't exit in time
+        raise asyncio.TimeoutError(f"Process {process.pid} did not exit after {max_wait} seconds")
 
     def _validate_oauth_settings(self, auth_config: dict[str, Any]) -> None:
         """Validate that all required OAuth settings are present and non-empty.
@@ -583,9 +591,10 @@ class MCPComposerService(Service):
             return None
         return self.project_composers[project_id]["port"]
 
-    @require_composer_enabled
     async def teardown(self) -> None:
         """Clean up resources when the service is torn down."""
+        if not get_settings_service().settings.mcp_composer_enabled and len(self.project_composers) == 0:
+            return
         await logger.adebug("Tearing down MCP Composer service...")
         await self.stop()
         await logger.adebug("MCP Composer service teardown complete")
