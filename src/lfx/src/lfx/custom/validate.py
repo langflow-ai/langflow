@@ -298,6 +298,28 @@ def create_type_ignore_class():
     return TypeIgnore
 
 
+def _import_module_with_warnings(module_name):
+    """Import module with appropriate warning suppression."""
+    if "langchain" in module_name:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", LangChainDeprecationWarning)
+            return importlib.import_module(module_name)
+    else:
+        return importlib.import_module(module_name)
+
+
+def _handle_module_attributes(imported_module, node, module_name, exec_globals):
+    """Handle importing specific attributes from a module."""
+    for alias in node.names:
+        try:
+            # First try getting it as an attribute
+            exec_globals[alias.name] = getattr(imported_module, alias.name)
+        except AttributeError:
+            # If that fails, try importing the full module path
+            full_module_path = f"{module_name}.{alias.name}"
+            exec_globals[alias.name] = importlib.import_module(full_module_path)
+
+
 def prepare_global_scope(module):
     """Prepares the global scope with necessary imports from the provided code module.
 
@@ -334,27 +356,31 @@ def prepare_global_scope(module):
                 raise ModuleNotFoundError(msg) from e
 
     for node in import_froms:
-        try:
-            module_name = node.module
-            # Apply warning suppression only when needed
-            if "langchain" in module_name:
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", LangChainDeprecationWarning)
-                    imported_module = importlib.import_module(module_name)
-            else:
-                imported_module = importlib.import_module(module_name)
+        module_names_to_try = [node.module]
 
-            for alias in node.names:
-                try:
-                    # First try getting it as an attribute
-                    exec_globals[alias.name] = getattr(imported_module, alias.name)
-                except AttributeError:
-                    # If that fails, try importing the full module path
-                    full_module_path = f"{module_name}.{alias.name}"
-                    exec_globals[alias.name] = importlib.import_module(full_module_path)
-        except ModuleNotFoundError as e:
+        # If original module starts with langflow, also try lfx equivalent
+        if node.module and node.module.startswith("langflow."):
+            lfx_module_name = node.module.replace("langflow.", "lfx.", 1)
+            module_names_to_try.append(lfx_module_name)
+
+        success = False
+        last_error = None
+
+        for module_name in module_names_to_try:
+            try:
+                imported_module = _import_module_with_warnings(module_name)
+                _handle_module_attributes(imported_module, node, module_name, exec_globals)
+
+                success = True
+                break
+
+            except ModuleNotFoundError as e:
+                last_error = e
+                continue
+
+        if not success:
             msg = f"Module {node.module} not found. Please install it and try again"
-            raise ModuleNotFoundError(msg) from e
+            raise ModuleNotFoundError(msg) from last_error
 
     if definitions:
         combined_module = ast.Module(body=definitions, type_ignores=[])
