@@ -63,7 +63,7 @@ The `LANGFLOW_DB_CONNECTION_SETTINGS` is a JSON configuration for database conne
 LANGFLOW_DB_CONNECTION_SETTINGS='{"pool_size": 20, "max_overflow": 30, "pool_timeout": 30, "pool_pre_ping": true, "pool_recycle": 1800, "echo": false}'
 ```
 
-**Connection Pool Parameters**:
+### Connection pool parameters
 - `pool_size`: Maximum number of database connections to keep in the pool. Default: 20 connections.
 - `max_overflow`: Maximum number of connections that can be created beyond the pool_size. Default: 30 connections.
 - `pool_timeout`: Number of seconds to wait before timing out on getting a connection from the pool. Default: 30 seconds.
@@ -82,7 +82,7 @@ LANGFLOW_CACHE_TYPE=async
 Alternative caching options can be configured, but options other than the default asynchronous, in-memory cache aren't supported.
 The default behavior is suitable for most use cases.
 
-### Cache Environment Variables
+### Cache environment variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
