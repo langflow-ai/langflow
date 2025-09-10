@@ -112,16 +112,9 @@ By default, flows and [flow logs](/logging) are stored on local disk at the foll
 - **OSS macOS/Windows/Linux/WSL (uv pip install)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/cache`
 - **OSS macOS/Windows/Linux/WSL (git clone)**: `<path_to_clone>/src/backend/base/langflow/cache`
 
-
 The overall storage location can be customized with the `LANGFLOW_CONFIG_DIR` environment variable, and the flow log storage location can be customized separately with the `LANGFLOW_LOG_FILE` environment variable.
 
 For more information, see [Memory management options](/memory).
-
-## See also
-
-* [Share and embed flows](/concepts-publish)
-* [Import and export flows](/concepts-flows-import)
-* [Langflow environment variables](/environment-variables)
 
 ## Flow configuration
 
@@ -139,3 +132,9 @@ You can configure flow behavior using the following [environment variables](/env
 | `LANGFLOW_EVENT_DELIVERY` | String | `streaming` | How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'. |
 
 For more information about all available environment variables, see [Environment Variables](/environment-variables#flow-and-project-management).
+
+## See also
+
+* [Share and embed flows](/concepts-publish)
+* [Import and export flows](/concepts-flows-import)
+* [Langflow environment variables](/environment-variables)

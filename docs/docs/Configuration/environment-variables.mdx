@@ -179,7 +179,7 @@ Langflow supports many environment variables for configuration. They are organiz
 | `LANGFLOW_DISABLE_TRACK_APIKEY_USAGE` | Boolean | False | Whether to track API key usage. If true, disables tracking of API key usage (`total_uses` and `last_used_at`) to avoid database contention under high concurrency. |
 | `LANGFLOW_WEBHOOK_AUTH_ENABLE` | Boolean | False | Enable API key authentication for webhook endpoints. If false, webhooks run as flow owner without authentication. |
 
-For detailed information about authentication configuration, see [API keys and authentication](/api-keys-and-authentication#authentication-configuration-variables).
+For detailed information about authentication configuration, see [API keys and authentication](/api-keys-and-authentication).
 
 ### Database configuration
 
@@ -240,23 +240,9 @@ For detailed information about logging configuration, see [Logs](/logging#config
 | `LANGFLOW_MAX_VERTEX_BUILDS_TO_KEEP` | Integer | `3000` | Maximum number of vertex builds to keep in the database. |
 | `LANGFLOW_MAX_VERTEX_BUILDS_PER_VERTEX` | Integer | `2` | Maximum number of builds to keep per vertex. Older builds will be deleted. |
 
-For detailed information about file management configuration, see [Manage files](/concepts-file-management#file-management-configuration).
-
 ### Flow and project management
 
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_AUTO_SAVING` | Boolean | True | Enable flow auto-saving. |
-| `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `1000` | Set the interval for flow auto-saving in milliseconds. |
-| `LANGFLOW_BUNDLE_URLS` | List[String] | `[]` | A list of URLs from which to load component bundles and flows. Supports GitHub URLs. If LANGFLOW_AUTO_LOGIN is enabled, flows from these bundles are loaded into the database. |
-| `LANGFLOW_LOAD_FLOWS_PATH` | String | Not set | Path to a directory containing flow JSON files to be loaded on startup. Note that this feature only works if `LANGFLOW_AUTO_LOGIN` is enabled. |
-| `LANGFLOW_CREATE_STARTER_PROJECTS` | Boolean | True | Whether to create templates during initialization. If false, Langflow doesn't create templates, and `LANGFLOW_UPDATE_STARTER_PROJECTS` is treated as false. |
-| `LANGFLOW_UPDATE_STARTER_PROJECTS` | Boolean | True | Whether to update templates with the latest component versions when initializing after an upgrade. |
-| `LANGFLOW_FS_FLOWS_POLLING_INTERVAL` | Integer | `10000` | The polling interval in milliseconds for synchronizing flows from the file system. |
-| `LANGFLOW_LAZY_LOAD_COMPONENTS` | Boolean | False | If true, Langflow only partially loads components at startup and fully loads them on demand. This significantly reduces startup time but may cause a slight delay when a component is first used. |
-| `LANGFLOW_EVENT_DELIVERY` | String | `streaming` | How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'. |
-
-For detailed information about flow configuration, see [Build flows](/concepts-flows#flow-configuration).
+For flow and project management environment variables, see [Flow configuration](/concepts-flows#flow-configuration).
 
 ### Public flow settings
 
