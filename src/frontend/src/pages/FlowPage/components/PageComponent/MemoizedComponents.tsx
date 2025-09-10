@@ -39,11 +39,11 @@ export const MemoizedCanvasControls = memo(
       <CanvasControls>
         <Button
           unstyled
-          unselectable="off"
+          unselectable="on"
           size="icon"
           data-testid="lock-status"
-          className="flex items-center justify-center px-2 rounded-none gap-1"
-          title="Lock status"
+          className="flex items-center justify-center px-2 rounded-none gap-1 cursor-default"
+          title={`Lock status: ${isLocked ? "Locked" : "Unlocked"}`}
         >
           <ForwardedIconComponent
             name={isLocked ? "Lock" : "Unlock"}
