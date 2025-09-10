@@ -12,7 +12,7 @@ class S3StorageService(StorageService):
     def __init__(self, session_service, settings_service) -> None:
         """Initialize the S3 storage service with session and settings services."""
         super().__init__(session_service, settings_service)
-        self.bucket = "langflow"
+        self.bucket = os.getenv("LANGFLOW_S3_BUCKET", "langflow")
         self.s3_client = boto3.client("s3")
         self.set_ready()
 
