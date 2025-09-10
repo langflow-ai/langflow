@@ -1,3 +1,4 @@
+import os
 import platform
 import sys
 import threading
@@ -39,6 +40,24 @@ class ProgressIndicator:
 
         self._animation_index = 0
 
+        # Determine whether progress output should be enabled
+        # Priority: explicit env override -> TTY detection -> CI/pytest heuristics
+        env_override = os.environ.get("LANGFLOW_PROGRESS")
+        if env_override is not None:
+            normalized = env_override.strip().lower()
+            if normalized in {"0", "false", "off", "no"}:
+                self.enabled = False
+            elif normalized in {"1", "true", "on", "yes"}:
+                self.enabled = True
+            else:
+                # Fallback to TTY if value unrecognized
+                self.enabled = sys.stdout.isatty()
+        else:
+            is_tty = getattr(sys.stdout, "isatty", lambda: False)() and getattr(sys.stderr, "isatty", lambda: False)()
+            in_ci = any(var in os.environ for var in ("CI", "GITHUB_ACTIONS"))
+            in_pytest = "PYTEST_CURRENT_TEST" in os.environ
+            self.enabled = is_tty and not in_ci and not in_pytest
+
     def add_step(self, title: str, description: str = "") -> None:
         """Add a step to the progress indicator."""
         self.steps.append(
@@ -53,6 +72,8 @@ class ProgressIndicator:
 
     def _animate_step(self, step_index: int) -> None:
         """Animate the current step with rotating square characters."""
+        if not getattr(self, "enabled", True):
+            return
         if step_index >= len(self.steps):
             return
 
@@ -88,10 +109,11 @@ class ProgressIndicator:
         self.running = True
         self._stop_animation = False
 
-        # Start animation in a separate thread
-        self._animation_thread = threading.Thread(target=self._animate_step, args=(step_index,))
-        self._animation_thread.daemon = True
-        self._animation_thread.start()
+        if getattr(self, "enabled", True):
+            # Start animation in a separate thread
+            self._animation_thread = threading.Thread(target=self._animate_step, args=(step_index,))
+            self._animation_thread.daemon = True
+            self._animation_thread.start()
 
     def complete_step(self, step_index: int, *, success: bool = True) -> None:
         """Complete a step and stop its animation."""
@@ -108,6 +130,10 @@ class ProgressIndicator:
             self._animation_thread.join(timeout=0.5)
 
         self.running = False
+
+        # If disabled, do not print anything
+        if not getattr(self, "enabled", True):
+            return
 
         # Clear the current line and print final result
         sys.stdout.write("\r")
@@ -131,6 +157,8 @@ class ProgressIndicator:
     def fail_step(self, step_index: int, error_msg: str = "") -> None:
         """Mark a step as failed."""
         self.complete_step(step_index, success=False)
+        if not getattr(self, "enabled", True):
+            return
         if error_msg and self.verbose:
             click.echo(click.style(f"   Error: {error_msg}", fg="red"))
 
@@ -148,7 +176,7 @@ class ProgressIndicator:
 
     def print_summary(self) -> None:
         """Print a summary of all completed steps."""
-        if not self.verbose:
+        if not self.verbose or not getattr(self, "enabled", True):
             return
 
         completed_steps = [s for s in self.steps if s["status"] in ["completed", "failed"]]
@@ -164,7 +192,7 @@ class ProgressIndicator:
 
     def print_shutdown_summary(self) -> None:
         """Print a summary of all completed shutdown steps."""
-        if not self.verbose:
+        if not self.verbose or not getattr(self, "enabled", True):
             return
 
         completed_steps = [s for s in self.steps if s["status"] in ["completed", "failed"]]
