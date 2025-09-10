@@ -5,9 +5,6 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException, status
 from httpx import AsyncClient
-from mcp.server.sse import SseServerTransport
-from sqlmodel import select
-
 from langflow.api.v1.mcp_projects import (
     get_project_mcp_server,
     get_project_sse,
@@ -21,6 +18,8 @@ from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.services.utils import initialize_services
+from mcp.server.sse import SseServerTransport
+from sqlmodel import select
 
 # Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio
