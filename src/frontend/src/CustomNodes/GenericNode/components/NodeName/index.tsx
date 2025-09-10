@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { getEffectiveAliasFromAnyNode } from "@/types/flow";
+import { updateAliasesForDisplayNameChange } from "@/utils/aliasUtils";
 import { cn } from "@/utils/utils";
 
 export default function NodeName({
@@ -48,6 +49,9 @@ export default function NodeName({
 
   const handleBlur = () => {
     if (nodeName?.trim() !== "") {
+      const oldDisplayName = display_name;
+      const newDisplayName = nodeName;
+
       setNodeName(nodeName);
       setNode(nodeId, (old) => ({
         ...old,
@@ -59,6 +63,18 @@ export default function NodeName({
           },
         },
       }));
+
+      // Update aliases when display name changes
+      if (oldDisplayName && newDisplayName !== oldDisplayName) {
+        const allNodes = useFlowStore.getState().nodes;
+        const updatedNodes = updateAliasesForDisplayNameChange(
+          nodeId,
+          oldDisplayName,
+          newDisplayName,
+          allNodes,
+        );
+        useFlowStore.getState().setNodes(updatedNodes);
+      }
     } else {
       setNodeName(display_name ?? "");
     }
