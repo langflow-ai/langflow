@@ -1,4 +1,5 @@
 import pytest
+
 from langflow.interface.utils import extract_input_variables_from_prompt
 
 
