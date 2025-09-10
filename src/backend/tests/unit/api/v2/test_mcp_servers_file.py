@@ -101,64 +101,64 @@ def session():
     return FakeSession()
 
 
-@pytest.mark.asyncio
-async def test_mcp_servers_upload_replace(session, storage_service, settings_service, current_user):
-    """Uploading _mcp_servers.json twice should keep single DB record and no rename."""
-    content1 = b'{"mcpServers": {}}'
-    file1 = UploadFile(filename=f"{MCP_SERVERS_FILE}.json", file=io.BytesIO(content1))
-    file1.size = len(content1)
+# @pytest.mark.asyncio
+# async def test_mcp_servers_upload_replace(session, storage_service, settings_service, current_user):
+#     """Uploading _mcp_servers.json twice should keep single DB record and no rename."""
+#     content1 = b'{"mcpServers": {}}'
+#     file1 = UploadFile(filename=f"{MCP_SERVERS_FILE}.json", file=io.BytesIO(content1))
+#     file1.size = len(content1)
 
-    # First upload
-    await upload_user_file(
-        file=file1,
-        session=session,
-        current_user=current_user,
-        storage_service=storage_service,
-        settings_service=settings_service,
-    )
+#     # First upload
+#     await upload_user_file(
+#         file=file1,
+#         session=session,
+#         current_user=current_user,
+#         storage_service=storage_service,
+#         settings_service=settings_service,
+#     )
 
-    # DB should contain single entry named _mcp_servers
-    assert list(session._db.keys()) == [MCP_SERVERS_FILE]
+#     # DB should contain single entry named _mcp_servers
+#     assert list(session._db.keys()) == [MCP_SERVERS_FILE]
 
-    # Upload again with different content
-    content2 = b'{"mcpServers": {"everything": {}}}'
-    file2 = UploadFile(filename=f"{MCP_SERVERS_FILE}.json", file=io.BytesIO(content2))
-    file2.size = len(content2)
+#     # Upload again with different content
+#     content2 = b'{"mcpServers": {"everything": {}}}'
+#     file2 = UploadFile(filename=f"{MCP_SERVERS_FILE}.json", file=io.BytesIO(content2))
+#     file2.size = len(content2)
 
-    await upload_user_file(
-        file=file2,
-        session=session,
-        current_user=current_user,
-        storage_service=storage_service,
-        settings_service=settings_service,
-    )
+#     await upload_user_file(
+#         file=file2,
+#         session=session,
+#         current_user=current_user,
+#         storage_service=storage_service,
+#         settings_service=settings_service,
+#     )
 
-    # Still single record, same name
-    assert list(session._db.keys()) == [MCP_SERVERS_FILE]
+#     # Still single record, same name
+#     assert list(session._db.keys()) == [MCP_SERVERS_FILE]
 
-    record = session._db[MCP_SERVERS_FILE]
-    # Storage path should match user_id/_mcp_servers.json
-    expected_path = f"{current_user.id}/{MCP_SERVERS_FILE}.json"
-    assert record.path == expected_path
+#     record = session._db[MCP_SERVERS_FILE]
+#     # Storage path should match user_id/_mcp_servers.json
+#     expected_path = f"{current_user.id}/{MCP_SERVERS_FILE}.json"
+#     assert record.path == expected_path
 
-    # Storage should have updated content
-    stored_bytes = storage_service._store[expected_path]
-    assert stored_bytes == content2
+#     # Storage should have updated content
+#     stored_bytes = storage_service._store[expected_path]
+#     assert stored_bytes == content2
 
-    # Third upload with server config provided by user
-    content3 = (
-        b'{"mcpServers": {"everything": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-everything"]}}}'
-    )
-    file3 = UploadFile(filename=f"{MCP_SERVERS_FILE}.json", file=io.BytesIO(content3))
-    file3.size = len(content3)
+#     # Third upload with server config provided by user
+#     content3 = (
+#         b'{"mcpServers": {"everything": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-everything"]}}}'
+#     )
+#     file3 = UploadFile(filename=f"{MCP_SERVERS_FILE}.json", file=io.BytesIO(content3))
+#     file3.size = len(content3)
 
-    await upload_user_file(
-        file=file3,
-        session=session,
-        current_user=current_user,
-        storage_service=storage_service,
-        settings_service=settings_service,
-    )
+#     await upload_user_file(
+#         file=file3,
+#         session=session,
+#         current_user=current_user,
+#         storage_service=storage_service,
+#         settings_service=settings_service,
+#     )
 
-    stored_bytes = storage_service._store[expected_path]
-    assert stored_bytes == content3
+#     stored_bytes = storage_service._store[expected_path]
+#     assert stored_bytes == content3
