@@ -1,6 +1,5 @@
 from langflow.components.input_output import TextOutputComponent
 from langflow.schema.message import Message
-
 from tests.integration.utils import run_single_component
 
 
