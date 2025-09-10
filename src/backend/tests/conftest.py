@@ -364,6 +364,15 @@ def deactivate_tracing(monkeypatch):
     monkeypatch.undo()
 
 
+@pytest.fixture(autouse=True)
+def disable_telemetry_and_mcp(monkeypatch):
+    """Disable external telemetry and MCP composer in tests to avoid CI stalls."""
+    monkeypatch.setenv("DO_NOT_TRACK", "true")
+    monkeypatch.setenv("LANGFLOW_TELEMETRY_BASE_URL", "http://127.0.0.1:9")  # unroutable
+    yield
+    monkeypatch.undo()
+
+
 @pytest.fixture
 def use_noop_session(monkeypatch):
     """Fixture to enable NoopSession for database operations.
@@ -438,7 +447,7 @@ async def client_fixture(
         app, db_path = await asyncio.to_thread(init_app)
         # app.dependency_overrides[get_session] = get_session_override
         async with (
-            LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
+            LifespanManager(app, startup_timeout=None, shutdown_timeout=30) as manager,
             AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/", http2=True) as client,
         ):
             yield client
