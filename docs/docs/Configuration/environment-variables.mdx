@@ -155,7 +155,7 @@ The following table lists the environment variables supported by Langflow.
 | `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `1000` | Set the interval for flow auto-saving in milliseconds. |
 | `LANGFLOW_BACKEND_ONLY` | Boolean | False | Run only the Langflow backend service (no frontend). |
 | `LANGFLOW_BUNDLE_URLS` | List[String] | `[]` | A list of URLs from which to load component bundles and flows. Supports GitHub URLs. If LANGFLOW_AUTO_LOGIN is enabled, flows from these bundles are loaded into the database. |
-| `LANGFLOW_CACHE_TYPE` | String | `async` | Set the cache type for Langflow. Possible values: `async`, `redis`, `memory`, `disk`. If you set the type to `redis`, then you must also set the following environment variables: `LANGFLOW_REDIS_HOST`, `LANGFLOW_REDIS_PORT`, `LANGFLOW_REDIS_DB`, and `LANGFLOW_REDIS_CACHE_EXPIRE`. See also [`langflow run`](/configuration-cli#langflow-run). |
+| `LANGFLOW_CACHE_TYPE` | String | `async` | Set the cache type for Langflow's internal caching system. For detailed cache configuration options, see [Configure cache memory](/memory#configure-cache-memory). |
 | `LANGFLOW_COMPONENTS_PATH` | String | Not set | Path to the directory containing custom components. |
 | `LANGFLOW_CONFIG_DIR` | String | Varies | Set the Langflow configuration directory where files, logs, and the Langflow database are stored. Default path depends on your installation. See [Flow storage and logs](/concepts-flows#flow-storage-and-logs). |
 | `LANGFLOW_DATABASE_URL` | String | Not set | Set the database URL for Langflow. If not provided, Langflow uses a SQLite database. |
@@ -170,7 +170,7 @@ The following table lists the environment variables supported by Langflow.
 | `LANGFLOW_FRONTEND_PATH` | String | `./frontend` | Path to the frontend directory containing build files. This is for development purposes only. See [`langflow run`](/configuration-cli#langflow-run). |
 | `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for the health check. See [`langflow run`](/configuration-cli#langflow-run). |
 | `LANGFLOW_HOST` | String | `localhost` | The host on which the Langflow server will run. See [`langflow run`](/configuration-cli#langflow-run). |
-| `LANGFLOW_LANGCHAIN_CACHE` | String | `InMemoryCache` | Type of cache storage to use, separate from `LANGFLOW_CACHE_TYPE`. Possible values: `InMemoryCache`, `SQLiteCache`. |
+| `LANGFLOW_LANGCHAIN_CACHE` | String | `InMemoryCache` | Set the cache type for Langchain's caching system. For detailed cache configuration options, see [Configure cache memory](/memory#configure-cache-memory). |
 | `LANGFLOW_LOG_LEVEL` | String | `INFO` | Set the logging level for Langflow. Possible values: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. |
 | `LANGFLOW_LOG_FILE` | String | Not set | Path to the log file. If this option isn't set, logs are written to stdout. |
 | `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` | Integer | `10000` | Set the buffer size for log retrieval. Only used if `LANGFLOW_ENABLE_LOG_RETRIEVAL` is enabled. |
@@ -184,11 +184,6 @@ The following table lists the environment variables supported by Langflow.
 | `LANGFLOW_PORT` | Integer | `7860` | The port on which the Langflow server runs. The server automatically selects a free port if the specified port is in use. |
 | `LANGFLOW_PROMETHEUS_ENABLED` | Boolean | False | Expose Prometheus metrics. |
 | `LANGFLOW_PROMETHEUS_PORT` | Integer | `9090` | Set the port on which Langflow exposes Prometheus metrics. |
-| `LANGFLOW_REDIS_CACHE_EXPIRE` | Integer | `3600` | See `LANGFLOW_CACHE_TYPE`. |
-| `LANGFLOW_REDIS_DB` | Integer | `0` | See `LANGFLOW_CACHE_TYPE`. |
-| `LANGFLOW_REDIS_HOST` | String | `localhost` | See `LANGFLOW_CACHE_TYPE`. |
-| `LANGFLOW_REDIS_PORT` | String | `6379` | See `LANGFLOW_CACHE_TYPE`. |
-| `LANGFLOW_REDIS_PASSWORD` | String | Not set | Password for Redis authentication when using Redis cache type. |
 | `LANGFLOW_REMOVE_API_KEYS` | Boolean | False | Remove API keys from the projects saved in the database. |
 | `LANGFLOW_SAVE_DB_IN_CONFIG_DIR` | Boolean | False | If false (default), the Langflow database is saved in the `langflow` root directory. This means the database isn't shared between different virtual environments, and the database is deleted when you uninstall Langflow. If true, the database is saved in the `LANGFLOW_CONFIG_DIR`. |
 | `LANGFLOW_SECRET_KEY` | String | Automated | See [`LANGFLOW_SECRET_KEY`](/api-keys-and-authentication#langflow-secret-key). |
