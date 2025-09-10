@@ -163,6 +163,7 @@ const config = {
               "/👋 Welcome-to-Langflow",
               "/getting-started-welcome-to-langflow",
               "/guides-new-to-llms",
+              "/about-langflow",
             ],
           },
           {
