@@ -1,12 +1,12 @@
+import type { ColDef, ColGroupDef } from "ag-grid-community";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { convertUTCToLocalTimezone } from "@/utils/utils";
-import type { ColDef, ColGroupDef } from "ag-grid-community";
-import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import BaseModal from "../baseModal";
 
 export default function FlowLogsModal({
@@ -41,7 +41,7 @@ export default function FlowLogsModal({
         data.rows.map((row: any) => {
           row.timestamp = convertUTCToLocalTimezone(row.timestamp);
         });
-        
+
         // Sort rows by timestamp (earliest first)
         data.rows.sort((a: any, b: any) => {
           const timestampA = new Date(a.timestamp).getTime();
