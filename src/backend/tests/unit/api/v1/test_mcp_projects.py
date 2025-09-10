@@ -1,16 +1,14 @@
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
 from typing import cast
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from langflow.services.mcp_composer.service import MCPComposerService
 import pytest
 from fastapi import HTTPException, status
 from httpx import AsyncClient
 from langflow.api.v1.mcp_projects import (
     get_project_mcp_server,
     get_project_sse,
-    init_mcp_servers,
     project_mcp_servers,
     project_sse_transports,
 )
@@ -19,6 +17,7 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
+from langflow.services.mcp_composer.service import MCPComposerService
 from langflow.services.utils import initialize_services
 from mcp.server.sse import SseServerTransport
 from sqlmodel import select
@@ -185,17 +184,16 @@ def enable_mcp_composer():
 @pytest.fixture(autouse=True, scope="module")
 async def cleanup_mcp_composer_processes():
     """Critical fixture to ensure MCP Composer processes are cleaned up after each test.
-    
+
     This prevents hanging tests by ensuring all spawned processes are terminated.
     """
     yield  # Let the test run
-    
+
     # After the test completes, forcibly clean up any MCP Composer processes
     try:
         from langflow.services.deps import get_service
         from langflow.services.schema import ServiceType
-        from langflow.api.v1.mcp_projects import project_mcp_servers, project_sse_transports
-        
+
         # Get the MCP Composer service if it exists
         mcp_composer_service = cast("MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE))
         await mcp_composer_service.stop()

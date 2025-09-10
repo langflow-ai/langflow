@@ -324,8 +324,7 @@ class TestMCPUtilityFunctions:
         """Test flow lookup by snake case name with mocked session."""
 
         class DummyFlow:
-            def __init__(self, name: str, user_id: str, *, is_component: bool = False,
-                action_name: str | None = None):
+            def __init__(self, name: str, user_id: str, *, is_component: bool = False, action_name: str | None = None):
                 self.name = name
                 self.user_id = user_id
                 self.is_component = is_component
