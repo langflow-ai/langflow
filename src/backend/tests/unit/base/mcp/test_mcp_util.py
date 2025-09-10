@@ -17,14 +17,60 @@ from langflow.base.mcp import util
 from langflow.base.mcp.util import MCPSessionManager, MCPSseClient, MCPStdioClient, _process_headers, validate_headers
 
 
+@pytest.fixture(autouse=True)
+async def cleanup_mcp_sessions():
+    """Auto-fixture to ensure all MCP sessions are cleaned up after each test."""
+    yield  # Let the test run
+    
+    # After each test, clean up any remaining MCP sessions
+    try:
+        # Get all active session managers and clean them up
+        import gc
+        for obj in gc.get_objects():
+            if isinstance(obj, MCPSessionManager):
+                try:
+                    await obj.cleanup_all()
+                    # Give cleanup task time to properly cancel
+                    await asyncio.sleep(0.1)
+                    
+                    # Wait for any background tasks to finish
+                    if hasattr(obj, '_background_tasks'):
+                        for task in list(obj._background_tasks):
+                            if not task.done():
+                                task.cancel()
+                                try:
+                                    await asyncio.wait_for(task, timeout=1.0)
+                                except (asyncio.CancelledError, asyncio.TimeoutError):
+                                    pass
+                except Exception as e:
+                    print(f"Warning: Error cleaning up MCPSessionManager: {e}")
+    except Exception as e:
+        print(f"Warning: Error during test cleanup: {e}")
+
+
 class TestMCPSessionManager:
     @pytest.fixture
     async def session_manager(self):
         """Create a session manager and clean it up after the test."""
         manager = MCPSessionManager()
-        yield manager
-        # Clean up after test
-        await manager.cleanup_all()
+        try:
+            yield manager
+        finally:
+            # Ensure thorough cleanup after test
+            await manager.cleanup_all()
+            
+            # Give cleanup task time to properly cancel
+            await asyncio.sleep(0.1)
+            
+            # Check for any remaining background tasks and cancel them
+            if hasattr(manager, '_background_tasks'):
+                for task in list(manager._background_tasks):
+                    if not task.done():
+                        task.cancel()
+                        try:
+                            await asyncio.wait_for(task, timeout=1.0)
+                        except (asyncio.CancelledError, asyncio.TimeoutError):
+                            pass
 
     async def test_session_caching(self, session_manager):
         """Test that sessions are properly cached and reused."""
@@ -836,8 +882,20 @@ async def test_cleanup_task_cancellation():
 
         # The cleanup_all should complete without hanging
     finally:
-        # Ensure proper cleanup even if test fails
-        if not manager._cleanup_task.done():
-            manager._cleanup_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await manager._cleanup_task
+        # Ensure thorough cleanup even if test fails
+        try:
+            await manager.cleanup_all()
+            # Give cleanup task time to properly cancel
+            await asyncio.sleep(0.1)
+            
+            # Check for any remaining background tasks and cancel them
+            if hasattr(manager, '_background_tasks'):
+                for task in list(manager._background_tasks):
+                    if not task.done():
+                        task.cancel()
+                        try:
+                            await asyncio.wait_for(task, timeout=1.0)
+                        except (asyncio.CancelledError, asyncio.TimeoutError):
+                            pass
+        except Exception as e:
+            print(f"Warning: Error during cleanup: {e}")
