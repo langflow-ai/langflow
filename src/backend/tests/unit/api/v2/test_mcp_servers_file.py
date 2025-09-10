@@ -144,7 +144,8 @@ def session():
 
 #     # Third upload with server config provided by user
 #     content3 = (
-#         b'{"mcpServers": {"everything": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-everything"]}}}'
+#         b'{"mcpServers": {"everything": {"command": "npx", "args":
+#         ["-y", "@modelcontextprotocol/server-everything"]}}}'
 #     )
 #     file3 = UploadFile(filename=f"{MCP_SERVERS_FILE}.json", file=io.BytesIO(content3))
 #     file3.size = len(content3)
