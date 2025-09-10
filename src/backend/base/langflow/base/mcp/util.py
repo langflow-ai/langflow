@@ -26,7 +26,7 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service
 
 # Global set to track all session managers for cleanup
-_global_session_managers = set()
+_global_session_managers: set = set()
 
 
 def _cleanup_all_mcp_sessions():
