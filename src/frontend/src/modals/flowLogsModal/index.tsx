@@ -38,28 +38,27 @@ export default function FlowLogsModal({
       const { columns, rows } = data;
 
       if (data?.rows?.length > 0) {
-        data.rows.map((row: any) => {
-          row.timestamp = convertUTCToLocalTimezone(row.timestamp);
-        });
-        
-        // Sort rows by timestamp (earliest first)
-        data.rows.sort((a: any, b: any) => {
+        // Sort rows by timestamp (latest first) BEFORE converting to display format
+        const sortedRows = [...data.rows].sort((a: any, b: any) => {
           const timestampA = new Date(a.timestamp).getTime();
           const timestampB = new Date(b.timestamp).getTime();
-          return timestampA - timestampB;
+          return timestampB - timestampA;
         });
+
+        // Now convert timestamps to display format
+        const processedRows = sortedRows.map((row: any) => ({
+          ...row,
+          timestamp: convertUTCToLocalTimezone(row.timestamp)
+        }));
+
+        setRows(processedRows);
+      } else {
+        setRows(rows);
       }
 
       setColumns(columns.map((col) => ({ ...col, editable: true })));
-      setRows(rows);
     }
   }, [data]);
-
-  useEffect(() => {
-    if (open) {
-      refetch();
-    }
-  }, [open]);
 
   // Refetch data when pagination parameters change
   useEffect(() => {
