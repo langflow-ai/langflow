@@ -833,7 +833,9 @@ class MCPSessionManager:
                         await logger.adebug("Successfully closed session %s using aclose()", session_id)
                     except RuntimeError as e:
                         if "asynchronous generator is already running" in str(e):
-                            await logger.adebug("Session %s async generator already running, skipping aclose", session_id)
+                            await logger.adebug(
+                                "Session %s async generator already running, skipping aclose", session_id
+                            )
                         else:
                             await logger.adebug("Error closing session %s with aclose(): %s", session_id, e)
                     except Exception as e:  # noqa: BLE001
