@@ -181,8 +181,8 @@ def enable_mcp_composer():
         yield True
 
 
-@pytest.fixture(autouse=True, scope="module")
-async def cleanup_mcp_composer_processes():
+@pytest.fixture(autouse=True)
+def cleanup_mcp_composer_processes():
     """Critical fixture to ensure MCP Composer processes are cleaned up after each test.
 
     This prevents hanging tests by ensuring all spawned processes are terminated.
@@ -191,15 +191,28 @@ async def cleanup_mcp_composer_processes():
 
     # After the test completes, forcibly clean up any MCP Composer processes
     try:
+        import asyncio
         from langflow.services.deps import get_service
         from langflow.services.schema import ServiceType
 
-        # Get the MCP Composer service if it exists
-        mcp_composer_service = cast("MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE))
-        await mcp_composer_service.stop()
+        from langflow.api.v1.mcp_projects import project_mcp_servers, project_sse_transports
+        
+        async def _async_cleanup():
+            try:
+                # Get the MCP Composer service if it exists
+                mcp_composer_service = cast("MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE))
+                if mcp_composer_service:
+                    await mcp_composer_service.stop()
+            except Exception as e:
+                print(f"Warning: Error during MCP Composer service cleanup: {e}")
+
+        # Run cleanup in current event loop if available, otherwise skip
+        loop = asyncio.get_running_loop()
+        if loop:
+            loop.create_task(_async_cleanup())
     except Exception as e:
         # Log but don't fail the test due to cleanup issues
-        print(f"Warning: Error during MCP Composer cleanup: {e}")
+        print(f"Warning: Error during MCP Composer cleanup setup: {e}")
 
 
 async def test_handle_project_messages_success(
