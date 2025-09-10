@@ -88,12 +88,17 @@ class ServiceManager:
 
     async def teardown(self) -> None:
         """Teardown all the services."""
+        import asyncio
+        
         for service in list(self.services.values()):
             if service is None:
                 continue
             await logger.adebug(f"Teardown service {service.name}")
             try:
-                await service.teardown()
+                # Add timeout to prevent individual service teardowns from hanging
+                await asyncio.wait_for(service.teardown(), timeout=15.0)
+            except asyncio.TimeoutError:
+                await logger.aerror(f"Service {service.name} teardown timed out")
             except Exception as exc:  # noqa: BLE001
                 await logger.aexception(exc)
         self.services = {}

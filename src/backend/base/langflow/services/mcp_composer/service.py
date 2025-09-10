@@ -96,7 +96,25 @@ class MCPComposerService(Service):
     async def stop(self):
         """Stop all MCP Composer instances."""
         for project_id in list(self.project_composers.keys()):
-            await self.stop_project_composer(project_id)
+            try:
+                # Add timeout to individual project stops
+                await asyncio.wait_for(self.stop_project_composer(project_id), timeout=5.0)
+            except asyncio.TimeoutError:
+                await logger.aerror(f"Timeout stopping MCP Composer for project {project_id}, forcing kill")
+                # Force cleanup for this project
+                if project_id in self.project_composers:
+                    composer_info = self.project_composers[project_id]
+                    process = composer_info.get("process")
+                    if process and process.returncode is None:
+                        try:
+                            process.kill()
+                        except ProcessLookupError:
+                            pass
+                    del self.project_composers[project_id]
+            except Exception as e:
+                await logger.aerror(f"Error stopping MCP Composer for project {project_id}: {e}")
+                # Still try to remove from dict
+                self.project_composers.pop(project_id, None)
         await logger.adebug("All MCP Composer instances stopped")
 
     async def stop_project_composer(self, project_id: str):
@@ -125,7 +143,7 @@ class MCPComposerService(Service):
         if process:
             try:
                 # Check if process is still running before trying to terminate
-                if process.poll() is None:
+                if process.returncode is None:
                     await logger.adebug(f"Terminating MCP Composer process {process.pid} for project {project_id}")
                     process.terminate()
 
@@ -165,7 +183,7 @@ class MCPComposerService(Service):
         poll_interval = 0.5
 
         for _ in range(int(max_wait / poll_interval)):
-            if process.poll() is not None:  # Non-blocking check
+            if process.returncode is not None:  # Process has exited
                 return  # Process has exited
             await asyncio.sleep(poll_interval)
 
@@ -368,7 +386,7 @@ class MCPComposerService(Service):
                 existing_auth = composer_info.get("auth_config", {})
 
                 # Check if process is still running
-                if process and process.poll() is None:
+                if process and process.returncode is None:
                     # Process is running - only restart if config changed
                     auth_changed = self._has_auth_config_changed(existing_auth, auth_config)
                     if auth_changed:
@@ -415,7 +433,7 @@ class MCPComposerService(Service):
         auth_config: dict[str, Any] | None = None,
         max_startup_checks: int = 3,
         startup_delay: float = 1.0,
-    ) -> subprocess.Popen:
+    ) -> asyncio.subprocess.Process:
         """Start the MCP Composer subprocess for a specific project."""
         cmd = [
             "uvx",
@@ -461,8 +479,13 @@ class MCPComposerService(Service):
                     if value is not None and str(value).strip():
                         cmd.extend(["--env", env_key, str(value)])
 
-        # Start the subprocess with both stdout and stderr captured
-        process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)  # noqa: ASYNC220, S603
+        # Start the subprocess with both stdout and stderr captured (using async subprocess)
+        process = await asyncio.create_subprocess_exec(
+            *cmd, 
+            env=env, 
+            stdout=asyncio.subprocess.PIPE, 
+            stderr=asyncio.subprocess.PIPE
+        )
 
         # Monitor the process startup with multiple checks
         process_running = False
@@ -474,14 +497,16 @@ class MCPComposerService(Service):
             await asyncio.sleep(startup_delay)
 
             # Check if process is still running
-            poll_result = process.poll()
+            poll_result = process.returncode
 
             startup_error_msg = None
             if poll_result is not None:
                 # Process terminated, get the error output
                 await logger.aerror(f"MCP Composer process {process.pid} terminated with exit code: {poll_result}")
                 try:
-                    stdout_content, stderr_content = process.communicate(timeout=2)
+                    stdout_bytes, stderr_bytes = await asyncio.wait_for(process.communicate(), timeout=2)
+                    stdout_content = stdout_bytes.decode('utf-8', errors='replace') if stdout_bytes else ""
+                    stderr_content = stderr_bytes.decode('utf-8', errors='replace') if stderr_bytes else ""
                     # Log the full error details for debugging
                     await logger.aerror(f"MCP Composer startup failed for project {project_id}")
                     await logger.aerror(f"MCP Composer stdout:\n{stdout_content}")
@@ -518,8 +543,8 @@ class MCPComposerService(Service):
             # Try to read any available stderr without blocking (only log if there's an error)
             if process.stderr and select.select([process.stderr], [], [], 0)[0]:
                 try:
-                    stderr_line = process.stderr.readline()
-                    if stderr_line and "ERROR" in stderr_line:
+                    stderr_line = await process.stderr.readline()
+                    if stderr_line and b"ERROR" in stderr_line:
                         await logger.aerror(f"MCP Composer error: {stderr_line.strip()}")
                 except Exception:  # noqa: S110, BLE001
                     pass
@@ -527,13 +552,15 @@ class MCPComposerService(Service):
         # After all checks
         if not process_running or not port_bound:
             # Get comprehensive error information
-            poll_result = process.poll()
+            poll_result = process.returncode
 
             if poll_result is not None:
                 # Process died
                 startup_error_msg = None
                 try:
-                    stdout_content, stderr_content = process.communicate(timeout=2)
+                    stdout_bytes, stderr_bytes = await asyncio.wait_for(process.communicate(), timeout=2)
+                    stdout_content = stdout_bytes.decode('utf-8', errors='replace') if stdout_bytes else ""
+                    stderr_content = stderr_bytes.decode('utf-8', errors='replace') if stderr_bytes else ""
                     # Extract meaningful error message
                     startup_error_msg = self._extract_error_message(stdout_content, stderr_content, oauth_server_url)
                     await logger.aerror(f"MCP Composer startup failed for project {project_id}:")
@@ -564,7 +591,9 @@ class MCPComposerService(Service):
             startup_error_msg = None
             try:
                 process.terminate()
-                stdout_content, stderr_content = process.communicate(timeout=2)
+                stdout_bytes, stderr_bytes = await asyncio.wait_for(process.communicate(), timeout=2)
+                stdout_content = stdout_bytes.decode('utf-8', errors='replace') if stdout_bytes else ""
+                stderr_content = stderr_bytes.decode('utf-8', errors='replace') if stderr_bytes else ""
                 startup_error_msg = self._extract_error_message(stdout_content, stderr_content, oauth_server_url)
                 if stderr_content.strip():
                     await logger.aerror(f"  - Process stderr: {stderr_content.strip()}")
@@ -577,10 +606,11 @@ class MCPComposerService(Service):
             raise MCPComposerStartupError(startup_error_msg, project_id)
 
         # Close the pipes if everything is successful
+        # Must do this to prevent buffers from filling up and blocking the process
         if process.stdout:
-            process.stdout.close()
+            process.stdout.feed_eof()
         if process.stderr:
-            process.stderr.close()
+            process.stderr.feed_eof()
 
         return process
 
@@ -596,5 +626,22 @@ class MCPComposerService(Service):
         if not get_settings_service().settings.mcp_composer_enabled and len(self.project_composers) == 0:
             return
         await logger.adebug("Tearing down MCP Composer service...")
-        await self.stop()
+        try:
+            # Add timeout to prevent infinite hanging
+            await asyncio.wait_for(self.stop(), timeout=10.0)
+        except asyncio.TimeoutError:
+            await logger.aerror("MCP Composer teardown timed out, forcing cleanup")
+            # Force cleanup by killing processes directly
+            for project_id, composer_info in list(self.project_composers.items()):
+                process = composer_info.get("process")
+                if process and process.returncode is None:
+                    try:
+                        process.kill()
+                    except ProcessLookupError:
+                        pass  # Process already gone
+            self.project_composers.clear()
+        except Exception as e:
+            await logger.aerror(f"Error during MCP Composer teardown: {e}")
+            # Still try to clear the composers dict
+            self.project_composers.clear()
         await logger.adebug("MCP Composer service teardown complete")

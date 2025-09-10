@@ -141,6 +141,8 @@ async def test_create_super_user_race_condition():
     """Test create_super_user handles race conditions gracefully when multiple workers try to create the same user."""
     # Mock the database session
     mock_session = AsyncMock()
+    # Make add() synchronous since SQLAlchemy's session.add() is synchronous
+    mock_session.add = MagicMock()
 
     # Create a mock user that will be "created" by the first worker
     mock_user = MagicMock(spec=User)
@@ -181,6 +183,8 @@ async def test_create_super_user_race_condition_no_user_found():
     """Test that create_super_user re-raises exception if no user is found after IntegrityError."""
     # Mock the database session
     mock_session = AsyncMock()
+    # Make add() synchronous since SQLAlchemy's session.add() is synchronous
+    mock_session.add = MagicMock()
 
     # Mock get_user_by_username to always return None (even after rollback)
     mock_get_user_by_username = AsyncMock()
@@ -215,6 +219,9 @@ async def test_create_super_user_concurrent_workers():
 
     mock_session1 = AsyncMock()
     mock_session2 = AsyncMock()
+    # Make add() synchronous since SQLAlchemy's session.add() is synchronous
+    mock_session1.add = MagicMock()
+    mock_session2.add = MagicMock()
 
     # Create mock users
     mock_user = MagicMock(spec=User)

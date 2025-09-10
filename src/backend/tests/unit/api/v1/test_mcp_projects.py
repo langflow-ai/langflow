@@ -32,6 +32,23 @@ _mcp_cache_lock = asyncio.Lock()
 
 
 @pytest.fixture
+async def mcp_test_lock():
+    """Hold the MCP cache lock for the entire test duration and clear caches.
+    
+    This fixture ensures that:
+    1. Only one test can access MCP global state at a time
+    2. Each test starts with clean caches
+    3. No race conditions can occur between concurrent tests
+    """
+    async with _mcp_cache_lock:
+        # Clear caches while holding lock
+        _project_sse_transports.clear()
+        _project_mcp_servers.clear()
+        yield  # Test runs while holding lock
+        # Caches will be cleared again for the next test
+
+
+@pytest.fixture
 def mock_project(active_user):
     """Fixture to provide a mock project linked to the active user."""
     return Folder(id=uuid4(), name="Test Project", user_id=active_user.id)
@@ -211,16 +228,20 @@ def cleanup_mcp_composer_processes():
                 print(f"Warning: Error during MCP Composer service cleanup: {e}")
 
         # Run cleanup in current event loop if available, otherwise skip
-        loop = asyncio.get_running_loop()
-        if loop:
-            loop.create_task(_async_cleanup())
+        try:
+            loop = asyncio.get_running_loop()
+            if loop and not loop.is_closed():
+                loop.create_task(_async_cleanup())
+        except RuntimeError:
+            # No running event loop, skip async cleanup
+            pass
     except Exception as e:
         # Log but don't fail the test due to cleanup issues
         print(f"Warning: Error during MCP Composer cleanup setup: {e}")
 
 
 async def test_handle_project_messages_success(
-    client: AsyncClient, user_test_project, mock_sse_transport, logged_in_headers
+    client: AsyncClient, user_test_project, mock_sse_transport, logged_in_headers, mcp_test_lock
 ):
     """Test successful handling of project messages."""
     response = await client.post(
@@ -232,7 +253,7 @@ async def test_handle_project_messages_success(
     mock_sse_transport.handle_post_message.assert_called_once()
 
 
-async def test_update_project_mcp_settings_invalid_json(client: AsyncClient, user_test_project, logged_in_headers):
+async def test_update_project_mcp_settings_invalid_json(client: AsyncClient, user_test_project, logged_in_headers, mcp_test_lock):
     """Test updating MCP settings with invalid JSON."""
     response = await client.patch(
         f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json="invalid"
@@ -274,7 +295,7 @@ async def test_flow_for_update(active_user, user_test_project):
 
 
 async def test_update_project_mcp_settings_success(
-    client: AsyncClient, user_test_project, test_flow_for_update, logged_in_headers
+    client: AsyncClient, user_test_project, test_flow_for_update, logged_in_headers, mcp_test_lock
 ):
     """Test successful update of MCP settings using real database."""
     # Create settings for updating the flow
@@ -317,7 +338,7 @@ async def test_update_project_mcp_settings_success(
         assert updated_flow.mcp_enabled is False
 
 
-async def test_update_project_mcp_settings_invalid_project(client: AsyncClient, logged_in_headers):
+async def test_update_project_mcp_settings_invalid_project(client: AsyncClient, logged_in_headers, mcp_test_lock):
     """Test accessing an invalid project ID."""
     # We're using the GET endpoint since it works correctly and tests the same security constraints
     # Generate a random UUID that doesn't exist in the database
@@ -332,7 +353,7 @@ async def test_update_project_mcp_settings_invalid_project(client: AsyncClient, 
 
 
 async def test_update_project_mcp_settings_other_user_project(
-    client: AsyncClient, other_test_project, logged_in_headers
+    client: AsyncClient, other_test_project, logged_in_headers, mcp_test_lock
 ):
     """Test accessing a project belonging to another user."""
     # We're using the GET endpoint since it works correctly and tests the same security constraints
@@ -347,7 +368,7 @@ async def test_update_project_mcp_settings_other_user_project(
 
 
 async def test_update_project_mcp_settings_other_user_project_with_composer(
-    client: AsyncClient, other_test_project, logged_in_headers, enable_mcp_composer
+    client: AsyncClient, other_test_project, logged_in_headers, enable_mcp_composer, mcp_test_lock
 ):
     """Test accessing a project belonging to another user when MCP Composer is enabled."""
     # When MCP Composer is enabled, JWT tokens are not accepted for MCP endpoints
@@ -361,7 +382,7 @@ async def test_update_project_mcp_settings_other_user_project_with_composer(
     assert "API key required" in response.json()["detail"]
 
 
-async def test_update_project_mcp_settings_empty_settings(client: AsyncClient, user_test_project, logged_in_headers):
+async def test_update_project_mcp_settings_empty_settings(client: AsyncClient, user_test_project, logged_in_headers, mcp_test_lock):
     """Test updating MCP settings with empty settings list."""
     # Use real database objects instead of mocks to avoid the coroutine issue
 
@@ -388,7 +409,7 @@ async def test_update_project_mcp_settings_empty_settings(client: AsyncClient, u
     assert "Updated MCP settings for 0 flows" in response.json()["message"]
 
 
-async def test_user_can_only_access_own_projects(client: AsyncClient, other_test_project, logged_in_headers):
+async def test_user_can_only_access_own_projects(client: AsyncClient, other_test_project, logged_in_headers, mcp_test_lock):
     """Test that a user can only access their own projects."""
     # Try to access the other user's project using first user's credentials
     response = await client.get(f"api/v1/mcp/project/{other_test_project.id}/sse", headers=logged_in_headers)
@@ -398,7 +419,7 @@ async def test_user_can_only_access_own_projects(client: AsyncClient, other_test
 
 
 async def test_user_data_isolation_with_real_db(
-    client: AsyncClient, logged_in_headers, other_test_user, other_test_project
+    client: AsyncClient, logged_in_headers, other_test_user, other_test_project, mcp_test_lock
 ):
     """Test that users can only access their own MCP projects using a real database session."""
     # Create a flow for the other test user in their project
@@ -489,7 +510,7 @@ async def user_test_flow(active_user, user_test_project):
 
 
 async def test_user_can_update_own_flow_mcp_settings(
-    client: AsyncClient, logged_in_headers, user_test_project, user_test_flow
+    client: AsyncClient, logged_in_headers, user_test_project, user_test_flow, mcp_test_lock
 ):
     """Test that a user can update MCP settings for their own flows using real database."""
     # User attempts to update their own flow settings
@@ -533,7 +554,7 @@ async def test_user_can_update_own_flow_mcp_settings(
 
 
 async def test_update_project_auth_settings_encryption(
-    client: AsyncClient, user_test_project, test_flow_for_update, logged_in_headers
+    client: AsyncClient, user_test_project, test_flow_for_update, logged_in_headers, mcp_test_lock
 ):
     """Test that sensitive auth_settings fields are encrypted when stored."""
     # Create settings with sensitive data
@@ -607,76 +628,62 @@ async def test_update_project_auth_settings_encryption(
         assert decrypted_settings["oauth_client_secret"] == "test-oauth-secret-value-456"
 
 
-async def test_project_sse_creation(user_test_project):
+async def test_project_sse_creation(user_test_project, mcp_test_lock):
     """Test that SSE transport and MCP server are correctly created for a project."""
-    async with _mcp_cache_lock:
-        # Test getting an SSE transport for the first time
-        project_id = user_test_project.id
-        project_id_str = str(project_id)
+    # Test getting an SSE transport for the first time
+    project_id = user_test_project.id
+    project_id_str = str(project_id)
 
-        # Ensure there's no SSE transport for this project yet
-        if project_id_str in _project_sse_transports:
-            del _project_sse_transports[project_id_str]
+    # Get an SSE transport
+    sse_transport = await get_project_sse(project_id)
 
-        # Get an SSE transport
-        sse_transport = await get_project_sse(project_id)
+    # Verify the transport was created correctly
+    assert project_id_str in _project_sse_transports
+    assert sse_transport is _project_sse_transports[project_id_str]
+    assert isinstance(sse_transport, SseServerTransport)
 
-        # Verify the transport was created correctly
-        assert project_id_str in _project_sse_transports
-        assert sse_transport is _project_sse_transports[project_id_str]
-        assert isinstance(sse_transport, SseServerTransport)
+    # Get an MCP server
+    mcp_server = await get_project_mcp_server(project_id)
 
-        # Test getting an MCP server for the first time
-        if project_id_str in _project_mcp_servers:
-            del _project_mcp_servers[project_id_str]
+    # Verify the server was created correctly
+    assert project_id_str in _project_mcp_servers
+    assert mcp_server is _project_mcp_servers[project_id_str]
+    assert mcp_server.project_id == project_id
+    assert mcp_server.server.name == f"langflow-mcp-project-{project_id}"
 
-        # Get an MCP server
-        mcp_server = await get_project_mcp_server(project_id)
+    # Test that getting the same SSE transport and MCP server again returns the cached instances
+    sse_transport2 = await get_project_sse(project_id)
+    mcp_server2 = await get_project_mcp_server(project_id)
 
-        # Verify the server was created correctly
-        assert project_id_str in _project_mcp_servers
-        assert mcp_server is _project_mcp_servers[project_id_str]
-        assert mcp_server.project_id == project_id
-        assert mcp_server.server.name == f"langflow-mcp-project-{project_id}"
-
-        # Test that getting the same SSE transport and MCP server again returns the cached instances
-        sse_transport2 = await get_project_sse(project_id)
-        mcp_server2 = await get_project_mcp_server(project_id)
-
-        assert sse_transport2 is sse_transport
-        assert mcp_server2 is mcp_server
-        # Yield control to the event loop to satisfy async usage in this test
-        await asyncio.sleep(0)
+    assert sse_transport2 is sse_transport
+    assert mcp_server2 is mcp_server
+    # Yield control to the event loop to satisfy async usage in this test
+    await asyncio.sleep(0)
 
 
-async def test_init_mcp_servers(user_test_project, other_test_project):
+async def test_init_mcp_servers(user_test_project, other_test_project, mcp_test_lock):
     """Test the initialization of MCP servers for all projects."""
-    async with _mcp_cache_lock:
-        # Clear existing caches (safe with lock)
-        _project_sse_transports.clear()
-        _project_mcp_servers.clear()
+    # Test the initialization function
+    await init_mcp_servers()
 
-        # Test the initialization function
-        await init_mcp_servers()
+    # Verify that both test projects have SSE transports and MCP servers initialized
+    project1_id = str(user_test_project.id)
+    project2_id = str(other_test_project.id)
 
-        # Verify that both test projects have SSE transports and MCP servers initialized
-        project1_id = str(user_test_project.id)
-        project2_id = str(other_test_project.id)
+    # Both projects should have SSE transports created
+    assert project1_id in _project_sse_transports
+    assert project2_id in _project_sse_transports
 
-        # Both projects should have SSE transports created
-        assert project1_id in _project_sse_transports
-        assert project2_id in _project_sse_transports
+    # Both projects should have MCP servers created
+    assert project1_id in _project_mcp_servers
+    assert project2_id in _project_mcp_servers
 
-        # Both projects should have MCP servers created
-        assert project1_id in _project_mcp_servers
-        assert project2_id in _project_mcp_servers
+    # Verify the correct configuration
+    assert isinstance(_project_sse_transports[project1_id], SseServerTransport)
+    assert isinstance(_project_sse_transports[project2_id], SseServerTransport)
 
-        # Verify the correct configuration
-        assert isinstance(_project_sse_transports[project1_id], SseServerTransport)
-        assert isinstance(_project_sse_transports[project2_id], SseServerTransport)
-
-        assert _project_mcp_servers[project1_id].project_id == user_test_project.id
-        assert _project_mcp_servers[project2_id].project_id == other_test_project.id
+    assert _project_mcp_servers[project1_id].project_id == user_test_project.id
+    assert _project_mcp_servers[project2_id].project_id == other_test_project.id
 
 
 @pytest.mark.asyncio
