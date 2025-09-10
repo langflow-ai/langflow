@@ -920,12 +920,9 @@ class MCPSessionManager:
         for task in list(self._background_tasks):
             if not task.done():
                 task.cancel()
-                with contextlib.suppress(asyncio.CancelledError, RuntimeError):
+                with contextlib.suppress(asyncio.CancelledError, RuntimeError, asyncio.TimeoutError):
                     # Use wait_for to prevent hanging on async generator cleanup
-                    try:
-                        await asyncio.wait_for(task, timeout=2.0)
-                    except asyncio.TimeoutError:
-                        pass
+                    await asyncio.wait_for(task, timeout=2.0)
 
         # Give extra time for subprocess transports and async generators to clean up
         # This helps prevent the BaseSubprocessTransport.__del__ warnings
