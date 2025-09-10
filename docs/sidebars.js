@@ -1,6 +1,5 @@
 module.exports = {
   docs: [
-    "Get-Started/welcome-to-langflow",
     {
       type: "category",
       label: "Get started",
