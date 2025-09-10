@@ -1,12 +1,13 @@
-import type { ColDef, ColGroupDef } from "ag-grid-community";
-import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
+import LoadingComponent from "@/components/common/loadingComponent";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { convertUTCToLocalTimezone } from "@/utils/utils";
+import type { ColDef, ColGroupDef } from "ag-grid-community";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import BaseModal from "../baseModal";
 
 export default function FlowLogsModal({
@@ -36,26 +37,16 @@ export default function FlowLogsModal({
   useEffect(() => {
     if (data) {
       const { columns, rows } = data;
-
-      if (data?.rows?.length > 0) {
-        // Sort rows by timestamp (latest first) BEFORE converting to display format
-        const sortedRows = [...data.rows].sort((a: any, b: any) => {
-          const timestampA = new Date(a.timestamp).getTime();
-          const timestampB = new Date(b.timestamp).getTime();
-          return timestampB - timestampA;
-        });
-
-        // Now convert timestamps to display format
-        const processedRows = sortedRows.map((row: any) => ({
-          ...row,
-          timestamp: convertUTCToLocalTimezone(row.timestamp),
-        }));
-
-        setRows(processedRows);
-      } else {
-        setRows(rows);
-      }
-
+      
+      // Convert timestamps to local timezone format (backend handles sorting)
+      const processedRows = rows?.length > 0 
+        ? rows.map((row: any) => ({
+            ...row,
+            timestamp: convertUTCToLocalTimezone(row.timestamp),
+          }))
+        : rows;
+      
+      setRows(processedRows);
       setColumns(columns.map((col) => ({ ...col, editable: true })));
     }
   }, [data]);
@@ -85,16 +76,26 @@ export default function FlowLogsModal({
         </div>
       </BaseModal.Header>
       <BaseModal.Content>
-        <TableComponent
-          key={"Executions"}
-          readOnlyEdit
-          className="h-max-full h-full w-full"
-          pagination={false}
-          columnDefs={columns}
-          autoSizeStrategy={{ type: "fitGridWidth" }}
-          rowData={rows}
-          headerHeight={rows.length === 0 ? 0 : undefined}
-        ></TableComponent>
+        <div className="relative h-full w-full">
+          <TableComponent
+            key={"Executions"}
+            readOnlyEdit
+            className="h-max-full h-full w-full"
+            pagination={false}
+            columnDefs={columns}
+            autoSizeStrategy={{ type: "fitGridWidth" }}
+            rowData={rows}
+            headerHeight={rows.length === 0 ? 0 : undefined}
+          ></TableComponent>
+          
+          {/* Loading overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+              <LoadingComponent remSize={8} />
+            </div>
+          )}
+        </div>
+        
         {!isLoading && (data?.pagination.pages ?? 0) > 1 && (
           <div className="flex justify-end px-3 py-4">
             <PaginatorComponent

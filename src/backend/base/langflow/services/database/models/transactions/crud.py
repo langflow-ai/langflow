@@ -18,7 +18,7 @@ async def get_transactions_by_flow_id(
     stmt = (
         select(TransactionTable)
         .where(TransactionTable.flow_id == flow_id)
-        .order_by(col(TransactionTable.timestamp))
+        .order_by(col(TransactionTable.timestamp).desc())
         .limit(limit)
     )
 
@@ -26,7 +26,9 @@ async def get_transactions_by_flow_id(
     return list(transactions)
 
 
-async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> TransactionTable | None:
+async def log_transaction(
+    db: AsyncSession, transaction: TransactionBase
+) -> TransactionTable | None:
     """Log a transaction and maintain a maximum number of transactions in the database.
 
     This function logs a new transaction into the database and ensures that the number of transactions
@@ -59,7 +61,9 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
                 select(TransactionTable.id)
                 .where(TransactionTable.flow_id == transaction.flow_id)
                 .order_by(col(TransactionTable.timestamp).desc())
-                .offset(max_entries - 1)  # Keep newest max_entries-1 plus the one we're adding
+                .offset(
+                    max_entries - 1
+                )  # Keep newest max_entries-1 plus the one we're adding
             ),
         )
 
@@ -78,5 +82,8 @@ def transform_transaction_table(
     transaction: list[TransactionTable] | TransactionTable,
 ) -> list[TransactionReadResponse]:
     if isinstance(transaction, list):
-        return [TransactionReadResponse.model_validate(t, from_attributes=True) for t in transaction]
+        return [
+            TransactionReadResponse.model_validate(t, from_attributes=True)
+            for t in transaction
+        ]
     return TransactionReadResponse.model_validate(transaction, from_attributes=True)
