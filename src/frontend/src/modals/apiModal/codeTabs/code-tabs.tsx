@@ -79,6 +79,7 @@ export default function APITabsComponent() {
     streaming: streaming,
     flowId: flowId || "",
     processedPayload: processedPayload,
+    nodes: nodes,
   };
 
   // Platform selection for cURL

@@ -1,4 +1,5 @@
 import type { AllNodeType, GenericNodeType } from "@/types/flow";
+import { getEffectiveAliasFromAnyNode } from "@/types/flow";
 
 /**
  * Utility functions for managing component aliases with hybrid approach:
@@ -374,6 +375,28 @@ function extractNumber(alias: string | undefined): number {
   if (!alias) return 0;
   const match = alias.match(/^.+#(\d+)$/);
   return match ? parseInt(match[1]) : 0;
+}
+
+/**
+ * Converts UUID-based tweak keys to human-readable alias keys for API code generation
+ */
+export function convertTweaksToAliases(tweaks: any, nodes?: any[]): any {
+  if (!nodes || !tweaks) return tweaks;
+
+  const aliasedTweaks: any = {};
+
+  for (const [nodeId, tweakValues] of Object.entries(tweaks)) {
+    const node = nodes.find((n) => n.id === nodeId);
+    if (node) {
+      const alias = getEffectiveAliasFromAnyNode(node);
+      aliasedTweaks[alias] = tweakValues;
+    } else {
+      // Fallback to original nodeId if node not found
+      aliasedTweaks[nodeId] = tweakValues;
+    }
+  }
+
+  return aliasedTweaks;
 }
 
 function getNodesByDisplayName(
