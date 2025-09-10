@@ -260,9 +260,9 @@ def test_graph_dump_handles_mixed_scenarios():
     node2 = next(n for n in nodes if n["id"] == input2_id)
     node3 = next(n for n in nodes if n["id"] == input3_id)
 
-    assert node1["data"]["node"]["alias"] == "ChatInput#1"  # Preserved (valid)
-    assert node2["data"]["node"]["alias"] == "ChatInput#2"  # Assigned (was missing)
-    assert node3["data"]["node"]["alias"] == "ChatInput#3"  # Updated (was incorrect)
+    assert node1["data"]["node"]["alias"] == "Chat Input#1"  # Preserved (valid)
+    assert node2["data"]["node"]["alias"] == "Chat Input#2"  # Assigned (was missing)
+    assert node3["data"]["node"]["alias"] == "Chat Input#3"  # Updated (was incorrect)
 
 
 def test_graph_dump_removes_unnecessary_numbered_aliases():
