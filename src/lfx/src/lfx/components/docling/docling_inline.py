@@ -2,10 +2,8 @@ import time
 from multiprocessing import Queue, get_context
 from queue import Empty
 
-from langchain_openai import ChatOpenAI
-
 from lfx.base.data import BaseFileComponent
-from lfx.base.data.docling_utils import docling_worker
+from lfx.base.data.docling_utils import _serialize_pydantic_model, docling_worker
 from lfx.inputs import BoolInput, DropdownInput, HandleInput, StrInput
 from lfx.schema import Data
 
@@ -169,14 +167,7 @@ class DoclingInlineComponent(BaseFileComponent):
 
         pic_desc_config: dict | None = None
         if self.pic_desc_llm is not None:
-            if not isinstance(self.pic_desc_llm, ChatOpenAI):
-                msg = "Picture description LLM only supports models of type ChatOpenAI."
-                raise RuntimeError(msg)
-            pic_desc_config = self.pic_desc_llm.model_dump(mode="json")
-            if isinstance(self.pic_desc_llm.openai_api_key, str):
-                pic_desc_config["openai_api_key"] = self.pic_desc_llm.openai_api_key
-            else:
-                pic_desc_config["openai_api_key"] = self.pic_desc_llm.openai_api_key.get_secret_value()
+            pic_desc_config = _serialize_pydantic_model(self.pic_desc_llm)
 
         ctx = get_context("spawn")
         queue: Queue = ctx.Queue()
