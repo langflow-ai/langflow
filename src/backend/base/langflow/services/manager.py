@@ -103,6 +103,14 @@ class ServiceManager:
                 await self._force_cleanup_service(service)
             except Exception as exc:  # noqa: BLE001
                 await logger.aexception(exc)
+        
+        # Clean up all MCP session managers after regular service teardown
+        try:
+            from langflow.base.mcp.util import cleanup_all_mcp_session_managers
+            await cleanup_all_mcp_session_managers()
+        except Exception as exc:  # noqa: BLE001
+            await logger.aexception(f"Error cleaning up MCP session managers: {exc}")
+        
         self.services = {}
         self.factories = {}
 
