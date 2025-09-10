@@ -1,3 +1,4 @@
+import os
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 
@@ -105,9 +106,8 @@ class S3StorageService(StorageService):
         """Get the size of a file in the S3 bucket."""
         try:
             response = self.s3_client.head_object(Bucket=self.bucket, Key=f"{flow_id}/{file_name}")
+            await logger.ainfo(f"File {file_name} retrieved successfully from folder {flow_id}.")
             return response["ContentLength"]
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "404":
-                raise FileNotFoundError(f"File {file_name} not found in flow_id {flow_id}")
-            logger.exception(f"Error getting file size for {file_name} in flow_id {flow_id}: {e}")
+        except ClientError:
+            logger.aexception(f"Error getting file size for {file_name} in flow_id {flow_id}: {e}")
             raise
