@@ -505,7 +505,7 @@ class MCPSessionManager:
         """Periodically clean up idle sessions."""
         error_count = 0
         MAX_CONSECUTIVE_ERRORS = 3
-        
+
         try:
             while True:
                 try:
@@ -518,7 +518,7 @@ class MCPSessionManager:
                 except (RuntimeError, KeyError, ClosedResourceError, ValueError, asyncio.TimeoutError) as e:
                     error_count += 1
                     await logger.awarning(f"Error in periodic cleanup ({error_count}/{MAX_CONSECUTIVE_ERRORS}): {e}")
-                    
+
                     if error_count >= MAX_CONSECUTIVE_ERRORS:
                         await logger.aerror("Too many consecutive cleanup errors, stopping periodic cleanup")
                         break  # Exit the loop to prevent infinite hanging
@@ -814,17 +814,17 @@ class MCPSessionManager:
         """Terminate any subprocess associated with the task to prevent hanging."""
         try:
             # Check if the task has access to a subprocess through the session
-            if hasattr(task, '_coro') and task._coro:
+            if hasattr(task, "_coro") and task._coro:
                 coro = task._coro
                 # Look for subprocess references in the coroutine frame
-                if hasattr(coro, 'cr_frame') and coro.cr_frame:
+                if hasattr(coro, "cr_frame") and coro.cr_frame:
                     frame_locals = coro.cr_frame.f_locals
                     # Common patterns for subprocess references
-                    subprocess_refs = ['process', '_process', 'subprocess', '_subprocess']
+                    subprocess_refs = ["process", "_process", "subprocess", "_subprocess"]
                     for ref_name in subprocess_refs:
                         if ref_name in frame_locals:
                             process = frame_locals[ref_name]
-                            if hasattr(process, 'terminate') and hasattr(process, 'returncode'):
+                            if hasattr(process, "terminate") and hasattr(process, "returncode"):
                                 try:
                                     if process.returncode is None:  # Still running
                                         await logger.adebug(f"Terminating subprocess for session {session_id}")
@@ -836,15 +836,17 @@ class MCPSessionManager:
                                             process.kill()
                                             await logger.adebug(f"Force-killed subprocess for session {session_id}")
                                 except Exception as e:
-                                    await logger.awarning(f"Failed to terminate subprocess for session {session_id}: {e}")
+                                    await logger.awarning(
+                                        f"Failed to terminate subprocess for session {session_id}: {e}"
+                                    )
                                 break
-            
+
             # Also check for subprocesses in the session info if available
-            if hasattr(task, '_context') and hasattr(task._context, 'get'):
-                session_obj = task._context.get('session')
-                if session_obj and hasattr(session_obj, '_process'):
+            if hasattr(task, "_context") and hasattr(task._context, "get"):
+                session_obj = task._context.get("session")
+                if session_obj and hasattr(session_obj, "_process"):
                     process = session_obj._process
-                    if hasattr(process, 'terminate') and process.returncode is None:
+                    if hasattr(process, "terminate") and process.returncode is None:
                         try:
                             process.terminate()
                             await asyncio.sleep(0.1)
@@ -853,7 +855,7 @@ class MCPSessionManager:
                             await logger.adebug(f"Terminated session subprocess for {session_id}")
                         except Exception as e:
                             await logger.awarning(f"Failed to terminate session subprocess for {session_id}: {e}")
-                            
+
         except Exception as e:
             await logger.adebug(f"Error checking for subprocess in session {session_id}: {e}")
 
@@ -922,7 +924,7 @@ class MCPSessionManager:
                 if not task.done():
                     # Try to terminate any underlying subprocess first
                     await self._terminate_subprocess_if_exists(task, session_id)
-                    
+
                     task.cancel()
                     try:
                         await asyncio.wait_for(task, timeout=2.0)
@@ -980,7 +982,7 @@ class MCPSessionManager:
             if not task.done():
                 # Try to terminate any subprocesses before canceling task
                 await self._terminate_subprocess_if_exists(task, "background_task")
-                
+
                 task.cancel()
                 with contextlib.suppress(asyncio.CancelledError, RuntimeError, asyncio.TimeoutError):
                     # Use wait_for to prevent hanging on async generator cleanup
@@ -1624,24 +1626,24 @@ async def update_tools(
 
 async def cleanup_all_mcp_session_managers():
     """Global cleanup function to cleanup all MCPSessionManager instances.
-    
+
     This should be called during service shutdown to ensure all MCP sessions
     and their subprocesses are properly terminated.
     """
     if not _global_session_managers:
         return
-        
+
     await logger.adebug(f"Cleaning up {len(_global_session_managers)} MCP session managers")
-    
+
     # Create a copy to avoid modification during iteration
     managers_to_cleanup = list(_global_session_managers)
-    
+
     for manager in managers_to_cleanup:
         try:
             await manager.cleanup_all()
         except Exception as e:
             await logger.awarning(f"Error cleaning up MCP session manager: {e}")
-    
+
     # Clear the global registry
     _global_session_managers.clear()
     await logger.adebug("All MCP session managers cleaned up")
