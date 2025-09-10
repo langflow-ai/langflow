@@ -79,8 +79,12 @@ LANGFLOW_LANGCHAIN_CACHE=InMemoryCache
 LANGFLOW_CACHE_TYPE=async
 ```
 
-Alternative caching options can be configured, but options other than the default asynchronous, in-memory cache aren't supported.
+Langflow officially supports only the default asynchronous, in-memory cache. Other backends are experimental and may change without notice.
 The default behavior is suitable for most use cases.
+
+:::warning
+Redis and other external cache settings are experimental and not officially supported.
+:::
 
 ### Cache environment variables
 
