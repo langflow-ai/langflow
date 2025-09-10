@@ -4,7 +4,6 @@ import httpx
 import pytest
 from langchain_core.tools import ToolException
 from langflow.custom import Component
-
 from lfx.components.wikipedia import WikidataComponent
 from lfx.custom.utils import build_custom_component_template
 

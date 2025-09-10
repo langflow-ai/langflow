@@ -6,7 +6,6 @@ from typing import Any
 import pytest
 import requests
 from astrapy.admin import parse_api_endpoint
-
 from lfx.custom import Component
 from lfx.custom.eval import eval_custom_component_code
 from lfx.field_typing import Embeddings

@@ -5,8 +5,8 @@ from faker import Faker
 from langchain_community.embeddings.fake import DeterministicFakeEmbedding
 from langchain_core.documents import Document
 from langchain_core.vectorstores.in_memory import InMemoryVectorStore
-
 from lfx.components.datastax.graph_rag import GraphRAGComponent
+
 from tests.base import ComponentTestBaseWithoutClient
 
 

@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from lfx.components.xai.xai import XAIModelComponent
 from lfx.custom.custom_component.component import Component
 from lfx.custom.utils import build_custom_component_template
@@ -14,6 +13,7 @@ from lfx.inputs.inputs import (
     SecretStrInput,
     SliderInput,
 )
+
 from tests.base import ComponentTestBaseWithoutClient
 
 

@@ -1,9 +1,9 @@
 from unittest.mock import Mock, patch
 
 import pytest
-
 from lfx.components.data import URLComponent
 from lfx.schema import DataFrame
+
 from tests.base import ComponentTestBaseWithoutClient
 
 

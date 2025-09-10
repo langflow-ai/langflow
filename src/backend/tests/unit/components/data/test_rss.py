@@ -2,9 +2,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
-
 from lfx.components.data.rss import RSSReaderComponent
 from lfx.schema import DataFrame
+
 from tests.base import ComponentTestBaseWithoutClient
 
 
