@@ -1,10 +1,13 @@
+import io
 import uuid
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
+from fastapi import UploadFile
 
 # Module under test
+from langflow.api.v2.files import MCP_SERVERS_FILE, upload_user_file
 
 if TYPE_CHECKING:
     from langflow.services.database.models.file.model import File as UserFile
@@ -144,8 +147,7 @@ async def test_mcp_servers_upload_replace(session, storage_service, settings_ser
 
     # Third upload with server config provided by user
     content3 = (
-        b'{"mcpServers": {"everything": {"command": "npx", "args":
-        ["-y", "@modelcontextprotocol/server-everything"]}}}'
+        b'{"mcpServers": {"everything": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-everything"]}}}'
     )
     file3 = UploadFile(filename=f"{MCP_SERVERS_FILE}.json", file=io.BytesIO(content3))
     file3.size = len(content3)
