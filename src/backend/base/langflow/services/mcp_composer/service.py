@@ -481,10 +481,7 @@ class MCPComposerService(Service):
 
         # Start the subprocess with both stdout and stderr captured (using async subprocess)
         process = await asyncio.create_subprocess_exec(
-            *cmd, 
-            env=env, 
-            stdout=asyncio.subprocess.PIPE, 
-            stderr=asyncio.subprocess.PIPE
+            *cmd, env=env, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
 
         # Monitor the process startup with multiple checks
@@ -505,8 +502,8 @@ class MCPComposerService(Service):
                 await logger.aerror(f"MCP Composer process {process.pid} terminated with exit code: {poll_result}")
                 try:
                     stdout_bytes, stderr_bytes = await asyncio.wait_for(process.communicate(), timeout=2)
-                    stdout_content = stdout_bytes.decode('utf-8', errors='replace') if stdout_bytes else ""
-                    stderr_content = stderr_bytes.decode('utf-8', errors='replace') if stderr_bytes else ""
+                    stdout_content = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
+                    stderr_content = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
                     # Log the full error details for debugging
                     await logger.aerror(f"MCP Composer startup failed for project {project_id}")
                     await logger.aerror(f"MCP Composer stdout:\n{stdout_content}")
@@ -559,8 +556,8 @@ class MCPComposerService(Service):
                 startup_error_msg = None
                 try:
                     stdout_bytes, stderr_bytes = await asyncio.wait_for(process.communicate(), timeout=2)
-                    stdout_content = stdout_bytes.decode('utf-8', errors='replace') if stdout_bytes else ""
-                    stderr_content = stderr_bytes.decode('utf-8', errors='replace') if stderr_bytes else ""
+                    stdout_content = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
+                    stderr_content = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
                     # Extract meaningful error message
                     startup_error_msg = self._extract_error_message(stdout_content, stderr_content, oauth_server_url)
                     await logger.aerror(f"MCP Composer startup failed for project {project_id}:")
@@ -592,8 +589,8 @@ class MCPComposerService(Service):
             try:
                 process.terminate()
                 stdout_bytes, stderr_bytes = await asyncio.wait_for(process.communicate(), timeout=2)
-                stdout_content = stdout_bytes.decode('utf-8', errors='replace') if stdout_bytes else ""
-                stderr_content = stderr_bytes.decode('utf-8', errors='replace') if stderr_bytes else ""
+                stdout_content = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
+                stderr_content = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
                 startup_error_msg = self._extract_error_message(stdout_content, stderr_content, oauth_server_url)
                 if stderr_content.strip():
                     await logger.aerror(f"  - Process stderr: {stderr_content.strip()}")

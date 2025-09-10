@@ -89,7 +89,7 @@ class ServiceManager:
     async def teardown(self) -> None:
         """Teardown all the services."""
         import asyncio
-        
+
         for service in list(self.services.values()):
             if service is None:
                 continue

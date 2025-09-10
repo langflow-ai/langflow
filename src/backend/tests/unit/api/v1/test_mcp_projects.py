@@ -34,7 +34,7 @@ _mcp_cache_lock = asyncio.Lock()
 @pytest.fixture
 async def mcp_test_lock():
     """Hold the MCP cache lock for the entire test duration and clear caches.
-    
+
     This fixture ensures that:
     1. Only one test can access MCP global state at a time
     2. Each test starts with clean caches
@@ -253,7 +253,9 @@ async def test_handle_project_messages_success(
     mock_sse_transport.handle_post_message.assert_called_once()
 
 
-async def test_update_project_mcp_settings_invalid_json(client: AsyncClient, user_test_project, logged_in_headers, mcp_test_lock):
+async def test_update_project_mcp_settings_invalid_json(
+    client: AsyncClient, user_test_project, logged_in_headers, mcp_test_lock
+):
     """Test updating MCP settings with invalid JSON."""
     response = await client.patch(
         f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json="invalid"
@@ -382,7 +384,9 @@ async def test_update_project_mcp_settings_other_user_project_with_composer(
     assert "API key required" in response.json()["detail"]
 
 
-async def test_update_project_mcp_settings_empty_settings(client: AsyncClient, user_test_project, logged_in_headers, mcp_test_lock):
+async def test_update_project_mcp_settings_empty_settings(
+    client: AsyncClient, user_test_project, logged_in_headers, mcp_test_lock
+):
     """Test updating MCP settings with empty settings list."""
     # Use real database objects instead of mocks to avoid the coroutine issue
 
@@ -409,7 +413,9 @@ async def test_update_project_mcp_settings_empty_settings(client: AsyncClient, u
     assert "Updated MCP settings for 0 flows" in response.json()["message"]
 
 
-async def test_user_can_only_access_own_projects(client: AsyncClient, other_test_project, logged_in_headers, mcp_test_lock):
+async def test_user_can_only_access_own_projects(
+    client: AsyncClient, other_test_project, logged_in_headers, mcp_test_lock
+):
     """Test that a user can only access their own projects."""
     # Try to access the other user's project using first user's credentials
     response = await client.get(f"api/v1/mcp/project/{other_test_project.id}/sse", headers=logged_in_headers)
