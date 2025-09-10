@@ -83,7 +83,7 @@ class DoclingInlineComponent(BaseFileComponent):
         StrInput(
             name="pic_desc_prompt",
             display_name="Picture description prompt",
-            value="Describe the image in three sentences. Be consise and accurate.",
+            value="Describe the image in three sentences. Be concise and accurate.",
             info="The user prompt to use when invoking the model.",
             advanced=True,
         ),
