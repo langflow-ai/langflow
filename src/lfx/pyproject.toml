@@ -36,6 +36,7 @@ dependencies = [
     "orjson>=3.10.15",
     "asyncer>=0.0.8",
     "structlog",
+    "loguru>=0.7.3",
 ]
 
 [project.scripts]
