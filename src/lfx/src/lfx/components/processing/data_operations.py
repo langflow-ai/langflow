@@ -2,13 +2,13 @@ import ast
 from typing import TYPE_CHECKING, Any
 
 from json_repair import repair_json
-from langflow.custom import Component
-from langflow.inputs import DictInput, DropdownInput, MessageTextInput, MultilineInput, SortableListInput
-from langflow.io import DataInput, Output
-from langflow.logging import logger
-from langflow.schema import Data
-from langflow.schema.dotdict import dotdict
-from langflow.utils.component_utils import set_current_fields, set_field_display
+from lfx.custom import Component
+from lfx.inputs import DictInput, DropdownInput, MessageTextInput, SortableListInput
+from lfx.io import DataInput, Output
+from lfx.log.logger import logger
+from lfx.schema import Data
+from lfx.schema.dotdict import dotdict
+from lfx.utils.component_utils import set_current_fields, set_field_display
 
 if TYPE_CHECKING:
     from collections.abc import Callable
