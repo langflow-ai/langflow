@@ -30,11 +30,7 @@ class ExceptionWithMessageError(Exception):
 
 
 # Global state for AWS Anthropic function call processing
-_aws_anthropic_state = {
-    "processed_text": "",
-    "last_sent_text": "",
-    "in_function_call": False
-}
+_aws_anthropic_state = {"processed_text": "", "last_sent_text": "", "in_function_call": False}
 
 
 class InputDict(TypedDict):
@@ -77,11 +73,7 @@ def _clean_text_for_aws_anthropic_streaming(text: str) -> str:
 def _reset_aws_anthropic_state():
     """Reset the AWS Anthropic processing state."""
     global _aws_anthropic_state  # noqa: PLW0603
-    _aws_anthropic_state = {
-        "processed_text": "",
-        "last_sent_text": "",
-        "in_function_call": False
-    }
+    _aws_anthropic_state = {"processed_text": "", "last_sent_text": "", "in_function_call": False}
 
 
 def _is_aws_anthropic_text(text: str) -> bool:
@@ -389,7 +381,7 @@ async def handle_on_chain_stream(
 
                 # Only add the new cleaned text that hasn't been sent yet
                 if "last_sent_text" in _aws_anthropic_state:
-                    new_text = cleaned_text[len(_aws_anthropic_state["last_sent_text"]):]
+                    new_text = cleaned_text[len(_aws_anthropic_state["last_sent_text"]) :]
                 else:
                     new_text = cleaned_text
                     _aws_anthropic_state["last_sent_text"] = ""
