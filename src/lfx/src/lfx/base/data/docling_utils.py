@@ -145,7 +145,7 @@ def docling_worker(
         check_shutdown()  # Check before heavy operations
 
         pipeline_options = PdfPipelineOptions()
-        pipeline_options.do_ocr = ocr_engine != ""
+        pipeline_options.do_ocr = ocr_engine not in {"", "None"}
         if pipeline_options.do_ocr:
             ocr_factory = get_ocr_factory(
                 allow_external_plugins=False,
