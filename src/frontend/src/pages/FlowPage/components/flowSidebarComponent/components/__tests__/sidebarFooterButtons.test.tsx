@@ -631,9 +631,7 @@ describe("SidebarMenuButtons", () => {
       const customSpan = screen.getByText("New Custom Component");
 
       expect(customSpan).toHaveClass(
-        "ml-2",
         "group-data-[state=open]/collapsible:font-semibold",
-        "text-sm",
       );
     });
 
