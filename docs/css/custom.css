@@ -529,24 +529,14 @@ body {
 }
 
 /* Fixed column widths for consistent sizing */
-.markdown table th:nth-child(1),
-.markdown table td:nth-child(1) {
-  width: 25%; /* Variable column */
+.markdown table th,
+.markdown table td {
+  width: 20%;
 }
 
-.markdown table th:nth-child(2),
-.markdown table td:nth-child(2) {
-  width: 15%; /* Format column */
-}
-
-.markdown table th:nth-child(3),
-.markdown table td:nth-child(3) {
-  width: 20%; /* Default column */
-}
-
-.markdown table th:nth-child(4),
-.markdown table td:nth-child(4) {
-  width: 40%; /* Description column */
+.markdown table th:last-child,
+.markdown table td:last-child {
+  width: auto; /* Final column */
 }
 
 /* Consistent row heights */
