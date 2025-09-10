@@ -182,7 +182,7 @@ def enable_mcp_composer():
         yield True
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope="module")
 async def cleanup_mcp_composer_processes():
     """Critical fixture to ensure MCP Composer processes are cleaned up after each test.
     
@@ -199,10 +199,6 @@ async def cleanup_mcp_composer_processes():
         # Get the MCP Composer service if it exists
         mcp_composer_service = cast("MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE))
         await mcp_composer_service.stop()
-                    
-        # Also clear any global caches that might hold references
-        project_mcp_servers.clear()
-        project_sse_transports.clear()
     except Exception as e:
         # Log but don't fail the test due to cleanup issues
         print(f"Warning: Error during MCP Composer cleanup: {e}")

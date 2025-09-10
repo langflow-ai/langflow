@@ -161,7 +161,7 @@ class MCPComposerService(Service):
 
     async def _wait_for_process_exit(self, process):
         """Wait for a process to exit with polling instead of blocking wait."""
-        max_wait = 30  # Total time to wait
+        max_wait = 5  # Total time to wait
         poll_interval = 0.5
         
         for _ in range(int(max_wait / poll_interval)):
