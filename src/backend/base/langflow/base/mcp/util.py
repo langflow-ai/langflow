@@ -524,7 +524,7 @@ class MCPSessionManager:
                 # Check for cancellation periodically
                 if asyncio.current_task().cancelled():
                     raise asyncio.CancelledError()
-                    
+
                 sessions = server_data.get("sessions", {})
                 sessions_to_remove = []
 
