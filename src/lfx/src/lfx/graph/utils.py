@@ -78,7 +78,8 @@ def get_artifact_type(value, build_result) -> str:
             result = ArtifactType.MESSAGE
 
     if result == ArtifactType.UNKNOWN and (
-        isinstance(build_result, Generator) or (isinstance(value, Message) and isinstance(value.text, Generator))
+        isinstance(build_result, Generator)
+        or (isinstance(value, Message) and isinstance(value.text, Generator))
     ):
         result = ArtifactType.STREAM
 
@@ -96,12 +97,18 @@ def _vertex_to_primitive_dict(target: Vertex) -> dict:
     """Cleans the parameters of the target vertex."""
     # Removes all keys that the values aren't python types like str, int, bool, etc.
     params = {
-        key: value for key, value in target.params.items() if isinstance(value, str | int | bool | float | list | dict)
+        key: value
+        for key, value in target.params.items()
+        if isinstance(value, str | int | bool | float | list | dict)
     }
     # if it is a list we need to check if the contents are python types
     for key, value in params.items():
         if isinstance(value, list):
-            params[key] = [item for item in value if isinstance(item, str | int | bool | float | list | dict)]
+            params[key] = [
+                item
+                for item in value
+                if isinstance(item, str | int | bool | float | list | dict)
+            ]
     return params
 
 
@@ -118,7 +125,9 @@ async def log_transaction(
     """
     try:
         settings_service = get_settings_service()
-        if not settings_service or not getattr(settings_service.settings, "transactions_storage_enabled", False):
+        if not settings_service or not getattr(
+            settings_service.settings, "transactions_storage_enabled", False
+        ):
             return
 
         db_service = get_db_service()
@@ -133,7 +142,82 @@ async def log_transaction(
                 return
 
         # Log basic transaction info - concrete implementation should be in langflow
-        logger.debug(f"Transaction logged: vertex={source.id}, flow={flow_id}, status={status}")
+        logger.debug(
+            f"Transaction logged: vertex={source.id}, flow={flow_id}, status={status}"
+        )
+
+        # Best-effort persistence when running within Langflow
+        try:
+            # Lazy import to avoid hard dependency when lfx is used standalone
+            from langflow.services.database.models.transactions.model import (
+                TransactionBase as LFTransactionBase,
+            )
+            from langflow.services.database.models.transactions.crud import (
+                log_transaction as lf_log_transaction,
+            )
+        except Exception:  # noqa: BLE001
+            # Langflow not available or import error; skip DB persistence
+            return
+
+        # Build a JSON-safe inputs payload including source/target context
+        try:
+            source_args = _vertex_to_primitive_dict(source)
+        except Exception:  # noqa: BLE001
+            source_args = {}
+
+        target_id = getattr(target, "id", None) if target else None
+        try:
+            target_args = _vertex_to_primitive_dict(target) if target else {}
+        except Exception:  # noqa: BLE001
+            target_args = {}
+
+        inputs_payload = {
+            "source": getattr(source, "id", None),
+            "target": target_id,
+            "source_args": source_args,
+            "target_args": target_args,
+        }
+
+        # Enhanced output logging - capture outputs_logs when available
+        outputs_payload = {}
+        if hasattr(source, "outputs_logs") and source.outputs_logs:
+            try:
+                # outputs_logs contains rich formatted output data
+                outputs_payload = dict(source.outputs_logs)
+            except Exception:  # noqa: BLE001
+                pass
+
+        # Enhanced error logging - extract details from ComponentBuildError
+        error_details = None
+        if error:
+            error_details = str(error)
+            # Check if it's a ComponentBuildError with rich information
+            if hasattr(error, "formatted_traceback"):
+                error_details = {
+                    "message": getattr(error, "message", str(error)),
+                    "traceback": getattr(error, "formatted_traceback", ""),
+                    "type": error.__class__.__name__,
+                }
+
+        # Construct transaction model (validators handle str->UUID conversion)
+        transaction = LFTransactionBase(
+            vertex_id=str(getattr(source, "id", "")),
+            target_id=str(target_id) if target_id else None,
+            inputs=inputs_payload,
+            outputs=outputs_payload,
+            status=str(status),
+            error=str(error_details) if error_details else None,
+            flow_id=str(flow_id),
+        )
+
+        # Persist using the database service session if available
+        try:
+            from lfx.services.deps import session_scope as lfx_session_scope
+
+            async with lfx_session_scope() as session:
+                await lf_log_transaction(session, transaction)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"Skipping transaction DB persistence due to error: {exc!s}")
     except Exception as exc:  # noqa: BLE001
         logger.debug(f"Error logging transaction: {exc!s}")
 
@@ -153,12 +237,16 @@ async def log_vertex_build(
     """
     try:
         settings_service = get_settings_service()
-        if not settings_service or not getattr(settings_service.settings, "vertex_builds_storage_enabled", False):
+        if not settings_service or not getattr(
+            settings_service.settings, "vertex_builds_storage_enabled", False
+        ):
             return
 
         db_service = get_db_service()
         if db_service is None:
-            logger.debug("Database service not available, skipping vertex build logging")
+            logger.debug(
+                "Database service not available, skipping vertex build logging"
+            )
             return
 
         try:
@@ -169,7 +257,9 @@ async def log_vertex_build(
             return
 
         # Log basic vertex build info - concrete implementation should be in langflow
-        logger.debug(f"Vertex build logged: vertex={vertex_id}, flow={flow_id}, valid={valid}")
+        logger.debug(
+            f"Vertex build logged: vertex={vertex_id}, flow={flow_id}, valid={valid}"
+        )
     except Exception:  # noqa: BLE001
         logger.debug("Error logging vertex build")
 

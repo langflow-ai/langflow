@@ -1,12 +1,12 @@
-import type { ColDef, ColGroupDef } from "ag-grid-community";
-import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { convertUTCToLocalTimezone } from "@/utils/utils";
+import type { ColDef, ColGroupDef } from "ag-grid-community";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import BaseModal from "../baseModal";
 
 export default function FlowLogsModal({
@@ -41,6 +41,13 @@ export default function FlowLogsModal({
         data.rows.map((row: any) => {
           row.timestamp = convertUTCToLocalTimezone(row.timestamp);
         });
+        
+        // Sort rows by timestamp (earliest first)
+        data.rows.sort((a: any, b: any) => {
+          const timestampA = new Date(a.timestamp).getTime();
+          const timestampB = new Date(b.timestamp).getTime();
+          return timestampA - timestampB;
+        });
       }
 
       setColumns(columns.map((col) => ({ ...col, editable: true })));
@@ -53,6 +60,13 @@ export default function FlowLogsModal({
       refetch();
     }
   }, [open]);
+
+  // Refetch data when pagination parameters change
+  useEffect(() => {
+    if (open) {
+      refetch();
+    }
+  }, [pageIndex, pageSize, open, refetch]);
 
   const handlePageChange = useCallback((newPageIndex, newPageSize) => {
     setPageIndex(newPageIndex);
@@ -82,11 +96,11 @@ export default function FlowLogsModal({
           rowData={rows}
           headerHeight={rows.length === 0 ? 0 : undefined}
         ></TableComponent>
-        {!isLoading && (data?.pagination.total ?? 0) >= 10 && (
+        {!isLoading && (data?.pagination.pages ?? 0) > 1 && (
           <div className="flex justify-end px-3 py-4">
             <PaginatorComponent
-              pageIndex={data?.pagination.page ?? 1}
-              pageSize={data?.pagination.size ?? 10}
+              pageIndex={pageIndex}
+              pageSize={pageSize}
               rowsCount={[12, 24, 48, 96]}
               totalRowsCount={data?.pagination.total ?? 0}
               paginate={handlePageChange}
