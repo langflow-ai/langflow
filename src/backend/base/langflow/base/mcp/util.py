@@ -1,5 +1,4 @@
 import asyncio
-import atexit
 import contextlib
 import inspect
 import os
@@ -24,45 +23,6 @@ from sqlmodel import select
 from langflow.logging.logger import logger
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service
-
-# Global set to track all session managers for cleanup
-_global_session_managers: set = set()
-
-
-def _cleanup_all_mcp_sessions():
-    """Clean up all MCP session managers at exit to prevent subprocess hanging."""
-    if not _global_session_managers:
-        return
-
-    with contextlib.suppress(Exception):
-        # Create a new event loop for cleanup if none exists
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-
-        if loop is None:
-            # No running loop, create a new one for cleanup
-            async def cleanup_all_managers():
-                for manager in list(_global_session_managers):
-                    with contextlib.suppress(Exception):
-                        await manager.cleanup_all()
-                _global_session_managers.clear()
-
-            asyncio.run(cleanup_all_managers())
-        else:
-            # Running loop exists, schedule cleanup
-            # This should not happen in normal atexit, but handle it
-            cleanup_tasks = []
-            for manager in list(_global_session_managers):
-                with contextlib.suppress(Exception):
-                    task = asyncio.create_task(manager.cleanup_all())
-                    cleanup_tasks.append(task)
-            _global_session_managers.clear()
-
-
-# Register the cleanup function
-atexit.register(_cleanup_all_mcp_sessions)
 
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 NULLABLE_TYPE_LENGTH = 2  # Number of types in a nullable union (the type itself + null)
@@ -529,9 +489,6 @@ class MCPSessionManager:
         self._cleanup_task = None
         self._start_cleanup_task()
 
-        # Register this manager for global cleanup
-        _global_session_managers.add(self)
-
     def _start_cleanup_task(self):
         """Start the periodic cleanup task."""
         if self._cleanup_task is None or self._cleanup_task.done():
@@ -971,9 +928,6 @@ class MCPSessionManager:
         # This helps prevent the BaseSubprocessTransport.__del__ warnings
         # and async generator cleanup warnings
         await asyncio.sleep(1.0)
-
-        # Remove from global cleanup set
-        _global_session_managers.discard(self)
 
     async def _cleanup_session(self, context_id: str):
         """Backward-compat cleanup by context_id.
