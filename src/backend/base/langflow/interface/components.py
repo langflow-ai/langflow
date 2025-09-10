@@ -184,7 +184,7 @@ async def _determine_loading_strategy(settings_service: SettingsService) -> dict
 
 
 async def get_and_cache_all_types_dict(
-    _: SettingsService,
+    settings_service: SettingsService,
 ):
     """Retrieves and caches the complete dictionary of component types and templates.
 
@@ -197,12 +197,12 @@ async def get_and_cache_all_types_dict(
         await logger.adebug("Building components cache")
 
         langflow_components = await import_langflow_components()
-        # custom_components_dict = await _determine_loading_strategy(settings_service)
+        custom_components_dict = await _determine_loading_strategy(settings_service)
 
         # merge the dicts
         component_cache.all_types_dict = {
             **langflow_components["components"],
-            # **custom_components_dict,
+            **custom_components_dict,
         }
         component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
         await logger.adebug(f"Loaded {component_count} components")
