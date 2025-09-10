@@ -2,6 +2,7 @@ import ast
 from typing import TYPE_CHECKING, Any
 
 from json_repair import repair_json
+
 from lfx.custom import Component
 from lfx.inputs import DictInput, DropdownInput, MessageTextInput, SortableListInput
 from lfx.io import DataInput, Output
