@@ -3,8 +3,8 @@ from multiprocessing import Queue, get_context
 from queue import Empty
 
 from lfx.base.data import BaseFileComponent
-from lfx.base.data.docling_utils import docling_worker
-from lfx.inputs import DropdownInput
+from lfx.base.data.docling_utils import _serialize_pydantic_model, docling_worker
+from lfx.inputs import BoolInput, DropdownInput, HandleInput, StrInput
 from lfx.schema import Data
 
 
@@ -66,6 +66,26 @@ class DoclingInlineComponent(BaseFileComponent):
             options=["None", "easyocr", "tesserocr", "rapidocr", "ocrmac"],
             real_time_refresh=False,
             value="None",
+        ),
+        BoolInput(
+            name="do_picture_classification",
+            display_name="Picture classification",
+            info="If enabled, the Docling pipeline will classify the pictures type.",
+            value=False,
+        ),
+        HandleInput(
+            name="pic_desc_llm",
+            display_name="Picture description LLM",
+            info="If connected, the model to use for running the picture description task.",
+            input_types=["LanguageModel"],
+            required=False,
+        ),
+        StrInput(
+            name="pic_desc_prompt",
+            display_name="Picture description prompt",
+            value="Describe the image in three sentences. Be concise and accurate.",
+            info="The user prompt to use when invoking the model.",
+            advanced=True,
         ),
         # TODO: expose more Docling options
     ]
@@ -131,11 +151,7 @@ class DoclingInlineComponent(BaseFileComponent):
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
         try:
-            from docling.datamodel.base_models import InputFormat
-            from docling.datamodel.pipeline_options import OcrOptions, PdfPipelineOptions, VlmPipelineOptions
-            from docling.document_converter import DocumentConverter, FormatOption, PdfFormatOption
-            from docling.models.factories import get_ocr_factory
-            from docling.pipeline.vlm_pipeline import VlmPipeline
+            from docling.document_converter import DocumentConverter  # noqa: F401
         except ImportError as e:
             msg = (
                 "Docling is an optional dependency. Install with `uv pip install 'langflow[docling]'` or refer to the "
@@ -143,52 +159,29 @@ class DoclingInlineComponent(BaseFileComponent):
             )
             raise ImportError(msg) from e
 
-        # Configure the standard PDF pipeline
-        def _get_standard_opts() -> PdfPipelineOptions:
-            pipeline_options = PdfPipelineOptions()
-            pipeline_options.do_ocr = self.ocr_engine != "None"
-            if pipeline_options.do_ocr:
-                ocr_factory = get_ocr_factory(
-                    allow_external_plugins=False,
-                )
-
-                ocr_options: OcrOptions = ocr_factory.create_options(
-                    kind=self.ocr_engine,
-                )
-                pipeline_options.ocr_options = ocr_options
-            return pipeline_options
-
-        # Configure the VLM pipeline
-        def _get_vlm_opts() -> VlmPipelineOptions:
-            return VlmPipelineOptions()
-
-        # Configure the main format options and create the DocumentConverter()
-        def _get_converter() -> DocumentConverter:
-            if self.pipeline == "standard":
-                pdf_format_option = PdfFormatOption(
-                    pipeline_options=_get_standard_opts(),
-                )
-            elif self.pipeline == "vlm":
-                pdf_format_option = PdfFormatOption(pipeline_cls=VlmPipeline, pipeline_options=_get_vlm_opts())
-
-            format_options: dict[InputFormat, FormatOption] = {
-                InputFormat.PDF: pdf_format_option,
-                InputFormat.IMAGE: pdf_format_option,
-            }
-
-            return DocumentConverter(format_options=format_options)
-
         file_paths = [file.path for file in file_list if file.path]
 
         if not file_paths:
             self.log("No files to process.")
             return file_list
 
+        pic_desc_config: dict | None = None
+        if self.pic_desc_llm is not None:
+            pic_desc_config = _serialize_pydantic_model(self.pic_desc_llm)
+
         ctx = get_context("spawn")
         queue: Queue = ctx.Queue()
         proc = ctx.Process(
             target=docling_worker,
-            args=(file_paths, queue, self.pipeline, self.ocr_engine),
+            kwargs={
+                "file_paths": file_paths,
+                "queue": queue,
+                "pipeline": self.pipeline,
+                "ocr_engine": self.ocr_engine,
+                "do_picture_classification": self.do_picture_classification,
+                "pic_desc_config": pic_desc_config,
+                "pic_desc_prompt": self.pic_desc_prompt,
+            },
         )
 
         result = None

@@ -4551,6 +4551,19 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-docling"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "docling" },
+    { name = "langchain-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fb/ab/c6e01d4830b8fdaa1e68e05e44159b78febd764debf3b70c64a8c001eaab/langchain_docling-1.1.0.tar.gz", hash = "sha256:cc9df0e438f67ac4f6cc68651c76d4929d177ff42a5242f5152b8a826426d329", size = 7542, upload-time = "2025-09-10T08:11:01.535Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/00/6d/19119e5de0d7976444d5fa136ff226fc4aaa93070cbdf74c372043e6aa3c/langchain_docling-1.1.0-py3-none-any.whl", hash = "sha256:3194f481e2ced092f5c0ac18a52226a9d928f66809eee7ecfbf934a2b84c4c1d", size = 7412, upload-time = "2025-09-10T08:11:00.483Z" },
+]
+
+[[package]]
 name = "langchain-elasticsearch"
 version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -5108,6 +5121,7 @@ couchbase = [
 ]
 docling = [
     { name = "docling" },
+    { name = "langchain-docling" },
     { name = "ocrmac", marker = "sys_platform == 'darwin'" },
     { name = "rapidocr-onnxruntime" },
     { name = "tesserocr" },
@@ -5227,6 +5241,7 @@ requires-dist = [
     { name = "langchain-chroma", specifier = "==0.1.4" },
     { name = "langchain-cohere", specifier = "==0.3.3" },
     { name = "langchain-community", specifier = "~=0.3.21" },
+    { name = "langchain-docling", marker = "extra == 'docling'", specifier = ">=1.1.0" },
     { name = "langchain-elasticsearch", specifier = "==0.3.0" },
     { name = "langchain-google-calendar-tools", specifier = "==0.0.1" },
     { name = "langchain-google-community", specifier = "==2.0.3" },
