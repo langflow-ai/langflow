@@ -170,7 +170,8 @@ class MCPComposerService(Service):
             await asyncio.sleep(poll_interval)
 
         # If we get here, process didn't exit in time
-        raise asyncio.TimeoutError(f"Process {process.pid} did not exit after {max_wait} seconds")
+        msg = f"Process {process.pid} did not exit after {max_wait} seconds"
+        raise asyncio.TimeoutError(msg)
 
     def _validate_oauth_settings(self, auth_config: dict[str, Any]) -> None:
         """Validate that all required OAuth settings are present and non-empty.
