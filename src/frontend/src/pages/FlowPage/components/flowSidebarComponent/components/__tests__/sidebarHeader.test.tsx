@@ -215,8 +215,6 @@ describe("SidebarHeaderComponent", () => {
         "w-full",
         "flex-col",
         "gap-2",
-        "p-4",
-        "pb-3",
         "group-data-[collapsible=icon]:hidden",
         "border-b",
       );
