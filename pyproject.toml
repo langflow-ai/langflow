@@ -86,7 +86,7 @@ dependencies = [
     "langchain-pinecone>=0.2.8",
     "langchain-mistralai==0.2.3",
     "langchain-chroma==0.1.4",
-    "langchain-aws==0.2.7",
+    "langchain-aws>=0.2.7",
     "langchain-unstructured==0.1.5",
     "langchain-milvus==0.1.7",
     "langchain-mongodb==0.2.0",

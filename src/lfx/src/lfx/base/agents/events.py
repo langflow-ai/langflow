@@ -1,4 +1,6 @@
 # Add helper functions for each event type
+import json
+import re
 from collections.abc import AsyncIterator
 from time import perf_counter
 from typing import Any, Protocol
@@ -27,6 +29,14 @@ class ExceptionWithMessageError(Exception):
         )
 
 
+# Global state for AWS Anthropic function call processing
+_aws_anthropic_state = {
+    "processed_text": "",
+    "last_sent_text": "",
+    "in_function_call": False
+}
+
+
 class InputDict(TypedDict):
     input: str
     chat_history: list[BaseMessage]
@@ -52,9 +62,98 @@ def _calculate_duration(start_time: float) -> int:
     return result
 
 
+def _clean_text_for_aws_anthropic_streaming(text: str) -> str:
+    """Clean text by removing function call markup for streaming display."""
+    # Remove function call markup but keep the result text
+    cleaned = re.sub(r"<function_calls>.*?</function_calls>", "", text, flags=re.DOTALL)
+    # Remove any remaining function call tags
+    cleaned = re.sub(r"<[^>]*>", "", cleaned)
+    # Restore processed result text
+    cleaned = re.sub(r"__RESULT_PROCESSED__(.+?)__(.+?)__", r"The result of \1 is \2.", cleaned)
+    # Clean up extra whitespace
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def _reset_aws_anthropic_state():
+    """Reset the AWS Anthropic processing state."""
+    global _aws_anthropic_state  # noqa: PLW0603
+    _aws_anthropic_state = {
+        "processed_text": "",
+        "last_sent_text": "",
+        "in_function_call": False
+    }
+
+
+def _is_aws_anthropic_text(text: str) -> bool:
+    """Check if the text contains AWS Anthropic function call patterns."""
+    return "<function_calls>" in text or "The result of" in text
+
+
+def _process_aws_anthropic_function_calls(text: str = "") -> tuple[str, bool]:
+    """Process AWS Anthropic function calls in the accumulated text.
+
+    Args:
+        text: Additional text to add (optional, defaults to empty string)
+
+    Returns:
+        tuple: (cleaned_text, has_function_call)
+    """
+    # Add to processed text if provided
+    if text:
+        _aws_anthropic_state["processed_text"] += text
+
+    # Check for function calls
+    function_call_pattern = r"<function_calls>\s*<tool_name>([^<]+)</tool_name>\s*([^<]+)</function_calls>"
+    function_call_match = re.search(function_call_pattern, _aws_anthropic_state["processed_text"], re.DOTALL)
+
+    has_function_call = False
+    if function_call_match and not _aws_anthropic_state["in_function_call"]:
+        _aws_anthropic_state["in_function_call"] = True
+        has_function_call = True
+        # Extract tool name and params for potential future use
+        _tool_name = function_call_match.group(1).strip()
+        params_text = function_call_match.group(2).strip()
+
+        try:
+            if params_text.startswith("{") and params_text.endswith("}"):
+                _params = json.loads(params_text)
+            else:
+                _params = {"input": params_text}
+        except json.JSONDecodeError:
+            _params = {"input": params_text}
+
+        # Remove the function call from processed text to avoid reprocessing
+        _aws_anthropic_state["processed_text"] = re.sub(
+            function_call_pattern, "", _aws_anthropic_state["processed_text"], flags=re.DOTALL
+        )
+
+    # Check for function results
+    result_pattern = r"The result of (.+?) is (.+?)\."
+    result_match = re.search(result_pattern, _aws_anthropic_state["processed_text"])
+
+    if result_match:
+        operation = result_match.group(1).strip()
+        result = result_match.group(2).strip()
+
+        # Mark as processed by replacing with a placeholder to avoid reprocessing
+        # but keep the original text for streaming
+        placeholder = f"__RESULT_PROCESSED__{operation}__{result}__"
+        _aws_anthropic_state["processed_text"] = re.sub(
+            result_pattern, placeholder, _aws_anthropic_state["processed_text"]
+        )
+
+    # Clean the text for streaming
+    cleaned_text = _clean_text_for_aws_anthropic_streaming(_aws_anthropic_state["processed_text"])
+
+    return cleaned_text, has_function_call
+
+
 async def handle_on_chain_start(
     event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType, start_time: float
 ) -> tuple[Message, float]:
+    # Reset AWS Anthropic state for new conversation
+    _reset_aws_anthropic_state()
+
     # Create content blocks if they don't exist
     if not agent_message.content_blocks:
         agent_message.content_blocks = [ContentBlock(title="Agent Steps", contents=[])]
@@ -141,6 +240,18 @@ async def handle_on_chain_end(
             agent_message.content_blocks[0].contents.append(text_content)
         agent_message = await send_message_method(message=agent_message)
         start_time = perf_counter()
+    elif _aws_anthropic_state["processed_text"] and _is_aws_anthropic_text(_aws_anthropic_state["processed_text"]):
+        # Handle final AWS Anthropic processing for streaming
+        # Process any remaining accumulated text
+        cleaned_text, _ = _process_aws_anthropic_function_calls("")
+
+        # Replace the agent message text with the final cleaned text
+        if cleaned_text:
+            agent_message.text = cleaned_text
+            _aws_anthropic_state["last_sent_text"] = cleaned_text
+            agent_message.properties.state = "complete"
+            agent_message = await send_message_method(message=agent_message)
+            start_time = perf_counter()
     return agent_message, start_time
 
 
@@ -268,7 +379,28 @@ async def handle_on_chain_stream(
     elif isinstance(data_chunk, AIMessageChunk):
         output_text = _extract_output_text(data_chunk.content)
         if output_text and isinstance(agent_message.text, str):
-            agent_message.text += output_text
+            # Always accumulate text for AWS Anthropic processing
+            _aws_anthropic_state["processed_text"] += output_text
+
+            # Check if we have AWS Anthropic patterns in the accumulated text
+            if _is_aws_anthropic_text(_aws_anthropic_state["processed_text"]):
+                # Process AWS Anthropic function calls on accumulated text
+                cleaned_text, _ = _process_aws_anthropic_function_calls("")
+
+                # Only add the new cleaned text that hasn't been sent yet
+                if "last_sent_text" in _aws_anthropic_state:
+                    new_text = cleaned_text[len(_aws_anthropic_state["last_sent_text"]):]
+                else:
+                    new_text = cleaned_text
+                    _aws_anthropic_state["last_sent_text"] = ""
+
+                if new_text:
+                    agent_message.text += new_text
+                    _aws_anthropic_state["last_sent_text"] = cleaned_text
+            else:
+                # Regular text processing - add the new chunk directly
+                agent_message.text += output_text
+
             agent_message.properties.state = "partial"
             agent_message = await send_message_method(message=agent_message)
         if not agent_message.text:
