@@ -17,7 +17,11 @@ import {
   trackDataLoaded,
   trackFlowBuild,
 } from "@/customization/utils/analytics";
-import { migrateExistingFlow, needsMigration } from "@/utils/aliasUtils";
+import {
+  assignAliasToNewComponent,
+  migrateExistingFlow,
+  needsMigration,
+} from "@/utils/aliasUtils";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import type { LogsLogType, VertexBuildTypeAPI } from "../types/api";
@@ -484,6 +488,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         useGlobalVariablesStore.getState().unavailableFields,
         useGlobalVariablesStore.getState().globalVariablesEntries,
       );
+
+      // Generate alias for the pasted component
+      if (newNode.type === "genericNode") {
+        assignAliasToNewComponent(newNode, newNodes);
+      }
 
       // Add the new node to the list of nodes in state
       newNodes = newNodes

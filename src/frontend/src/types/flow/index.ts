@@ -78,6 +78,23 @@ export type EdgeDataType = {
   targetHandle: targetHandleType;
 };
 
+// Utility functions for computing effective alias from JSON data
+export function getEffectiveAlias(nodeData: NodeDataType): string {
+  return nodeData.node.alias || nodeData.node.display_name;
+}
+
+export function getEffectiveAliasFromNode(node: GenericNodeType): string {
+  return node.data.node.alias || node.data.node.display_name;
+}
+
+export function getEffectiveAliasFromAnyNode(node: AllNodeType): string {
+  if (node.type === "genericNode") {
+    return getEffectiveAliasFromNode(node);
+  }
+  // For note nodes or other types, fallback to a reasonable display
+  return node.data?.node?.display_name || "Unknown";
+}
+
 // FlowStyleType is the type of the style object that is used to style the
 // Flow card with an emoji and a color.
 export type FlowStyleType = {

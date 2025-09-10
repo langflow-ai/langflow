@@ -4,6 +4,7 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Input } from "@/components/ui/input";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { getEffectiveAliasFromAnyNode } from "@/types/flow";
 import { cn } from "@/utils/utils";
 
 export default function NodeName({
@@ -25,9 +26,15 @@ export default function NodeName({
   toggleEditNameDescription: () => void;
   setHasChangedNodeDescription: (hasChanged: boolean) => void;
 }) {
-  const [nodeName, setNodeName] = useState<string>(display_name ?? "");
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const setNode = useFlowStore((state) => state.setNode);
+  const node = useFlowStore((state) => state.getNode(nodeId));
+
+  // Get alias for badge display
+  const componentAlias = node ? getEffectiveAliasFromAnyNode(node) : null;
+  const aliasNumber = componentAlias?.match(/#(\d+)$/)?.[1];
+
+  const [nodeName, setNodeName] = useState<string>(display_name ?? "");
 
   useEffect(() => {
     if (selected && editNameDescription) {
@@ -98,6 +105,13 @@ export default function NodeName({
           <span className={cn("cursor-grab truncate text-sm")}>
             {display_name}
           </span>
+          {aliasNumber && (
+            <ShadTooltip content={`Alias: ${componentAlias}`}>
+              <div className="flex h-5 w-auto min-w-[18px] items-center justify-center rounded border border-border bg-background px-1.5 text-xs font-semibold text-foreground">
+                #{aliasNumber}
+              </div>
+            </ShadTooltip>
+          )}
         </div>
       </div>
       {beta && (
