@@ -1,15 +1,14 @@
 import asyncio
-from copy import deepcopy
 import os
 import tempfile
 import uuid
+from copy import deepcopy
 from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from anyio import Path
 from httpx import AsyncClient
-from langflow.custom.directory_reader.utils import abuild_custom_component_list_from_path
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
     detect_github_url,
