@@ -6,6 +6,8 @@ This test suite validates the MCP utility functions including:
 - Utility functions for name sanitization and schema conversion
 """
 
+import asyncio
+import contextlib
 import shutil
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -815,3 +817,26 @@ class TestMCPSseClientUnit:
             assert result is not None
             # Should have cleaned up the failed session
             mock_manager._cleanup_session.assert_called_once_with("test_context")
+
+async def test_cleanup_task_cancellation():
+    """Test that the periodic cleanup task properly cancels during cleanup_all."""
+    manager = MCPSessionManager()
+    
+    try:
+        # Verify the cleanup task is running
+        assert manager._cleanup_task is not None
+        assert not manager._cleanup_task.done()
+        
+        # Call cleanup_all which should cancel the task
+        await manager.cleanup_all()
+        
+        # Verify the task was properly cancelled/finished
+        assert manager._cleanup_task.done()
+        
+        # The cleanup_all should complete without hanging
+    finally:
+        # Ensure proper cleanup even if test fails
+        if not manager._cleanup_task.done():
+            manager._cleanup_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await manager._cleanup_task

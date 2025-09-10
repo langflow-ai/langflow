@@ -498,41 +498,58 @@ class MCPSessionManager:
 
     async def _periodic_cleanup(self):
         """Periodically clean up idle sessions."""
-        while True:
-            try:
-                await asyncio.sleep(SESSION_CLEANUP_INTERVAL)
-                await self._cleanup_idle_sessions()
-            except asyncio.CancelledError:
-                break
-            except (RuntimeError, KeyError, ClosedResourceError, ValueError, asyncio.TimeoutError) as e:
-                # Handle common recoverable errors without stopping the cleanup loop
-                await logger.awarning(f"Error in periodic cleanup: {e}")
+        try:
+            while True:
+                try:
+                    await asyncio.sleep(SESSION_CLEANUP_INTERVAL)
+                    await self._cleanup_idle_sessions()
+                except asyncio.CancelledError:
+                    # Re-raise cancellation to exit the loop
+                    raise
+                except (RuntimeError, KeyError, ClosedResourceError, ValueError, asyncio.TimeoutError) as e:
+                    # Handle common recoverable errors without stopping the cleanup loop
+                    await logger.awarning(f"Error in periodic cleanup: {e}")
+        except asyncio.CancelledError:
+            await logger.adebug("Periodic cleanup task cancelled")
+        finally:
+            await logger.adebug("Periodic cleanup task finished")
 
     async def _cleanup_idle_sessions(self):
         """Clean up sessions that have been idle for too long."""
-        current_time = asyncio.get_event_loop().time()
-        servers_to_remove = []
+        try:
+            current_time = asyncio.get_event_loop().time()
+            servers_to_remove = []
 
-        for server_key, server_data in self.sessions_by_server.items():
-            sessions = server_data.get("sessions", {})
-            sessions_to_remove = []
+            for server_key, server_data in self.sessions_by_server.items():
+                # Check for cancellation periodically
+                if asyncio.current_task().cancelled():
+                    raise asyncio.CancelledError()
+                    
+                sessions = server_data.get("sessions", {})
+                sessions_to_remove = []
 
-            for session_id, session_info in sessions.items():
-                if current_time - session_info["last_used"] > SESSION_IDLE_TIMEOUT:
-                    sessions_to_remove.append(session_id)
+                for session_id, session_info in sessions.items():
+                    if current_time - session_info["last_used"] > SESSION_IDLE_TIMEOUT:
+                        sessions_to_remove.append(session_id)
 
-            # Clean up idle sessions
-            for session_id in sessions_to_remove:
-                await logger.ainfo(f"Cleaning up idle session {session_id} for server {server_key}")
-                await self._cleanup_session_by_id(server_key, session_id)
+                # Clean up idle sessions
+                for session_id in sessions_to_remove:
+                    # Check for cancellation before each cleanup operation
+                    if asyncio.current_task().cancelled():
+                        raise asyncio.CancelledError()
+                    await logger.ainfo(f"Cleaning up idle session {session_id} for server {server_key}")
+                    await self._cleanup_session_by_id(server_key, session_id)
 
-            # Remove server entry if no sessions left
-            if not sessions:
-                servers_to_remove.append(server_key)
+                # Remove server entry if no sessions left
+                if not sessions:
+                    servers_to_remove.append(server_key)
 
-        # Clean up empty server entries
-        for server_key in servers_to_remove:
-            del self.sessions_by_server[server_key]
+            # Clean up empty server entries
+            for server_key in servers_to_remove:
+                del self.sessions_by_server[server_key]
+        except asyncio.CancelledError:
+            await logger.adebug("Idle session cleanup cancelled")
+            raise
 
     def _get_server_key(self, connection_params, transport_type: str) -> str:
         """Generate a consistent server key based on connection parameters."""
@@ -856,11 +873,16 @@ class MCPSessionManager:
 
     async def cleanup_all(self):
         """Clean up all sessions."""
-        # Cancel periodic cleanup task
+        # Cancel periodic cleanup task with timeout
         if self._cleanup_task and not self._cleanup_task.done():
             self._cleanup_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._cleanup_task
+            try:
+                await asyncio.wait_for(self._cleanup_task, timeout=2.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError):
+                # Task was cancelled or didn't finish in time - that's expected
+                pass
+            except Exception as e:
+                await logger.awarning(f"Unexpected error while cancelling cleanup task: {e}")
 
         # Clean up all sessions
         for server_key in list(self.sessions_by_server.keys()):
