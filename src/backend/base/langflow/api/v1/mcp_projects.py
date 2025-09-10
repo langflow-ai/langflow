@@ -175,18 +175,20 @@ async def verify_project_auth_conditional(
 current_project_ctx: ContextVar[UUID | None] = ContextVar("current_project_ctx", default=None)
 
 # Create a mapping of project-specific SSE transports
-project_sse_transports = {}
+# Do not use this directly, use the get_project_sse functions
+_project_sse_transports = {}
+_project_sse_transports_lock = asyncio.Lock()
 
-
-def get_project_sse(project_id: UUID | None) -> SseServerTransport:
+async def get_project_sse(project_id: UUID | None) -> SseServerTransport:
     """Get or create an SSE transport for a specific project."""
     if not project_id:
         raise HTTPException(status_code=400, detail="Project ID is required to start MCP server")
 
-    project_id_str = str(project_id)
-    if project_id_str not in project_sse_transports:
-        project_sse_transports[project_id_str] = SseServerTransport(f"/api/v1/mcp/project/{project_id_str}/")
-    return project_sse_transports[project_id_str]
+    async with _project_sse_transports_lock:
+        project_id_str = str(project_id)
+        if project_id_str not in _project_sse_transports:
+            _project_sse_transports[project_id_str] = SseServerTransport(f"/api/v1/mcp/project/{project_id_str}/")
+        return _project_sse_transports[project_id_str]
 
 
 @router.get("/{project_id}")
@@ -284,8 +286,8 @@ async def handle_project_sse(
 ):
     """Handle SSE connections for a specific project."""
     # Get project-specific SSE transport and MCP server
-    sse = get_project_sse(project_id)
-    project_server = get_project_mcp_server(project_id)
+    sse = await get_project_sse(project_id)
+    project_server = await get_project_mcp_server(project_id)
     await logger.adebug("Project MCP server name: %s", project_server.server.name)
 
     # Set context variables
@@ -333,7 +335,7 @@ async def handle_project_messages(
     project_token = current_project_ctx.set(project_id)
 
     try:
-        sse = get_project_sse(project_id)
+        sse = await get_project_sse(project_id)
         await sse.handle_post_message(request.scope, request.receive, request._send)
     except BrokenResourceError as e:
         await logger.ainfo("Project MCP Server disconnected for project %s", project_id)
@@ -1062,19 +1064,21 @@ class ProjectMCPServer:
 
 
 # Cache of project MCP servers
-project_mcp_servers = {}
+# Do not use this directly, use the get_project_mcp_server function
+_project_mcp_servers = {}
+_project_mcp_servers_lock = asyncio.Lock()
 
-
-def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:
+async def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:
     """Get or create an MCP server for a specific project."""
     if project_id is None:
         error_message = "Project ID cannot be None when getting project MCP server"
         raise ValueError(error_message)
 
-    project_id_str = str(project_id)
-    if project_id_str not in project_mcp_servers:
-        project_mcp_servers[project_id_str] = ProjectMCPServer(project_id)
-    return project_mcp_servers[project_id_str]
+    async with _project_mcp_servers_lock:
+        project_id_str = str(project_id)
+        if project_id_str not in _project_mcp_servers:
+            _project_mcp_servers[project_id_str] = ProjectMCPServer(project_id)
+        return _project_mcp_servers[project_id_str]
 
 
 async def register_project_with_composer(project: Folder):
@@ -1158,8 +1162,8 @@ async def init_mcp_servers():
                             f"authentication because MCP Composer is disabled"
                         )
 
-                    get_project_sse(project.id)
-                    get_project_mcp_server(project.id)
+                    await get_project_sse(project.id)
+                    await get_project_mcp_server(project.id)
 
                     # Only register with MCP Composer if OAuth authentication is configured
                     if get_settings_service().settings.mcp_composer_enabled and project.auth_settings:

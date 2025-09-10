@@ -3,14 +3,16 @@ from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+from pydantic import SecretStr
 import pytest
 from fastapi import HTTPException, status
 from httpx import AsyncClient
 from langflow.api.v1.mcp_projects import (
     get_project_mcp_server,
     get_project_sse,
-    project_mcp_servers,
-    project_sse_transports,
+    init_mcp_servers,
+    _project_mcp_servers,
+    _project_sse_transports,
 )
 from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
 from langflow.services.database.models.flow import Flow
@@ -22,8 +24,11 @@ from langflow.services.utils import initialize_services
 from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 
-# Mark all tests in this module as asyncio
+# Mark all tests in this module as asyncio 
 pytestmark = pytest.mark.asyncio
+
+# Global lock to ensure sequential access to shared MCP state
+_mcp_cache_lock = asyncio.Lock()
 
 
 @pytest.fixture
@@ -194,8 +199,6 @@ def cleanup_mcp_composer_processes():
         import asyncio
         from langflow.services.deps import get_service
         from langflow.services.schema import ServiceType
-
-        from langflow.api.v1.mcp_projects import project_mcp_servers, project_sse_transports
         
         async def _async_cleanup():
             try:
@@ -605,94 +608,74 @@ async def test_update_project_auth_settings_encryption(
 
 async def test_project_sse_creation(user_test_project):
     """Test that SSE transport and MCP server are correctly created for a project."""
-    # Test getting an SSE transport for the first time
-    project_id = user_test_project.id
-    project_id_str = str(project_id)
+    async with _mcp_cache_lock:
+        # Test getting an SSE transport for the first time
+        project_id = user_test_project.id
+        project_id_str = str(project_id)
 
-    # Ensure there's no SSE transport for this project yet
-    if project_id_str in project_sse_transports:
-        del project_sse_transports[project_id_str]
+        # Ensure there's no SSE transport for this project yet
+        if project_id_str in _project_sse_transports:
+            del _project_sse_transports[project_id_str]
 
-    # Get an SSE transport
-    sse_transport = get_project_sse(project_id)
+        # Get an SSE transport
+        sse_transport = await get_project_sse(project_id)
 
-    # Verify the transport was created correctly
-    assert project_id_str in project_sse_transports
-    assert sse_transport is project_sse_transports[project_id_str]
-    assert isinstance(sse_transport, SseServerTransport)
+        # Verify the transport was created correctly
+        assert project_id_str in _project_sse_transports
+        assert sse_transport is _project_sse_transports[project_id_str]
+        assert isinstance(sse_transport, SseServerTransport)
 
-    # Test getting an MCP server for the first time
-    if project_id_str in project_mcp_servers:
-        del project_mcp_servers[project_id_str]
+        # Test getting an MCP server for the first time
+        if project_id_str in _project_mcp_servers:
+            del _project_mcp_servers[project_id_str]
 
-    # Get an MCP server
-    mcp_server = get_project_mcp_server(project_id)
+        # Get an MCP server
+        mcp_server = await get_project_mcp_server(project_id)
 
-    # Verify the server was created correctly
-    assert project_id_str in project_mcp_servers
-    assert mcp_server is project_mcp_servers[project_id_str]
-    assert mcp_server.project_id == project_id
-    assert mcp_server.server.name == f"langflow-mcp-project-{project_id}"
+        # Verify the server was created correctly
+        assert project_id_str in _project_mcp_servers
+        assert mcp_server is _project_mcp_servers[project_id_str]
+        assert mcp_server.project_id == project_id
+        assert mcp_server.server.name == f"langflow-mcp-project-{project_id}"
 
-    # Test that getting the same SSE transport and MCP server again returns the cached instances
-    sse_transport2 = get_project_sse(project_id)
-    mcp_server2 = get_project_mcp_server(project_id)
+        # Test that getting the same SSE transport and MCP server again returns the cached instances
+        sse_transport2 = await get_project_sse(project_id)
+        mcp_server2 = await get_project_mcp_server(project_id)
 
-    assert sse_transport2 is sse_transport
-    assert mcp_server2 is mcp_server
-    # Yield control to the event loop to satisfy async usage in this test
-    await asyncio.sleep(0)
-
-
-# async def test_init_mcp_servers(user_test_project, other_test_project):
-#     """Test the initialization of MCP servers for all projects."""
-#     # Clear existing caches
-#     project_sse_transports.clear()
-#     project_mcp_servers.clear()
-
-#     # Test the initialization function
-#     await init_mcp_servers()
-
-#     # Verify that both test projects have SSE transports and MCP servers initialized
-#     project1_id = str(user_test_project.id)
-#     project2_id = str(other_test_project.id)
-
-#     # Both projects should have SSE transports created
-#     assert project1_id in project_sse_transports
-#     assert project2_id in project_sse_transports
-
-#     # Both projects should have MCP servers created
-#     assert project1_id in project_mcp_servers
-#     assert project2_id in project_mcp_servers
-
-#     # Verify the correct configuration
-#     assert isinstance(project_sse_transports[project1_id], SseServerTransport)
-#     assert isinstance(project_sse_transports[project2_id], SseServerTransport)
-
-#     assert project_mcp_servers[project1_id].project_id == user_test_project.id
-#     assert project_mcp_servers[project2_id].project_id == other_test_project.id
+        assert sse_transport2 is sse_transport
+        assert mcp_server2 is mcp_server
+        # Yield control to the event loop to satisfy async usage in this test
+        await asyncio.sleep(0)
 
 
-# async def test_init_mcp_servers_error_handling():
-#     """Test that init_mcp_servers handles errors correctly and continues initialization."""
-#     # Clear existing caches
-#     project_sse_transports.clear()
-#     project_mcp_servers.clear()
+async def test_init_mcp_servers(user_test_project, other_test_project):
+    """Test the initialization of MCP servers for all projects."""
+    async with _mcp_cache_lock:
+        # Clear existing caches (safe with lock)
+        _project_sse_transports.clear()
+        _project_mcp_servers.clear()
 
-#     # Create a mock to simulate an error when initializing one project
-#     original_get_project_sse = get_project_sse
+        # Test the initialization function
+        await init_mcp_servers()
 
-#     def mock_get_project_sse(project_id):
-#         # Raise an exception for the first project only
-#         if not project_sse_transports:  # Only for the first project
-#             msg = "Test error for project SSE creation"
-#             raise ValueError(msg)
-#         return original_get_project_sse(project_id)
+        # Verify that both test projects have SSE transports and MCP servers initialized
+        project1_id = str(user_test_project.id)
+        project2_id = str(other_test_project.id)
 
-#     # Apply the patch
-#     with patch("langflow.api.v1.mcp_projects.get_project_sse", side_effect=mock_get_project_sse):
-#         # This should not raise any exception, as the error should be caught
-#         await init_mcp_servers()
+        # Both projects should have SSE transports created
+        assert project1_id in _project_sse_transports
+        assert project2_id in _project_sse_transports
+
+        # Both projects should have MCP servers created
+        assert project1_id in _project_mcp_servers
+        assert project2_id in _project_mcp_servers
+
+        # Verify the correct configuration
+        assert isinstance(_project_sse_transports[project1_id], SseServerTransport)
+        assert isinstance(_project_sse_transports[project2_id], SseServerTransport)
+
+        assert _project_mcp_servers[project1_id].project_id == user_test_project.id
+        assert _project_mcp_servers[project2_id].project_id == other_test_project.id
 
 
 @pytest.mark.asyncio
@@ -728,7 +711,7 @@ async def test_mcp_longterm_token_succeeds_with_headless_fallback():
     settings_service.auth_settings.AUTO_LOGIN = False
     # Clear any configured credentials
     settings_service.auth_settings.SUPERUSER = ""
-    settings_service.auth_settings.SUPERUSER_PASSWORD = ""  # SecretStr handled in service
+    settings_service.auth_settings.SUPERUSER_PASSWORD = SecretStr("")  # SecretStr handled in service
 
     # Re-initialize core services which now create the headless superuser fallback
     await initialize_services()
