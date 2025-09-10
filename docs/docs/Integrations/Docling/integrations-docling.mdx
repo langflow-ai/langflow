@@ -49,9 +49,9 @@ This example demonstrates how to use Docling components to split a PDF in a flow
     The **Docling** component loads the document, and the **Export DoclingDocument** component converts the `DoclingDocument` into the format you select. This example converts the document to Markdown, with images represented as placeholders.
     The **Split Text** component will split the Markdown into chunks for the vector database to store in the next part of the flow.
 
-2. Connect a [**Chroma DB** vector store component](/components-vector-stores#chroma-db) to the **Split Text** component's **Chunks** output.
-3. Connect an [**Embedding Model** component](/components-embedding-models) to the **Chroma DB** component's **Embedding** port and a **Chat Output** component to view the extracted [`DataFrame`](/data-types#dataframe).
-4. Add your OpenAI API key to the **Embedding Model** component.
+2. Connect a [**Chroma DB** vector store component](/bundles-chroma#chroma-db) to the **Split Text** component's **Chunks** output.
+3. Connect an [embedding model component](/components-embedding-models) to the **Chroma DB** component's **Embedding** port and a **Chat Output** component to view the extracted [`DataFrame`](/data-types#dataframe).
+4. In the embedding model component, select your preferred model, provide credentials, and configure other settings as needed.
 
     ![Docling and ExportDoclingDocument extracting and splitting text to vector database](./integrations-docling-split-text.png)
 
@@ -70,6 +70,8 @@ The **Docling** language model component ingest documents, and then uses Docling
 
 It outputs `files`, which is the processed files with `DoclingDocument` data.
 
+For more information, see the [Docling IBM models project repository](https://github.com/docling-project/docling-ibm-models).
+
 #### Docling parameters
 
 | Name | Type | Description |
@@ -80,9 +82,11 @@ It outputs `files`, which is the processed files with `DoclingDocument` data.
 
 ### Docling Serve
 
-The **Docling Serve** component ingests documents, and then uses Docling to process them by connecting to your instance of Docling Serve.
+The **Docling Serve** component runs Docling as an API service.
 
 It outputs `files`, which is the processed files with `DoclingDocument` data.
+
+For more information, see the [Docling serve project repository](https://github.com/docling-project/docling-serve).
 
 #### Docling Serve parameters
 
@@ -101,6 +105,8 @@ The **Chunk DoclingDocument** component uses the `DoclingDocument` chunkers to s
 
 It outputs the chunked documents as a [`DataFrame`](/data-types#dataframe).
 
+For more information, see the [Docling core project repository](https://github.com/docling-project/docling-core).
+
 #### Chunk DoclingDocument parameters
 
 | Name | Type | Description |
@@ -118,6 +124,8 @@ It outputs the chunked documents as a [`DataFrame`](/data-types#dataframe).
 The **Export DoclingDocument** component exports `DoclingDocument` to Markdown, HTML, and other formats.
 
 It can output the exported data as either [`Data`](/data-types#data) or [`DataFrame`](/data-types#dataframe).
+
+For more information, see the [Docling core project repository](https://github.com/docling-project/docling-core).
 
 #### Export DoclingDocument parameters
 

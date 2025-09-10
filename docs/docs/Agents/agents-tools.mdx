@@ -46,16 +46,16 @@ If not selected, the action is disabled.
 * **Name**: A human-readable string name for the action, such as `Fetch Content`. This cannot be changed.
 
 * **Description**: A human-readable description of the action's purpose, such as `Fetch content from web pages recursively`.
+To edit this value, double-click the action's row to open the edit pane.
+Changes are saved automatically when you click out of the field or close the dialog.
 
-    To edit this value, double-click the description cell to open the edit pane.
-    Then, edit the **Description** field.
-    Changes are saved automatically when you click out of the field or close the dialog.
+* **Slug**: An encoded name for the action, usually the same as the name but in snake case, such as `fetch_content`.
+To edit this value, double-click the action's row to open the edit pane.
+Changes are saved automatically when you click out of the field or close the dialog.
 
-* **Slug**: An encoded name for the action, usually the same as the **Name** but in snake case, such as `fetch_content`.
-
-    To edit this value, double-click the action's row to open the edit pane.
-    Then, edit the **Slug** field.
-    Changes are saved automatically when you click out of the field or close the dialog.
+Some actions allow you to provide fixed values for their inputs.
+Typically, you want to leave these blank so the agent can provide its own values.
+However, you might use a fixed value if you're trying to debug an agent's behavior or your use case requires a fixed input for an action.
 
 ## Use an agent as a tool
 
@@ -84,7 +84,7 @@ To try this for yourself, add an additional agent to the **Simple Agent** templa
 
 An agent can use [custom components](/components-custom-components) as tools.
 
-1. To add a custom component to an agent flow, click **New Custom Component** in the **Components** menu.
+1. To add a custom component to an agent flow, click **New Custom Component** in the <Icon name="Component" aria-hidden="true" /> **Core components** or <Icon name="Blocks" aria-hidden="true" /> **Bundles** menus.
 
 2. Enter Python code into the **Code** pane to create the custom component.
 

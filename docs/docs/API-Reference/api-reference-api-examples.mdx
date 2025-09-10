@@ -5,6 +5,7 @@ slug: /api-reference-api-examples
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import McpIcon from '@site/static/logos/mcp-icon.svg';
 
 You can use the Langflow API for programmatic interactions with Langflow, such as the following:
 
@@ -169,7 +170,7 @@ curl -X GET \
   "auto_saving": true,
   "auto_saving_interval": 1000,
   "health_check_max_retries": 5,
-  "max_file_size_upload": 100
+  "max_file_size_upload": 1024
 }
 ```
 
@@ -208,6 +209,9 @@ Other endpoints are helpful for specific use cases, such as administration and f
   * POST `/v1/run/{flow_id_or_name}`: Run a flow.
   * POST `/v1/run/advanced/{flow_id}`: Advanced run with explicit `inputs`, `outputs`, `tweaks`, and optional `session_id`.
   * POST `/v1/webhook/{flow_id_or_name}`: Trigger a flow via webhook payload.
+
+* [OpenAI Responses API](/api-openai-responses):
+  * POST `/v1/responses`: Execute flows using an OpenAI-compatible request format.
 
 * Deployment details:
   * GET `/v1/version`: Return Langflow version. See [Get version](/api-reference-api-examples#get-version).
@@ -310,6 +314,14 @@ The following endpoints are for managing Langflow MCP servers, both Langflow-hos
   * PATCH `/v1/mcp/project/{project_id}`: Update MCP settings for flows and project auth settings.
   * POST `/v1/mcp/project/{project_id}/install`: Install MCP client config for Cursor/Windsurf/Claude (local only).
   * GET `/v1/mcp/project/{project_id}/installed`: Check which clients have MCP config installed.
+
+:::tip
+You can also manage MCP servers and clients in the Langflow visual editor:
+
+* To manage all connections to external MCP servers, click <McpIcon /> **MCP servers** when editing a flow, or click your profile icon, select **Settings**, and then click **MCP Servers**.
+
+* To manage the MCP servers for your Langflow projects, click **MCP Server** on the [**Projects** page](/concepts-flows#projects), or, when editing a flow, click **Share**, and then select **MCP Server**.
+:::
 
 </TabItem>
 <TabItem value="Codebase contribution" label="Codebase development">

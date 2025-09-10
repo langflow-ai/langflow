@@ -3,8 +3,7 @@ title: Troubleshoot Langflow
 slug: /troubleshoot
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
 
 This page provides troubleshooting advice for issues you might encounter when using Langflow or contributing to Langflow.
 
@@ -12,10 +11,11 @@ This page provides troubleshooting advice for issues you might encounter when us
 
 As Langflow development continues, components are often recategorized or deprecated for better alignment or to prepare for new components.
 
-If a component appears to be missing from the expected location on the **Components** menu, try the following:
+If a component appears to be missing from the <Icon name="Component" aria-hidden="true" /> **Core components** and  menus, try the following:
 
-* Search for the component or check other component categories, including [bundles](/components-bundle-components).
-* [Expose legacy components](/concepts-components#component-menus), which are hidden by default.
+* <Icon name="Search" aria-hidden="true" /> **Search** for the component.
+* Check other component categories and <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
+* Check [legacy components](/concepts-components#legacy-components), which are hidden by default.
 * Check the [Changelog](https://github.com/langflow-ai/langflow/releases/latest) for component changes in recent releases.
 * Make sure the component isn't already present in your flow if it is a single-use component.
 
