@@ -80,7 +80,7 @@ class GmailLoaderComponent(Component):
                 message = re.sub(r"http\S+|www\S+|https\S+", "", message, flags=re.MULTILINE)
 
                 # Remove email addresses
-                message = re.sub(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", "", message)
+                message = re.sub(r"[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}", "", message)
 
                 # Remove special characters and excessive whitespace
                 message = re.sub(r"[^A-Za-z0-9\s]+", " ", message)
