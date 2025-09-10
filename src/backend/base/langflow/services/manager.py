@@ -108,11 +108,11 @@ class ServiceManager:
 
     async def _force_cleanup_service(self, service) -> None:
         """Force cleanup of service resources when normal teardown times out."""
-        service_name = getattr(service, 'name', str(type(service).__name__))
+        service_name = getattr(service, "name", str(type(service).__name__))
         await logger.awarning(f"Attempting force cleanup of {service_name}")
-        
+
         # Try to cancel common background task attributes
-        task_attrs = ['worker_task', 'log_package_version_task', '_cleanup_task', '_task', 'background_task']
+        task_attrs = ["worker_task", "log_package_version_task", "_cleanup_task", "_task", "background_task"]
         for attr_name in task_attrs:
             if hasattr(service, attr_name):
                 task = getattr(service, attr_name)
@@ -122,13 +122,13 @@ class ServiceManager:
                         await logger.adebug(f"Cancelled {attr_name} for {service_name}")
                     except Exception as e:
                         await logger.awarning(f"Failed to cancel {attr_name} for {service_name}: {e}")
-        
+
         # Try to close common connection attributes
-        conn_attrs = ['client', '_client', 'session', '_session']
+        conn_attrs = ["client", "_client", "session", "_session"]
         for attr_name in conn_attrs:
             if hasattr(service, attr_name):
                 conn = getattr(service, attr_name)
-                if conn and hasattr(conn, 'aclose'):
+                if conn and hasattr(conn, "aclose"):
                     try:
                         await conn.aclose()
                         await logger.adebug(f"Closed {attr_name} for {service_name}")
