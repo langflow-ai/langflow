@@ -141,7 +141,7 @@ def add_edge(source, target, from_output, to_input):
     }
 
 
-@pytest.mark.skip("TODO: SKIPPING TEST")
+@pytest.mark.asyncio
 async def test_refresh_starter_projects():
     all_types = await get_and_cache_all_types_dict(get_settings_service())
     copy_all_types = deepcopy(all_types)
