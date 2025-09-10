@@ -303,14 +303,17 @@ def get_lifespan(*, fix_migration=False, version=None):
                 # Step 2: Cleaning Up Services
                 with shutdown_progress.step(2):
                     try:
-                        await asyncio.wait_for(teardown_services(), timeout=10)
+                        await asyncio.wait_for(teardown_services(), timeout=30)
                     except asyncio.TimeoutError:
-                        await logger.awarning("Teardown services timed out.")
+                        await logger.awarning("Teardown services timed out after 30s.")
 
                 # Step 3: Clearing Temporary Files
                 with shutdown_progress.step(3):
                     temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
-                    await asyncio.gather(*temp_dir_cleanups)
+                    try:
+                        await asyncio.wait_for(asyncio.gather(*temp_dir_cleanups), timeout=10)
+                    except asyncio.TimeoutError:
+                        await logger.awarning("Temporary file cleanup timed out after 10s.")
 
                 # Step 4: Finalizing Shutdown
                 with shutdown_progress.step(4):

@@ -98,11 +98,42 @@ class ServiceManager:
                 # Add timeout to prevent individual service teardowns from hanging
                 await asyncio.wait_for(service.teardown(), timeout=15.0)
             except asyncio.TimeoutError:
-                await logger.aerror(f"Service {service.name} teardown timed out")
+                await logger.aerror(f"Service {service.name} teardown timed out after 15s")
+                # Try to force cleanup of common background resources
+                await self._force_cleanup_service(service)
             except Exception as exc:  # noqa: BLE001
                 await logger.aexception(exc)
         self.services = {}
         self.factories = {}
+
+    async def _force_cleanup_service(self, service) -> None:
+        """Force cleanup of service resources when normal teardown times out."""
+        service_name = getattr(service, 'name', str(type(service).__name__))
+        await logger.awarning(f"Attempting force cleanup of {service_name}")
+        
+        # Try to cancel common background task attributes
+        task_attrs = ['worker_task', 'log_package_version_task', '_cleanup_task', '_task', 'background_task']
+        for attr_name in task_attrs:
+            if hasattr(service, attr_name):
+                task = getattr(service, attr_name)
+                if task and isinstance(task, asyncio.Task) and not task.done():
+                    try:
+                        task.cancel()
+                        await logger.adebug(f"Cancelled {attr_name} for {service_name}")
+                    except Exception as e:
+                        await logger.awarning(f"Failed to cancel {attr_name} for {service_name}: {e}")
+        
+        # Try to close common connection attributes
+        conn_attrs = ['client', '_client', 'session', '_session']
+        for attr_name in conn_attrs:
+            if hasattr(service, attr_name):
+                conn = getattr(service, attr_name)
+                if conn and hasattr(conn, 'aclose'):
+                    try:
+                        await conn.aclose()
+                        await logger.adebug(f"Closed {attr_name} for {service_name}")
+                    except Exception as e:
+                        await logger.awarning(f"Failed to close {attr_name} for {service_name}: {e}")
 
     @staticmethod
     def get_factories():

@@ -84,7 +84,9 @@ class ProcessManager:
             if self.webapp_process.is_alive():
                 logger.warning("Process didn't terminate gracefully, killing it.")
                 self.webapp_process.kill()
-                self.webapp_process.join()
+                self.webapp_process.join(timeout=10)
+                if self.webapp_process.is_alive():
+                    logger.warning("Process still alive after kill() and 10s timeout. Proceeding with shutdown.")
             self.print_farewell_message()
 
         sys.exit(0)
