@@ -23,7 +23,7 @@ const SIDEBAR_WIDTH = "19rem";
 const SIDEBAR_WIDTH_ICON = "4rem";
 const SEGMENTED_SIDEBAR_ICON_WIDTH = "40px";
 
-export type SidebarSection = "search" | "components" | "bundles" | "mcp";
+export type SidebarSection = "search" | "components" | "bundles" | "mcp" | "flows";
 
 // Helper function to get cookie value
 function getCookie(name: string): string | null {
@@ -51,7 +51,8 @@ function getInitialSidebarSection(
     cookieValue === "search" ||
     cookieValue === "components" ||
     cookieValue === "bundles" ||
-    cookieValue === "mcp"
+    cookieValue === "mcp" ||
+    cookieValue === "flows"
   ) {
     return cookieValue;
   }

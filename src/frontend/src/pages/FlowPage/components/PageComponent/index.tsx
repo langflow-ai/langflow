@@ -485,6 +485,55 @@ export default function Page({
       if (grabbingElement.length > 0) {
         document.body.removeChild(grabbingElement[0]);
       }
+      
+      // Check for flow data first
+      if (event.dataTransfer.types.includes("application/reactflow")) {
+        try {
+          const data = JSON.parse(event.dataTransfer.getData("application/reactflow"));
+          if (data.type === "flow_data" && data.flow) {
+            takeSnapshot();
+            
+            // Get position where the flow was dropped and convert to flow coordinates
+            const position = reactFlowInstance?.screenToFlowPosition({
+              x: event.clientX,
+              y: event.clientY,
+            });
+            
+            console.log("Flow drag detected, flow ID:", data.flow.id);
+            
+            // Fetch complete flow data via API (same approach as the working code)
+            import("@/controllers/API/api").then(({ api }) => {
+              import("@/controllers/API/helpers/constants").then(({ getURL }) => {
+                api.get(`${getURL("FLOWS")}/${data.flow.id}`)
+                  .then((response) => {
+                    console.log("Fetched complete flow data for drag:", response.data);
+                    if (response.data && response.data.data && response.data.data.nodes) {
+                      const selection = {
+                        nodes: response.data.data.nodes,
+                        edges: response.data.data.edges || [],
+                      };
+                      console.log("Using fetched data with paste:", selection.nodes.length, "nodes");
+                      paste(selection, position);
+                    } else {
+                      throw new Error("Fetched flow data is invalid");
+                    }
+                  })
+                  .catch((error) => {
+                    console.error("Failed to fetch complete flow data:", error);
+                    setErrorData({
+                      title: "Error loading flow",
+                      list: ["Failed to load complete flow data"],
+                    });
+                  });
+              });
+            });
+            return;
+          }
+        } catch (error) {
+          console.error("Error handling flow drag:", error);
+        }
+      }
+      
       if (event.dataTransfer.types.some((type) => isSupportedNodeTypes(type))) {
         takeSnapshot();
 
@@ -523,7 +572,7 @@ export default function Page({
         });
       }
     },
-    [takeSnapshot, addComponent],
+    [takeSnapshot, addComponent, paste, reactFlowInstance],
   );
 
   const onEdgeUpdateStart = useCallback(() => {

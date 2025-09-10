@@ -44,6 +44,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Bundles",
     tooltip: "Bundles",
   },
+  {
+    id: "flows",
+    icon: "workflow",
+    label: "Flows",
+    tooltip: "Flows",
+  },
 ];
 
 export default function SidebarSegmentedNav() {

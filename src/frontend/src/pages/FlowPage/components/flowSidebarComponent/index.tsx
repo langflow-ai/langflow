@@ -35,6 +35,7 @@ import type { APIClassType } from "../../../../types/api";
 import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";
+import FlowsSidebarGroup from "./components/flowsSidebarGroup";
 import McpSidebarGroup from "./components/McpSidebarGroup";
 import MemoizedSidebarGroup from "./components/sidebarBundles";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
@@ -490,6 +491,9 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const showMcp =
     (ENABLE_NEW_SIDEBAR && activeSection === "mcp") ||
     (hasSearchInput && hasMcpComponents && ENABLE_NEW_SIDEBAR);
+  const showFlows =
+    (ENABLE_NEW_SIDEBAR && activeSection === "flows") ||
+    (hasSearchInput && ENABLE_NEW_SIDEBAR);
 
   return (
     <Sidebar
@@ -598,6 +602,21 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                         showSearchConfigTrigger={
                           activeSection === "bundles" ||
                           (!showComponents && !showMcp)
+                        }
+                        showConfig={showConfig}
+                        setShowConfig={setShowConfig}
+                      />
+                    )}
+                    {showFlows && (
+                      <FlowsSidebarGroup
+                        nodeColors={nodeColors}
+                        onDragStart={onDragStart}
+                        openCategories={openCategories}
+                        setOpenCategories={setOpenCategories}
+                        search={search}
+                        showSearchConfigTrigger={
+                          activeSection === "flows" ||
+                          (!showComponents && !showMcp && !showBundles)
                         }
                         showConfig={showConfig}
                         setShowConfig={setShowConfig}
