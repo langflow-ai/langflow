@@ -2667,7 +2667,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "0.3.75"
+                    "version": "0.3.76"
                   },
                   {
                     "name": "pydantic",

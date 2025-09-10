@@ -748,7 +748,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_text_splitters",
-                    "version": "0.3.9"
+                    "version": "0.3.11"
                   },
                   {
                     "name": "lfx",
@@ -3357,7 +3357,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.75"
+                    "version": "0.3.76"
                   },
                   {
                     "name": "lfx",
@@ -4163,7 +4163,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.75"
+                    "version": "0.3.76"
                   },
                   {
                     "name": "lfx",
