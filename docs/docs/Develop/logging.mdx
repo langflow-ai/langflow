@@ -24,28 +24,10 @@ The default config directory location depends on your operating system and insta
 - **macOS Desktop**:`/Users/<username>/Library/Logs/com.Langflow`
 - **macOS OSS**:`/Users/<username>/Library/Caches/langflow`
 - **Windows Desktop**:`C:\Users\<username>\AppData\Roaming\com.Langflow\cache`
-- **OSS Windows/Linux/WSL (`uv pip install`)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/cache`
-- **OSS Windows/Linux/WSL (`git clone`)**: `<path_to_clone>/src/backend/base/langflow/cache`
 
 To customize log storage, see [Configure log options](#configure-log-options).
 
-## View logs in real-time
-
-To monitor Langflow logs as they are generated, you can use the `tail -f` command to follow the log file:
-
-1. Change to your [Langflow config directory](#log-storage):
-    ```bash
-    cd /Users/<username>/Library/Caches/langflow
-    ```
-
-2. Tail the main log file:
-    ```bash
-    tail -f langflow.log
-    ```
-
-    If you don't see new log entries, check that Langflow is running and generating logs. You can also check the terminal where you started Langflow to see if logs are being displayed there.
-
-## Configure log storage options
+### Configure log storage options
 
 Use [Langflow environment variables](/environment-variables) to configure logging options in your Langflow `.env` file, and then start Langflow with `uv run langflow run --env-file .env`.
 
@@ -64,15 +46,49 @@ For example, `LANGFLOW_LOG_FILE=path/to/logfile.log`.
     * `LANGFLOW_LOG_ENV=container_csv`: Outputs CSV-formatted plain text to stdout.
     * `LANGFLOW_LOG_ENV=default` or unset: Outputs prettified output with [RichHandler](https://rich.readthedocs.io/en/stable/reference/logging.html).
 
-* `LANGFLOW_PRETTY_LOGS`: Controls whether logs are formatted with colors and pretty printing (default: `true`). Set to `false` to disable pretty formatting.
-
-* `LANGFLOW_LOG_FORMAT`: Sets a custom log format for pretty printing. When set, uses `KeyValueRenderer` instead of the default ConsoleRenderer. Log file rotation is automatically enabled with a 10MB size limit and 5 backup files. This cannot be configured via environment variables.
-
-    * Time-based rotation: "1 day", "12 hours", "1 week"
-    * Size-based rotation: "10 MB", "1 GB"
-    * Disable rotation: "None" (log files will grow without limit)
-
 A complete example `.env` file with logging values is available in the [Langflow repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
+
+## View logs in real-time
+
+To monitor Langflow logs as they are generated, you can use the `tail -f` command to follow the log file:
+
+1. Change to your [Langflow config directory](#log-storage):
+
+    <Tabs groupId="cd-command">
+      <TabItem value="macOS" label="macOS" default>
+
+        ```bash
+        cd /Users/<username>/Library/Caches/langflow
+        ```
+
+      </TabItem>
+      <TabItem value="Windows" label="Windows">
+        ```cmd
+        cd C:\Users\<username>\AppData\Roaming\com.Langflow\cache
+        ```
+
+      </TabItem>
+    </Tabs>
+
+2. Tail the main log file:
+
+    <Tabs groupId="tail-command">
+      <TabItem value="macOS" label="macOS" default>
+
+        ```bash
+        tail -f langflow.log
+        ```
+
+      </TabItem>
+      <TabItem value="Windows" label="Windows">
+        ```cmd
+        Get-Content -Wait -Path langflow.log
+        ```
+
+      </TabItem>
+    </Tabs>
+
+    If you don't see new log entries, check that Langflow is running and generating logs. You can also check the terminal where you started Langflow to see if logs are being displayed there.
 
 ## Flow and component logs
 
