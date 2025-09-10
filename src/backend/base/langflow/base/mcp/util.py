@@ -831,6 +831,11 @@ class MCPSessionManager:
                     try:
                         await session.aclose()
                         await logger.adebug("Successfully closed session %s using aclose()", session_id)
+                    except RuntimeError as e:
+                        if "asynchronous generator is already running" in str(e):
+                            await logger.adebug("Session %s async generator already running, skipping aclose", session_id)
+                        else:
+                            await logger.adebug("Error closing session %s with aclose(): %s", session_id, e)
                     except Exception as e:  # noqa: BLE001
                         await logger.adebug("Error closing session %s with aclose(): %s", session_id, e)
 
@@ -862,9 +867,14 @@ class MCPSessionManager:
                 if not task.done():
                     task.cancel()
                     try:
-                        await task
-                    except asyncio.CancelledError:
+                        await asyncio.wait_for(task, timeout=2.0)
+                    except (asyncio.CancelledError, asyncio.TimeoutError):
                         await logger.ainfo(f"Cancelled task for session {session_id}")
+                    except RuntimeError as e:
+                        if "asynchronous generator is already running" in str(e):
+                            await logger.adebug(f"Async generator cleanup warning for session {session_id}")
+                        else:
+                            raise
         except Exception as e:  # noqa: BLE001
             await logger.awarning(f"Error cleaning up session {session_id}: {e}")
         finally:
@@ -908,12 +918,17 @@ class MCPSessionManager:
         for task in list(self._background_tasks):
             if not task.done():
                 task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await task
+                with contextlib.suppress(asyncio.CancelledError, RuntimeError):
+                    # Use wait_for to prevent hanging on async generator cleanup
+                    try:
+                        await asyncio.wait_for(task, timeout=2.0)
+                    except asyncio.TimeoutError:
+                        pass
 
-        # Give a bit more time for subprocess transports to clean up
+        # Give extra time for subprocess transports and async generators to clean up
         # This helps prevent the BaseSubprocessTransport.__del__ warnings
-        await asyncio.sleep(0.5)
+        # and async generator cleanup warnings
+        await asyncio.sleep(1.0)
 
     async def _cleanup_session(self, context_id: str):
         """Backward-compat cleanup by context_id.
