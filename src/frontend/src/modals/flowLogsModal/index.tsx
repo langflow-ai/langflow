@@ -1,3 +1,6 @@
+import type { ColDef, ColGroupDef } from "ag-grid-community";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import LoadingComponent from "@/components/common/loadingComponent";
 import PaginatorComponent from "@/components/common/paginatorComponent";
@@ -5,9 +8,6 @@ import TableComponent from "@/components/core/parameterRenderComponent/component
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { convertUTCToLocalTimezone } from "@/utils/utils";
-import type { ColDef, ColGroupDef } from "ag-grid-community";
-import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import BaseModal from "../baseModal";
 
 export default function FlowLogsModal({
@@ -37,15 +37,16 @@ export default function FlowLogsModal({
   useEffect(() => {
     if (data) {
       const { columns, rows } = data;
-      
+
       // Convert timestamps to local timezone format (backend handles sorting)
-      const processedRows = rows?.length > 0 
-        ? rows.map((row: any) => ({
-            ...row,
-            timestamp: convertUTCToLocalTimezone(row.timestamp),
-          }))
-        : rows;
-      
+      const processedRows =
+        rows?.length > 0
+          ? rows.map((row: any) => ({
+              ...row,
+              timestamp: convertUTCToLocalTimezone(row.timestamp),
+            }))
+          : rows;
+
       setRows(processedRows);
       setColumns(columns.map((col) => ({ ...col, editable: true })));
     }
@@ -87,7 +88,7 @@ export default function FlowLogsModal({
             rowData={rows}
             headerHeight={rows.length === 0 ? 0 : undefined}
           ></TableComponent>
-          
+
           {/* Loading overlay */}
           {isLoading && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -95,7 +96,7 @@ export default function FlowLogsModal({
             </div>
           )}
         </div>
-        
+
         {!isLoading && (data?.pagination.pages ?? 0) > 1 && (
           <div className="flex justify-end px-3 py-4">
             <PaginatorComponent
