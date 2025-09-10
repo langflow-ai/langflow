@@ -492,6 +492,7 @@ body {
   margin: 1.5rem 0;
   overflow: scroll;
   scrollbar-width: none;
+  table-layout: fixed;
 }
 
 /* Table header */
@@ -519,10 +520,39 @@ body {
   vertical-align: top;
   border-right: var(--ifm-table-border-width) solid var(--ifm-table-border-color);
   border-left: none;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .markdown table td:last-child {
   border: none;
+}
+
+/* Fixed column widths for consistent sizing */
+.markdown table th:nth-child(1),
+.markdown table td:nth-child(1) {
+  width: 25%; /* Variable column */
+}
+
+.markdown table th:nth-child(2),
+.markdown table td:nth-child(2) {
+  width: 15%; /* Format column */
+}
+
+.markdown table th:nth-child(3),
+.markdown table td:nth-child(3) {
+  width: 20%; /* Default column */
+}
+
+.markdown table th:nth-child(4),
+.markdown table td:nth-child(4) {
+  width: 40%; /* Description column */
+}
+
+/* Consistent row heights */
+.markdown table tbody tr {
+  height: auto;
+  min-height: 2.2rem;
 }
 
 .markdown table tbody tr:last-child td {
