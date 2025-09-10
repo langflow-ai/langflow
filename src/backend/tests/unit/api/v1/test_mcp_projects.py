@@ -664,7 +664,7 @@ async def test_init_mcp_servers_error_handling():
 @pytest.mark.asyncio
 async def test_mcp_longterm_token_fails_without_superuser():
     """When AUTO_LOGIN is false and no superuser exists, creating a long-term token should raise 400.
-    
+
     This simulates a clean DB with AUTO_LOGIN disabled and without provisioning a superuser.
     """
     settings_service = get_settings_service()
@@ -687,7 +687,7 @@ async def test_mcp_longterm_token_fails_without_superuser():
 @pytest.mark.skip("MCP Projects can only create long-term tokens if AUTO_LOGIN is enabled")
 async def test_mcp_longterm_token_succeeds_with_headless_fallback():
     """When AUTO_LOGIN is false and no credentials are provided.
-    
+
     The headless fallback should create an internal superuser so MCP can mint a token without raising 400.
     """
     settings_service = get_settings_service()
