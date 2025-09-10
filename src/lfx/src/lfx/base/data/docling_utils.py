@@ -76,6 +76,7 @@ def _unwrap_secrets(obj):
 def _dump_with_secrets(model: BaseModel):
     return _unwrap_secrets(model.model_dump(mode="python", round_trip=True))
 
+
 def _serialize_pydantic_model(model: BaseModel):
     return {
         "__class_path__": f"{model.__class__.__module__}.{model.__class__.__name__}",
@@ -191,7 +192,7 @@ def docling_worker(
         pipeline_options.do_picture_classification = do_picture_classification
 
         if pic_desc_config:
-            pic_desc_llm: "BaseChatModel" = _deserialize_pydantic_model(pic_desc_config)
+            pic_desc_llm: BaseChatModel = _deserialize_pydantic_model(pic_desc_config)
 
             logger.info("Docling enabling the picture description stage.")
             pipeline_options.do_picture_description = True
