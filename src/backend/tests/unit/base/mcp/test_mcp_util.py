@@ -301,7 +301,7 @@
 #         assert instance.foo == "abc"
 #         assert instance.bar == 1
 
-#         with pytest.raises(Exception):  # noqa: B017, PT011
+#         with pytest.raises(Exception):
 #             model_class(bar=1)  # missing required field
 
 #     @pytest.mark.asyncio
@@ -341,7 +341,7 @@
 #             def __init__(self, flows: list[DummyFlow]):
 #                 self._flows = flows
 
-#             async def exec(self, stmt):  # noqa: ARG002
+#             async def exec(self, stmt):
 #                 return DummyExec(self._flows)
 
 #         user_id = "123e4567-e89b-12d3-a456-426614174000"

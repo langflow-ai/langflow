@@ -555,7 +555,7 @@
 #     data = response.json()
 
 #     # SecretStr fields are masked in the response for security
-#     assert data["auth_settings"]["oauth_client_secret"] == "**********"  # noqa: S105
+#     assert data["auth_settings"]["oauth_client_secret"] == "**********"
 #     assert data["auth_settings"]["oauth_client_id"] == "test-client-id"
 #     assert data["auth_settings"]["auth_type"] == "oauth"
 
@@ -565,7 +565,7 @@
 #     async with session_scope() as session:
 #         project = await session.get(Folder, user_test_project.id)
 #         decrypted_settings = decrypt_auth_settings(project.auth_settings)
-#         assert decrypted_settings["oauth_client_secret"] == "test-oauth-secret-value-456"  # noqa: S105
+#         assert decrypted_settings["oauth_client_secret"] == "test-oauth-secret-value-456"
 
 
 # async def test_project_sse_creation(user_test_project):
@@ -671,7 +671,7 @@
 
 #     # Ensure no superuser exists in DB
 #     async with get_db_service().with_session() as session:
-#         result = await session.exec(select(User).where(User.is_superuser == True))  # noqa: E712
+#         result = await session.exec(select(User).where(User.is_superuser == True))
 #         users = result.all()
 #         for user in users:
 #             await session.delete(user)
