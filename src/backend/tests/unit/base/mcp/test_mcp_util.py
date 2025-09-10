@@ -7,7 +7,6 @@ This test suite validates the MCP utility functions including:
 """
 
 import asyncio
-import contextlib
 import shutil
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -21,20 +20,21 @@ from langflow.base.mcp.util import MCPSessionManager, MCPSseClient, MCPStdioClie
 async def cleanup_mcp_sessions():
     """Auto-fixture to ensure all MCP sessions are cleaned up after each test."""
     yield  # Let the test run
-    
+
     # After each test, clean up any remaining MCP sessions
     try:
         # Get all active session managers and clean them up
         import gc
+
         for obj in gc.get_objects():
             if isinstance(obj, MCPSessionManager):
                 try:
                     await obj.cleanup_all()
                     # Give cleanup task time to properly cancel
                     await asyncio.sleep(0.1)
-                    
+
                     # Wait for any background tasks to finish
-                    if hasattr(obj, '_background_tasks'):
+                    if hasattr(obj, "_background_tasks"):
                         for task in list(obj._background_tasks):
                             if not task.done():
                                 task.cancel()
@@ -58,12 +58,12 @@ class TestMCPSessionManager:
         finally:
             # Ensure thorough cleanup after test
             await manager.cleanup_all()
-            
+
             # Give cleanup task time to properly cancel
             await asyncio.sleep(0.1)
-            
+
             # Check for any remaining background tasks and cancel them
-            if hasattr(manager, '_background_tasks'):
+            if hasattr(manager, "_background_tasks"):
                 for task in list(manager._background_tasks):
                     if not task.done():
                         task.cancel()
@@ -887,9 +887,9 @@ async def test_cleanup_task_cancellation():
             await manager.cleanup_all()
             # Give cleanup task time to properly cancel
             await asyncio.sleep(0.1)
-            
+
             # Check for any remaining background tasks and cancel them
-            if hasattr(manager, '_background_tasks'):
+            if hasattr(manager, "_background_tasks"):
                 for task in list(manager._background_tasks):
                     if not task.done():
                         task.cancel()
