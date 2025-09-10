@@ -3,16 +3,15 @@ from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from pydantic import SecretStr
 import pytest
 from fastapi import HTTPException, status
 from httpx import AsyncClient
 from langflow.api.v1.mcp_projects import (
+    _project_mcp_servers,
+    _project_sse_transports,
     get_project_mcp_server,
     get_project_sse,
     init_mcp_servers,
-    _project_mcp_servers,
-    _project_sse_transports,
 )
 from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
 from langflow.services.database.models.flow import Flow
@@ -22,9 +21,10 @@ from langflow.services.deps import get_db_service, get_settings_service, session
 from langflow.services.mcp_composer.service import MCPComposerService
 from langflow.services.utils import initialize_services
 from mcp.server.sse import SseServerTransport
+from pydantic import SecretStr
 from sqlmodel import select
 
-# Mark all tests in this module as asyncio 
+# Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio
 
 # Global lock to ensure sequential access to shared MCP state
@@ -197,9 +197,10 @@ def cleanup_mcp_composer_processes():
     # After the test completes, forcibly clean up any MCP Composer processes
     try:
         import asyncio
+
         from langflow.services.deps import get_service
         from langflow.services.schema import ServiceType
-        
+
         async def _async_cleanup():
             try:
                 # Get the MCP Composer service if it exists

@@ -179,6 +179,7 @@ current_project_ctx: ContextVar[UUID | None] = ContextVar("current_project_ctx",
 _project_sse_transports = {}
 _project_sse_transports_lock = asyncio.Lock()
 
+
 async def get_project_sse(project_id: UUID | None) -> SseServerTransport:
     """Get or create an SSE transport for a specific project."""
     if not project_id:
@@ -1067,6 +1068,7 @@ class ProjectMCPServer:
 # Do not use this directly, use the get_project_mcp_server function
 _project_mcp_servers = {}
 _project_mcp_servers_lock = asyncio.Lock()
+
 
 async def get_project_mcp_server(project_id: UUID | None) -> ProjectMCPServer:
     """Get or create an MCP server for a specific project."""
