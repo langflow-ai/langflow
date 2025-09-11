@@ -188,14 +188,13 @@ For more information, see the MCP documentation for your client, such as [Cursor
 
 Each [Langflow project](/concepts-flows#projects) has its own MCP server with it's own MCP server authentication settings.
 
-Langflow MCP servers support these authentication types.
 
-To configure authentication for a Langflow MCP server, go to the **Projects** page in Langflow, click the **MCP Server** tab, click <Icon name="Fingerprint" aria-hidden="true"/> **Add Auth**, and then select your preferred authentication method:
+To configure authentication for a Langflow MCP server, go to the **Projects** page in Langflow, click the **MCP Server** tab, click <Icon name="Fingerprint" aria-hidden="true"/> **Edit Auth**, and then select your preferred authentication method:
 
 <Tabs groupId="auth-type">
 <TabItem value="API key" label="API key">
 
-When authenticating your MCP server with an Langflow API key, the code template in your project's **MCP Server** tab automatically includes the `--headers` and `x-api-key` arguments.
+When authenticating your MCP server with an Langflow API key, your project's MCP server **JSON** code snippets automatically include the `--headers` and `x-api-key` arguments.
 
 Click <Icon name="key" aria-hidden="true"/> **Generate API key** to automatically insert a new Langflow API key into the code template.
 Alternatively, you can replace `YOUR_API_KEY` with an existing Langflow API key.
