@@ -6,6 +6,10 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException, status
 from httpx import AsyncClient
+from mcp.server.sse import SseServerTransport
+from pydantic import SecretStr
+from sqlmodel import select
+
 from langflow.api.v1.mcp_projects import (
     _project_mcp_servers,
     _project_sse_transports,
@@ -19,9 +23,6 @@ from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.services.utils import initialize_services
-from mcp.server.sse import SseServerTransport
-from pydantic import SecretStr
-from sqlmodel import select
 
 if TYPE_CHECKING:
     from langflow.services.mcp_composer.service import MCPComposerService

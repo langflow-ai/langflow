@@ -64,6 +64,7 @@ class ProcessManager:
         # Don't call shutdown() directly in signal handler to avoid interrupting cleanup
         # Instead, set a flag and let the main process handle it
         import threading
+
         threading.Thread(target=self.shutdown, daemon=True).start()
 
     # params are required for signal handlers, even if they are not used
@@ -77,7 +78,7 @@ class ProcessManager:
     def shutdown(self):
         """Gracefully shutdown the webapp process."""
         import os
-        
+
         if self.webapp_process and self.webapp_process.is_alive():
             # Just terminate the process - the actual shutdown progress is handled
             # by the FastAPI lifespan context in main.py
@@ -96,8 +97,8 @@ class ProcessManager:
 
         # Check if we're in a test environment (look for pytest in the call stack)
         # to avoid sys.exit() during test cleanup
-        in_test = any('pytest' in frame.filename for frame in inspect.stack())
-        if not in_test and 'PYTEST_CURRENT_TEST' not in os.environ:
+        in_test = any("pytest" in frame.filename for frame in inspect.stack())
+        if not in_test and "PYTEST_CURRENT_TEST" not in os.environ:
             sys.exit(0)
 
     def print_farewell_message(self) -> None:
