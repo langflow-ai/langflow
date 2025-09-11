@@ -105,7 +105,7 @@ class SmartRouterComponent(Component):
                         display_name=route_category,
                         name=f"category_{i + 1}_result",
                         method="process_case",
-                        group_outputs="True",
+                        group_outputs=True,
                     )
                 )
             # Add default output only if enabled
