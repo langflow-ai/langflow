@@ -147,7 +147,7 @@ On startup, Langflow imports the environment variables from your `.env` file, as
 
 ## Supported environment variables {#supported-variables}
 
-Langflow supports many environment variables for configuration. They are organized by category below for easier reference.
+The following tables list the environment variables supported by Langflow.
 
 ### Server configuration
 
@@ -274,6 +274,8 @@ For detailed information about how global and environment variables interact, se
 | `LANGFLOW_PROMETHEUS_ENABLED` | Boolean | False | Expose Prometheus metrics. |
 | `LANGFLOW_PROMETHEUS_PORT` | Integer | `9090` | Set the port on which Langflow exposes Prometheus metrics. |
 
+For environment variables for specific monitoring service providers, see the Langflow monitoring integration guides, such as [Langfuse](/integrations-langfuse).
+
 ### MCP (Model Context Protocol) {#mcp}
 
 For detailed information about MCP server configuration, see [Use Langflow as an MCP server](/mcp-server#mcp-server-configuration).
@@ -287,9 +289,7 @@ For detailed information about MCP server configuration, see [Use Langflow as an
 
 ### Telemetry
 
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `DO_NOT_TRACK` | Boolean | False | Whether to report [Langflow telemetry data](/contributing-telemetry). If true, Langflow telemetry is disabled. |
+For telemetry configuration options, see [Telemetry](/contributing-telemetry).
 
 For telemetry configuration options, see [Telemetry](/contributing-telemetry).
 
