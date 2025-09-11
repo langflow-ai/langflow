@@ -413,8 +413,8 @@ def run(
             # SIGINT should be handled by the signal handler, but leaving here for safety
             logger.warning("KeyboardInterrupt caught in main thread")
         finally:
-            process_manager.shutdown()
-            sys.exit(0)
+            if not process_manager.shutdown_in_progress:
+                process_manager.shutdown()
 
 
 def is_port_in_use(port, host="localhost"):
