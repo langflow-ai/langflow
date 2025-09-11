@@ -32,9 +32,7 @@ router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
 
 @router.get("/builds")
-async def get_vertex_builds(
-    flow_id: Annotated[UUID, Query()], session: DbSession
-) -> VertexBuildMapModel:
+async def get_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSession) -> VertexBuildMapModel:
     try:
         vertex_builds = await get_vertex_builds_by_flow_id(session, flow_id)
         return VertexBuildMapModel.from_list_of_dicts(vertex_builds)
@@ -43,9 +41,7 @@ async def get_vertex_builds(
 
 
 @router.delete("/builds", status_code=204)
-async def delete_vertex_builds(
-    flow_id: Annotated[UUID, Query()], session: DbSession
-) -> None:
+async def delete_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSession) -> None:
     try:
         await delete_vertex_builds_by_flow_id(session, flow_id)
         await session.commit()
@@ -97,16 +93,12 @@ async def get_messages(
             col = getattr(MessageTable, order_by).asc()
             stmt = stmt.order_by(col)
         messages = await session.exec(stmt)
-        return [
-            MessageResponse.model_validate(d, from_attributes=True) for d in messages
-        ]
+        return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.delete(
-    "/messages", status_code=204, dependencies=[Depends(get_current_active_user)]
-)
+@router.delete("/messages", status_code=204, dependencies=[Depends(get_current_active_user)])
 async def delete_messages(message_ids: list[UUID], session: DbSession) -> None:
     try:
         await session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore[attr-defined]
@@ -152,9 +144,7 @@ async def update_message(
 )
 async def update_session_id(
     old_session_id: str,
-    new_session_id: Annotated[
-        str, Query(..., description="The new session ID to update to")
-    ],
+    new_session_id: Annotated[str, Query(..., description="The new session ID to update to")],
     session: DbSession,
 ) -> list[MessageResponse]:
     try:
@@ -165,9 +155,7 @@ async def update_session_id(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     if not messages:
-        raise HTTPException(
-            status_code=404, detail="No messages found with the given session ID"
-        )
+        raise HTTPException(status_code=404, detail="No messages found with the given session ID")
 
     try:
         # Update all messages with the new session ID
@@ -180,9 +168,7 @@ async def update_session_id(
         message_responses = []
         for message in messages:
             await session.refresh(message)
-            message_responses.append(
-                MessageResponse.model_validate(message, from_attributes=True)
-            )
+            message_responses.append(MessageResponse.model_validate(message, from_attributes=True))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
