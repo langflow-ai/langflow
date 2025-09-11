@@ -1,13 +1,19 @@
+import importlib
 import signal
 import sys
 import traceback
 from contextlib import suppress
+from typing import TYPE_CHECKING
 
 from docling_core.types.doc import DoclingDocument
+from pydantic import BaseModel, SecretStr, TypeAdapter
 
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
+
+if TYPE_CHECKING:
+    from langchain_core.language_models.chat_models import BaseChatModel
 
 
 def extract_docling_documents(data_inputs: Data | list[Data] | DataFrame, doc_key: str) -> list[DoclingDocument]:
@@ -57,7 +63,45 @@ def extract_docling_documents(data_inputs: Data | list[Data] | DataFrame, doc_ke
     return documents
 
 
-def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str):
+def _unwrap_secrets(obj):
+    if isinstance(obj, SecretStr):
+        return obj.get_secret_value()
+    if isinstance(obj, dict):
+        return {k: _unwrap_secrets(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_unwrap_secrets(v) for v in obj]
+    return obj
+
+
+def _dump_with_secrets(model: BaseModel):
+    return _unwrap_secrets(model.model_dump(mode="python", round_trip=True))
+
+
+def _serialize_pydantic_model(model: BaseModel):
+    return {
+        "__class_path__": f"{model.__class__.__module__}.{model.__class__.__name__}",
+        "config": _dump_with_secrets(model),
+    }
+
+
+def _deserialize_pydantic_model(data: dict):
+    module_name, class_name = data["__class_path__"].rsplit(".", 1)
+    module = importlib.import_module(module_name)
+    cls = getattr(module, class_name)
+    adapter = TypeAdapter(cls)
+    return adapter.validate_python(data["config"])
+
+
+def docling_worker(
+    *,
+    file_paths: list[str],
+    queue,
+    pipeline: str,
+    ocr_engine: str,
+    do_picture_classification: bool,
+    pic_desc_config: dict | None,
+    pic_desc_prompt: str,
+):
     """Worker function for processing files with Docling in a separate process."""
     # Signal handling for graceful shutdown
     shutdown_requested = False
@@ -106,6 +150,7 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
         from docling.document_converter import DocumentConverter, FormatOption, PdfFormatOption
         from docling.models.factories import get_ocr_factory
         from docling.pipeline.vlm_pipeline import VlmPipeline
+        from langchain_docling.picture_description import PictureDescriptionLangChainOptions
 
         # Check for shutdown after imports
         check_shutdown()
@@ -143,6 +188,19 @@ def docling_worker(file_paths: list[str], queue, pipeline: str, ocr_engine: str)
                 kind=ocr_engine,
             )
             pipeline_options.ocr_options = ocr_options
+
+        pipeline_options.do_picture_classification = do_picture_classification
+
+        if pic_desc_config:
+            pic_desc_llm: BaseChatModel = _deserialize_pydantic_model(pic_desc_config)
+
+            logger.info("Docling enabling the picture description stage.")
+            pipeline_options.do_picture_description = True
+            pipeline_options.allow_external_plugins = True
+            pipeline_options.picture_description_options = PictureDescriptionLangChainOptions(
+                llm=pic_desc_llm,
+                prompt=pic_desc_prompt,
+            )
         return pipeline_options
 
     # Configure the VLM pipeline
