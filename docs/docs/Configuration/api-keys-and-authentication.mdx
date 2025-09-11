@@ -272,46 +272,28 @@ For more information, see [Start a Langflow server with authentication enabled](
 
 ### LANGFLOW_CORS_ORIGINS and LANGFLOW_CORS_ALLOW_CREDENTIALS {#cors-configuration-for-authentication}
 
-Cross-Origin Resource Sharing (CORS) configuration affects how authentication credentials are handled when your Langflow frontend and backend are served from different origins (domains, ports, or protocols).
+Cross-Origin Resource Sharing (CORS) configuration controls how authentication credentials are handled when your Langflow frontend and backend are served from different origins.
 
-The default settings below allow all origins (`*`) and disable credentials for security.
+The current default configuration allows all origins (`*`) with credentials enabled, which can be a security risk in production environments.
 
 ```text
 LANGFLOW_CORS_ORIGINS=*
-LANGFLOW_CORS_ALLOW_CREDENTIALS=false
+LANGFLOW_CORS_ALLOW_CREDENTIALS=true
 ```
 
-With the default settings:
+With the current default settings:
 - Any website can make requests to your Langflow API
-- Authentication cookies and authorization headers are not sent with requests
-- API requests must include the `x-api-key` header for authentication
+- Authentication cookies and authorization headers are sent with requests
+- API requests can use either the `x-api-key` header or session-based authentication
 
-For production deployments where your frontend and backend are on different origins, configure CORS to allow specific origins and enable credentials:
+Consider specifying exact origins in `LANGFLOW_CORS_ORIGINS` for production deployments.
 
 ```text
 LANGFLOW_CORS_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
 LANGFLOW_CORS_ALLOW_CREDENTIALS=true
 ```
 
-With this configuration:
-- Only your specified domains can make requests to the server
-- Cookies and authorization headers are sent with requests
-- Supports session-based authentication in addition to API key authentication
-
-With CORS credentials enabled, you can use JWT authentication for your backend requests with a JWT token from your authentication service.
-
-```bash
-curl -X POST \
-  "https://your-langflow-backend.com/api/v1/run/your-flow-id" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer **YOUR_JWT_TOKEN**" \
-  -d '{
-    "inputs": {
-      "text": "Hello, Langflow!"
-    },
-    "tweaks": {}
-  }'
-```
+In a future release, when using wildcard origins, credentials will be automatically disabled.
 
 For more information about CORS environment variables, see [Environment variables](/environment-variables#supported-variables).
 
