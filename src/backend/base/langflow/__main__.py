@@ -27,7 +27,7 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
-from langflow.cli.progress import create_langflow_progress
+from langflow.cli.progress import ProgressIndicator, create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
@@ -50,6 +50,7 @@ class ProcessManager:
     def __init__(self):
         self.webapp_process = None
         self.shutdown_in_progress = False
+        self.progress_indicator: ProgressIndicator | None = None  # Track progress indicator for cleanup
         if platform.system() == "Windows":
             self._farewell_emoji = ":)"  # ASCII smiley
         else:
@@ -61,6 +62,11 @@ class ProcessManager:
         if self.shutdown_in_progress:
             return  # Already shutting down, ignore
         self.shutdown_in_progress = True
+
+        # Stop progress indicator immediately on signal
+        if self.progress_indicator:
+            self.progress_indicator.request_shutdown()
+
         # Don't call shutdown() directly in signal handler to avoid interrupting cleanup
         # Instead, set a flag and let the main process handle it
         import threading
@@ -72,12 +78,21 @@ class ProcessManager:
         if self.shutdown_in_progress:
             return  # Already shutting down, ignore
         self.shutdown_in_progress = True
+
+        # Stop progress indicator immediately on signal
+        if self.progress_indicator:
+            self.progress_indicator.request_shutdown()
+
         self.shutdown()
 
     def shutdown(self):
         """Gracefully shutdown the webapp process."""
         import os
-        
+
+        # Clean up progress indicator first to stop animations
+        if self.progress_indicator:
+            self.progress_indicator.cleanup()
+
         if self.webapp_process and self.webapp_process.is_alive():
             # Just terminate the process - the actual shutdown progress is handled
             # by the FastAPI lifespan context in main.py
@@ -96,8 +111,8 @@ class ProcessManager:
 
         # Check if we're in a test environment (look for pytest in the call stack)
         # to avoid sys.exit() during test cleanup
-        in_test = any('pytest' in frame.filename for frame in inspect.stack())
-        if not in_test and 'PYTEST_CURRENT_TEST' not in os.environ:
+        in_test = any("pytest" in frame.filename for frame in inspect.stack())
+        if not in_test and "PYTEST_CURRENT_TEST" not in os.environ:
             sys.exit(0)
 
     def print_farewell_message(self) -> None:
@@ -282,6 +297,9 @@ def run(
     # Create progress indicator (show verbose timing if log level is DEBUG)
     verbose = log_level == "debug"
     progress = create_langflow_progress(verbose=verbose)
+
+    # Store reference for cleanup during shutdown
+    process_manager.progress_indicator = progress
 
     # Step 0: Initializing Langflow
     with progress.step(0):

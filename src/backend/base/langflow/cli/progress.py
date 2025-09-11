@@ -24,6 +24,7 @@ class ProgressIndicator:
         self.running = False
         self._stop_animation = False
         self._animation_thread: threading.Thread | None = None
+        self._shutdown_requested = False
 
         # Use Windows-safe characters on Windows to prevent encoding issues
         if platform.system() == "Windows":
@@ -38,6 +39,7 @@ class ProgressIndicator:
             self._farewell_emoji = "👋"  # Unicode wave
 
         self._animation_index = 0
+
 
     def add_step(self, title: str, description: str = "") -> None:
         """Add a step to the progress indicator."""
@@ -58,7 +60,8 @@ class ProgressIndicator:
 
         step = self.steps[step_index]
 
-        while self.running and step["status"] == "running" and not self._stop_animation:
+        while (self.running and step["status"] == "running" and
+               not self._stop_animation and not self._shutdown_requested):
             # Clear the current line and move cursor to beginning
             sys.stdout.write("\r")
 
@@ -73,7 +76,11 @@ class ProgressIndicator:
             # Update animation
             self._animation_index = (self._animation_index + 1) % len(self._animation_chars)
 
-            time.sleep(0.15)  # Animation speed
+            # Use shorter sleep intervals and check for shutdown more frequently
+            for _ in range(15):  
+                if self._shutdown_requested or self._stop_animation:
+                    break
+                time.sleep(0.01)
 
     def start_step(self, step_index: int) -> None:
         """Start a specific step and begin animation."""
@@ -146,10 +153,15 @@ class ProgressIndicator:
             self.fail_step(step_index, error_msg)
             raise
 
-    def cleanup(self) -> None:
-        """Clean up the progress indicator and stop any running animations."""
+    def request_shutdown(self) -> None:
+        """Request shutdown of the progress indicator (called by main process)."""
+        self._shutdown_requested = True
         self._stop_animation = True
         self.running = False
+
+    def cleanup(self) -> None:
+        """Clean up the progress indicator and stop any running animations."""
+        self.request_shutdown()
         if self._animation_thread and self._animation_thread.is_alive():
             self._animation_thread.join(timeout=0.5)
         # Clear the current line
