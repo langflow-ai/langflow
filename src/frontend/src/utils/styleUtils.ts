@@ -2,6 +2,7 @@ import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
+import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
 import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
 import { GradientSave } from "@/icons/GradientSparkles";
@@ -211,11 +212,15 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Agents", name: "agents", icon: "Bot" },
   { display_name: "Models", name: "models", icon: "BrainCog" },
   { display_name: "Data", name: "data", icon: "Database" },
-  {
-    display_name: "Knowledge Bases",
-    name: "knowledge_bases",
-    icon: "Library",
-  },
+  ...(ENABLE_KNOWLEDGE_BASES
+    ? [
+        {
+          display_name: "Knowledge Bases",
+          name: "knowledge_bases",
+          icon: "Library",
+        },
+      ]
+    : []),
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
   { display_name: "Processing", name: "processing", icon: "ListFilter" },
   { display_name: "Logic", name: "logic", icon: "ArrowRightLeft" },
