@@ -4,7 +4,7 @@ from langflow.services.deps import get_db_service, get_settings_service
 from langflow.services.utils import initialize_services
 
 
-@pytest.mark.asyncio
+@pytest.mark.skip(reason="MCP Projects can only create long-term tokens if AUTO_LOGIN is enabled")
 async def test_mcp_longterm_token_headless_superuser_integration():
     """Integration-style check that without explicit credentials, AUTO_LOGIN=false path.
 
