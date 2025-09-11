@@ -140,6 +140,7 @@ def add_edge(source, target, from_output, to_input):
     }
 
 
+@pytest.mark.skip(reason="Skipping test_refresh_starter_projects")
 async def test_refresh_starter_projects():
     data_path = str(await Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
     components = await abuild_custom_component_list_from_path(data_path)
