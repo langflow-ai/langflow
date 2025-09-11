@@ -101,10 +101,12 @@ describe("SidebarMenuButtons", () => {
       expect(screen.getByTestId("icon-Plus")).toBeInTheDocument();
     });
 
-    it("should render sidebar menu buttons", () => {
+    it("should render custom component button container", () => {
       render(<SidebarMenuButtons {...defaultProps} />);
 
-      expect(screen.getByTestId("sidebar-menu-button")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("sidebar-custom-component-button"),
+      ).toBeInTheDocument();
     });
 
     it("should display correct text for custom component button", () => {
@@ -437,11 +439,13 @@ describe("SidebarMenuButtons", () => {
       expect(container.children).toHaveLength(1);
     });
 
-    it("should wrap buttons in SidebarMenuButton", () => {
+    it("should render custom component button with correct attributes", () => {
       render(<SidebarMenuButtons {...defaultProps} />);
 
-      const sidebarMenuButton = screen.getByTestId("sidebar-menu-button");
-      expect(sidebarMenuButton).toHaveAttribute("data-as-child", "true");
+      const customButton = screen.getByTestId(
+        "sidebar-custom-component-button",
+      );
+      expect(customButton).toHaveAttribute("data-unstyled", "true");
     });
 
     it("should render multiple SidebarMenuButtons in MCP mode", () => {
@@ -585,7 +589,9 @@ describe("SidebarMenuButtons", () => {
       const customSpan = screen.getByText("New Custom Component");
 
       expect(customSpan).toHaveClass(
+        "ml-2",
         "group-data-[state=open]/collapsible:font-semibold",
+        "text-sm",
       );
     });
   });

@@ -73,9 +73,9 @@ const SidebarSegmentedNav = () => {
     <div className="flex h-full flex-col border-r border-border bg-background">
       <SidebarMenu className="gap-2">
         {NAV_ITEMS.map((item) => (
-          <>
+          <div key={item.id}>
             {item.id === "add_note" && <Separator className="w-full" />}
-            <SidebarMenuItem key={item.id} className="px-1">
+            <SidebarMenuItem className="px-1">
               <ShadTooltip content={item.tooltip} side="right">
                 <SidebarMenuButton
                   size="md"
@@ -124,7 +124,7 @@ const SidebarSegmentedNav = () => {
                 </SidebarMenuButton>
               </ShadTooltip>
             </SidebarMenuItem>
-          </>
+          </div>
         ))}
       </SidebarMenu>
     </div>

@@ -78,7 +78,7 @@ const SidebarMenuButtons = ({
             name="Plus"
             className="h-4 w-4 text-muted-foreground"
           />
-          <span className="ml-2group-data-[state=open]/collapsible:font-semibold text-sm">
+          <span className="ml-2 group-data-[state=open]/collapsible:font-semibold text-sm">
             New Custom Component
           </span>
         </Button>
