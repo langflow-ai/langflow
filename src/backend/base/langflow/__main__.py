@@ -46,9 +46,9 @@ app = typer.Typer(no_args_is_help=True)
 
 class ProcessManager:
     """Manages the lifecycle of the backend process."""
+    webapp_process: Process | None = None
 
     def __init__(self):
-        self.webapp_process = None
         self.shutdown_in_progress = False
         self.progress_indicator: ProgressIndicator | None = None  # Track progress indicator for cleanup
         if platform.system() == "Windows":
@@ -67,10 +67,7 @@ class ProcessManager:
         if self.progress_indicator:
             self.progress_indicator.request_shutdown()
 
-        # Don't call shutdown() directly in signal handler to avoid interrupting cleanup
-        # Instead, set a flag and let the main process handle it
-        import threading
-        threading.Thread(target=self.shutdown, daemon=True).start()
+        self.shutdown()
 
     # params are required for signal handlers, even if they are not used
     def handle_sigint(self, _signum: int, _frame) -> None:
@@ -108,12 +105,6 @@ class ProcessManager:
                 if self.webapp_process.is_alive():
                     logger.warning("Process still alive after kill() and 10s timeout. Proceeding with shutdown.")
             self.print_farewell_message()
-
-        # Check if we're in a test environment (look for pytest in the call stack)
-        # to avoid sys.exit() during test cleanup
-        in_test = any("pytest" in frame.filename for frame in inspect.stack())
-        if not in_test and "PYTEST_CURRENT_TEST" not in os.environ:
-            sys.exit(0)
 
     def print_farewell_message(self) -> None:
         """Print a nice farewell message after shutdown is complete."""
@@ -424,6 +415,7 @@ def run(
             logger.warning("KeyboardInterrupt caught in main thread")
         finally:
             process_manager.shutdown()
+            sys.exit(0)
 
 
 def is_port_in_use(port, host="localhost"):
