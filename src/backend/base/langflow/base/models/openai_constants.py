@@ -95,12 +95,15 @@ OPENAI_CHAT_MODEL_NAMES = [
     if not metadata.get("not_supported", False)
     and not metadata.get("reasoning", False)
     and not metadata.get("search", False)
+    and metadata.get("tool_calling", True)
 ]
 
 OPENAI_REASONING_MODEL_NAMES = [
     metadata["name"]
     for metadata in OPENAI_MODELS_DETAILED
-    if metadata.get("reasoning", False) and not metadata.get("not_supported", False)
+    if metadata.get("reasoning", False)
+    and not metadata.get("not_supported", False)
+    and metadata.get("tool_calling", True)
 ]
 
 OPENAI_SEARCH_MODEL_NAMES = [
