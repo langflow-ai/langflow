@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { SidebarHeaderComponentProps } from "../../types";
+import type { SidebarHeaderComponentProps } from "../../types";
 import { SidebarHeaderComponent } from "../sidebarHeader";
 
 // Mock the UI components

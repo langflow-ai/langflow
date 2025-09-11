@@ -2,13 +2,13 @@ import asyncio
 import os
 import tempfile
 import uuid
+from copy import deepcopy
 from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from anyio import Path
 from httpx import AsyncClient
-from langflow.custom.directory_reader.utils import abuild_custom_component_list_from_path
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
     detect_github_url,
@@ -141,11 +141,11 @@ def add_edge(source, target, from_output, to_input):
 
 
 async def test_refresh_starter_projects():
-    data_path = str(await Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
-    components = await abuild_custom_component_list_from_path(data_path)
+    all_types = await get_and_cache_all_types_dict(get_settings_service())
+    copy_all_types = deepcopy(all_types)
 
-    chat_input = find_component_by_name(components, "ChatInput")
-    chat_output = find_component_by_name(components, "ChatOutput")
+    chat_input = find_component_by_name(copy_all_types, "ChatInput")
+    chat_output = find_component_by_name(copy_all_types, "ChatOutput")
     chat_output["template"]["code"]["value"] = "changed !"
     del chat_output["template"]["should_store_message"]
     graph_data = {
@@ -155,7 +155,7 @@ async def test_refresh_starter_projects():
         ],
         "edges": [add_edge("ChatInput" + "chat-input-1", "ChatOutput" + "chat-output-1", "message", "input_value")],
     }
-    all_types = await get_and_cache_all_types_dict(get_settings_service())
+
     new_change = update_projects_components_with_latest_component_versions(graph_data, all_types)
     assert graph_data["nodes"][1]["data"]["node"]["template"]["code"]["value"] == "changed !"
     assert new_change["nodes"][1]["data"]["node"]["template"]["code"]["value"] != "changed !"
