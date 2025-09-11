@@ -1,0 +1,20 @@
+name: Copy deploy_status.env from VM
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fetch-deploy-status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Copy deploy_status.env from VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: staging.visualaiagentsbuilder.com
+          username: root
+          password: ${{ secrets.VM_PASSWORD }}
+          source: /root/deploy_status.env
+          target: ${{ github.workspace }}/
+
+      - name: Print deploy_status.env contents
+        run: cat $GITHUB_WORKSPACE/deploy_status.env
