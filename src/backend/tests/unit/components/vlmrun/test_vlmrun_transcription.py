@@ -1,9 +1,9 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from langflow.components.vlmrun.vlmrun_transcription import VLMRunTranscription
 from langflow.schema.data import Data
 
+from lfx.components.vlmrun.vlmrun_transcription import VLMRunTranscription
 from tests.base import ComponentTestBaseWithoutClient
 
 

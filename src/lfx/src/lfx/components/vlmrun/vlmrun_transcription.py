@@ -1,8 +1,6 @@
 from pathlib import Path
 from urllib.parse import urlparse
 
-from loguru import logger
-
 from langflow.custom.custom_component.component import Component
 from langflow.io import (
     DropdownInput,
@@ -13,6 +11,7 @@ from langflow.io import (
     SecretStrInput,
 )
 from langflow.schema.data import Data
+from loguru import logger
 
 
 class VLMRunTranscription(Component):
