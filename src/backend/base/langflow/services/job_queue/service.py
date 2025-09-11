@@ -106,12 +106,16 @@ class JobQueueService(Service):
         """
         self._closed = True
         if self._cleanup_task:
-            self._cleanup_task.cancel()
-            await asyncio.wait([self._cleanup_task])
-            if not self._cleanup_task.cancelled():
-                exc = self._cleanup_task.exception()
-                if exc is not None:
-                    raise exc
+            try:
+                self._cleanup_task.cancel()
+                await asyncio.wait_for(self._cleanup_task, timeout=5.0)
+            except asyncio.TimeoutError:
+                await logger.awarning("JobQueueService: Cleanup task timed out during shutdown")
+            except asyncio.CancelledError:
+                await logger.adebug("JobQueueService: Cleanup task cancelled during shutdown")
+            except Exception as exc:
+                await logger.aerror(f"JobQueueService: Cleanup task failed: {exc}")
+                raise
 
         # Clean up each registered job queue.
         for job_id in list(self._queues.keys()):
