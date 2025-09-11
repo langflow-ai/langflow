@@ -120,10 +120,7 @@ async def load_bundles_with_error_handling():
 def warn_about_future_cors_changes(settings):
     """Warn users about upcoming CORS security changes in version 1.7."""
     # Check if using default (backward compatible) settings
-    using_defaults = (
-        settings.cors_origins == "*" and
-        settings.cors_allow_credentials is True
-    )
+    using_defaults = settings.cors_origins == "*" and settings.cors_allow_credentials is True
 
     if using_defaults:
         logger.warning(
