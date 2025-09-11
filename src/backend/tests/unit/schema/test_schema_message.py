@@ -95,10 +95,10 @@ def test_message_with_single_image(sample_image):
     assert lc_message.content[0] == {"type": "text", "text": text}
 
     # Check image content
-    assert lc_message.content[1]["type"] == "image"
-    assert lc_message.content[1]["source_type"] == "url"
-    assert "url" in lc_message.content[1]
-    assert lc_message.content[1]["url"].startswith("data:image/png;base64,")
+    assert lc_message.content[1]["type"] == "image_url"
+    assert "image_url" in lc_message.content[1]
+    assert "url" in lc_message.content[1]["image_url"]
+    assert lc_message.content[1]["image_url"]["url"].startswith("data:image/png;base64,")
 
 
 def test_message_with_multiple_images(sample_image, langflow_cache_dir):
@@ -131,10 +131,10 @@ def test_message_with_multiple_images(sample_image, langflow_cache_dir):
 
     # Check both images
     assert all(
-        content["type"] == "image"
-        and content["source_type"] == "url"
-        and "url" in content
-        and content["url"].startswith("data:image/png;base64,")
+        content["type"] == "image_url"
+        and "image_url" in content
+        and "url" in content["image_url"]
+        and content["image_url"]["url"].startswith("data:image/png;base64,")
         for content in lc_message.content[1:]
     )
 
