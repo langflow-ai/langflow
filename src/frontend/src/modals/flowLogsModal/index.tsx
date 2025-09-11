@@ -77,7 +77,6 @@ export default function FlowLogsModal({
               tableOptions={{
                 hide_options: true,
               }}
-              suppressRowClickSelection={true}
               columnDefs={columnDefs}
               rowData={rows}
               className={cn(
