@@ -429,9 +429,6 @@ def run(
             if not process_manager.shutdown_in_progress:
                 process_manager.shutdown()
 
-            # The long wait allows the process to finish setup, preventing it from
-            # getting in a state where background tasks continue to do work after termination
-            # is sent.
             if process_manager.webapp_process.is_alive():
                 logger.warning("Process didn't terminate gracefully, killing it.")
                 process_manager.webapp_process.kill()

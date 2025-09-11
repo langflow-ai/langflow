@@ -290,6 +290,17 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         """Return a string representation of the RedisCache instance."""
         return f"RedisCache(expiration_time={self.expiration_time})"
 
+    async def teardown(self) -> None:
+        """Clean up the Redis connection."""
+        from langflow.logging.logger import logger
+        await logger.adebug("RedisCache teardown called")
+        try:
+            await self._client.aclose()
+            await logger.adebug("RedisCache client closed")
+        except Exception as e:
+            await logger.aerror(f"Error closing Redis client: {e}")
+        await logger.adebug("RedisCache teardown completed")
+
 
 class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
     def __init__(self, max_size=None, expiration_time=3600) -> None:
@@ -353,3 +364,10 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
 
     async def contains(self, key) -> bool:
         return key in self.cache
+
+    async def teardown(self) -> None:
+        """Clean up the cache."""
+        from langflow.logging.logger import logger
+        await logger.adebug("AsyncInMemoryCache teardown called")
+        await self.clear()
+        await logger.adebug("AsyncInMemoryCache teardown completed")

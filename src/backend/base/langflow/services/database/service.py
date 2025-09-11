@@ -473,7 +473,9 @@ class DatabaseService(Service):
             await conn.run_sync(self._create_db_and_tables)
 
     async def teardown(self) -> None:
+        import asyncio
         await logger.adebug("Tearing down database")
+        
         try:
             settings_service = get_settings_service()
             # remove the default superuser if auto_login is enabled
@@ -482,4 +484,12 @@ class DatabaseService(Service):
                 await teardown_superuser(settings_service, session)
         except Exception:  # noqa: BLE001
             await logger.aexception("Error tearing down database")
-        await self.engine.dispose()
+        
+        # Add timeout to engine.dispose() to prevent hanging
+        try:
+            await asyncio.wait_for(self.engine.dispose(), timeout=5.0)
+            await logger.adebug("Database engine disposed successfully")
+        except asyncio.TimeoutError:
+            await logger.aerror("Database engine dispose timed out after 5s - connections may be leaked")
+        except Exception as e:  # noqa: BLE001
+            await logger.aerror(f"Error disposing database engine: {e}")
