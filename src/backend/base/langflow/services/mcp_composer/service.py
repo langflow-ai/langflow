@@ -542,7 +542,7 @@ class MCPComposerService(Service):
                 try:
                     stderr_line = await process.stderr.readline()
                     if stderr_line and b"ERROR" in stderr_line:
-                        await logger.aerror(f"MCP Composer error: {stderr_line.strip()}")
+                        await logger.aerror(f"MCP Composer error: {stderr_line.decode().strip()}")
                 except Exception:  # noqa: S110, BLE001
                     pass
 
