@@ -93,17 +93,6 @@ class ProcessManager:
             # Just terminate the process - the actual shutdown progress is handled
             # by the FastAPI lifespan context in main.py
             self.webapp_process.terminate()
-            # The long wait allows the process to finish setup, preventing it from
-            # getting in a state where background tasks continue to do work after termination
-            # is sent.
-            self.webapp_process.join(timeout=30)
-            if self.webapp_process.is_alive():
-                logger.warning("Process didn't terminate gracefully, killing it.")
-                self.webapp_process.kill()
-                self.webapp_process.join(timeout=10)
-                if self.webapp_process.is_alive():
-                    logger.warning("Process still alive after kill() and 10s timeout. Proceeding with shutdown.")
-            self.print_farewell_message()
 
     def print_farewell_message(self) -> None:
         """Print a nice farewell message after shutdown is complete."""
@@ -432,17 +421,25 @@ def run(
                 click.launch(f"{protocol}://{host}:{port}")
 
         try:
-            process_manager.webapp_process.join(30)
-            if process_manager.webapp_process.is_alive():
-                logger.warning("Langflow process did not terminate gracefully, force quitting it")
-                process_manager.webapp_process.kill()
-                process_manager.webapp_process.join(5)
+            process_manager.webapp_process.join()
         except KeyboardInterrupt:
             # SIGINT should be handled by the signal handler, but leaving here for safety
             logger.warning("KeyboardInterrupt caught in main thread")
         finally:
             if not process_manager.shutdown_in_progress:
                 process_manager.shutdown()
+
+            # The long wait allows the process to finish setup, preventing it from
+            # getting in a state where background tasks continue to do work after termination
+            # is sent.
+            if process_manager.webapp_process.is_alive():
+                logger.warning("Process didn't terminate gracefully, killing it.")
+                process_manager.webapp_process.kill()
+                process_manager.webapp_process.join(timeout=10)
+                if process_manager.webapp_process.is_alive():
+                    logger.warning("Process still alive after kill() and 10s timeout. Proceeding with shutdown.")
+
+            process_manager.print_farewell_message()
             sys.exit(0)
 
 
