@@ -179,8 +179,41 @@ async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
 @pytest.fixture
 async def async_client() -> AsyncGenerator:
     app = create_app()
-    async with AsyncClient(app=app, base_url="http://testserver", http2=True) as client:
-        yield client
+    try:
+        async with (
+            LifespanManager(app, startup_timeout=None, shutdown_timeout=30) as manager,
+            AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/", http2=True) as client,
+        ):
+            yield client
+    except Exception as e:
+        # If LifespanManager fails to shutdown cleanly, force cleanup
+        import os
+        import psutil
+        
+        current_pid = os.getpid()
+        try:
+            # Find and kill any child processes that might be hanging
+            current_process = psutil.Process(current_pid)
+            children = current_process.children(recursive=True)
+            if children:
+                print(f"Force killing {len(children)} hanging child processes in async_client")
+                for child in children:
+                    try:
+                        child.kill()
+                    except psutil.NoSuchProcess:
+                        pass
+        except (psutil.NoSuchProcess, ImportError):
+            pass
+        
+        # Force cleanup service manager
+        try:
+            from langflow.services.manager import service_manager
+            service_manager.services.clear()
+            service_manager.factories.clear()
+        except Exception:
+            pass
+        
+        raise e
 
 
 @pytest.fixture(name="session")
@@ -437,16 +470,49 @@ async def client_fixture(
 
         app, db_path = await asyncio.to_thread(init_app)
         # app.dependency_overrides[get_session] = get_session_override
-        async with (
-            LifespanManager(app, startup_timeout=None, shutdown_timeout=45) as manager,
-            AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/", http2=True) as client,
-        ):
-            yield client
-        # app.dependency_overrides.clear()
-        monkeypatch.undo()
-        # clear the temp db
-        with suppress(FileNotFoundError):
-            await anyio.Path(db_path).unlink()
+        try:
+            async with (
+                LifespanManager(app, startup_timeout=None, shutdown_timeout=30) as manager,
+                AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/", http2=True) as client,
+            ):
+                yield client
+        except Exception as e:
+            # If LifespanManager fails to shutdown cleanly, force cleanup
+            import os
+            import signal
+            import psutil
+            
+            current_pid = os.getpid()
+            try:
+                # Find and kill any child processes that might be hanging
+                current_process = psutil.Process(current_pid)
+                children = current_process.children(recursive=True)
+                if children:
+                    print(f"Force killing {len(children)} hanging child processes")
+                    for child in children:
+                        try:
+                            child.kill()
+                        except psutil.NoSuchProcess:
+                            pass
+            except (psutil.NoSuchProcess, ImportError):
+                pass
+            
+            # Force cleanup service manager
+            try:
+                from langflow.services.manager import service_manager
+                service_manager.services.clear()
+                service_manager.factories.clear()
+            except Exception:
+                pass
+            
+            raise e
+        finally:
+            # Ensure cleanup even if test fails
+            # app.dependency_overrides.clear()
+            monkeypatch.undo()
+            # clear the temp db
+            with suppress(FileNotFoundError):
+                await anyio.Path(db_path).unlink()
 
 
 @pytest.fixture

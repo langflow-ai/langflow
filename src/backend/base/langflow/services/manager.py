@@ -90,30 +90,47 @@ class ServiceManager:
     async def teardown(self) -> None:
         """Teardown all the services."""
         import asyncio
+        import time
+
+        start_time = time.time()
+        await logger.adebug(f"Starting teardown of {len(self.services)} services")
 
         for service in list(self.services.values()):
             if service is None:
                 continue
+            service_start = time.time()
             await logger.adebug(f"Teardown service {service.name}")
             try:
                 # Add timeout to prevent individual service teardowns from hanging
                 await asyncio.wait_for(service.teardown(), timeout=15.0)
+                service_time = time.time() - service_start
+                await logger.adebug(f"Service {service.name} teardown completed in {service_time:.2f}s")
             except asyncio.TimeoutError:
                 await logger.aerror(f"Service {service.name} teardown timed out after 15s")
                 # Try to force cleanup of common background resources
                 await self._force_cleanup_service(service)
             except Exception as exc:  # noqa: BLE001
-                await logger.aexception(exc)
+                await logger.aexception(f"Service {service.name} teardown failed: {exc}")
+
+        services_time = time.time() - start_time
+        await logger.adebug(f"All services teardown completed in {services_time:.2f}s")
 
         # Clean up all MCP session managers after regular service teardown
+        mcp_start = time.time()
+        await logger.adebug("Starting MCP session manager cleanup")
         try:
             from langflow.base.mcp.util import cleanup_all_mcp_session_managers
 
             await asyncio.wait_for(cleanup_all_mcp_session_managers(), timeout=10.0)
+            mcp_time = time.time() - mcp_start
+            await logger.adebug(f"MCP session manager cleanup completed in {mcp_time:.2f}s")
         except asyncio.TimeoutError:
             await logger.aerror("MCP session manager cleanup timed out after 10s")
         except Exception as exc:  # noqa: BLE001
             await logger.aexception(f"Error cleaning up MCP session managers: {exc}")
+
+        total_time = time.time() - start_time
+        await logger.adebug(f"Total teardown completed in {total_time:.2f}s")
 
         self.services = {}
         self.factories = {}
