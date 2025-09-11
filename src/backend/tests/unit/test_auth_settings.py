@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 from langflow.services.settings.auth import AuthSettings
-from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from pydantic import SecretStr
 
 

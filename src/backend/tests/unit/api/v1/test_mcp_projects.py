@@ -17,7 +17,6 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
-from langflow.services.utils import initialize_services
 from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 
@@ -681,5 +680,3 @@ async def test_mcp_longterm_token_fails_without_superuser():
     async with get_db_service().with_session() as session:
         with pytest.raises(HTTPException):
             await create_user_longterm_token(session)
-
-
