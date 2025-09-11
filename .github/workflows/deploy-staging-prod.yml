@@ -105,20 +105,20 @@ jobs:
           VITE_AUTO_LOGIN=false \
           VITE_CLERK_AUTH_ENABLED=true \
           VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.CLERK_PUBLISHABLE_KEY }} \
-          make docker_build TAG=langflow:staging:$BRANCH_NAME-$COMMIT_ID
+          make docker_build TAG=langflow:staging-$BRANCH_NAME-$COMMIT_ID
 
-          docker tag langflow:staging:$BRANCH_NAME-$COMMIT_ID forwardemailforaifirstdesk/langflow:staging:$BRANCH_NAME-$COMMIT_ID
-          docker push forwardemailforaifirstdesk/langflow:staging:$BRANCH_NAME-$COMMIT_ID
+          docker tag langflow:staging-$BRANCH_NAME-$COMMIT_ID forwardemailforaifirstdesk/langflow:staging-$BRANCH_NAME-$COMMIT_ID
+          docker push forwardemailforaifirstdesk/langflow:staging-$BRANCH_NAME-$COMMIT_ID
 
           echo "=== Building Prod Image ==="
           DOCKER_BUILDKIT=1 \
           VITE_AUTO_LOGIN=false \
           VITE_CLERK_AUTH_ENABLED=true \
           VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.PROD_CLERK_PUBLISHABLE_KEY }} \
-          make docker_build TAG=langflow:prod:$BRANCH_NAME-$COMMIT_ID
+          make docker_build TAG=langflow:prod-$BRANCH_NAME-$COMMIT_ID
         
-          docker tag langflow:prod:$BRANCH_NAME-$COMMIT_ID forwardemailforaifirstdesk/langflow:prod:$BRANCH_NAME-$COMMIT_ID
-          docker push forwardemailforaifirstdesk/langflow:prod:$BRANCH_NAME-$COMMIT_ID
+          docker tag langflow:prod-$BRANCH_NAME-$COMMIT_ID forwardemailforaifirstdesk/langflow:prod-$BRANCH_NAME-$COMMIT_ID
+          docker push forwardemailforaifirstdesk/langflow:prod-$BRANCH_NAME-$COMMIT_ID
 
       - name: Cleanup old Docker Hub tags (skip for prod)
         if: ${{ github.event.inputs.environment == 'staging' }}
@@ -157,7 +157,7 @@ jobs:
           for TAG in $TAGS; do
             COMMIT_ID=${{ steps.commit.outputs.commit_id }}
             BRANCH_NAME=${{ steps.branch.outputs.branch_name }}
-            if [[ "$TAG" == "staging:$BRANCH_NAME-$COMMIT_ID" || "$TAG" == "prod:$BRANCH_NAME-$COMMIT_ID" ]]; then
+            if [[ "$TAG" == "staging-$BRANCH_NAME-$COMMIT_ID" || "$TAG" == "prod-$BRANCH_NAME-$COMMIT_ID" ]]; then
               echo "⏭️ Skipping current branch+commit tag: $TAG"
               continue
             fi
@@ -210,7 +210,7 @@ jobs:
           script: |
             chmod +x /root/deploy/deploy-stage-prod.sh
             /root/deploy/deploy-stage-prod.sh \
-              --image forwardemailforaifirstdesk/langflow:staging:$BRANCH_NAME-$COMMIT_ID \
+              --image forwardemailforaifirstdesk/langflow:staging-$BRANCH_NAME-$COMMIT_ID \
               --domain ${env.STAGING_HOST} \
               --email ${{ github.event.inputs.email }} \
               --env-file /root/.env-file
@@ -225,7 +225,7 @@ jobs:
           script: |
             chmod +x /root/deploy/deploy-stage-prod.sh
             /root/deploy/deploy-stage-prod.sh \
-              --image forwardemailforaifirstdesk/langflow:prod:$BRANCH_NAME-$COMMIT_ID \
+              --image forwardemailforaifirstdesk/langflow:prod-$BRANCH_NAME-$COMMIT_ID \
               --domain ${env.PROD_HOST} \
               --email ${{ github.event.inputs.email }} \
               --env-file /root/.env-file        
