@@ -212,18 +212,7 @@ For detailed information about cache configuration, see [Memory management optio
 
 ### Logging configuration {#logging}
 
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_LOG_LEVEL` | String | `INFO` | Set the logging level for Langflow. Possible values: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. See [Logging configuration](/logging#configure-log-options). |
-| `LANGFLOW_LOG_FILE` | String | Not set | Path to the log file. If this option isn't set, logs are written to stdout. See [Logging configuration](/logging#configure-log-options). |
-| `LANGFLOW_LOG_ENV` | String | `default` | Controls log output and formatting. See [Logging configuration](/logging#configure-log-options). |
-| `LANGFLOW_LOG_ROTATION` | String | `1 day` | Controls when the log file is rotated, either based on time or file size. See [Logging configuration](/logging#configure-log-options). |
-| `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` | Integer | `10000` | Set the buffer size for log retrieval. Only used if `LANGFLOW_ENABLE_LOG_RETRIEVAL` is enabled. |
-| `LANGFLOW_LOG_FORMAT` | String | Not set | Set the log format configuration. |
-| `LANGFLOW_PRETTY_LOGS` | Boolean | True | Enable pretty log formatting with colors and rich console output. |
-| `LANGFLOW_ALEMBIC_LOG_FILE` | String | `alembic/alembic.log` | Path to the Alembic log file for SQLAlchemy migrations. |
-
-For detailed information about logging configuration, see [Logs](/logging#configure-log-options).
+For detailed information about logging configuration, including environment variables, see [Configure log options](/logging#configure-log-options).
 
 ### File and data management
 
