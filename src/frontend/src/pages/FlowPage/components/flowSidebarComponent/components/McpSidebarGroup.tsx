@@ -51,7 +51,7 @@ const McpEmptyState = ({ isLoading }: { isLoading?: boolean }) => {
           onClick={handleAddMcpServerClick}
           data-testid="add-mcp-server-button-sidebar"
         >
-          Add MCP Server
+          <span>Add MCP Server</span>
         </Button>
       </div>
       <AddMcpServerModal open={addMcpOpen} setOpen={setAddMcpOpen} />
