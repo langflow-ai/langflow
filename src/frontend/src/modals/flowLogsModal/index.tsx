@@ -4,11 +4,11 @@ import PaginatorComponent from "@/components/common/paginatorComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { convertUTCToLocalTimezone } from "@/utils/utils";
-import type { ColDef, ColGroupDef } from "ag-grid-community";
+import { cn } from "@/utils/utils";
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import BaseModal from "../baseModal";
+import { createFlowLogsColumns } from "./config/flowLogsColumns";
 
 export default function FlowLogsModal({
   children,
@@ -19,11 +19,12 @@ export default function FlowLogsModal({
   const [open, setOpen] = useState(false);
 
   const [pageIndex, setPageIndex] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
+  const [pageSize, setPageSize] = useState(24);
   const [rows, setRows] = useState<any>([]);
   const [searchParams] = useSearchParams();
   const flowIdFromUrl = searchParams.get("id");
+  
+  const columnDefs = createFlowLogsColumns();
 
   const { data, isLoading, refetch } = useGetTransactionsQuery({
     id: currentFlowId ?? flowIdFromUrl,
@@ -36,54 +37,9 @@ export default function FlowLogsModal({
 
   useEffect(() => {
     if (data) {
-      const { columns, rows } = data;
-
-      // Convert timestamps to local timezone format (backend handles sorting)
-      const processedRows =
-        rows?.length > 0
-          ? rows.map((row: any) => ({
-              ...row,
-              timestamp: convertUTCToLocalTimezone(row.timestamp),
-            }))
-          : rows;
-
-      setRows(processedRows);
-      
-      // Customize column configurations
-      const customizedColumns = columns.map((col) => {
-        // Check if it's a ColDef (not ColGroupDef) before accessing properties
-        if ('field' in col) {
-          const columnField = col.field;
-          const customCol = { ...col, editable: false };
-
-          if (columnField && ['id'].includes(columnField)) {
-            customCol.minWidth = 320;
-            customCol.filter = false;
-            customCol.sortable = false;
-
-         
-          }
-          
-          // Hide filters for specific columns
-          if (columnField && ['vertex_id', 'target_id', 'status'].includes(columnField)) {
-            customCol.filter = false;
-            customCol.sortable = false;
-            customCol.flex = 1;
-          }
-          
-          // Set same width for inputs and outputs columns
-          if (columnField && ['inputs', 'outputs'].includes(columnField)) {
-            customCol.flex = 1.5;
-          }
-          
-          return customCol;
-        }
-        
-        // Return ColGroupDef as is (no editable property for groups)
-        return col;
-      });
-      
-      setColumns(customizedColumns);
+      const { rows } = data;
+      // Set rows directly - timestamp conversion is now handled in column config
+      setRows(rows || []);
     }
   }, [data]);
 
@@ -93,7 +49,7 @@ export default function FlowLogsModal({
     }
   }, [pageIndex, pageSize, open, refetch]);
 
-  const handlePageChange = useCallback((newPageIndex, newPageSize) => {
+  const handlePageChange = useCallback((newPageIndex: number, newPageSize: number) => {
     setPageIndex(newPageIndex);
     setPageSize(newPageSize);
   }, []);
@@ -111,43 +67,57 @@ export default function FlowLogsModal({
         </div>
       </BaseModal.Header>
       <BaseModal.Content>
-        <div className="relative h-full w-full">
-          <TableComponent
-            key={"Executions"}
-            className="h-max-full h-full w-full"
-            pagination={false}
-            columnDefs={columns}
-            autoSizeStrategy={{ type: "fitGridWidth" }}
-            rowData={rows}
-            headerHeight={rows.length === 0 ? 0 : undefined}
-            gridOptions={{
-              suppressCellFocus: true,
-              suppressRowClickSelection: true,
-              suppressColumnVirtualisation: true,
-              suppressRowDeselection: true,
-            }}
-          ></TableComponent>
+        <div className="flex h-full flex-col">
+          <div className="relative h-full">
+            <TableComponent
+              key="FlowExecutions"
+              rowHeight={45}
+              headerHeight={45}
+              cellSelection={false}
+              tableOptions={{
+                hide_options: true,
+              }}
+              suppressRowClickSelection={true}
+              columnDefs={columnDefs}
+              rowData={rows}
+              className={cn(
+                "ag-no-border ag-flow-logs-table w-full h-full"
+              )}
+              pagination={false}
+              autoSizeStrategy={{ type: "fitGridWidth" }}
+              gridOptions={{
+                suppressCellFocus: true,
+                suppressRowClickSelection: true,
+                suppressColumnVirtualisation: true,
+                suppressRowDeselection: true,
+                stopEditingWhenCellsLoseFocus: true,
+                ensureDomOrder: true,
+                colResizeDefault: "shift",
+              }}
+            />
 
-          {/* Loading overlay */}
-          {isLoading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-              <LoadingComponent remSize={8} />
+            {/* Loading overlay */}
+            {isLoading && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+                <LoadingComponent remSize={8} />
+              </div>
+            )}
+          </div>
+
+          {/* External Pagination */}
+          {!isLoading && (data?.pagination.pages ?? 0) > 1 && (
+            <div className="flex justify-end px-3 py-4">
+              <PaginatorComponent
+                pageIndex={pageIndex}
+                pageSize={pageSize}
+                rowsCount={[12, 24, 48, 96]}
+                totalRowsCount={data?.pagination.total ?? 0}
+                paginate={handlePageChange}
+                pages={data?.pagination.pages}
+              />
             </div>
           )}
         </div>
-
-        {!isLoading && (data?.pagination.pages ?? 0) > 1 && (
-          <div className="flex justify-end px-3 py-4">
-            <PaginatorComponent
-              pageIndex={pageIndex}
-              pageSize={pageSize}
-              rowsCount={[12, 24, 48, 96]}
-              totalRowsCount={data?.pagination.total ?? 0}
-              paginate={handlePageChange}
-              pages={data?.pagination.pages}
-            />
-          </div>
-        )}
       </BaseModal.Content>
     </BaseModal>
   );
