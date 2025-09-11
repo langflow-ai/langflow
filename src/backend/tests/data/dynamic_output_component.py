@@ -1,8 +1,9 @@
+# from langflow.field_typing import Data
 from typing import Any
 
-from lfx.custom import Component
-from lfx.io import BoolInput, MessageTextInput, Output
-from lfx.schema import Data
+from langflow.custom import Component
+from langflow.io import BoolInput, MessageTextInput, Output
+from langflow.schema import Data
 
 
 class DynamicOutputComponent(Component):

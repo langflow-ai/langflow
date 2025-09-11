@@ -30,6 +30,7 @@ import { classNames, cn } from "../../utils/utils";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import NodeDescription from "./components/NodeDescription";
+import NodeLegacyComponent from "./components/NodeLegacyComponent";
 import NodeName from "./components/NodeName";
 import NodeOutputs from "./components/NodeOutputParameter/NodeOutputs";
 import NodeUpdateComponent from "./components/NodeUpdateComponent";
@@ -97,9 +98,21 @@ function GenericNode({
   const removeDismissedNodes = useFlowStore(
     (state) => state.removeDismissedNodes,
   );
+
+  const dismissedNodesLegacy = useFlowStore(
+    (state) => state.dismissedNodesLegacy,
+  );
+  const addDismissedNodesLegacy = useFlowStore(
+    (state) => state.addDismissedNodesLegacy,
+  );
+
   const dismissAll = useMemo(
     () => dismissedNodes.includes(data.id),
     [dismissedNodes, data.id],
+  );
+  const dismissAllLegacy = useMemo(
+    () => dismissedNodesLegacy.includes(data.id),
+    [dismissedNodesLegacy, data.id],
   );
 
   const showNode = data.showNode ?? true;
@@ -356,6 +369,11 @@ function GenericNode({
     [isOutdated, hasBreakingChange, isUserEdited, dismissAll],
   );
 
+  const shouldShowLegacyComponent = useMemo(
+    () => (data.node?.legacy || data.node?.replacement) && !dismissAllLegacy,
+    [data.node?.legacy, data.node?.replacement, dismissAllLegacy],
+  );
+
   const memoizedNodeToolbarComponent = useMemo(() => {
     return selected && selectedNodesCount === 1 ? (
       <>
@@ -457,6 +475,11 @@ function GenericNode({
     [addDismissedNodes, data.id],
   );
 
+  const memoizedSetDismissAllLegacy = useCallback(
+    () => addDismissedNodesLegacy([data.id]),
+    [addDismissedNodesLegacy, data.id],
+  );
+
   return (
     <div className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}>
       <div
@@ -476,7 +499,7 @@ function GenericNode({
           />
         )}
         {memoizedNodeToolbarComponent}
-        {shouldShowUpdateComponent && (
+        {shouldShowUpdateComponent ? (
           <NodeUpdateComponent
             hasBreakingChange={hasBreakingChange}
             showNode={showNode}
@@ -484,7 +507,16 @@ function GenericNode({
             loadingUpdate={loadingUpdate}
             setDismissAll={memoizedSetDismissAll}
           />
+        ) : shouldShowLegacyComponent ? (
+          <NodeLegacyComponent
+            legacy={data.node?.legacy}
+            replacement={data.node?.replacement}
+            setDismissAll={memoizedSetDismissAllLegacy}
+          />
+        ) : (
+          <></>
         )}
+
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
@@ -514,6 +546,10 @@ function GenericNode({
                   selected={selected}
                   showNode={showNode}
                   beta={data.node?.beta || false}
+                  legacy={
+                    data.node?.legacy ||
+                    (data.node?.replacement?.length ?? 0) > 0
+                  }
                   editNameDescription={editNameDescription}
                   toggleEditNameDescription={toggleEditNameDescription}
                   setHasChangedNodeDescription={setHasChangedNodeDescription}

@@ -131,7 +131,7 @@ export function getSnapPosition(
   let snapPosition = { ...draggingNode.position };
 
   if (helperLines.horizontal) {
-    const _draggingNodeBounds = {
+    const draggingNodeBounds = {
       top: draggingNode.position.y,
       bottom:
         draggingNode.position.y + (draggingNode.measured?.height || nodeHeight),
@@ -154,7 +154,7 @@ export function getSnapPosition(
   }
 
   if (helperLines.vertical) {
-    const _draggingNodeBounds = {
+    const draggingNodeBounds = {
       left: draggingNode.position.x,
       right:
         draggingNode.position.x + (draggingNode.measured?.width || nodeWidth),

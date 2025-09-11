@@ -48,7 +48,4 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   eventDelivery: EventDeliveryType.POLLING,
   setEventDelivery: (eventDelivery: EventDeliveryType) =>
     set({ eventDelivery }),
-  webhookAuthEnable: true,
-  setWebhookAuthEnable: (webhookAuthEnable: boolean) =>
-    set({ webhookAuthEnable }),
 }));

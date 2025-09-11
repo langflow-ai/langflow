@@ -2,8 +2,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-
-from lfx.components.git import GitLoaderComponent
+from langflow.components.git import GitLoaderComponent
 
 
 @pytest.fixture

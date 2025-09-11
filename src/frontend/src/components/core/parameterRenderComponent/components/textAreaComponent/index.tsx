@@ -3,7 +3,6 @@ import { GRADIENT_CLASS } from "@/constants/constants";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { getCurlWebhookCode } from "@/modals/apiModal/utils/get-curl-code";
 import ComponentTextModal from "@/modals/textAreaModal";
-import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Input } from "../../../../ui/input";
@@ -75,7 +74,6 @@ export default function TextAreaComponent({
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const webhookAuthEnable = useUtilityStore((state) => state.webhookAuthEnable);
   const [cursor, setCursor] = useState<number | null>(null);
 
   const isWebhook = useMemo(
@@ -92,7 +90,7 @@ export default function TextAreaComponent({
     if (isWebhook && value === WEBHOOK_VALUE) {
       const curlWebhookCode = getCurlWebhookCode({
         flowId: nodeInformationMetadata?.flowId!,
-        webhookAuthEnable,
+        isAuth: nodeInformationMetadata?.isAuth!,
         flowName: nodeInformationMetadata?.flowName!,
         format: "singleline",
       });
@@ -101,13 +99,7 @@ export default function TextAreaComponent({
       const mcpSSEUrl = `${URL_MCP_SSE}`;
       handleOnNewValue({ value: mcpSSEUrl });
     }
-  }, [
-    isWebhook,
-    value,
-    nodeInformationMetadata,
-    handleOnNewValue,
-    webhookAuthEnable,
-  ]);
+  }, [isWebhook, value, nodeInformationMetadata, handleOnNewValue]);
 
   // Restore cursor position after value changes
   useEffect(() => {
@@ -135,7 +127,7 @@ export default function TextAreaComponent({
     if (isWebhook) {
       const curlWebhookCode = getCurlWebhookCode({
         flowId: nodeInformationMetadata?.flowId!,
-        webhookAuthEnable,
+        isAuth: nodeInformationMetadata?.isAuth!,
         flowName: nodeInformationMetadata?.flowName!,
         format,
       });

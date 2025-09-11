@@ -1,8 +1,7 @@
 import pandas as pd
 import pytest
-
-from lfx.components.processing.dataframe_operations import DataFrameOperationsComponent
-from lfx.schema.dataframe import DataFrame
+from langflow.components.processing.dataframe_operations import DataFrameOperationsComponent
+from langflow.schema.dataframe import DataFrame
 
 
 @pytest.fixture

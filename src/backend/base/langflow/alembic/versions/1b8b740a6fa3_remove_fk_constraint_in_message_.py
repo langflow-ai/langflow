@@ -1,25 +1,25 @@
 """remove fk constraint in message transaction and vertex build
 
+
 Revision ID: 1b8b740a6fa3
 Revises: f3b2d1f1002d
 Create Date: 2025-04-10 10:17:32.493181
 
 """
+from typing import Sequence, Union
 
-from collections.abc import Sequence
-
+from alembic import op
 import sqlalchemy as sa
 import sqlmodel
-from alembic import op
 from sqlalchemy.engine.reflection import Inspector
-
 from langflow.utils import migration
 
+
 # revision identifiers, used by Alembic.
-revision: str = "1b8b740a6fa3"
-down_revision: str | None = "f3b2d1f1002d"
-branch_labels: str | Sequence[str] | None = None
-depends_on: str | Sequence[str] | None = None
+revision: str = '1b8b740a6fa3'
+down_revision: Union[str, None] = 'f3b2d1f1002d'
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
 
 NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",
@@ -28,7 +28,6 @@ NAMING_CONVENTION = {
     "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
     "pk": "pk_%(table_name)s",
 }
-
 
 def constraint_exists(constraint_name: str, conn) -> bool:
     """Check if a constraint with the given name already exists in the database.
@@ -47,15 +46,11 @@ def constraint_exists(constraint_name: str, conn) -> bool:
 
     # Check each table for the constraint
     for table in tables:
-        for constraint in (
-            inspector.get_pk_constraint(table).get("name"),
-            *[c.get("name") for c in inspector.get_foreign_keys(table)],
-        ):
+        for constraint in inspector.get_pk_constraint(table).get("name"), *[c.get("name") for c in inspector.get_foreign_keys(table)]:
             if constraint == constraint_name:
                 return True
 
     return False
-
 
 def upgrade() -> None:
     conn = op.get_bind()
@@ -72,7 +67,7 @@ def upgrade() -> None:
         # Check if PK constraint already exists
         if constraint_exists(pk_name, conn):
             # Use a different PK name if it already exists
-            pk_name = "pk_temp_vertex_build"
+            pk_name = f"pk_temp_vertex_build"
 
         # Create temp table with same schema but no FK constraint
         op.create_table(
@@ -90,7 +85,7 @@ def upgrade() -> None:
 
         # Copy data - use a window function to ensure build_id uniqueness across SQLite, PostgreSQL and MySQL
         # Filter out rows where the original 'id' (vertex id) is NULL, as the new table requires it.
-        op.execute(f"""
+        op.execute(f'''
             INSERT INTO "{temp_table_name}" (timestamp, id, data, artifacts, params, build_id, flow_id, valid)
             SELECT timestamp, id, data, artifacts, params, build_id, flow_id, valid
             FROM (
@@ -100,7 +95,7 @@ def upgrade() -> None:
                 WHERE id IS NOT NULL -- Ensure vertex id is not NULL
             ) sub
             WHERE rn = 1
-        """)
+        ''')
 
         # Drop original table and rename temp table
         op.drop_table("vertex_build")
@@ -115,7 +110,7 @@ def upgrade() -> None:
         # Check if PK constraint already exists
         if constraint_exists(pk_name, conn):
             # Use a different PK name if it already exists
-            pk_name = "pk_temp_transaction"
+            pk_name = f"pk_temp_transaction"
 
         # Create temp table with same schema but no FK constraint
         op.create_table(
@@ -133,12 +128,12 @@ def upgrade() -> None:
         )
 
         # Copy data - explicitly list columns and filter out rows where id is NULL
-        op.execute(f"""
+        op.execute(f'''
             INSERT INTO "{temp_table_name}" (timestamp, vertex_id, target_id, inputs, outputs, status, id, flow_id, error)
             SELECT timestamp, vertex_id, target_id, inputs, outputs, status, id, flow_id, error
             FROM "transaction"
             WHERE id IS NOT NULL
-        """)
+        ''')
 
         # Drop original table and rename temp table
         op.drop_table("transaction")
@@ -153,7 +148,7 @@ def upgrade() -> None:
         # Check if PK constraint already exists
         if constraint_exists(pk_name, conn):
             # Use a different PK name if it already exists
-            pk_name = "pk_temp_message"
+            pk_name = f"pk_temp_message"
 
         # Create temp table with same schema but no FK constraint
         op.create_table(
@@ -175,12 +170,12 @@ def upgrade() -> None:
         )
 
         # Copy data - explicitly list columns and filter out rows where id is NULL
-        op.execute(f"""
+        op.execute(f'''
             INSERT INTO "{temp_table_name}" (timestamp, sender, sender_name, session_id, text, id, flow_id, files, error, edit, properties, category, content_blocks)
             SELECT timestamp, sender, sender_name, session_id, text, id, flow_id, files, error, edit, properties, category, content_blocks
             FROM "message"
             WHERE id IS NOT NULL
-        """)
+        ''')
 
         # Drop original table and rename temp table
         op.drop_table("message")
@@ -201,7 +196,7 @@ def downgrade() -> None:
 
         # Check if constraints already exist
         if constraint_exists(pk_name, conn):
-            pk_name = "pk_temp_vertex_build"
+            pk_name = f"pk_temp_vertex_build"
 
         if constraint_exists(fk_name, conn):
             fk_name = f"fk_vertex_build_flow_id_flow_{revision[:8]}"
@@ -228,7 +223,7 @@ def downgrade() -> None:
         # Copy data - use a window function to ensure build_id uniqueness.
         # Filter out rows where build_id is NULL (PK constraint)
         # No need to filter by 'id' here as the target column allows NULLs.
-        op.execute(f"""
+        op.execute(f'''
             INSERT INTO "{temp_table_name}" (timestamp, id, data, artifacts, params, build_id, flow_id, valid)
             SELECT timestamp, id, data, artifacts, params, build_id, flow_id, valid
             FROM (
@@ -238,7 +233,7 @@ def downgrade() -> None:
                 WHERE build_id IS NOT NULL -- Ensure primary key is not NULL
             ) sub
             WHERE rn = 1
-        """)
+        ''')
 
         # Drop original table and rename temp table
         op.drop_table("vertex_build")
@@ -253,7 +248,7 @@ def downgrade() -> None:
 
         # Check if constraints already exist
         if constraint_exists(pk_name, conn):
-            pk_name = "pk_temp_transaction"
+            pk_name = f"pk_temp_transaction"
 
         if constraint_exists(fk_name, conn):
             fk_name = f"fk_transaction_flow_id_flow_{revision[:8]}"
@@ -279,12 +274,12 @@ def downgrade() -> None:
         )
 
         # Copy data - explicitly list columns and filter out rows where id is NULL
-        op.execute(f"""
+        op.execute(f'''
             INSERT INTO "{temp_table_name}" (timestamp, vertex_id, target_id, inputs, outputs, status, id, flow_id, error)
             SELECT timestamp, vertex_id, target_id, inputs, outputs, status, id, flow_id, error
             FROM "transaction"
             WHERE id IS NOT NULL
-        """)
+        ''')
 
         # Drop original table and rename temp table
         op.drop_table("transaction")
@@ -299,7 +294,7 @@ def downgrade() -> None:
 
         # Check if constraints already exist
         if constraint_exists(pk_name, conn):
-            pk_name = "pk_temp_message"
+            pk_name = f"pk_temp_message"
 
         if constraint_exists(fk_name, conn):
             fk_name = f"fk_message_flow_id_flow_{revision[:8]}"
@@ -329,12 +324,12 @@ def downgrade() -> None:
         )
 
         # Copy data - explicitly list columns and filter out rows where id is NULL
-        op.execute(f"""
+        op.execute(f'''
             INSERT INTO "{temp_table_name}" (timestamp, sender, sender_name, session_id, text, id, flow_id, files, error, edit, properties, category, content_blocks)
             SELECT timestamp, sender, sender_name, session_id, text, id, flow_id, files, error, edit, properties, category, content_blocks
             FROM "message"
             WHERE id IS NOT NULL
-        """)
+        ''')
 
         # Drop original table and rename temp table
         op.drop_table("message")

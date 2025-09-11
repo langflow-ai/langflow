@@ -7,8 +7,7 @@ from langflow.services.base import Service
 from langflow.services.task.backends.anyio import AnyIOBackend
 
 if TYPE_CHECKING:
-    from lfx.services.settings.service import SettingsService
-
+    from langflow.services.settings.service import SettingsService
     from langflow.services.task.backends.base import TaskBackend
 
 

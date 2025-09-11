@@ -5,9 +5,8 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-
-from lfx.custom.directory_reader.directory_reader import DirectoryReader
-from lfx.services.settings.base import BASE_COMPONENTS_PATH
+from langflow.custom.directory_reader.directory_reader import DirectoryReader
+from langflow.services.settings.base import BASE_COMPONENTS_PATH
 
 
 async def run_post(client, flow_id, headers, post_data):

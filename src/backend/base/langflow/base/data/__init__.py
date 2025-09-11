@@ -1,3 +1,5 @@
-"""Backwards compatibility module for langflow.base.data."""
+from .base_file import BaseFileComponent
 
-from lfx.base.data import *  # noqa: F403
+__all__ = [
+    "BaseFileComponent",
+]

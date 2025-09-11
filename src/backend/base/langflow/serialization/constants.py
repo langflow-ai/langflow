@@ -1,3 +1,2 @@
-from lfx.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
-
-__all__ = ["MAX_ITEMS_LENGTH", "MAX_TEXT_LENGTH"]
+MAX_TEXT_LENGTH = 6000
+MAX_ITEMS_LENGTH = 1000

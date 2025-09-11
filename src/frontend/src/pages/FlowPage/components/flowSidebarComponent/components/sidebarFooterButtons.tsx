@@ -20,7 +20,7 @@ const SidebarMenuButtons = ({
   };
 
   return (
-    <>
+    <div className="flex w-full h-full">
       {ENABLE_NEW_SIDEBAR && activeSection === "mcp" ? (
         <>
           <SidebarMenuButton asChild>
@@ -29,7 +29,7 @@ const SidebarMenuButtons = ({
               disabled={isLoading}
               onClick={handleAddMcpServerClick}
               data-testid="sidebar-add-mcp-server-button"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 w-full p-0"
             >
               <ForwardedIconComponent
                 name="Plus"
@@ -62,29 +62,29 @@ const SidebarMenuButtons = ({
           <AddMcpServerModal open={addMcpOpen} setOpen={setAddMcpOpen} />
         </>
       ) : (
-        <SidebarMenuButton asChild>
-          <Button
-            unstyled
-            disabled={isLoading}
-            onClick={() => {
-              if (customComponent) {
-                addComponent(customComponent, "CustomComponent");
-              }
-            }}
-            data-testid="sidebar-custom-component-button"
-            className="flex items-center gap-2"
-          >
-            <ForwardedIconComponent
-              name="Plus"
-              className="h-4 w-4 text-muted-foreground"
-            />
-            <span className="group-data-[state=open]/collapsible:font-semibold">
-              New Custom Component
-            </span>
-          </Button>
-        </SidebarMenuButton>
+        // <SidebarMenuButton asChild className="group">
+        <Button
+          unstyled
+          disabled={isLoading}
+          onClick={() => {
+            if (customComponent) {
+              addComponent(customComponent, "CustomComponent");
+            }
+          }}
+          data-testid="sidebar-custom-component-button"
+          className="flex items-center w-full h-full p-3 gap-2 hover:bg-muted"
+        >
+          <ForwardedIconComponent
+            name="Plus"
+            className="h-4 w-4 text-muted-foreground"
+          />
+          <span className="ml-2group-data-[state=open]/collapsible:font-semibold text-sm">
+            New Custom Component
+          </span>
+        </Button>
+        // </SidebarMenuButton>
       )}
-    </>
+    </div>
   );
 };
 

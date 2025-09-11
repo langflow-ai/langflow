@@ -18,6 +18,14 @@ CACHE_DIR = user_cache_dir("langflow", "langflow")
 PREFIX = "langflow_cache"
 
 
+class CacheMiss:
+    def __repr__(self) -> str:
+        return "<CACHE_MISS>"
+
+    def __bool__(self) -> bool:
+        return False
+
+
 def create_cache_folder(func):
     def wrapper(*args, **kwargs):
         # Get the destination folder
@@ -156,3 +164,6 @@ def update_build_status(cache_service, flow_id: str, status: "BuildStatus") -> N
     cache_service[flow_id] = cached_flow
     cached_flow["status"] = status
     cache_service[flow_id] = cached_flow
+
+
+CACHE_MISS = CacheMiss()

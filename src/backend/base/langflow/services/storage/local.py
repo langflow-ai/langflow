@@ -1,6 +1,7 @@
 import anyio
 from aiofile import async_open
-from lfx.log.logger import logger
+
+from langflow.logging.logger import logger
 
 from .service import StorageService
 

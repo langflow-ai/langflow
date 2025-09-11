@@ -1,8 +1,7 @@
 import pytest
-
-from lfx.template.field.base import Input
-from lfx.template.frontend_node.base import FrontendNode
-from lfx.template.template.base import Template
+from langflow.template.field.base import Input
+from langflow.template.frontend_node.base import FrontendNode
+from langflow.template.template.base import Template
 
 
 @pytest.fixture

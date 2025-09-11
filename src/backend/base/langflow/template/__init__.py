@@ -1,3 +1,10 @@
-"""Backwards compatibility module for langflow.template."""
+from langflow.template.field.base import Input, Output
+from langflow.template.frontend_node.base import FrontendNode
+from langflow.template.template.base import Template
 
-from lfx.template import *  # noqa: F403
+__all__ = [
+    "FrontendNode",
+    "Input",
+    "Output",
+    "Template",
+]

@@ -25,7 +25,7 @@ const FeatureToggles = ({
   ];
 
   return (
-    <div className="flex flex-col gap-7 border-b pb-7 pt-5">
+    <div className="flex flex-col gap-7 pb-3 px-2 pt-5">
       {toggles.map((toggle) => (
         <div key={toggle.label} className="flex items-center justify-between">
           <div className="flex items-center space-x-2">

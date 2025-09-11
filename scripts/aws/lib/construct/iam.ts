@@ -65,7 +65,7 @@ export class EcsIAM extends Construct {
     // KendraとBedrockのアクセス権付与
     this.backendTaskRole.attachInlinePolicy(RagAccessPolicy);
 
-    // BackEnd Task ExecutionRole
+    // BackEnd Task ExecutionRole 
     this.backendTaskExecutionRole = new iam.Role(this, 'backendTaskExecutionRole', {
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
       managedPolicies: [
@@ -75,7 +75,7 @@ export class EcsIAM extends Construct {
         },
       ],
     });
-
+  
     this.backendTaskExecutionRole.attachInlinePolicy(SecretsManagerPolicy);
     this.backendTaskExecutionRole.attachInlinePolicy(RagAccessPolicy);
   }

@@ -1,6 +1,5 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { v5 as uuidv5 } from "uuid";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Input } from "@/components/ui/input";
@@ -11,9 +10,8 @@ import {
   SelectTrigger,
 } from "@/components/ui/select-custom";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
+import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
 import useFlowStore from "@/stores/flowStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
 
@@ -40,11 +38,7 @@ export default function SessionSelector({
   playgroundPage: boolean;
   setActiveSession: (session: string) => void;
 }) {
-  const clientId = useUtilityStore((state) => state.clientId);
-  const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const currentFlowId = playgroundPage
-    ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
-    : realFlowId;
+  const currentFlowId = useGetFlowId();
   const [isEditing, setIsEditing] = useState(false);
   const [editedSession, setEditedSession] = useState(session);
   const { mutate: updateSessionName } = useUpdateSessionName();

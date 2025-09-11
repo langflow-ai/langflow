@@ -37,7 +37,11 @@ export const MarkdownField = ({
         )}
         components={{
           p({ node, ...props }) {
-            return <span className="w-fit max-w-full">{props.children}</span>;
+            return (
+              <p className="w-fit max-w-full my-1.5 last:mb-0 first:mt-0">
+                {props.children}
+              </p>
+            );
           },
           ol({ node, ...props }) {
             return <ol className="max-w-full">{props.children}</ol>;

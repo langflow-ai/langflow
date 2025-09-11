@@ -10,7 +10,7 @@ export type GetCodesType = {
 export type GetCodeType = {
   flowId: string;
   flowName: string;
-  webhookAuthEnable: boolean;
+  isAuth: boolean;
   tweaksBuildedObject?: {};
   endpointName?: string | null;
   activeTweaks?: boolean;

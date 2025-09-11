@@ -1,5 +1,6 @@
 module.exports = {
   docs: [
+    "Get-Started/welcome-to-langflow",
     {
       type: "category",
       label: "Get started",
@@ -470,7 +471,7 @@ module.exports = {
         {
           type: "doc",
           id: "Support/luna-for-langflow",
-          label: "IBM Elite Support for Langflow",
+          label: "Enterprise support",
         },
       ],
     },

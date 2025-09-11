@@ -97,7 +97,7 @@ describe("refresh token functionality", () => {
 
       try {
         await refreshMutation.mutate();
-      } catch (_error) {
+      } catch (error) {
         // Expected to throw
       }
 

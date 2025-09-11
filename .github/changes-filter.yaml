@@ -7,7 +7,6 @@ python:
   - "src/backend/base/pyproject.toml"
   - "src/backend/base/uv.lock"
   - "**/python_test.yml"
-  - ".github/workflows/ci.yml"
 components-changes:
   - "src/backend/base/langflow/components/**"
 starter-projects-changes:
@@ -18,7 +17,6 @@ frontend:
   - "src/frontend/**"
   - "**/typescript_test.yml"
   - "**/jest_test.yml"
-  - ".github/workflows/ci.yml"
 docs:
   - "docs/**"
 

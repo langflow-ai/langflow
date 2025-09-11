@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from anyio import Path
 from httpx import AsyncClient
+from langflow.custom.directory_reader.utils import abuild_custom_component_list_from_path
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
     detect_github_url,
@@ -23,9 +24,6 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, session_scope
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
-
-from lfx.constants import BASE_COMPONENTS_PATH
-from lfx.custom.directory_reader.utils import abuild_custom_component_list_from_path
 
 
 async def test_load_starter_projects():
@@ -143,8 +141,7 @@ def add_edge(source, target, from_output, to_input):
 
 
 async def test_refresh_starter_projects():
-    # Use lfx components path since components have been moved there
-    data_path = BASE_COMPONENTS_PATH
+    data_path = str(await Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
     components = await abuild_custom_component_list_from_path(data_path)
 
     chat_input = find_component_by_name(components, "ChatInput")
@@ -246,7 +243,11 @@ async def test_load_bundles_from_urls():
     async with session_scope() as session:
         await create_super_user(
             username=settings_service.auth_settings.SUPERUSER,
-            password=settings_service.auth_settings.SUPERUSER_PASSWORD,
+            password=(
+                settings_service.auth_settings.SUPERUSER_PASSWORD.get_secret_value()
+                if hasattr(settings_service.auth_settings.SUPERUSER_PASSWORD, "get_secret_value")
+                else settings_service.auth_settings.SUPERUSER_PASSWORD
+            ),
             db=session,
         )
 

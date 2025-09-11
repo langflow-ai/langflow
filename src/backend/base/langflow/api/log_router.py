@@ -5,7 +5,8 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
-from lfx.log.logger import log_buffer
+
+from langflow.logging.logger import log_buffer
 
 log_router = APIRouter(tags=["Log"])
 

@@ -16,6 +16,7 @@ import { BASENAME } from "./customization/config-constants";
 import {
   ENABLE_CUSTOM_PARAM,
   ENABLE_FILE_MANAGEMENT,
+  ENABLE_KNOWLEDGE_BASES,
 } from "./customization/feature-flags";
 import { CustomRoutesStore } from "./customization/utils/custom-routes-store";
 import { CustomRoutesStorePages } from "./customization/utils/custom-routes-store-pages";
@@ -89,10 +90,12 @@ const router = createBrowserRouter(
                         element={<CustomNavigate replace to="files" />}
                       />
                       <Route path="files" element={<FilesPage />} />
-                      <Route
-                        path="knowledge-bases"
-                        element={<KnowledgePage />}
-                      />
+                      {ENABLE_KNOWLEDGE_BASES && (
+                        <Route
+                          path="knowledge-bases"
+                          element={<KnowledgePage />}
+                        />
+                      )}
                     </Route>
                   )}
                   <Route

@@ -2,10 +2,9 @@ from collections import defaultdict
 from collections.abc import Callable
 from threading import Lock
 
-from lfx.log.logger import logger
-from lfx.services.settings.service import SettingsService
-
+from langflow.logging.logger import logger
 from langflow.services.base import Service
+from langflow.services.settings.service import SettingsService
 
 
 class StateService(Service):

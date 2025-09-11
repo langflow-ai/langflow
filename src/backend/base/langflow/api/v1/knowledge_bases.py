@@ -6,10 +6,10 @@ from pathlib import Path
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from langchain_chroma import Chroma
-from lfx.log import logger
 from pydantic import BaseModel
 
 from langflow.api.utils import CurrentActiveUser
+from langflow.logging import logger
 from langflow.services.deps import get_settings_service
 
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases")
@@ -78,7 +78,11 @@ def detect_embedding_provider(kb_path: Path) -> str:
                 config_str = json.dumps(config_data).lower()
 
                 # Check for explicit provider fields first
-                provider_fields = ["embedding_provider", "provider", "embedding_model_provider"]
+                provider_fields = [
+                    "embedding_provider",
+                    "provider",
+                    "embedding_model_provider",
+                ]
                 for field in provider_fields:
                     if field in config_data:
                         provider_value = str(config_data[field]).lower()
@@ -133,7 +137,12 @@ def detect_embedding_model(kb_path: Path) -> str:
                     continue
 
                 # Check for explicit model fields first and return the actual model name
-                model_fields = ["embedding_model", "model", "embedding_model_name", "model_name"]
+                model_fields = [
+                    "embedding_model",
+                    "model",
+                    "embedding_model_name",
+                    "model_name",
+                ]
                 for field in model_fields:
                     if field in config_data:
                         model_value = str(config_data[field])
@@ -142,7 +151,11 @@ def detect_embedding_model(kb_path: Path) -> str:
 
                 # Check for OpenAI specific model names
                 if "openai" in json.dumps(config_data).lower():
-                    openai_models = ["text-embedding-ada-002", "text-embedding-3-small", "text-embedding-3-large"]
+                    openai_models = [
+                        "text-embedding-ada-002",
+                        "text-embedding-3-small",
+                        "text-embedding-3-large",
+                    ]
                     config_str = json.dumps(config_data).lower()
                     for model in openai_models:
                         if model in config_str:
@@ -152,7 +165,12 @@ def detect_embedding_model(kb_path: Path) -> str:
                 if "model" in config_data:
                     model_name = str(config_data["model"])
                     # Common HuggingFace embedding models
-                    hf_patterns = ["sentence-transformers", "all-MiniLM", "all-mpnet", "multi-qa"]
+                    hf_patterns = [
+                        "sentence-transformers",
+                        "all-MiniLM",
+                        "all-mpnet",
+                        "multi-qa",
+                    ]
                     if any(pattern in model_name for pattern in hf_patterns):
                         return model_name
 
@@ -291,7 +309,9 @@ def get_kb_metadata(kb_path: Path) -> dict:
 
 @router.get("", status_code=HTTPStatus.OK)
 @router.get("/", status_code=HTTPStatus.OK)
-async def list_knowledge_bases(current_user: CurrentActiveUser) -> list[KnowledgeBaseInfo]:
+async def list_knowledge_bases(
+    current_user: CurrentActiveUser,
+) -> list[KnowledgeBaseInfo]:
     """List all available knowledge bases."""
     try:
         kb_root_path = get_kb_root_path()
@@ -426,7 +446,10 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
                 # Continue with other deletions even if one fails
 
         if not_found_kbs and deleted_count == 0:
-            raise HTTPException(status_code=404, detail=f"Knowledge bases not found: {', '.join(not_found_kbs)}")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Knowledge bases not found: {', '.join(not_found_kbs)}",
+            )
 
         result = {
             "message": f"Successfully deleted {deleted_count} knowledge base(s)",

@@ -4,7 +4,6 @@ slug: /bundles-azure
 ---
 
 import Icon from "@site/src/components/icon";
-import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 [Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
@@ -17,13 +16,14 @@ This component generates text using [Azure OpenAI LLMs](https://learn.microsoft.
 It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
 Specifically, the **Language Model** output is an instance of [`AzureChatOpenAI`](https://python.langchain.com/docs/integrations/chat/azure_chat_openai/) configured according to the component's parameters.
 
-Use the **Language Model** output when you want to use an Azure OpenAI model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
+Use the **Language Model** output when you want to use an Azure OpenAI model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
 
 For more information, see [**Language Model** components](/components-models).
 
 ### Azure OpenAI parameters
 
-<PartialParams />
+Many **Azure OpenAI** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -45,7 +45,8 @@ For more information about using embedding model components in flows, see [**Emb
 
 ### Azure OpenAI Embeddings parameters
 
-<PartialParams />
+Some **Azure OpenAI Embeddings** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 | Name | Type | Description |
 |------|------|-------------|

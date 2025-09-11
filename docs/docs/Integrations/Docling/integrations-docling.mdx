@@ -64,8 +64,6 @@ The **Docling** language model component ingest documents, and then uses Docling
 
 It outputs `files`, which is the processed files with `DoclingDocument` data.
 
-For more information, see the [Docling IBM models project repository](https://github.com/docling-project/docling-ibm-models).
-
 #### Docling parameters
 
 | Name | Type | Description |
@@ -76,11 +74,9 @@ For more information, see the [Docling IBM models project repository](https://gi
 
 ### Docling Serve
 
-The **Docling Serve** component runs Docling as an API service.
+The **Docling Serve** component ingests documents, and then uses Docling to process them by connecting to your instance of Docling Serve.
 
 It outputs `files`, which is the processed files with `DoclingDocument` data.
-
-For more information, see the [Docling serve project repository](https://github.com/docling-project/docling-serve).
 
 #### Docling Serve parameters
 
@@ -99,8 +95,6 @@ The **Chunk DoclingDocument** component uses the `DoclingDocument` chunkers to s
 
 It outputs the chunked documents as a [`DataFrame`](/data-types#dataframe).
 
-For more information, see the [Docling core project repository](https://github.com/docling-project/docling-core).
-
 #### Chunk DoclingDocument parameters
 
 | Name | Type | Description |
@@ -118,8 +112,6 @@ For more information, see the [Docling core project repository](https://github.c
 The **Export DoclingDocument** component exports `DoclingDocument` to Markdown, HTML, and other formats.
 
 It can output the exported data as either [`Data`](/data-types#data) or [`DataFrame`](/data-types#dataframe).
-
-For more information, see the [Docling core project repository](https://github.com/docling-project/docling-core).
 
 #### Export DoclingDocument parameters
 

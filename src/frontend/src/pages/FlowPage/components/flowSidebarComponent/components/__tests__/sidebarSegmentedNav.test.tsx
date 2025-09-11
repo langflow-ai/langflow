@@ -137,9 +137,8 @@ describe("SidebarSegmentedNav", () => {
     expect(componentsButton).toHaveAttribute("data-active", "false");
   });
 
-  it("sets active state for search when search is focused", () => {
-    mockUseSidebar.activeSection = "components";
-    mockUseSearchContext.isSearchFocused = true;
+  it("sets active state for search when activeSection is search", () => {
+    mockUseSidebar.activeSection = "search";
     render(<SidebarSegmentedNav />);
 
     const searchButton = screen.getByTestId("sidebar-nav-search");
