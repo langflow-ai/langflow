@@ -46,6 +46,7 @@ app = typer.Typer(no_args_is_help=True)
 
 class ProcessManager:
     """Manages the lifecycle of the backend process."""
+
     webapp_process: Process | None = None
 
     def __init__(self):
@@ -84,8 +85,6 @@ class ProcessManager:
 
     def shutdown(self):
         """Gracefully shutdown the webapp process."""
-        import os
-
         # Clean up progress indicator first to stop animations
         if self.progress_indicator:
             self.progress_indicator.cleanup()

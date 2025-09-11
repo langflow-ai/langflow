@@ -40,7 +40,6 @@ class ProgressIndicator:
 
         self._animation_index = 0
 
-
     def add_step(self, title: str, description: str = "") -> None:
         """Add a step to the progress indicator."""
         self.steps.append(
@@ -60,8 +59,9 @@ class ProgressIndicator:
 
         step = self.steps[step_index]
 
-        while (self.running and step["status"] == "running" and
-               not self._stop_animation and not self._shutdown_requested):
+        while (
+            self.running and step["status"] == "running" and not self._stop_animation and not self._shutdown_requested
+        ):
             # Clear the current line and move cursor to beginning
             sys.stdout.write("\r")
 
@@ -77,7 +77,7 @@ class ProgressIndicator:
             self._animation_index = (self._animation_index + 1) % len(self._animation_chars)
 
             # Use shorter sleep intervals and check for shutdown more frequently
-            for _ in range(15):  
+            for _ in range(15):
                 if self._shutdown_requested or self._stop_animation:
                     break
                 time.sleep(0.01)
