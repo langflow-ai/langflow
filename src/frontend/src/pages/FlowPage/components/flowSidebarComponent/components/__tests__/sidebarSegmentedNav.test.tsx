@@ -393,8 +393,6 @@ describe("SidebarSegmentedNav", () => {
       label: "Sticky Notes",
       tooltip: "Add Sticky Notes",
     });
-<<<<<<< HEAD
-=======
   });
 
   describe("Add Note Functionality", () => {
@@ -490,6 +488,5 @@ describe("SidebarSegmentedNav", () => {
 
       mockRemoveEventListener.mockRestore();
     });
->>>>>>> 7b9b65ce98 (Fixed sidebar segmented nav test)
   });
 });

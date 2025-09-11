@@ -72,12 +72,7 @@ test.describe("Flow Lock Feature", () => {
       });
 
       // Verify lock icon now appears in the flow header
-<<<<<<< HEAD
-      const lockIconInHeader = page.locator('[data-testid="icon-Lock"]');
-
-=======
       const lockIconInHeader = page.getByTestId("icon-Lock");
->>>>>>> 20ec382893 (Fixed flow lock test)
       await expect(lockIconInHeader).toBeVisible();
 
       // Try to open settings again to unlock
@@ -157,20 +152,9 @@ test.describe("Flow Lock Feature", () => {
       await lockSwitch.click();
 
       // Should now show lock icon
-<<<<<<< HEAD
-      const lockIcon = page.locator('[data-testid="icon-Lock"]');
-<<<<<<< HEAD
-      await expect(lockIcon).toBeVisible();
-      await expect(unlockIcon).toHaveCount(1);
-=======
-      await expect(lockIcon).toBeVisible({ timeout: 5000 });
-      await expect(unlockIcon).toHaveCount(0);
->>>>>>> 20faa2c70f (Fixed flow lock test)
-=======
       const lockIcon = dialog.locator('[data-testid="icon-Lock"]');
       await expect(lockIcon).toBeVisible({ timeout: 5000 });
       await expect(unlockIcon).toBeHidden({ timeout: 5000 });
->>>>>>> 20ec382893 (Fixed flow lock test)
     },
   );
 });

@@ -33,13 +33,8 @@ const SidebarMenuButtons = ({
             name="Plus"
             className="h-4 w-4 text-muted-foreground"
           />
-<<<<<<< HEAD
-          <span className="ml-2 group-data-[state=open]/collapsible:font-semibold text-sm">
-            New Custom Component
-=======
           <span className="group-data-[state=open]/collapsible:font-semibold">
             Add MCP Server
->>>>>>> 61920ccfe7 (fixed sidebar footer buttons and test)
           </span>
         </Button>
       </SidebarMenuButton>
