@@ -98,8 +98,7 @@ class MCPComposerService(Service):
         """Stop all MCP Composer instances."""
         for project_id in list(self.project_composers.keys()):
             try:
-                # Add timeout to individual project stops
-                await asyncio.wait_for(self.stop_project_composer(project_id), timeout=5.0)
+                await asyncio.wait_for(self.stop_project_composer(project_id), timeout=3.0)
             except asyncio.TimeoutError:
                 await logger.aerror(f"Timeout stopping MCP Composer for project {project_id}, forcing kill")
                 # Force cleanup for this project
@@ -109,6 +108,14 @@ class MCPComposerService(Service):
                     if process and process.returncode is None:
                         with contextlib.suppress(ProcessLookupError):
                             process.kill()
+                            # Force close pipes to prevent hanging
+                            try:
+                                if process.stdout:
+                                    process.stdout.close()
+                                if process.stderr:
+                                    process.stderr.close()
+                            except Exception:
+                                pass
                     del self.project_composers[project_id]
             except Exception as e:  # noqa: BLE001
                 await logger.aerror(f"Error stopping MCP Composer for project {project_id}: {e}")
@@ -146,29 +153,36 @@ class MCPComposerService(Service):
                     await logger.adebug(f"Terminating MCP Composer process {process.pid} for project {project_id}")
                     process.terminate()
 
-                    # Wait longer for graceful shutdown
+                    # Wait for graceful shutdown 
                     try:
-                        await asyncio.wait_for(self._wait_for_process_exit(process), timeout=3.0)
+                        await asyncio.wait_for(self._wait_for_process_exit(process), timeout=2.0)
                         await logger.adebug(f"MCP Composer for project {project_id} terminated gracefully")
                     except asyncio.TimeoutError:
                         await logger.aerror(
                             f"MCP Composer for project {project_id} did not terminate gracefully, force killing"
                         )
                         process.kill()
-                        # Wait a bit more for force kill to complete
+                        # Wait for force kill to complete
                         try:
-                            await asyncio.wait_for(self._wait_for_process_exit(process), timeout=2.0)
+                            await asyncio.wait_for(self._wait_for_process_exit(process), timeout=1.0)
                         except asyncio.TimeoutError:
                             await logger.aerror(
                                 f"Failed to kill MCP Composer process {process.pid} for project {project_id}"
                             )
+                            # Force cleanup of process pipes to prevent hanging
+                            try:
+                                if process.stdout:
+                                    process.stdout.close()
+                                if process.stderr:
+                                    process.stderr.close()
+                            except Exception:
+                                pass  # Ignore errors when closing pipes
                 else:
                     await logger.adebug(f"MCP Composer process for project {project_id} was already terminated")
 
                 await logger.adebug(f"MCP Composer stopped for project {project_id}")
 
             except ProcessLookupError:
-                # Process already terminated
                 await logger.adebug(f"MCP Composer process for project {project_id} was already terminated")
             except Exception as e:  # noqa: BLE001
                 await logger.aerror(f"Error stopping MCP Composer for project {project_id}: {e}")
@@ -178,11 +192,11 @@ class MCPComposerService(Service):
 
     async def _wait_for_process_exit(self, process):
         """Wait for a process to exit with polling instead of blocking wait."""
-        max_wait = 5  # Total time to wait
-        poll_interval = 0.5
+        max_wait = 3 
+        poll_interval = 0.1
 
         for _ in range(int(max_wait / poll_interval)):
-            if process.returncode is not None:  # Process has exited
+            if process.returncode is not None:
                 return  # Process has exited
             await asyncio.sleep(poll_interval)
 
@@ -624,8 +638,7 @@ class MCPComposerService(Service):
             return
         await logger.adebug("Tearing down MCP Composer service...")
         try:
-            # Add timeout to prevent infinite hanging
-            await asyncio.wait_for(self.stop(), timeout=10.0)
+            await asyncio.wait_for(self.stop(), timeout=5.0)
         except asyncio.TimeoutError:
             await logger.aerror("MCP Composer teardown timed out, forcing cleanup")
             # Force cleanup by killing processes directly
@@ -634,9 +647,54 @@ class MCPComposerService(Service):
                 if process and process.returncode is None:
                     with contextlib.suppress(ProcessLookupError):
                         process.kill()
+                        # Force close pipes to prevent hanging
+                        try:
+                            if process.stdout:
+                                process.stdout.close()
+                            if process.stderr:
+                                process.stderr.close()
+                        except Exception:
+                            pass
             self.project_composers.clear()
         except Exception as e:  # noqa: BLE001
             await logger.aerror(f"Error during MCP Composer teardown: {e}")
             # Still try to clear the composers dict
             self.project_composers.clear()
+        # Final cleanup: kill any remaining zombie processes
+        await self._force_cleanup_zombie_processes()
         await logger.adebug("MCP Composer service teardown complete")
+
+    async def _force_cleanup_zombie_processes(self):
+        """Force cleanup any remaining MCP Composer processes that might be zombies."""
+        try:
+            import psutil
+            current_pid = os.getpid()
+            
+            # Find all child processes of the current process
+            current_process = psutil.Process(current_pid)
+            children = current_process.children(recursive=True)
+            
+            mcp_processes = []
+            for child in children:
+                try:
+                    cmdline = child.cmdline()
+                    if cmdline and any('mcp-composer' in arg for arg in cmdline):
+                        mcp_processes.append(child)
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+            
+            if mcp_processes:
+                await logger.adebug(f"Found {len(mcp_processes)} remaining MCP Composer processes, force killing")
+                for process in mcp_processes:
+                    try:
+                        if process.is_running():
+                            process.kill()
+                            await logger.adebug(f"Force killed MCP Composer process {process.pid}")
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        pass  # Process already dead or no permission
+        except ImportError:
+            # psutil not available, skip zombie cleanup
+            await logger.adebug("psutil not installed, skipping zombie process cleanup")
+            pass
+        except Exception as e:
+            await logger.awarning(f"Error during zombie process cleanup: {e}")
