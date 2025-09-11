@@ -1,20 +1,22 @@
 import pytest
 from langflow.services.auth.utils import verify_password
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_db_service, get_settings_service
+from langflow.services.deps import get_settings_service
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from langflow.services.utils import initialize_services, setup_superuser, teardown_superuser
 from sqlmodel import select
 
 
 @pytest.mark.asyncio
-async def test_initialize_services_creates_default_superuser_when_auto_login_true():
+async def test_initialize_services_creates_default_superuser_when_auto_login_true(client):  # noqa: ARG001
+    from langflow.services.deps import session_scope
+
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = True
 
     await initialize_services()
 
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
         user = (await session.exec(stmt)).first()
         assert user is not None
@@ -22,14 +24,16 @@ async def test_initialize_services_creates_default_superuser_when_auto_login_tru
 
 
 @pytest.mark.asyncio
-async def test_teardown_superuser_removes_default_if_never_logged():
+async def test_teardown_superuser_removes_default_if_never_logged(client):  # noqa: ARG001
+    from langflow.services.deps import session_scope
+
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = False
 
     # Ensure default exists and has never logged in
     await initialize_services()
 
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         # Create default manually if missing
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
         user = (await session.exec(stmt)).first()
@@ -49,25 +53,29 @@ async def test_teardown_superuser_removes_default_if_never_logged():
         await session.commit()
 
     # Run teardown and verify removal
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         await teardown_superuser(settings, session)
 
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
         user = (await session.exec(stmt)).first()
         assert user is None
 
 
 @pytest.mark.asyncio
-async def test_teardown_superuser_preserves_logged_in_default():
+async def test_teardown_superuser_preserves_logged_in_default(client):  # noqa: ARG001
     """Test that teardown preserves default superuser if they have logged in."""
+    from datetime import datetime, timezone
+
+    from langflow.services.deps import session_scope
+
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = False
 
     # Ensure default exists
     await initialize_services()
 
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         # Create default manually if missing and mark as logged in
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
         user = (await session.exec(stmt)).first()
@@ -83,17 +91,15 @@ async def test_teardown_superuser_preserves_logged_in_default():
             await session.refresh(user)
 
         # Mark user as having logged in
-        from datetime import datetime, timezone
-
         user.last_login_at = datetime.now(timezone.utc)
         user.is_superuser = True
         await session.commit()
 
     # Run teardown and verify user is preserved
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         await teardown_superuser(settings, session)
 
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
         user = (await session.exec(stmt)).first()
         assert user is not None
@@ -101,15 +107,17 @@ async def test_teardown_superuser_preserves_logged_in_default():
 
 
 @pytest.mark.asyncio
-async def test_setup_superuser_with_no_configured_credentials():
+async def test_setup_superuser_with_no_configured_credentials(client):  # noqa: ARG001
     """Test setup_superuser behavior when no superuser credentials are configured."""
+    from langflow.services.deps import session_scope
+
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = False
     settings.auth_settings.SUPERUSER = ""
     # Reset password to empty
     settings.auth_settings.SUPERUSER_PASSWORD = ""
 
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         # This should create a default superuser since no credentials are provided
         await setup_superuser(settings, session)
 
@@ -121,17 +129,18 @@ async def test_setup_superuser_with_no_configured_credentials():
 
 
 @pytest.mark.asyncio
-async def test_setup_superuser_with_custom_credentials():
+async def test_setup_superuser_with_custom_credentials(client):  # noqa: ARG001
     """Test setup_superuser behavior with custom superuser credentials."""
+    from langflow.services.deps import session_scope
+    from pydantic import SecretStr
+
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = False
     settings.auth_settings.SUPERUSER = "custom_admin"
-    from pydantic import SecretStr
-
     settings.auth_settings.SUPERUSER_PASSWORD = SecretStr("custom_password")
 
     # Clean DB state to avoid interference from previous tests
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         # Ensure default can be removed by teardown (last_login_at must be None)
         stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
         default_user = (await session.exec(stmt)).first()
@@ -147,7 +156,7 @@ async def test_setup_superuser_with_custom_credentials():
             await session.delete(existing_custom)
             await session.commit()
 
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         await setup_superuser(settings, session)
 
         # Verify custom superuser was created
@@ -168,7 +177,7 @@ async def test_setup_superuser_with_custom_credentials():
         assert settings.auth_settings.SUPERUSER_PASSWORD.get_secret_value() == ""
 
     # Cleanup: remove custom_admin to not leak state across tests
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         stmt = select(User).where(User.username == "custom_admin")
         created_custom = (await session.exec(stmt)).first()
         if created_custom:
