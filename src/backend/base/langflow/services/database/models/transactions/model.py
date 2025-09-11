@@ -44,9 +44,7 @@ class TransactionBase(SQLModel):
         Returns:
             dict: The serialized input data with applied constraints.
         """
-        return serialize(
-            data, max_length=get_max_text_length(), max_items=get_max_items_length()
-        )
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @field_serializer("outputs")
     def serialize_outputs(self, data) -> dict:
@@ -58,9 +56,7 @@ class TransactionBase(SQLModel):
         Returns:
             dict: The serialized outputs dictionary with applied constraints.
         """
-        return serialize(
-            data, max_length=get_max_text_length(), max_items=get_max_items_length()
-        )
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
 
 class TransactionTable(TransactionBase, table=True):  # type: ignore[call-arg]
@@ -87,13 +83,9 @@ class TransactionLogsResponse(SQLModel):
     @field_serializer("inputs")
     def serialize_inputs(self, data) -> dict:
         """Serialize the transaction's input data with enforced limits on text length and item count."""
-        return serialize(
-            data, max_length=get_max_text_length(), max_items=get_max_items_length()
-        )
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
 
     @field_serializer("outputs")
     def serialize_outputs(self, data) -> dict:
         """Serialize the outputs dictionary with enforced limits on text length and item count."""
-        return serialize(
-            data, max_length=get_max_text_length(), max_items=get_max_items_length()
-        )
+        return serialize(data, max_length=get_max_text_length(), max_items=get_max_items_length())
