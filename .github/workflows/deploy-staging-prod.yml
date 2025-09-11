@@ -56,6 +56,9 @@ jobs:
         run: |
           BRANCH_NAME=$(echo "${{ github.event.inputs.branch }}" | tr '/' '-')
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+    
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
 
       - name: Create GitHub Deployment
         env:
@@ -229,16 +232,12 @@ jobs:
               --domain ${{env.PROD_HOST}} \
               --email ${{ github.event.inputs.email }} \
               --env-file /root/.env-file        
-      
-      - name: Fetch Deployment Status
-        if: always()
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ github.event.inputs.environment == 'staging' && env.STAGING_HOST || env.PROD_HOST }}
-          username: root
-          password: ${{ github.event.inputs.environment == 'staging' && secrets.VM_PASSWORD || secrets.PROD_VM_PASSWORD }}
-          script: |
-            scp /root/deploy_status.env $GITHUB_WORKSPACE/
+
+      - name: Copy deploy_status.env from VM
+        run: |
+          sshpass -p "${{ secrets.VM_PASSWORD }}" scp -o StrictHostKeyChecking=no \
+            root@staging.visualaiagentsbuilder.com:/root/deploy_status.env \
+            $GITHUB_WORKSPACE/deploy_status.env
 
       - name: Update GitHub Deployment Status with Docker info
         if: always()
