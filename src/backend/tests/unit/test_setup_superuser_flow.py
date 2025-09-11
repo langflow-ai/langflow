@@ -9,7 +9,7 @@ from langflow.services.utils import initialize_services, setup_superuser, teardo
 
 
 @pytest.mark.asyncio
-async def test_initialize_services_creates_default_superuser_when_auto_login_true():
+async def test_initialize_services_creates_default_superuser_when_auto_login_true(client):  # noqa: ARG001
     from langflow.services.deps import session_scope
 
     settings = get_settings_service()
@@ -25,7 +25,7 @@ async def test_initialize_services_creates_default_superuser_when_auto_login_tru
 
 
 @pytest.mark.asyncio
-async def test_teardown_superuser_removes_default_if_never_logged():
+async def test_teardown_superuser_removes_default_if_never_logged(client):  # noqa: ARG001
     from langflow.services.deps import session_scope
 
     settings = get_settings_service()
@@ -64,7 +64,7 @@ async def test_teardown_superuser_removes_default_if_never_logged():
 
 
 @pytest.mark.asyncio
-async def test_teardown_superuser_preserves_logged_in_default():
+async def test_teardown_superuser_preserves_logged_in_default(client):  # noqa: ARG001
     """Test that teardown preserves default superuser if they have logged in."""
     from datetime import datetime, timezone
 
@@ -108,7 +108,7 @@ async def test_teardown_superuser_preserves_logged_in_default():
 
 
 @pytest.mark.asyncio
-async def test_setup_superuser_with_no_configured_credentials():
+async def test_setup_superuser_with_no_configured_credentials(client):  # noqa: ARG001
     """Test setup_superuser behavior when no superuser credentials are configured."""
     from langflow.services.deps import session_scope
 
@@ -130,7 +130,7 @@ async def test_setup_superuser_with_no_configured_credentials():
 
 
 @pytest.mark.asyncio
-async def test_setup_superuser_with_custom_credentials():
+async def test_setup_superuser_with_custom_credentials(client):  # noqa: ARG001
     """Test setup_superuser behavior with custom superuser credentials."""
     from pydantic import SecretStr
 
