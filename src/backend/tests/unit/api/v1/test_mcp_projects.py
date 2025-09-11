@@ -6,10 +6,6 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException, status
 from httpx import AsyncClient
-from mcp.server.sse import SseServerTransport
-from pydantic import SecretStr
-from sqlmodel import select
-
 from langflow.api.v1.mcp_projects import (
     _project_mcp_servers,
     _project_sse_transports,
@@ -23,6 +19,9 @@ from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.services.utils import initialize_services
+from mcp.server.sse import SseServerTransport
+from pydantic import SecretStr
+from sqlmodel import select
 
 if TYPE_CHECKING:
     from langflow.services.mcp_composer.service import MCPComposerService
@@ -247,7 +246,11 @@ def cleanup_mcp_composer_processes():
 
 
 async def test_handle_project_messages_success(
-    client: AsyncClient, user_test_project, mock_sse_transport, logged_in_headers, mcp_test_lock  # noqa: ARG001
+    client: AsyncClient,
+    user_test_project,
+    mock_sse_transport,
+    logged_in_headers,
+    mcp_test_lock,  # noqa: ARG001
 ):
     """Test successful handling of project messages."""
     response = await client.post(
@@ -260,7 +263,10 @@ async def test_handle_project_messages_success(
 
 
 async def test_update_project_mcp_settings_invalid_json(
-    client: AsyncClient, user_test_project, logged_in_headers, mcp_test_lock  # noqa: ARG001
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    mcp_test_lock,  # noqa: ARG001
 ):
     """Test updating MCP settings with invalid JSON."""
     response = await client.patch(
@@ -303,7 +309,11 @@ async def test_flow_for_update(active_user, user_test_project):
 
 
 async def test_update_project_mcp_settings_success(
-    client: AsyncClient, user_test_project, test_flow_for_update, logged_in_headers, mcp_test_lock  # noqa: ARG001
+    client: AsyncClient,
+    user_test_project,
+    test_flow_for_update,
+    logged_in_headers,
+    mcp_test_lock,  # noqa: ARG001
 ):
     """Test successful update of MCP settings using real database."""
     # Create settings for updating the flow
@@ -361,7 +371,10 @@ async def test_update_project_mcp_settings_invalid_project(client: AsyncClient, 
 
 
 async def test_update_project_mcp_settings_other_user_project(
-    client: AsyncClient, other_test_project, logged_in_headers, mcp_test_lock  # noqa: ARG001
+    client: AsyncClient,
+    other_test_project,
+    logged_in_headers,
+    mcp_test_lock,  # noqa: ARG001
 ):
     """Test accessing a project belonging to another user."""
     # We're using the GET endpoint since it works correctly and tests the same security constraints
@@ -376,7 +389,11 @@ async def test_update_project_mcp_settings_other_user_project(
 
 
 async def test_update_project_mcp_settings_other_user_project_with_composer(
-    client: AsyncClient, other_test_project, logged_in_headers, enable_mcp_composer, mcp_test_lock  # noqa: ARG001
+    client: AsyncClient,
+    other_test_project,
+    logged_in_headers,
+    enable_mcp_composer,
+    mcp_test_lock,  # noqa: ARG001
 ):
     """Test accessing a project belonging to another user when MCP Composer is enabled."""
     # When MCP Composer is enabled, JWT tokens are not accepted for MCP endpoints
@@ -391,7 +408,10 @@ async def test_update_project_mcp_settings_other_user_project_with_composer(
 
 
 async def test_update_project_mcp_settings_empty_settings(
-    client: AsyncClient, user_test_project, logged_in_headers, mcp_test_lock  # noqa: ARG001
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    mcp_test_lock,  # noqa: ARG001
 ):
     """Test updating MCP settings with empty settings list."""
     # Use real database objects instead of mocks to avoid the coroutine issue
@@ -420,7 +440,10 @@ async def test_update_project_mcp_settings_empty_settings(
 
 
 async def test_user_can_only_access_own_projects(
-    client: AsyncClient, other_test_project, logged_in_headers, mcp_test_lock  # noqa: ARG001
+    client: AsyncClient,
+    other_test_project,
+    logged_in_headers,
+    mcp_test_lock,  # noqa: ARG001
 ):
     """Test that a user can only access their own projects."""
     # Try to access the other user's project using first user's credentials
@@ -431,7 +454,11 @@ async def test_user_can_only_access_own_projects(
 
 
 async def test_user_data_isolation_with_real_db(
-    client: AsyncClient, logged_in_headers, other_test_user, other_test_project, mcp_test_lock  # noqa: ARG001
+    client: AsyncClient,
+    logged_in_headers,
+    other_test_user,
+    other_test_project,
+    mcp_test_lock,  # noqa: ARG001
 ):
     """Test that users can only access their own MCP projects using a real database session."""
     # Create a flow for the other test user in their project
@@ -522,7 +549,11 @@ async def user_test_flow(active_user, user_test_project):
 
 
 async def test_user_can_update_own_flow_mcp_settings(
-    client: AsyncClient, logged_in_headers, user_test_project, user_test_flow, mcp_test_lock  # noqa: ARG001
+    client: AsyncClient,
+    logged_in_headers,
+    user_test_project,
+    user_test_flow,
+    mcp_test_lock,  # noqa: ARG001
 ):
     """Test that a user can update MCP settings for their own flows using real database."""
     # User attempts to update their own flow settings
@@ -566,7 +597,11 @@ async def test_user_can_update_own_flow_mcp_settings(
 
 
 async def test_update_project_auth_settings_encryption(
-    client: AsyncClient, user_test_project, test_flow_for_update, logged_in_headers, mcp_test_lock  # noqa: ARG001
+    client: AsyncClient,
+    user_test_project,
+    test_flow_for_update,
+    logged_in_headers,
+    mcp_test_lock,  # noqa: ARG001
 ):
     """Test that sensitive auth_settings fields are encrypted when stored."""
     # Create settings with sensitive data
