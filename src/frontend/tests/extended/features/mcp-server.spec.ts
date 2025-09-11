@@ -705,3 +705,290 @@ test(
       .click({ timeout: 3000 });
   },
 );
+
+test(
+  "mcp server tools should be refreshed when editing a server",
+  { tag: ["@release", "@workspace", "@components"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
+
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
+    await page.getByTestId("blank-flow").click();
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("mcp tools");
+
+    await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
+      timeout: 30000,
+    });
+
+    await page
+      .getByTestId("agentsMCP Tools")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 100, y: 100 },
+      });
+
+    await page.getByTestId("canvas_controls_dropdown").click();
+
+    await page.getByTestId("fit_view").click();
+
+    await zoomOut(page, 3);
+    await page.getByTestId("canvas_controls_dropdown").click();
+
+    await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
+
+    try {
+      await page.getByText("Add MCP Server", { exact: true }).click({
+        timeout: 5000,
+      });
+    } catch (_error) {
+      await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
+      await page.getByText("Add MCP Server", { exact: true }).click({
+        timeout: 5000,
+      });
+    }
+
+    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
+      state: "visible",
+      timeout: 30000,
+    });
+
+    await page.getByTestId("stdio-tab").click();
+
+    await page.waitForSelector('[data-testid="stdio-name-input"]', {
+      state: "visible",
+      timeout: 30000,
+    });
+
+    const randomSuffix = Math.floor(Math.random() * 90000) + 10000; // 5-digit random number
+    const testName = `test_server_${randomSuffix}`;
+    await page.getByTestId("stdio-name-input").fill(testName);
+
+    await page.getByTestId("stdio-command-input").fill("uvx mcp-server-fetch");
+
+    await page.getByTestId("add-mcp-server-button").click();
+
+    await page.waitForSelector(
+      '[data-testid="dropdown_str_tool"]:not([disabled])',
+      {
+        timeout: 10000,
+        state: "visible",
+      },
+    );
+
+    await page.getByTestId("dropdown_str_tool").click();
+
+    const fetchOptionCount = await page.getByTestId("fetch-0-option").count();
+
+    expect(fetchOptionCount).toBeGreaterThan(0);
+
+    await page.getByTestId("fetch-0-option").click();
+
+    await page.waitForTimeout(2000);
+    await page.getByTestId("canvas_controls_dropdown").click();
+
+    await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
+
+    await page.waitForSelector('[data-testid="int_int_max_length"]', {
+      state: "visible",
+      timeout: 30000,
+    });
+
+    const maxLengthOptionCount = await page
+      .getByTestId("int_int_max_length")
+      .count();
+
+    expect(maxLengthOptionCount).toBeGreaterThan(0);
+
+    const urlOptionCount = await page
+      .getByTestId("anchor-popover-anchor-input-url")
+      .count();
+
+    expect(urlOptionCount).toBeGreaterThan(0);
+
+    await page.getByTestId("user_menu_button").click({ timeout: 3000 });
+
+    await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
+
+    await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
+      timeout: 30000,
+    });
+
+    await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 3000 });
+
+    await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
+      timeout: 3000,
+    });
+
+    await expect(page.getByText(testName)).toBeVisible({
+      timeout: 3000,
+    });
+
+    await page
+      .getByTestId(`mcp-server-menu-button-${testName}`)
+      .click({ timeout: 3000 });
+
+    await page
+      .getByText("Edit", { exact: true })
+      .first()
+      .click({ timeout: 3000 });
+
+    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
+      state: "visible",
+      timeout: 30000,
+    });
+
+    await expect(page.getByTestId("json-tab")).toBeDisabled({
+      timeout: 3000,
+    });
+
+    await expect(page.getByTestId("stdio-tab")).not.toBeDisabled({
+      timeout: 3000,
+    });
+
+    await expect(page.getByTestId("sse-tab")).toBeDisabled({
+      timeout: 3000,
+    });
+
+    expect(await page.getByTestId("stdio-command-input").inputValue()).toBe(
+      "uvx mcp-server-fetch",
+    );
+
+    await page.getByTestId("stdio-command-input").fill("uvx mcp-server-time");
+
+    await page.getByTestId("add-mcp-server-button").click();
+
+    await awaitBootstrapTest(page, { skipModal: true });
+
+    const newFlowDiv = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlowDiv.click();
+
+    try {
+      await page.waitForSelector('[data-testid="dropdown_str_tool"]:disabled', {
+        timeout: 10000,
+        state: "visible",
+      });
+    } catch (_) {
+      console.warn("Dropdown tool is not disabled, continuing...");
+    }
+
+    await page.waitForSelector(
+      '[data-testid="dropdown_str_tool"]:not([disabled])',
+      {
+        timeout: 10000,
+        state: "visible",
+      },
+    );
+
+    await page.getByTestId("dropdown_str_tool").click();
+
+    const timeOptionCount = await page
+      .getByTestId("get_current_time-0-option")
+      .count();
+
+    expect(timeOptionCount).toBeGreaterThan(0);
+
+    await page.getByTestId("user_menu_button").click({ timeout: 3000 });
+
+    await page.getByTestId("menu_settings_button").click({ timeout: 3000 });
+
+    await page.waitForSelector('[data-testid="sidebar-nav-MCP Servers"]', {
+      timeout: 30000,
+    });
+
+    await page.getByTestId("sidebar-nav-MCP Servers").click({ timeout: 3000 });
+
+    await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
+      timeout: 3000,
+    });
+    await page
+      .getByTestId(`mcp-server-menu-button-${testName}`)
+      .click({ timeout: 3000 });
+
+    await page
+      .getByText("Delete", { exact: true })
+      .first()
+      .click({ timeout: 3000 });
+
+    await page.waitForSelector(
+      '[data-testid="btn_delete_delete_confirmation_modal"]',
+      {
+        timeout: 3000,
+      },
+    );
+
+    await page
+      .getByTestId("btn_delete_delete_confirmation_modal")
+      .click({ timeout: 3000 });
+
+    await page.waitForSelector('[data-testid="add-mcp-server-button-page"]', {
+      timeout: 3000,
+    });
+
+    await page.waitForTimeout(3000);
+
+    await expect(page.getByText(testName)).not.toBeVisible({
+      timeout: 3000,
+    });
+
+    await page.getByTestId("add-mcp-server-button-page").click();
+
+    await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
+      state: "visible",
+      timeout: 30000,
+    });
+
+    await page.getByTestId("stdio-tab").click();
+
+    await page.waitForSelector('[data-testid="stdio-name-input"]', {
+      state: "visible",
+      timeout: 30000,
+    });
+
+    await page.getByTestId("stdio-name-input").fill(testName);
+
+    await page.getByTestId("stdio-command-input").fill("uvx mcp-server-fetch");
+
+    await page.getByTestId("add-mcp-server-button").click();
+
+    await expect(page.getByText(testName)).toBeVisible({
+      timeout: 3000,
+    });
+
+    await awaitBootstrapTest(page, { skipModal: true });
+
+    const newFlowDiv2 = await page
+      .getByTestId("flow-name-div")
+      .filter({ hasText: "New Flow" })
+      .first();
+    await newFlowDiv2.click();
+
+    try {
+      await page.waitForSelector('[data-testid="dropdown_str_tool"]:disabled', {
+        timeout: 10000,
+        state: "visible",
+      });
+    } catch (_) {
+      console.warn("Dropdown tool is not disabled, continuing...");
+    }
+
+    await page.waitForSelector(
+      '[data-testid="dropdown_str_tool"]:not([disabled])',
+      {
+        timeout: 10000,
+        state: "visible",
+      },
+    );
+
+    await page.getByTestId("dropdown_str_tool").click();
+
+    const fetchOptionCount2 = await page.getByTestId("fetch-0-option").count();
+
+    expect(fetchOptionCount2).toBeGreaterThan(0);
+  },
+);
