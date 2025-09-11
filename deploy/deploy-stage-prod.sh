@@ -16,6 +16,15 @@ SWITCHED=0              # set to 1 right after successful switch
 STOPPED_ACTIVE=0        # set to 1 when we stop the active container
 HAD_ACTIVE=0            # set to 1 if an active container existed
 
+# ---------- Deploy status history rotation ----------
+DEPLOY_ENV="/root/deploy_status.env"
+DEPLOY_HISTORY="/root/deploy_status_history.env"
+if [[ -f "$DEPLOY_ENV" ]]; then
+  cat "$DEPLOY_ENV" >> "$DEPLOY_HISTORY"
+  echo "" >> "$DEPLOY_HISTORY"
+  rm -f "$DEPLOY_ENV"
+fi
+
 log()      { printf "\n\033[1;34m==> %s\033[0m\n" "$*"; }
 ok()       { printf "\033[0;32m✅ %s\033[0m\n" "$*"; }
 warn()     { printf "\033[0;33m⚠️  %s\033[0m\n" "$*"; }
