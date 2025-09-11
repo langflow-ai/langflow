@@ -339,7 +339,7 @@ dockerfile_build:
 		--build-arg VITE_CLERK_AUTH_ENABLED=${VITE_CLERK_AUTH_ENABLED} \
 		--build-arg VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY} \
 		--build-arg VITE_AUTO_LOGIN=$(VITE_AUTO_LOGIN) \
-		-t langflow:${VERSION} .
+		-t $(TAG) .
 
 dockerfile_build_be: dockerfile_build
 	@echo 'BUILDING DOCKER IMAGE BACKEND: ${DOCKERFILE_BACKEND}'
