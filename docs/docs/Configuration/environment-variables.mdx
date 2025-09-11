@@ -251,9 +251,29 @@ For detailed information about shared Playground configuration, see [Share a flo
 | `LANGFLOW_PUBLIC_FLOW_CLEANUP_INTERVAL` | Integer | `3600` | The interval in seconds at which public temporary flows will be cleaned up. Default is 1 hour (3600 seconds). Minimum is 600 seconds (10 minutes). |
 | `LANGFLOW_PUBLIC_FLOW_EXPIRATION` | Integer | `86400` | The time in seconds after which a public temporary flow will be considered expired and eligible for cleanup. Default is 24 hours (86400 seconds). Minimum is 600 seconds (10 minutes). |
 
-### Global variables and environment integration
+### Global variables and environment variables interaction
 
 For detailed information about how global and environment variables interact, see [Global variables](/configuration-global-variables).
+
+### Monitoring and metrics
+
+For environment variables for specific monitoring service providers, see the Langflow monitoring integration guides, such as [Langfuse](/integrations-langfuse).
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_PROMETHEUS_ENABLED` | Boolean | False | Expose Prometheus metrics. |
+| `LANGFLOW_PROMETHEUS_PORT` | Integer | `9090` | Set the port on which Langflow exposes Prometheus metrics. |
+
+### MCP (Model Context Protocol) {#mcp}
+
+For detailed information about MCP server configuration, see [Use Langflow as an MCP server](/mcp-server#mcp-server-configuration).
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_MCP_SERVER_ENABLED` | Boolean | True | If this option is set to False, Langflow doesn't enable the MCP server. |
+| `LANGFLOW_MCP_SERVER_ENABLE_PROGRESS_NOTIFICATIONS` | Boolean | False | If this option is set to True, Langflow sends progress notifications in the MCP server. |
+| `LANGFLOW_MCP_SERVER_TIMEOUT` | Integer | `20` | The number of seconds to wait before timing out MCP server operations. |
+| `LANGFLOW_MCP_MAX_SESSIONS_PER_SERVER` | Integer | `10` | Maximum number of MCP sessions to keep per unique server. |
 
 ### Other environment variables
 
@@ -267,29 +287,7 @@ For detailed information about how global and environment variables interact, se
 | `LANGFLOW_DEACTIVATE_TRACING` | Boolean | False | Deactivate tracing functionality. |
 | `LANGFLOW_CELERY_ENABLED` | Boolean | False | Enable Celery for distributed task processing. |
 
-### Monitoring and metrics
-
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_PROMETHEUS_ENABLED` | Boolean | False | Expose Prometheus metrics. |
-| `LANGFLOW_PROMETHEUS_PORT` | Integer | `9090` | Set the port on which Langflow exposes Prometheus metrics. |
-
-For environment variables for specific monitoring service providers, see the Langflow monitoring integration guides, such as [Langfuse](/integrations-langfuse).
-
-### MCP (Model Context Protocol) {#mcp}
-
-For detailed information about MCP server configuration, see [Use Langflow as an MCP server](/mcp-server#mcp-server-configuration).
-
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_MCP_SERVER_ENABLED` | Boolean | True | If this option is set to False, Langflow doesn't enable the MCP server. |
-| `LANGFLOW_MCP_SERVER_ENABLE_PROGRESS_NOTIFICATIONS` | Boolean | False | If this option is set to True, Langflow sends progress notifications in the MCP server. |
-| `LANGFLOW_MCP_SERVER_TIMEOUT` | Integer | `20` | The number of seconds to wait before timing out MCP server operations. |
-| `LANGFLOW_MCP_MAX_SESSIONS_PER_SERVER` | Integer | `10` | Maximum number of MCP sessions to keep per unique server. |
-
 ### Telemetry
-
-For telemetry configuration options, see [Telemetry](/contributing-telemetry).
 
 For telemetry configuration options, see [Telemetry](/contributing-telemetry).
 
