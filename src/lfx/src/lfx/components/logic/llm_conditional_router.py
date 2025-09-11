@@ -145,7 +145,7 @@ class SmartRouterComponent(Component):
                 f"determine which category best matches the text.\n\n"
                 f'Text to classify: "{input_text}"\n\n'
                 f"Available categories: {categories_text}\n\n"
-                f'Respond with ONLY the exact category name that best matches the text. '
+                f"Respond with ONLY the exact category name that best matches the text. "
                 f'If none match well, respond with "NONE".\n\n'
                 f"Category:"
             )
