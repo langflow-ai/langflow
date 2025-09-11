@@ -165,28 +165,28 @@ def set_var_for_macos_issue() -> None:
 
 def wait_for_server_ready(host, port, protocol, *, max_wait: int = 60) -> bool:
     """Wait for the server to become ready by polling the health endpoint.
-    
+
     Returns:
         bool: True if server became ready, False if timeout or shutdown requested
     """
     # Use localhost for health check when host is 0.0.0.0 (bind to all interfaces)
     health_check_host = "localhost" if host == "0.0.0.0" else host  # noqa: S104
-    
+
     start_time = time.time()
     status_code = 0
-    
+
     while status_code != httpx.codes.OK:
         # Check if shutdown was requested
         if process_manager.shutdown_in_progress:
             logger.debug("Shutdown requested, stopping server health check")
             return False
-            
+
         # Check timeout
         elapsed = time.time() - start_time
         if elapsed > max_wait:
             logger.warning(f"Server health check timeout after {max_wait}s")
             return False
-            
+
         try:
             # Use shorter timeout for HTTP requests to make interruption more responsive
             status_code = httpx.get(
@@ -199,7 +199,7 @@ def wait_for_server_ready(host, port, protocol, *, max_wait: int = 60) -> bool:
         except Exception:  # noqa: BLE001
             logger.debug("Error while waiting for the server to become ready.", exc_info=True)
             time.sleep(0.5)  # Shorter sleep for more responsive interruption
-    
+
     logger.debug(f"Server became ready after {time.time() - start_time:.2f}s")
     return True
 
