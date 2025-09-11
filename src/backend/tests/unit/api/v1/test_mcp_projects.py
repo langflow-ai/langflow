@@ -1,5 +1,5 @@
 import asyncio
-from typing import cast
+from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -13,16 +13,19 @@ from langflow.api.v1.mcp_projects import (
     get_project_sse,
     init_mcp_servers,
 )
+from langflow.logging.logger import logger
 from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
-from langflow.services.mcp_composer.service import MCPComposerService
 from langflow.services.utils import initialize_services
 from mcp.server.sse import SseServerTransport
 from pydantic import SecretStr
 from sqlmodel import select
+
+if TYPE_CHECKING:
+    from langflow.services.mcp_composer.service import MCPComposerService
 
 # Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio
@@ -225,7 +228,7 @@ def cleanup_mcp_composer_processes():
                 if mcp_composer_service:
                     await mcp_composer_service.stop()
             except Exception as e:
-                print(f"Warning: Error during MCP Composer service cleanup: {e}")
+                logger.aerror(f"Warning: Error during MCP Composer service cleanup: {e}")
 
         # Run cleanup in current event loop if available, otherwise skip
         try:
@@ -621,7 +624,7 @@ async def test_update_project_auth_settings_encryption(
     data = response.json()
 
     # SecretStr fields are masked in the response for security
-    assert data["auth_settings"]["oauth_client_secret"] == "**********"
+    assert data["auth_settings"]["oauth_client_secret"] == "**********"  # noqa: S105
     assert data["auth_settings"]["oauth_client_id"] == "test-client-id"
     assert data["auth_settings"]["auth_type"] == "oauth"
 
@@ -631,7 +634,7 @@ async def test_update_project_auth_settings_encryption(
     async with session_scope() as session:
         project = await session.get(Folder, user_test_project.id)
         decrypted_settings = decrypt_auth_settings(project.auth_settings)
-        assert decrypted_settings["oauth_client_secret"] == "test-oauth-secret-value-456"
+        assert decrypted_settings["oauth_client_secret"] == "test-oauth-secret-value-456"  # noqa: S105
 
 
 async def test_project_sse_creation(user_test_project, mcp_test_lock):
@@ -703,7 +706,7 @@ async def test_mcp_longterm_token_fails_without_superuser():
 
     # Ensure no superuser exists in DB
     async with get_db_service().with_session() as session:
-        result = await session.exec(select(User).where(User.is_superuser == True))
+        result = await session.exec(select(User).where(User.is_superuser))
         users = result.all()
         for user in users:
             await session.delete(user)
