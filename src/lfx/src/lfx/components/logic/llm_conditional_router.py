@@ -32,7 +32,10 @@ class SmartRouterComponent(Component):
         TableInput(
             name="routes",
             display_name="Routes",
-            info="Define the categories for routing. Each row should have a route/category name and optionally a custom output value.",
+            info=(
+                "Define the categories for routing. Each row should have a route/category name "
+                "and optionally a custom output value."
+            ),
             table_schema=[
                 {
                     "name": "route_category",
@@ -58,7 +61,10 @@ class SmartRouterComponent(Component):
         MessageInput(
             name="message",
             display_name="Override Output",
-            info="Optional override message that will replace both the Input and Output Value for all routes when filled.",
+            info=(
+                "Optional override message that will replace both the Input and Output Value "
+                "for all routes when filled."
+            ),
             required=False,
             advanced=True,
         ),
@@ -72,23 +78,24 @@ class SmartRouterComponent(Component):
         MultilineInput(
             name="custom_prompt",
             display_name="Additional Instructions",
-            info="Additional instructions for LLM-based categorization. These will be added to the base prompt. Use {input_text} for the input text and {routes} for the available categories.",
+            info=(
+                "Additional instructions for LLM-based categorization. "
+                "These will be added to the base prompt. "
+                "Use {input_text} for the input text and {routes} for the available categories."
+            ),
             advanced=True,
         ),
     ]
 
-    outputs = []
+    outputs: list[Output] = []
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Create a dynamic output for each category in the categories table."""
-        if field_name == "routes" or field_name == "enable_else_output":
+        if field_name in {"routes", "enable_else_output"}:
             frontend_node["outputs"] = []
 
             # Get the routes data - either from field_value (if routes field) or from component state
-            if field_name == "routes":
-                routes_data = field_value
-            else:
-                routes_data = getattr(self, "routes", [])
+            routes_data = field_value if field_name == "routes" else getattr(self, "routes", [])
 
             # Add a dynamic output for each category - all using the same method
             for i, row in enumerate(routes_data):
@@ -120,7 +127,6 @@ class SmartRouterComponent(Component):
 
         categories = getattr(self, "routes", [])
         input_text = getattr(self, "input_text", "")
-        message = getattr(self, "message", Message(text=""))
 
         # Find the matching category using LLM-based categorization
         matched_category = None
@@ -134,15 +140,15 @@ class SmartRouterComponent(Component):
             categories_text = ", ".join([f'"{cat}"' for cat in category_values if cat])
 
             # Create base prompt
-            base_prompt = f"""You are a text classifier. Given the following text and categories, determine which category best matches the text.
-
-Text to classify: "{input_text}"
-
-Available categories: {categories_text}
-
-Respond with ONLY the exact category name that best matches the text. If none match well, respond with "NONE".
-
-Category:"""
+            base_prompt = (
+                f"You are a text classifier. Given the following text and categories, "
+                f"determine which category best matches the text.\n\n"
+                f'Text to classify: "{input_text}"\n\n'
+                f"Available categories: {categories_text}\n\n"
+                f'Respond with ONLY the exact category name that best matches the text. '
+                f'If none match well, respond with "NONE".\n\n'
+                f"Category:"
+            )
 
             # Use custom prompt as additional instructions if provided
             custom_prompt = getattr(self, "custom_prompt", "")
@@ -188,9 +194,12 @@ Category:"""
                         break
 
                 if matched_category is None:
-                    self.status = f"No match found for '{categorization}'. Available categories: {[category.get('route_category', '') for category in categories]}"
+                    self.status = (
+                        f"No match found for '{categorization}'. Available categories: "
+                        f"{[category.get('route_category', '') for category in categories]}"
+                    )
 
-            except Exception as e:
+            except RuntimeError as e:
                 self.status = f"Error in LLM categorization: {e!s}"
         else:
             self.status = "No LLM provided for categorization"
@@ -260,11 +269,13 @@ Category:"""
 
         categories = getattr(self, "routes", [])
         input_text = getattr(self, "input_text", "")
-        message = getattr(self, "message", Message(text=""))
 
         # Check if a match was already found in process_case
         if hasattr(self, "_matched_category") and self._matched_category is not None:
-            self.status = f"Match already found in process_case (Category {self._matched_category + 1}), stopping default_response"
+            self.status = (
+                f"Match already found in process_case (Category {self._matched_category + 1}), "
+                "stopping default_response"
+            )
             self.stop("default_result")
             return Message(text="")
 
@@ -281,15 +292,15 @@ Category:"""
                 categories_text = ", ".join([f'"{cat}"' for cat in category_values if cat])
 
                 # Create base prompt
-                base_prompt = f"""You are a text classifier. Given the following text and categories, determine which category best matches the text.
-
-Text to classify: "{input_text}"
-
-Available categories: {categories_text}
-
-Respond with ONLY the exact category name that best matches the text. If none match well, respond with "NONE".
-
-Category:"""
+                base_prompt = (
+                    "You are a text classifier. Given the following text and categories, "
+                    "determine which category best matches the text.\n\n"
+                    f'Text to classify: "{input_text}"\n\n'
+                    f"Available categories: {categories_text}\n\n"
+                    "Respond with ONLY the exact category name that best matches the text. "
+                    'If none match well, respond with "NONE".\n\n'
+                    "Category:"
+                )
 
                 # Use custom prompt as additional instructions if provided
                 custom_prompt = getattr(self, "custom_prompt", "")
@@ -324,7 +335,10 @@ Category:"""
                     route_category = category.get("route_category", "")
 
                     # Log each comparison attempt
-                    self.status = f"Default check - Comparing '{categorization}' with category {i + 1}: route_category='{route_category}'"
+                    self.status = (
+                        f"Default check - Comparing '{categorization}' with category {i + 1}: "
+                        f"route_category='{route_category}'"
+                    )
 
                     if categorization.lower() == route_category.lower():
                         has_match = True
@@ -332,9 +346,13 @@ Category:"""
                         break
 
                 if not has_match:
-                    self.status = f"Default check - No match found for '{categorization}'. Available categories: {[category.get('route_category', '') for category in categories]}"
+                    self.status = (
+                        f"Default check - No match found for '{categorization}'. "
+                        f"Available categories: "
+                        f"{[category.get('route_category', '') for category in categories]}"
+                    )
 
-            except Exception:
+            except RuntimeError:
                 pass  # If there's an error, treat as no match
 
         if has_match:
