@@ -561,27 +561,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.2",
-            "metadata": {
-              "code_hash": "f8c1338e3512",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.input_output.chat_output.ChatOutput"
-            },
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {

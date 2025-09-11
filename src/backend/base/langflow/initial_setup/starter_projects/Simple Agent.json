@@ -190,19 +190,7 @@
             "key": "CalculatorComponent",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {
-              "code_hash": "3139fe9e04a5",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.helpers.calculator_core.CalculatorComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -357,19 +345,7 @@
             "icon": "MessagesSquare",
             "key": "ChatInput",
             "legacy": false,
-            "metadata": {
-              "code_hash": "5f2d98ee19db",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.input_output.chat.ChatInput"
-            },
+            "metadata": {},
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -615,27 +591,7 @@
             "icon": "MessagesSquare",
             "key": "ChatOutput",
             "legacy": false,
-            "metadata": {
-              "code_hash": "f8c1338e3512",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.input_output.chat_output.ChatOutput"
-            },
+            "metadata": {},
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -865,27 +821,7 @@
             "frozen": false,
             "icon": "bot",
             "legacy": false,
-            "metadata": {
-              "code_hash": "6e76cf95a2a2",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.75"
-                  },
-                  {
-                    "name": "pydantic",
-                    "version": "2.10.6"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.agents.agent.AgentComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1522,31 +1458,7 @@
             "icon": "layout-template",
             "key": "URLComponent",
             "legacy": false,
-            "metadata": {
-              "code_hash": "b5c50602651a",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "requests",
-                    "version": "2.32.5"
-                  },
-                  {
-                    "name": "bs4",
-                    "version": "4.12.3"
-                  },
-                  {
-                    "name": "langchain_community",
-                    "version": "0.3.21"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 4
-              },
-              "module": "langflow.components.data.url.URLComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [

@@ -284,27 +284,7 @@
             "key": "BatchRunComponent",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {
-              "code_hash": "ee50d5005321",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "toml",
-                    "version": "0.10.2"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  },
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.75"
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.processing.batch_run.BatchRunComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -519,27 +499,7 @@
             "key": "YouTubeCommentsComponent",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {
-              "code_hash": "aeda2975f4aa",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "pandas",
-                    "version": "2.2.3"
-                  },
-                  {
-                    "name": "googleapiclient",
-                    "version": "2.154.0"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.youtube.comments.YouTubeCommentsComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -758,27 +718,7 @@
             "last_updated": "2025-07-07T14:52:14.999Z",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {
-              "code_hash": "6e76cf95a2a2",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.75"
-                  },
-                  {
-                    "name": "pydantic",
-                    "version": "2.10.6"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.agents.agent.AgentComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1591,27 +1531,7 @@
             "key": "ChatOutput",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {
-              "code_hash": "f8c1338e3512",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.input_output.chat_output.ChatOutput"
-            },
+            "metadata": {},
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1832,31 +1752,7 @@
             "last_updated": "2025-07-07T14:52:15.000Z",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {
-              "code_hash": "c9f0262ff0b6",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "pandas",
-                    "version": "2.2.3"
-                  },
-                  {
-                    "name": "youtube_transcript_api",
-                    "version": "0.6.3"
-                  },
-                  {
-                    "name": "langchain_community",
-                    "version": "0.3.21"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 4
-              },
-              "module": "langflow.components.youtube.youtube_transcripts.YouTubeTranscriptsComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -2603,19 +2499,7 @@
             "key": "ChatInput",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {
-              "code_hash": "5f2d98ee19db",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.input_output.chat.ChatInput"
-            },
+            "metadata": {},
             "minimized": true,
             "output_types": [],
             "outputs": [
