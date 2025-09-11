@@ -238,12 +238,15 @@ jobs:
           username: root
           password: ${{ github.event.inputs.environment == 'staging' && secrets.VM_PASSWORD || secrets.PROD_VM_PASSWORD }}
           source: "/root/deploy_status.env"
-          target: "./"
+          target: "${{ github.workspace }}/"
+          direction: download
 
       - name: Update GitHub Deployment Status with Docker info
         if: always()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          source ./deploy_status.env
-          gh api repos/${{ github.repository }}/deployments/${{ env.DEPLOYMENT_ID }}/statuses -F state=$FINAL_STATUS -F description="$FINAL_DESCRIPTION"
+          source "${GITHUB_WORKSPACE}/deploy_status.env"
+          gh api repos/${{ github.repository }}/deployments/${{ env.DEPLOYMENT_ID }}/statuses \
+          -F state=$FINAL_STATUS \
+          -F description="$FINAL_DESCRIPTION"
