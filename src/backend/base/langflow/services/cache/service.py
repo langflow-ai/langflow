@@ -293,6 +293,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
     async def teardown(self) -> None:
         """Clean up the Redis connection."""
         from langflow.logging.logger import logger
+
         await logger.adebug("RedisCache teardown called")
         try:
             await self._client.aclose()
@@ -368,6 +369,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
     async def teardown(self) -> None:
         """Clean up the cache."""
         from langflow.logging.logger import logger
+
         await logger.adebug("AsyncInMemoryCache teardown called")
         await self.clear()
         await logger.adebug("AsyncInMemoryCache teardown completed")

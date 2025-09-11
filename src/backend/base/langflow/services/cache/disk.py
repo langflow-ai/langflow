@@ -93,7 +93,9 @@ class AsyncDiskCache(AsyncBaseCacheService, Generic[AsyncLockType]):
     async def teardown(self) -> None:
         """Clean up the cache directory."""
         import asyncio
+
         from langflow.logging.logger import logger
+
         await logger.adebug("AsyncDiskCache teardown called")
         # Clean up the cache directory using asyncio.to_thread to avoid blocking
         await asyncio.to_thread(self.cache.clear, retry=True)

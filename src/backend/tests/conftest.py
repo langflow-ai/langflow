@@ -188,8 +188,9 @@ async def async_client() -> AsyncGenerator:
     except Exception as e:
         # If LifespanManager fails to shutdown cleanly, force cleanup
         import os
+
         import psutil
-        
+
         current_pid = os.getpid()
         try:
             # Find and kill any child processes that might be hanging
@@ -204,15 +205,16 @@ async def async_client() -> AsyncGenerator:
                         pass
         except (psutil.NoSuchProcess, ImportError):
             pass
-        
+
         # Force cleanup service manager
         try:
             from langflow.services.manager import service_manager
+
             service_manager.services.clear()
             service_manager.factories.clear()
         except Exception:
             pass
-        
+
         raise e
 
 
@@ -473,15 +475,17 @@ async def client_fixture(
         try:
             async with (
                 LifespanManager(app, startup_timeout=None, shutdown_timeout=30) as manager,
-                AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/", http2=True) as client,
+                AsyncClient(
+                    transport=ASGITransport(app=manager.app), base_url="http://testserver/", http2=True
+                ) as client,
             ):
                 yield client
         except Exception as e:
             # If LifespanManager fails to shutdown cleanly, force cleanup
             import os
-            import signal
+
             import psutil
-            
+
             current_pid = os.getpid()
             try:
                 # Find and kill any child processes that might be hanging
@@ -496,15 +500,16 @@ async def client_fixture(
                             pass
             except (psutil.NoSuchProcess, ImportError):
                 pass
-            
+
             # Force cleanup service manager
             try:
                 from langflow.services.manager import service_manager
+
                 service_manager.services.clear()
                 service_manager.factories.clear()
             except Exception:
                 pass
-            
+
             raise e
         finally:
             # Ensure cleanup even if test fails

@@ -89,7 +89,6 @@ class ServiceManager:
 
     async def teardown(self) -> None:
         """Teardown all the services."""
-        import asyncio
         import time
 
         start_time = time.time()

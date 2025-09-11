@@ -474,8 +474,9 @@ class DatabaseService(Service):
 
     async def teardown(self) -> None:
         import asyncio
+
         await logger.adebug("Tearing down database")
-        
+
         try:
             settings_service = get_settings_service()
             # remove the default superuser if auto_login is enabled
@@ -484,7 +485,7 @@ class DatabaseService(Service):
                 await teardown_superuser(settings_service, session)
         except Exception:  # noqa: BLE001
             await logger.aexception("Error tearing down database")
-        
+
         # Add timeout to engine.dispose() to prevent hanging
         try:
             await asyncio.wait_for(self.engine.dispose(), timeout=5.0)

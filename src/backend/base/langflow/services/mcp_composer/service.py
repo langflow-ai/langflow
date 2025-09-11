@@ -153,7 +153,7 @@ class MCPComposerService(Service):
                     await logger.adebug(f"Terminating MCP Composer process {process.pid} for project {project_id}")
                     process.terminate()
 
-                    # Wait for graceful shutdown 
+                    # Wait for graceful shutdown
                     try:
                         await asyncio.wait_for(self._wait_for_process_exit(process), timeout=2.0)
                         await logger.adebug(f"MCP Composer for project {project_id} terminated gracefully")
@@ -192,7 +192,7 @@ class MCPComposerService(Service):
 
     async def _wait_for_process_exit(self, process):
         """Wait for a process to exit with polling instead of blocking wait."""
-        max_wait = 3 
+        max_wait = 3
         poll_interval = 0.1
 
         for _ in range(int(max_wait / poll_interval)):
@@ -211,23 +211,23 @@ class MCPComposerService(Service):
             # This allows the event loop to continue processing other tasks
             stdout_task = None
             stderr_task = None
-            
+
             if process.stdout:
                 stdout_task = asyncio.create_task(process.stdout.read())
             if process.stderr:
                 stderr_task = asyncio.create_task(process.stderr.read())
-            
+
             # Wait for both with timeout
             tasks = [t for t in [stdout_task, stderr_task] if t is not None]
             if tasks:
                 await asyncio.wait_for(asyncio.gather(*tasks), timeout=timeout)
-            
+
             # Get results
             stdout_bytes = await stdout_task if stdout_task else b""
             stderr_bytes = await stderr_task if stderr_task else b""
-            
+
             return stdout_bytes, stderr_bytes
-            
+
         except asyncio.TimeoutError:
             # If timeout, force kill the process and return empty output
             try:
@@ -706,21 +706,22 @@ class MCPComposerService(Service):
         """Force cleanup any remaining MCP Composer processes that might be zombies."""
         try:
             import psutil
+
             current_pid = os.getpid()
-            
+
             # Find all child processes of the current process
             current_process = psutil.Process(current_pid)
             children = current_process.children(recursive=True)
-            
+
             mcp_processes = []
             for child in children:
                 try:
                     cmdline = child.cmdline()
-                    if cmdline and any('mcp-composer' in arg for arg in cmdline):
+                    if cmdline and any("mcp-composer" in arg for arg in cmdline):
                         mcp_processes.append(child)
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
-            
+
             if mcp_processes:
                 await logger.adebug(f"Found {len(mcp_processes)} remaining MCP Composer processes, force killing")
                 for process in mcp_processes:
@@ -733,6 +734,5 @@ class MCPComposerService(Service):
         except ImportError:
             # psutil not available, skip zombie cleanup
             await logger.adebug("psutil not installed, skipping zombie process cleanup")
-            pass
         except Exception as e:
             await logger.awarning(f"Error during zombie process cleanup: {e}")

@@ -17,7 +17,7 @@ from langflow.services.database.utils import initialize_database
 from langflow.services.schema import ServiceType
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 
-from .deps import get_db_service, get_service, get_settings_service
+from .deps import get_db_service, get_service
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
