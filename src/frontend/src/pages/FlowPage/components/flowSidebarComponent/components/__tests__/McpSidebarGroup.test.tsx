@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import React from "react";
-import { APIClassType } from "@/types/api";
+import type React from "react";
+import type { APIClassType } from "@/types/api";
 import McpSidebarGroup from "../McpSidebarGroup";
 
 // Mock the UI components
@@ -355,6 +355,7 @@ describe("McpSidebarGroup", () => {
     it("should render multiple MCP components", () => {
       const secondComponent: APIClassType = {
         ...mockMcpComponent,
+        mcpServerName: "Test Other Server",
         name: "second-mcp-component",
         display_name: "Second MCP Component",
       };
@@ -487,6 +488,7 @@ describe("McpSidebarGroup", () => {
       const componentWithError: APIClassType = {
         ...mockMcpComponent,
         error: "Test error message",
+        mcpServerName: "Test Other Other Server",
         beta: true,
         official: false,
       };

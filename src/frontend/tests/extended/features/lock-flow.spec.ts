@@ -2,6 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { lockFlow, unlockFlow } from "../../utils/lock-flow";
 
 test(
   "user must be able to lock a flow and it must be saved",
@@ -29,18 +30,7 @@ test(
     await page.getByTestId("canvas_controls_dropdown").click();
     await page.waitForTimeout(500);
 
-    await page.getByTestId("flow_name").click();
-    await page.getByTestId("lock-flow-switch").click();
-    await page.getByTestId("icon-Lock").isVisible({ timeout: 5000 });
-    //ensure the UI is updated
-    await page.waitForTimeout(500);
-    await page.getByTestId("save-flow-settings").click();
-    await expect(page.getByTestId("save-flow-settings")).toBeHidden({
-      timeout: 5000,
-    });
-
-    //ensure the UI is updated
-    await page.getByTestId("icon-Lock").isVisible({ timeout: 5000 });
+    await lockFlow(page);
 
     await page.getByTestId("icon-ChevronLeft").click();
     await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -62,17 +52,7 @@ test(
       timeout: 3000,
     });
 
-    await page.getByTestId("flow_name").click();
-    await page.getByTestId("lock-flow-switch").click();
-    await page.getByTestId("icon-Unlock").isVisible({ timeout: 5000 });
-    //ensure the UI is updated
-    await page.waitForTimeout(500);
-    await page.getByTestId("save-flow-settings").click();
-    await expect(page.getByTestId("save-flow-settings")).toBeHidden({
-      timeout: 5000,
-    });
-    //ensure the UI is updated
-    await page.getByTestId("icon-Lock").isHidden({ timeout: 5000 });
+    await unlockFlow(page);
 
     await page.getByTestId("icon-ChevronLeft").click();
     await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -132,16 +112,7 @@ test(
 );
 
 async function tryConnectNodes(page: Page) {
-  await page.getByTestId("flow_name").click();
-  await page.getByTestId("lock-flow-switch").click();
-  await page.getByTestId("lock-flow-switch").isHidden({ timeout: 5000 });
-  await page.getByTestId("icon-Unlock").isVisible({ timeout: 5000 });
-  //ensure the UI is updated
-  await page.waitForTimeout(500);
-  await page.getByTestId("save-flow-settings").click();
-  await expect(page.getByTestId("save-flow-settings")).toBeHidden({
-    timeout: 5000,
-  });
+  await lockFlow(page);
 
   const numberOfTries = 5;
   let numberOfEdges = await page.locator(".react-flow__edge-path").count();
@@ -169,34 +140,11 @@ async function tryConnectNodes(page: Page) {
       expect(numberOfEdges).toBe(0);
     }
   }
-  await page.getByTestId("flow_name").click();
-  await page.getByTestId("lock-flow-switch").click();
-
-  await page.getByTestId("icon-Unlock").isVisible({ timeout: 5000 });
-  //ensure the UI is updated
-  await page.waitForTimeout(500);
-  await page.getByTestId("save-flow-settings").click();
-  await expect(page.getByTestId("save-flow-settings")).toBeHidden({
-    timeout: 5000,
-  });
-
-  //ensure the UI is updated
-  await page.getByTestId("icon-Lock").isHidden({ timeout: 5000 });
+  await unlockFlow(page);
 }
 
 async function tryDeleteEdge(page: Page) {
-  await page.getByTestId("flow_name").click();
-  await page.getByTestId("lock-flow-switch").click();
-  await page.getByTestId("icon-Lock").isVisible({ timeout: 5000 });
-  await page.waitForTimeout(500);
-
-  await page.getByTestId("save-flow-settings").click();
-  await expect(page.getByTestId("save-flow-settings")).toBeHidden({
-    timeout: 5000,
-  });
-
-  //ensure the UI is updated
-  await page.getByTestId("icon-Lock").isVisible({ timeout: 5000 });
+  await lockFlow(page);
 
   let numberOfEdges = await page.locator(".react-flow__edge-path").count();
   expect(numberOfEdges).toBe(3);
@@ -214,14 +162,5 @@ async function tryDeleteEdge(page: Page) {
     ).rejects.toThrow();
     expect(numberOfEdges).toBe(3);
   }
-  //unlock the flow
-  await page.getByTestId("flow_name").click();
-  await page.getByTestId("lock-flow-switch").click();
-  await page.getByTestId("icon-Unlock").isVisible({ timeout: 5000 });
-  //ensure the UI is updated
-  await page.waitForTimeout(500);
-  await page.getByTestId("save-flow-settings").click();
-  await expect(page.getByTestId("save-flow-settings")).toBeHidden({
-    timeout: 5000,
-  });
+  await unlockFlow(page);
 }
