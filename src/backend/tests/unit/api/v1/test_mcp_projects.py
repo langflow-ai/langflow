@@ -1,8 +1,9 @@
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from fastapi import status
+from fastapi import HTTPException, status
 from httpx import AsyncClient
 from langflow.api.v1.mcp_projects import (
     get_project_mcp_server,
@@ -11,12 +12,13 @@ from langflow.api.v1.mcp_projects import (
     project_mcp_servers,
     project_sse_transports,
 )
-from langflow.services.auth.utils import get_password_hash
+from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
-from langflow.services.database.models.user import User
-from langflow.services.deps import session_scope
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from mcp.server.sse import SseServerTransport
+from sqlmodel import select
 
 # Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio
@@ -62,6 +64,7 @@ class AsyncContextManagerMock:
         return (MagicMock(), MagicMock())
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        # No teardown required for this mock context manager in tests
         pass
 
 
@@ -601,6 +604,8 @@ async def test_project_sse_creation(user_test_project):
 
     assert sse_transport2 is sse_transport
     assert mcp_server2 is mcp_server
+    # Yield control to the event loop to satisfy async usage in this test
+    await asyncio.sleep(0)
 
 
 async def test_init_mcp_servers(user_test_project, other_test_project):
@@ -652,3 +657,26 @@ async def test_init_mcp_servers_error_handling():
     with patch("langflow.api.v1.mcp_projects.get_project_sse", side_effect=mock_get_project_sse):
         # This should not raise any exception, as the error should be caught
         await init_mcp_servers()
+
+
+@pytest.mark.asyncio
+async def test_mcp_longterm_token_fails_without_superuser():
+    """When AUTO_LOGIN is false and no superuser exists, creating a long-term token should raise 400.
+
+    This simulates a clean DB with AUTO_LOGIN disabled and without provisioning a superuser.
+    """
+    settings_service = get_settings_service()
+    settings_service.auth_settings.AUTO_LOGIN = False
+
+    # Ensure no superuser exists in DB
+    async with get_db_service().with_session() as session:
+        result = await session.exec(select(User).where(User.is_superuser == True))  # noqa: E712
+        users = result.all()
+        for user in users:
+            await session.delete(user)
+        await session.commit()
+
+    # Now attempt to create long-term token -> expect HTTPException 400
+    async with get_db_service().with_session() as session:
+        with pytest.raises(HTTPException):
+            await create_user_longterm_token(session)
