@@ -5,7 +5,7 @@ import SidebarMenuButtons from "../sidebarFooterButtons";
 // Mock the UI components
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name, className }: any) => (
+  default: ({ name, className }: { name: string; className?: string }) => (
     <span data-testid={`icon-${name}`} className={className}>
       {name}
     </span>
@@ -20,8 +20,16 @@ jest.mock("@/components/ui/button", () => ({
     disabled,
     unstyled,
     ...props
-  }: any) => (
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    className?: string;
+    disabled?: boolean;
+    unstyled?: boolean;
+    [key: string]: unknown;
+  }) => (
     <button
+      type="button"
       onClick={onClick}
       className={className}
       disabled={disabled}
@@ -37,8 +45,20 @@ jest.mock("@/components/ui/button", () => ({
 const mockUseSidebar = jest.fn();
 
 jest.mock("@/components/ui/sidebar", () => ({
-  SidebarMenuButton: ({ children, asChild }: any) => (
-    <div data-testid="sidebar-menu-button" data-as-child={asChild}>
+  SidebarMenuButton: ({
+    children,
+    asChild,
+    className,
+  }: {
+    children: React.ReactNode;
+    asChild?: boolean;
+    className?: string;
+  }) => (
+    <div
+      data-testid="sidebar-menu-button"
+      data-as-child={asChild}
+      className={className}
+    >
       {children}
     </div>
   ),
@@ -59,9 +79,17 @@ jest.mock("@/customization/hooks/use-custom-navigate", () => ({
 // Mock modal component
 jest.mock("@/modals/addMcpServerModal", () => ({
   __esModule: true,
-  default: ({ open, setOpen }: any) => (
+  default: ({
+    open,
+    setOpen,
+  }: {
+    open: boolean;
+    setOpen: (open: boolean) => void;
+  }) => (
     <div data-testid="add-mcp-server-modal" data-open={open}>
-      <button onClick={() => setOpen(false)}>Close Modal</button>
+      <button type="button" onClick={() => setOpen(false)}>
+        Close Modal
+      </button>
     </div>
   ),
 }));
@@ -332,9 +360,23 @@ describe("SidebarMenuButtons", () => {
       const addButton = screen.getByTestId("sidebar-add-mcp-server-button");
       const manageButton = screen.getByTestId("sidebar-manage-servers-button");
 
-      expect(addButton).toHaveClass("flex", "items-center", "gap-2");
+      expect(addButton).toHaveClass(
+        "flex",
+        "items-center",
+        "w-full",
+        "h-full",
+        "gap-3",
+        "hover:bg-muted",
+      );
       expect(addButton).toHaveAttribute("data-unstyled", "true");
-      expect(manageButton).toHaveClass("flex", "items-center", "gap-2");
+      expect(manageButton).toHaveClass(
+        "flex",
+        "items-center",
+        "w-full",
+        "h-full",
+        "gap-3",
+        "hover:bg-muted",
+      );
       expect(manageButton).toHaveAttribute("data-unstyled", "true");
     });
 
@@ -589,10 +631,32 @@ describe("SidebarMenuButtons", () => {
       const customSpan = screen.getByText("New Custom Component");
 
       expect(customSpan).toHaveClass(
-        "ml-2",
         "group-data-[state=open]/collapsible:font-semibold",
-        "text-sm",
       );
+    });
+
+    it("should apply correct styling to custom component button", () => {
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      const customButton = screen.getByTestId(
+        "sidebar-custom-component-button",
+      );
+      expect(customButton).toHaveClass(
+        "flex",
+        "items-center",
+        "w-full",
+        "h-full",
+        "gap-3",
+        "hover:bg-muted",
+      );
+      expect(customButton).toHaveAttribute("data-unstyled", "true");
+    });
+
+    it("should apply group class to custom component SidebarMenuButton", () => {
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      const sidebarMenuButton = screen.getByTestId("sidebar-menu-button");
+      expect(sidebarMenuButton).toHaveClass("group");
     });
   });
 

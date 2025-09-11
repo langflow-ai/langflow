@@ -700,7 +700,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
           {ENABLE_NEW_SIDEBAR &&
           activeSection === "mcp" &&
           !hasMcpServers ? null : (
-            <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-0">
+            <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
               <SidebarMenuButtons
                 customComponent={customComponent}
                 addComponent={addComponent}
