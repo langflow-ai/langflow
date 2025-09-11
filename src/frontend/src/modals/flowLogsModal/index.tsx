@@ -1,6 +1,3 @@
-import type { ColDef, ColGroupDef } from "ag-grid-community";
-import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import LoadingComponent from "@/components/common/loadingComponent";
 import PaginatorComponent from "@/components/common/paginatorComponent";
@@ -8,6 +5,9 @@ import TableComponent from "@/components/core/parameterRenderComponent/component
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { convertUTCToLocalTimezone } from "@/utils/utils";
+import type { ColDef, ColGroupDef } from "ag-grid-community";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import BaseModal from "../baseModal";
 
 export default function FlowLogsModal({
@@ -48,7 +48,42 @@ export default function FlowLogsModal({
           : rows;
 
       setRows(processedRows);
-      setColumns(columns.map((col) => ({ ...col, editable: true })));
+      
+      // Customize column configurations
+      const customizedColumns = columns.map((col) => {
+        // Check if it's a ColDef (not ColGroupDef) before accessing properties
+        if ('field' in col) {
+          const columnField = col.field;
+          const customCol = { ...col, editable: false };
+
+          if (columnField && ['id'].includes(columnField)) {
+            customCol.minWidth = 320;
+            customCol.filter = false;
+            customCol.sortable = false;
+
+         
+          }
+          
+          // Hide filters for specific columns
+          if (columnField && ['vertex_id', 'target_id', 'status'].includes(columnField)) {
+            customCol.filter = false;
+            customCol.sortable = false;
+            customCol.flex = 1;
+          }
+          
+          // Set same width for inputs and outputs columns
+          if (columnField && ['inputs', 'outputs'].includes(columnField)) {
+            customCol.flex = 1.5;
+          }
+          
+          return customCol;
+        }
+        
+        // Return ColGroupDef as is (no editable property for groups)
+        return col;
+      });
+      
+      setColumns(customizedColumns);
     }
   }, [data]);
 
@@ -79,13 +114,18 @@ export default function FlowLogsModal({
         <div className="relative h-full w-full">
           <TableComponent
             key={"Executions"}
-            readOnlyEdit
             className="h-max-full h-full w-full"
             pagination={false}
             columnDefs={columns}
             autoSizeStrategy={{ type: "fitGridWidth" }}
             rowData={rows}
             headerHeight={rows.length === 0 ? 0 : undefined}
+            gridOptions={{
+              suppressCellFocus: true,
+              suppressRowClickSelection: true,
+              suppressColumnVirtualisation: true,
+              suppressRowDeselection: true,
+            }}
           ></TableComponent>
 
           {/* Loading overlay */}
