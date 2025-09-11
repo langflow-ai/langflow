@@ -163,23 +163,45 @@ def set_var_for_macos_issue() -> None:
         logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
 
-def wait_for_server_ready(host, port, protocol) -> None:
-    """Wait for the server to become ready by polling the health endpoint."""
+def wait_for_server_ready(host, port, protocol, *, max_wait: int = 60) -> bool:
+    """Wait for the server to become ready by polling the health endpoint.
+    
+    Returns:
+        bool: True if server became ready, False if timeout or shutdown requested
+    """
     # Use localhost for health check when host is 0.0.0.0 (bind to all interfaces)
     health_check_host = "localhost" if host == "0.0.0.0" else host  # noqa: S104
-
+    
+    start_time = time.time()
     status_code = 0
+    
     while status_code != httpx.codes.OK:
+        # Check if shutdown was requested
+        if process_manager.shutdown_in_progress:
+            logger.debug("Shutdown requested, stopping server health check")
+            return False
+            
+        # Check timeout
+        elapsed = time.time() - start_time
+        if elapsed > max_wait:
+            logger.warning(f"Server health check timeout after {max_wait}s")
+            return False
+            
         try:
+            # Use shorter timeout for HTTP requests to make interruption more responsive
             status_code = httpx.get(
                 f"{protocol}://{health_check_host}:{port}/health",
+                timeout=2.0,  # 2 second HTTP timeout
                 verify=health_check_host not in ("127.0.0.1", "localhost"),
             ).status_code
         except HTTPError:
-            time.sleep(1)
+            time.sleep(0.5)  # Shorter sleep for more responsive interruption
         except Exception:  # noqa: BLE001
             logger.debug("Error while waiting for the server to become ready.", exc_info=True)
-            time.sleep(1)
+            time.sleep(0.5)  # Shorter sleep for more responsive interruption
+    
+    logger.debug(f"Server became ready after {time.time() - start_time:.2f}s")
+    return True
 
 
 @app.command()
@@ -397,15 +419,17 @@ def run(
             process_manager.webapp_process = Process(target=server.run)
             process_manager.webapp_process.start()
 
-            wait_for_server_ready(host, port, protocol)
+            server_ready = wait_for_server_ready(host, port, protocol)
 
-        # Print summary and banner after server is ready
-        progress.print_summary()
-        print_banner(host, port, protocol)
+        # Only show banner and handle browser if server actually started
+        if server_ready and not process_manager.shutdown_in_progress:
+            # Print summary and banner after server is ready
+            progress.print_summary()
+            print_banner(host, port, protocol)
 
-        # Handle browser opening
-        if open_browser and not backend_only:
-            click.launch(f"{protocol}://{host}:{port}")
+            # Handle browser opening
+            if open_browser and not backend_only:
+                click.launch(f"{protocol}://{host}:{port}")
 
         try:
             process_manager.webapp_process.join()
@@ -415,6 +439,7 @@ def run(
         finally:
             if not process_manager.shutdown_in_progress:
                 process_manager.shutdown()
+            sys.exit(0)
 
 
 def is_port_in_use(port, host="localhost"):
