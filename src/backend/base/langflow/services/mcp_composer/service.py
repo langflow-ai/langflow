@@ -108,14 +108,7 @@ class MCPComposerService(Service):
                     if process and process.returncode is None:
                         with contextlib.suppress(ProcessLookupError):
                             process.kill()
-                            # Force close pipes to prevent hanging
-                            try:
-                                if process.stdout:
-                                    process.stdout.close()
-                                if process.stderr:
-                                    process.stderr.close()
-                            except Exception:
-                                pass
+
                     del self.project_composers[project_id]
             except Exception as e:  # noqa: BLE001
                 await logger.aerror(f"Error stopping MCP Composer for project {project_id}: {e}")
@@ -162,21 +155,12 @@ class MCPComposerService(Service):
                             f"MCP Composer for project {project_id} did not terminate gracefully, force killing"
                         )
                         process.kill()
-                        # Wait for force kill to complete
                         try:
                             await asyncio.wait_for(self._wait_for_process_exit(process), timeout=1.0)
                         except asyncio.TimeoutError:
                             await logger.aerror(
                                 f"Failed to kill MCP Composer process {process.pid} for project {project_id}"
                             )
-                            # Force cleanup of process pipes to prevent hanging
-                            try:
-                                if process.stdout:
-                                    process.stdout.close()
-                                if process.stderr:
-                                    process.stderr.close()
-                            except Exception:
-                                pass  # Ignore errors when closing pipes
                 else:
                     await logger.adebug(f"MCP Composer process for project {project_id} was already terminated")
 
@@ -685,14 +669,7 @@ class MCPComposerService(Service):
                 if process and process.returncode is None:
                     with contextlib.suppress(ProcessLookupError):
                         process.kill()
-                        # Force close pipes to prevent hanging
-                        try:
-                            if process.stdout:
-                                process.stdout.close()
-                            if process.stderr:
-                                process.stderr.close()
-                        except Exception:
-                            pass
+
             self.project_composers.clear()
         except Exception as e:  # noqa: BLE001
             await logger.aerror(f"Error during MCP Composer teardown: {e}")
