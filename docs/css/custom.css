@@ -488,7 +488,7 @@ body {
   border-collapse: collapse;
   border-radius: var(--ifm-global-radius);
   border: var(--ifm-table-border-width) solid var(--ifm-table-border-color);
-  font-size: .8rem;
+  font-size: 1rem;
   margin: 1.5rem 0;
   overflow: scroll;
   scrollbar-width: none;
