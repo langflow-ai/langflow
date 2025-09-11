@@ -660,47 +660,47 @@ async def test_init_mcp_servers_error_handling():
         await init_mcp_servers()
 
 
-# @pytest.mark.asyncio
-# async def test_mcp_longterm_token_fails_without_superuser():
-#     """When AUTO_LOGIN is false and no superuser exists, creating a long-term token should raise 400.
+@pytest.mark.asyncio
+async def test_mcp_longterm_token_fails_without_superuser():
+    """When AUTO_LOGIN is false and no superuser exists, creating a long-term token should raise 400.
 
-#     This simulates a clean DB with AUTO_LOGIN disabled and without provisioning a superuser.
-#     """
-#     settings_service = get_settings_service()
-#     settings_service.auth_settings.AUTO_LOGIN = False
+    This simulates a clean DB with AUTO_LOGIN disabled and without provisioning a superuser.
+    """
+    settings_service = get_settings_service()
+    settings_service.auth_settings.AUTO_LOGIN = False
 
-#     # Ensure no superuser exists in DB
-#     async with get_db_service().with_session() as session:
-#         result = await session.exec(select(User).where(User.is_superuser == True))  # noqa: E712
-#         users = result.all()
-#         for user in users:
-#             await session.delete(user)
-#         await session.commit()
+    # Ensure no superuser exists in DB
+    async with get_db_service().with_session() as session:
+        result = await session.exec(select(User).where(User.is_superuser == True))  # noqa: E712
+        users = result.all()
+        for user in users:
+            await session.delete(user)
+        await session.commit()
 
-#     # Now attempt to create long-term token -> expect HTTPException 400
-#     async with get_db_service().with_session() as session:
-#         with pytest.raises(HTTPException, match="Super user hasn't been created"):
-#             await create_user_longterm_token(session)
+    # Now attempt to create long-term token -> expect HTTPException 400
+    async with get_db_service().with_session() as session:
+        with pytest.raises(HTTPException, match="Super user hasn't been created"):
+            await create_user_longterm_token(session)
 
 
-# @pytest.mark.asyncio
-# async def test_mcp_longterm_token_succeeds_with_headless_fallback():
-#     """When AUTO_LOGIN is false and no credentials are provided.
+@pytest.mark.asyncio
+async def test_mcp_longterm_token_succeeds_with_headless_fallback():
+    """When AUTO_LOGIN is false and no credentials are provided.
 
-#     The headless fallback should create an internal superuser so MCP can mint a token without raising 400.
-#     """
-#     settings_service = get_settings_service()
-#     settings_service.auth_settings.AUTO_LOGIN = False
-#     # Clear any configured credentials
-#     settings_service.auth_settings.SUPERUSER = ""
-#     settings_service.auth_settings.SUPERUSER_PASSWORD = ""  # SecretStr handled in service
+    The headless fallback should create an internal superuser so MCP can mint a token without raising 400.
+    """
+    settings_service = get_settings_service()
+    settings_service.auth_settings.AUTO_LOGIN = False
+    # Clear any configured credentials
+    settings_service.auth_settings.SUPERUSER = ""
+    settings_service.auth_settings.SUPERUSER_PASSWORD = ""  # SecretStr handled in service
 
-#     # Re-initialize core services which now create the headless superuser fallback
-#     await initialize_services()
+    # Re-initialize core services which now create the headless superuser fallback
+    await initialize_services()
 
-#     # Should now be able to create a long-term token
-#     async with get_db_service().with_session() as session:
-#         user_id, tokens = await create_user_longterm_token(session)
-#         assert user_id is not None
-#         assert tokens.get("access_token")
-#         assert tokens.get("token_type") == "bearer"
+    # Should now be able to create a long-term token
+    async with get_db_service().with_session() as session:
+        user_id, tokens = await create_user_longterm_token(session)
+        assert user_id is not None
+        assert tokens.get("access_token")
+        assert tokens.get("token_type") == "bearer"

@@ -161,8 +161,22 @@ class MCPComposerService(Service):
         del self.project_composers[project_id]
 
     async def _wait_for_process_exit(self, process):
-        """Wait for a process to exit."""
-        await asyncio.to_thread(process.wait)
+        """Wait for a process to exit with timeout."""
+        max_wait = 3.0
+        poll_interval = 0.1
+        
+        elapsed = 0
+        while elapsed < max_wait:
+            # Non-blocking poll
+            if process.poll() is not None:
+                return  # Process has exited
+            
+            await asyncio.sleep(poll_interval)
+            elapsed += poll_interval
+        
+        # Process didn't exit in time, force kill
+        process.kill()
+        await asyncio.to_thread(process.wait)  # Wait for kill to complete
 
     def _validate_oauth_settings(self, auth_config: dict[str, Any]) -> None:
         """Validate that all required OAuth settings are present and non-empty.
