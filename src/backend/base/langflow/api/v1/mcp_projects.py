@@ -186,7 +186,7 @@ def get_project_sse(project_id: UUID | None) -> SseServerTransport:
 
     project_id_str = str(project_id)
     if project_id_str not in project_sse_transports:
-        project_sse_transports[project_id_str] = SseServerTransport(f"/api/v1/mcp/project/{project_id_str}/")
+        project_sse_transports[project_id_str] = SseServerTransport("./")
     return project_sse_transports[project_id_str]
 
 
