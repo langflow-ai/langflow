@@ -237,9 +237,8 @@ jobs:
           host: ${{ github.event.inputs.environment == 'staging' && env.STAGING_HOST || env.PROD_HOST }}
           username: root
           password: ${{ github.event.inputs.environment == 'staging' && secrets.VM_PASSWORD || secrets.PROD_VM_PASSWORD }}
-          source: "/root/deploy_status.env"
-          target: "${{ github.workspace }}/"
-          direction: download
+          script: |
+            scp /root/deploy_status.env $GITHUB_WORKSPACE/
 
       - name: Update GitHub Deployment Status with Docker info
         if: always()
