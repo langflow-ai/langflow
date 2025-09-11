@@ -1,6 +1,7 @@
 """MCP Composer service for proxying and orchestrating MCP servers."""
 
 import asyncio
+import contextlib
 import os
 import re
 import select
@@ -106,12 +107,10 @@ class MCPComposerService(Service):
                     composer_info = self.project_composers[project_id]
                     process = composer_info.get("process")
                     if process and process.returncode is None:
-                        try:
+                        with contextlib.suppress(ProcessLookupError):
                             process.kill()
-                        except ProcessLookupError:
-                            pass
                     del self.project_composers[project_id]
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 await logger.aerror(f"Error stopping MCP Composer for project {project_id}: {e}")
                 # Still try to remove from dict
                 self.project_composers.pop(project_id, None)
@@ -188,7 +187,8 @@ class MCPComposerService(Service):
             await asyncio.sleep(poll_interval)
 
         # If we get here, process didn't exit in time
-        raise asyncio.TimeoutError(f"Process {process.pid} did not exit after {max_wait} seconds")
+        msg = f"Process {process.pid} did not exit after {max_wait} seconds"
+        raise asyncio.TimeoutError(msg)
 
     def _validate_oauth_settings(self, auth_config: dict[str, Any]) -> None:
         """Validate that all required OAuth settings are present and non-empty.
@@ -629,15 +629,13 @@ class MCPComposerService(Service):
         except asyncio.TimeoutError:
             await logger.aerror("MCP Composer teardown timed out, forcing cleanup")
             # Force cleanup by killing processes directly
-            for project_id, composer_info in list(self.project_composers.items()):
+            for composer_info in list(self.project_composers.values()):
                 process = composer_info.get("process")
                 if process and process.returncode is None:
-                    try:
+                    with contextlib.suppress(ProcessLookupError):
                         process.kill()
-                    except ProcessLookupError:
-                        pass  # Process already gone
             self.project_composers.clear()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             await logger.aerror(f"Error during MCP Composer teardown: {e}")
             # Still try to clear the composers dict
             self.project_composers.clear()

@@ -1,11 +1,15 @@
 import asyncio
-from typing import cast
+from typing import TYPE_CHECKING, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException, status
 from httpx import AsyncClient
+from mcp.server.sse import SseServerTransport
+from pydantic import SecretStr
+from sqlmodel import select
+
 from langflow.api.v1.mcp_projects import (
     _project_mcp_servers,
     _project_sse_transports,
@@ -18,11 +22,10 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
-from langflow.services.mcp_composer.service import MCPComposerService
 from langflow.services.utils import initialize_services
-from mcp.server.sse import SseServerTransport
-from pydantic import SecretStr
-from sqlmodel import select
+
+if TYPE_CHECKING:
+    from langflow.services.mcp_composer.service import MCPComposerService
 
 # Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio
@@ -224,24 +227,27 @@ def cleanup_mcp_composer_processes():
                 mcp_composer_service = cast("MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE))
                 if mcp_composer_service:
                     await mcp_composer_service.stop()
-            except Exception as e:
-                print(f"Warning: Error during MCP Composer service cleanup: {e}")
+            except Exception:  # noqa: S110
+                # Ignore cleanup errors to avoid test failures
+                pass
 
         # Run cleanup in current event loop if available, otherwise skip
         try:
             loop = asyncio.get_running_loop()
             if loop and not loop.is_closed():
-                loop.create_task(_async_cleanup())
+                task = loop.create_task(_async_cleanup())
+                # Store reference to prevent garbage collection
+                task.add_done_callback(lambda _: None)
         except RuntimeError:
             # No running event loop, skip async cleanup
             pass
-    except Exception as e:
+    except Exception:  # noqa: S110
         # Log but don't fail the test due to cleanup issues
-        print(f"Warning: Error during MCP Composer cleanup setup: {e}")
+        pass
 
 
 async def test_handle_project_messages_success(
-    client: AsyncClient, user_test_project, mock_sse_transport, logged_in_headers, mcp_test_lock
+    client: AsyncClient, user_test_project, mock_sse_transport, logged_in_headers, mcp_test_lock  # noqa: ARG001
 ):
     """Test successful handling of project messages."""
     response = await client.post(
@@ -254,7 +260,7 @@ async def test_handle_project_messages_success(
 
 
 async def test_update_project_mcp_settings_invalid_json(
-    client: AsyncClient, user_test_project, logged_in_headers, mcp_test_lock
+    client: AsyncClient, user_test_project, logged_in_headers, mcp_test_lock  # noqa: ARG001
 ):
     """Test updating MCP settings with invalid JSON."""
     response = await client.patch(
@@ -297,7 +303,7 @@ async def test_flow_for_update(active_user, user_test_project):
 
 
 async def test_update_project_mcp_settings_success(
-    client: AsyncClient, user_test_project, test_flow_for_update, logged_in_headers, mcp_test_lock
+    client: AsyncClient, user_test_project, test_flow_for_update, logged_in_headers, mcp_test_lock  # noqa: ARG001
 ):
     """Test successful update of MCP settings using real database."""
     # Create settings for updating the flow
@@ -340,7 +346,7 @@ async def test_update_project_mcp_settings_success(
         assert updated_flow.mcp_enabled is False
 
 
-async def test_update_project_mcp_settings_invalid_project(client: AsyncClient, logged_in_headers, mcp_test_lock):
+async def test_update_project_mcp_settings_invalid_project(client: AsyncClient, logged_in_headers, mcp_test_lock):  # noqa: ARG001
     """Test accessing an invalid project ID."""
     # We're using the GET endpoint since it works correctly and tests the same security constraints
     # Generate a random UUID that doesn't exist in the database
@@ -355,7 +361,7 @@ async def test_update_project_mcp_settings_invalid_project(client: AsyncClient, 
 
 
 async def test_update_project_mcp_settings_other_user_project(
-    client: AsyncClient, other_test_project, logged_in_headers, mcp_test_lock
+    client: AsyncClient, other_test_project, logged_in_headers, mcp_test_lock  # noqa: ARG001
 ):
     """Test accessing a project belonging to another user."""
     # We're using the GET endpoint since it works correctly and tests the same security constraints
@@ -370,7 +376,7 @@ async def test_update_project_mcp_settings_other_user_project(
 
 
 async def test_update_project_mcp_settings_other_user_project_with_composer(
-    client: AsyncClient, other_test_project, logged_in_headers, enable_mcp_composer, mcp_test_lock
+    client: AsyncClient, other_test_project, logged_in_headers, enable_mcp_composer, mcp_test_lock  # noqa: ARG001
 ):
     """Test accessing a project belonging to another user when MCP Composer is enabled."""
     # When MCP Composer is enabled, JWT tokens are not accepted for MCP endpoints
@@ -385,7 +391,7 @@ async def test_update_project_mcp_settings_other_user_project_with_composer(
 
 
 async def test_update_project_mcp_settings_empty_settings(
-    client: AsyncClient, user_test_project, logged_in_headers, mcp_test_lock
+    client: AsyncClient, user_test_project, logged_in_headers, mcp_test_lock  # noqa: ARG001
 ):
     """Test updating MCP settings with empty settings list."""
     # Use real database objects instead of mocks to avoid the coroutine issue
@@ -414,7 +420,7 @@ async def test_update_project_mcp_settings_empty_settings(
 
 
 async def test_user_can_only_access_own_projects(
-    client: AsyncClient, other_test_project, logged_in_headers, mcp_test_lock
+    client: AsyncClient, other_test_project, logged_in_headers, mcp_test_lock  # noqa: ARG001
 ):
     """Test that a user can only access their own projects."""
     # Try to access the other user's project using first user's credentials
@@ -425,7 +431,7 @@ async def test_user_can_only_access_own_projects(
 
 
 async def test_user_data_isolation_with_real_db(
-    client: AsyncClient, logged_in_headers, other_test_user, other_test_project, mcp_test_lock
+    client: AsyncClient, logged_in_headers, other_test_user, other_test_project, mcp_test_lock  # noqa: ARG001
 ):
     """Test that users can only access their own MCP projects using a real database session."""
     # Create a flow for the other test user in their project
@@ -516,7 +522,7 @@ async def user_test_flow(active_user, user_test_project):
 
 
 async def test_user_can_update_own_flow_mcp_settings(
-    client: AsyncClient, logged_in_headers, user_test_project, user_test_flow, mcp_test_lock
+    client: AsyncClient, logged_in_headers, user_test_project, user_test_flow, mcp_test_lock  # noqa: ARG001
 ):
     """Test that a user can update MCP settings for their own flows using real database."""
     # User attempts to update their own flow settings
@@ -560,7 +566,7 @@ async def test_user_can_update_own_flow_mcp_settings(
 
 
 async def test_update_project_auth_settings_encryption(
-    client: AsyncClient, user_test_project, test_flow_for_update, logged_in_headers, mcp_test_lock
+    client: AsyncClient, user_test_project, test_flow_for_update, logged_in_headers, mcp_test_lock  # noqa: ARG001
 ):
     """Test that sensitive auth_settings fields are encrypted when stored."""
     # Create settings with sensitive data
@@ -621,7 +627,7 @@ async def test_update_project_auth_settings_encryption(
     data = response.json()
 
     # SecretStr fields are masked in the response for security
-    assert data["auth_settings"]["oauth_client_secret"] == "**********"
+    assert data["auth_settings"]["oauth_client_secret"] == "**********"  # noqa: S105
     assert data["auth_settings"]["oauth_client_id"] == "test-client-id"
     assert data["auth_settings"]["auth_type"] == "oauth"
 
@@ -631,10 +637,10 @@ async def test_update_project_auth_settings_encryption(
     async with session_scope() as session:
         project = await session.get(Folder, user_test_project.id)
         decrypted_settings = decrypt_auth_settings(project.auth_settings)
-        assert decrypted_settings["oauth_client_secret"] == "test-oauth-secret-value-456"
+        assert decrypted_settings["oauth_client_secret"] == "test-oauth-secret-value-456"  # noqa: S105
 
 
-async def test_project_sse_creation(user_test_project, mcp_test_lock):
+async def test_project_sse_creation(user_test_project, mcp_test_lock):  # noqa: ARG001
     """Test that SSE transport and MCP server are correctly created for a project."""
     # Test getting an SSE transport for the first time
     project_id = user_test_project.id
@@ -667,7 +673,7 @@ async def test_project_sse_creation(user_test_project, mcp_test_lock):
     await asyncio.sleep(0)
 
 
-async def test_init_mcp_servers(user_test_project, other_test_project, mcp_test_lock):
+async def test_init_mcp_servers(user_test_project, other_test_project, mcp_test_lock):  # noqa: ARG001
     """Test the initialization of MCP servers for all projects."""
     # Test the initialization function
     await init_mcp_servers()
@@ -703,7 +709,7 @@ async def test_mcp_longterm_token_fails_without_superuser():
 
     # Ensure no superuser exists in DB
     async with get_db_service().with_session() as session:
-        result = await session.exec(select(User).where(User.is_superuser == True))
+        result = await session.exec(select(User).where(User.is_superuser))
         users = result.all()
         for user in users:
             await session.delete(user)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import importlib
 import inspect
 from typing import TYPE_CHECKING
@@ -129,7 +130,7 @@ class ServiceManager:
                     try:
                         task.cancel()
                         await logger.adebug(f"Cancelled {attr_name} for {service_name}")
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001
                         await logger.awarning(f"Failed to cancel {attr_name} for {service_name}: {e}")
 
         # Try to close common connection attributes
@@ -141,7 +142,7 @@ class ServiceManager:
                     try:
                         await conn.aclose()
                         await logger.adebug(f"Closed {attr_name} for {service_name}")
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001
                         await logger.awarning(f"Failed to close {attr_name} for {service_name}: {e}")
 
     @staticmethod

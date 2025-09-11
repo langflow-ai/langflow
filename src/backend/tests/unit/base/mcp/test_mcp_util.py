@@ -7,11 +7,13 @@ This test suite validates the MCP utility functions including:
 """
 
 import asyncio
+import contextlib
 import shutil
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from langflow.base.mcp import util
 from langflow.base.mcp.util import MCPSessionManager, MCPSseClient, MCPStdioClient, _process_headers, validate_headers
 
@@ -38,14 +40,12 @@ async def cleanup_mcp_sessions():
                         for task in list(obj._background_tasks):
                             if not task.done():
                                 task.cancel()
-                                try:
+                                with contextlib.suppress(asyncio.CancelledError, asyncio.TimeoutError):
                                     await asyncio.wait_for(task, timeout=1.0)
-                                except (asyncio.CancelledError, asyncio.TimeoutError):
-                                    pass
-                except Exception as e:
-                    print(f"Warning: Error cleaning up MCPSessionManager: {e}")
-    except Exception as e:
-        print(f"Warning: Error during test cleanup: {e}")
+                except Exception:  # noqa: S110
+                    pass  # Ignore cleanup errors
+    except Exception:  # noqa: S110
+        pass  # Ignore cleanup errors
 
 
 class TestMCPSessionManager:
@@ -67,10 +67,8 @@ class TestMCPSessionManager:
                 for task in list(manager._background_tasks):
                     if not task.done():
                         task.cancel()
-                        try:
+                        with contextlib.suppress(asyncio.CancelledError, asyncio.TimeoutError):
                             await asyncio.wait_for(task, timeout=1.0)
-                        except (asyncio.CancelledError, asyncio.TimeoutError):
-                            pass
 
     async def test_session_caching(self, session_manager):
         """Test that sessions are properly cached and reused."""
@@ -347,7 +345,7 @@ class TestMCPUtilityFunctions:
         assert instance.foo == "abc"
         assert instance.bar == 1
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="validation error"):
             model_class(bar=1)  # missing required field
 
     @pytest.mark.asyncio
@@ -387,7 +385,7 @@ class TestMCPUtilityFunctions:
             def __init__(self, flows: list[DummyFlow]):
                 self._flows = flows
 
-            async def exec(self, stmt):
+            async def exec(self, stmt):  # noqa: ARG002
                 return DummyExec(self._flows)
 
         user_id = "123e4567-e89b-12d3-a456-426614174000"
@@ -893,9 +891,7 @@ async def test_cleanup_task_cancellation():
                 for task in list(manager._background_tasks):
                     if not task.done():
                         task.cancel()
-                        try:
+                        with contextlib.suppress(asyncio.CancelledError, asyncio.TimeoutError):
                             await asyncio.wait_for(task, timeout=1.0)
-                        except (asyncio.CancelledError, asyncio.TimeoutError):
-                            pass
-        except Exception as e:
-            print(f"Warning: Error during cleanup: {e}")
+        except Exception:  # noqa: S110
+            pass  # Ignore cleanup errors

@@ -504,7 +504,7 @@ class MCPSessionManager:
     async def _periodic_cleanup(self):
         """Periodically clean up idle sessions."""
         error_count = 0
-        MAX_CONSECUTIVE_ERRORS = 3
+        max_consecutive_errors = 3
 
         try:
             while True:
@@ -517,9 +517,9 @@ class MCPSessionManager:
                     raise
                 except (RuntimeError, KeyError, ClosedResourceError, ValueError, asyncio.TimeoutError) as e:
                     error_count += 1
-                    await logger.awarning(f"Error in periodic cleanup ({error_count}/{MAX_CONSECUTIVE_ERRORS}): {e}")
+                    await logger.awarning(f"Error in periodic cleanup ({error_count}/{max_consecutive_errors}): {e}")
 
-                    if error_count >= MAX_CONSECUTIVE_ERRORS:
+                    if error_count >= max_consecutive_errors:
                         await logger.aerror("Too many consecutive cleanup errors, stopping periodic cleanup")
                         break  # Exit the loop to prevent infinite hanging
         except asyncio.CancelledError:
@@ -835,7 +835,7 @@ class MCPSessionManager:
                                         if process.returncode is None:
                                             process.kill()
                                             await logger.adebug(f"Force-killed subprocess for session {session_id}")
-                                except Exception as e:
+                                except Exception as e:  # noqa: BLE001
                                     await logger.awarning(
                                         f"Failed to terminate subprocess for session {session_id}: {e}"
                                     )
@@ -853,10 +853,10 @@ class MCPSessionManager:
                             if process.returncode is None:
                                 process.kill()
                             await logger.adebug(f"Terminated session subprocess for {session_id}")
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001
                             await logger.awarning(f"Failed to terminate session subprocess for {session_id}: {e}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             await logger.adebug(f"Error checking for subprocess in session {session_id}: {e}")
 
     async def _cleanup_session_by_id(self, server_key: str, session_id: str):
@@ -1641,7 +1641,7 @@ async def cleanup_all_mcp_session_managers():
     for manager in managers_to_cleanup:
         try:
             await manager.cleanup_all()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             await logger.awarning(f"Error cleaning up MCP session manager: {e}")
 
     # Clear the global registry
