@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { SidebarHeaderComponentProps } from "../../types";
+import type { SidebarHeaderComponentProps } from "../../types";
 import { SidebarHeaderComponent } from "../sidebarHeader";
 
 // Mock the UI components
@@ -215,8 +215,6 @@ describe("SidebarHeaderComponent", () => {
         "w-full",
         "flex-col",
         "gap-2",
-        "p-4",
-        "pb-3",
         "group-data-[collapsible=icon]:hidden",
         "border-b",
       );
