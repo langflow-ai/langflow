@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin'",
@@ -1200,7 +1200,7 @@ wheels = [
 
 [[package]]
 name = "codeflash"
-version = "0.16.6"
+version = "0.16.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -1208,6 +1208,7 @@ dependencies = [
     { name = "coverage" },
     { name = "crosshair-tool" },
     { name = "dill" },
+    { name = "filelock" },
     { name = "gitpython" },
     { name = "humanize" },
     { name = "inquirer" },
@@ -1231,9 +1232,9 @@ dependencies = [
     { name = "unidiff" },
     { name = "unittest-xml-reporting" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/26/3f/024c01530275d703f6e4c37e000a1ca6589044414dd5e8a4d392da1df1ac/codeflash-0.16.6.tar.gz", hash = "sha256:6f9e081b2d36d239bd3d63ac2fa119209d224067fb547f1b870158c46ac1dea7", size = 191271, upload-time = "2025-08-20T19:17:15.038Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/51/287dfdb7605b1562a19e9f2173ed284479dd40dcad6afae058002579a18d/codeflash-0.16.7.tar.gz", hash = "sha256:4e0e61afe1ac64238d790d76db4487203121f8625a9a4e04c60355e7ced446dc", size = 196373, upload-time = "2025-09-11T05:40:57.507Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bd/55/22c797562969306f25a182ef6ead4451e4a4c8b619c0fdad6d83d88f2918/codeflash-0.16.6-py3-none-any.whl", hash = "sha256:394dc96e2b0560674ecec05469dc29a691d6259c29b1c3847ff923e63e730f02", size = 228485, upload-time = "2025-08-20T19:17:16.477Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/e4/7580dedd46341d6f38b2fd9c0c1710090e4882eb99926b04620f79b0ba39/codeflash-0.16.7-py3-none-any.whl", hash = "sha256:ed00ef8ae4ab5977a82b8a40938189f23d0a28225fd574e9d505eb9f27ac6524", size = 234761, upload-time = "2025-09-11T05:40:58.907Z" },
 ]
 
 [[package]]
