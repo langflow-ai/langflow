@@ -432,7 +432,11 @@ def run(
                 click.launch(f"{protocol}://{host}:{port}")
 
         try:
-            process_manager.webapp_process.join()
+            process_manager.webapp_process.join(30)
+            if process_manager.webapp_process.is_alive():
+                logger.warning("Langflow process did not terminate gracefully, force quitting it")
+                process_manager.webapp_process.kill()
+                process_manager.webapp_process.join(5)
         except KeyboardInterrupt:
             # SIGINT should be handled by the signal handler, but leaving here for safety
             logger.warning("KeyboardInterrupt caught in main thread")

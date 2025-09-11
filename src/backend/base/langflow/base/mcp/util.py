@@ -1640,7 +1640,10 @@ async def cleanup_all_mcp_session_managers():
 
     for manager in managers_to_cleanup:
         try:
-            await manager.cleanup_all()
+            # Add timeout to prevent individual manager cleanup from hanging
+            await asyncio.wait_for(manager.cleanup_all(), timeout=5.0)
+        except asyncio.TimeoutError:
+            await logger.aerror(f"MCP session manager cleanup timed out after 5s")
         except Exception as e:  # noqa: BLE001
             await logger.awarning(f"Error cleaning up MCP session manager: {e}")
 

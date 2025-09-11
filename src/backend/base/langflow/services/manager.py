@@ -109,7 +109,9 @@ class ServiceManager:
         try:
             from langflow.base.mcp.util import cleanup_all_mcp_session_managers
 
-            await cleanup_all_mcp_session_managers()
+            await asyncio.wait_for(cleanup_all_mcp_session_managers(), timeout=10.0)
+        except asyncio.TimeoutError:
+            await logger.aerror("MCP session manager cleanup timed out after 10s")
         except Exception as exc:  # noqa: BLE001
             await logger.aexception(f"Error cleaning up MCP session managers: {exc}")
 
