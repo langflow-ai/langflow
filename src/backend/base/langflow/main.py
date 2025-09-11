@@ -117,6 +117,31 @@ async def load_bundles_with_error_handling():
         return [], []
 
 
+def warn_about_future_cors_changes(settings):
+    """Warn users about upcoming CORS security changes in version 1.7."""
+    # Check if using default (backward compatible) settings
+    using_defaults = (
+        settings.cors_origins == "*" and
+        settings.cors_allow_credentials is True
+    )
+
+    if using_defaults:
+        logger.warning(
+            "DEPRECATION NOTICE: Starting in v1.7, CORS will be more restrictive by default. "
+            "Current behavior allows all origins (*) with credentials enabled. "
+            "Consider setting LANGFLOW_CORS_ORIGINS for production deployments. "
+            "See documentation for secure CORS configuration."
+        )
+
+    # Additional warning for potentially insecure configuration
+    if settings.cors_origins == "*" and settings.cors_allow_credentials:
+        logger.warning(
+            "SECURITY NOTICE: Current CORS configuration allows all origins with credentials. "
+            "In v1.7, credentials will be automatically disabled when using wildcard origins. "
+            "Specify exact origins in LANGFLOW_CORS_ORIGINS to use credentials securely."
+        )
+
+
 def get_lifespan(*, fix_migration=False, version=None):
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
@@ -322,20 +347,19 @@ def create_app():
 
     settings = get_settings_service().settings
 
+    # Warn about future CORS changes
+    warn_about_future_cors_changes(settings)
+
+    # Configure CORS using settings (with backward compatible defaults)
     origins = settings.cors_origins
     if isinstance(origins, str) and origins != "*":
         origins = [origins]
 
-    # Ensure safe configuration
-    allow_credentials = settings.cors_allow_credentials
-    if origins == "*" and allow_credentials:
-        logger.warning("SECURITY: Disabling credentials for wildcard CORS origins")
-        allow_credentials = False
-
+    # Apply current CORS configuration (maintains backward compatibility)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
-        allow_credentials=allow_credentials,
+        allow_credentials=settings.cors_allow_credentials,
         allow_methods=settings.cors_allow_methods,
         allow_headers=settings.cors_allow_headers,
     )

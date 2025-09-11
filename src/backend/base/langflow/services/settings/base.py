@@ -205,12 +205,10 @@ class Settings(BaseSettings):
     # CORS Settings
     cors_origins: list[str] | str = "*"
     """Allowed origins for CORS. Can be a list of origins or '*' for all origins.
-    In production, specify exact origins like ['https://app.example.com'].
-    Default is '*' for development convenience."""
-    cors_allow_credentials: bool = False
+    Default is '*' for backward compatibility. In production, specify exact origins."""
+    cors_allow_credentials: bool = True
     """Whether to allow credentials in CORS requests.
-    SECURITY WARNING: Cannot be True when cors_origins is '*'.
-    Set to True only with specific origins in production."""
+    Default is True for backward compatibility. In v1.7, this will be changed to False when using wildcard origins."""
     cors_allow_methods: list[str] | str = "*"
     """Allowed HTTP methods for CORS requests."""
     cors_allow_headers: list[str] | str = "*"
@@ -314,18 +312,6 @@ class Settings(BaseSettings):
                 return [origin.strip() for origin in value.split(",")]
             # Convert single origin to list for consistency
             return [value]
-        return value
-
-    @field_validator("cors_allow_credentials", mode="after")
-    @classmethod
-    def validate_cors_credentials(cls, value, info):
-        """Ensure credentials are not allowed with wildcard origins."""
-        origins = info.data.get("cors_origins", "*")
-        if value is True and origins == "*":
-            logger.warning(
-                "SECURITY: Cannot allow credentials with wildcard origins. Setting cors_allow_credentials to False."
-            )
-            return False
         return value
 
     @field_validator("use_noop_database", mode="before")
