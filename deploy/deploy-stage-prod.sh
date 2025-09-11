@@ -642,8 +642,10 @@ report_status() {
     desc="Deployment failed. No container running."
   fi
 
-  echo "FINAL_STATUS=$status" >> /root/deploy_status.env
-  echo "FINAL_DESCRIPTION=$desc" >> /root/deploy_status.env
+  {
+    echo "FINAL_STATUS=\"$status\""
+    echo "FINAL_DESCRIPTION=\"$desc\""
+  } > /root/deploy_status.env
 }
 
 # ---------- Execute flow (STOP-FIRST) ----------
@@ -667,5 +669,3 @@ ok "Deployment successful: ${TARGET_COLOR} is live"
 cleanup_old_container
 DEPLOY_SUCCESS=1
 
-# 5) Final status report
-report_status
