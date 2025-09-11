@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+
 from langflow.services.settings.base import Settings
 
 
@@ -40,13 +41,13 @@ class TestCORSConfiguration:
     def test_default_cors_settings_secure_future(self):
         """Test future default CORS settings that will be secure (skip until v1.7)."""
         # This test represents the behavior we want in v1.7
-        with tempfile.TemporaryDirectory() as temp_dir, patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": temp_dir}):
-            settings = Settings()
-            # Future secure defaults:
-            # assert settings.cors_origins == ["http://localhost:3000", "http://127.0.0.1:3000"]
-            # assert settings.cors_allow_credentials is True
-            # assert settings.cors_allow_methods == ["GET", "POST", "PUT", "DELETE"]
-            # assert settings.cors_allow_headers == ["Content-Type", "Authorization"]
+        # with tempfile.TemporaryDirectory() as temp_dir, patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": temp_dir}):
+        #     settings = Settings()
+        #     # Future secure defaults:
+        #     assert settings.cors_origins == ["http://localhost:3000", "http://127.0.0.1:3000"]
+        #     assert settings.cors_allow_credentials is True
+        #     assert settings.cors_allow_methods == ["GET", "POST", "PUT", "DELETE"]
+        #     assert settings.cors_allow_headers == ["Content-Type", "Authorization"]
 
     def test_cors_origins_string_to_list_conversion(self):
         """Test comma-separated origins are converted to list."""
