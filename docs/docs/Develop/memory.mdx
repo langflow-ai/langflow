@@ -26,17 +26,19 @@ For more information, see [Configure external memory](#configure-external-memory
 
 The following tables are stored in `langflow.db`:
 
-• **User**: Stores user account information including credentials, permissions, profiles, and user management settings. For more information, see [API keys and authentication](/api-keys-and-authentication).
+• **ApiKey**: Manages Langflow API authentication keys. Component API keys are stored in the **Variables** table. For more information, see [API keys and authentication](/api-keys-and-authentication).
+
+• **File**: Stores metadata for files uploaded to Langflow's file management system, including file names, paths, sizes, and storage providers. For more information, see [Manage files](/concepts-file-management).
 
 • **Flow**: Contains flow definitions, including nodes, edges, and components, stored as JSON or database records. For more information, see [Build flows](/concepts-flows).
 
+• **Folder**: Provides a structure for flow storage, including single-user folders and shared folders accessed by multiple users. For more information, see [Manage flows in projects](/concepts-flows#projects).
+
 • **Message**: Stores chat messages and interactions that occur between components. For more information, see [Message objects](/data-types#message) and [Store chat memory](#store-chat-memory).
 
-• **Transaction**: Records execution history and results of flow runs. This information is used for [logging](/logging).
+• **Transactions**: Records execution history and results of flow runs. This information is used for [logging](/logging).
 
-• **ApiKey**: Manages Langflow API authentication keys. Component API keys are stored in the **Variables** table. For more information, see [API keys and authentication](/api-keys-and-authentication).
-
-• **Project**: Provides a structure for flow storage, including single-user projects and shared projects accessed by multiple users. For more information, see [Manage flows in projects](/concepts-flows#projects).
+• **User**: Stores user account information including credentials, permissions, profiles, and user management settings. For more information, see [API keys and authentication](/api-keys-and-authentication).
 
 • **Variables**: Stores global encrypted values and credentials. For more information, see [Global variables](/configuration-global-variables).
 
@@ -54,35 +56,47 @@ LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
 
 For an example, see [Configure an external PostgreSQL database](/configuration-custom-database).
 
-### Configure the external database connection
+The `LANGFLOW_DB_CONNECTION_SETTINGS` is a JSON configuration for database connection pool settings that allows you to fine-tune your database connection pool and timeout settings.
 
-The following settings allow you to fine-tune your database connection pool and timeout settings:
 
-```
+```bash
 LANGFLOW_DB_CONNECTION_SETTINGS='{"pool_size": 20, "max_overflow": 30, "pool_timeout": 30, "pool_pre_ping": true, "pool_recycle": 1800, "echo": false}'
-LANGFLOW_DB_CONNECT_TIMEOUT=20
 ```
 
-- `pool_size`: Maximum number of database connections to keep in the pool (default: 20)
-- `max_overflow`: Maximum number of connections that can be created beyond the pool_size (default: 30)
-- `pool_timeout`: Number of seconds to wait before timing out on getting a connection from the pool (default: 30)
-- `pool_pre_ping`: If true, the pool tests connections for liveness upon each checkout (default: true)
-- `pool_recycle`: Number of seconds after which a connection is automatically recycled (default: 1800, or 30 minutes)
-- `echo`: If true, SQL queries are logged for debugging purposes (default: false)
-- `LANGFLOW_DB_CONNECT_TIMEOUT`: Maximum number of seconds to wait when establishing a new database connection (default: 20)
+### Connection pool parameters
+- `pool_size`: Maximum number of database connections to keep in the pool. Default: 20 connections.
+- `max_overflow`: Maximum number of connections that can be created beyond the pool_size. Default: 30 connections.
+- `pool_timeout`: Number of seconds to wait before timing out on getting a connection from the pool. Default: 30 seconds.
+- `pool_pre_ping`: If `true`, the pool tests connections for liveness upon each checkout. Default: `true`.
+- `pool_recycle`: Number of seconds after which a connection is automatically recycled. Default: 1800 seconds (30 minutes).
+- `echo`: If `true`, SQL queries are logged for debugging purposes. Default: `false`.
 
 ## Configure cache memory
 
 The default Langflow caching behavior is an asynchronous, in-memory cache.
 ```
 LANGFLOW_LANGCHAIN_CACHE=InMemoryCache
-LANGFLOW_CACHE_TYPE=Async
+LANGFLOW_CACHE_TYPE=async
 ```
 
-Alternative caching options can be configured, but options other than the default asynchronous, in-memory cache aren't supported.
+Langflow officially supports only the default asynchronous, in-memory cache. Other backends are experimental and may change without notice.
 The default behavior is suitable for most use cases.
 
-For other options, see the `LANGFLOW_CACHE_TYPE` [environment variable](/environment-variables).
+:::warning
+Redis and other external cache settings are experimental and not officially supported.
+:::
+
+### Cache environment variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `LANGFLOW_CACHE_TYPE` | String | `async` | Set the cache type for Langflow's internal caching system. |
+| `LANGFLOW_LANGCHAIN_CACHE` | String | `InMemoryCache` | Set the cache type for Langchain's caching system. |
+| `LANGFLOW_REDIS_HOST` | String | `localhost` | Redis server hostname. |
+| `LANGFLOW_REDIS_PORT` | Integer | `6379` | Redis server port. |
+| `LANGFLOW_REDIS_DB` | Integer | `0` | Redis database number. |
+| `LANGFLOW_REDIS_CACHE_EXPIRE` | Integer | `3600` | Cache expiration time in seconds. |
+| `LANGFLOW_REDIS_PASSWORD` | String | Not set | Redis authentication password (optional). |
 
 ## Store chat memory
 
