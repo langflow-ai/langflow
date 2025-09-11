@@ -184,7 +184,7 @@ jobs:
         if: ${{ github.event.inputs.environment == 'staging' }}
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${env.STAGING_HOST}
+          host: ${{env.STAGING_HOST}}
           username: root
           password: ${{ secrets.VM_PASSWORD }}
           source: "./deploy/deploy-stage-prod.sh,./.env-file"
@@ -194,7 +194,7 @@ jobs:
         if: ${{ github.event.inputs.environment == 'prod' }}
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${env.PROD_HOST}
+          host: ${{env.PROD_HOST}}
           username: root
           password: ${{ secrets.PROD_VM_PASSWORD }}
           source: "./deploy/deploy-stage-prod.sh,./.env-file"
@@ -204,14 +204,14 @@ jobs:
         if: ${{ github.event.inputs.environment == 'staging' }}
         uses: appleboy/ssh-action@v1.1.0
         with:
-          host: ${env.STAGING_HOST}
+          host: ${{env.STAGING_HOST}}
           username: root
           password: ${{ secrets.VM_PASSWORD }}
           script: |
             chmod +x /root/deploy/deploy-stage-prod.sh
             /root/deploy/deploy-stage-prod.sh \
               --image forwardemailforaifirstdesk/langflow:staging-$BRANCH_NAME-$COMMIT_ID \
-              --domain ${env.STAGING_HOST} \
+              --domain ${{env.STAGING_HOST}} \
               --email ${{ github.event.inputs.email }} \
               --env-file /root/.env-file
 
@@ -219,14 +219,14 @@ jobs:
         if: ${{ github.event.inputs.environment == 'prod' }}
         uses: appleboy/ssh-action@v1.1.0
         with:
-          host: ${env.PROD_HOST}
+          host: ${{env.PROD_HOST}}
           username: root
           password: ${{ secrets.PROD_VM_PASSWORD }}
           script: |
             chmod +x /root/deploy/deploy-stage-prod.sh
             /root/deploy/deploy-stage-prod.sh \
               --image forwardemailforaifirstdesk/langflow:prod-$BRANCH_NAME-$COMMIT_ID \
-              --domain ${env.PROD_HOST} \
+              --domain ${{env.PROD_HOST}} \
               --email ${{ github.event.inputs.email }} \
               --env-file /root/.env-file        
       
