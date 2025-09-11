@@ -162,6 +162,7 @@ class ChatOutput(ChatComponent):
         """Convert input data to string with proper error handling."""
         self._validate_input()
         if isinstance(self.input_value, list):
+            self.clean_data = self.clean_data if hasattr(self, "clean_data") else False
             return "\n".join([safe_convert(item, clean_data=self.clean_data) for item in self.input_value])
         if isinstance(self.input_value, Generator):
             return self.input_value
