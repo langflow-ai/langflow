@@ -1,11 +1,13 @@
 import ast
+import json
 from typing import TYPE_CHECKING, Any
 
+import jq
 from json_repair import repair_json
 
 from lfx.custom import Component
 from lfx.inputs import DictInput, DropdownInput, MessageTextInput, SortableListInput
-from lfx.io import DataInput, Output
+from lfx.io import DataInput, MultilineInput, Output
 from lfx.log.logger import logger
 from lfx.schema import Data
 from lfx.schema.dotdict import dotdict
@@ -149,7 +151,10 @@ class DataOperationsComponent(Component):
         MessageTextInput(
             name="filter_key",
             display_name="Filter Key",
-            info="Name of the key containing the list to filter. It must be a top-level key in the JSON and its value must be a list.",
+            info=(
+                "Name of the key containing the list to filter. "
+                "It must be a top-level key in the JSON and its value must be a list."
+            ),
             is_list=True,
             show=False,
         ),
@@ -232,28 +237,29 @@ class DataOperationsComponent(Component):
         import jq
 
         if not self.query or not self.query.strip():
-            raise ValueError("JSON Query is required and cannot be blank.")
+            msg = "JSON Query is required and cannot be blank."
+            raise ValueError(msg)
         raw_data = self.get_data_dict()
         try:
             input_str = json.dumps(raw_data)
             repaired = repair_json(input_str)
             data_json = json.loads(repaired)
-            if isinstance(data_json, dict) and "data" in data_json:
-                jq_input = data_json["data"]
-            else:
-                jq_input = data_json
+            jq_input = data_json["data"] if isinstance(data_json, dict) and "data" in data_json else data_json
             results = jq.compile(self.query).input(jq_input).all()
             if not results:
-                raise ValueError("No result from JSON query.")
+                msg = "No result from JSON query."
+                raise ValueError(msg)
             result = results[0] if len(results) == 1 else results
             if result is None or result == "None":
-                raise ValueError("JSON query returned null/None. Check if the path exists in your data.")
+                msg = "JSON query returned null/None. Check if the path exists in your data."
+                raise ValueError(msg)
             if isinstance(result, dict):
                 return Data(data=result)
             return Data(data={"result": result})
-        except Exception as e:
+        except (ValueError, TypeError, KeyError, json.JSONDecodeError) as e:
             logger.error(f"JSON Query failed: {e}")
-            raise ValueError(f"JSON Query error: {e}")
+            msg = f"JSON Query error: {e}"
+            raise ValueError(msg) from e
 
     def get_normalized_data(self) -> dict:
         """Get normalized data dictionary, handling the 'data' key if present."""
@@ -271,16 +277,12 @@ class DataOperationsComponent(Component):
             raise ValueError(msg)
 
     def operation_exception(self, operations: list[str]) -> None:
-        msg = f"{operations} operations are not supported in combination with each other."
-        raise ValueError(msg)
-
-    def operation_exception(self, operations: list[str]) -> None:
         """Raise exception for incompatible operations."""
         msg = f"{operations} operations are not supported in combination with each other."
         raise ValueError(msg)
 
     # Data transformation operations
-    def select_keys(self, evaluate: bool | None = None) -> Data:
+    def select_keys(self, *, evaluate: bool | None = None) -> Data:
         """Select specific keys from the data dictionary."""
         self.validate_single_data("Select Keys")
         data_dict = self.get_normalized_data()
@@ -353,7 +355,7 @@ class DataOperationsComponent(Component):
         logger.info("evaluating data")
         return Data(**self.recursive_eval(self.get_data_dict()))
 
-    def combine_data(self, evaluate: bool | None = None) -> Data:
+    def combine_data(self, *, evaluate: bool | None = None) -> Data:
         """Combine multiple data objects into one."""
         logger.info("combining data")
         if not self.data_is_list():
@@ -385,13 +387,6 @@ class DataOperationsComponent(Component):
             combined_data = self.recursive_eval(combined_data)
 
         return Data(**combined_data)
-
-    def compare_values(self, item_value: Any, filter_value: str, operator: str) -> bool:
-        """Compare values based on the specified operator."""
-        comparison_func = OPERATORS.get(operator)
-        if comparison_func:
-            return comparison_func(item_value, filter_value)
-        return False
 
     def filter_data(self, input_data: list[dict[str, Any]], filter_key: str, filter_value: str, operator: str) -> list:
         """Filter list data based on key, value, and operator."""
@@ -477,7 +472,7 @@ class DataOperationsComponent(Component):
                 keys = DataOperationsComponent.extract_all_paths(parsed_json)
                 build_config["selected_key"]["options"] = keys
                 build_config["selected_key"]["show"] = True
-            except Exception as e:
+            except (json.JSONDecodeError, TypeError, ValueError) as e:
                 logger.error(f"Error parsing mapped JSON: {e}")
                 build_config["selected_key"]["show"] = False
 
@@ -486,14 +481,15 @@ class DataOperationsComponent(Component):
     def json_path(self) -> Data:
         try:
             if not self.data or not self.selected_key:
-                raise ValueError("Missing input data or selected key.")
+                msg = "Missing input data or selected key."
+                raise ValueError(msg)
             input_payload = self.data[0].data if isinstance(self.data, list) else self.data.data
             compiled = jq.compile(self.selected_key)
             result = compiled.input(input_payload).first()
             if isinstance(result, dict):
                 return Data(data=result)
             return Data(data={"result": result})
-        except Exception as e:
+        except (ValueError, TypeError, KeyError) as e:
             self.status = f"Error: {e!s}"
             self.log(self.status)
             return Data(data={"error": str(e)})
