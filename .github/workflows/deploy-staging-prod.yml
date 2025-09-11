@@ -210,7 +210,7 @@ jobs:
           script: |
             chmod +x /root/deploy/deploy-stage-prod.sh
             /root/deploy/deploy-stage-prod.sh \
-              --image forwardemailforaifirstdesk/langflow:staging-$BRANCH_NAME-$COMMIT_ID \
+              --image forwardemailforaifirstdesk/langflow:staging-${{ steps.branch.outputs.branch_name }}-${{ steps.commit.outputs.commit_id }} \
               --domain ${{env.STAGING_HOST}} \
               --email ${{ github.event.inputs.email }} \
               --env-file /root/.env-file
@@ -225,7 +225,7 @@ jobs:
           script: |
             chmod +x /root/deploy/deploy-stage-prod.sh
             /root/deploy/deploy-stage-prod.sh \
-              --image forwardemailforaifirstdesk/langflow:prod-$BRANCH_NAME-$COMMIT_ID \
+              --image forwardemailforaifirstdesk/langflow:prod-${{ steps.branch.outputs.branch_name }}-${{ steps.commit.outputs.commit_id }} \
               --domain ${{env.PROD_HOST}} \
               --email ${{ github.event.inputs.email }} \
               --env-file /root/.env-file        
