@@ -245,7 +245,11 @@ test(
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-nav-mcp").click();
 
-    await page.getByTestId("sidebar-add-mcp-server-button").click();
+    try {
+      await page.getByTestId("sidebar-add-mcp-server-button").click();
+    } catch (_error) {
+      await page.getByTestId("add-mcp-server-button-sidebar").click();
+    }
 
     await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
       state: "visible",
