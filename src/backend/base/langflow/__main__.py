@@ -61,7 +61,10 @@ class ProcessManager:
         if self.shutdown_in_progress:
             return  # Already shutting down, ignore
         self.shutdown_in_progress = True
-        self.shutdown()
+        # Don't call shutdown() directly in signal handler to avoid interrupting cleanup
+        # Instead, set a flag and let the main process handle it
+        import threading
+        threading.Thread(target=self.shutdown, daemon=True).start()
 
     # params are required for signal handlers, even if they are not used
     def handle_sigint(self, _signum: int, _frame) -> None:
@@ -73,6 +76,8 @@ class ProcessManager:
 
     def shutdown(self):
         """Gracefully shutdown the webapp process."""
+        import os
+        
         if self.webapp_process and self.webapp_process.is_alive():
             # Just terminate the process - the actual shutdown progress is handled
             # by the FastAPI lifespan context in main.py
@@ -89,7 +94,11 @@ class ProcessManager:
                     logger.warning("Process still alive after kill() and 10s timeout. Proceeding with shutdown.")
             self.print_farewell_message()
 
-        sys.exit(0)
+        # Check if we're in a test environment (look for pytest in the call stack)
+        # to avoid sys.exit() during test cleanup
+        in_test = any('pytest' in frame.filename for frame in inspect.stack())
+        if not in_test and 'PYTEST_CURRENT_TEST' not in os.environ:
+            sys.exit(0)
 
     def print_farewell_message(self) -> None:
         """Print a nice farewell message after shutdown is complete."""

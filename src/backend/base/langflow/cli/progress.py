@@ -146,6 +146,16 @@ class ProgressIndicator:
             self.fail_step(step_index, error_msg)
             raise
 
+    def cleanup(self) -> None:
+        """Clean up the progress indicator and stop any running animations."""
+        self._stop_animation = True
+        self.running = False
+        if self._animation_thread and self._animation_thread.is_alive():
+            self._animation_thread.join(timeout=0.5)
+        # Clear the current line
+        sys.stdout.write("\r")
+        sys.stdout.flush()
+
     def print_summary(self) -> None:
         """Print a summary of all completed steps."""
         if not self.verbose:
