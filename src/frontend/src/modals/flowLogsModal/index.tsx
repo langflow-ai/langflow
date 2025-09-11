@@ -1,3 +1,6 @@
+import type { ColDef, ColGroupDef } from "ag-grid-community";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import LoadingComponent from "@/components/common/loadingComponent";
 import PaginatorComponent from "@/components/common/paginatorComponent";
@@ -5,9 +8,6 @@ import TableComponent from "@/components/core/parameterRenderComponent/component
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { convertUTCToLocalTimezone } from "@/utils/utils";
-import type { ColDef, ColGroupDef } from "ag-grid-community";
-import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import BaseModal from "../baseModal";
 
 export default function FlowLogsModal({
