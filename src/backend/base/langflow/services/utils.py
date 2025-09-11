@@ -132,9 +132,8 @@ async def teardown_superuser(settings_service, session: AsyncSession) -> None:
 
 async def teardown_services() -> None:
     """Teardown all the services."""
-    async with get_db_service().with_session() as session:
-        await teardown_superuser(get_settings_service(), session)
-
+    # Don't try to get a new database session during teardown - it can hang
+    # The database service will handle its own cleanup including superuser teardown
     from langflow.services.manager import service_manager
 
     await service_manager.teardown()

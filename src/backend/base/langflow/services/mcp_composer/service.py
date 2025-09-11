@@ -204,6 +204,41 @@ class MCPComposerService(Service):
         msg = f"Process {process.pid} did not exit after {max_wait} seconds"
         raise asyncio.TimeoutError(msg)
 
+    async def _non_blocking_communicate(self, process, timeout=2):
+        """Non-blocking version of process.communicate() that doesn't block the event loop."""
+        try:
+            # Use asyncio.gather to read stdout and stderr concurrently
+            # This allows the event loop to continue processing other tasks
+            stdout_task = None
+            stderr_task = None
+            
+            if process.stdout:
+                stdout_task = asyncio.create_task(process.stdout.read())
+            if process.stderr:
+                stderr_task = asyncio.create_task(process.stderr.read())
+            
+            # Wait for both with timeout
+            tasks = [t for t in [stdout_task, stderr_task] if t is not None]
+            if tasks:
+                await asyncio.wait_for(asyncio.gather(*tasks), timeout=timeout)
+            
+            # Get results
+            stdout_bytes = await stdout_task if stdout_task else b""
+            stderr_bytes = await stderr_task if stderr_task else b""
+            
+            return stdout_bytes, stderr_bytes
+            
+        except asyncio.TimeoutError:
+            # If timeout, force kill the process and return empty output
+            try:
+                process.kill()
+            except ProcessLookupError:
+                pass  # Process already dead
+            return b"", b""
+        except Exception:
+            # If any other error, return empty output
+            return b"", b""
+
     def _validate_oauth_settings(self, auth_config: dict[str, Any]) -> None:
         """Validate that all required OAuth settings are present and non-empty.
 
@@ -515,7 +550,8 @@ class MCPComposerService(Service):
                 # Process terminated, get the error output
                 await logger.aerror(f"MCP Composer process {process.pid} terminated with exit code: {poll_result}")
                 try:
-                    stdout_bytes, stderr_bytes = await asyncio.wait_for(process.communicate(), timeout=2)
+                    # Use non-blocking approach to avoid event loop blocking
+                    stdout_bytes, stderr_bytes = await self._non_blocking_communicate(process, timeout=2)
                     stdout_content = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
                     stderr_content = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
                     # Log the full error details for debugging
@@ -569,7 +605,8 @@ class MCPComposerService(Service):
                 # Process died
                 startup_error_msg = None
                 try:
-                    stdout_bytes, stderr_bytes = await asyncio.wait_for(process.communicate(), timeout=2)
+                    # Use non-blocking approach to avoid event loop blocking
+                    stdout_bytes, stderr_bytes = await self._non_blocking_communicate(process, timeout=2)
                     stdout_content = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
                     stderr_content = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
                     # Extract meaningful error message
@@ -602,7 +639,8 @@ class MCPComposerService(Service):
             startup_error_msg = None
             try:
                 process.terminate()
-                stdout_bytes, stderr_bytes = await asyncio.wait_for(process.communicate(), timeout=2)
+                # Use non-blocking approach to avoid event loop blocking
+                stdout_bytes, stderr_bytes = await self._non_blocking_communicate(process, timeout=2)
                 stdout_content = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
                 stderr_content = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
                 startup_error_msg = self._extract_error_message(stdout_content, stderr_content, oauth_server_url)
