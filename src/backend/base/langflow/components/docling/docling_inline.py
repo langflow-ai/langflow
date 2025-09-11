@@ -217,17 +217,33 @@ class DoclingInlineComponent(BaseFileComponent):
                     # Ignore cleanup errors, but log them
                     self.log(f"Warning: Error during queue cleanup - {e}")
 
-        # Check if there was an error in the worker
+        # Enhanced error checking with dependency-specific handling
         if isinstance(result, dict) and "error" in result:
-            msg = result["error"]
-            if msg.startswith("Docling is not installed"):
-                raise ImportError(msg)
-            # Handle interrupt gracefully - return empty result instead of raising error
-            if "Worker interrupted by SIGINT" in msg or "shutdown" in result:
+            error_msg = result["error"]
+
+            # Handle dependency errors specifically
+            if result.get("error_type") == "dependency_error":
+                dependency_name = result.get("dependency_name", "Unknown dependency")
+                install_command = result.get("install_command", "Please check documentation")
+
+                # Create a user-friendly error message
+                user_message = (
+                    f"Missing OCR dependency: {dependency_name}. "
+                    f"{install_command} "
+                    f"Alternatively, you can set OCR Engine to 'None' to disable OCR processing."
+                )
+                raise ImportError(user_message)
+
+            # Handle other specific errors
+            if error_msg.startswith("Docling is not installed"):
+                raise ImportError(error_msg)
+
+            # Handle graceful shutdown
+            if "Worker interrupted by SIGINT" in error_msg or "shutdown" in result:
                 self.log("Docling process cancelled by user")
                 result = []
             else:
-                raise RuntimeError(msg)
+                raise RuntimeError(error_msg)
 
         processed_data = [Data(data={"doc": r["document"], "file_path": r["file_path"]}) if r else None for r in result]
         return self.rollup_data(file_list, processed_data)
