@@ -274,7 +274,9 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       (edge) => edge.target === nodeId && edge.targetHandle === myId,
     );
     const outputType = connectedEdge?.data?.sourceHandle?.output_types?.[0];
-    const connectedColor = outputType ? nodeColorsName[outputType] : "gray";
+    const connectedColor = outputType
+      ? nodeColorsName[outputType] ?? "gray"
+      : "gray";
 
     const isNullHandle =
       filterPresent && !(openHandle || ownDraggingHandle || ownFilterHandle);
@@ -288,24 +290,24 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     const handleColorName = connectedEdge
       ? connectedColor
       : uniqueColorCount > 1
-        ? "secondary-foreground"
-        : "datatype-" + firstUniqueColor;
+      ? "secondary-foreground"
+      : "datatype-" + firstUniqueColor;
 
     const handleColor = isNullHandle
       ? dark
         ? "hsl(var(--accent-gray))"
         : "hsl(var(--accent-gray-foreground)"
       : connectedEdge
-        ? "hsl(var(--datatype-" + connectedColor + "))"
-        : uniqueColorCount > 1
-          ? "hsl(var(--secondary-foreground))"
-          : "hsl(var(--datatype-" + firstUniqueColor + "))";
+      ? "hsl(var(--datatype-" + connectedColor + "))"
+      : uniqueColorCount > 1
+      ? "hsl(var(--secondary-foreground))"
+      : "hsl(var(--datatype-" + firstUniqueColor + "))";
 
     const accentForegroundColorName = connectedEdge
       ? "hsl(var(--datatype-" + connectedColor + "-foreground))"
       : uniqueColorCount > 1
-        ? "hsl(var(--input))"
-        : "hsl(var(--datatype-" + firstUniqueColor + "-foreground))";
+      ? "hsl(var(--input))"
+      : "hsl(var(--datatype-" + firstUniqueColor + "-foreground))";
 
     const currentFilter = left
       ? {
