@@ -165,7 +165,8 @@ In Langflow version 1.5, you could set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=True` _and
 This was a temporary bypass for backwards compatibility.
 
 In Langflow version 1.6 and later, the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` option has been removed.
-When `LANGFLOW_AUTO_LOGIN=True`, API requests still require a valid Langflow API key for authentication.
+When `LANGFLOW_AUTO_LOGIN=True`, all Langflow API requests require a valid Langflow API key for authentication.
+The only exceptions are the MCP endpoints (`/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`), which inherit authentication settings from your Langflow projects' [MCP servers](/mcp-server).
 </details>
 
 ### LANGFLOW_ENABLE_SUPERUSER_CLI {#langflow-enable-superuser-cli}
