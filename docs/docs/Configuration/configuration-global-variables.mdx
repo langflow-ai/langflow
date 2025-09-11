@@ -176,4 +176,12 @@ Langflow automatically detects and converts some environment variables into glob
 
 The supported variables are listed in [constants.py](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/services/settings/constants.py).
 
-For information about other environment variables and their usage, see [Environment Variables](/environment-variables).
+## Global variables and environment variables configuration
+
+These environment variables configure how Langflow handles the relationship between environment variables and global variables.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` | Boolean | True | Whether to store environment variables as [global variables](/configuration-global-variables) in the database. |
+| `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` | String | Not set | Comma-separated list of environment variables to get from the environment and store as [global variables](/configuration-global-variables). |
+| `LANGFLOW_FALLBACK_TO_ENV_VAR` | Boolean | True | If enabled, [global variables](/configuration-global-variables) set in your Langflow **Settings** can use an environment variable with the same name if Langflow can't retrieve the variable value from the global variables. |

@@ -42,7 +42,6 @@ However, environment variables imported from a `.env` file take [precedence](#pr
 
 ### Set environment variables in your terminal {#configure-variables-terminal}
 
-
 Run the following commands to set environment variables for your current terminal session:
 
 <Tabs>
@@ -254,13 +253,9 @@ For detailed information about shared Playground configuration, see [Share a flo
 
 ### Global variables and environment integration
 
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` | Boolean | True | Whether to store environment variables as [global variables](/configuration-global-variables) in the database. |
-| `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` | String | Not set | Comma-separated list of environment variables to get from the environment and store as [global variables](/configuration-global-variables). |
-| `LANGFLOW_FALLBACK_TO_ENV_VAR` | Boolean | True | If enabled, [global variables](/configuration-global-variables) set in your Langflow **Settings** can use an environment variable with the same name if Langflow can't retrieve the variable value from the global variables. |
+For detailed information about how global and environment variables interact, see [Global variables](/configuration-global-variables).
 
-### Store and features
+### Other environment variables
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
@@ -295,6 +290,8 @@ For detailed information about MCP server configuration, see [Use Langflow as an
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
 | `DO_NOT_TRACK` | Boolean | False | Whether to report [Langflow telemetry data](/contributing-telemetry). If true, Langflow telemetry is disabled. |
+
+For telemetry configuration options, see [Telemetry](/contributing-telemetry).
 
 ## Configure .env, override.conf, and tasks.json files
 
