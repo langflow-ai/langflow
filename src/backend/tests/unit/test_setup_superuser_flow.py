@@ -132,20 +132,26 @@ async def test_setup_superuser_with_custom_credentials():
 
     # Clean DB state to avoid interference from previous tests
     async with get_db_service().with_session() as session:
-        # Ensure default can be removed by teardown (last_login_at must be None)
-        stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
-        default_user = (await session.exec(stmt)).first()
-        if default_user:
-            default_user.last_login_at = None
-            await session.commit()
-            await teardown_superuser(settings, session)
+        # Check if user table exists before querying it
+        from langflow.utils.migration import table_exists
 
-        # Remove any pre-existing custom_admin user
-        stmt = select(User).where(User.username == "custom_admin")
-        existing_custom = (await session.exec(stmt)).first()
-        if existing_custom:
-            await session.delete(existing_custom)
-            await session.commit()
+        async with session.bind.connect() as conn:
+            user_table_exists = await conn.run_sync(lambda sync_conn: table_exists("user", sync_conn))
+        if user_table_exists:
+            # Ensure default can be removed by teardown (last_login_at must be None)
+            stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
+            default_user = (await session.exec(stmt)).first()
+            if default_user:
+                default_user.last_login_at = None
+                await session.commit()
+                await teardown_superuser(settings, session)
+
+            # Remove any pre-existing custom_admin user
+            stmt = select(User).where(User.username == "custom_admin")
+            existing_custom = (await session.exec(stmt)).first()
+            if existing_custom:
+                await session.delete(existing_custom)
+                await session.commit()
 
     async with get_db_service().with_session() as session:
         await setup_superuser(settings, session)
