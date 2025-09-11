@@ -30,7 +30,17 @@ class OrganizationService:
         if len(cls._db_service_cache) > cls._MAX_CACHE_SIZE:
             _, old_service = cls._db_service_cache.popitem(last=False)
             cls._cleanup_tasks.append(asyncio.create_task(old_service.teardown()))
-
+    
+    @staticmethod
+    def _normalize_url(url: str) -> str:
+        """Return a normalized database URL with explicit async drivers."""
+        driver, rest = url.split("://", 1)
+        if driver == "sqlite":
+            driver = "sqlite+aiosqlite"
+        elif driver in {"postgres", "postgresql"}:
+            driver = "postgresql+psycopg"
+        return f"{driver}://{rest}"
+    
     @classmethod
     def get_db_service_for_request(cls) -> DatabaseService:
         """Return a DatabaseService for the organisation in the auth context."""
@@ -39,19 +49,35 @@ class OrganizationService:
         if not org_id:
             msg = "Missing organisation id"
             raise RuntimeError(msg)
+        
+        settings_service = get_settings_service()
+        base_url = settings_service.settings.database_url
+        expected_url = cls._build_database_url_for_org(base_url, org_id)
 
         service = cls._db_service_cache.get(org_id)
         if service:
-            cls._db_service_cache.move_to_end(org_id)
-            logger.info(f"[OrgDB] Returning cached DB service for org_id={org_id}, DB URL={service.settings_service.settings.database_url}")
+            # Ensure the cached service points to the correct database
+            cached_url = cls._normalize_url(service.settings_service.settings.database_url)
+            expected_normalized = cls._normalize_url(expected_url)
+            if cached_url != expected_normalized:
+                logger.info(
+                    f"[OrgDB] Rebuilding DB service for org_id={org_id}, DB URL={expected_url}"
+                )
+                new_settings = settings_service.settings.model_copy()
+                new_settings.database_url = expected_url
+                new_settings_service = SettingsService(new_settings, settings_service.auth_settings)
+                service = DatabaseService(new_settings_service)
+                cls._remember_org(org_id, service)
+            else:
+                cls._db_service_cache.move_to_end(org_id)
+                logger.info(
+                    f"[OrgDB] Returning cached DB service for org_id={org_id}, DB URL={service.settings_service.settings.database_url}"
+                )
             return service
 
-        settings_service = get_settings_service()
-        base_url = settings_service.settings.database_url
-        new_url = cls._build_database_url_for_org(base_url, org_id)
-        logger.info(f"[OrgDB] Creating new DB service for org_id={org_id}, DB URL={new_url}")
+        logger.info(f"[OrgDB] Creating new DB service for org_id={org_id}, DB URL={expected_url}")
         new_settings = settings_service.settings.model_copy()
-        new_settings.database_url = new_url
+        new_settings.database_url = expected_url
         new_settings_service = SettingsService(new_settings, settings_service.auth_settings)
         service = DatabaseService(new_settings_service)
         cls._remember_org(org_id, service)
@@ -139,16 +165,17 @@ class OrganizationService:
         if not org_id:
             raise RuntimeError("Missing organisation id")
 
-        # If already cached → skip
-        if org_id in self._db_service_cache:
-            logger.info(f"[OrgInit] Organisation database already cached for org_id={org_id}")
-            self._remember_org(org_id, self._db_service_cache[org_id])
-            return
-
         # Build per-org DB URL
         base_url = settings_service.settings.database_url
         new_url = self._build_database_url_for_org(base_url, org_id)
         logger.info(f"[OrgInit] Using DB URL for org_id={org_id}: {new_url}")
+
+        # If already cached with correct URL → skip
+        cached_service = self._db_service_cache.get(org_id)
+        if cached_service and cached_service.settings_service.settings.database_url == new_url:
+            logger.info(f"[OrgInit] Organisation database already cached for org_id={org_id}")
+            self._remember_org(org_id, cached_service)
+            return
 
         # Ensure the organisation database exists (for Postgres)
         await self._ensure_database_exists(base_url, org_id)
@@ -168,6 +195,7 @@ class OrganizationService:
         # Create a dedicated DatabaseService for this org
         new_settings = settings_service.settings.model_copy()
         new_settings.database_url = new_url
+        logger.info(f"[OrgInit] Creating org DatabaseService with DB URL: {new_settings.database_url}")
         new_settings_service = SettingsService(new_settings, settings_service.auth_settings)
         new_db_service = DatabaseService(new_settings_service)
 
