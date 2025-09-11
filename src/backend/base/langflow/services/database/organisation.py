@@ -60,26 +60,27 @@ class OrganizationService:
             cached_url = cls._normalize_url(service.settings_service.settings.database_url)
             expected_normalized = cls._normalize_url(expected_url)
             if cached_url != expected_normalized:
-                logger.info(
-                    f"[OrgDB] Rebuilding DB service for org_id={org_id}, DB URL={expected_url}"
-                )
-                new_settings = settings_service.settings.model_copy()
-                new_settings.database_url = expected_url
+                logger.info(f"[OrgDB] Rebuilding DB service for org_id={org_id}, DB URL={expected_url}")
+                new_settings = settings_service.settings.model_copy(update={"database_url": expected_url})
                 new_settings_service = SettingsService(new_settings, settings_service.auth_settings)
                 service = DatabaseService(new_settings_service)
+                service.reload_engine()
                 cls._remember_org(org_id, service)
             else:
                 cls._db_service_cache.move_to_end(org_id)
+                cached_db_url = service.settings_service.settings.database_url
                 logger.info(
-                    f"[OrgDB] Returning cached DB service for org_id={org_id}, DB URL={service.settings_service.settings.database_url}"
+                    "[OrgDB] Returning cached DB service for org_id=%s, DB URL=%s",
+                    org_id,
+                    cached_db_url,
                 )
             return service
 
         logger.info(f"[OrgDB] Creating new DB service for org_id={org_id}, DB URL={expected_url}")
-        new_settings = settings_service.settings.model_copy()
-        new_settings.database_url = expected_url
+        new_settings = settings_service.settings.model_copy(update={"database_url": expected_url})
         new_settings_service = SettingsService(new_settings, settings_service.auth_settings)
         service = DatabaseService(new_settings_service)
+        service.reload_engine()
         cls._remember_org(org_id, service)
         return service
 
@@ -193,11 +194,11 @@ class OrganizationService:
                 await async_engine.dispose()
 
         # Create a dedicated DatabaseService for this org
-        new_settings = settings_service.settings.model_copy()
-        new_settings.database_url = new_url
+        new_settings = settings_service.settings.model_copy(update={"database_url": new_url})
         logger.info(f"[OrgInit] Creating org DatabaseService with DB URL: {new_settings.database_url}")
         new_settings_service = SettingsService(new_settings, settings_service.auth_settings)
         new_db_service = DatabaseService(new_settings_service)
+        new_db_service.reload_engine()
 
         try:
             logger.warning("🔥 [DEBUG] Org DB Init STARTED")
