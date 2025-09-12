@@ -186,7 +186,6 @@ class ConsistencyTestComponent(Component):
     assert response1.status_code == status.HTTP_200_OK
     assert response2.status_code == status.HTTP_200_OK
 
-
     # TODO: Temporarily skip metadata checks
 
     # Metadata should be identical
