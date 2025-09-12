@@ -227,23 +227,7 @@
             "icon": "arXiv",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {
-              "code_hash": "b61405ff011f",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "defusedxml",
-                    "version": "0.7.1"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
-              },
-              "module": "langflow.components.arxiv.arxiv.ArXivComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -401,27 +385,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {
-              "code_hash": "765fdf2ed814",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.input_output.chat_output.ChatOutput"
-            },
+            "metadata": {},
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -642,19 +606,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {
-              "code_hash": "5f2d98ee19db",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.input_output.chat.ChatInput"
-            },
+            "metadata": {},
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -919,19 +871,7 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {
-              "code_hash": "556209520650",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.processing.parser.ParserComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1103,19 +1043,7 @@
             "icon": "infinity",
             "legacy": false,
             "lf_version": "1.4.3",
-            "metadata": {
-              "code_hash": "5b234f78c942",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.logic.loop.LoopComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1525,19 +1453,7 @@
             "icon": "repeat",
             "key": "TypeConverterComponent",
             "legacy": false,
-            "metadata": {
-              "code_hash": "38e56a852063",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.processing.converter.TypeConverterComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [

@@ -313,23 +313,7 @@
             "icon": "AssemblyAI",
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {
-              "code_hash": "3e67a5940263",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "assemblyai",
-                    "version": "0.35.1"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
-              },
-              "module": "langflow.components.assemblyai.assemblyai_poll_transcript.AssemblyAITranscriptionJobPoller"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -638,27 +622,7 @@
             "key": "ChatOutput",
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {
-              "code_hash": "765fdf2ed814",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.input_output.chat_output.ChatOutput"
-            },
+            "metadata": {},
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -876,27 +840,7 @@
             "key": "ChatOutput",
             "legacy": false,
             "lf_version": "1.1.1",
-            "metadata": {
-              "code_hash": "765fdf2ed814",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.input_output.chat_output.ChatOutput"
-            },
+            "metadata": {},
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1114,27 +1058,7 @@
             "key": "ChatOutput",
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {
-              "code_hash": "765fdf2ed814",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.input_output.chat_output.ChatOutput"
-            },
+            "metadata": {},
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -1529,19 +1453,7 @@
             "icon": "message-square-more",
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {
-              "code_hash": "2d955c386a94",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.helpers.memory.MemoryComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1868,19 +1780,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.1.5",
-            "metadata": {
-              "code_hash": "5f2d98ee19db",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.input_output.chat.ChatInput"
-            },
+            "metadata": {},
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -2229,23 +2129,7 @@
             "icon": "AssemblyAI",
             "key": "AssemblyAITranscriptionJobCreator",
             "legacy": false,
-            "metadata": {
-              "code_hash": "03d20eaf49f4",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "assemblyai",
-                    "version": "0.35.1"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
-              },
-              "module": "langflow.components.assemblyai.assemblyai_start_transcript.AssemblyAITranscriptionJobCreator"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
