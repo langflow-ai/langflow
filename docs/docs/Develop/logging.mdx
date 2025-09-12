@@ -31,22 +31,17 @@ Use [Langflow environment variables](/environment-variables) to configure loggin
 
 The following environment variables are available to configure logging:
 
-* `LANGFLOW_LOG_LEVEL`: Sets the log level as one of `DEBUG`, `ERROR` (default), `INFO`, `WARNING`, and `CRITICAL`. For example, `LANGFLOW_LOG_LEVEL=DEBUG`.
+### Logging environment variables
 
-* `LANGFLOW_LOG_FILE`: Sets the log file storage location if you want to use a non-default location.
-For example, `LANGFLOW_LOG_FILE=path/to/logfile.log`.
-
-* `LANGFLOW_LOG_ENV`: Controls log output and formatting.
-
-    * `LANGFLOW_LOG_ENV=container`: Outputs serialized JSON to stdout.
-    * `LANGFLOW_LOG_ENV=container_csv`: Outputs CSV-formatted plain text to stdout.
-    * `LANGFLOW_LOG_ENV=default` or unset: Outputs prettified output with [RichHandler](https://rich.readthedocs.io/en/stable/reference/logging.html).
-
-* `LANGFLOW_LOG_ROTATION` controls when the log file is rotated, either based on time or file size. By default, logs are rotated every 1 day.
-
-    * Time-based rotation: "1 day", "12 hours", "1 week"
-    * Size-based rotation: "10 MB", "1 GB"
-    * Disable rotation: "None" (log files will grow without limit)
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_LOG_LEVEL` | String | `ERROR` | Sets the log level as one of `DEBUG`, `ERROR`, `INFO`, `WARNING`, and `CRITICAL`. For example, `LANGFLOW_LOG_LEVEL=DEBUG`. |
+| `LANGFLOW_LOG_FILE` | String | Not set | Sets the log file storage location if you want to use a non-default location. For example, `LANGFLOW_LOG_FILE=path/to/logfile.log`. If this option isn't set, logs are written to stdout. |
+| `LANGFLOW_LOG_ENV` | String | `default` | Controls how logs are formatted and displayed. `container`: JSON format for Docker/structured logging. `container_csv`: CSV format for data analysis. `default` or unset: Pretty, colorful format for development/reading using [RichHandler](https://rich.readthedocs.io/en/stable/reference/logging.html). |
+| `LANGFLOW_LOG_ROTATION` | String | `1 day` | Controls when the log file is rotated, either based on time or file size. Time-based rotation: "1 day", "12 hours", "1 week". Size-based rotation: "10 MB", "1 GB". Disable rotation: "None" (log files will grow without limit). |
+| `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` | Integer | `10000` | Set the buffer size for log retrieval. Only used if `LANGFLOW_ENABLE_LOG_RETRIEVAL` is enabled. |
+| `LANGFLOW_LOG_FORMAT` | String | Not set | Set the log format configuration. |
+| `LANGFLOW_PRETTY_LOGS` | Boolean | True | Enable pretty log formatting with colors and rich console output. |
 
 A complete example `.env` file is available in the [Langflow repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
 
@@ -135,6 +130,7 @@ Follow the steps for your operating system.
 You can use the log file to investigate the issue on your own, add context to a [GitHub Issue](/contributing-github-issues), or send it to [support](/luna-for-langflow) for debugging assistance.
 
 The log file is only created when Langflow Desktop runs. If you don't see a log file, try starting Langflow Desktop first, then check for the log file.
+
 ## See also
 
 * [Memory management options](/memory)
