@@ -17,7 +17,7 @@ from httpx import codes as httpx_codes
 from langchain_core.tools import StructuredTool
 from mcp import ClientSession
 from mcp.shared.exceptions import McpError
-from pydantic import BaseModel, Field, create_model
+from pydantic import AliasChoices, BaseModel, Field, ValidationError, create_model
 from sqlmodel import select
 
 from langflow.logging.logger import logger
@@ -204,10 +204,38 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
             provided_args[field_names[i]] = arg
         # Merge in keyword arguments
         provided_args.update(kwargs)
+
+        # Convert camelCase parameters to snake_case if needed
+        converted_args = {}
+        for key, value in provided_args.items():
+            # Check if the key exists in the model fields
+            if key in arg_schema.model_fields:
+                converted_args[key] = value
+            else:
+                # Try to find a snake_case field that matches this camelCase key
+                snake_key = _camel_to_snake(key)
+                if snake_key in arg_schema.model_fields:
+                    converted_args[snake_key] = value
+                    logger.info(f"Converted parameter '{key}' to '{snake_key}'")
+                else:
+                    # Keep the original key
+                    converted_args[key] = value
+
+        # Debug logging
+        logger.info(f"Tool '{tool_name}' called with args: {args}, kwargs: {kwargs}")
+        logger.info(f"Converted args for validation: {converted_args}")
+        logger.info(f"Expected field names: {field_names}")
+
+        provided_args = converted_args
+
         # Validate input and fill defaults for missing optional fields
         try:
             validated = arg_schema.model_validate(provided_args)
         except Exception as e:
+            schema_fields = list(arg_schema.model_fields.keys())
+            logger.error(
+                f"Tool '{tool_name}' validation failed. Provided: {provided_args}, Schema fields: {schema_fields}"
+            )
             msg = f"Invalid input: {e}"
             raise ValueError(msg) from e
 
@@ -232,9 +260,37 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
                 raise ValueError(msg)
             provided_args[field_names[i]] = arg
         provided_args.update(kwargs)
+
+        # Convert camelCase parameters to snake_case if needed
+        converted_args = {}
+        for key, value in provided_args.items():
+            # Check if the key exists in the model fields
+            if key in arg_schema.model_fields:
+                converted_args[key] = value
+            else:
+                # Try to find a snake_case field that matches this camelCase key
+                snake_key = _camel_to_snake(key)
+                if snake_key in arg_schema.model_fields:
+                    converted_args[snake_key] = value
+                    logger.info(f"Converted parameter '{key}' to '{snake_key}'")
+                else:
+                    # Keep the original key
+                    converted_args[key] = value
+
+        # Debug logging
+        logger.info(f"Tool func '{tool_name}' called with args: {args}, kwargs: {kwargs}")
+        logger.info(f"Converted args for validation: {converted_args}")
+        logger.info(f"Expected field names: {field_names}")
+
+        provided_args = converted_args
+
         try:
             validated = arg_schema.model_validate(provided_args)
         except Exception as e:
+            schema_fields = list(arg_schema.model_fields.keys())
+            logger.error(
+                f"Tool func '{tool_name}' validation failed. Provided: {provided_args}, Schema fields: {schema_fields}"
+            )
             msg = f"Invalid input: {e}"
             raise ValueError(msg) from e
 
@@ -278,6 +334,21 @@ async def get_flow_snake_case(flow_name: str, user_id: str, session, *, is_actio
         if this_flow_name == flow_name:
             return flow
     return None
+
+
+def _snake_to_camel(snake_str):
+    """Convert snake_case to camelCase."""
+    components = snake_str.split("_")
+    return components[0] + "".join(word.capitalize() for word in components[1:])
+
+
+def _camel_to_snake(camel_str):
+    """Convert camelCase to snake_case."""
+    import re
+
+    # Insert an underscore before any uppercase letter that follows a lowercase letter or digit
+    snake_str = re.sub("([a-z0-9])([A-Z])", r"\1_\2", camel_str)
+    return snake_str.lower()
 
 
 def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseModel]:
@@ -389,7 +460,15 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             else:
                 default = ...  # required by Pydantic
 
-            fields[prop_name] = (py_type, Field(default, description=prop_schema.get("description")))
+            # Create field with alias for camelCase version if the field is snake_case
+            field_kwargs = {"default": default, "description": prop_schema.get("description")}
+            if "_" in prop_name:
+                # Add camelCase alias for snake_case fields using AliasChoices
+                camel_alias = _snake_to_camel(prop_name)
+                field_kwargs["validation_alias"] = AliasChoices(prop_name, camel_alias)
+                logger.info(f"Adding validation alias for nested field '{prop_name}': {camel_alias}")
+
+            fields[prop_name] = (py_type, Field(**field_kwargs))
 
         model_cls = create_model(name, **fields)
         model_cache[name] = model_cls
@@ -407,7 +486,16 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             default = fdef.get("default", None)
         else:
             default = ...
-        top_fields[fname] = (py_type, Field(default, description=fdef.get("description")))
+
+        # Create field with alias for camelCase version if the field is snake_case
+        field_kwargs = {"default": default, "description": fdef.get("description")}
+        if "_" in fname:
+            # Add both snake_case and camelCase as valid names using AliasChoices
+            camel_alias = _snake_to_camel(fname)
+            field_kwargs["validation_alias"] = AliasChoices(fname, camel_alias)
+            logger.info(f"Adding validation alias for field '{fname}': {camel_alias}")
+
+        top_fields[fname] = (py_type, Field(**field_kwargs))
 
     return create_model("InputSchema", **top_fields)
 
@@ -1504,7 +1592,95 @@ async def update_tools(
                 logger.warning(f"Could not create schema for tool '{tool.name}' from server '{server_name}'")
                 continue
 
-            tool_obj = StructuredTool(
+            # Debug logging for schema
+            logger.info(f"Created schema for tool '{tool.name}': {list(args_schema.model_fields.keys())}")
+            for field_name, field_info in args_schema.model_fields.items():
+                logger.info(f"  Field '{field_name}': validation_alias={getattr(field_info, 'validation_alias', None)}")
+
+            # Test schema validation with camelCase parameters
+            if tool.name == "recommend_with_weather":
+                try:
+                    test_camel = {"weatherMain": "Clear", "topN": 6}
+                    test_snake = {"weather_main": "Clear", "top_n": 6}
+
+                    logger.info(f"Testing schema validation for '{tool.name}':")
+                    logger.info(f"  CamelCase test: {test_camel}")
+                    camel_result = args_schema.model_validate(test_camel)
+                    logger.info(f"  CamelCase result: {camel_result.model_dump()}")
+
+                    logger.info(f"  Snake_case test: {test_snake}")
+                    snake_result = args_schema.model_validate(test_snake)
+                    logger.info(f"  Snake_case result: {snake_result.model_dump()}")
+
+                except (ValueError, ValidationError) as e:
+                    logger.error(f"Schema validation test failed for '{tool.name}': {e}")
+
+            # Create a custom StructuredTool that bypasses schema validation
+            class MCPStructuredTool(StructuredTool):
+                def run(self, tool_input: str | dict, config=None, **kwargs):
+                    """Override the main run method to handle parameter conversion before validation."""
+                    # Parse tool_input if it's a string
+                    if isinstance(tool_input, str):
+                        try:
+                            import json
+
+                            parsed_input = json.loads(tool_input)
+                        except json.JSONDecodeError:
+                            parsed_input = {"input": tool_input}
+                    else:
+                        parsed_input = tool_input or {}
+
+                    # Convert camelCase parameters to snake_case
+                    converted_input = self._convert_parameters(parsed_input)
+                    logger.info(f"MCPStructuredTool.run parameter conversion: {parsed_input} -> {converted_input}")
+
+                    # Call the parent run method with converted parameters
+                    return super().run(converted_input, config=config, **kwargs)
+
+                async def arun(self, tool_input: str | dict, config=None, **kwargs):
+                    """Override the main arun method to handle parameter conversion before validation."""
+                    # Parse tool_input if it's a string
+                    if isinstance(tool_input, str):
+                        try:
+                            import json
+
+                            parsed_input = json.loads(tool_input)
+                        except json.JSONDecodeError:
+                            parsed_input = {"input": tool_input}
+                    else:
+                        parsed_input = tool_input or {}
+
+                    # Convert camelCase parameters to snake_case
+                    converted_input = self._convert_parameters(parsed_input)
+                    logger.info(f"MCPStructuredTool.arun parameter conversion: {parsed_input} -> {converted_input}")
+
+                    # Call the parent arun method with converted parameters
+                    return await super().arun(converted_input, config=config, **kwargs)
+
+                def _convert_parameters(self, input_dict):
+                    if not input_dict or not isinstance(input_dict, dict):
+                        return input_dict
+
+                    converted_dict = {}
+                    original_fields = set(self.args_schema.model_fields.keys())
+
+                    for key, value in input_dict.items():
+                        if key in original_fields:
+                            # Field exists as-is
+                            converted_dict[key] = value
+                        else:
+                            # Try to convert camelCase to snake_case
+                            snake_key = _camel_to_snake(key)
+                            if snake_key in original_fields:
+                                logger.info(f"Converting parameter '{key}' to '{snake_key}' in MCPStructuredTool")
+                                converted_dict[snake_key] = value
+                            else:
+                                # Keep original key
+                                converted_dict[key] = value
+
+                    return converted_dict
+
+            tool_obj = MCPStructuredTool(
                 name=tool.name,
                 description=tool.description or "",
                 args_schema=args_schema,
