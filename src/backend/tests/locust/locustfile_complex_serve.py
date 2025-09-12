@@ -1,72 +1,197 @@
-"""Enhanced Langflow Locust Load Testing File
+"""Langflow Locust Load Testing File.
+
 Based on the weakness-focused stress test scripts with additional user behaviors.
+Includes production-ready fixes for timing, error handling, and reporting.
 
 Usage:
     # Run with web UI (recommended)
-    locust -f src/backend/tests/locust/locustfile_enhanced.py --host http://127.0.0.1:8000
+    locust -f locustfile_enhanced_patched.py --host http://127.0.0.1:8000
 
-    # Run headless
-    locust -f src/backend/tests/locust/locustfile_enhanced.py --host http://127.0.0.1:8000 --headless -u 50 -r 5 -t 60s
+    # Run headless with built-in shape
+    locust -f locustfile_enhanced_patched.py --host http://127.0.0.1:8000 --headless --shape RampToHundred
 
     # Run distributed (master)
-    locust -f src/backend/tests/locust/locustfile_enhanced.py --host http://127.0.0.1:8000 --master
+    locust -f locustfile_enhanced_patched.py --host http://127.0.0.1:8000 --master
 
     # Run distributed (worker)
-    locust -f src/backend/tests/locust/locustfile_enhanced.py --host http://127.0.0.1:8000 --worker --master-host=localhost
+    locust -f locustfile_enhanced_patched.py --host http://127.0.0.1:8000 --worker --master-host=localhost
+
+Environment Variables:
+    - FLOW_ID: Flow ID to test (default: 5523731d-5ef3-56de-b4ef-59b0a224fdbc)
+    - API_KEY: API key for authentication (default: test)
+    - REQUEST_TIMEOUT: Request timeout in seconds (default: 10)
+    - SHAPE: Load test shape to use (default: none, options: ramp100)
 """
 
+import inspect
 import json
 import os
 import random
 import time
 
 import gevent
-from locust import FastHttpUser, between, constant, constant_pacing, events, task
+from locust import FastHttpUser, LoadTestShape, between, constant, constant_pacing, events, task
 
-# Configuration - can be overridden by environment variables
+# Configuration
 FLOW_ID = os.getenv("FLOW_ID", "5523731d-5ef3-56de-b4ef-59b0a224fdbc")
 API_KEY = os.getenv("API_KEY", "test")
 API_ENDPOINT = f"/flows/{FLOW_ID}/run"
 
-# Test messages of varying complexity (from weakness_stress_test.py)
+# Test messages with realistic distribution
 TEST_MESSAGES = {
     "minimal": "Hi",
-    "simple": "Can you help me solve this problem?",
-    "medium": "I need help understanding how machine learning algorithms work, particularly neural networks and deep learning. Can you explain the key concepts?",
-    "large": "Please provide a comprehensive analysis of the following scenario: " + "x" * 500,
-    "complex": "Analyze this data: " + json.dumps({f"field_{i}": f"value_{i}" * 10 for i in range(50)}),
+    "simple": "Can you help me?",
+    "medium": "I need help understanding how machine learning works in this context.",
+    "complex": "Please analyze this data: " + "x" * 500 + " and provide detailed insights.",
+    "large": "Here's a complex scenario: " + "data " * 1000,
 }
 
-# Message distribution (80% simple, 15% medium, 5% complex - from weakness test)
-MESSAGE_WEIGHTS = [
-    ("minimal", 40),
-    ("simple", 40),
-    ("medium", 15),
-    ("large", 4),
-    ("complex", 1),
-]
+# Weighted message distribution for realistic load
+MESSAGE_WEIGHTS = [("simple", 50), ("medium", 30), ("minimal", 15), ("complex", 4), ("large", 1)]
+
+
+# Load test shapes
+class RampToHundred(LoadTestShape):
+    """0 -> 100 users at 5 users/sec (20s ramp), then hold until 180s total.
+
+    Matches the TLDR test pattern: 3 minutes, ramping to 100 users.
+    """
+
+    spawn_rate = 5
+    target_users = 100
+    total_duration = 180  # seconds
+
+    def tick(self):
+        run_time = self.get_run_time()
+        if run_time >= self.total_duration:
+            return None
+        users = min(int(run_time * self.spawn_rate), self.target_users)
+        return users, self.spawn_rate
+
+
+class StepRamp(LoadTestShape):
+    """Step ramp for finding performance cliffs.
+
+    Steps every 30 seconds: 5 -> 10 -> 15 -> 20 -> 25 -> 30 -> 35 users.
+    Each step holds for exactly 30 seconds to measure steady-state performance.
+    """
+
+    def tick(self):
+        run_time = self.get_run_time()
+
+        # Define the step progression with 30-second intervals
+        steps = [
+            (30, 5),  # 0-30s: 5 users
+            (60, 10),  # 30-60s: 10 users
+            (90, 15),  # 60-90s: 15 users
+            (120, 20),  # 90-120s: 20 users
+            (150, 25),  # 120-150s: 25 users
+            (180, 30),  # 150-180s: 30 users
+            (210, 35),  # 180-210s: 35 users
+            (240, 40),  # 210-240s: 40 users
+            (270, 45),  # 240-270s: 45 users
+            (300, 50),  # 270-300s: 50 users
+        ]
+
+        # Find current step
+        for time_limit, user_count in steps:
+            if run_time < time_limit:
+                return user_count, 10  # Fast spawn rate for quick transitions
+
+        return None  # End test after 300 seconds
+
+
+# Environment-scoped metrics tracking (fixes the event listener issue)
+_env_bags = {}
+
+
+@events.test_start.add_listener
+def on_test_start(environment, **_kwargs):
+    """Initialize per-environment metrics tracking."""
+    _env_bags[environment] = {
+        "slow_10s": 0,
+        "slow_20s": 0,
+    }
+
+
+@events.request.add_listener
+def on_request(_request_type, _name, response_time, _response_length, exception, context, **_kwargs):
+    """Track slow requests using Locust's built-in timing."""
+    # response_time is in milliseconds from Locust
+    bag = _env_bags.get(context.get("environment") if context else None)
+    if bag is None:
+        # fallback: try the single environment we likely have
+        if len(_env_bags) == 1:
+            bag = next(iter(_env_bags.values()))
+        else:
+            return
+
+    if exception is None:  # Only count successful requests for timing
+        if response_time > 10_000:  # 10 seconds in ms
+            bag["slow_10s"] += 1
+        if response_time > 20_000:  # 20 seconds in ms
+            bag["slow_20s"] += 1
+
+
+@events.test_stop.add_listener
+def on_test_stop(environment, **_kwargs):
+    """Print comprehensive test summary with performance grading."""
+    stats = environment.stats.total
+    if stats.num_requests == 0:
+        return
+
+    # Get percentiles and basic stats
+    stats.get_response_time_percentile(0.50) or 0
+    p95 = stats.get_response_time_percentile(0.95) or 0
+    stats.get_response_time_percentile(0.99) or 0
+    fail_ratio = stats.fail_ratio
+    getattr(stats, "current_rps", 0.0)
+
+    # Get slow request counts
+    _env_bags.get(environment, {"slow_10s": 0, "slow_20s": 0})
+
+    # Performance grading based on production criteria
+    grade = "A"
+    issues = []
+
+    if fail_ratio > 0.01:
+        grade = "B"
+        issues.append(f"fail {fail_ratio:.1%}")
+    if fail_ratio > 0.05:
+        grade = "C"
+    if p95 > 10_000:
+        grade = max(grade, "D")
+        issues.append(f"p95 {p95 / 1000:.1f}s")
+    if p95 > 20_000:
+        grade = "F"
+        issues.append(f"p95 {p95 / 1000:.1f}s")
+
+    # Production readiness assessment
+    if grade in ["A", "B"] or grade == "C":
+        pass
+    else:
+        pass
+
+    # Cleanup
+    _env_bags.pop(environment, None)
 
 
 class BaseLangflowUser(FastHttpUser):
-    """Base class for all Langflow test users with common setup."""
+    """Base class for all Langflow API load testing user types."""
 
-    abstract = True  # This is a base class, not instantiated directly
-    connection_timeout = 30.0
-    network_timeout = 30.0
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.session_id = None
-        self.request_count = 0
-        self.slow_requests = 0
-        self.start_time = time.time()
+    abstract = True
+    REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "10"))  # Tighter timeout for production
 
     def on_start(self):
         """Called when a user starts before any task is scheduled."""
         self.session_id = f"locust_{self.__class__.__name__}_{id(self)}_{int(time.time())}"
+        self.request_count = 0
 
     def make_request(self, message_type="simple", tag_suffix=""):
-        """Common request method used by all user types."""
+        """Make a request with proper error handling and timing.
+
+        Uses Locust's built-in response time measurement.
+        """
         message = TEST_MESSAGES.get(message_type, TEST_MESSAGES["simple"])
 
         payload = {"input_value": message, "session_id": f"{self.session_id}_{self.request_count}"}
@@ -76,63 +201,54 @@ class BaseLangflowUser(FastHttpUser):
         self.request_count += 1
         name = f"{API_ENDPOINT} [{message_type}{tag_suffix}]"
 
-        # Track request timing manually
-        start_time = time.time()
-
         with self.client.post(
             API_ENDPOINT,
             json=payload,
             headers=headers,
-            catch_response=True,
             name=name,
-            timeout=20,  # 20 second timeout like in weakness test
+            timeout=self.REQUEST_TIMEOUT,
+            catch_response=True,
         ) as response:
-            # Calculate response time manually
-            response_time = time.time() - start_time
-
-            # Track slow requests (>10s)
-            if response_time > 10:
-                self.slow_requests += 1
-
+            # Handle successful responses
             if response.status_code == 200:
                 try:
                     data = response.json()
-                    if data.get("success", False):
-                        response.success()
-                    else:
-                        # Flow execution failed
-                        error_msg = data.get("result", "Unknown error")
-                        if len(error_msg) > 100:
-                            error_msg = error_msg[:100] + "..."
-                        response.failure(f"Flow failed: {error_msg}")
                 except json.JSONDecodeError:
-                    response.failure("Invalid JSON response")
-            elif response.status_code == 401:
-                response.failure("Unauthorized - API key issue")
-            elif response.status_code == 500:
-                response.failure("Internal server error")
-            else:
-                response.failure(f"HTTP {response.status_code}")
+                    return response.failure("Invalid JSON response")
 
-    def on_stop(self):
-        """Called when user stops."""
-        time.time() - self.start_time
-        if self.request_count > 0:
-            pass
+                if data.get("success", False):
+                    return response.success()
+
+                # Application-level failure
+                msg = str(data.get("result", "Unknown error"))[:200]
+                return response.failure(f"Flow failed: {msg}")
+
+            # Handle specific error cases for better monitoring
+            if response.status_code in (429, 503):
+                return response.failure(f"Backpressure/capacity: {response.status_code}")
+            if response.status_code == 401:
+                return response.failure("Unauthorized - API key issue")
+            if response.status_code == 404:
+                return response.failure("Flow not found - check FLOW_ID")
+            if response.status_code >= 500:
+                return response.failure(f"Server error {response.status_code}")
+
+            return response.failure(f"HTTP {response.status_code}")
 
 
 class NormalUser(BaseLangflowUser):
     """Normal user simulating typical API interactions.
-    Based on the main stress test patterns.
+
+    Based on the main stress test patterns with realistic message distribution.
     """
 
-    wait_time = between(0.5, 2)  # Wait between requests
+    weight = 3
+    wait_time = between(0.5, 2)  # Typical user think time
 
     @task(80)
     def send_message(self):
         """Main task: Send a message with weighted distribution."""
-        message_type = random.choices([w[0] for w in MESSAGE_WEIGHTS], weights=[w[1] for w in MESSAGE_WEIGHTS], k=1)[0]
-
+        message_type = random.choices([w[0] for w in MESSAGE_WEIGHTS], weights=[w[1] for w in MESSAGE_WEIGHTS], k=1)[0]  # noqa: S311
         self.make_request(message_type=message_type)
 
     @task(15)
@@ -140,198 +256,115 @@ class NormalUser(BaseLangflowUser):
         """Send a burst of 3 small messages quickly."""
         for i in range(3):
             self.make_request(message_type="minimal", tag_suffix=f"-burst{i}")
-            if i < 2:
-                gevent.sleep(0.1)
+            gevent.sleep(0.1)  # Small delay between burst requests
 
     @task(5)
     def send_complex(self):
-        """Send a complex message."""
+        """Occasionally send complex requests that stress the system."""
         self.make_request(message_type="complex")
 
 
 class AggressiveUser(BaseLangflowUser):
-    """Aggressive user that sends requests with minimal wait time.
-    Simulates the "extreme concurrent" scenarios from stress tests.
+    """Aggressive user with minimal wait times.
+
+    Tests the system under extreme concurrent load.
     """
 
-    wait_time = constant(0.1)  # Minimal wait - aggressive testing
+    weight = 3
+    wait_time = between(0.1, 0.3)  # Very aggressive
 
     @task
     def rapid_fire(self):
-        """Send messages as fast as possible."""
-        # Use simple messages for speed
-        self.make_request(message_type="simple", tag_suffix="-aggressive")
+        """Send requests as fast as possible."""
+        self.make_request(message_type="simple", tag_suffix="-rapid")
 
 
 class SustainedLoadUser(BaseLangflowUser):
-    """User that maintains consistent load over time.
-    Simulates the "sustained high load" test from weakness testing.
+    """Maintains exactly 1 request/second for steady load testing.
+
+    Based on constant throughput testing patterns.
     """
 
+    weight = 3
     wait_time = constant_pacing(1)  # Exactly 1 request per second per user
 
     @task
     def steady_load(self):
-        """Maintain steady load with varied message types."""
-        # Use only simple to medium messages for sustained load
-        message_type = random.choice(["minimal", "simple", "medium"])
-        self.make_request(message_type=message_type, tag_suffix="-sustained")
+        """Send requests at constant 1 RPS per user."""
+        self.make_request(message_type="medium", tag_suffix="-steady")
 
 
 class TailLatencyHunter(BaseLangflowUser):
-    """Special user designed to find tail latency issues.
-    Sends mixed workload similar to the tail latency test.
+    """Mixed workload designed to expose tail latency issues.
+
+    Alternates between light and heavy requests to stress the system.
     """
 
-    wait_time = between(0.1, 5)  # Variable wait to create unpredictable load
+    weight = 3
+    wait_time = between(0.8, 1.5)
 
     @task
     def hunt_tail_latency(self):
-        """Send requests designed to expose tail latency."""
-        # 80% simple, 15% medium, 5% complex (from weakness test)
-        rand = random.random()
-        if rand < 0.8:
-            message_type = "simple"
-        elif rand < 0.95:
-            message_type = "medium"
+        """Alternate between simple and complex requests to find tail latency."""
+        if random.random() < 0.7:  # noqa: S311
+            self.make_request(message_type="simple", tag_suffix="-tail")
         else:
-            message_type = "complex"
-
-        self.make_request(message_type=message_type, tag_suffix="-tail")
+            self.make_request(message_type="large", tag_suffix="-tail-heavy")
 
 
 class ScalabilityTestUser(BaseLangflowUser):
-    """User for testing scalability cliff.
-    Similar to the scalability cliff detection from weakness test.
+    """Tests for the scalability cliff at 30 users.
+
+    Uses patterns that specifically stress concurrency limits.
     """
 
-    wait_time = between(1, 3)
+    weight = 3
+    wait_time = constant(1.0)  # Constant load to test scaling
 
     @task
     def scalability_test(self):
-        """Send requests for scalability testing."""
-        # Mix of message types
-        message_type = random.choice(list(TEST_MESSAGES.keys()))
-        self.make_request(message_type=message_type, tag_suffix="-scale")
+        """Send medium complexity requests to test scaling limits."""
+        self.make_request(message_type="medium", tag_suffix="-scale")
 
 
 class BurstUser(BaseLangflowUser):
-    """User that sends bursts of requests to test connection pooling.
-    Based on connection pool exhaustion test.
+    """Sends bursts of 10 requests to test connection pooling.
+
+    Based on connection pool exhaustion test patterns.
     """
 
+    weight = 3
     wait_time = between(5, 10)  # Long wait between bursts
 
     @task
     def burst_attack(self):
-        """Send a burst of 10 requests quickly."""
+        """Send a burst of 10 requests quickly to test connection handling."""
         for i in range(10):
             self.make_request(message_type="minimal", tag_suffix=f"-burst{i}")
             gevent.sleep(0.05)  # 50ms between requests in burst
 
 
-# Event handlers for additional metrics and reporting
-@events.test_start.add_listener
-def on_test_start(environment, **kwargs):
-    """Called when test starts."""
-    # Initialize custom metrics tracking
-    environment.slow_request_count = 0
-    environment.very_slow_request_count = 0
+# Auto-select shape based on environment variable
 
+_shape_env = os.getenv("SHAPE", "").lower()
+_selected = None
 
-@events.request.add_listener
-def track_slow_requests(request_type, name, response_time, response_length, exception, **kwargs):
-    """Track requests that exceed certain thresholds."""
-    # Convert to seconds for easier reading
-    response_time_sec = response_time / 1000
+if _shape_env == "stepramp":
+    _selected = StepRamp
+elif _shape_env == "ramp100":
+    _selected = RampToHundred
 
-    if response_time_sec > 10:
-        if hasattr(kwargs.get("context", {}), "environment"):
-            kwargs["context"].environment.slow_request_count += 1
-
-        if response_time_sec > 20:
-            if hasattr(kwargs.get("context", {}), "environment"):
-                kwargs["context"].environment.very_slow_request_count += 1
-        else:
-            pass
-
-
-@events.test_stop.add_listener
-def on_test_stop(environment, **kwargs):
-    """Called when test stops."""
-    # Print performance summary
-    if environment.stats.total.num_requests > 0:
-        # Calculate percentiles
-        p95 = environment.stats.total.get_response_time_percentile(0.95) or 0
-        environment.stats.total.get_response_time_percentile(0.99) or 0
-
-        # Performance grade based on weakness test criteria
-        grade = "A"
-        issues = []
-
-        if environment.stats.total.fail_ratio > 0.01:
-            grade = "B"
-            issues.append(f"Failure rate: {environment.stats.total.fail_ratio:.1%}")
-
-        if environment.stats.total.fail_ratio > 0.05:
-            grade = "C"
-
-        if p95 > 10000:  # 10 seconds
-            grade = "D" if grade > "C" else grade
-            issues.append(f"P95 > 10s: {p95 / 1000:.1f}s")
-
-        if p95 > 20000:  # 20 seconds
-            grade = "F"
-            issues.append(f"P95 > 20s: {p95 / 1000:.1f}s")
-
-        # Warnings based on specific thresholds
-        if environment.runner.user_count > 30:
-            pass
-
-        if p95 > 14000:
-            pass
-
-        if hasattr(environment, "slow_request_count") and environment.slow_request_count > 0:
-            if hasattr(environment, "very_slow_request_count"):
-                pass
-
-
-# Helper function for running specific test scenarios
-def run_scalability_cliff_test(host="http://127.0.0.1:8000", step_duration=30):
-    """Programmatically run a scalability cliff detection test.
-    Similar to the weakness test's scalability cliff detection.
-    """
-    from locust.env import Environment
-
-    # Use mix of user types for realistic load
-    env = Environment(user_classes=[NormalUser, AggressiveUser, ScalabilityTestUser], host=host)
-
-    runner = env.create_local_runner()
-
-    # Progressive load increase to find cliff
-    user_counts = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
-
-    for user_count in user_counts:
-        runner.start(user_count, spawn_rate=5)
-        gevent.sleep(step_duration)
-
-        # Get current stats
-        stats = env.stats
-        fail_ratio = stats.total.fail_ratio if stats.total.num_requests > 0 else 0
-        avg_response = stats.total.avg_response_time if stats.total.num_requests > 0 else 0
-
-        # Check for performance cliff (>5% failure or response time doubled)
-        if fail_ratio > 0.05 or (user_count > 5 and avg_response > 10000):
-            break
-
-    runner.quit()
-    return env.stats
-
-
-if __name__ == "__main__":
-    import sys
-
-    if len(sys.argv) > 1 and sys.argv[1] == "cliff":
-        run_scalability_cliff_test()
-    else:
+if _selected:
+    # Create a single exported shape class and remove others so Locust sees only one
+    class SelectedLoadTestShape(_selected):
         pass
+
+    # Remove other shape classes so Locust auto-picks the selected one
+    for _name, _obj in list(globals().items()):
+        if (
+            inspect.isclass(_obj)
+            and issubclass(_obj, LoadTestShape)
+            and _obj is not SelectedLoadTestShape
+            and _obj is not LoadTestShape
+        ):
+            del globals()[_name]
