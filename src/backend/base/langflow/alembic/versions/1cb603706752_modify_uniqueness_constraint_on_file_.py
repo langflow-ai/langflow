@@ -215,14 +215,28 @@ def upgrade() -> None:
     
     if db_type == 'sqlite':
         # SQLite: Must use batch_alter_table with recreate to drop constraints
-        logger.info("Using SQLite table recreation to remove file_name_key constraint")
+        logger.info("Using SQLite table recreation to remove single-name unique constraints")
         with op.batch_alter_table("file", recreate="always") as batch_op:
-            # Explicitly drop the old constraint during recreation
+            # Find and drop any single-column unique constraints on 'name'
             try:
-                logger.info("Explicitly dropping file_name_key constraint during table recreation")
-                batch_op.drop_constraint("file_name_key", type_="unique")
+                constraints = inspector.get_unique_constraints("file")
+                for c in constraints:
+                    cols = [col.lower() for col in (c.get("column_names") or [])]
+                    constraint_name = c.get("name")
+                    
+                    # Skip malformed/empty constraint names
+                    if constraint_name is None or constraint_name.strip() == '' or constraint_name.endswith('_'):
+                        logger.warning("Skipping malformed constraint name: '%s'", constraint_name)
+                        continue
+                        
+                    if len(cols) == 1 and cols[0] == 'name':
+                        logger.info("Dropping single-name unique constraint during recreation: %s", constraint_name)
+                        try:
+                            batch_op.drop_constraint(constraint_name, type_="unique")
+                        except Exception as e:
+                            logger.warning("Failed to drop constraint %s: %s", constraint_name, e)
             except Exception as e:
-                logger.info("Could not drop file_name_key constraint (may not exist): %s", e)
+                logger.warning("Failed to enumerate constraints during recreation: %s", e)
             
             # Add the new composite constraint
             if not composite_uc:
@@ -232,11 +246,26 @@ def upgrade() -> None:
                 logger.info("Composite unique already present: %s", composite_uc)
     else:
         # PostgreSQL: Can drop constraints directly
+        # Find and drop any single-column unique constraints on 'name'
         try:
-            logger.info("Dropping known single-column unique constraint: file_name_key")
-            op.drop_constraint("file_name_key", "file", type_="unique")
+            constraints = inspector.get_unique_constraints("file")
+            for c in constraints:
+                cols = [col.lower() for col in (c.get("column_names") or [])]
+                constraint_name = c.get("name")
+                
+                # Skip malformed/empty constraint names
+                if constraint_name is None or constraint_name.strip() == '' or constraint_name.endswith('_'):
+                    logger.warning("Skipping malformed constraint name: '%s'", constraint_name)
+                    continue
+                    
+                if len(cols) == 1 and cols[0] == 'name':
+                    logger.info("Dropping single-name unique constraint: %s", constraint_name)
+                    try:
+                        op.drop_constraint(constraint_name, "file", type_="unique")
+                    except Exception as e:
+                        logger.warning("Failed to drop constraint %s: %s", constraint_name, e)
         except Exception as e:
-            logger.info("Constraint file_name_key not found or already dropped: %s", e)
+            logger.warning("Failed to enumerate constraints: %s", e)
 
         # Add the composite constraint
         if not composite_uc:
