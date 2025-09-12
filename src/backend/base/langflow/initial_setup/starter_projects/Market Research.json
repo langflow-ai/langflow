@@ -195,19 +195,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {
-              "code_hash": "5f2d98ee19db",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.input_output.chat.ChatInput"
-            },
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -442,27 +430,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {
-              "code_hash": "765fdf2ed814",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.input_output.chat_output.ChatOutput"
-            },
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -717,27 +685,7 @@
             "icon": "braces",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {
-              "code_hash": "9e70464cbdb6",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "pydantic",
-                    "version": "2.10.6"
-                  },
-                  {
-                    "name": "trustcall",
-                    "version": "0.0.39"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.processing.structured_output.StructuredOutputComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1085,23 +1033,7 @@
             "icon": "TavilyIcon",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {
-              "code_hash": "4c76fb76d395",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "httpx",
-                    "version": "0.28.1"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
-              },
-              "module": "langflow.components.tavily.tavily_search.TavilySearchComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1975,27 +1907,7 @@
             "icon": "bot",
             "key": "Agent",
             "legacy": false,
-            "metadata": {
-              "code_hash": "6e76cf95a2a2",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.75"
-                  },
-                  {
-                    "name": "pydantic",
-                    "version": "2.10.6"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.agents.agent.AgentComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
