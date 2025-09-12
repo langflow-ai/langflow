@@ -24,7 +24,7 @@ env:
 
 jobs:
   test-docker:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     name: Test docker images
     steps:
       - uses: actions/checkout@v4
