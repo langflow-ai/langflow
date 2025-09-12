@@ -50,16 +50,16 @@ jobs:
         run: make build_langflow_base args="--wheel"
       - name: Move base package to correct directory
         run: |
-          # Base package builds to dist/ but should be in src/backend/base/dist/
-          mkdir -p src/backend/base/dist
-          mv dist/langflow_base*.whl src/backend/base/dist/
+          # Base package builds to dist/ but should be in src/packages/base/dist/
+          mkdir -p src/packages/base/dist
+          mv dist/langflow_base*.whl src/packages/base/dist/
       - name: Build main package
         run: make build_langflow args="--wheel"
       - name: Upload base artifact
         uses: actions/upload-artifact@v4
         with:
           name: adhoc-dist-base
-          path: src/backend/base/dist
+          path: src/packages/base/dist
       - name: Upload main artifact
         uses: actions/upload-artifact@v4
         with:

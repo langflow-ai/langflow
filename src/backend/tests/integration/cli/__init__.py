@@ -1,1 +1,0 @@
-"""Integration CLI tests package."""

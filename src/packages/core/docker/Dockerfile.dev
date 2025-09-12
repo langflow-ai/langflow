@@ -1,0 +1,58 @@
+# syntax=docker/dockerfile:1
+# Development Dockerfile for LFX
+
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+
+ENV TZ=UTC
+
+WORKDIR /app
+
+# Enable bytecode compilation
+ENV UV_COMPILE_BYTECODE=1
+
+# Copy from the cache instead of linking since it's a mounted volume
+ENV UV_LINK_MODE=copy
+
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    vim \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- Copy only files that affect dependency resolution (best cache) ---
+# Workspace root metadata + lockfile
+COPY pyproject.toml uv.lock ./
+
+# Member's pyproject so uv knows about workspace packages (no source yet, better cache)
+COPY src/packages/core/pyproject.toml /app/src/packages/core/pyproject.toml
+COPY src/packages/core/README.md /app/src/packages/core/README.md
+COPY src/packages/base/pyproject.toml /app/src/packages/base/pyproject.toml
+COPY src/packages/base/README.md /app/src/packages/base/README.md
+
+# Create the venv and install LFX with dev dependencies
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --dev --package lfx
+
+# --- Now copy the source and tests (doesn't bust the deps layer) ---
+COPY src/packages/core/lfx /app/src/packages/core/lfx
+COPY src/packages/core/tests /app/src/packages/core/tests
+
+# Install the LFX package into the virtual environment (editable for dev)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --dev --package lfx
+
+# Set working directory
+WORKDIR /app/src/packages/core
+
+# Place executables in the environment at the front of the path
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Expose any ports that might be needed for development
+EXPOSE 8000
+
+# Default to bash for development
+CMD ["/bin/bash"]

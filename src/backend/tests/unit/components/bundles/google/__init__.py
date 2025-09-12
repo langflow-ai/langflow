@@ -1,1 +1,0 @@
-"""Google components test package."""

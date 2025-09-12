@@ -3,9 +3,9 @@ name: Template Tests
 on:
   pull_request:
     paths:
-      - 'src/backend/base/langflow/initial_setup/starter_projects/**'
+      - 'src/packages/base/langflow/initial_setup/starter_projects/**'
       - 'src/backend/tests/unit/template/test_starter_projects.py'
-      - 'src/backend/base/langflow/utils/template_validation.py'
+      - 'src/packages/base/langflow/utils/template_validation.py'
       - '.github/workflows/template-tests.yml'
   workflow_dispatch:
 
