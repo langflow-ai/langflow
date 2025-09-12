@@ -457,7 +457,9 @@ def get_module_name_from_display_name(display_name: str):
 
 
 def build_custom_component_template_from_inputs(
-    custom_component: Component | CustomComponent, user_id: str | UUID | None = None, module_name: str | None = None
+    custom_component: Component | CustomComponent,
+    user_id: str | UUID | None = None,
+    module_name: str | None = None,  # noqa :ARG001
 ):
     # The List of Inputs fills the role of the build_config and the entrypoint_args
     """Builds a frontend node template from a custom component using its input-based configuration.
@@ -494,7 +496,6 @@ def build_custom_component_template_from_inputs(
     # ! This should be removed when we have a better way to handle this
     frontend_node.set_base_classes_from_outputs()
     reorder_fields(frontend_node, cc_instance._get_field_order())
-    frontend_node = build_component_metadata(frontend_node, cc_instance, module_name, ctype_name)
 
     return frontend_node.to_dict(keep_name=False), cc_instance
 
@@ -587,11 +588,6 @@ def build_custom_component_template(
         add_output_types(frontend_node, custom_component._get_function_entrypoint_return_type)
 
         reorder_fields(frontend_node, custom_instance._get_field_order())
-
-        if module_name:
-            frontend_node = build_component_metadata(
-                frontend_node, custom_component, module_name, custom_component.__class__.__name__
-            )
 
         return frontend_node.to_dict(keep_name=False), custom_instance
     except Exception as exc:
