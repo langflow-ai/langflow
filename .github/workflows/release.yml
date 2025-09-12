@@ -44,6 +44,14 @@ on:
         required: false
         type: boolean
         default: false
+      runs_on:
+        description: "Runner to use for CI tests (use self-hosted for safe/release code)"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+        default: self-hosted
 
 
 
@@ -56,6 +64,7 @@ jobs:
       python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
       release: true
+      runs-on: ${{ inputs.runs_on || 'ubuntu-latest' }}
     secrets: inherit
 
 
