@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { simulateDragAndDrop } from "../../utils/simulate-drag-and-drop";
 

@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test.describe("group node test", () => {
