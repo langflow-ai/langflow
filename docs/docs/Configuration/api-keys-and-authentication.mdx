@@ -283,17 +283,18 @@ LANGFLOW_CORS_ALLOW_CREDENTIALS=true
 
 The default settings enable the following:
 - Any website can make requests to your Langflow API.
-- Authentication cookies and authorization headers aren't sent with requests.
+- Any website can include credentials in cross-origin requests, including authentication cookies and authorization headers.
 - API requests must include the `x-api-key` header for authentication.
 
-Consider specifying exact origins in `LANGFLOW_CORS_ORIGINS` for production deployments.
+Production deployments should specify exact origins in `LANGFLOW_CORS_ORIGINS`.
 
 ```text
 LANGFLOW_CORS_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
 LANGFLOW_CORS_ALLOW_CREDENTIALS=true
 ```
 
-In a future release, when using wildcard origins, credentials will be automatically disabled.
+In a future release, if you configure CORS with a wildcard origin using `LANGFLOW_CORS_ORIGINS=*`, the Langflow server will automatically disable credentialed requests such as cookies, authorization headers, and TLS client certificates.
+This change prevents insecure configurations where credentials could be exposed to all origins.
 
 For more information about all Langflow environment variables, see [Environment variables](/environment-variables#supported-variables).
 
