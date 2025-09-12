@@ -111,19 +111,7 @@
             "key": "ChatInput",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {
-              "code_hash": "5f2d98ee19db",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.input_output.chat.ChatInput"
-            },
+            "metadata": {},
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -368,27 +356,7 @@
             "key": "ChatOutput",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {
-              "code_hash": "765fdf2ed814",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.input_output.chat_output.ChatOutput"
-            },
+            "metadata": {},
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -700,31 +668,7 @@
             "icon": "Globe",
             "key": "APIRequest",
             "legacy": false,
-            "metadata": {
-              "code_hash": "3cadbf7bde8a",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "aiofiles",
-                    "version": "24.1.0"
-                  },
-                  {
-                    "name": "httpx",
-                    "version": "0.28.1"
-                  },
-                  {
-                    "name": "validators",
-                    "version": "0.34.0"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 4
-              },
-              "module": "langflow.components.data.api_request.APIRequestComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -1171,27 +1115,7 @@
             "icon": "bot",
             "key": "Agent",
             "legacy": false,
-            "metadata": {
-              "code_hash": "6e76cf95a2a2",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.75"
-                  },
-                  {
-                    "name": "pydantic",
-                    "version": "2.10.6"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.agents.agent.AgentComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [

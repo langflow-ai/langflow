@@ -317,19 +317,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {
-              "code_hash": "5f2d98ee19db",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.input_output.chat.ChatInput"
-            },
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -737,23 +725,7 @@
             "icon": "scissors-line-dashed",
             "legacy": false,
             "lf_version": "1.1.1",
-            "metadata": {
-              "code_hash": "dbf2e9d2319d",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_text_splitters",
-                    "version": "0.3.9"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
-              },
-              "module": "langflow.components.processing.split_text.SplitTextComponent"
-            },
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1039,27 +1011,7 @@
             "icon": "MessagesSquare",
             "legacy": false,
             "lf_version": "1.1.1",
-            "metadata": {
-              "code_hash": "765fdf2ed814",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.input_output.chat_output.ChatOutput"
-            },
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1289,23 +1241,7 @@
             "icon": "OpenAI",
             "legacy": false,
             "lf_version": "1.2.0",
-            "metadata": {
-              "code_hash": "2691dee277c9",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_openai",
-                    "version": "0.3.23"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
-              },
-              "module": "langflow.components.openai.openai.OpenAIEmbeddingsComponent"
-            },
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1838,23 +1774,7 @@
             "icon": "OpenAI",
             "legacy": false,
             "lf_version": "1.1.1",
-            "metadata": {
-              "code_hash": "2691dee277c9",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_openai",
-                    "version": "0.3.23"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
-              },
-              "module": "langflow.components.openai.openai.OpenAIEmbeddingsComponent"
-            },
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -4537,19 +4457,7 @@
             "icon": "file-text",
             "last_updated": "2025-09-09T16:18:15.248Z",
             "legacy": false,
-            "metadata": {
-              "code_hash": "0deb837dc28d",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.data.file.FileComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
