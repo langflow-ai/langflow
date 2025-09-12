@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.79069821.css">
-<script src="/assets/js/runtime~main.e77c9791.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.739d5a31.js" defer="defer"></script>
 <script src="/assets/js/main.f711f3e7.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -378,15 +378,15 @@ Several file formats are supported, and you can store files in <a href="/memory"
 It can contain a file name or an entire file path:</p>
 <ul>
 <li>
-<p><strong>Default location</strong>: If you only provide a file name, then the file is stored in <code>.langflow/data</code>.</p>
+<p><strong>Default location</strong>: If you only provide a file name, then the file is stored in the Langflow data directory. For example,<code>~/Library/Caches/langflow/data</code> on macOS.</p>
 </li>
 <li>
 <p><strong>Subdirectory</strong>: To store files in subdirectories, add the path to the <strong>File Name</strong> parameter.
-For example, <code>subdirectory/my_file</code> creates <code>my_file</code> in <code>.langflow/data/subdirectory</code>.
-If a given subdirectory doesn&#x27;t already exist, Langflow automatically creates it.</p>
+If a given subdirectory doesn&#x27;t already exist, Langflow automatically creates it.
+For example, <code>files/my_file</code> creates <code>my_file</code> in <code>/data/files</code>, and it creates the <code>files</code> subdirectory if it doesn&#x27;t already exist.</p>
 </li>
 <li>
-<p><strong>Absolute or relative path</strong>: To store files elsewhere in your <code>.langflow</code> installation or the local file system, provide the absolute or relative path to the desired location.
+<p><strong>Absolute or relative path</strong>: To store files elsewhere in your environment or local file storage, provide the absolute or relative path to the desired location.
 For example, <code>~/Desktop/my_file</code> saves <code>my_file</code> to the desktop.</p>
 </li>
 </ul>
@@ -415,7 +415,7 @@ To avoid unintended overwrites, use unique file names and paths.</p></div></div>
 <p>To test the <strong>Save File</strong> component, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Run component</strong>, and then click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-text-search" aria-hidden="true"><path d="M21 6H3"></path><path d="M10 12H3"></path><path d="M10 18H3"></path><circle cx="17" cy="15" r="3"></circle><path d="m21 19-1.9-1.9"></path></svg> <strong>Inspect output</strong> to get the filepath where the file was saved.</p>
 <p>The component&#x27;s literal output is a <code>Message</code> containing the original data type, the file name and extension, and the absolute filepath to the file based on the <strong>File Name</strong> parameter.
 For example:</p>
-<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>DataFrame saved successfully as &#x27;my_file.csv&#x27; at /Users/user.name/.langflow/data/my_file.csv</span></div></div><br></code></div></div>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>DataFrame saved successfully as &#x27;my_file.csv&#x27; at /Users/user.name/Library/Caches/langflow/data/my_file.csv</span></div></div><br></code></div></div>
 <p>If the <strong>File Name</strong> contains a subdirectory or other non-default path, this is reflected in the <code>Message</code> output.
 For example, a CSV file with the file name <code>~/Desktop/my_file</code> could produce the following output:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>DataFrame saved successfully as &#x27;/Users/user.name/Desktop/my_file.csv&#x27; at /Users/user.name/Desktop/my_file.csv</span></div></div><br></code></div></div>

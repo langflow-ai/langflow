@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.79069821.css">
-<script src="/assets/js/runtime~main.e77c9791.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.739d5a31.js" defer="defer"></script>
 <script src="/assets/js/main.f711f3e7.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -112,15 +112,30 @@ To create a project, click <svg xmlns="http://www.w3.org/2000/svg" width="24" he
 <li>Click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg> <strong>More</strong>, and then select <strong>Delete</strong>.</li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="flow-storage-and-logs">Flow storage and logs<a href="#flow-storage-and-logs" class="hash-link" aria-label="Direct link to Flow storage and logs" title="Direct link to Flow storage and logs">​</a></h2>
-<p>By default, flows and <a href="/logging">flow logs</a> are stored on local disk at the following default locations:</p>
+<p>By default, flows and flow execution data are stored in a SQLite database at the following locations.</p>
+<p>The default storage path depends on your operation system and installation method:</p>
 <ul>
-<li><strong>macOS Desktop</strong>: <code>/Users/&lt;username&gt;/.langflow/cache</code></li>
-<li><strong>Windows Desktop</strong>: <code>C:\Users\&lt;username&gt;\AppData\Roaming\com.Langflow\cache</code></li>
-<li><strong>OSS macOS/Windows/Linux/WSL (uv pip install)</strong>: <code>&lt;path_to_venv&gt;/lib/python3.12/site-packages/langflow/cache</code></li>
-<li><strong>OSS macOS/Windows/Linux/WSL (git clone)</strong>: <code>&lt;path_to_clone&gt;/src/backend/base/langflow/cache</code></li>
+<li><strong>macOS Desktop</strong>: <code>/Users/&lt;username&gt;/.langflow/data/database.db</code></li>
+<li><strong>Windows Desktop</strong>: <code>C:\Users\&lt;name&gt;\AppData\Roaming\com.Langflow\data\langflow.db</code></li>
+<li><strong>OSS macOS/Windows/Linux/WSL (<code>uv pip install</code>)</strong>: <code>&lt;path_to_venv&gt;/lib/python3.12/site-packages/langflow/langflow.db</code> (Python version may vary)</li>
+<li><strong>OSS macOS/Windows/Linux/WSL (<code>git clone</code>)</strong>: <code>&lt;path_to_clone&gt;/src/backend/base/langflow/langflow.db</code></li>
 </ul>
-<p>The overall storage location can be customized with the <code>LANGFLOW_CONFIG_DIR</code> environment variable, and the flow log storage location can be customized separately with the <code>LANGFLOW_LOG_FILE</code> environment variable.</p>
-<p>For more information, see <a href="/memory">Memory management options</a>.</p>
+<p>The database storage location can be customized using the <code>LANGFLOW_CONFIG_DIR</code> and <code>LANGFLOW_SAVE_DB_IN_CONFIG_DIR</code> environment variables. The config directory can be customized with the <code>LANGFLOW_CONFIG_DIR</code> environment variable.</p>
+<p>Langflow logs are stored in the config directory specified in the <code>LANGFLOW_CONFIG_DIR</code> environment variable.</p>
+<p>The default config directory location depends on your operating system and installation method:</p>
+<ul>
+<li><strong>macOS Desktop</strong>:<code>/Users/&lt;username&gt;/Library/Logs/com.Langflow</code></li>
+<li><strong>Windows Desktop</strong>:<code>C:\Users\&lt;username&gt;\AppData\Roaming\com.Langflow\cache</code></li>
+<li><strong>OSS macOS/Windows/Linux/WSL (<code>uv pip install</code>)</strong>:<!-- -->
+<ul>
+<li><strong>macOS</strong>: <code>/Users/&lt;username&gt;/Library/Caches/langflow</code></li>
+<li><strong>Linux</strong>: <code>/home/&lt;username&gt;/.cache/langflow</code></li>
+<li><strong>Windows</strong>: <code>C:\Users\&lt;username&gt;\AppData\Local\langflow\langflow\Cache</code></li>
+</ul>
+</li>
+<li><strong>OSS macOS/Windows/Linux/WSL (<code>git clone</code>)</strong>: <code>&lt;path_to_clone&gt;/src/backend/base/langflow/</code></li>
+</ul>
+<p>For more information, see <a href="/memory">Memory management options</a> and <a href="/logging">Logging</a>.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="see-also">See also<a href="#see-also" class="hash-link" aria-label="Direct link to See also" title="Direct link to See also">​</a></h2>
 <ul>
 <li><a href="/concepts-publish">Share and embed flows</a></li>
