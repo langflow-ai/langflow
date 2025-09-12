@@ -13,6 +13,11 @@ from langflow.services.deps import get_settings_service, get_shared_component_ca
 
 router = APIRouter(tags=["MCP"], prefix="/mcp")
 
+async def get_mcp_file(current_user: CurrentActiveUser):
+# Create a unique MCP servers file with the user id appended
+    base_name = MCP_SERVERS_FILE.replace(".json", "")
+    return f"{base_name}_{current_user.id!s}.json"
+
 
 async def upload_server_config(
     server_config: dict,
@@ -25,7 +30,7 @@ async def upload_server_config(
     content_bytes = content_str.encode("utf-8")  # Convert to bytes
     file_obj = BytesIO(content_bytes)  # Use BytesIO for binary data
 
-    upload_file = UploadFile(file=file_obj, filename=MCP_SERVERS_FILE + ".json", size=len(content_str))
+    upload_file = UploadFile(file=file_obj, filename=get_mcp_file(current_user), size=len(content_str))
 
     return await upload_user_file(
         file=upload_file,
@@ -43,7 +48,7 @@ async def get_server_list(
     settings_service=Depends(get_settings_service),
 ):
     # Read the server configuration from a file using the files api
-    server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
+    server_config_file = await get_file_by_name(get_mcp_file(current_user), current_user, session)
 
     # Attempt to download the configuration file content
     try:
@@ -70,7 +75,7 @@ async def get_server_list(
         )
 
         # Fetch and download again
-        server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
+        server_config_file = await get_file_by_name(get_mcp_file(current_user), current_user, session)
         if not server_config_file:
             raise HTTPException(status_code=500, detail="Failed to create _mcp_servers.json") from None
 
@@ -226,7 +231,7 @@ async def update_server(
         server_list["mcpServers"][server_name] = server_config
 
     # Remove the existing file
-    server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
+    server_config_file = await get_file_by_name(get_mcp_file(current_user), current_user, session)
 
     if server_config_file:
         await delete_file(server_config_file.id, current_user, session, storage_service)
