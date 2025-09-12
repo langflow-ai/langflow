@@ -116,7 +116,7 @@ For more information about uploading files and working with files in flows, see 
 ### File type and size limits
 
 By default, the maximum file size is 1024 MB.
-To modify this value, change the `--max-file-size-upload` [environment variable](/environment-variables).
+To modify this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` [environment variable](/environment-variables).
 
 <details>
 <summary>Supported file types</summary>
@@ -255,7 +255,7 @@ If you upload multiple files, the component outputs **Files**, which is a [`Data
 The **News Search** component searches Google News through RSS, and then returns clean article data as a [`DataFrame`](/data-types#dataframe) containing article titles, links, publication dates, and summaries.
 The component's `clean_html` method parses the HTML content with the BeautifulSoup library, removes HTML markup, and strips whitespace to output clean data.
 
-For other RSS feeds, use the [**RSS Reader** component](#rss-reader), and for other searches use the [**Web Search** component](#web-search) or provider-specific <Icon name="Blocks" aria-hidden="true" /> [**Bundles**].
+For other RSS feeds, use the [**RSS Reader** component](#rss-reader), and for other searches use the [**Web Search** component](#web-search) or provider-specific <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
 
 When used as a standard component in a flow, the **News Search** component must be connected to a component that accepts `DataFrame` input.
 You can connect the **News Search** component directly to a compatible component, or you can use a [Processing component](/components-processing) to convert or extract data of a different type between components.
@@ -380,7 +380,7 @@ Instead, you only need to provide enough context for the agent to understand tha
     If you want to use a different model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
 
     If you need to execute highly specialized queries, consider selecting a model that is trained for tasks like advanced SQL queries.
-    If your preferred model isn't in the **Agent** component's built-in model list, select the **Custom** model provider, and then use a [language model component](/components-models) to attach a specific model.
+    If your preferred model isn't in the **Agent** component's built-in model list, set **Model Provider** to **Connect other models**, and then connect any [language model component](/components-models).
 
 6. Connect the **SQL Database** component's **Toolset** output to the **Agent** component's **Tools** input.
 
@@ -465,7 +465,7 @@ The agent decides whether to use the **URL** component based on the user's query
 ## Web Search
 
 The **Web Search** component performs a basic web search using DuckDuckGo's HTML scraping interface.
-For other search APIs, see <Icon name="Blocks" aria-hidden="true" /> [**Bundles**].
+For other search APIs, see <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
 
 :::important
 The **Web Search** component uses web scraping that can be subject to rate limits.

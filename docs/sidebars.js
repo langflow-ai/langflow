@@ -1,6 +1,5 @@
 module.exports = {
   docs: [
-    "Get-Started/welcome-to-langflow",
     {
       type: "category",
       label: "Get started",
@@ -113,7 +112,6 @@ module.exports = {
               id: "Develop/memory",
               label: "Manage memory"
             },
-            "Concepts/knowledge",
             {
               type: "doc",
               id: "Develop/session-id",
@@ -269,7 +267,6 @@ module.exports = {
               ]
             },
             "Components/components-data",
-            "Components/components-kb",
             {
               type: "category",
               label: "Processing",

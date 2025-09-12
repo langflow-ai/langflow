@@ -49,7 +49,7 @@ For information about accepted values and functionality, see the [Elasticsearch 
 | embedding | Embeddings | Input parameter. The embedding model to use. |
 | search_type | String | Input parameter. The type of search to perform. Options are `similarity` (default) or `mmr`. |
 | number_of_results | Integer | Input parameter. Number of search results to return. Default: 4. |
-| search_score_threshold | Integer | Input parameter. The minimum similarity score threshold for search results. Default: 0. |
+| search_score_threshold | Float | Input parameter. The minimum similarity score threshold for search results. Default: 0. |
 | api_key | SecretString | Input parameter. API key for Elastic Cloud authentication. If provided, `username` and `password` aren't required. |
 | verify_certs | Boolean | Input parameter. Whether to verify SSL certificates when connecting to Elasticsearch. Default: Enabled (true). |
 

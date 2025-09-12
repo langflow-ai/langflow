@@ -51,7 +51,7 @@ For more information about using embedding model components in flows, see [Embed
 | truncate | Boolean | Input parameter. How to handle input that exceeds the model's token limit. One of `NONE`, `START`, or `END` (default). For more information, see the [Cohere `truncate` API reference](https://docs.cohere.com/reference/embed#request.body.truncate). |
 | max_retries | Integer | Input parameter. The maximum number of retry attempts for failed requests. Default: `3` |
 | user_agent | String | Input parameter. A user agent string to include in requests. Default: `langchain`|
-| request_timeout | Float | Input parameter. The timeout duration for requests in milliseconds. Default: `10000` |
+| request_timeout | Float | Input parameter. The timeout duration for requests in seconds. Default: None |
 
 ## Cohere Rerank
 
