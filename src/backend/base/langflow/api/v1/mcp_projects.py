@@ -113,6 +113,7 @@ async def verify_project_auth(
     # For MCP endpoints, always fall back to username lookup when no API key is provided
     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
     if result:
+        await logger.awarning("MCP authentication fallback: Using default superuser without API key")
         return result
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
