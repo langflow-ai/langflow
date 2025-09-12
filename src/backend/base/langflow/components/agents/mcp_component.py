@@ -275,7 +275,17 @@ class MCPToolsComponent(ComponentWithCache):
 
                 # To avoid unnecessary updates, only proceed if the server has actually changed
                 if (_last_selected_server in (current_server_name, "")) and build_config["tool"]["show"]:
-                    return build_config
+                    if current_server_name:
+                        servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+                        if isinstance(servers_cache, dict):
+                            cached = servers_cache.get(current_server_name)
+                            if cached is not None and cached.get("tool_names"):
+                                cached_tools = cached["tool_names"]
+                                current_tools = build_config["tool"]["options"]
+                                if current_tools == cached_tools:
+                                    return build_config
+                    else:
+                        return build_config
 
                 # Determine if "Tool Mode" is active by checking if the tool dropdown is hidden.
                 is_in_tool_mode = build_config["tools_metadata"]["show"]

@@ -47,10 +47,16 @@ export const MarkdownField = ({
             return <ol className="max-w-full">{props.children}</ol>;
           },
           ul({ node, ...props }) {
-            return <ul className="max-w-full">{props.children}</ul>;
+            return <ul className="max-w-full mb-2">{props.children}</ul>;
           },
           pre({ node, ...props }) {
             return <>{props.children}</>;
+          },
+          hr({ node, ...props }) {
+            return <hr className="w-full mt-3 mb-5 border-border" {...props} />;
+          },
+          h3({ node, ...props }) {
+            return <h3 className={cn("mt-4", props.className)} {...props} />;
           },
           table: ({ node, ...props }) => {
             return (
