@@ -153,6 +153,7 @@ export const nodeColorsName: { [char: string]: string } = {
   embeddings: "teal",
   documentloaders: "lime",
   vectorstores: "yellow",
+  VectorStore: "yellow",
   vectorsearch: "yellow",
   textsplitters: "fuchsia",
   toolkits: "red",

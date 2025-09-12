@@ -1998,7 +1998,7 @@
                 "cache": true,
                 "display_name": "Vector Store Connection",
                 "group_outputs": false,
-                "hidden": true,
+                "hidden": false,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
                 "selected": "VectorStore",
