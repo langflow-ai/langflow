@@ -304,10 +304,16 @@ jobs:
             playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
 
       - name: Install Playwright Browser Dependencies
-        if: steps.cache-playwright.outputs.cache-hit != 'true'
+        if: steps.cache-playwright.outputs.cache-hit != 'true' && inputs.runs-on != 'self-hosted'
         run: |
           cd ./src/frontend
           npx playwright install --with-deps chromium
+
+      - name: Install Playwright Browsers (Self-Hosted)
+        if: steps.cache-playwright.outputs.cache-hit != 'true' && inputs.runs-on == 'self-hosted'
+        run: |
+          cd ./src/frontend
+          npx playwright install chromium
 
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
