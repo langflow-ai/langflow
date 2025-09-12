@@ -59,7 +59,7 @@ To enable file input in your flow, do the following:
 2. Click **Share**, select **API access**, and then click **Input Schema** to add [`tweaks`](/concepts-publish#input-schema) to the request payload in the flow's automatically generated code snippets.
 3. Expand the **File** section, find the **Files** row, and then enable **Expose Input** to allow the parameter to be set at runtime through the Langflow API.
 4. Close the **Input Schema** pane to return to the **API access** pane.
-The payload in each code snippet now includes `tweaks`, your **File** component's ID, and the `path` key that you enabled in **Input Schema**: 
+The payload in each code snippet now includes `tweaks` with your **File** component's ID and the `path` key that you enabled in **Input Schema**:
 
     ```json
     "tweaks": {
@@ -122,6 +122,15 @@ For videos, see the **Twelve Labs** and **YouTube** [bundles](/components-bundle
 
 By default, the maximum file size is 100 MB.
 To modify this value, change the `--max-file-size-upload` [environment variable](/environment-variables).
+
+## File management configuration
+
+You can configure file management behavior using the following [environment variables](/environment-variables):
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_MAX_FILE_SIZE_UPLOAD` | Integer | `100` | Set the maximum file size for the upload in megabytes. |
+| `LANGFLOW_STORAGE_TYPE` | String | `local` | Type of storage to use for file uploads and data. |
 
 ## See also
 
