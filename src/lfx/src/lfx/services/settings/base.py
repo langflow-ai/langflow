@@ -179,7 +179,18 @@ class Settings(BaseSettings):
     download_webhook_url: str | None = "https://api.langflow.store/flows/trigger/ec611a61-8460-4438-b187-a4f65e5559d4"
     like_webhook_url: str | None = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
 
-    storage_type: str = "local"
+    storage_type: str = "s3"
+    # s3 storage configuration
+    s3_bucket_name: str | None = None
+    """S3 bucket name for file storage. If not set, uses LANGFLOW_S3_BUCKET_NAME env var."""
+    s3_region_name: str | None = None
+    """S3 region name for file storage. If not set, uses LANGFLOW_S3_REGION_NAME env var."""
+    s3_aws_access_key_id: str | None = None
+    """AWS access key ID for S3. If not set, uses LANGFLOW_S3_AWS_ACCESS_KEY_ID env var."""
+    s3_aws_secret_access_key: str | None = None
+    """AWS secret access key for S3. If not set, uses LANGFLOW_S3_AWS_SECRET_ACCESS_KEY env var."""
+    s3_storage_path: str | None = "tenants"
+    """S3 storage path for file storage. If not set, uses LANGFLOW_S3_STORAGE_PATH env var or defaults to 'tenants'."""
 
     celery_enabled: bool = False
 
@@ -507,7 +518,7 @@ class Settings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
-        return (CustomSource(settings_cls),)
+        return (env_settings, dotenv_settings, CustomSource(settings_cls))
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str) -> None:
