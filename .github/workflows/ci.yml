@@ -18,6 +18,11 @@ on:
         required: false
         type: boolean
         default: false
+      runs-on:
+        description: "Runner to use for the tests"
+        required: false
+        type: string
+        default: "ubuntu-latest"
   workflow_dispatch:
     inputs:
       branch:
@@ -37,6 +42,14 @@ on:
         required: false
         type: string
         default: "['3.10']"
+      runs-on:
+        description: "Runner to use for the tests"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+        default: ubuntu-latest
   pull_request:
     types: [opened, synchronize, labeled]
   merge_group:
@@ -179,6 +192,7 @@ jobs:
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
+      runs-on: ${{ inputs.runs-on || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
@@ -200,6 +214,7 @@ jobs:
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}
       release: ${{ inputs.release || false }}
+      runs-on: ${{ inputs.runs-on || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
