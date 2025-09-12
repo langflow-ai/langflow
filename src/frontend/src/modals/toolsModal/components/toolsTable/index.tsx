@@ -45,6 +45,8 @@ export default function ToolsTable({
   const [sidebarName, setSidebarName] = useState<string>("");
   const [sidebarDescription, setSidebarDescription] = useState<string>("");
 
+  const editedSelection = useRef<boolean>(false);
+
   const { setOpen: setSidebarOpen } = useSidebar();
 
   const getRowId = useMemo(() => {
@@ -59,7 +61,7 @@ export default function ToolsTable({
   }, [rows, open]);
 
   const applyInitialSelection = () => {
-    if (!agGrid.current?.api) return;
+    if (!agGrid.current?.api || editedSelection.current) return;
 
     const initialData = cloneDeep(rows);
     const filter = initialData.filter((row) => row.status === true);
@@ -102,8 +104,8 @@ export default function ToolsTable({
             name !== "" && name !== display_name
               ? name
               : isAction
-                ? sanitizeMcpName(display_name || row.name, 46)
-                : display_name
+              ? sanitizeMcpName(display_name || row.name, 46)
+              : display_name
           ).slice(0, 46);
 
           const processedDescription =
@@ -111,8 +113,8 @@ export default function ToolsTable({
             row.description !== row.display_description
               ? row.description
               : isAction
-                ? ""
-                : row.display_description;
+              ? ""
+              : row.display_description;
 
           return selectedRows?.some(
             (selected) =>
@@ -180,11 +182,11 @@ export default function ToolsTable({
               "uppercase",
             ])
           : isAction
-            ? sanitizeMcpName(params.data.display_name, 46).toUpperCase()
-            : parseString(params.data.tags.join(", "), [
-                "snake_case",
-                "uppercase",
-              ]),
+          ? sanitizeMcpName(params.data.display_name, 46).toUpperCase()
+          : parseString(params.data.tags.join(", "), [
+              "snake_case",
+              "uppercase",
+            ]),
       cellClass: "text-muted-foreground",
     },
     {
@@ -197,6 +199,7 @@ export default function ToolsTable({
   const handleSelectionChanged = (event) => {
     if (open) {
       const selectedData = event.api.getSelectedRows();
+      editedSelection.current = true;
       setSelectedRows(selectedData);
     }
   };
