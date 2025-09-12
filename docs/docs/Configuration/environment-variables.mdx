@@ -149,20 +149,6 @@ On startup, Langflow imports the environment variables from your `.env` file, as
 
 The following tables list the environment variables supported by Langflow.
 
-### Server configuration
-
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_HOST` | String | `localhost` | The host on which the Langflow server will run. See [`langflow run`](/configuration-cli#langflow-run). |
-| `LANGFLOW_PORT` | Integer | `7860` | The port on which the Langflow server runs. The server automatically selects a free port if the specified port is in use. |
-| `LANGFLOW_BACKEND_ONLY` | Boolean | False | Run only the Langflow backend service (no frontend). |
-| `LANGFLOW_OPEN_BROWSER` | Boolean | False | Open the system web browser on startup. |
-| `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for the health check. See [`langflow run`](/configuration-cli#langflow-run). |
-| `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. |
-| `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. |
-| `LANGFLOW_SSL_CERT_FILE` | String | Not set | Path to the SSL certificate file on the local system. |
-| `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file on the local system. |
-
 ### Authentication and security
 
 | Variable | Format | Default | Description |
@@ -180,21 +166,6 @@ The following tables list the environment variables supported by Langflow.
 
 For detailed information about authentication configuration, see [API keys and authentication](/api-keys-and-authentication).
 
-### Database configuration
-
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_DATABASE_URL` | String | Not set | Set the database URL for Langflow. If not provided, Langflow uses a SQLite database. See [Database configuration](/memory#configure-external-memory). |
-| `LANGFLOW_DATABASE_CONNECTION_RETRY` | Boolean | False | Whether to retry lost connections to the Langflow database. If true, Langflow tries to connect to the database again if the connection fails. |
-| `LANGFLOW_DB_CONNECT_TIMEOUT` | Integer | `30` | The number of seconds to wait before giving up on a lock to be released or establishing a connection to the database. |
-| `LANGFLOW_DB_CONNECTION_SETTINGS` | JSON | Not set | A JSON dictionary to centralize database connection parameters. Example: `{"pool_size": 20, "max_overflow": 30}`. See [Database configuration](/memory#configure-the-external-database-connection). |
-| `LANGFLOW_DB_POOL_SIZE` | Integer | `20` | **DEPRECATED:** Use `LANGFLOW_DB_CONNECTION_SETTINGS` instead. The number of connections to keep open in the connection pool. |
-| `LANGFLOW_DB_MAX_OVERFLOW` | Integer | `30` | **DEPRECATED:** Use `LANGFLOW_DB_CONNECTION_SETTINGS` instead. The number of connections to allow that can be opened beyond the pool size. |
-| `LANGFLOW_SAVE_DB_IN_CONFIG_DIR` | Boolean | False | If false (default), the Langflow database is saved in the `langflow` root directory. This means the database isn't shared between different virtual environments, and the database is deleted when you uninstall Langflow. If true, the database is saved in the `LANGFLOW_CONFIG_DIR`. |
-| `LANGFLOW_USE_NOOP_DATABASE` | Boolean | False | If true, disables all database operations and uses a no-op session. Useful for testing. |
-
-For detailed information about database configuration, see [Memory management options](/memory).
-
 ### Caching configuration
 
 | Variable | Format | Default | Description |
@@ -209,9 +180,20 @@ For detailed information about database configuration, see [Memory management op
 
 For detailed information about cache configuration, see [Memory management options](/memory#configure-cache-memory).
 
-### Logging configuration {#logging}
+### Database configuration
 
-For detailed information about logging configuration, including environment variables, see [Configure log options](/logging#configure-log-options).
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_DATABASE_URL` | String | Not set | Set the database URL for Langflow. If not provided, Langflow uses a SQLite database. See [Database configuration](/memory#configure-external-memory). |
+| `LANGFLOW_DATABASE_CONNECTION_RETRY` | Boolean | False | Whether to retry lost connections to the Langflow database. If true, Langflow tries to connect to the database again if the connection fails. |
+| `LANGFLOW_DB_CONNECT_TIMEOUT` | Integer | `30` | The number of seconds to wait before giving up on a lock to be released or establishing a connection to the database. |
+| `LANGFLOW_DB_CONNECTION_SETTINGS` | JSON | Not set | A JSON dictionary to centralize database connection parameters. Example: `{"pool_size": 20, "max_overflow": 30}`. See [Database configuration](/memory#configure-the-external-database-connection). |
+| `LANGFLOW_DB_POOL_SIZE` | Integer | `20` | **DEPRECATED:** Use `LANGFLOW_DB_CONNECTION_SETTINGS` instead. The number of connections to keep open in the connection pool. |
+| `LANGFLOW_DB_MAX_OVERFLOW` | Integer | `30` | **DEPRECATED:** Use `LANGFLOW_DB_CONNECTION_SETTINGS` instead. The number of connections to allow that can be opened beyond the pool size. |
+| `LANGFLOW_SAVE_DB_IN_CONFIG_DIR` | Boolean | False | If false (default), the Langflow database is saved in the `langflow` root directory. This means the database isn't shared between different virtual environments, and the database is deleted when you uninstall Langflow. If true, the database is saved in the `LANGFLOW_CONFIG_DIR`. |
+| `LANGFLOW_USE_NOOP_DATABASE` | Boolean | False | If true, disables all database operations and uses a no-op session. Useful for testing. |
+
+For detailed information about database configuration, see [Memory management options](/memory).
 
 ### File and data management
 
@@ -241,28 +223,13 @@ For detailed information about logging configuration, including environment vari
 | `LANGFLOW_LAZY_LOAD_COMPONENTS` | Boolean | False | If true, Langflow only partially loads components at startup and fully loads them on demand. This significantly reduces startup time but may cause a slight delay when a component is first used. |
 | `LANGFLOW_EVENT_DELIVERY` | String | `streaming` | How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'. |
 
-### Public flow settings
-
-Public flows are flows that are exposed in shared Langflow playgrounds.
-For detailed information about shared Playground configuration, see [Share a flow's Playground](/concepts-playground#share-a-flows-playground).
-
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_PUBLIC_FLOW_CLEANUP_INTERVAL` | Integer | `3600` | The interval in seconds at which public temporary flows will be cleaned up. Default is 1 hour (3600 seconds). Minimum is 600 seconds (10 minutes). |
-| `LANGFLOW_PUBLIC_FLOW_EXPIRATION` | Integer | `86400` | The time in seconds after which a public temporary flow will be considered expired and eligible for cleanup. Default is 24 hours (86400 seconds). Minimum is 600 seconds (10 minutes). |
-
 ### Global variables and environment variables interaction
 
 For detailed information about how global and environment variables interact, see [Global variables](/configuration-global-variables).
 
-### Monitoring and metrics
+### Logging configuration {#logging}
 
-For environment variables for specific monitoring service providers, see the Langflow monitoring integration guides, such as [Langfuse](/integrations-langfuse).
-
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_PROMETHEUS_ENABLED` | Boolean | False | Expose Prometheus metrics. |
-| `LANGFLOW_PROMETHEUS_PORT` | Integer | `9090` | Set the port on which Langflow exposes Prometheus metrics. |
+For detailed information about logging configuration, including environment variables, see [Configure log options](/logging#configure-log-options).
 
 ### MCP (Model Context Protocol) {#mcp}
 
@@ -276,6 +243,15 @@ For detailed information about MCP server configuration, see [Use Langflow as an
 | `LANGFLOW_MCP_SERVER_TIMEOUT` | Integer | `20` | The number of seconds to wait before timing out MCP server operations. |
 | `LANGFLOW_MCP_MAX_SESSIONS_PER_SERVER` | Integer | `10` | Maximum number of MCP sessions to keep per unique server. |
 
+### Monitoring and metrics
+
+For environment variables for specific monitoring service providers, see the Langflow monitoring integration guides, such as [Langfuse](/integrations-langfuse).
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_PROMETHEUS_ENABLED` | Boolean | False | Expose Prometheus metrics. |
+| `LANGFLOW_PROMETHEUS_PORT` | Integer | `9090` | Set the port on which Langflow exposes Prometheus metrics. |
+
 ### Other environment variables
 
 | Variable | Format | Default | Description |
@@ -287,6 +263,30 @@ For detailed information about MCP server configuration, see [Use Langflow as an
 | `LANGFLOW_DEV` | Boolean | False | Enable development mode. |
 | `LANGFLOW_DEACTIVATE_TRACING` | Boolean | False | Deactivate tracing functionality. |
 | `LANGFLOW_CELERY_ENABLED` | Boolean | False | Enable Celery for distributed task processing. |
+
+### Public flow settings
+
+Public flows are flows that are exposed in shared Langflow playgrounds.
+For detailed information about shared Playground configuration, see [Share a flow's Playground](/concepts-playground#share-a-flows-playground).
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_PUBLIC_FLOW_CLEANUP_INTERVAL` | Integer | `3600` | The interval in seconds at which public temporary flows will be cleaned up. Default is 1 hour (3600 seconds). Minimum is 600 seconds (10 minutes). |
+| `LANGFLOW_PUBLIC_FLOW_EXPIRATION` | Integer | `86400` | The time in seconds after which a public temporary flow will be considered expired and eligible for cleanup. Default is 24 hours (86400 seconds). Minimum is 600 seconds (10 minutes). |
+
+### Server configuration
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_HOST` | String | `localhost` | The host on which the Langflow server will run. See [`langflow run`](/configuration-cli#langflow-run). |
+| `LANGFLOW_PORT` | Integer | `7860` | The port on which the Langflow server runs. The server automatically selects a free port if the specified port is in use. |
+| `LANGFLOW_BACKEND_ONLY` | Boolean | False | Run only the Langflow backend service (no frontend). |
+| `LANGFLOW_OPEN_BROWSER` | Boolean | False | Open the system web browser on startup. |
+| `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for the health check. See [`langflow run`](/configuration-cli#langflow-run). |
+| `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. |
+| `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. |
+| `LANGFLOW_SSL_CERT_FILE` | String | Not set | Path to the SSL certificate file on the local system. |
+| `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file on the local system. |
 
 ### Telemetry
 
