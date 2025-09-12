@@ -15,6 +15,7 @@ from uuid import uuid4
 from lfx.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
 from lfx.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
 from lfx.log.logger import logger
+from lfx.utils.helpers import build_content_type_from_extension
 from mcp import types
 from sqlmodel import select
 
@@ -25,7 +26,6 @@ from langflow.schema.message import Message
 from langflow.services.database.models import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
-from langflow.services.storage.utils import build_content_type_from_extension
 
 T = TypeVar("T")
 P = ParamSpec("P")

@@ -1,5 +1,5 @@
-from langflow.services.storage.constants import EXTENSION_TO_CONTENT_TYPE
+from lfx.utils.helpers import build_content_type_from_extension
 
-
-def build_content_type_from_extension(extension: str):
-    return EXTENSION_TO_CONTENT_TYPE.get(extension.lower(), "application/octet-stream")
+__all__ = [
+    "build_content_type_from_extension",
+]
