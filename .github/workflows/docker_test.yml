@@ -19,7 +19,7 @@ jobs:
     runs-on: self-hosted
     name: Test docker images
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set container runtime
         run: |
           if command -v docker &> /dev/null; then
