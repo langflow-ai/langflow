@@ -602,6 +602,51 @@ locust: ## run locust load tests (options: locust_users=10 locust_spawn_rate=1 l
 			-f $$(basename "$(locust_file)"); \
 	fi
 
+# Enhanced load testing targets with improved error handling and shapes
+load_test_host ?= http://127.0.0.1:8000
+load_test_flow_id ?= 5523731d-5ef3-56de-b4ef-59b0a224fdbc
+load_test_api_key ?= test
+html ?= false
+
+load_test_ramp100: ## Run 100-user ramp load test (3min, 0->100 users @ 5/s). Options: html=true, load_test_host, load_test_flow_id, load_test_api_key
+	@echo "$(YELLOW)Running 100-user ramp load test (3 minutes)$(NC)"
+	@export FLOW_ID=$(load_test_flow_id) && \
+	export API_KEY=$(load_test_api_key) && \
+	export REQUEST_TIMEOUT=10 && \
+	cd src/backend/tests/locust && \
+	if [ "$(html)" = "true" ]; then \
+		echo "$(GREEN)Generating HTML report: ramp100_test.html$(NC)"; \
+		uv run locust -f locustfile_complex_serve.py --host $(load_test_host) --headless --shape RampToHundred --html ramp100_test.html; \
+	else \
+		uv run locust -f locustfile_complex_serve.py --host $(load_test_host) --headless --shape RampToHundred; \
+	fi
+
+load_test_cliff: ## Find performance cliff with step ramp (5->50 users, 30s steps). Options: html=true, load_test_host, load_test_flow_id, load_test_api_key
+	@echo "$(YELLOW)Running step ramp to find performance cliff$(NC)"
+	@export FLOW_ID=$(load_test_flow_id) && \
+	export API_KEY=$(load_test_api_key) && \
+	export REQUEST_TIMEOUT=10 && \
+	cd src/backend/tests/locust && \
+	if [ "$(html)" = "true" ]; then \
+		echo "$(GREEN)Generating HTML report: cliff_test.html$(NC)"; \
+		uv run locust -f locustfile_step_ramp.py --host $(load_test_host) --headless --html cliff_test.html; \
+	else \
+		uv run locust -f locustfile_step_ramp.py --host $(load_test_host) --headless; \
+	fi
+
+load_test_quick: ## Quick 30-user load test (60s). Options: html=true, load_test_host, load_test_flow_id, load_test_api_key
+	@echo "$(YELLOW)Running quick 30-user load test (60 seconds)$(NC)"
+	@export FLOW_ID=$(load_test_flow_id) && \
+	export API_KEY=$(load_test_api_key) && \
+	export REQUEST_TIMEOUT=10 && \
+	cd src/backend/tests/locust && \
+	if [ "$(html)" = "true" ]; then \
+		echo "$(GREEN)Generating HTML report: quick_test.html$(NC)"; \
+		uv run locust -f locustfile_complex_serve.py --host $(load_test_host) --headless -u 30 -r 5 -t 60s --html quick_test.html; \
+	else \
+		uv run locust -f locustfile_complex_serve.py --host $(load_test_host) --headless -u 30 -r 5 -t 60s; \
+	fi
+
 ######################
 # INCLUDE FRONTEND MAKEFILE
 ######################
