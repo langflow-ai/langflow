@@ -219,9 +219,7 @@ def configure(
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
 
     log_level_str: str = log_level or os.getenv("LANGFLOW_LOG_LEVEL", "ERROR")
-    requested_min_level = LOG_LEVEL_MAP.get(
-        log_level_str.upper(), logging.ERROR
-    )
+    requested_min_level = LOG_LEVEL_MAP.get(log_level_str.upper(), logging.ERROR)
     if current_min_level == requested_min_level:
         return
 
