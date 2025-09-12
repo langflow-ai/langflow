@@ -353,7 +353,7 @@ jobs:
       - name: Check Version
         id: check-version
         run: |
-          cd src/lfx
+          cd src/core
           version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}' | sed 's/^v//')
           last_released_version=$(curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" = "$last_released_version" ]; then
@@ -364,19 +364,19 @@ jobs:
           fi
       - name: Build project for distribution
         run: |
-          cd src/lfx
+          cd src/core
           rm -rf dist/
           uv build --wheel --out-dir dist
       - name: Test CLI
         run: |
-          cd src/lfx
+          cd src/core
           uv pip install dist/*.whl --force-reinstall
           uv run lfx --help
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: dist-lfx
-          path: src/lfx/dist
+          path: src/core/dist
 
   publish-lfx:
     name: Publish LFX to PyPI
@@ -388,7 +388,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dist-lfx
-          path: src/lfx/dist
+          path: src/core/dist
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -398,7 +398,7 @@ jobs:
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          cd src/lfx && uv publish dist/*.whl
+          cd src/core && uv publish dist/*.whl
 
   create_release:
     name: Create Release

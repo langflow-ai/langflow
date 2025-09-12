@@ -99,12 +99,12 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
       - name: Install LFX dependencies
-        run: cd src/lfx && uv sync
+        run: cd src/core && uv sync
 
       - name: Verify Nightly Name and Version
         id: verify
         run: |
-          cd src/lfx
+          cd src/core
           name=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $1}')
           version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}')
           if [ "$name" != "lfx-nightly" ]; then
@@ -121,13 +121,13 @@ jobs:
 
       - name: Build LFX for distribution
         run: |
-          cd src/lfx
+          cd src/core
           rm -rf dist/
           uv build --wheel --out-dir dist
 
       - name: Test LFX CLI
         run: |
-          cd src/lfx
+          cd src/core
           uv pip install dist/*.whl --force-reinstall
           uv run lfx --help
           echo "LFX CLI test completed successfully"
@@ -138,7 +138,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist-nightly-lfx
-          path: src/lfx/dist
+          path: src/core/dist
 
   build-nightly-base:
     name: Build Langflow Nightly Base
@@ -317,7 +317,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dist-nightly-lfx
-          path: src/lfx/dist
+          path: src/core/dist
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
