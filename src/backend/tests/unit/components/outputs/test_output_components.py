@@ -1,6 +1,6 @@
 import pytest
-
 from lfx.components.input_output import TextOutputComponent
+
 from tests.base import ComponentTestBaseWithoutClient
 
 

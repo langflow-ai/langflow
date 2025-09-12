@@ -21,11 +21,10 @@ from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, session_scope
-from sqlalchemy.orm import selectinload
-from sqlmodel import select
-
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.directory_reader.utils import abuild_custom_component_list_from_path
+from sqlalchemy.orm import selectinload
+from sqlmodel import select
 
 
 async def test_load_starter_projects():

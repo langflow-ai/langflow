@@ -1,6 +1,7 @@
 from lfx.components.input_output import ChatInput
 from lfx.memory import aget_messages
 from lfx.schema.message import Message
+
 from tests.integration.utils import pyleak_marker, run_single_component
 
 pytestmark = pyleak_marker()
