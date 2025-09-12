@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 from lfx.log.logger import logger
@@ -18,18 +21,72 @@ class S3StorageService(StorageService):
         s3_region = getattr(settings_service.settings, "s3_region_name", DEFAULT_S3_REGION_NAME)
         s3_access_key = getattr(settings_service.settings, "s3_aws_access_key_id", None)
         s3_secret_key = getattr(settings_service.settings, "s3_aws_secret_access_key", None)
+        s3_session_token = getattr(settings_service.settings, "s3_aws_session_token", None)
+        s3_role_arn = getattr(settings_service.settings, "s3_role_arn", None)
         self.path = getattr(settings_service.settings, "s3_storage_path", "tenants")
 
-        # Initialize S3 client with credentials if available
+        # Initialize S3 client based on available credentials
         if s3_access_key and s3_secret_key:
+            # Use explicit credentials (access key + secret key)
             self.s3_client = boto3.client(
-                "s3", aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key, region_name=s3_region
+                "s3",
+                aws_access_key_id=s3_access_key,
+                aws_secret_access_key=s3_secret_key,
+                aws_session_token=s3_session_token,
+                region_name=s3_region,
             )
+            logger.info("S3 client initialized with explicit credentials")
+        elif s3_role_arn:
+            # Use role-based authentication (IRSA)
+            self.s3_client = self._create_role_based_client(s3_role_arn, s3_region)
+            logger.info(f"S3 client initialized with role ARN: {s3_role_arn}")
         else:
             # Use default credential chain (environment variables, IAM roles, etc.)
             self.s3_client = boto3.client("s3", region_name=s3_region)
+            logger.info("S3 client initialized with default credential chain")
 
         self.set_ready()
+
+    def _create_role_based_client(self, role_arn: str, region: str):
+        """Create S3 client using role-based authentication (IRSA)."""
+        try:
+            # First, assume the role to get temporary credentials
+            sts_client = boto3.client("sts", region_name=region)
+
+            # Check if we have a web identity token (for IRSA)
+            web_identity_token_file = os.getenv("AWS_WEB_IDENTITY_TOKEN_FILE")
+            if web_identity_token_file and Path(web_identity_token_file).exists():
+                # IRSA: Use web identity token
+                with Path(web_identity_token_file).open() as f:
+                    web_identity_token = f.read().strip()
+
+                response = sts_client.assume_role_with_web_identity(
+                    RoleArn=role_arn,
+                    RoleSessionName="langflow-s3-session",
+                    WebIdentityToken=web_identity_token,
+                    DurationSeconds=3600,
+                )
+            else:
+                # Regular role assumption
+                response = sts_client.assume_role(
+                    RoleArn=role_arn, RoleSessionName="langflow-s3-session", DurationSeconds=3600
+                )
+
+            credentials = response["Credentials"]
+
+            # Create S3 client with temporary credentials
+            return boto3.client(
+                "s3",
+                aws_access_key_id=credentials["AccessKeyId"],
+                aws_secret_access_key=credentials["SecretAccessKey"],
+                aws_session_token=credentials["SessionToken"],
+                region_name=region,
+            )
+
+        except (ClientError, NoCredentialsError, FileNotFoundError, PermissionError) as e:
+            logger.error(f"Failed to assume role {role_arn}: {e}")
+            # Fallback to default credential chain
+            return boto3.client("s3", region_name=region)
 
     async def save_file(self, flow_id: str, file_name: str, data) -> None:
         """Save a file to the S3 bucket.
