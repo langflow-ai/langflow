@@ -6,7 +6,7 @@ slug: /bundles-ibm
 import Icon from "@site/src/components/icon";
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
-[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
 The **IBM** bundle provides access to IBM watsonx.ai models for text and embedding generation.
 These components require an IBM watsonx.ai deployment and watsonx API credentials.
@@ -45,7 +45,7 @@ You can use this component anywhere you need a language model in a flow.
 The **IBM watsonx.ai** component can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
 
 Use the **Language Model** output when you want to use an IBM watsonx.ai model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
-For more information, see [**Language Model** components](/components-models).
+For more information, see [Language model components](/components-models).
 
 The `LanguageModel` output from the **IBM watsonx.ai** component is an instance of [ChatWatsonx](https://python.langchain.com/docs/integrations/chat/ibm_watsonx/) configured according to the [component's parameters](#ibm-watsonxai-parameters).
 
@@ -55,7 +55,7 @@ The **IBM watsonx.ai Embeddings** component uses the [supported foundation model
 
 The output is [`Embeddings`](/data-types#embeddings) generated with [`WatsonxEmbeddings`](https://python.langchain.com/docs/integrations/text_embedding/ibm_watsonx/).
 
-For more information about using embedding model components in flows, see [**Embedding Model** components](/components-embedding-models).
+For more information about using embedding model components in flows, see [Embedding model components](/components-embedding-models).
 
 ![A basic embedding generation flow using the IBM watsonx.ai Embeddings component](/img/component-watsonx-embeddings-chroma.png)
 
