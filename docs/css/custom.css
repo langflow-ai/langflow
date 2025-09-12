@@ -553,6 +553,6 @@ body {
 .markdown table code {
   background-color: var(--ifm-color-emphasis-100);
   border-radius: 4px;
-  padding: 0.2rem 0.4rem;
+  padding: 0.1rem 0.3rem;
   font-family: var(--ifm-font-family-monospace);
 }
