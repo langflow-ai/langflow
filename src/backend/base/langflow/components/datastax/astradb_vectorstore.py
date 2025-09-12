@@ -192,7 +192,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             input_types=["Embeddings"],
             info="Specify the Embedding Model. Not required for Astra Vectorize collections.",
             required=False,
-            show=False,
+            show=True,
         ),
         *LCVectorStoreComponent.inputs,
         DropdownInput(
@@ -789,6 +789,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         database_config.update({"options": [], "options_metadata": [], "value": "", "show": False})
         build_config["api_endpoint"]["options"] = []
         build_config["api_endpoint"]["value"] = ""
+
+        # Reset hybrid search options
+        build_config["reranker"]["options"] = []
+        build_config["reranker"]["value"] = ""
+        build_config["reranker"]["show"] = False
+        build_config["lexical_terms"]["value"] = ""
+        build_config["lexical_terms"]["show"] = False
 
         # Reset collection configuration
         collection_config = build_config["collection_name"]
