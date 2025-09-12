@@ -204,6 +204,7 @@ Documentation = "https://docs.langflow.org"
 [project.optional-dependencies]
 docling = [
     "docling>=2.36.1",
+    "langchain-docling>=1.1.0",
     "tesserocr>=2.8.0",
     "rapidocr-onnxruntime>=1.4.4",
     "ocrmac>=1.0.0; sys_platform == 'darwin'",
