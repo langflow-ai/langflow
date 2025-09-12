@@ -332,12 +332,14 @@ docker_build_frontend: dockerfile_build_fe clear_dockerimage ## build Frontend D
 
 dockerfile_build:
 	@echo 'BUILDING DOCKER IMAGE: ${DOCKERFILE}'
+	@command -v $(DOCKER) >/dev/null 2>&1 || { echo "Error: $(DOCKER) is not installed. Please install $(DOCKER), or run 'make docker_build DOCKER=podman' (or DOCKER=docker) if you have an alternative installed."; exit 1; }
 	@$(DOCKER) build --rm \
 		-f ${DOCKERFILE} \
 		-t langflow:${VERSION} .
 
 dockerfile_build_be: dockerfile_build
 	@echo 'BUILDING DOCKER IMAGE BACKEND: ${DOCKERFILE_BACKEND}'
+	@command -v $(DOCKER) >/dev/null 2>&1 || { echo "Error: $(DOCKER) is not installed. Please install $(DOCKER), or run 'make docker_build_backend DOCKER=podman' (or DOCKER=docker) if you have an alternative installed."; exit 1; }
 	@$(DOCKER) build --rm \
 		--build-arg LANGFLOW_IMAGE=langflow:${VERSION} \
 		-f ${DOCKERFILE_BACKEND} \
@@ -345,6 +347,7 @@ dockerfile_build_be: dockerfile_build
 
 dockerfile_build_fe: dockerfile_build
 	@echo 'BUILDING DOCKER IMAGE FRONTEND: ${DOCKERFILE_FRONTEND}'
+	@command -v $(DOCKER) >/dev/null 2>&1 || { echo "Error: $(DOCKER) is not installed. Please install $(DOCKER), or run 'make docker_build_frontend DOCKER=podman' (or DOCKER=docker) if you have an alternative installed."; exit 1; }
 	@$(DOCKER) build --rm \
 		--build-arg LANGFLOW_IMAGE=langflow:${VERSION} \
 		-f ${DOCKERFILE_FRONTEND} \
