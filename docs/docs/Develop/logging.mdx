@@ -6,32 +6,29 @@ slug: /logging
 import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import PartialConfigDirPaths from '@site/docs/_partial-config-dir-paths.mdx';
 
 This page provides information about Langflow logs, including logs for individual flows and the Langflow application itself.
 
-Langflow uses the `loguru` library for logging.
+Langflow uses the [structlog](https://www.structlog.org) library for logging.
 
 The default logfile is named `langflow.log`.
 Langflow also produces logfiles for flows.
 
+Log files are stored in JSON format with structured metadata.
+
 ## Log storage
 
-The default logfile storage location depends on your operating system:
+Langflow logs are stored in the config directory specified in the `LANGFLOW_CONFIG_DIR` environment variable.
+<PartialConfigDirPaths/>
 
-- **macOS Desktop**:`/Users/<username>/.langflow/cache`
-- **Windows Desktop**:`C:\Users\<username>\AppData\Roaming\com.Langflow\cache`
-- **OSS macOS/Windows/Linux/WSL (`uv pip install`)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/cache`
-- **OSS macOS/Windows/Linux/WSL (`git clone`)**: `<path_to_clone>/src/backend/base/langflow/cache`
+To customize log storage, see [Configure log options](#configure-log-storage-options).
 
-To customize log storage, see [Configure log options](#configure-log-options).
-
-## Configure log options
+### Configure log storage options
 
 Use [Langflow environment variables](/environment-variables) to configure logging options in your Langflow `.env` file, and then start Langflow with `uv run langflow run --env-file .env`.
 
 The following environment variables are available to configure logging:
-
-### Logging environment variables
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
@@ -43,8 +40,47 @@ The following environment variables are available to configure logging:
 | `LANGFLOW_LOG_FORMAT` | String | Not set | Set the log format configuration. |
 | `LANGFLOW_PRETTY_LOGS` | Boolean | True | Enable pretty log formatting with colors and rich console output. |
 
-A complete example `.env` file is available in the [Langflow repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
+## View logs in real-time
 
+To monitor Langflow logs as they are generated, you can use the `tail -f` command to follow the log file:
+
+1. Change to your [Langflow config directory](#log-storage):
+
+    <Tabs groupId="cd-command">
+      <TabItem value="macOS" label="macOS" default>
+
+        ```bash
+        cd /Users/**USERNAME**/Library/Caches/langflow
+        ```
+
+      </TabItem>
+      <TabItem value="Windows" label="Windows">
+        ```cmd
+        cd C:\Users\**USERNAME**\AppData\Local\langflow\langflow\Cache
+        ```
+
+      </TabItem>
+    </Tabs>
+
+2. Tail the main log file:
+
+    <Tabs groupId="tail-command">
+      <TabItem value="macOS" label="macOS" default>
+
+        ```bash
+        tail -f langflow.log
+        ```
+
+      </TabItem>
+      <TabItem value="Windows" label="Windows">
+        ```cmd
+        Get-Content -Wait -Path langflow.log
+        ```
+
+      </TabItem>
+    </Tabs>
+    
+    If you don't see new log entries, check that Langflow is running and generating logs. You can also check the terminal where you started Langflow to see if logs are being displayed there.
 ## Flow and component logs
 
 After you run a flow, you can inspect the logs for the each component and flow run.

@@ -4,6 +4,8 @@ slug: /concepts-flows
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialConfigDirPaths from '@site/docs/_partial-config-dir-paths.mdx';
+import PartialDBDirPaths from '@site/docs/_partial-db-dir-paths.mdx';
 
 A _flow_ is a functional representation of an application workflow.
 Flows receive input, process it, and produce output.
@@ -105,16 +107,15 @@ To get back to the **Projects** page after editing a flow, click the project nam
 
 ## Flow storage and logs
 
-By default, flows and [flow logs](/logging) are stored on local disk at the following default locations:
+By default, flows and flow execution data are stored in a SQLite database at the following locations.
+<PartialDBDirPaths/>
 
-- **macOS Desktop**: `/Users/<username>/.langflow/cache`
-- **Windows Desktop**: `C:\Users\<username>\AppData\Roaming\com.Langflow\cache`
-- **OSS macOS/Windows/Linux/WSL (uv pip install)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/cache`
-- **OSS macOS/Windows/Linux/WSL (git clone)**: `<path_to_clone>/src/backend/base/langflow/cache`
+The database storage location can be customized using the `LANGFLOW_CONFIG_DIR` and `LANGFLOW_SAVE_DB_IN_CONFIG_DIR` environment variables. The config directory can be customized with the `LANGFLOW_CONFIG_DIR` environment variable.
 
-The overall storage location can be customized with the `LANGFLOW_CONFIG_DIR` environment variable, and the flow log storage location can be customized separately with the `LANGFLOW_LOG_FILE` environment variable.
+Langflow logs are stored in the config directory specified in the `LANGFLOW_CONFIG_DIR` environment variable.
+<PartialConfigDirPaths/>
 
-For more information, see [Memory management options](/memory).
+For more information, see [Memory management options](/memory) and [Logging](/logging).
 
 ## See also
 
