@@ -127,6 +127,8 @@ class BaseLangflowUser(FastHttpUser):
                 return response.failure(f"Backpressure: {response.status_code}")
             if response.status_code == 401:
                 return response.failure("Unauthorized")
+            if response.status_code == 404:
+                return response.failure("Not Found - possible bad FLOW_ID or misconfiguration")
             if response.status_code >= 500:
                 return response.failure(f"Server error {response.status_code}")
             return response.failure(f"HTTP {response.status_code}")
