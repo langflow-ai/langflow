@@ -11,6 +11,7 @@ PYTHON_REQUIRED=$(shell grep '^requires-python[[:space:]]*=' pyproject.toml | se
 RED=\033[0;31m
 NC=\033[0m # No Color
 GREEN=\033[0;32m
+YELLOW=\033[1;33m
 
 log_level ?= debug
 host ?= 0.0.0.0
