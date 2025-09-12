@@ -5,7 +5,6 @@ from typing import Any
 
 import pytest
 import requests
-from astrapy.admin import parse_api_endpoint
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.custom import Component
 from langflow.custom.eval import eval_custom_component_code
@@ -35,6 +34,11 @@ def valid_nvidia_vectorize_region(api_endpoint: str) -> bool:
     Returns:
         True if the region contains hosted nvidia models, False otherwise.
     """
+    try:
+        from astrapy.admin import parse_api_endpoint
+    except ImportError as e:
+        msg = "Could not import astrapy package. Please install it with `uv pip install astrapy`."
+        raise ImportError(msg) from e
     parsed_endpoint = parse_api_endpoint(api_endpoint)
     if not parsed_endpoint:
         msg = "Invalid ASTRA_DB_API_ENDPOINT"
