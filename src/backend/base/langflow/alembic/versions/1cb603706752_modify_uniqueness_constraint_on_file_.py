@@ -29,16 +29,45 @@ DUPLICATE_SUFFIX_START = 2  # first suffix to use, e.g., "name_2.ext"
 BATCH_SIZE = 1000  # Process duplicates in batches for large datasets
 
 
+def _force_drop_single_name_constraints(batch_op, inspector, table: str) -> None:
+    """Force drop any single-column unique constraints on 'name' that might have been missed."""
+    try:
+        constraints = inspector.get_unique_constraints(table)
+        for c in constraints:
+            cols = [col.lower() for col in (c.get("column_names") or [])]
+            if len(cols) == 1 and cols[0] == 'name':
+                constraint_name = c.get("name")
+                logger.info("Force dropping single-name constraint: %s", constraint_name)
+                try:
+                    batch_op.drop_constraint(constraint_name, type_="unique")
+                except Exception as e:
+                    logger.warning("Failed to drop constraint %s: %s", constraint_name, e)
+    except Exception as e:
+        logger.warning("Failed to enumerate constraints for force-drop: %s", e)
+
+
 def _get_unique_constraints_by_columns(
     inspector, table: str, expected_cols: Iterable[str]
 ) -> Optional[str]:
     """Return the name of a unique constraint that matches the exact set of expected columns."""
-    expected = set(expected_cols)
-    for c in inspector.get_unique_constraints(table):
-        cols = set(c.get("column_names") or [])
+    expected = {col.lower() for col in expected_cols}  # Make case-insensitive
+    
+    try:
+        constraints = inspector.get_unique_constraints(table)
+    except Exception as e:
+        logger.warning("Failed to get unique constraints for table %s: %s", table, e)
+        return None
+    
+    for c in constraints:
+        cols = {col.lower() for col in (c.get("column_names") or [])}  # Case-insensitive
         if cols == expected:
+            logger.debug("Found matching constraint: %s for columns %s", c.get("name"), expected_cols)
             return c.get("name")
+    
+    logger.debug("No constraint found for columns %s. Available constraints: %s", 
+                expected_cols, [c.get("name") for c in constraints])
     return None
+
 
 
 def _split_base_ext(name: str) -> Tuple[str, str]:
@@ -173,6 +202,7 @@ def _handle_duplicates_before_upgrade(conn) -> None:
     logger.info("Duplicate resolution completed.")
 
 
+# Perform the upgrade
 def upgrade() -> None:
     start_time = time.time()
     logger.info("Starting upgrade: adding composite unique (name, user_id) on file")
@@ -188,19 +218,21 @@ def upgrade() -> None:
     if duplicate_duration > 1.0:  # Only log if it took more than 1 second
         logger.info("Duplicate resolution completed in %.2f seconds", duplicate_duration)
 
-    # 2) Detect existing single-column unique on name (if any)
+    # 2) Detect existing constraints
     inspector = inspect(conn)  # refresh inspector
     single_name_uc = _get_unique_constraints_by_columns(inspector, "file", {"name"})
     composite_uc = _get_unique_constraints_by_columns(inspector, "file", {"name", "user_id"})
 
-    # 3) Use a unified, reflection-based batch_alter_table for both Postgres and SQLite.
-    #    recreate="always" ensures a safe table rebuild on SQLite and a standard alter on Postgres.
+    # 3) Use batch_alter_table with forced constraint cleanup
     constraint_start = time.time()
     with op.batch_alter_table("file", recreate="always") as batch_op:
         # Drop old single-column unique if present
         if single_name_uc:
             logger.info("Dropping existing single-column unique: %s", single_name_uc)
             batch_op.drop_constraint(single_name_uc, type_="unique")
+        
+        # FORCE drop any remaining single-name constraints that might have been missed
+        _force_drop_single_name_constraints(batch_op, inspector, "file")
 
         # Create composite unique if not already present
         if not composite_uc:
