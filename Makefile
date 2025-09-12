@@ -17,7 +17,7 @@ host ?= 0.0.0.0
 port ?= 7860
 env ?= .env
 open_browser ?= true
-path = src/backend/base/langflow/frontend
+path = src/packages/base/langflow/frontend
 workers ?= 1
 async ?= true
 lf ?= false
@@ -84,7 +84,7 @@ clean_python_cache:
 clean_npm_cache:
 	@echo "Cleaning npm cache..."
 	cd src/frontend && npm cache clean --force
-	$(call CLEAR_DIRS,src/frontend/node_modules src/frontend/build src/backend/base/langflow/frontend)
+	$(call CLEAR_DIRS,src/frontend/node_modules src/frontend/build src/packages/base/langflow/frontend)
 	rm -f src/frontend/package-lock.json
 	@echo "$(GREEN)NPM cache and frontend directories cleaned.$(NC)"
 
@@ -93,7 +93,7 @@ clean_frontend_build: ## clean frontend build artifacts to ensure fresh build
 	@echo "  - Removing src/frontend/build directory"
 	$(call CLEAR_DIRS,src/frontend/build)
 	@echo "  - Removing built frontend files from backend"
-	$(call CLEAR_DIRS,src/backend/base/langflow/frontend)
+	$(call CLEAR_DIRS,src/packages/base/langflow/frontend)
 	@echo "$(GREEN)Frontend build artifacts cleaned - fresh build guaranteed.$(NC)"
 
 clean_all: clean_python_cache clean_npm_cache # clean all caches and temporary directories
@@ -105,7 +105,7 @@ setup_uv: ## install uv using pipx
 add:
 	@echo 'Adding dependencies'
 ifdef devel
-	@cd src/backend/base && uv add --group dev $(devel)
+	@cd src/packages/base && uv add --group dev $(devel)
 endif
 
 ifdef main
@@ -113,7 +113,7 @@ ifdef main
 endif
 
 ifdef base
-	@cd src/backend/base && uv add $(base)
+	@cd src/packages/base && uv add $(base)
 endif
 
 
@@ -151,7 +151,7 @@ unit_tests_looponfail:
 
 lfx_tests: ## run lfx package unit tests
 	@echo 'Running LFX Package Tests...'
-	@cd src/core && \
+	@cd src/packages/core && \
 	uv sync && \
 	uv run pytest tests/unit -v $(args)
 
@@ -285,15 +285,15 @@ else
 endif
 
 build_and_run: setup_env ## build the project and run it
-	$(call CLEAR_DIRS,dist src/backend/base/dist)
+	$(call CLEAR_DIRS,dist src/packages/base/dist)
 	make build
 	uv run pip install dist/*.tar.gz
 	uv run langflow run
 
 build_and_install: ## build the project and install it
 	@echo 'Removing dist folder'
-	$(call CLEAR_DIRS,dist src/backend/base/dist)
-	make build && uv run pip install dist/*.whl && pip install src/backend/base/dist/*.whl --force-reinstall
+	$(call CLEAR_DIRS,dist src/packages/base/dist)
+	make build && uv run pip install dist/*.whl && pip install src/packages/base/dist/*.whl --force-reinstall
 
 build: setup_env ## build the frontend static files and package the project
 ifdef base
@@ -310,7 +310,7 @@ ifdef main
 endif
 
 build_langflow_base:
-	cd src/backend/base && uv build $(args)
+	cd src/packages/base && uv build $(args)
 
 build_langflow_backup:
 	uv lock && uv build
@@ -373,30 +373,30 @@ dcdev_up:
 	$(DOCKER) compose -f docker/dev.docker-compose.yml up --remove-orphans
 
 lock_base:
-	cd src/backend/base && uv lock
+	cd src/packages/base && uv lock
 
 lock_langflow:
 	uv lock
 
 lock: ## lock dependencies
 	@echo 'Locking dependencies'
-	cd src/backend/base && uv lock
+	cd src/packages/base && uv lock
 	uv lock
 
 update: ## update dependencies
 	@echo 'Updating dependencies'
-	cd src/backend/base && uv sync --upgrade
+	cd src/packages/base && uv sync --upgrade
 	uv sync --upgrade
 
 publish_base:
-	cd src/backend/base && uv publish
+	cd src/packages/base && uv publish
 
 publish_langflow:
 	uv publish
 
 publish_base_testpypi:
 	# TODO: update this to use the test-pypi repository
-	cd src/backend/base && uv publish -r test-pypi
+	cd src/packages/base && uv publish -r test-pypi
 
 publish_langflow_testpypi:
 	# TODO: update this to use the test-pypi repository
@@ -421,73 +421,73 @@ publish_testpypi: ## build the frontend static files and package the project and
 
 lfx_build: ## build the LFX package
 	@echo 'Building LFX package'
-	@cd src/core && make build
+	@cd src/packages/core && make build
 
 lfx_publish: ## publish LFX package to PyPI
 	@echo 'Publishing LFX package'
-	@cd src/core && make publish
+	@cd src/packages/core && make publish
 
 lfx_publish_testpypi: ## publish LFX package to test PyPI
 	@echo 'Publishing LFX package to test PyPI'
-	@cd src/core && make publish_test
+	@cd src/packages/core && make publish_test
 
 lfx_test: ## run LFX tests
 	@echo 'Running LFX tests'
-	@cd src/core && make test
+	@cd src/packages/core && make test
 
 lfx_format: ## format LFX code
 	@echo 'Formatting LFX code'
-	@cd src/core && make format
+	@cd src/packages/core && make format
 
 lfx_lint: ## lint LFX code
 	@echo 'Linting LFX code'
-	@cd src/core && make lint
+	@cd src/packages/core && make lint
 
 lfx_clean: ## clean LFX build artifacts
 	@echo 'Cleaning LFX build artifacts'
-	@cd src/core && make clean
+	@cd src/packages/core && make clean
 
 lfx_docker_build: ## build LFX production Docker image
 	@echo 'Building LFX Docker image'
-	@cd src/core && make docker_build
+	@cd src/packages/core && make docker_build
 
 lfx_docker_dev: ## start LFX development environment
 	@echo 'Starting LFX development environment'
-	@cd src/core && make docker_dev
+	@cd src/packages/core && make docker_dev
 
 lfx_docker_test: ## run LFX tests in Docker
 	@echo 'Running LFX tests in Docker'
-	@cd src/core && make docker_test
+	@cd src/packages/core && make docker_test
 
 # example make alembic-revision message="Add user table"
 alembic-revision: ## generate a new migration
 	@echo 'Generating a new Alembic revision'
-	cd src/backend/base/langflow/ && uv run alembic revision --autogenerate -m "$(message)"
+	cd src/packages/base/langflow/ && uv run alembic revision --autogenerate -m "$(message)"
 
 
 alembic-upgrade: ## upgrade database to the latest version
 	@echo 'Upgrading database to the latest version'
-	cd src/backend/base/langflow/ && uv run alembic upgrade head
+	cd src/packages/base/langflow/ && uv run alembic upgrade head
 
 alembic-downgrade: ## downgrade database by one version
 	@echo 'Downgrading database by one version'
-	cd src/backend/base/langflow/ && uv run alembic downgrade -1
+	cd src/packages/base/langflow/ && uv run alembic downgrade -1
 
 alembic-current: ## show current revision
 	@echo 'Showing current Alembic revision'
-	cd src/backend/base/langflow/ && uv run alembic current
+	cd src/packages/base/langflow/ && uv run alembic current
 
 alembic-history: ## show migration history
 	@echo 'Showing Alembic migration history'
-	cd src/backend/base/langflow/ && uv run alembic history --verbose
+	cd src/packages/base/langflow/ && uv run alembic history --verbose
 
 alembic-check: ## check migration status
 	@echo 'Running alembic check'
-	cd src/backend/base/langflow/ && uv run alembic check
+	cd src/packages/base/langflow/ && uv run alembic check
 
 alembic-stamp: ## stamp the database with a specific revision
 	@echo 'Stamping the database with revision $(revision)'
-	cd src/backend/base/langflow/ && uv run alembic stamp $(revision)
+	cd src/packages/base/langflow/ && uv run alembic stamp $(revision)
 
 ######################
 # VERSION MANAGEMENT
@@ -511,7 +511,7 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 	python -c "import re; fname='pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"langflow-base==.*\"', '\"langflow-base==$$LANGFLOW_BASE_VERSION\"', txt); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Updating langflow-base pyproject.toml...$(NC)"; \
-	python -c "import re; fname='src/backend/base/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_BASE_VERSION\"', txt, flags=re.MULTILINE); open(fname, 'w').write(txt)"; \
+	python -c "import re; fname='src/packages/base/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_BASE_VERSION\"', txt, flags=re.MULTILINE); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Updating frontend package.json...$(NC)"; \
 	python -c "import re; fname='src/frontend/package.json'; txt=open(fname).read(); txt=re.sub(r'\"version\": \".*\"', '\"version\": \"$$LANGFLOW_VERSION\"', txt); open(fname, 'w').write(txt)"; \
@@ -519,7 +519,7 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 	echo "$(GREEN)Validating version changes...$(NC)"; \
 	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml version validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "\"langflow-base==$$LANGFLOW_BASE_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base dependency validation failed$(NC)"; exit 1; fi; \
-	if ! grep -q "^version = \"$$LANGFLOW_BASE_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml version validation failed$(NC)"; exit 1; fi; \
+	if ! grep -q "^version = \"$$LANGFLOW_BASE_VERSION\"" src/packages/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml version validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "\"version\": \"$$LANGFLOW_VERSION\"" src/frontend/package.json; then echo "$(RED)✗ Frontend package.json version validation failed$(NC)"; exit 1; fi; \
 	echo "$(GREEN)✓ All versions updated successfully$(NC)"; \
 	\
@@ -536,7 +536,7 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 		git status --porcelain; \
 		exit 1; \
 	fi; \
-	EXPECTED_FILES="pyproject.toml uv.lock src/backend/base/pyproject.toml src/frontend/package.json src/frontend/package-lock.json"; \
+	EXPECTED_FILES="pyproject.toml uv.lock src/packages/base/pyproject.toml src/frontend/package.json src/frontend/package-lock.json"; \
 	for file in $$EXPECTED_FILES; do \
 		if ! git status --porcelain | grep -q "$$file"; then \
 			echo "$(RED)✗ Expected file $$file was not modified$(NC)"; \
@@ -548,7 +548,7 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 	echo "$(GREEN)Version update complete!$(NC)"; \
 	echo "$(GREEN)Updated files:$(NC)"; \
 	echo "  - pyproject.toml: $$LANGFLOW_VERSION"; \
-	echo "  - src/backend/base/pyproject.toml: $$LANGFLOW_BASE_VERSION"; \
+	echo "  - src/packages/base/pyproject.toml: $$LANGFLOW_BASE_VERSION"; \
 	echo "  - src/frontend/package.json: $$LANGFLOW_VERSION"; \
 	echo "  - uv.lock: dependency lock updated"; \
 	echo "  - src/frontend/package-lock.json: dependency lock updated"; \
