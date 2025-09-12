@@ -550,6 +550,8 @@ def test_build_custom_component_template_metadata_hash_changes():
 
     metadata_v1 = frontend_node_v1["metadata"]
     metadata_v2 = frontend_node_v2["metadata"]
+    assert metadata_v1 is not None
+    assert metadata_v2 is not None
 
     # Same module name
     # assert metadata_v1["module"] == metadata_v2["module"]
@@ -581,7 +583,8 @@ def test_build_custom_component_template_metadata_unicode():
     frontend_node, _ = build_custom_component_template(component, module_name="unicode.test")
 
     # Verify metadata is present and valid
-    # metadata = frontend_node["metadata"]
+    metadata = frontend_node["metadata"]
+    assert metadata is not None
     # assert "module" in metadata
     # assert "code_hash" in metadata
 
