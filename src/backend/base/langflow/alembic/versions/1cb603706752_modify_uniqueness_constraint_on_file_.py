@@ -33,24 +33,12 @@ def _get_unique_constraints_by_columns(
     inspector, table: str, expected_cols: Iterable[str]
 ) -> Optional[str]:
     """Return the name of a unique constraint that matches the exact set of expected columns."""
-    expected = {col.lower() for col in expected_cols}  # Make case-insensitive
-    
-    try:
-        constraints = inspector.get_unique_constraints(table)
-    except Exception as e:
-        logger.warning("Failed to get unique constraints for table %s: %s", table, e)
-        return None
-    
-    for c in constraints:
-        cols = {col.lower() for col in (c.get("column_names") or [])}  # Case-insensitive
+    expected = set(expected_cols)
+    for c in inspector.get_unique_constraints(table):
+        cols = set(c.get("column_names") or [])
         if cols == expected:
-            logger.debug("Found matching constraint: %s for columns %s", c.get("name"), expected_cols)
             return c.get("name")
-    
-    logger.debug("No constraint found for columns %s. Available constraints: %s", 
-                expected_cols, [c.get("name") for c in constraints])
     return None
-
 
 
 def _split_base_ext(name: str) -> Tuple[str, str]:
@@ -185,8 +173,6 @@ def _handle_duplicates_before_upgrade(conn) -> None:
     logger.info("Duplicate resolution completed.")
 
 
-# Perform the upgrade
-# Perform the upgrade
 def upgrade() -> None:
     start_time = time.time()
     logger.info("Starting upgrade: adding composite unique (name, user_id) on file")
@@ -202,75 +188,24 @@ def upgrade() -> None:
     if duplicate_duration > 1.0:  # Only log if it took more than 1 second
         logger.info("Duplicate resolution completed in %.2f seconds", duplicate_duration)
 
-    # 2) Detect existing constraints
+    # 2) Detect existing single-column unique on name (if any)
     inspector = inspect(conn)  # refresh inspector
+    single_name_uc = _get_unique_constraints_by_columns(inspector, "file", {"name"})
     composite_uc = _get_unique_constraints_by_columns(inspector, "file", {"name", "user_id"})
 
-    # 3) Handle constraint changes based on database type
+    # 3) Use a unified, reflection-based batch_alter_table for both Postgres and SQLite.
+    #    recreate="always" ensures a safe table rebuild on SQLite and a standard alter on Postgres.
     constraint_start = time.time()
-    
-    # Check database type
-    db_type = conn.dialect.name
-    logger.info("Database type: %s", db_type)
-    
-    if db_type == 'sqlite':
-        # SQLite: Must use batch_alter_table with recreate to drop constraints
-        logger.info("Using SQLite table recreation to remove single-name unique constraints")
-        with op.batch_alter_table("file", recreate="always") as batch_op:
-            # Find and drop any single-column unique constraints on 'name'
-            try:
-                constraints = inspector.get_unique_constraints("file")
-                for c in constraints:
-                    cols = [col.lower() for col in (c.get("column_names") or [])]
-                    constraint_name = c.get("name")
-                    
-                    # Skip malformed/empty constraint names
-                    if constraint_name is None or constraint_name.strip() == '' or constraint_name.endswith('_'):
-                        logger.warning("Skipping malformed constraint name: '%s'", constraint_name)
-                        continue
-                        
-                    if len(cols) == 1 and cols[0] == 'name':
-                        logger.info("Dropping single-name unique constraint during recreation: %s", constraint_name)
-                        try:
-                            batch_op.drop_constraint(constraint_name, type_="unique")
-                        except Exception as e:
-                            logger.warning("Failed to drop constraint %s: %s", constraint_name, e)
-            except Exception as e:
-                logger.warning("Failed to enumerate constraints during recreation: %s", e)
-            
-            # Add the new composite constraint
-            if not composite_uc:
-                logger.info("Creating composite unique: file_name_user_id_key on (name, user_id)")
-                batch_op.create_unique_constraint("file_name_user_id_key", ["name", "user_id"])
-            else:
-                logger.info("Composite unique already present: %s", composite_uc)
-    else:
-        # PostgreSQL: Can drop constraints directly
-        # Find and drop any single-column unique constraints on 'name'
-        try:
-            constraints = inspector.get_unique_constraints("file")
-            for c in constraints:
-                cols = [col.lower() for col in (c.get("column_names") or [])]
-                constraint_name = c.get("name")
-                
-                # Skip malformed/empty constraint names
-                if constraint_name is None or constraint_name.strip() == '' or constraint_name.endswith('_'):
-                    logger.warning("Skipping malformed constraint name: '%s'", constraint_name)
-                    continue
-                    
-                if len(cols) == 1 and cols[0] == 'name':
-                    logger.info("Dropping single-name unique constraint: %s", constraint_name)
-                    try:
-                        op.drop_constraint(constraint_name, "file", type_="unique")
-                    except Exception as e:
-                        logger.warning("Failed to drop constraint %s: %s", constraint_name, e)
-        except Exception as e:
-            logger.warning("Failed to enumerate constraints: %s", e)
+    with op.batch_alter_table("file", recreate="always") as batch_op:
+        # Drop old single-column unique if present
+        if single_name_uc:
+            logger.info("Dropping existing single-column unique: %s", single_name_uc)
+            batch_op.drop_constraint(single_name_uc, type_="unique")
 
-        # Add the composite constraint
+        # Create composite unique if not already present
         if not composite_uc:
             logger.info("Creating composite unique: file_name_user_id_key on (name, user_id)")
-            op.create_unique_constraint("file_name_user_id_key", "file", ["name", "user_id"])
+            batch_op.create_unique_constraint("file_name_user_id_key", ["name", "user_id"])
         else:
             logger.info("Composite unique already present: %s", composite_uc)
     
