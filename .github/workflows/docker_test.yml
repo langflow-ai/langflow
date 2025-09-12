@@ -9,14 +9,6 @@ on:
       - "pyproject.toml"
       - "src/backend/**"
       - ".github/workflows/docker_test.yml"
-  pull_request:
-    branches: [dev, main]
-    paths:
-      - "docker/**"
-      - "uv.lock"
-      - "pyproject.toml"
-      - "src/**"
-      - ".github/workflows/docker_test.yml"
   workflow_dispatch:
 
 env:
