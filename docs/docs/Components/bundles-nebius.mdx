@@ -1,0 +1,34 @@
+---
+title: Nebius
+slug: /bundles-nebius
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Nebius** bundle.
+
+For more information about Nebius features and functionality used by Nebius components, see the [Nebius documentation](https://python.langchain.com/docs/integrations/providers/nebius/).
+
+## Nebius Models
+
+This component generates text using Nebius models.
+
+It can output a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a Nebius model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
+
+For more information, see [**Language Model** components](/components-models).
+
+### Parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Input Value | String | Input text for the model. |
+| Nebius API Key | SecretString | The Nebius API Key to use for the Nebius model. It can also be set as the `NEBIUS_API_KEY` environment variable. |
+| Model Name | Dropdown | The name of the Nebius model to use. |
+| Temperature | Float | (Advanced) Controls randomness. Lower values are more deterministic, higher values are more creative. Defaults to `0.6`. |

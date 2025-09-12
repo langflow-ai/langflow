@@ -322,6 +322,7 @@ module.exports = {
             "Components/bundles-maritalk",
             "Components/bundles-mem0",
             "Components/bundles-mistralai",
+            "Components/bundles-nebius",
             {
               type: "category",
               label: "Notion",
