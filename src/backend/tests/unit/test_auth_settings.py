@@ -29,7 +29,7 @@ def test_auto_login_true_forces_default_and_scrubs_password(tmp_path: Path):
     # reset_credentials keeps default username (AUTO_LOGIN on) and keeps password scrubbed
     settings.reset_credentials()
     assert settings.SUPERUSER == DEFAULT_SUPERUSER
-    assert settings.SUPERUSER_PASSWORD.get_secret_value() == "langflow"
+    assert settings.SUPERUSER_PASSWORD.get_secret_value() == ""
 
 
 def test_auto_login_false_preserves_username_and_scrubs_password_on_reset(tmp_path: Path):
