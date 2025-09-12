@@ -274,7 +274,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       (edge) => edge.target === nodeId && edge.targetHandle === myId,
     );
     const outputType = connectedEdge?.data?.sourceHandle?.output_types?.[0];
-    const connectedColor = outputType ? nodeColorsName[outputType] : "gray";
+    const connectedColor = (outputType && nodeColorsName[outputType]) || "gray";
 
     const isNullHandle =
       filterPresent && !(openHandle || ownDraggingHandle || ownFilterHandle);

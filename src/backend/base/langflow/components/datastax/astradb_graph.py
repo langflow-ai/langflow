@@ -1,7 +1,6 @@
 import os
 
 import orjson
-from astrapy.admin import parse_api_endpoint
 from langchain_core.documents import Document
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -176,6 +175,7 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
     @check_cached_vector_store
     def build_vector_store(self):
         try:
+            from astrapy.admin import parse_api_endpoint
             from langchain_astradb import AstraDBGraphVectorStore
             from langchain_astradb.utils.astradb import SetupMode
         except ImportError as e:
