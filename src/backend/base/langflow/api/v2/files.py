@@ -28,7 +28,7 @@ SAMPLE_DATA_DIR = Path(__file__).parent / "sample_data"
 
 
 async def get_mcp_file(current_user: CurrentActiveUser, *, extension: bool = False) -> str:
-# Create a unique MCP servers file with the user id appended
+    # Create a unique MCP servers file with the user id appended
     return f"{MCP_SERVERS_FILE}_{current_user.id!s}" + (".json" if extension else "")
 
 
