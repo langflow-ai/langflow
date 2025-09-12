@@ -121,8 +121,9 @@ async def upload_user_file(
 
         # Special handling for the MCP servers config file: always keep the same root filename
         mcp_file = await get_mcp_file(current_user)
+        mcp_file_ext = await get_mcp_file(current_user, extension=True)
 
-        if new_filename.startswith(MCP_SERVERS_FILE):
+        if new_filename == mcp_file_ext:
             # Check if an existing record exists; if so, delete it to replace with the new one
             existing_mcp_file = await get_file_by_name(mcp_file, current_user, session)
             if existing_mcp_file:
@@ -262,7 +263,9 @@ async def list_files(
         full_list = list(results)
 
         # Filter out the _mcp_servers file
-        return [file for file in full_list if file.name != MCP_SERVERS_FILE]
+        mcp_file = await get_mcp_file(current_user)
+
+        return [file for file in full_list if file.name != mcp_file]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing files: {e}") from e
 

@@ -1,9 +1,7 @@
 import asyncio
 import tempfile
-import uuid
 from contextlib import suppress
 from pathlib import Path
-from types import SimpleNamespace
 
 # we need to import tmpdir
 import anyio
@@ -21,14 +19,6 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from tests.conftest import _delete_transactions_and_vertex_builds
-
-
-@pytest.fixture
-def current_user():
-    class User(SimpleNamespace):
-        id: str
-
-    return User(id=str(uuid.uuid4()))
 
 
 @pytest.fixture(name="files_created_api_key")
@@ -396,12 +386,12 @@ async def test_upload_files_with_different_extensions_same_name(files_client, fi
     assert file3["name"] == "document (2)"
 
 
-async def test_mcp_servers_file_replacement(files_client, files_created_api_key, current_user):
+async def test_mcp_servers_file_replacement(files_client, files_created_api_key, files_active_user):
     """Test that _mcp_servers file gets replaced instead of creating unique names."""
     headers = {"x-api-key": files_created_api_key.api_key}
 
-    mcp_file_ext = await get_mcp_file(current_user, extension=True)
-    mcp_file = await get_mcp_file(current_user)
+    mcp_file_ext = await get_mcp_file(files_active_user, extension=True)
+    mcp_file = await get_mcp_file(files_active_user)
 
     # Upload first _mcp_servers file
     response1 = await files_client.post(
