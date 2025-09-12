@@ -385,7 +385,7 @@ async def update_project_mcp_settings(
             should_stop_composer = False
 
             # Update project-level auth settings with encryption
-            if "auth_settings" in request.model_fields_set:
+            if "auth_settings" in request.model_fields_set and request.auth_settings is not None:
                 auth_result = handle_auth_settings_update(
                     existing_project=project,
                     new_auth_settings=request.auth_settings,
