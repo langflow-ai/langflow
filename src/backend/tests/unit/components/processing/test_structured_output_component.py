@@ -257,7 +257,6 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
     )
     def test_with_real_openai_model_simple_schema(self):
         # Create a real OpenAI model
-        print("OPENAI_API_KEY", os.environ.get("OPENAI_API_KEY"))
         llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
         # Create a component with a simple schema
