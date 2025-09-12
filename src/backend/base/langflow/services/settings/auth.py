@@ -28,7 +28,7 @@ class AuthSettings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     AUTO_LOGIN: bool = Field(
-        default=True,  # TODO: Set to False in v1.6
+        default=False,
         description=(
             "Enable automatic login with default credentials. "
             "SECURITY WARNING: This bypasses authentication and should only be used in development environments. "
@@ -36,9 +36,6 @@ class AuthSettings(BaseSettings):
         ),
     )
     """If True, the application will attempt to log in automatically as a super user."""
-    skip_auth_auto_login: bool = True
-    """If True, the application will skip authentication when AUTO_LOGIN is enabled.
-    This will be removed in v1.6"""
 
     ENABLE_SUPERUSER_CLI: bool = Field(
         default=True,
@@ -47,6 +44,10 @@ class AuthSettings(BaseSettings):
     """If True, allows creation of superusers via the CLI 'langflow superuser' command."""
 
     NEW_USER_IS_ACTIVE: bool = False
+
+    clear_superuser_credentials: bool = False
+    """If True, the superuser credentials can be cleared from memory successfully. """
+
     SUPERUSER: str = DEFAULT_SUPERUSER
     # Store password as SecretStr to prevent accidental plaintext exposure
     SUPERUSER_PASSWORD: SecretStr = Field(default=DEFAULT_SUPERUSER_PASSWORD)
@@ -72,16 +73,18 @@ class AuthSettings(BaseSettings):
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
     def reset_credentials(self) -> None:
-        # Preserve the configured username but scrub the password from memory to avoid plaintext exposure.
+        self.clear_superuser_credentials = True
+        # Field validators are run on assignment, so set the value to trigger the validator
         self.SUPERUSER_PASSWORD = SecretStr("")
 
-    # If autologin is true, then we need to set the credentials to
-    # the default values
-    # so we need to validate the superuser and superuser_password
-    # fields
     @field_validator("SUPERUSER", "SUPERUSER_PASSWORD", mode="before")
     @classmethod
     def validate_superuser(cls, value, info):
+        """Validate the superuser and superuser_password fields.
+
+        If AUTO_LOGIN is enabled, force superuser to use default values.
+        If clear_superuser_credentials is True, clear the superuser credentials from memory.
+        """
         # When AUTO_LOGIN is enabled, force superuser to use default values.
         if info.data.get("AUTO_LOGIN"):
             logger.debug("Auto login is enabled, forcing superuser to use default values")
@@ -92,6 +95,11 @@ class AuthSettings(BaseSettings):
             if info.field_name == "SUPERUSER_PASSWORD":
                 if value != DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
                     logger.debug("Resetting superuser password to default value")
+
+                if info.data.get("clear_superuser_credentials"):
+                    logger.debug("Clearing superuser credentials from memory")
+                    return SecretStr("")
+
                 return DEFAULT_SUPERUSER_PASSWORD
 
         return value

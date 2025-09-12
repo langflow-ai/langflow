@@ -32,12 +32,7 @@ api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
 MINIMUM_KEY_LENGTH = 32
-AUTO_LOGIN_WARNING = "In v1.6 LANGFLOW_SKIP_AUTH_AUTO_LOGIN will be removed. Please update your authentication method."
-AUTO_LOGIN_ERROR = (
-    "Since v1.5, LANGFLOW_AUTO_LOGIN requires a valid API key. "
-    "Set LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true to skip this check. "
-    "Please update your authentication method."
-)
+AUTO_LOGIN_ERROR = "Since v1.5, LANGFLOW_AUTO_LOGIN requires a valid API key. Please update your authentication method."
 
 
 # Source: https://github.com/mrtolkien/fastapi_simple_security/blob/master/fastapi_simple_security/security_api_key.py
@@ -57,10 +52,6 @@ async def api_key_security(
                     detail="Missing first superuser credentials",
                 )
             if not query_param and not header_param:
-                if settings_service.auth_settings.skip_auth_auto_login:
-                    result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
-                    logger.warning(AUTO_LOGIN_WARNING)
-                    return UserRead.model_validate(result, from_attributes=True)
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=AUTO_LOGIN_ERROR,
@@ -102,16 +93,11 @@ async def ws_api_key_security(
                     reason="Missing first superuser credentials",
                 )
             if not api_key:
-                if settings.auth_settings.skip_auth_auto_login:
-                    result = await get_user_by_username(db, settings.auth_settings.SUPERUSER)
-                    logger.warning(AUTO_LOGIN_WARNING)
-                else:
-                    raise WebSocketException(
-                        code=status.WS_1008_POLICY_VIOLATION,
-                        reason=AUTO_LOGIN_ERROR,
-                    )
-            else:
-                result = await check_key(db, api_key)
+                raise WebSocketException(
+                    code=status.WS_1008_POLICY_VIOLATION,
+                    reason=AUTO_LOGIN_ERROR,
+                )
+            result = await check_key(db, api_key)
 
         # normal path: must provide an API key
         else:
@@ -408,17 +394,13 @@ async def create_refresh_token(refresh_token: str, db: AsyncSession):
         user_id: UUID = payload.get("sub")  # type: ignore[assignment]
         token_type: str = payload.get("type")  # type: ignore[assignment]
 
-        if user_id is None or token_type != "refresh":  # noqa: S105
+        if user_id is None or token_type == "":
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
         user_exists = await get_user_by_id(db, user_id)
 
         if user_exists is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
-
-        # Security: Check if user is still active
-        if not user_exists.is_active:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account is inactive")
 
         return await create_user_tokens(user_id, db)
 
@@ -505,7 +487,8 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
     return ""
 
 
-# MCP-specific authentication functions that always behave as if skip_auth_auto_login is True
+# NOTE: MCP-specific authentication functions that always behave as if AUTO_LOGIN is enabled
+# and authentication is skipped
 async def get_current_user_mcp(
     token: Annotated[str, Security(oauth2_login)],
     query_param: Annotated[str, Security(api_key_query)],
@@ -523,7 +506,7 @@ async def get_current_user_mcp(
     if token:
         return await get_current_user_by_jwt(token, db)
 
-    # MCP-specific authentication logic - always behaves as if skip_auth_auto_login is True
+    # MCP-specific authentication logic - does not require API keys if AUTO_LOGIN is enabled
     settings_service = get_settings_service()
     result: ApiKey | User | None
 
@@ -538,7 +521,7 @@ async def get_current_user_mcp(
             # For MCP endpoints, always fall back to username lookup when no API key is provided
             result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
             if result:
-                logger.warning(AUTO_LOGIN_WARNING)
+                logger.warning("AUTO_LOGIN is enabled; authentication is skipped for MCP endpoints")
                 return result
         else:
             result = await check_key(db, query_param or header_param)
