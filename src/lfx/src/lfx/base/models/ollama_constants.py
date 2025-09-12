@@ -1,5 +1,6 @@
 # https://ollama.com/search?c=embedding
 OLLAMA_EMBEDDING_MODELS = [
+    "embeddinggemma",
     "nomic-embed-text",
     "mxbai-embed-large",
     "snowflake-arctic-embed",
@@ -12,6 +13,8 @@ OLLAMA_EMBEDDING_MODELS = [
 ]
 # https://ollama.com/search?c=tools
 OLLAMA_TOOL_MODELS_BASE = [
+    "gpt-oss:20b",
+    "gpt-oss:120b",
     "llama3.3",
     "qwq",
     "llama3.2",
