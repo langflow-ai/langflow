@@ -44,6 +44,10 @@ class AuthSettings(BaseSettings):
     """If True, allows creation of superusers via the CLI 'langflow superuser' command."""
 
     NEW_USER_IS_ACTIVE: bool = False
+
+    clear_superuser_credentials: bool = False
+    """If True, the superuser credentials can be cleared from memory successfully. """
+
     SUPERUSER: str = DEFAULT_SUPERUSER
     # Store password as SecretStr to prevent accidental plaintext exposure
     SUPERUSER_PASSWORD: SecretStr = Field(default=DEFAULT_SUPERUSER_PASSWORD)
@@ -67,9 +71,6 @@ class AuthSettings(BaseSettings):
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
-
-    clear_superuser_credentials: bool = False
-    """If True, the superuser credentials can be cleared from memory successfully. """
 
     def reset_credentials(self) -> None:
         self.clear_superuser_credentials = True
