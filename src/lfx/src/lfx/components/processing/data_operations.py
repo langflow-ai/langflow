@@ -463,7 +463,11 @@ class DataOperationsComponent(Component):
                 build_config["data"]["is_list"] = config["is_list"]
                 logger.info(config["log_msg"])
                 return set_current_fields(
-                    build_config, self.actions_data, action, ["operations", "data"], set_field_display
+                    build_config=build_config,
+                    action_fields=self.actions_data,
+                    selected_action=action,
+                    default_fields=["operations", "data"],
+                    func=set_field_display,
                 )
 
         if field_name == "mapped_json_display":
