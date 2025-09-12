@@ -217,7 +217,7 @@ class TestRefreshTokenSecurity:
     @pytest.mark.skip(reason="Token type validation not implemented - security enhancement for future")
     async def test_refresh_token_type_validation(self):
         """Test that refresh token validates token type.
-        
+
         NOTE: Currently the code doesn't validate that the token type is 'refresh'.
         It only checks if the token_type is empty. This should be enhanced.
         """
@@ -246,7 +246,7 @@ class TestRefreshTokenSecurity:
     @pytest.mark.skip(reason="User activity check not implemented yet - security enhancement for future")
     async def test_refresh_token_user_active_check(self):
         """Test that inactive users cannot refresh tokens.
-        
+
         NOTE: This is a security enhancement that should be implemented.
         Currently, the system does not check if a user is active when refreshing tokens.
         """
