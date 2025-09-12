@@ -2838,31 +2838,7 @@
             "frozen": false,
             "icon": "AstraDB",
             "legacy": false,
-            "metadata": {
-              "code_hash": "45152a287ecf",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "astrapy",
-                    "version": "2.0.1"
-                  },
-                  {
-                    "name": "langchain_astradb",
-                    "version": "0.6.0"
-                  },
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.75"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 4
-              },
-              "module": "langflow.components.datastax.astradb_vectorstore.AstraDBVectorStoreComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -3651,31 +3627,7 @@
             "frozen": false,
             "icon": "AstraDB",
             "legacy": false,
-            "metadata": {
-              "code_hash": "45152a287ecf",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "astrapy",
-                    "version": "2.0.1"
-                  },
-                  {
-                    "name": "langchain_astradb",
-                    "version": "0.6.0"
-                  },
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.75"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 4
-              },
-              "module": "langflow.components.datastax.astradb_vectorstore.AstraDBVectorStoreComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
