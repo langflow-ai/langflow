@@ -51,7 +51,7 @@ on:
         options:
           - ubuntu-latest
           - self-hosted
-        default: self-hosted
+        default: ubuntu-latest
 
 
 
