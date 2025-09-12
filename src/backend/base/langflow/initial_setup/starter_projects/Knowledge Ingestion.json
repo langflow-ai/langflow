@@ -86,23 +86,7 @@
             "icon": "scissors-line-dashed",
             "legacy": false,
             "lf_version": "1.5.0.post1",
-            "metadata": {
-              "code_hash": "dbf2e9d2319d",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_text_splitters",
-                    "version": "0.3.9"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
-              },
-              "module": "langflow.components.processing.split_text.SplitTextComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -350,31 +334,7 @@
             "icon": "layout-template",
             "legacy": false,
             "lf_version": "1.5.0.post1",
-            "metadata": {
-              "code_hash": "b5c50602651a",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "requests",
-                    "version": "2.32.5"
-                  },
-                  {
-                    "name": "bs4",
-                    "version": "4.12.3"
-                  },
-                  {
-                    "name": "langchain_community",
-                    "version": "0.3.21"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 4
-              },
-              "module": "langflow.components.data.url.URLComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
@@ -734,47 +694,7 @@
             "icon": "upload",
             "last_updated": "2025-08-26T18:21:03.358Z",
             "legacy": false,
-            "metadata": {
-              "code_hash": "91e88b11ddbc",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "pandas",
-                    "version": "2.2.3"
-                  },
-                  {
-                    "name": "cryptography",
-                    "version": "43.0.3"
-                  },
-                  {
-                    "name": "langchain_chroma",
-                    "version": "0.1.4"
-                  },
-                  {
-                    "name": "loguru",
-                    "version": "0.7.3"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  },
-                  {
-                    "name": "langchain_openai",
-                    "version": "0.3.23"
-                  },
-                  {
-                    "name": "langchain_huggingface",
-                    "version": "0.3.1"
-                  },
-                  {
-                    "name": "langchain_cohere",
-                    "version": "0.3.3"
-                  }
-                ],
-                "total_dependencies": 8
-              },
-              "module": "langflow.components.knowledge_bases.ingestion.KnowledgeIngestionComponent"
-            },
+            "metadata": {},
             "minimized": false,
             "output_types": [],
             "outputs": [
