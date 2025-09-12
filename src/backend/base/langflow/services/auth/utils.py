@@ -408,13 +408,17 @@ async def create_refresh_token(refresh_token: str, db: AsyncSession):
         user_id: UUID = payload.get("sub")  # type: ignore[assignment]
         token_type: str = payload.get("type")  # type: ignore[assignment]
 
-        if user_id is None or token_type == "":
+        if user_id is None or token_type != "refresh":  # noqa: S105
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
         user_exists = await get_user_by_id(db, user_id)
 
         if user_exists is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+        # Security: Check if user is still active
+        if not user_exists.is_active:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account is inactive")
 
         return await create_user_tokens(user_id, db)
 

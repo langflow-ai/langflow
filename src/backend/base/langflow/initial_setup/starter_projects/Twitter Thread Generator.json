@@ -282,19 +282,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "metadata": {
-              "code_hash": "5f2d98ee19db",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.input_output.chat.ChatInput"
-            },
+            "metadata": {},
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -534,19 +522,7 @@
             "icon": "type",
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {
-              "code_hash": "efdcba3771af",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.input_output.text.TextInputComponent"
-            },
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -661,27 +637,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "metadata": {
-              "code_hash": "765fdf2ed814",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "langflow.components.input_output.chat_output.ChatOutput"
-            },
+            "metadata": {},
             "minimized": true,
             "output_types": [],
             "outputs": [
@@ -900,19 +856,7 @@
             "icon": "type",
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {
-              "code_hash": "efdcba3771af",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.input_output.text.TextInputComponent"
-            },
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1017,19 +961,7 @@
             "icon": "type",
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {
-              "code_hash": "efdcba3771af",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.input_output.text.TextInputComponent"
-            },
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1134,19 +1066,7 @@
             "icon": "type",
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {
-              "code_hash": "efdcba3771af",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.input_output.text.TextInputComponent"
-            },
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1251,19 +1171,7 @@
             "icon": "type",
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {
-              "code_hash": "efdcba3771af",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.input_output.text.TextInputComponent"
-            },
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -1368,19 +1276,7 @@
             "icon": "type",
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {
-              "code_hash": "efdcba3771af",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "langflow.components.input_output.text.TextInputComponent"
-            },
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
