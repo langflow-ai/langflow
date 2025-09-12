@@ -1311,7 +1311,7 @@ class Component(CustomComponent):
     def _get_fallback_input(self, **kwargs):
         return Input(**kwargs)
 
-    def to_toolkit(self) -> list[Tool]:
+    async def to_toolkit(self) -> list[Tool]:
         """Convert component to a list of tools.
 
         This is a template method that defines the skeleton of the toolkit creation
@@ -1325,7 +1325,11 @@ class Component(CustomComponent):
                 - tags: List of tags associated with the tool
         """
         # Get tools from subclass implementation
-        tools = self._get_tools()
+        # Handle both sync and async _get_tools methods
+        if asyncio.iscoroutinefunction(self._get_tools):
+            tools = await self._get_tools()
+        else:
+            tools = self._get_tools()
 
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             tools = self._filter_tools_by_status(tools=tools, metadata=self.tools_metadata)
