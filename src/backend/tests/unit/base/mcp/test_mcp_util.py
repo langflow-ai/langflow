@@ -251,6 +251,366 @@ class TestSSEHeaderIntegration:
         assert sse_client._connection_params["headers"] == test_headers
 
 
+class TestFieldNameConversion:
+    """Test camelCase to snake_case field name conversion functionality."""
+
+    def test_camel_to_snake_basic(self):
+        """Test basic camelCase to snake_case conversion."""
+        assert util._camel_to_snake("weatherMain") == "weather_main"
+        assert util._camel_to_snake("topN") == "top_n"
+        assert util._camel_to_snake("firstName") == "first_name"
+        assert util._camel_to_snake("lastName") == "last_name"
+
+    def test_camel_to_snake_edge_cases(self):
+        """Test edge cases for camelCase conversion."""
+        # Already snake_case should remain unchanged
+        assert util._camel_to_snake("snake_case") == "snake_case"
+        assert util._camel_to_snake("already_snake") == "already_snake"
+
+        # Single word should remain unchanged
+        assert util._camel_to_snake("simple") == "simple"
+        assert util._camel_to_snake("UPPER") == "upper"
+
+        # Multiple consecutive capitals
+        assert util._camel_to_snake("XMLHttpRequest") == "xmlhttp_request"
+        assert util._camel_to_snake("HTTPSConnection") == "httpsconnection"
+
+        # Numbers
+        assert util._camel_to_snake("version2Beta") == "version2_beta"
+        assert util._camel_to_snake("test123Value") == "test123_value"
+
+    def test_convert_field_names_exact_match(self):
+        """Test field name conversion when fields already match schema."""
+        from pydantic import Field, create_model
+
+        # Create test schema with snake_case fields
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+        )
+
+        # Input with exact field names should pass through unchanged
+        input_args = {"weather_main": "Snow", "top_n": 6}
+        result = util._convert_field_names(input_args, test_schema)
+
+        assert result == {"weather_main": "Snow", "top_n": 6}
+
+    def test_convert_field_names_camel_to_snake(self):
+        """Test field name conversion from camelCase to snake_case."""
+        from pydantic import Field, create_model
+
+        # Create test schema with snake_case fields
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+            user_id=(str, Field(..., description="User identifier")),
+        )
+
+        # Input with camelCase field names
+        input_args = {"weatherMain": "Snow", "topN": 6, "userId": "user123"}
+        result = util._convert_field_names(input_args, test_schema)
+
+        assert result == {"weather_main": "Snow", "top_n": 6, "user_id": "user123"}
+
+    def test_convert_field_names_mixed_case(self):
+        """Test field name conversion with mixed naming conventions."""
+        from pydantic import Field, create_model
+
+        # Create test schema with mixed field names
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            topN=(int, Field(..., description="Number of results")),  # Already camelCase in schema
+            user_count=(int, Field(..., description="User count")),
+        )
+
+        # Input with mixed naming
+        input_args = {"weatherMain": "Snow", "topN": 6, "user_count": 42}
+        result = util._convert_field_names(input_args, test_schema)
+
+        # weather_main should be converted, topN should match exactly, user_count should match exactly
+        assert result == {"weather_main": "Snow", "topN": 6, "user_count": 42}
+
+    def test_convert_field_names_no_match(self):
+        """Test field name conversion with fields that don't match schema."""
+        from pydantic import Field, create_model
+
+        # Create test schema
+        test_schema = create_model("TestSchema", expected_field=(str, Field(..., description="Expected field")))
+
+        # Input with unrecognized field names
+        input_args = {"unknownField": "value", "anotherField": "value2"}
+        result = util._convert_field_names(input_args, test_schema)
+
+        # Fields that don't match should be kept as-is (validation will catch errors)
+        assert result == {"unknownField": "value", "anotherField": "value2"}
+
+    def test_convert_field_names_empty_input(self):
+        """Test field name conversion with empty input."""
+        from pydantic import Field, create_model
+
+        test_schema = create_model("TestSchema", test_field=(str, Field(..., description="Test field")))
+
+        # Empty input should return empty result
+        result = util._convert_field_names({}, test_schema)
+        assert result == {}
+
+    def test_field_conversion_in_tool_validation(self):
+        """Test that field conversion works end-to-end with Pydantic validation."""
+        from pydantic import Field, create_model
+
+        # Create test schema matching the original error case
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of top results")),
+        )
+
+        # Original error case: camelCase input
+        input_args = {"weatherMain": "Snow", "topN": 6}
+        converted_args = util._convert_field_names(input_args, test_schema)
+
+        # Should validate successfully with converted field names
+        validated = test_schema.model_validate(converted_args)
+        assert validated.weather_main == "Snow"
+        assert validated.top_n == 6
+        assert validated.model_dump() == {"weather_main": "Snow", "top_n": 6}
+
+    def test_field_conversion_preserves_values(self):
+        """Test that field conversion preserves all value types correctly."""
+        from pydantic import Field, create_model
+
+        test_schema = create_model(
+            "TestSchema",
+            string_field=(str, Field(...)),
+            int_field=(int, Field(...)),
+            bool_field=(bool, Field(...)),
+            list_field=(list, Field(...)),
+            dict_field=(dict, Field(...)),
+        )
+
+        input_args = {
+            "stringField": "test_string",
+            "intField": 42,
+            "boolField": True,
+            "listField": [1, 2, 3],
+            "dictField": {"nested": "value"},
+        }
+
+        result = util._convert_field_names(input_args, test_schema)
+
+        expected = {
+            "string_field": "test_string",
+            "int_field": 42,
+            "bool_field": True,
+            "list_field": [1, 2, 3],
+            "dict_field": {"nested": "value"},
+        }
+
+        assert result == expected
+
+
+class TestToolExecutionWithFieldConversion:
+    """Test that field name conversion works in actual tool execution."""
+
+    def test_create_tool_coroutine_with_camel_case_fields(self):
+        """Test that create_tool_coroutine handles camelCase field conversion."""
+        from unittest.mock import AsyncMock
+
+        from pydantic import Field, create_model
+
+        # Create test schema with snake_case fields
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+        )
+
+        # Mock client
+        mock_client = AsyncMock()
+        mock_client.run_tool = AsyncMock(return_value="tool_result")
+
+        # Create tool coroutine
+        tool_coroutine = util.create_tool_coroutine("test_tool", test_schema, mock_client)
+
+        # Test that it's actually a coroutine function
+        import asyncio
+
+        assert asyncio.iscoroutinefunction(tool_coroutine)
+
+    def test_create_tool_func_with_camel_case_fields(self):
+        """Test that create_tool_func handles camelCase field conversion."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        from pydantic import Field, create_model
+
+        # Create test schema with snake_case fields
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+        )
+
+        # Mock client with async run_tool method
+        mock_client = AsyncMock()
+        mock_client.run_tool = AsyncMock(return_value="tool_result")
+
+        # Create tool function
+        tool_func = util.create_tool_func("test_tool", test_schema, mock_client)
+
+        # Mock the event loop
+        mock_loop = MagicMock()
+        mock_loop.run_until_complete = MagicMock(return_value="tool_result")
+
+        with patch("asyncio.get_event_loop", return_value=mock_loop):
+            # Test with camelCase arguments
+            result = tool_func(weatherMain="Snow", topN=6)
+
+            assert result == "tool_result"
+            # Verify that run_until_complete was called
+            mock_loop.run_until_complete.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_tool_coroutine_field_conversion_end_to_end(self):
+        """Test end-to-end field conversion in tool coroutine."""
+        from unittest.mock import AsyncMock
+
+        from pydantic import Field, create_model
+
+        # Create test schema with snake_case fields (matching original error case)
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+        )
+
+        # Mock client
+        mock_client = AsyncMock()
+        mock_client.run_tool = AsyncMock(return_value="success")
+
+        # Create tool coroutine
+        tool_coroutine = util.create_tool_coroutine("test_tool", test_schema, mock_client)
+
+        # Test with camelCase keyword arguments (the problematic case)
+        result = await tool_coroutine(weatherMain="Snow", topN=6)
+
+        assert result == "success"
+        # Verify client was called with converted field names
+        mock_client.run_tool.assert_called_once_with("test_tool", arguments={"weather_main": "Snow", "top_n": 6})
+
+    @pytest.mark.asyncio
+    async def test_tool_coroutine_positional_args_no_conversion(self):
+        """Test that positional arguments work correctly without field conversion."""
+        from unittest.mock import AsyncMock
+
+        from pydantic import Field, create_model
+
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+        )
+
+        # Mock client
+        mock_client = AsyncMock()
+        mock_client.run_tool = AsyncMock(return_value="success")
+
+        # Create tool coroutine
+        tool_coroutine = util.create_tool_coroutine("test_tool", test_schema, mock_client)
+
+        # Test with positional arguments
+        result = await tool_coroutine("Snow", 6)
+
+        assert result == "success"
+        # Verify client was called with correct field mapping
+        mock_client.run_tool.assert_called_once_with("test_tool", arguments={"weather_main": "Snow", "top_n": 6})
+
+    @pytest.mark.asyncio
+    async def test_tool_coroutine_mixed_args_and_conversion(self):
+        """Test mixed positional and keyword arguments with field conversion."""
+        from unittest.mock import AsyncMock
+
+        from pydantic import Field, create_model
+
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+            user_id=(str, Field(..., description="User ID")),
+        )
+
+        # Mock client
+        mock_client = AsyncMock()
+        mock_client.run_tool = AsyncMock(return_value="success")
+
+        # Create tool coroutine
+        tool_coroutine = util.create_tool_coroutine("test_tool", test_schema, mock_client)
+
+        # Test with one positional arg and camelCase keyword args
+        result = await tool_coroutine("Snow", topN=6, userId="user123")
+
+        assert result == "success"
+        # Verify field names were properly converted
+        mock_client.run_tool.assert_called_once_with(
+            "test_tool", arguments={"weather_main": "Snow", "top_n": 6, "user_id": "user123"}
+        )
+
+    @pytest.mark.asyncio
+    async def test_tool_coroutine_validation_error_with_conversion(self):
+        """Test that validation errors are properly handled after field conversion."""
+        from unittest.mock import AsyncMock
+
+        from pydantic import Field, create_model
+
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Required field")),
+            top_n=(int, Field(..., description="Required field")),
+        )
+
+        # Mock client
+        mock_client = AsyncMock()
+
+        # Create tool coroutine
+        tool_coroutine = util.create_tool_coroutine("test_tool", test_schema, mock_client)
+
+        # Test with missing required field (should fail validation even after conversion)
+        with pytest.raises(ValueError, match="Invalid input"):
+            await tool_coroutine(weatherMain="Snow")  # Missing topN/top_n
+
+    def test_tool_func_field_conversion_sync(self):
+        """Test that create_tool_func handles field conversion in sync context."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        from pydantic import Field, create_model
+
+        test_schema = create_model(
+            "TestSchema",
+            user_name=(str, Field(..., description="User name")),
+            max_results=(int, Field(..., description="Maximum results")),
+        )
+
+        # Mock client
+        mock_client = AsyncMock()
+        mock_client.run_tool = AsyncMock(return_value="sync_result")
+
+        # Create tool function
+        tool_func = util.create_tool_func("test_tool", test_schema, mock_client)
+
+        # Mock asyncio.get_event_loop
+        mock_loop = MagicMock()
+        mock_loop.run_until_complete = MagicMock(return_value="sync_result")
+
+        with patch("asyncio.get_event_loop", return_value=mock_loop):
+            # Test with camelCase fields
+            result = tool_func(userName="testuser", maxResults=10)
+
+            assert result == "sync_result"
+            mock_loop.run_until_complete.assert_called_once()
+
+
 class TestMCPUtilityFunctions:
     """Test utility functions from util.py that don't have dedicated test classes."""
 

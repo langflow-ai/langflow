@@ -7,7 +7,11 @@ from lfx.io import DictInput, DropdownInput
 
 class AmazonBedrockComponent(LCModelComponent):
     display_name: str = "Amazon Bedrock"
-    description: str = "Generate text using Amazon Bedrock LLMs."
+    description: str = (
+        "Generate text using Amazon Bedrock LLMs with the legacy ChatBedrock API. "
+        "For better compatibility, newer features, and improved conversation handling, "
+        "we recommend using Amazon Bedrock Converse instead."
+    )
     icon = "Amazon"
     name = "AmazonBedrockModel"
 
