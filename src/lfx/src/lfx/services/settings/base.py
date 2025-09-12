@@ -189,6 +189,10 @@ class Settings(BaseSettings):
     """AWS access key ID for S3. If not set, uses LANGFLOW_S3_AWS_ACCESS_KEY_ID env var."""
     s3_aws_secret_access_key: str | None = None
     """AWS secret access key for S3. If not set, uses LANGFLOW_S3_AWS_SECRET_ACCESS_KEY env var."""
+    s3_aws_session_token: str | None = None
+    """AWS session token for S3. If not set, uses LANGFLOW_S3_AWS_SESSION_TOKEN env var."""
+    s3_role_arn: str | None = None
+    """AWS IAM role ARN for S3. If not set, uses LANGFLOW_S3_ROLE_ARN env var."""
     s3_storage_path: str | None = "tenants"
     """S3 storage path for file storage. If not set, uses LANGFLOW_S3_STORAGE_PATH env var or defaults to 'tenants'."""
 
