@@ -475,7 +475,6 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const hasMcpServers = Boolean(mcpServers && mcpServers.length > 0);
 
   const hasSearchInput = search !== "" || filterType !== undefined;
-  console.log("hasSearchInput", hasSearchInput);
 
   const showComponents =
     (ENABLE_NEW_SIDEBAR &&
