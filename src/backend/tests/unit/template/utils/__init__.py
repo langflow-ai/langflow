@@ -1,1 +1,0 @@
-"""Utils tests package."""
