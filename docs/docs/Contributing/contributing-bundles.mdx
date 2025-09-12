@@ -3,11 +3,13 @@ title: Contribute bundles
 slug: /contributing-bundles
 ---
 
-Bundles are groups of components that are related to a specific service provider.
+import Icon from "@site/src/components/icon";
 
-Follow these steps to add components to the **Bundles** section of the **Components** menu in the Langflow visual editor.
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) are groups of components that are related to a specific service provider.
+If you want to contribute your custom components back to the Langflow project, you must put them into a bundle.
 
-Example adds a new bundle named `DarthVader`.
+Follow these steps to add components to <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the Langflow visual editor.
+This example adds a bundle named `DarthVader`.
 
 ## Add the bundle to the backend folder
 
@@ -103,7 +105,7 @@ For example:
         import("@/icons/DeepSeek").then((mod) => ({ default: mod.DeepSeekIcon })),
     ```
 
-8. To add your bundle to the **Bundles** menu, edit the [`SIDEBAR_BUNDLES` array](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/utils/styleUtils.ts#L231) in `/src/frontend/src/utils/styleUtils.ts`.
+8. To add your bundle to the <Icon name="Blocks" aria-hidden="true" /> **Bundles** menu, edit the [`SIDEBAR_BUNDLES` array](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/utils/styleUtils.ts#L231) in `/src/frontend/src/utils/styleUtils.ts`.
 
     Add an object to the array with the following keys:
 
@@ -139,4 +141,4 @@ class DarthVaderAPIComponent(LCToolComponent):
 1. To rebuild the backend and frontend, run `make install_frontend && make build_frontend && make install_backend && uv run langflow run --port 7860`.
 
 2. Refresh the frontend application.
-Your new bundle called `DarthVader` is available in the **Components** menu in the visual editor.
+Your new bundle called `DarthVader` is available in the <Icon name="Blocks" aria-hidden="true" /> **Bundles** menu in the visual editor.

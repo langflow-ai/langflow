@@ -13,6 +13,7 @@ Langflow provides several ways to run flows from external applications:
 * [Trigger flows with the Langflow API](#api-access)
 * [Add an embedded chat widget to a website](#embedded-chat-widget)
 * [Serve flows through a Langflow MCP server](#serve-flows-through-a-langflow-mcp-server)
+* [Run flows with the OpenAI Responses compatible endpoint](#openai-responses-api)
 
 Although you can use these options with an isolated, local Langflow instance, they are typically more valuable when you have [deployed a Langflow server](/deployment-overview) or [packaged Langflow as a dependency of an application](/develop-application).
 
@@ -526,6 +527,12 @@ In addition to serving flows through Langflow MCP servers, you can use Langflow 
 Interactions with Langflow MCP servers happen through the Langflow API's `/mcp` endpoints.
 
 For more information, see [Use Langflow as an MCP server](/mcp-server) and [Use Langflow as an MCP client](/mcp-client).
+
+## Run flows with the OpenAI Responses compatible endpoint {#openai-responses-api}
+
+Langflow includes an OpenAI Responses API-compatible endpoint at `/api/v1/responses` that allows you to use existing OpenAI client libraries and code with minimal modifications.
+
+For more information, see [OpenAI Responses API](/api-openai-responses).
 
 ## See also
 

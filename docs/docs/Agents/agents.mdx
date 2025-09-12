@@ -86,9 +86,9 @@ You can configure the **Agent** component to use your preferred provider and mod
 Use the **Model Provider** (`agent_llm`) and **Model Name** (`llm_model`) settings to select the model provider and LLM that you want the agent to use.
 
 The **Agent** component includes many models from several popular model providers.
-To access other providers and models, set **Model Provider** to **Custom**, and then connect any [**Language Model** component](/components-models).
+To access other providers and models, set **Model Provider** to **Connect other models**, and then connect any [language model component](/components-models).
 
-If you need to generate embeddings in your flow, use an [**Embedding Model** component](/components-embedding-models).
+If you need to generate embeddings in your flow, use an [embedding model component](/components-embedding-models).
 
 ### Model provider API key
 
@@ -99,7 +99,7 @@ You can enter the key directly, but it is recommended that you follow industry b
 For example, you can use a <Icon name="Globe" aria-hidden="true"/> [global variable](/configuration-global-variables) or [environment variables](/environment-variables).
 For more information, see [Add component API keys to Langflow](/api-keys-and-authentication#component-api-keys).
 
-If you select **Custom** as the model provider, authentication is handled in the incoming **Language Model** component.
+If you select **Connect other models** as the model provider, authentication is handled in the incoming language model component.
 
 ### Agent instructions and input
 

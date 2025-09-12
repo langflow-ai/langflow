@@ -16,13 +16,17 @@ In the Langflow header, click your profile icon, select **Settings**, and then c
 
 ## Add a component to a flow {#component-menus}
 
-To add a component to a flow, drag the component from the **Components** menu to the [workspace](/concepts-overview).
+To add a component to a flow, drag the component from the <Icon name="Component" aria-hidden="true" /> **Core components** or <Icon name="Blocks" aria-hidden="true" /> **Bundles** menu into the [workspace](/concepts-overview#workspace).
 
-The **Components** menu is organized by component type or provider, and some components are hidden by default.
+Components are grouped by type or provider, and some components are hidden by default:
 
-* **Core**: The categories near the top of the **Components** menu are Langflow's core components. They are grouped by purpose, such as **Inputs and Outputs** or **Data**. **Beta** components are newly released and still in development.
-* **Bundles**: These components support specific third-party integrations, and they are grouped by provider.
-* **Legacy**: You can still use these components, but they are no longer supported. Legacy components are hidden by default; click <Icon name="SlidersHorizontal" aria-hidden="true" /> **Component settings** to expose legacy components.
+* <Icon name="Component" aria-hidden="true" /> **Core components**: Langflow's base components are grouped by purpose, such as **Inputs and Outputs** or **Data**.
+These components either provide generic functionality, like loops and parsing, or they provide single components that support multiple third-party integrations.
+
+* <Icon name="Blocks" aria-hidden="true" /> **Bundles**: Bundles contain one or more components that support specific third-party integrations, and they are grouped by service provider.
+
+* **Legacy**: These components are hidden by default.
+For more information, see [Legacy components](#legacy-components).
 
 ### Configure a component
 
@@ -91,9 +95,8 @@ When building flows, connect output ports to input ports of the same type (color
 For information about the programmatic representation of each data type, see [Langflow data types](/data-types).
 
 :::tip
-* Hover over a port to see connection details for that port.
-
-* Click a port to filter the **Components** menu by compatible components.
+* In the workspace, hover over a port to see connection details for that port.
+Click a port to <Icon name="Search" aria-hidden="true" /> **Search** for compatible components.
 
 * If two components have incompatible data types, you can use a processing component like the [**Type Convert** component](/components-processing#type-convert) to convert the data between components.
 :::
@@ -115,7 +118,7 @@ Some components can produce multiple types of output:
 
 * If the component emits only one type, you must select the output type by clicking the output label near the output port, and then selecting the desired output type. In component code, this is represented by `group_outputs=False` or omitting the `group_outputs` parameter.
 
-For example, the **Language Model** component can output _either_ a **Model Response** or **Language Model**.
+For example, a language model component can output _either_ a **Model Response** or **Language Model**.
 The **Model Response** output produces [`Message`](/data-types#message) data that can be passed to another component's `Message` port.
 The **Language Model** output must be connected to a component with a **Language Model** input, such as the [**Structured Output** component](/components-processing#structured-output), that uses the attached LLM to power the receiving component's reasoning.
 
@@ -253,4 +256,10 @@ Grouped components are configured and managed as a single component, including t
 
 To ungroup the components, click the component in the workspace to expose the component's header menu, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**, and then select **Ungroup**.
 
-If you want to reuse this grouping in other flows, click the component in the workspace to expose the component's header menu, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**, and then select **Save** to save the component to the **Components** menu.
+If you want to reuse this grouping in other flows, click the component in the workspace to expose the component's header menu, click <Icon name="Ellipsis" aria-hidden="true" /> **Show More**, and then select **Save** to save the component to the <Icon name="Component" aria-hidden="true" /> **Core components** menu as a custom component.
+
+## Legacy components
+
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
+
+<PartialLegacy />
