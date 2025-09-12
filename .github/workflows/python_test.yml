@@ -24,6 +24,11 @@ on:
         required: false
         type: boolean
         default: false
+      runs-on:
+        description: "Runner to use for the tests"
+        required: false
+        type: string
+        default: "ubuntu-latest"
   workflow_dispatch:
     inputs:
       python-versions:
@@ -31,6 +36,14 @@ on:
         required: true
         type: string
         default: "['3.10', '3.11', '3.12', '3.13']"
+      runs-on:
+        description: "Runner to use for the tests"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+        default: ubuntu-latest
 env:
   POETRY_VERSION: "1.8.2"
   NODE_VERSION: "21"
@@ -42,7 +55,7 @@ jobs:
   build:
 
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on || 'ubuntu-latest' }}
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
@@ -108,7 +121,7 @@ jobs:
 
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on || 'ubuntu-latest' }}
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
@@ -133,7 +146,7 @@ jobs:
 
   lfx-tests:
     name: LFX Tests - Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on || 'ubuntu-latest' }}
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
@@ -155,7 +168,7 @@ jobs:
 
   test-cli:
     name: Test CLI - Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on || 'ubuntu-latest' }}
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}

@@ -2,6 +2,15 @@ name: Nightly Build
 
 on:
   workflow_dispatch:
+    inputs:
+      runs_on:
+        description: "Runner to use for tests (use self-hosted for safe/release code)"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+        default: self-hosted
   schedule:
     # Run job at 00:00 UTC (4:00 PM PST / 5:00 PM PDT)
     - cron: "0 0 * * *"
@@ -145,6 +154,7 @@ jobs:
     with:
       tests_folder: "tests"
       release: true
+      runs-on: ${{ inputs.runs_on || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
@@ -158,6 +168,7 @@ jobs:
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13"]'
+      runs-on: ${{ inputs.runs_on || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
