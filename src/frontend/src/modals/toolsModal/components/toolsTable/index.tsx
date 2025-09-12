@@ -361,7 +361,10 @@ export default function ToolsTable({
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-1" data-testid="sidebar_header">
+              <div
+                className="flex flex-col gap-1 p-4"
+                data-testid="sidebar_header"
+              >
                 <h3
                   className="text-base font-medium"
                   data-testid="sidebar_header_name"
@@ -376,7 +379,7 @@ export default function ToolsTable({
                 </p>
               </div>
             ))}
-          {!isAction && <Separator />}
+          {!isAction && actionArgs.length > 0 && <Separator />}
           {focusedRow && (
             <div className="flex h-full flex-col gap-4 p-2">
               <SidebarGroup className="flex-1">
