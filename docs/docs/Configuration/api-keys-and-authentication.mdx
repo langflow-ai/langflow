@@ -173,15 +173,6 @@ Controls the availability of the `langflow superuser` command in the Langflow CL
 The default is true, but false is recommended to prevent unrestricted superuser creation.
 For more information, see [`langflow superuser`](/configuration-cli#langflow-superuser).
 
-### LANGFLOW_NEW_USER_IS_ACTIVE {#langflow-new-user-is-active}
-
-Controls whether new users are automatically activated when they register.
-
-* If `LANGFLOW_NEW_USER_IS_ACTIVE=True`, new users are automatically activated and can immediately access the Langflow server.
-* If `LANGFLOW_NEW_USER_IS_ACTIVE=False`, new users must be manually activated by a superuser before they can access the server.
-
-This setting is only relevant when authentication is enabled (`LANGFLOW_AUTO_LOGIN=False`).
-
 ### LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD {#langflow-superuser}
 
 These variables specify the username and password for the Langflow server's superuser.
