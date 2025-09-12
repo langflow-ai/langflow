@@ -189,13 +189,13 @@ lfx = { workspace = true }
 
 [tool.uv.workspace]
 members = [
-    "src/backend/base",
+    "src/packages/base",
     ".",
-    "src/core",
+    "src/packages/core",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/backend/langflow"]
+packages = ["src/packages/langflow"]
 
 [project.urls]
 Repository = "https://github.com/langflow-ai/langflow"
@@ -262,7 +262,7 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 timeout = 150
 timeout_method = "signal"
 minversion = "6.0"
-testpaths = ["src/backend/tests", "src/core/tests"]
+testpaths = ["src/packages/base/tests", "src/packages/core/tests"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true
@@ -287,7 +287,7 @@ command_line = """
     --cov --cov-report=term --cov-report=html
     --instafail -ra -n auto -m "not api_key_required"
 """
-source = ["src/backend/base/langflow/"]
+source = ["src/packages/base/langflow/"]
 omit = ["*/alembic/*", "tests/*", "*/__init__.py"]
 
 
@@ -303,7 +303,7 @@ directory = "coverage"
 
 
 [tool.ruff]
-exclude = ["src/backend/base/langflow/alembic/*", "src/frontend/tests/assets/*"]
+exclude = ["src/packages/base/langflow/alembic/*", "src/frontend/tests/assets/*"]
 line-length = 120
 
 [tool.ruff.lint]
@@ -334,8 +334,8 @@ external = ["RUF027"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["D1", "INP", "T201"]
-"src/backend/base/langflow/alembic/versions/*" = ["INP001", "D415", "PGH003"]
-"src/backend/tests/*" = [
+"src/packages/base/langflow/alembic/versions/*" = ["INP001", "D415", "PGH003"]
+"src/packages/base/tests/*" = [
     "D1",
     "PLR2004",
     "S101",

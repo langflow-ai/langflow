@@ -5260,7 +5260,7 @@ requires-dist = [
     { name = "langchain-pinecone", specifier = ">=0.2.8" },
     { name = "langchain-sambanova", specifier = "==0.1.0" },
     { name = "langchain-unstructured", specifier = "==0.1.5" },
-    { name = "langflow-base", editable = "src/backend/base" },
+    { name = "langflow-base", editable = "src/packages/base" },
     { name = "langfuse", specifier = "==2.53.9" },
     { name = "langsmith", specifier = ">=0.3.42,<1.0.0" },
     { name = "langwatch", specifier = ">=0.2.11,<0.3.0" },
@@ -5376,7 +5376,7 @@ dev = [
 [[package]]
 name = "langflow-base"
 version = "0.6.0"
-source = { editable = "src/backend/base" }
+source = { editable = "src/packages/base" }
 dependencies = [
     { name = "aiofile" },
     { name = "aiofiles" },
@@ -5551,7 +5551,7 @@ requires-dist = [
     { name = "langchain-experimental", specifier = ">=0.3.4,<1.0.0" },
     { name = "langchain-ibm", specifier = ">=0.3.8" },
     { name = "langchainhub", specifier = "~=0.1.15" },
-    { name = "lfx", editable = "src/core" },
+    { name = "lfx", editable = "src/packages/core" },
     { name = "llama-cpp-python", marker = "extra == 'all'", specifier = ">=0.2.0" },
     { name = "llama-cpp-python", marker = "extra == 'local'", specifier = ">=0.2.0" },
     { name = "loguru", specifier = ">=0.7.1,<1.0.0" },
@@ -5790,7 +5790,7 @@ wheels = [
 [[package]]
 name = "lfx"
 version = "0.1.12"
-source = { editable = "src/core" }
+source = { editable = "src/packages/core" }
 dependencies = [
     { name = "aiofile" },
     { name = "aiofiles" },

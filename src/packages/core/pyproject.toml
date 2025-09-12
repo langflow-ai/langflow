@@ -85,16 +85,16 @@ external = ["RUF027"]
     "S101",
     "SLF001",
 ]
-"src/core/base/*" = [
+"src/packages/core/base/*" = [
     "SLF001",
 ]
-"src/core/components/*" = [
+"src/packages/core/components/*" = [
     "SLF001",
 ]
-"src/core/custom/*" = [
+"src/packages/core/custom/*" = [
     "SLF001",
 ]
-"src/core/graph/*" = [
+"src/packages/core/graph/*" = [
     "SLF001",
 ]
 
