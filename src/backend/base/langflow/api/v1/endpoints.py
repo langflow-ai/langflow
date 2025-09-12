@@ -283,6 +283,7 @@ async def simplified_run_flow(
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
+    context: dict | None = None,
 ):
     """Executes a specified flow by ID with support for streaming and telemetry.
 
@@ -296,6 +297,7 @@ async def simplified_run_flow(
         stream (bool): Whether to stream the response
         api_key_user (UserRead): Authenticated user from API key
         request (Request): The incoming HTTP request
+        context (dict | None): Optional context to pass to the flow
 
     Returns:
         Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results
@@ -332,6 +334,7 @@ async def simplified_run_flow(
                 api_key_user=api_key_user,
                 event_manager=event_manager,
                 client_consumed_queue=asyncio_queue_client_consumed,
+                context=context,
             )
         )
 
@@ -347,10 +350,7 @@ async def simplified_run_flow(
 
     try:
         result = await simple_run_flow(
-            flow=flow,
-            input_request=input_request,
-            stream=stream,
-            api_key_user=api_key_user,
+            flow=flow, input_request=input_request, stream=stream, api_key_user=api_key_user, context=context
         )
         end_time = time.perf_counter()
         background_tasks.add_task(
