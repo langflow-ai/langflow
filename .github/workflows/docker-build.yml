@@ -183,7 +183,7 @@ jobs:
             fi
           fi
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [get-version, setup]
     steps:
       - name: Check out the code at a specific ref
@@ -256,7 +256,7 @@ jobs:
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       packages: write
     needs: [build, get-version]
