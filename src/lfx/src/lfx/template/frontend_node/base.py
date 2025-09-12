@@ -28,6 +28,8 @@ class FrontendNode(BaseModel):
     """Name of the frontend node."""
     display_name: str | None = ""
     """Display name of the frontend node."""
+    alias: str | None = None
+    """Alias of the frontend node for user-friendly referencing."""
     priority: int | None = None
     """Priority of the frontend node."""
     documentation: str = ""

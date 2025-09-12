@@ -19,6 +19,8 @@ class Tweaks(RootModel):
     root: dict[str, str | dict[str, Any]] = Field(
         description="A dictionary of tweaks to adjust the flow's execution. "
         "Allows customizing flow behavior dynamically. "
+        "Keys can be node IDs, component aliases, or display names. "
+        "Aliases provide human-readable references (e.g., 'OpenAI#1', 'MyCustomLLM'). "
         "All tweaks are overridden by the input values.",
     )
     model_config = {
@@ -28,6 +30,8 @@ class Tweaks(RootModel):
                     "parameter_name": "value",
                     "Component Name": {"parameter_name": "value"},
                     "component_id": {"parameter_name": "value"},
+                    "OpenAI#1": {"temperature": 0.7},
+                    "MyCustomLLM": {"temperature": 0.3},
                 }
             ]
         }

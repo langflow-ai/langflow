@@ -17,6 +17,11 @@ import {
   trackDataLoaded,
   trackFlowBuild,
 } from "@/customization/utils/analytics";
+import {
+  assignAliasToNewComponent,
+  migrateExistingFlow,
+  needsMigration,
+} from "@/utils/aliasUtils";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import type { LogsLogType, VertexBuildTypeAPI } from "../types/api";
@@ -210,8 +215,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ isPending });
   },
   resetFlow: (flow) => {
-    const nodes = flow?.data?.nodes ?? [];
+    let nodes = flow?.data?.nodes ?? [];
     const edges = flow?.data?.edges ?? [];
+
+    // Migrate existing flows to assign aliases to duplicate components (backward compatibility)
+    if (needsMigration(nodes)) {
+      nodes = migrateExistingFlow(nodes);
+    }
+
     const brokenEdges = detectBrokenEdgesEdges(nodes, edges);
     if (brokenEdges.length > 0) {
       useAlertStore.getState().setErrorData({
@@ -477,6 +488,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         useGlobalVariablesStore.getState().unavailableFields,
         useGlobalVariablesStore.getState().globalVariablesEntries,
       );
+
+      // Generate alias for the pasted component
+      if (newNode.type === "genericNode") {
+        assignAliasToNewComponent(newNode, newNodes);
+      }
 
       // Add the new node to the list of nodes in state
       newNodes = newNodes

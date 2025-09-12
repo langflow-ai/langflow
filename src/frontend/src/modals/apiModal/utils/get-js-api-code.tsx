@@ -1,4 +1,5 @@
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
+import { convertTweaksToAliases } from "@/utils/aliasUtils";
 import {
   getAllChatInputNodeIds,
   getAllFileNodeIds,
@@ -15,11 +16,13 @@ export function getNewJsApiCode({
   endpointName,
   processedPayload,
   shouldDisplayApiKey,
+  nodes,
 }: {
   flowId: string;
   endpointName: string;
   processedPayload: any;
   shouldDisplayApiKey: boolean;
+  nodes?: any[];
 }): string {
   const { protocol, host } = customGetHostProtocol();
   const baseUrl = `${protocol}//${host}`;
@@ -31,14 +34,21 @@ export function getNewJsApiCode({
     parsedUrl.port || (parsedUrl.protocol === "https:" ? "443" : "80");
 
   // Check if there are file uploads
-  const tweaks = processedPayload.tweaks || {};
-  const hasFiles = hasFileTweaks(tweaks);
+  const originalTweaks = processedPayload.tweaks || {};
+  const tweaks = convertTweaksToAliases(originalTweaks, nodes);
+  const hasFiles = hasFileTweaks(originalTweaks); // Use original tweaks for file detection
+
+  // Create payload with aliased tweaks
+  const payloadWithAliases = {
+    ...processedPayload,
+    tweaks: tweaks,
+  };
 
   // If no file uploads, use existing logic
   if (!hasFiles) {
     const apiUrl = `${baseUrl}/api/v1/run/${endpointName || flowId}`;
 
-    const payloadString = JSON.stringify(processedPayload, null, 4);
+    const payloadString = JSON.stringify(payloadWithAliases, null, 4);
 
     const authSection = shouldDisplayApiKey
       ? `const crypto = require('crypto');

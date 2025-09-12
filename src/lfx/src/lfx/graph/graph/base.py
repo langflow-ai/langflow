@@ -232,6 +232,9 @@ class Graph:
             edges = [edge.to_data() for edge in self.edges]
             self.raw_graph_data = {"nodes": nodes, "edges": edges}
             data_dict = self.raw_graph_data
+
+        # Calculate dynamic aliases for duplicate components
+        data_dict = self._add_dynamic_aliases(data_dict)
         graph_dict: GraphDump = {
             "data": data_dict,
             "is_component": len(data_dict.get("nodes", [])) == 1 and data_dict["edges"] == [],
@@ -246,6 +249,46 @@ class Graph:
             graph_dict["description"] = self.description
         graph_dict["endpoint_name"] = str(endpoint_name)
         return graph_dict
+
+    def _add_dynamic_aliases(self, data_dict: dict) -> dict:
+        """Calculate and assign dynamic aliases to duplicate components in graph data."""
+        nodes = data_dict.get("nodes", [])
+
+        # Group nodes by display_name to identify duplicates
+        display_name_groups: dict[str, list] = {}
+
+        for node in nodes:
+            node_info = node.get("data", {}).get("node", {})
+            display_name = node_info.get("display_name")
+
+            if display_name:
+                if display_name not in display_name_groups:
+                    display_name_groups[display_name] = []
+                display_name_groups[display_name].append(node)
+
+        # Assign aliases to groups with multiple components
+        for display_name, group_nodes in display_name_groups.items():
+            if len(group_nodes) > 1:
+                # Multiple components - assign numbered aliases
+                for index, node in enumerate(group_nodes):
+                    node_info = node.get("data", {}).get("node", {})
+                    if node_info:
+                        # Only assign if no existing alias (preserve all existing aliases)
+                        current_alias = node_info.get("alias")
+
+                        if not current_alias:
+                            expected_alias = f"{display_name}#{index + 1}"
+                            node_info["alias"] = expected_alias
+            else:
+                # Single component - ensure no alias
+                node_info = group_nodes[0].get("data", {}).get("node", {})
+                if node_info and node_info.get("alias", "").endswith("#1"):
+                    # Remove #1 suffix if it's the only component of its type
+                    alias = node_info.get("alias", "")
+                    if alias == f"{display_name}#1":
+                        node_info["alias"] = None
+
+        return data_dict
 
     def add_nodes_and_edges(self, nodes: list[NodeData], edges: list[EdgeData]) -> None:
         self._vertices = nodes
