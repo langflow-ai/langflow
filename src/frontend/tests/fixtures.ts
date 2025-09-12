@@ -16,8 +16,11 @@ export const test = base.extend({
       const url = response.url();
       const status = response.status();
 
-      // Log 400/500 API errors (ignore auth endpoints)
-      if (url.includes("/api/") && (status === 400 || status === 500)) {
+      // Log 400/404/422/500 API errors (ignore auth endpoints)
+      if (
+        url.includes("/api/") &&
+        (status === 400 || status === 404 || status === 422 || status === 500)
+      ) {
         const isAuth =
           url.includes("/login") ||
           url.includes("/refresh") ||
