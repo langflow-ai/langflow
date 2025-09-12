@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
 import { DISCORD_URL, GITHUB_URL } from "../../../src/constants/constants";
+import { expect, test } from "../../fixtures";
 import { addNewUserAndLogin } from "../../utils/add-new-user-and-loggin";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
