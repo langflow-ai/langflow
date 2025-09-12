@@ -104,8 +104,8 @@ export default function ToolsTable({
             name !== "" && name !== display_name
               ? name
               : isAction
-              ? sanitizeMcpName(display_name || row.name, 46)
-              : display_name
+                ? sanitizeMcpName(display_name || row.name, 46)
+                : display_name
           ).slice(0, 46);
 
           const processedDescription =
@@ -113,8 +113,8 @@ export default function ToolsTable({
             row.description !== row.display_description
               ? row.description
               : isAction
-              ? ""
-              : row.display_description;
+                ? ""
+                : row.display_description;
 
           return selectedRows?.some(
             (selected) =>
@@ -182,11 +182,11 @@ export default function ToolsTable({
               "uppercase",
             ])
           : isAction
-          ? sanitizeMcpName(params.data.display_name, 46).toUpperCase()
-          : parseString(params.data.tags.join(", "), [
-              "snake_case",
-              "uppercase",
-            ]),
+            ? sanitizeMcpName(params.data.display_name, 46).toUpperCase()
+            : parseString(params.data.tags.join(", "), [
+                "snake_case",
+                "uppercase",
+              ]),
       cellClass: "text-muted-foreground",
     },
     {
@@ -361,7 +361,10 @@ export default function ToolsTable({
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-1" data-testid="sidebar_header">
+              <div
+                className="flex flex-col gap-1 p-4"
+                data-testid="sidebar_header"
+              >
                 <h3
                   className="text-base font-medium"
                   data-testid="sidebar_header_name"
@@ -376,7 +379,7 @@ export default function ToolsTable({
                 </p>
               </div>
             ))}
-          {!isAction && <Separator />}
+          {!isAction && actionArgs.length > 0 && <Separator />}
           {focusedRow && (
             <div className="flex h-full flex-col gap-4 p-2">
               <SidebarGroup className="flex-1">
