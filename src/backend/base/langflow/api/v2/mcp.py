@@ -5,7 +5,15 @@ from io import BytesIO
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.api.v2.files import MCP_SERVERS_FILE, delete_file, download_file, get_file_by_name, upload_user_file
+from langflow.api.v2.files import (
+    MCP_SERVERS_FILE,
+    delete_file,
+    download_file,
+    edit_file_name,
+    get_file_by_name,
+    get_mcp_file,
+    upload_user_file,
+)
 from langflow.base.agents.utils import safe_cache_get, safe_cache_set
 from langflow.base.mcp.util import update_tools
 from langflow.logging import logger
@@ -25,7 +33,8 @@ async def upload_server_config(
     content_bytes = content_str.encode("utf-8")  # Convert to bytes
     file_obj = BytesIO(content_bytes)  # Use BytesIO for binary data
 
-    upload_file = UploadFile(file=file_obj, filename=MCP_SERVERS_FILE + ".json", size=len(content_str))
+    mcp_file = await get_mcp_file(current_user, extension=True)
+    upload_file = UploadFile(file=file_obj, filename=mcp_file, size=len(content_str))
 
     return await upload_user_file(
         file=upload_file,
@@ -42,8 +51,14 @@ async def get_server_list(
     storage_service=Depends(get_storage_service),
     settings_service=Depends(get_settings_service),
 ):
+    # Backwards compatibilty with old format file name
+    mcp_file = await get_mcp_file(current_user)
+    old_format_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
+    if old_format_config_file:
+        await edit_file_name(old_format_config_file.id, mcp_file, current_user, session)
+
     # Read the server configuration from a file using the files api
-    server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
+    server_config_file = await get_file_by_name(mcp_file, current_user, session)
 
     # Attempt to download the configuration file content
     try:
@@ -70,9 +85,10 @@ async def get_server_list(
         )
 
         # Fetch and download again
-        server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
+        mcp_file = await get_mcp_file(current_user)
+        server_config_file = await get_file_by_name(mcp_file, current_user, session)
         if not server_config_file:
-            raise HTTPException(status_code=500, detail="Failed to create _mcp_servers.json") from None
+            raise HTTPException(status_code=500, detail="Failed to create MCP Servers configuration file") from None
 
         server_config_bytes = await download_file(
             server_config_file.id,
@@ -226,8 +242,10 @@ async def update_server(
         server_list["mcpServers"][server_name] = server_config
 
     # Remove the existing file
-    server_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
+    mcp_file = await get_mcp_file(current_user)
+    server_config_file = await get_file_by_name(mcp_file, current_user, session)
 
+    # Now we are ready to delete it and reprocess
     if server_config_file:
         await delete_file(server_config_file.id, current_user, session, storage_service)
 
