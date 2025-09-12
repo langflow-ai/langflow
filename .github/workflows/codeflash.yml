@@ -3,7 +3,7 @@ name: Codeflash
 on:
   pull_request:
     paths:
-      - "src/backend/base/langflow/**"
+      - "src/packages/base/langflow/**"
   workflow_dispatch:
 
 concurrency:
@@ -31,7 +31,7 @@ jobs:
           prune-cache: false
       - run: uv sync
       - name: Run Codeflash Optimizer
-        working-directory: ./src/backend/base
+        working-directory: ./src/packages/base
         continue-on-error: true
         run: uv run codeflash
 

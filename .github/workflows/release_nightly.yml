@@ -99,12 +99,12 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
       - name: Install LFX dependencies
-        run: cd src/core && uv sync
+        run: cd src/packages/core && uv sync
 
       - name: Verify Nightly Name and Version
         id: verify
         run: |
-          cd src/core
+          cd src/packages/core
           name=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $1}')
           version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}')
           if [ "$name" != "lfx-nightly" ]; then
@@ -121,13 +121,13 @@ jobs:
 
       - name: Build LFX for distribution
         run: |
-          cd src/core
+          cd src/packages/core
           rm -rf dist/
           uv build --wheel --out-dir dist
 
       - name: Test LFX CLI
         run: |
-          cd src/core
+          cd src/packages/core
           uv pip install dist/*.whl --force-reinstall
           uv run lfx --help
           echo "LFX CLI test completed successfully"
@@ -138,7 +138,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist-nightly-lfx
-          path: src/core/dist
+          path: src/packages/core/dist
 
   build-nightly-base:
     name: Build Langflow Nightly Base
@@ -190,16 +190,16 @@ jobs:
 
       - name: Build Langflow Base for distribution
         run: |
-          rm -rf src/backend/base/dist
+          rm -rf src/packages/base/dist
           rm -rf dist
           make build base=true args="--wheel"
 
       - name: Test Langflow Base CLI
         run: |
-          # TODO: Unsure why the whl is not built in src/backend/base/dist
-          mkdir src/backend/base/dist
-          mv dist/*.whl src/backend/base/dist/
-          uv pip install src/backend/base/dist/*.whl
+          # TODO: Unsure why the whl is not built in src/packages/base/dist
+          mkdir src/packages/base/dist
+          mv dist/*.whl src/packages/base/dist/
+          uv pip install src/packages/base/dist/*.whl
           uv run python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
@@ -221,7 +221,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist-nightly-base
-          path: src/backend/base/dist
+          path: src/packages/base/dist
 
   build-nightly-main:
     name: Build Langflow Nightly Main
@@ -317,7 +317,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dist-nightly-lfx
-          path: src/core/dist
+          path: src/packages/core/dist
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -342,7 +342,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dist-nightly-base
-          path: src/backend/base/dist
+          path: src/packages/base/dist
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:

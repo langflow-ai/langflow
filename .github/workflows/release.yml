@@ -100,10 +100,10 @@ jobs:
       - name: Test CLI
         if: steps.check-version.outputs.skipped == 'false'
         run: |
-          # TODO: Unsure why the whl is not built in src/backend/base/dist
-          mkdir src/backend/base/dist
-          mv dist/*.whl src/backend/base/dist
-          uv pip install src/backend/base/dist/*.whl
+          # TODO: Unsure why the whl is not built in src/packages/base/dist
+          mkdir src/packages/base/dist
+          mv dist/*.whl src/packages/base/dist
+          uv pip install src/packages/base/dist/*.whl
           uv run python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
@@ -126,7 +126,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist-base
-          path: src/backend/base/dist
+          path: src/packages/base/dist
 
   build-main:
     name: Build Langflow Main
@@ -250,7 +250,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dist-base
-          path: src/backend/base/dist
+          path: src/packages/base/dist
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -261,7 +261,7 @@ jobs:
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          cd src/backend/base && uv publish dist/*.whl
+          cd src/packages/base && uv publish dist/*.whl
 
   publish-main:
     name: Publish Langflow Main to PyPI
@@ -353,7 +353,7 @@ jobs:
       - name: Check Version
         id: check-version
         run: |
-          cd src/core
+          cd src/packages/core
           version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}' | sed 's/^v//')
           last_released_version=$(curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" = "$last_released_version" ]; then
@@ -364,19 +364,19 @@ jobs:
           fi
       - name: Build project for distribution
         run: |
-          cd src/core
+          cd src/packages/core
           rm -rf dist/
           uv build --wheel --out-dir dist
       - name: Test CLI
         run: |
-          cd src/core
+          cd src/packages/core
           uv pip install dist/*.whl --force-reinstall
           uv run lfx --help
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: dist-lfx
-          path: src/core/dist
+          path: src/packages/core/dist
 
   publish-lfx:
     name: Publish LFX to PyPI
@@ -388,7 +388,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dist-lfx
-          path: src/core/dist
+          path: src/packages/core/dist
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -398,7 +398,7 @@ jobs:
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          cd src/core && uv publish dist/*.whl
+          cd src/packages/core && uv publish dist/*.whl
 
   create_release:
     name: Create Release

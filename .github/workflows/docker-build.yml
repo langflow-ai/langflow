@@ -201,7 +201,7 @@ jobs:
       - name: Install the project
         run: |
           if [[ "${{ inputs.release_type }}" == "base" || "${{ inputs.release_type }}" == "nightly-base" ]]; then
-            uv sync --directory src/backend/base --no-dev --no-sources
+            uv sync --directory src/packages/base --no-dev --no-sources
           else
             uv sync --no-dev --no-sources
           fi

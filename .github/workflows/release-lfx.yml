@@ -58,7 +58,7 @@ jobs:
       - name: Check version
         id: check
         run: |
-          cd src/core
+          cd src/packages/core
           # Use uv tree to get package info, consistent with nightly workflow
           name=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $1}')
           version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}')
@@ -107,12 +107,12 @@ jobs:
 
       - name: Run LFX tests
         run: |
-          cd src/core
+          cd src/packages/core
           make test
 
       - name: Test CLI installation
         run: |
-          cd src/core
+          cd src/packages/core
           uv pip install .
           uv run lfx --help
           uv run lfx run --help
@@ -142,7 +142,7 @@ jobs:
       - name: Verify Version
         id: check-version
         run: |
-          cd src/core
+          cd src/packages/core
           # Use uv tree to get package info, consistent with nightly workflow
           name=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $1}')
           version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}')
@@ -166,20 +166,20 @@ jobs:
 
       - name: Build distribution
         run: |
-          cd src/core
+          cd src/packages/core
           rm -rf dist/
           uv build --wheel --out-dir dist
 
       - name: Check build artifacts
         run: |
-          cd src/core
+          cd src/packages/core
           ls -la dist/
           # Verify wheel contents
           unzip -l dist/*.whl | grep -E "(lfx/__main__.py|lfx/cli/run.py|lfx/cli/commands.py)"
 
       - name: Test installation from wheel
         run: |
-          cd src/core
+          cd src/packages/core
           uv pip install dist/*.whl --force-reinstall
           uv run lfx --help
           echo "LFX CLI test completed successfully"
@@ -188,7 +188,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lfx-dist
-          path: src/core/dist/
+          path: src/packages/core/dist/
           retention-days: 5
 
       - name: Publish to PyPI
@@ -196,7 +196,7 @@ jobs:
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          cd src/core
+          cd src/packages/core
           uv publish dist/*.whl
 
   build-docker:
@@ -250,7 +250,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: src/core/docker/Dockerfile${{ matrix.variant == 'alpine' && '.alpine' || '' }}
+          file: src/packages/core/docker/Dockerfile${{ matrix.variant == 'alpine' && '.alpine' || '' }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
