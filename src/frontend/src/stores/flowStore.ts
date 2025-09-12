@@ -54,6 +54,7 @@ import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
+import { usePlaygroundStore } from "./playgroundStore";
 import { useTweaksStore } from "./tweaksStore";
 import { useTypesStore } from "./typesStore";
 
@@ -229,7 +230,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
     unselectAllNodesEdges(nodes, newEdges);
     if (flow?.id) {
-      useTweaksStore.getState().initialSetup(nodes, flow?.id);
+      useTweaksStore.getState().initialSetup(nodes, flow.id);
+      usePlaygroundStore.getState().reset(flow.id);
     }
     set({
       nodes,
@@ -644,6 +646,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     stream?: boolean;
     eventDelivery?: EventDeliveryType;
   }) => {
+    if (get().isBuilding) return;
     set({
       pastBuildFlowParams: {
         startNodeId,
