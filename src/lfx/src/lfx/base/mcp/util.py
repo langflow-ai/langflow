@@ -189,6 +189,37 @@ def sanitize_mcp_name(name: str, max_length: int = 46) -> str:
     return name
 
 
+def _camel_to_snake(name: str) -> str:
+    """Convert camelCase to snake_case."""
+    import re
+
+    # Insert an underscore before any uppercase letter that follows a lowercase letter
+    s1 = re.sub("([a-z0-9])([A-Z])", r"\1_\2", name)
+    return s1.lower()
+
+
+def _convert_field_names(provided_args: dict[str, Any], arg_schema: type[BaseModel]) -> dict[str, Any]:
+    """Convert camelCase field names to snake_case if the schema expects snake_case fields."""
+    schema_fields = set(arg_schema.model_fields.keys())
+    converted_args = {}
+
+    for key, value in provided_args.items():
+        # If the key already exists in schema, use it as-is
+        if key in schema_fields:
+            converted_args[key] = value
+        else:
+            # Try converting camelCase to snake_case
+            snake_key = _camel_to_snake(key)
+            if snake_key in schema_fields:
+                converted_args[snake_key] = value
+            else:
+                # If neither the original nor converted key exists, keep original
+                # The validation will catch this error
+                converted_args[key] = value
+
+    return converted_args
+
+
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
     async def tool_coroutine(*args, **kwargs):
         # Get field names from the model (preserving order)
@@ -202,6 +233,8 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
             provided_args[field_names[i]] = arg
         # Merge in keyword arguments
         provided_args.update(kwargs)
+        # Convert camelCase field names to snake_case if needed
+        provided_args = _convert_field_names(provided_args, arg_schema)
         # Validate input and fill defaults for missing optional fields
         try:
             validated = arg_schema.model_validate(provided_args)
@@ -230,6 +263,8 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
                 raise ValueError(msg)
             provided_args[field_names[i]] = arg
         provided_args.update(kwargs)
+        # Convert camelCase field names to snake_case if needed
+        provided_args = _convert_field_names(provided_args, arg_schema)
         try:
             validated = arg_schema.model_validate(provided_args)
         except Exception as e:
