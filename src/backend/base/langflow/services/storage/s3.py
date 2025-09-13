@@ -104,6 +104,14 @@ class S3StorageService(StorageService):
         Raises:
             Exception: If an error occurs during file saving.
         """
+        if not isinstance(data, bytes):
+            msg = f"Expected bytes, got {type(data)}"
+            raise TypeError(msg)
+
+        if self.s3_client is None:
+            msg = "S3 client not initialized"
+            raise RuntimeError(msg)
+
         try:
             self.s3_client.put_object(Bucket=self.bucket, Key=f"{self.path}/{flow_id}/{file_name}", Body=data)
             await logger.ainfo(f"File {file_name} saved successfully in flow {flow_id}.")
@@ -127,6 +135,10 @@ class S3StorageService(StorageService):
         Raises:
             Exception: If an error occurs during file retrieval.
         """
+        if self.s3_client is None:
+            msg = "S3 client not initialized"
+            raise RuntimeError(msg)
+
         try:
             response = self.s3_client.get_object(Bucket=self.bucket, Key=f"{self.path}/{flow_id}/{file_name}")
             await logger.ainfo(f"File {file_name} retrieved successfully from flow {flow_id}.")
@@ -147,6 +159,10 @@ class S3StorageService(StorageService):
         Raises:
             Exception: If an error occurs during file listing.
         """
+        if self.s3_client is None:
+            msg = "S3 client not initialized"
+            raise RuntimeError(msg)
+
         try:
             response = self.s3_client.list_objects_v2(Bucket=self.bucket, Prefix=f"{self.path}/{flow_id}/")
         except ClientError:
@@ -156,7 +172,7 @@ class S3StorageService(StorageService):
         files = [
             item["Key"]
             for item in response.get("Contents", [])
-            if "/" not in item["Key"][len(f"{self.path}/{flow_id}") :]
+            if "/" not in item["Key"][len(f"{self.path}/{flow_id}/") :]
         ]
         await logger.ainfo(f"{len(files)} files listed in flow {flow_id}.")
         return files
@@ -171,6 +187,10 @@ class S3StorageService(StorageService):
         Raises:
             Exception: If an error occurs during file deletion.
         """
+        if self.s3_client is None:
+            msg = "S3 client not initialized"
+            raise RuntimeError(msg)
+
         try:
             self.s3_client.delete_object(Bucket=self.bucket, Key=f"{self.path}/{flow_id}/{file_name}")
             await logger.ainfo(f"File {file_name} deleted successfully from flow {flow_id}.")
@@ -195,6 +215,10 @@ class S3StorageService(StorageService):
         Raises:
             Exception: If an error occurs during file size retrieval.
         """
+        if self.s3_client is None:
+            msg = "S3 client not initialized"
+            raise RuntimeError(msg)
+
         try:
             response = self.s3_client.head_object(Bucket=self.bucket, Key=f"{self.path}/{flow_id}/{file_name}")
             file_size = response["ContentLength"]
