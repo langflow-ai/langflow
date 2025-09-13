@@ -7,9 +7,11 @@ from pathlib import Path
 
 import anyio
 import sqlalchemy as sa
-from sqlmodel import SQLModel
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlmodel import SQLModel
 
+from langflow.initial_setup.setup import create_or_update_starter_projects
+from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.logging.logger import logger
 from langflow.services.auth.clerk_utils import auth_header_ctx
 from langflow.services.database.service import DatabaseService
@@ -30,7 +32,7 @@ class OrganizationService:
         if len(cls._db_service_cache) > cls._MAX_CACHE_SIZE:
             _, old_service = cls._db_service_cache.popitem(last=False)
             cls._cleanup_tasks.append(asyncio.create_task(old_service.teardown()))
-    
+
     @staticmethod
     def _normalize_url(url: str) -> str:
         """Return a normalized database URL with explicit async drivers."""
@@ -40,7 +42,7 @@ class OrganizationService:
         elif driver in {"postgres", "postgresql"}:
             driver = "postgresql+psycopg"
         return f"{driver}://{rest}"
-    
+
     @classmethod
     def get_db_service_for_request(cls) -> DatabaseService:
         """Return a DatabaseService for the organisation in the auth context."""
@@ -49,7 +51,7 @@ class OrganizationService:
         if not org_id:
             msg = "Missing organisation id"
             raise RuntimeError(msg)
-        
+
         settings_service = get_settings_service()
         base_url = settings_service.settings.database_url
         expected_url = cls._build_database_url_for_org(base_url, org_id)
@@ -87,7 +89,6 @@ class OrganizationService:
     @staticmethod
     def _build_database_url_for_org(base_url: str, org_id: str) -> str:
         """Return a database URL for the given organisation."""
-
         if base_url.startswith("sqlite"):
             # Use aiosqlite for async DB access
             driver_prefix = "sqlite+aiosqlite"
@@ -117,7 +118,7 @@ class OrganizationService:
 
         logger.debug(f"Derived organisation database URL: {new_url}")
         return new_url
-    
+
     @staticmethod
     async def _ensure_database_exists(base_url: str, org_id: str) -> None:
         """Create the organisation database if it doesn't already exist.
@@ -127,7 +128,6 @@ class OrganizationService:
         organisation. For SQLite, databases are created as files elsewhere
         in the flow.
         """
-
         if base_url.startswith("sqlite"):
             return
 
@@ -156,15 +156,18 @@ class OrganizationService:
 
         # Check Clerk auth
         if not settings_service.auth_settings.CLERK_AUTH_ENABLED:
-            raise RuntimeError("Clerk authentication disabled")
+            msg = "Clerk authentication disabled"
+            raise RuntimeError(msg)
 
         payload: dict | None = auth_header_ctx.get()
         if not payload:
-            raise RuntimeError("Missing Clerk payload")
+            msg = "Missing Clerk payload"
+            raise RuntimeError(msg)
 
         org_id = payload.get("org_id")
         if not org_id:
-            raise RuntimeError("Missing organisation id")
+            msg = "Missing organisation id"
+            raise RuntimeError(msg)
 
         # Build per-org DB URL
         base_url = settings_service.settings.database_url
@@ -217,13 +220,17 @@ class OrganizationService:
                 await setup_superuser(new_settings_service, session)
 
             self._remember_org(org_id, new_db_service)
+            # Populate starter projects for this organisation
+            all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
+            await create_or_update_starter_projects(all_types_dict, use_organisation=True)
             logger.info(f"[OrgInit] Organisation DB initialization complete for org_id={org_id}")
 
         except Exception as exc:
             logger.exception(f"[OrgInit] Failed to initialise DB for org_id: {org_id}")
             await self._cleanup_failed_initialization(org_id, new_db_service, new_url)
             await new_db_service.teardown()
-            raise RuntimeError("Failed to initialise organisation database") from exc
+            msg = "Failed to initialise organisation database"
+            raise RuntimeError(msg) from exc
 
     @classmethod
     async def _cleanup_failed_initialization(cls, org_id: str, db_service: DatabaseService, database_url: str) -> None:

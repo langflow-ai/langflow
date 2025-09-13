@@ -79,7 +79,6 @@ async def verify_clerk_token(token: str) -> dict[str, Any]:
         else:
             msg = "Missing organization info in Clerk token payload"
             raise JWTError(msg)
-        logger.info(f"[ClerkAuthAdapter] Verified Clerk token for org_id: {payload}")
     except JWTError as exc:
         msg = "Invalid token"
         raise ValueError(msg) from exc
@@ -146,7 +145,6 @@ async def clerk_token_middleware(request: Request, call_next):
         return await call_next(request)
 
     auth_header = request.headers.get("Authorization")
-    logger.info(f"Authorization header present: {auth_header}")
     if not auth_header or not auth_header.startswith("Bearer "):
         return await call_next(request)
 

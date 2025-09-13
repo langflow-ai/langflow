@@ -870,14 +870,16 @@ async def find_existing_flow(session, flow_id, flow_endpoint_name):
     return None
 
 
-async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: bool = True) -> None:
+async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: bool = True, use_organisation: bool = False) -> None:
     """Create or update starter projects.
 
     Args:
         all_types_dict (dict): Dictionary containing all component types and their templates
         do_create (bool, optional): Whether to create new projects. Defaults to True.
+    use_organisation (bool, optional): Whether to use organisation-scoped database sessions.
+            Defaults to False.
     """
-    async with session_scope(use_organisation=False) as session:
+    async with session_scope(use_organisation=use_organisation) as session:
         new_folder = await create_starter_folder(session)
         starter_projects = await load_starter_projects()
         await delete_start_projects(session, new_folder.id)
