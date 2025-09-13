@@ -26,13 +26,6 @@ export enum HttpStatusCode {
 
 
 export async function createOrganisation(token: string) {
-  console.log("[createOrganisation] Called with token:", token);
-  try {
-    const [, p] = token.split(".");
-    console.log("[createOrganisation] Parsed token payload:", JSON.parse(atob(p.replace(/-/g, "+").replace(/_/g, "/"))));
-  } catch {
-    return null;
-  }
   await api.post(
     getURL("CREATE_ORGANISATION"),
     {},
@@ -83,7 +76,7 @@ export async function backendLogin(username: string,token:string) {
       },
     },
   );
-  console.debug(`[backendLogin] Login response for ${username}:`, res.data);
+  console.debug(`[backendLogin] Login response for ${username}`);
   return res.data;
 }
 
@@ -153,7 +146,6 @@ export function ClerkAuthAdapter() {
       }
       console.debug("[ClerkAuthAdapter] Is Token Same:", token === currentRefreshToken);
       if (token && token !== prevToken) {
-        console.log("[ClerkAuthAdapter] Detected token change, syncing with backend");
         prevTokenRef.current = token;
         login(token, "login", currentRefreshToken);
       }
