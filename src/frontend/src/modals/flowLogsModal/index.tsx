@@ -2,6 +2,7 @@ import type { ColDef, ColGroupDef } from "ag-grid-community";
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
+import LoadingComponent from "@/components/common/loadingComponent";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
@@ -37,14 +38,53 @@ export default function FlowLogsModal({
     if (data) {
       const { columns, rows } = data;
 
-      if (data?.rows?.length > 0) {
-        data.rows.map((row: any) => {
-          row.timestamp = convertUTCToLocalTimezone(row.timestamp);
-        });
-      }
+      // Convert timestamps to local timezone format (backend handles sorting)
+      const processedRows =
+        rows?.length > 0
+          ? rows.map((row: any) => ({
+              ...row,
+              timestamp: convertUTCToLocalTimezone(row.timestamp),
+            }))
+          : rows;
 
-      setColumns(columns.map((col) => ({ ...col, editable: true })));
-      setRows(rows);
+      setRows(processedRows);
+
+      // Customize column configurations
+      const customizedColumns = columns.map((col) => {
+        // Check if it's a ColDef (not ColGroupDef) before accessing properties
+        if ("field" in col) {
+          const columnField = col.field;
+          const customCol = { ...col, editable: false };
+
+          if (columnField && ["id"].includes(columnField)) {
+            customCol.minWidth = 320;
+            customCol.filter = false;
+            customCol.sortable = false;
+          }
+
+          // Hide filters for specific columns
+          if (
+            columnField &&
+            ["vertex_id", "target_id", "status"].includes(columnField)
+          ) {
+            customCol.filter = false;
+            customCol.sortable = false;
+            customCol.flex = 1;
+          }
+
+          // Set same width for inputs and outputs columns
+          if (columnField && ["inputs", "outputs"].includes(columnField)) {
+            customCol.flex = 1.5;
+          }
+
+          return customCol;
+        }
+
+        // Return ColGroupDef as is (no editable property for groups)
+        return col;
+      });
+
+      setColumns(customizedColumns);
     }
   }, [data]);
 
@@ -52,7 +92,7 @@ export default function FlowLogsModal({
     if (open) {
       refetch();
     }
-  }, [open]);
+  }, [pageIndex, pageSize, open, refetch]);
 
   const handlePageChange = useCallback((newPageIndex, newPageSize) => {
     setPageIndex(newPageIndex);
@@ -72,21 +112,36 @@ export default function FlowLogsModal({
         </div>
       </BaseModal.Header>
       <BaseModal.Content>
-        <TableComponent
-          key={"Executions"}
-          readOnlyEdit
-          className="h-max-full h-full w-full"
-          pagination={false}
-          columnDefs={columns}
-          autoSizeStrategy={{ type: "fitGridWidth" }}
-          rowData={rows}
-          headerHeight={rows.length === 0 ? 0 : undefined}
-        ></TableComponent>
-        {!isLoading && (data?.pagination.total ?? 0) >= 10 && (
+        <div className="relative h-full w-full">
+          <TableComponent
+            key={"Executions"}
+            className="h-max-full h-full w-full"
+            pagination={false}
+            columnDefs={columns}
+            autoSizeStrategy={{ type: "fitGridWidth" }}
+            rowData={rows}
+            headerHeight={rows.length === 0 ? 0 : undefined}
+            gridOptions={{
+              suppressCellFocus: true,
+              suppressRowClickSelection: true,
+              suppressColumnVirtualisation: true,
+              suppressRowDeselection: true,
+            }}
+          ></TableComponent>
+
+          {/* Loading overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+              <LoadingComponent remSize={8} />
+            </div>
+          )}
+        </div>
+
+        {!isLoading && (data?.pagination.pages ?? 0) > 1 && (
           <div className="flex justify-end px-3 py-4">
             <PaginatorComponent
-              pageIndex={data?.pagination.page ?? 1}
-              pageSize={data?.pagination.size ?? 10}
+              pageIndex={pageIndex}
+              pageSize={pageSize}
               rowsCount={[12, 24, 48, 96]}
               totalRowsCount={data?.pagination.total ?? 0}
               paginate={handlePageChange}

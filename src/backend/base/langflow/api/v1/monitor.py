@@ -10,9 +10,18 @@ from sqlmodel import col, select
 from langflow.api.utils import DbSession, custom_params
 from langflow.schema.message import MessageResponse
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models.message.model import MessageRead, MessageTable, MessageUpdate
-from langflow.services.database.models.transactions.crud import transform_transaction_table
-from langflow.services.database.models.transactions.model import TransactionTable
+from langflow.services.database.models.message.model import (
+    MessageRead,
+    MessageTable,
+    MessageUpdate,
+)
+from langflow.services.database.models.transactions.crud import (
+    transform_transaction_table_for_logs,
+)
+from langflow.services.database.models.transactions.model import (
+    TransactionLogsResponse,
+    TransactionTable,
+)
 from langflow.services.database.models.vertex_builds.crud import (
     delete_vertex_builds_by_flow_id,
     get_vertex_builds_by_flow_id,
@@ -98,7 +107,11 @@ async def delete_messages(message_ids: list[UUID], session: DbSession) -> None:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.put("/messages/{message_id}", dependencies=[Depends(get_current_active_user)], response_model=MessageRead)
+@router.put(
+    "/messages/{message_id}",
+    dependencies=[Depends(get_current_active_user)],
+    response_model=MessageRead,
+)
 async def update_message(
     message_id: UUID,
     message: MessageUpdate,
@@ -185,19 +198,26 @@ async def get_transactions(
     flow_id: Annotated[UUID, Query()],
     session: DbSession,
     params: Annotated[Params | None, Depends(custom_params)],
-) -> Page[TransactionTable]:
+) -> Page[TransactionLogsResponse]:
     try:
         stmt = (
             select(TransactionTable)
             .where(TransactionTable.flow_id == flow_id)
-            .order_by(col(TransactionTable.timestamp))
+            .order_by(col(TransactionTable.timestamp).desc())
         )
         import warnings
 
         with warnings.catch_warnings():
             warnings.filterwarnings(
-                "ignore", category=DeprecationWarning, module=r"fastapi_pagination\.ext\.sqlalchemy"
+                "ignore",
+                category=DeprecationWarning,
+                module=r"fastapi_pagination\.ext\.sqlalchemy",
             )
-            return await apaginate(session, stmt, params=params, transformer=transform_transaction_table)
+            return await apaginate(
+                session,
+                stmt,
+                params=params,
+                transformer=transform_transaction_table_for_logs,
+            )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
