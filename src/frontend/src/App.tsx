@@ -9,9 +9,9 @@ export default function App() {
   const dark = useDarkStore((state) => state.dark);
   useEffect(() => {
     if (!dark) {
-      document.getElementById("body")!.classList.remove("dark");
+      document.body.classList.add("dark");
     } else {
-      document.getElementById("body")!.classList.add("dark");
+      document.body.classList.remove("dark");
     }
   }, [dark]);
   return (
