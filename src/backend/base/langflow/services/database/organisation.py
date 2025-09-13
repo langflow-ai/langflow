@@ -288,4 +288,3 @@ class OrganizationService:
         except Exception:  # noqa: BLE001
             logger.exception("Error checking organisation database existence")
             return False
-
