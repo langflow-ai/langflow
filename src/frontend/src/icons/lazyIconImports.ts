@@ -53,6 +53,8 @@ export const lazyIconsMapping = {
     })),
   Cohere: () =>
     import("@/icons/Cohere").then((mod) => ({ default: mod.CohereIcon })),
+  CometAPI: () =>
+    import("@/icons/CometAPI").then((mod) => ({ default: mod.CometAPIIcon })),
   Composio: () =>
     import("@/icons/Composio").then((mod) => ({ default: mod.ComposioIcon })),
   Confluence: () =>
