@@ -192,7 +192,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             input_types=["Embeddings"],
             info="Specify the Embedding Model. Not required for Astra Vectorize collections.",
             required=False,
-            show=False,
+            show=True,
+            advanced=True,
         ),
         *LCVectorStoreComponent.inputs,
         DropdownInput(
