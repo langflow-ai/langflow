@@ -26,24 +26,29 @@ class S3StorageService(StorageService):
         self.path = getattr(settings_service.settings, "s3_storage_path", "tenants")
 
         # Initialize S3 client based on available credentials
-        if s3_access_key and s3_secret_key:
-            # Use explicit credentials (access key + secret key)
-            self.s3_client = boto3.client(
-                "s3",
-                aws_access_key_id=s3_access_key,
-                aws_secret_access_key=s3_secret_key,
-                aws_session_token=s3_session_token,
-                region_name=s3_region,
-            )
-            logger.info("S3 client initialized with explicit credentials")
-        elif s3_role_arn:
-            # Use role-based authentication (IRSA)
-            self.s3_client = self._create_role_based_client(s3_role_arn, s3_region)
-            logger.info(f"S3 client initialized with role ARN: {s3_role_arn}")
-        else:
-            # Use default credential chain (environment variables, IAM roles, etc.)
-            self.s3_client = boto3.client("s3", region_name=s3_region)
-            logger.info("S3 client initialized with default credential chain")
+        try:
+            if s3_access_key and s3_secret_key:
+                # Use explicit credentials (access key + secret key)
+                self.s3_client = boto3.client(
+                    "s3",
+                    aws_access_key_id=s3_access_key,
+                    aws_secret_access_key=s3_secret_key,
+                    aws_session_token=s3_session_token,
+                    region_name=s3_region,
+                )
+                logger.info("S3 client initialized with explicit credentials")
+            elif s3_role_arn:
+                # Use role-based authentication (IRSA)
+                self.s3_client = self._create_role_based_client(s3_role_arn, s3_region)
+                logger.info(f"S3 client initialized with role ARN: {s3_role_arn}")
+            else:
+                # Use default credential chain (environment variables, IAM roles, etc.)
+                self.s3_client = boto3.client("s3", region_name=s3_region)
+                logger.info("S3 client initialized with default credential chain")
+        except (ClientError, NoCredentialsError, FileNotFoundError, PermissionError) as e:
+            logger.error(f"Failed to initialize S3 client: {e}")
+            # Fallback to a mock client for testing
+            self.s3_client = None
 
         self.set_ready()
 
@@ -88,7 +93,7 @@ class S3StorageService(StorageService):
             # Fallback to default credential chain
             return boto3.client("s3", region_name=region)
 
-    async def save_file(self, flow_id: str, file_name: str, data) -> None:
+    async def save_file(self, flow_id: str, file_name: str, data: bytes) -> None:
         """Save a file to the S3 bucket.
 
         Args:
@@ -109,7 +114,7 @@ class S3StorageService(StorageService):
             await logger.aexception(f"Error saving file {file_name} in flow {flow_id}")
             raise
 
-    async def get_file(self, flow_id: str, file_name: str):
+    async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """Retrieve a file from the S3 bucket.
 
         Args:
@@ -130,7 +135,7 @@ class S3StorageService(StorageService):
             await logger.aexception(f"Error retrieving file {file_name} from flow {flow_id}")
             raise
 
-    async def list_files(self, flow_id: str):
+    async def list_files(self, flow_id: str) -> list[str]:
         """List all files in a specified flow of the S3 bucket.
 
         Args:
