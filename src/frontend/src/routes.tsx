@@ -46,26 +46,26 @@ const router = createBrowserRouter(
     <Route path="/playground/:id/">
       <Route
         path=""
-        element={(() => { console.log("[Route] Rendering PlaygroundPage"); return (
+        element={(() => (
           <ContextWrapper key={1}>
             <PlaygroundPage />
           </ContextWrapper>
-        ); })()}
+        ))()}
       />
     </Route>,
     <Route
       path={ENABLE_CUSTOM_PARAM ? "/:customParam?" : "/"}
-      element={(() => { console.log(`[Route] Main route matched, customParam enabled: ${ENABLE_CUSTOM_PARAM}`); return (
+      element={(() => (
         <ContextWrapper key={2}>
           <Outlet />
         </ContextWrapper>
-      ); })()}
+      ))()}
     >
-      <Route path="" element={(() => { console.log("[Route] AppWrapperPage loaded"); return <AppWrapperPage />; })()}>
-        <Route path="" element={(() => { console.log("[Route] ProtectedRoute + AppInitPage loaded"); return <ProtectedRoute><AppInitPage /></ProtectedRoute>; })()}>
-          <Route path="" element={(() => { console.log("[Route] AppAuthenticatedPage loaded"); return <AppAuthenticatedPage />; })()}>
-            <Route path="" element={(() => { console.log("[Route] CustomDashboardWrapperPage loaded"); return <CustomDashboardWrapperPage />; })()}>
-              <Route path="" element={(() => { console.log("[Route] CollectionPage loaded"); return <CollectionPage />; })()}>
+      <Route path="" element={(() => <AppWrapperPage />)()}>
+        <Route path="" element={(() => <ProtectedRoute><AppInitPage /></ProtectedRoute>)()}>
+          <Route path="" element={(() => <AppAuthenticatedPage />)()}>
+            <Route path="" element={(() => <CustomDashboardWrapperPage />)()}>
+              <Route path="" element={(() => <CollectionPage />)()}>
                 <Route
                   index
                   element={

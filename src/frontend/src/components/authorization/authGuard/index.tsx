@@ -33,14 +33,6 @@ export const ProtectedRoute = ({ children }) => {
   const isRootPage = currentPath === "/";
   const isFlowsPage = currentPath.includes("/flows");
 
-  console.debug("[ProtectedRoute] Render", {
-    isAuthenticated,
-    autoLogin,
-    isOrgSelected,
-    orgId,
-    currentPath,
-  });
-
   // 1️⃣ Redirect to login if not authenticated
   const shouldRedirectToLogin =
     isOrgLoaded &&
@@ -72,15 +64,11 @@ export const ProtectedRoute = ({ children }) => {
       : LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV;
 
     if (autoLogin !== undefined && !autoLogin && isAuthenticated) {
-      console.log("[ProtectedRoute] Setting token refresh interval", { refreshTime });
-
       const intervalId = setInterval(() => {
-        console.log("[ProtectedRoute] Refreshing access token");
         mutateRefresh();
       }, refreshTime * 1000);
 
       return () => {
-        console.log("[ProtectedRoute] Clearing token refresh interval");
         clearInterval(intervalId);
       };
     }

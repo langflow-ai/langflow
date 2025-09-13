@@ -17,13 +17,6 @@ export const ProtectedLoginRoute = ({ children }) => {
   let isOrgLoaded = true; // default true if not using Clerk
 
   if (IS_CLERK_AUTH) {
-    // try {
-    //   const { organization, isLoaded } = useOrganization();
-    //   organizationId = organization?.id;
-    //   isOrgLoaded = isLoaded;
-    // } catch (err) {
-    //   console.warn("[ProtectedLoginRoute] useOrganization failed:", err);
-    // }
     const { organization, isLoaded } = useOrganization();
     organizationId = organization?.id;
     isOrgLoaded = isLoaded;
@@ -40,27 +33,14 @@ export const ProtectedLoginRoute = ({ children }) => {
     (autoLogin === true || isAuthenticated) &&
     isOrgSelected;
 
-  console.log("[ProtectedLoginRoute] Render", {
-    autoLogin,
-    isAuthenticated,
-    organizationId,
-    isOrgLoaded,
-    isOrgSelected,
-    canRedirect,
-    pathname: location.pathname,
-  });
-
   if (canRedirect) {
     const urlParams = new URLSearchParams(window.location.search);
     const redirectPath = urlParams.get("redirect");
-    console.log("[ProtectedLoginRoute] Authenticated, redirecting", { redirectPath });
 
     if (redirectPath) {
       return <CustomNavigate to={redirectPath} replace />;
     }
     return <CustomNavigate to="/home" replace />;
   }
-
-  console.log("[ProtectedLoginRoute] Not authenticated or org not selected, rendering children");
   return children;
 };

@@ -30,13 +30,6 @@ export function AppInitPage() {
     ? !isOrgLoaded || location.pathname === "/organization" || !organization?.id
     : false;
 
-  console.log("[AppInitPage] Render", {
-    pathname: location.pathname,
-    orgId: organization?.id,
-    isOrgLoaded,
-    shouldSkip
-  });
-
   const { isFetched, refetch } = useGetAutoLogin({
     enabled: isLoaded && !shouldSkip,
   });
@@ -55,33 +48,16 @@ export function AppInitPage() {
   });
 
   useEffect(() => {
-    console.log("[AppInitPage] useEffect triggered", {
-      isFetched,
-      isConfigFetched,
-      isExamplesFetched,
-      shouldSkip
-    });
-
     if (isFetched && !shouldSkip) {
-      console.log("[AppInitPage] Refreshing stars and discord count");
       refreshStars();
       refreshDiscordCount();
     }
 
     if (isConfigFetched && !shouldSkip) {
-      console.log("[AppInitPage] Refetching auto login and examples");
       refetch();
       refetchExamples();
     }
   }, [isFetched, isConfigFetched, shouldSkip]);
-
-  console.log("[AppInitPage] Loading state", {
-    isLoaded,
-    isLoading,
-    isFetched,
-    isExamplesFetched,
-    shouldSkip
-  });
 
   return (
     <>

@@ -1,6 +1,6 @@
 import { SignIn, SignUp as ClerkSignUp, useAuth, useUser , useClerk, SignedOut} from "@clerk/clerk-react";
 import { lazy, useEffect, useState } from "react";
-import { ensureLangflowUser, useLogout } from "./auth";
+import { useLogout } from "./auth";
 import { IS_CLERK_AUTH } from "@/clerk/auth";
 // Clerk login page component
 export function ClerkLoginPage() {
@@ -18,17 +18,14 @@ export function ClerkLoginPage() {
 
 // Clerk sign-up page component
 export function ClerkSignUpPage() {
-  const { isSignedIn, getToken } = useAuth();
+  const { isSignedIn } = useAuth();
   const { user } = useUser();
   const navigate = useCustomNavigate();
   const [processed, setProcessed] = useState(false);
-  const { mutateAsync: logout } = useLogout();
-  const { signOut } = useClerk();
 
   useEffect(() => {
     async function handleSignup() {
       if (isSignedIn && user && !processed) {
-        console.debug("[ClerkSignUpPage] User is signed in after signup. Redirecting to /organization...");
         setProcessed(true);
         navigate("/organization");
       }
