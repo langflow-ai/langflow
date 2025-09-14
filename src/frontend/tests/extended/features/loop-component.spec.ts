@@ -161,11 +161,6 @@ test(
       .first()
       .click();
 
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await zoomOut(page, 3);
-    await page.getByTestId("canvas_controls_dropdown").click();
-
     await page.getByTestId("div-generic-node").nth(5).click();
 
     await page.waitForTimeout(1000);
