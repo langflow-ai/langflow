@@ -5,13 +5,13 @@ import { useState } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
-import { BorderTrail } from "@/components/core/border-trail";
-import type { ContentBlock } from "@/types/chat";
-import { cn } from "@/utils/utils";
-import ForwardedIconComponent from "../../common/genericIconComponent";
-import { Separator } from "../../ui/separator";
-import ContentDisplay from "./ContentDisplay";
-import DurationDisplay from "./DurationDisplay";
+import type { ContentBlock } from "../types/chat";
+import { cn } from "../utils/cn";
+import { BorderTrail } from "./BorderTrail";
+import { ContentDisplay } from "./ContentDisplay";
+import { DurationDisplay } from "./DurationDisplay";
+import { GenericIcon } from "./GenericIcon";
+import { Separator } from "./Separator";
 
 interface ContentBlockDisplayProps {
   contentBlocks: ContentBlock[];
@@ -81,7 +81,7 @@ export function ContentBlockDisplay({
           <div className="flex items-center gap-2 align-baseline">
             {headerIcon && (
               <span data-testid="header-icon">
-                <ForwardedIconComponent
+                <GenericIcon
                   name={headerIcon}
                   className={cn(
                     "h-4 w-4",

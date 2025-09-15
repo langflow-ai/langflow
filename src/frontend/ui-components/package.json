@@ -1,0 +1,34 @@
+{
+  "name": "@langflow/ui-components",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.mjs",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./index.mjs",
+      "require": "./index.js",
+      "types": "./src/index.d.ts"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.mjs",
+    "src/"
+  ],
+  "dependencies": {
+    "tslib": "^2.3.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.3.0",
+    "framer-motion": "^11.2.10",
+    "lucide-react": "^0.503.0",
+    "react-markdown": "^8.0.7",
+    "rehype-mathjax": "^4.0.3",
+    "remark-gfm": "3.0.1"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
