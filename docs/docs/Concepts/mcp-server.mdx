@@ -203,21 +203,34 @@ Alternatively, you can replace `YOUR_API_KEY` with an existing Langflow API key.
 
 When OAuth is enabled, Langflow automatically starts an [MCP Composer](https://pypi.org/project/mcp-composer) instance for your project, creating a secure proxy between MCP clients and the `mcp-proxy` in front of your server.
 
+OAuth integration allows your Langflow MCP server to authenticate users and applications through any OAuth 2.0 compliant service. When users or applications connect to your MCP server, they'll be redirected to your chosen OAuth provider to authenticate, and upon successful authentication, they'll be granted access to your flows as MCP tools.
+
+Before configuring OAuth in Langflow, you must first set up an OAuth application with an external OAuth 2.0 service provider.
+During this setup, you'll register your Langflow server as an OAuth client and obtain the required credentials.
+The example values use [GitHub OAuth](https://github.com/settings/developers), but your deployment may vary.
+
+<details closed>
+<summary>Where do I find the OAuth values?</summary>
+
+   | Field | Description | Source | Example |
+   |-------|-------------|--------|---------|
+   | **Host** | OAuth server host | MCP Composer default. | `localhost` |
+   | **Port** | OAuth server port | MCP Composer default. | `9000` |
+   | **Server URL** | Full OAuth server URL | Combines the MCP Composer default OAuth host and port. | `http://localhost:9000` |
+   | **Callback Path** | OAuth callback URL on your server | You define this address during OAuth app registration. | `http://localhost:9000/auth/idaas/callback` |
+   | **Client ID** | Your OAuth client identifier | From your OAuth provider. | `Ov23li9vx2grVL61qjb` |
+   | **Client Secret** | Your OAuth client secret | From your OAuth provider. | `1234567890abcdef1234567890abcdef12345678` |
+   | **Authorization URL** | OAuth authorization endpoint | From your OAuth provider. | `https://github.com/login/oauth/authorize` |
+   | **Token URL** | OAuth token endpoint for getting refresh tokens | From your OAuth provider. | `https://github.com/login/oauth/access_token` |
+   | **MCP Scope** | Scope for MCP operations | You define this. As of Langflow 1.6, `user` is the only available value. | `user` |
+   | **Provider Scope** | OAuth provider scope | You define this. As of Langflow 1.6, `openid` is the only available value. | `openid` |
+
+</details>
 To configure OAuth authentication:
 
 1. Select **OAuth** as the authentication type.
-2. Configure the OAuth settings with the values from your OAuth deployment:
-
-   - **Host**: OAuth server host
-   - **Port**: OAuth server port
-   - **Server URL**: Full OAuth server URL
-   - **Callback Path**: OAuth callback URL
-   - **Client ID**: Your OAuth client identifier
-   - **Client Secret**: Your OAuth client secret
-   - **Authorization URL**: OAuth authorization endpoint
-   - **Token URL**: OAuth token endpoint
-   - **MCP Scope**: Scope for MCP operations
-   - **Provider Scope**: OAuth provider scope
+2. Configure the OAuth settings with the values from your OAuth deployment.
+    All values are required.
 
     The OAuth credentials are encrypted and stored securely in your Langflow database.
 
