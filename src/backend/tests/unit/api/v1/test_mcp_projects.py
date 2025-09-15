@@ -678,5 +678,5 @@ async def test_mcp_longterm_token_fails_without_superuser():
 
     # Now attempt to create long-term token -> expect HTTPException 400
     async with get_db_service().with_session() as session:
-        with pytest.raises(HTTPException):
+        with pytest.raises(HTTPException, match="Auto login required to create a long-term token"):
             await create_user_longterm_token(session)
