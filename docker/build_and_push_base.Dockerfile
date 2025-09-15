@@ -55,8 +55,9 @@ COPY ./src /app/src
 
 COPY src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
+# Increase memory and disable concurrent builds to avoid esbuild crashes on emulated architectures
 RUN npm install \
-    && NODE_OPTIONS="--max-old-space-size=4096" npm run build \
+    && NODE_OPTIONS="--max-old-space-size=8192" JOBS=1 npm run build \
     && cp -r build /app/src/backend/base/langflow/frontend \
     && rm -rf /tmp/src/frontend
 
