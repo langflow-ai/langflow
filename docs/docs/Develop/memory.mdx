@@ -3,6 +3,9 @@ title: Memory management options
 slug: /memory
 ---
 
+import PartialConfigDirPaths from '@site/docs/_partial-config-dir-paths.mdx';
+import PartialDBDirPaths from '@site/docs/_partial-db-dir-paths.mdx';
+
 Langflow provides flexible memory management options for storage and retrieval of data relevant to your flows and your Langflow server.
 This includes essential Langflow database tables, file management, and caching, as well as chat memory.
 
@@ -11,12 +14,7 @@ This includes essential Langflow database tables, file management, and caching, 
 Langflow supports both local memory and external memory options.
 
 Langflow's default storage option is a [SQLite](https://www.sqlite.org/) database stored in your system's cache directory.
-The default storage path depends on your operation system and installation method:
-
-- **macOS Desktop**: `/Users/<username>/.langflow/data/database.db`
-- **Windows Desktop**: `C:\Users\<name>\AppData\Roaming\com.Langflow\data\langflow.db`
-- **OSS macOS/Windows/Linux/WSL (`uv pip install`)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/langflow.db` (Python version may vary)
-- **OSS macOS/Windows/Linux/WSL (`git clone`)**: `<path_to_clone>/src/backend/base/langflow/langflow.db`
+<PartialDBDirPaths/>
 
 Alternatively, you can use an external PostgreSQL database for all of your Langflow storage.
 You can also selectively use external storage for chat memory, separate from other Langflow storage.
