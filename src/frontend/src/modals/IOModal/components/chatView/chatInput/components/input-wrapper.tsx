@@ -55,20 +55,26 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   // Check if voice mode is available
   const { data: config } = useGetConfig();
 
+  const onClick = () => {
+    () => {
+      if (inputRef.current && inputRef.current !== document.activeElement) {
+        inputRef.current?.focus();
+      }
+    };
+  };
+
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
   return (
     <div className="flex w-full flex-col-reverse">
       <div
         data-testid="input-wrapper"
         className="flex w-full flex-col rounded-md border cursor-text border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary"
-        onMouseDown={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-        }}
-        onClick={() => {
-          if (inputRef.current && inputRef.current !== document.activeElement) {
-            inputRef.current?.focus();
-          }
-        }}
+        onMouseDown={onMouseDown}
+        onClick={onClick}
       >
         <TextAreaWrapper
           isBuilding={isBuilding}
