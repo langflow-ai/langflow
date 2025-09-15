@@ -64,12 +64,9 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
           e.stopPropagation();
           e.preventDefault();
         }}
-        onClick={(e) => {
+        onClick={() => {
           if (inputRef.current && inputRef.current !== document.activeElement) {
             inputRef.current?.focus();
-          } else {
-            e.stopPropagation();
-            e.preventDefault();
           }
         }}
       >
