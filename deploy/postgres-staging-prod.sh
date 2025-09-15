@@ -146,11 +146,11 @@ prepare_langflow_env() {
   [[ -n "$DB_USER" && -n "$DB_PASSWORD" && -n "$DB_NAME" ]] || {
     err "--db-user, --db-password and --db-name are required"; exit 1;
   }
-
   [[ -f "$CONTAINER_ENV_FILE" ]] || { err "Env file not found: $CONTAINER_ENV_FILE"; exit 1; }
-
   sed -i '/^LANGFLOW_DATABASE_URL=/d' "$CONTAINER_ENV_FILE"
-
+  if [[ -s "$CONTAINER_ENV_FILE" && $(tail -c1 "$CONTAINER_ENV_FILE") != "" ]]; then
+    echo "" >> "$CONTAINER_ENV_FILE"
+  fi
   echo "LANGFLOW_DATABASE_URL=postgresql://$DB_USER:$DB_PASSWORD@postgres:5432/$DB_NAME" >> "$CONTAINER_ENV_FILE"
 }
 
@@ -167,12 +167,12 @@ cleanup_old_images() {
   step "Cleaning up old Docker images (keeping last 2)"
   local images
   images=$(docker images --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedAt}}' \
+    | grep -v '^postgres:' \
     | sort -k3 -r \
     | awk 'NR>2 {print $2}')
 
   if [[ -n "$images" ]]; then
-    # Ignore failures if an image is still in use
-    echo "$images" | xargs -r docker rmi -f || true
+    echo "$images" | xargs -r docker rmi -f >/dev/null 2>&1 || true
     ok "Old images removed (except in-use ones)"
   else
     ok "No old images to remove"
