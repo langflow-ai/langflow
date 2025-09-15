@@ -202,6 +202,10 @@ Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
+lfx = [
+    "lfx~=0.1.0",
+]
+
 docling = [
     "docling>=2.36.1",
     "langchain-docling>=1.1.0",

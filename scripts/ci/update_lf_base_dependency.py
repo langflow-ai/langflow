@@ -35,13 +35,14 @@ def update_lfx_dep_in_base(pyproject_path: str, lfx_version: str) -> None:
     content = filepath.read_text(encoding="utf-8")
 
     # Updated pattern to handle PEP 440 version suffixes and both ~= and == version specifiers
+    # Look for lfx in optional dependencies section
     pattern = re.compile(r'("lfx(?:~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")')
     replacement = f'"lfx-nightly=={lfx_version}"'
 
     # Check if the pattern is found
     if not pattern.search(content):
-        msg = f'LFX dependency not found in "{filepath}"'
-        raise ValueError(msg)
+        print(f'LFX dependency not found in "{filepath}" - this is OK for builds without lfx')
+        return
 
     # Replace the matched pattern with the new one
     content = pattern.sub(replacement, content)
@@ -72,6 +73,9 @@ def main() -> None:
 
     # Update langflow-base dependency in main project
     update_base_dep("pyproject.toml", base_version)
+
+    # Update LFX dependency in main project (optional dependencies)
+    update_lfx_dep_in_base("pyproject.toml", lfx_version)
 
     # Update LFX dependency in langflow-base
     update_lfx_dep_in_base("src/backend/base/pyproject.toml", lfx_version)
