@@ -38,6 +38,7 @@ dependencies = [
     "structlog",
     "loguru>=0.7.3",
     "langchain>=0.3.23",
+    "validators>=0.34.0",
 ]
 
 [project.scripts]
