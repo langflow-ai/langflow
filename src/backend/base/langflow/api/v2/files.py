@@ -131,8 +131,9 @@ async def upload_user_file(
             unique_filename = new_filename
         else:
             # For normal files, ensure unique name by appending a count if necessary
+            # TODO: If we can remove the unique constraint on name, we should filter to user_id
             stmt = select(UserFile).where(
-                col(UserFile.name).like(f"{root_filename}%"), UserFile.user_id == current_user.id
+                col(UserFile.name).like(f"{root_filename}%")
             )
             existing_files = await session.exec(stmt)
             files = existing_files.all()  # Fetch all matching records
