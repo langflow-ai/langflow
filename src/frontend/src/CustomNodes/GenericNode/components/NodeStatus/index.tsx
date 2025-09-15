@@ -96,6 +96,7 @@ export default function NodeStatus({
   const version = useDarkStore((state) => state.version);
   const eventDeliveryConfig = useUtilityStore((state) => state.eventDelivery);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setFlowPool = useFlowStore((state) => state.setFlowPool);
 
   const postTemplateValue = usePostTemplateValue({
     parameterId: nodeAuth?.name ?? "auth",
@@ -287,6 +288,8 @@ export default function NodeStatus({
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const handleClickRun = () => {
+    setFlowPool({});
+
     if (BuildStatus.BUILDING === buildStatus && isHovered) {
       stopBuilding();
       return;
