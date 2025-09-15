@@ -6,14 +6,14 @@ import orjson
 import pandas as pd
 from fastapi import UploadFile
 from fastapi.encoders import jsonable_encoder
-from langflow.api.v2.files import upload_user_file
-from langflow.custom import Component
-from langflow.inputs import SortableListInput
-from langflow.io import DropdownInput, HandleInput, SecretStrInput, StrInput
-from langflow.schema import Data, DataFrame, Message
-from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.deps import get_settings_service, get_storage_service, session_scope
-from langflow.template.field.base import Output
+from lfx.api.v2.files import upload_user_file
+from lfx.custom import Component
+from lfx.inputs import SortableListInput
+from lfx.io import DropdownInput, HandleInput, SecretStrInput, StrInput
+from lfx.schema import Data, DataFrame, Message
+from lfx.services.database.models.user.crud import get_user_by_id
+from lfx.services.deps import get_settings_service, get_storage_service, session_scope
+from lfx.template.field.base import Output
 
 
 class SaveToFileComponent(Component):
