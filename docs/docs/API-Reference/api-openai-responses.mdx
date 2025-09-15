@@ -27,7 +27,7 @@ For more information, see [API keys and authentication](/api-keys-and-authentica
 
 ### Using OpenAI Client Libraries
 
-While this endpoint is designed to be compatible with OpenAI's API, there are some differences when using OpenAI client libraries.
+This endpoint is compatible with OpenAI's API, but requires special configuration when using OpenAI client libraries.
 Langflow uses `x-api-key` headers for authentication, while OpenAI uses `Authorization: Bearer` headers.
 When sending requests to Langflow with OpenAI client libraries, you must configure custom headers and include an `api_key` configuration.
 The `api_key` parameter can have any value, such as `"api-dummy-key"` in the client examples, as the actual authentication is handled through the `default_headers` configuration.
