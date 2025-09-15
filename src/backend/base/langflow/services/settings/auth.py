@@ -28,7 +28,7 @@ class AuthSettings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     AUTO_LOGIN: bool = Field(
-        default=True, # TODO: Set to False in v2.0
+        default=True,  # TODO: Set to False in v2.0
         description=(
             "Enable automatic login with default credentials. "
             "SECURITY WARNING: This bypasses authentication and should only be used in development environments. "
