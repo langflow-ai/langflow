@@ -83,6 +83,11 @@ jobs:
       - name: Install the project
         run: uv sync
 
+      - name: Update pyproject.toml for nightly build
+        run: |
+          cd scripts/ci
+          uv run update_pyproject_combined.py main ${{ inputs.nightly_tag_base }} ${{ inputs.nightly_tag_base }}
+
       - name: Verify Nightly Name and Version
         id: verify
         run: |
@@ -159,6 +164,11 @@ jobs:
           prune-cache: false
       - name: Install the project
         run: uv sync
+
+      - name: Update pyproject.toml for nightly build
+        run: |
+          cd scripts/ci
+          uv run update_pyproject_combined.py main ${{ inputs.nightly_tag_main }} ${{ inputs.nightly_tag_base }}
 
       - name: Verify Nightly Name and Version
         id: verify
