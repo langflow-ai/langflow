@@ -3,6 +3,8 @@ title: Troubleshoot Langflow
 slug: /troubleshoot
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
 
 This page provides troubleshooting advice for issues you might encounter when using Langflow or contributing to Langflow.
@@ -193,10 +195,66 @@ To fully remove a Langflow Desktop macOS installation, you must also delete `~/.
     rm -rf .langflow
     ```
 
-## MCP server issues
+## Langflow MCP issues {#mcp}
 
-- [Use MCP Inspector to test and debug flows](/mcp-server#test-and-debug-flows)
-- [Troubleshooting MCP server](/mcp-server#troubleshooting-mcp-server)
+The following issues can occur when using Langflow as an MCP server or client.
+
+### Claude for Desktop not using MCP server tools correctly
+
+If Claude for Desktop isn't using your server's tools correctly, you may need to explicitly define the path to your local `uvx` or `npx` executable file in the `claude_desktop_config.json` configuration file.
+
+1. To find your UVX path, run `which uvx`.
+
+    To find your NPX path, run `which npx`.
+
+2. Copy the path, and then replace `PATH_TO_UVX` or `PATH_TO_NPX` in your `claude_desktop_config.json` file.
+
+    <Tabs>
+    <TabItem value="uvx" label="uvx" default>
+
+    ```json
+    {
+      "mcpServers": {
+        "PROJECT_NAME": {
+          "command": "PATH_TO_UVX",
+          "args": [
+            "mcp-proxy",
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
+          ]
+        }
+      }
+    }
+    ```
+
+    </TabItem>
+    <TabItem value="npx" label="npx">
+
+    ```json
+    {
+      "mcpServers": {
+        "PROJECT_NAME": {
+          "command": "PATH_TO_NPX",
+          "args": [
+            "-y",
+            "supergateway",
+            "--sse",
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
+          ]
+        }
+      }
+    }
+    ```
+
+    </TabItem>
+    </Tabs>
+
+### MCP browser-based flows won't open browser on Windows
+
+If you're using MCP Tools with browser navigation actions such as Playwright on Windows and the agent executes the tools successfully but no browser tabs open, this is a known limitation.
+
+This issue occurs because the MCP server runs from a Python process, which prevents it from opening browser windows in WSL or Windows.
+
+To work around this issue, use the standalone MCP server approach documented in the [Playwright MCP repository](https://github.com/microsoft/playwright-mcp?tab=readme-ov-file#standalone-mcp-server).
 
 ## Token length limit errors in Embedding Model components
 
