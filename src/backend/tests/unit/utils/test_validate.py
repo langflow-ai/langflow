@@ -532,7 +532,7 @@ def test():
     pass
 """
         module = ast.parse(code)
-        with pytest.raises(ModuleNotFoundError, match="Module nonexistent_module not found"):
+        with pytest.raises(ModuleNotFoundError, match="No module named 'nonexistent_module'"):
             prepare_global_scope(module)
 
     def test_handles_langchain_warnings(self):
