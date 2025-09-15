@@ -203,11 +203,15 @@ Alternatively, you can replace `YOUR_API_KEY` with an existing Langflow API key.
 
 When OAuth is enabled, Langflow automatically starts an [MCP Composer](https://pypi.org/project/mcp-composer) instance for your project, creating a secure proxy between MCP clients and the `mcp-proxy` in front of your server.
 
-OAuth integration allows your Langflow MCP server to authenticate users and applications through any OAuth 2.0 compliant service. When users or applications connect to your MCP server, they'll be redirected to your chosen OAuth provider to authenticate, and upon successful authentication, they'll be granted access to your flows as MCP tools.
+OAuth integration allows your Langflow MCP server to authenticate users and applications through any OAuth 2.0 compliant service. When users or applications connect to your MCP server, they are redirected to your chosen OAuth provider to authenticate. Upon successful authentication, they are granted access to your flows as MCP tools.
 
-Before configuring OAuth in Langflow, you must first set up an OAuth application with an external OAuth 2.0 service provider.
-During this setup, you'll register your Langflow server as an OAuth client and obtain the required credentials.
-The example values use [GitHub OAuth](https://github.com/settings/developers), but your deployment may vary.
+1. Before configuring OAuth in Langflow, you must first set up an OAuth application with an external OAuth 2.0 service provider.
+You must register your Langflow server as an OAuth client, and then obtain the required values to complete the configuration in Langflow.
+
+The following table describes the required values.
+[GitHub OAuth](https://github.com/settings/developers) is used for example purposes.
+Be sure to use the actual values from your own deployment.
+For more information, see your OAuth provider's documentation.
 
 <details closed>
 <summary>Where do I find the OAuth values?</summary>
@@ -234,11 +238,12 @@ To configure OAuth authentication:
 
     The OAuth credentials are encrypted and stored securely in your Langflow database.
 
-3. To complete MCP server setup, click **Save**.
-Your MCP server's **JSON** code snippets and **Auto install** configuration are automatically updated with OAuth values.
+3. Click **Save**.
 
-4. After enabling OAuth on your MCP server, you need to update your MCP client configuration to use the new OAuth settings.
-    The client update method depends on how the client was installed.
+    Your MCP server's **JSON** code snippets and **Auto install** configuration are automatically updated with OAuth values. These are automatically used for new installations after enabling OAuth. However, you must manually update any existing installations, as explained in the next step.
+
+4. If you already installed your Langflow MCP server in your MCP client, you must update your MCP client configuration to use the new OAuth settings after enabling OAuth on your MCP server.
+    The client update method depends on how you installed the server on the client:
 
     - **Auto install**: Manually update your client's config file using the updated JSON snippet from the **JSON** tab, or repeat the steps in [Auto-install](#connect-clients-to-use-the-servers-actions) to re-install the client with the updated settings.
     - **JSON option**: Copy the updated JSON snippet from the **JSON** tab and replace your existing configuration.
