@@ -3,6 +3,9 @@ title: OpenAI Responses API
 slug: /api-openai-responses
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 Langflow includes an endpoint that is compatible with the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses).
 It is available at `POST /api/v1/responses`.
 
@@ -21,6 +24,84 @@ The component types `ChatInput` and `Chat Input` are recognized as chat inputs.
 - **Model Names**: In your request, the `model` field must contain a valid flow ID or endpoint name.
 - **Authentication**: All requests require an API key passed in the `x-api-key` header.
 For more information, see [API keys and authentication](/api-keys-and-authentication).
+
+### Using OpenAI Client Libraries
+
+While this endpoint is designed to be compatible with OpenAI's API, there are some differences when using OpenAI client libraries.
+The `api_key` parameter is required by the OpenAI SDK but is not used by Langflow, so requests must include a dummy API key value.
+You can set it to any value, such as `"api-dummy-key"` in the client examples, as the actual authentication is handled through the `default_headers` configuration.
+
+Langflow uses `x-api-key` headers for authentication, while OpenAI uses `Authorization: Bearer` headers.
+When sending requests to Langflow with OpenAI client libraries, you'll need to configure custom headers and include an `api_key` configuration.
+
+Replace the values for `LANGFLOW_SERVER_URL`, `LANGFLOW_API_KEY`, and `FLOW_ID` with values from your deployment.
+<Tabs groupId="client">
+  <TabItem value="Python" label="OpenAI Python Client" default>
+
+    ```python
+    from openai import OpenAI
+
+    client = OpenAI(
+      base_url="LANGFLOW_SERVER_URL/api/v1/",
+      default_headers={"x-api-key": "LANGFLOW_API_KEY"},
+      api_key="dummy-api-key" # Required by OpenAI SDK but not used by Langflow
+    )
+
+    response = client.responses.create(
+      model="FLOW_ID",
+      input="There is an event that happens on the second wednesday of every month. What are the event dates in 2026?",
+    )
+
+    print(response.output_text)
+    ```
+
+  </TabItem>
+  <TabItem value="JavaScript" label="OpenAI TypeScript Client">
+
+    ```typescript
+    import OpenAI from "openai";
+
+    const client = new OpenAI({
+      baseURL: "LANGFLOW_SERVER_URL/api/v1/",
+      defaultHeaders: {
+        "x-api-key": "LANGFLOW_API_KEY"
+      },
+      apiKey: "dummy-api-key" # Required by OpenAI SDK but not used by Langflow
+    });
+
+    const response = await client.responses.create({
+      model: "FLOW_ID",
+      input: "There is an event that happens on the second wednesday of every month. What are the event dates in 2026?"
+    });
+
+    console.log(response.output_text);
+    ```
+
+  </TabItem>
+</Tabs>
+
+    <details closed>
+    <summary>Response</summary>
+        ```text
+        Here are the event dates for the second Wednesday of each month in 2026:
+
+        - January 14, 2026
+        - February 11, 2026
+        - March 11, 2026
+        - April 8, 2026
+        - May 13, 2026
+        - June 10, 2026
+        - July 8, 2026
+        - August 12, 2026
+        - September 9, 2026
+        - October 14, 2026
+        - November 11, 2026
+        - December 9, 2026
+
+        If you need these in a different format or want a downloadable calendar, let me know!
+        ```
+     </details>
+
 
 ## Example request
 
