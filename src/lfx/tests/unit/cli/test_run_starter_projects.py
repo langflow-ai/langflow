@@ -71,8 +71,8 @@ class TestRunStarterProjects:
         # The command will likely fail due to missing API keys, etc.
         # But we're checking that there are no import errors
 
-        # Combine stdout and stderr for checking
-        all_output = result.stdout + result.stderr
+        # Use the combined output provided by Click/Typer
+        all_output = result.output
 
         # Check for import errors related to langflow or lfx
         if "ModuleNotFoundError" in all_output or "ImportError" in all_output or "Module" in all_output:
@@ -161,9 +161,7 @@ class TestRunStarterProjects:
             # We just want to ensure the command is parsed and attempted
 
             # Check that we got some output (even if it's an error)
-            assert len(result.stdout) > 0 or len(result.stderr) > 0, (
-                f"No output for {template_file.name} with format {fmt}"
-            )
+            assert len(result.output) > 0, f"No output for {template_file.name} with format {fmt}"
 
     def test_run_basic_starter_projects_detailed(self):
         """Test basic starter projects that should have minimal dependencies."""
@@ -186,7 +184,7 @@ class TestRunStarterProjects:
 
             # These basic templates might still fail due to missing LLM API keys
             # but should not have import errors
-            all_output = result.stdout + result.stderr
+            all_output = result.output
 
             # More specific checks for these basic templates
             assert "No module named 'langflow'" not in all_output, f"Langflow import error in {template_name}"
@@ -210,10 +208,10 @@ class TestRunStarterProjects:
         )
 
         # Check that the command attempted to process the input
-        assert len(result.stdout) > 0 or len(result.stderr) > 0
+        assert len(result.output) > 0
 
         # Verify no import errors
-        all_output = result.stdout + result.stderr
+        all_output = result.output
         assert "No module named 'langflow'" not in all_output
 
     @pytest.mark.parametrize("template_file", get_starter_project_files()[:5], ids=lambda x: x.name)
@@ -228,8 +226,8 @@ class TestRunStarterProjects:
         )
 
         # Check that the command attempted to process the input
-        assert len(result.stdout) > 0 or len(result.stderr) > 0
+        assert len(result.output) > 0
 
         # Verify no import errors
-        all_output = result.stdout + result.stderr
+        all_output = result.output
         assert "No module named 'langflow'" not in all_output
