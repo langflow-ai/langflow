@@ -5849,7 +5849,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115.13" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.24.0" },
     { name = "json-repair", specifier = ">=0.30.3" },
-    { name = "langchain", specifier = ">=0.3.23" },
+    { name = "langchain", specifier = "~=0.3.23" },
     { name = "langchain-core", specifier = ">=0.3.66" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "nanoid", specifier = ">=2.0.0" },

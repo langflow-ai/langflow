@@ -37,7 +37,7 @@ dependencies = [
     "asyncer>=0.0.8",
     "structlog",
     "loguru>=0.7.3",
-    "langchain>=0.3.23",
+    "langchain~=0.3.23",
     "validators>=0.34.0",
 ]
 
