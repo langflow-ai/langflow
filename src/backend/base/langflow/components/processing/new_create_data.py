@@ -1,7 +1,7 @@
 from typing import Any
 
-from langflow.custom import Component
-from langflow.io import (
+from lfx.custom import Component
+from lfx.io import (
     BoolInput,
     FloatInput,
     HandleInput,
@@ -11,8 +11,8 @@ from langflow.io import (
     StrInput,
     TableInput,
 )
-from langflow.schema.data import Data
-from langflow.schema.message import Message
+from lfx.schema.data import Data
+from lfx.schema.message import Message
 
 
 class CrateData(Component):
