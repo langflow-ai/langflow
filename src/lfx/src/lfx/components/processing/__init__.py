@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from lfx.components.processing.split_text import SplitTextComponent
     from lfx.components.processing.structured_output import StructuredOutputComponent
     from lfx.components.processing.update_data import UpdateDataComponent
+    from lfx.components.processing.anymize import AnymizeComponent
 
 _dynamic_imports = {
     "AlterMetadataComponent": "alter_metadata",
@@ -96,6 +97,7 @@ __all__ = [
     "StructuredOutputComponent",
     "TypeConverterComponent",
     "UpdateDataComponent",
+    "AnymizeComponent",
 ]
 
 
