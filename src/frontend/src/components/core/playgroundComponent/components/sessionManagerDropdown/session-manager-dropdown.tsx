@@ -35,7 +35,11 @@ export const SessionManagerDropdown = ({
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="!my-0" />
             <DropdownMenuGroup>
-              <SessionMenuItem onSelect={addNewSession} icon="Plus">
+              <SessionMenuItem
+                onSelect={addNewSession ?? (() => {})}
+                icon="Plus"
+                disabled={addNewSession === undefined}
+              >
                 New Session
               </SessionMenuItem>
             </DropdownMenuGroup>

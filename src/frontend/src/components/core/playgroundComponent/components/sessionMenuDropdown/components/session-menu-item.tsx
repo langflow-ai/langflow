@@ -10,12 +10,14 @@ export const SessionMenuItem = forwardRef<
     className?: string;
     icon?: string;
     children: React.ReactNode;
+    disabled?: boolean;
   }
->(({ onSelect, className, icon, children }, ref) => {
+>(({ onSelect, className, icon, children, disabled }, ref) => {
   return (
     <DropdownMenuItem
       className={cn("!text-mmd font-normal gap-2 px-2.5 py-2", className)}
       onSelect={onSelect}
+      disabled={disabled}
       onClick={(event) => event.stopPropagation()}
       ref={ref}
     >

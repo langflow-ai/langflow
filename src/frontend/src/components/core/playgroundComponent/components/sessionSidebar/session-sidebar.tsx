@@ -23,7 +23,12 @@ export default function SessionSidebar() {
           <span className="text-xs font-semibold text-muted-foreground">
             Sessions
           </span>
-          <Button variant="ghost" size="icon" onClick={addNewSession}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={addNewSession}
+            disabled={addNewSession === undefined}
+          >
             <ForwardedIconComponent
               name="Plus"
               className="w-4 h-4 text-muted-foreground"

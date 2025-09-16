@@ -13,7 +13,7 @@ interface UseGetAddSessionsProps {
 }
 
 type UseGetAddSessionsReturnType = (props: UseGetAddSessionsProps) => {
-  addNewSession: () => void;
+  addNewSession: (() => void) | undefined;
   sessions: SessionInfo[];
 };
 
@@ -24,15 +24,20 @@ export const useGetAddSessions: UseGetAddSessionsReturnType = ({ flowId }) => {
     (state) => state.setSelectedSession,
   );
 
+  const selectedSession = usePlaygroundStore((state) => state.selectedSession);
+
   const { data: dbSessions } = useGetSessionsFromFlowQuery({
     flowId,
     useLocalStorage: isPlayground,
   });
 
-  const addNewSession = () => {
-    const newSessionId = `${NEW_SESSION_NAME} ${sessions?.length ?? 0}`;
-    setSelectedSession(newSessionId);
-  };
+  const addNewSession =
+    selectedSession && !dbSessions?.includes(selectedSession)
+      ? undefined
+      : () => {
+          const newSessionId = `${NEW_SESSION_NAME} ${dbSessions?.length ?? 0}`;
+          setSelectedSession(newSessionId);
+        };
 
   const sessions = useMemo(() => {
     return (
