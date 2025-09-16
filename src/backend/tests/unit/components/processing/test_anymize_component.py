@@ -291,20 +291,22 @@ class TestAnymizeComponent(ComponentTestBaseWithoutClient):
         mock_response.status = 200
         mock_response.json = AsyncMock(return_value={"job_id": "test123"})
 
-        with patch("aiohttp.ClientSession") as mock_session_class:
-            with patch("aiohttp.ClientTimeout") as mock_timeout:
-                mock_session = MagicMock()
-                mock_session_class.return_value.__aenter__.return_value = mock_session
-                mock_session.post.return_value.__aenter__.return_value = mock_response
+        with (
+            patch("aiohttp.ClientSession") as mock_session_class,
+            patch("aiohttp.ClientTimeout") as mock_timeout,
+            patch("builtins.open", mock_open(read_data=b"fake pdf content")),
+        ):
+            mock_session = MagicMock()
+            mock_session_class.return_value.__aenter__.return_value = mock_session
+            mock_session.post.return_value.__aenter__.return_value = mock_response
 
-                with patch("builtins.open", mock_open(read_data=b"fake pdf content")):
-                    result = await component._anonymize_file(mock_file)
+            result = await component._anonymize_file(mock_file)
 
-                # Verify timeout was configured with 300 seconds
-                mock_timeout.assert_called_once_with(total=300)
-                # Verify session was created with timeout
-                mock_session_class.assert_called_once_with(timeout=mock_timeout.return_value)
-                assert result == {"job_id": "test123"}
+            # Verify timeout was configured with 300 seconds
+            mock_timeout.assert_called_once_with(total=300)
+            # Verify session was created with timeout
+            mock_session_class.assert_called_once_with(timeout=mock_timeout.return_value)
+            assert result == {"job_id": "test123"}
 
     @pytest.mark.asyncio
     async def test_unknown_operation(self):
@@ -320,10 +322,8 @@ class TestAnymizeComponent(ComponentTestBaseWithoutClient):
     async def test_process_exception_handling(self):
         """Test exception handling in process method."""
         component = AnymizeComponent(anymize_api="test_api_key", operation="anonymize_text", text="Test text")
-
         with patch.object(component, "_anonymize_text", new_callable=AsyncMock) as mock_anonymize:
-            mock_anonymize.side_effect = Exception("API connection failed")
-
+            mock_anonymize.side_effect = RuntimeError("API connection failed")
             result = await component.process()
 
             assert isinstance(result, Message)
@@ -354,31 +354,6 @@ class TestAnymizeComponent(ComponentTestBaseWithoutClient):
                 await component._poll_status("job123", max_retries=2, retry_interval=1)
 
     @pytest.mark.asyncio
-    async def test_anymize_api_request_post(self):
-        """Test POST request to anymize API."""
-        component = AnymizeComponent(anymize_api="test_api_key")
-
-        mock_response = AsyncMock()
-        mock_response.json = AsyncMock(return_value={"success": True})
-
-        mock_post = AsyncMock()
-        mock_post.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_post.__aexit__ = AsyncMock(return_value=None)
-
-        mock_session = AsyncMock()
-        mock_session.post = Mock(return_value=mock_post)
-
-        mock_client_session = Mock()
-        mock_client_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_client_session.__aexit__ = AsyncMock(return_value=None)
-
-        with patch("aiohttp.ClientSession", return_value=mock_client_session):
-            result = await component._anymize_api_request("POST", "/api/test", {"data": "test"})
-
-            assert result == {"success": True}
-            mock_session.post.assert_called_once()
-
-    @pytest.mark.asyncio
     async def test_anymize_api_request_get(self):
         """Test GET request to anymize API."""
         component = AnymizeComponent(anymize_api="test_api_key")
@@ -398,24 +373,26 @@ class TestAnymizeComponent(ComponentTestBaseWithoutClient):
         mock_client_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_client_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_client_session) as mock_session_class:
-            with patch("aiohttp.ClientTimeout") as mock_timeout:
-                result = await component._anymize_api_request("GET", "/api/status/123")
+        with (
+            patch("aiohttp.ClientSession", return_value=mock_client_session) as mock_session_class,
+            patch("aiohttp.ClientTimeout") as mock_timeout,
+        ):
+            result = await component._anymize_api_request("GET", "/api/status/123")
 
-                assert result == {"status": "ready"}
-                # Verify timeout was configured with 60 seconds
-                mock_timeout.assert_called_once_with(total=60)
-                # Verify session was created with timeout
-                mock_session_class.assert_called_once_with(timeout=mock_timeout.return_value)
-                mock_session.get.assert_called_once_with(
-                    "https://app.anymize.ai/api/status/123",
-                    headers={
-                        "Authorization": "Bearer test_api_key",
-                        "Accept": "application/json",
-                        "Content-Type": "application/json",
-                    },
-                    params={},
-                )
+            assert result == {"status": "ready"}
+            # Verify timeout was configured with 60 seconds
+            mock_timeout.assert_called_once_with(total=60)
+            # Verify session was created with timeout
+            mock_session_class.assert_called_once_with(timeout=mock_timeout.return_value)
+            mock_session.get.assert_called_once_with(
+                "https://app.anymize.ai/api/status/123",
+                headers={
+                    "Authorization": "Bearer test_api_key",
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                },
+                params={},
+            )
 
     @pytest.mark.asyncio
     async def test_anymize_api_request_post(self):
@@ -486,7 +463,7 @@ class TestAnymizeComponent(ComponentTestBaseWithoutClient):
         """Test API request with unsupported HTTP method."""
         component = AnymizeComponent(anymize_api="test_api_key")
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match=r"Unsupported HTTP method: PATCH") as exc_info:
             await component._anymize_api_request("PATCH", "/api/test")
 
         assert "Unsupported HTTP method: PATCH" in str(exc_info.value)
@@ -531,7 +508,7 @@ class TestAnymizeComponent(ComponentTestBaseWithoutClient):
         """Test _anonymize_file with invalid input type."""
         component = AnymizeComponent(anymize_api="test_api_key")
 
-        with pytest.raises(TypeError, match="file_input must be a path string"):
+        with pytest.raises(TypeError, match="Invalid file_input type"):
             await component._anonymize_file(123)  # Invalid type
 
     def test_component_metadata(self):

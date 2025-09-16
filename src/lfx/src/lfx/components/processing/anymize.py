@@ -1,5 +1,6 @@
 import asyncio
 import os
+from pathlib import Path
 from typing import Any
 
 import aiohttp
@@ -35,7 +36,7 @@ class AnymizeComponent(Component):
             options=["anonymize_text", "deanonymize_text", "file_anonymization"],
             value="anonymize_text",
             real_time_refresh=True,
-            info="Select the anonymization operation to perform: 'anonymize_text' converts personal data to hash codes, 'deanonymize_text' restores original data from hashes, 'file_anonymization' processes uploaded documents via OCR.",
+            info="Select operation: anonymize text to hashes, deanonymize hashes to text, or process files via OCR.",
         ),
         MultilineInput(
             name="text",
@@ -127,7 +128,7 @@ class AnymizeComponent(Component):
                     text=f"File anonymization completed but no anonymized text found. Response: {final_response}"
                 )
             return Message(text=f"Error: Unknown operation '{self.operation}'")
-        except Exception as e:
+        except (RuntimeError, ValueError, TypeError, asyncio.TimeoutError) as e:
             return Message(text=f"Error during processing: {e!s}")
 
     async def _anonymize_file(self, file_input) -> dict[str, Any]:
@@ -135,12 +136,13 @@ class AnymizeComponent(Component):
 
         if isinstance(file_input, str):
             file_path = file_input
-            file_name = os.path.basename(file_path)
+            file_name = Path(file_path).name
         elif hasattr(file_input, "path"):
             file_path = file_input.path
-            file_name = getattr(file_input, "name", os.path.basename(file_path))
+            file_name = getattr(file_input, "name", Path(file_path).name)
         else:
-            raise TypeError("file_input must be a path string or an object with a 'path' attribute")
+            msg = "Invalid file_input type"
+            raise TypeError(msg)
 
         timeout = aiohttp.ClientTimeout(total=300)
         async with aiohttp.ClientSession(timeout=timeout) as session:
