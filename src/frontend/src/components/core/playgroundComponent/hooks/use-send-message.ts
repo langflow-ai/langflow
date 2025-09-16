@@ -44,7 +44,7 @@ export const useSendMessage = () => {
         throw err;
       });
       if (selectedSession && !sessions?.includes(selectedSession)) {
-        refetch();
+        refetch(); // refetch sessions to add the new session
       }
     },
     [
