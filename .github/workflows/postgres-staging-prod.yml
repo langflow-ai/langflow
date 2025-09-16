@@ -47,7 +47,7 @@ jobs:
           if [ -n "${{ github.event.inputs.commit_id }}" ]; then
             echo "commit_id=${{ github.event.inputs.commit_id }}" >> $GITHUB_OUTPUT
           else
-            COMMIT_ID=$(git rev-parse --short HEAD)
+            COMMIT_ID=$(git rev-parse HEAD)
             echo "commit_id=$COMMIT_ID" >> $GITHUB_OUTPUT
           fi
 
