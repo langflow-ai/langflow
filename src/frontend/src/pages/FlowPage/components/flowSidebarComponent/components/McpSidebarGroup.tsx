@@ -8,7 +8,7 @@ import {
   SidebarMenu,
 } from "@/components/ui/sidebar";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
-import { APIClassType } from "@/types/api";
+import type { APIClassType } from "@/types/api";
 import { removeCountFromString } from "@/utils/utils";
 import { SearchConfigTrigger } from "./searchConfigTrigger";
 import SidebarDraggableComponent from "./sidebarDraggableComponent";
@@ -87,7 +87,7 @@ const McpSidebarGroup = ({
   }
 
   return (
-    <SidebarGroup className={`p-3${!hasMcpServers ? " h-full" : ""}`}>
+    <SidebarGroup className={`p-3 pr-2${!hasMcpServers ? " h-full" : ""}`}>
       {hasMcpServers && (
         <>
           <SidebarGroupLabel className="cursor-default">
