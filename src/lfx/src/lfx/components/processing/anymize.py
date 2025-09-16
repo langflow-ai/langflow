@@ -1,12 +1,12 @@
-from typing import Any, Dict
-
-import aiohttp
 import asyncio
 import os
-from lfx.io import MultilineInput, FileInput, DropdownInput, SecretStrInput
+from typing import Any
+
+import aiohttp
 from lfx.custom.custom_component.component import Component
-from lfx.template import Output
+from lfx.io import DropdownInput, FileInput, MultilineInput, SecretStrInput
 from lfx.schema import Message
+from lfx.template import Output
 
 
 class AnymizeComponent(Component):
@@ -24,7 +24,10 @@ class AnymizeComponent(Component):
         SecretStrInput(
             name="anymize_api",
             display_name="anymize API Key",
-            info="Your anymize.ai API key for authentication. Get your API key from https://anymize.ai after creating an account. Required for all operations.",
+            info=(
+                "Your anymize.ai API key for authentication. Get your API key from "
+                "https://anymize.ai after creating an account. Required for all operations."
+            ),
         ),
         DropdownInput(
             name="operation",
@@ -133,7 +136,7 @@ class AnymizeComponent(Component):
         except Exception as e:
             return Message(text=f"Error during processing: {str(e)}")
 
-    async def _anonymize_file(self, file_input) -> Dict[str, Any]:
+    async def _anonymize_file(self, file_input) -> dict[str, Any]:
         headers = {"Authorization": f"Bearer {self.anymize_api}"}
 
         if isinstance(file_input, str):
@@ -145,7 +148,8 @@ class AnymizeComponent(Component):
         else:
             raise TypeError("file_input must be a path string or an object with a 'path' attribute")
 
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=300)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             data = aiohttp.FormData()
             with open(file_path, "rb") as f:
                 data.add_field("file", f, filename=file_name)
@@ -155,9 +159,12 @@ class AnymizeComponent(Component):
                     headers=headers,
                     data=data,
                 ) as response:
+                    if response.status >= 400:
+                        text = await response.text()
+                        raise RuntimeError(f"anymize API error {response.status} for /api/ocr: {text[:200]}")
                     return await response.json()
 
-    async def _anonymize_text(self, text: str, language: str = "en") -> Dict[str, Any]:
+    async def _anonymize_text(self, text: str, language: str = "en") -> dict[str, Any]:
         body = {
             "text": text,
             "language": language,
@@ -165,10 +172,10 @@ class AnymizeComponent(Component):
 
         return await self._anymize_api_request("POST", "/api/anonymize", body)
 
-    async def _get_anonymization_status(self, job_id: str) -> Dict[str, Any]:
+    async def _get_anonymization_status(self, job_id: str) -> dict[str, Any]:
         return await self._anymize_api_request("GET", f"/api/status/{job_id}")
 
-    async def _deanonymize_text(self, text: str) -> Dict[str, Any]:
+    async def _deanonymize_text(self, text: str) -> dict[str, Any]:
         body = {
             "text": text,
         }
@@ -179,23 +186,33 @@ class AnymizeComponent(Component):
         self,
         method: str,
         resource: str,
-        body: Dict[str, Any] = {},
-        qs: Dict[str, Any] = {},
-    ) -> Dict[str, Any]:
+        body: dict[str, Any] | None = None,
+        qs: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         headers = {
             "Authorization": f"Bearer {self.anymize_api}",
+            "Accept": "application/json",
             "Content-Type": "application/json",
         }
-
         url = f"https://app.anymize.ai{resource}"
-
-        async with aiohttp.ClientSession() as session:
+        body = {} if body is None else body
+        qs = {} if qs is None else qs
+        timeout = aiohttp.ClientTimeout(total=60)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             if method == "POST":
                 async with session.post(url, headers=headers, json=body, params=qs) as response:
+                    if response.status >= 400:
+                        text = await response.text()
+                        raise RuntimeError(f"anymize API error {response.status} for {resource}: {text[:200]}")
                     return await response.json()
             elif method == "GET":
                 async with session.get(url, headers=headers, params=qs) as response:
+                    if response.status >= 400:
+                        text = await response.text()
+                        raise RuntimeError(f"anymize API error {response.status} for {resource}: {text[:200]}")
                     return await response.json()
+            else:
+                raise ValueError(f"Unsupported HTTP method: {method}")
 
     async def _poll_status(
         self,
@@ -203,8 +220,8 @@ class AnymizeComponent(Component):
         max_retries: int = 150,
         retry_interval: int = 10000,
         error_message: str = "Anonymization timeout: Process did not complete within expected time",
-    ) -> Dict[str, Any]:
-        for i in range(max_retries):
+    ) -> dict[str, Any]:
+        for _ in range(max_retries):
             response = await self._get_anonymization_status(job_id)
             if response["status"] == "completed":
                 return response
