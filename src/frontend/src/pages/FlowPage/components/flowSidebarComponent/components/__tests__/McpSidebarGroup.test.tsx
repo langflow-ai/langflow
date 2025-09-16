@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { APIClassType } from "@/types/api";
+import type { APIClassType } from "@/types/api";
 import McpSidebarGroup from "../McpSidebarGroup";
 
 // Mock the UI components
@@ -529,7 +529,11 @@ describe("McpSidebarGroup", () => {
 
       render(<McpSidebarGroup {...props} />);
 
-      expect(screen.getByTestId("sidebar-group")).toHaveClass("p-3", "h-full");
+      expect(screen.getByTestId("sidebar-group")).toHaveClass(
+        "p-3",
+        "pr-2",
+        "h-full",
+      );
     });
 
     it("should not apply h-full class when hasMcpServers is true", () => {
@@ -541,7 +545,7 @@ describe("McpSidebarGroup", () => {
       render(<McpSidebarGroup {...props} />);
 
       const sidebarGroup = screen.getByTestId("sidebar-group");
-      expect(sidebarGroup).toHaveClass("p-3");
+      expect(sidebarGroup).toHaveClass("p-3", "pr-2");
       expect(sidebarGroup).not.toHaveClass("h-full");
     });
   });
