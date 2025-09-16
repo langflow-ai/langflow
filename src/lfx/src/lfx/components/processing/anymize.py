@@ -1,12 +1,13 @@
-from typing import Any, Dict
-
-import aiohttp
 import asyncio
 import os
-from lfx.io import MultilineInput, FileInput, DropdownInput, SecretStrInput
+from typing import Any
+
+import aiohttp
+
 from lfx.custom.custom_component.component import Component
-from lfx.template import Output
+from lfx.io import DropdownInput, FileInput, MultilineInput, SecretStrInput
 from lfx.schema import Message
+from lfx.template import Output
 
 
 class AnymizeComponent(Component):
@@ -93,12 +94,9 @@ class AnymizeComponent(Component):
 
                 if "anonymized_text_raw" in final_response:
                     return Message(text=final_response["anonymized_text_raw"])
-                else:
-                    return Message(
-                        text=f"Anonymization completed but no anonymized text found. Response: {final_response}"
-                    )
+                return Message(text=f"Anonymization completed but no anonymized text found. Response: {final_response}")
 
-            elif self.operation == "deanonymize_text":
+            if self.operation == "deanonymize_text":
                 if not self.text:
                     return Message(text="Error: No text provided for deanonymization.")
 
@@ -106,10 +104,9 @@ class AnymizeComponent(Component):
 
                 if "text" in response:
                     return Message(text=response["text"])
-                else:
-                    return Message(text=f"Deanonymization failed. Response: {response}")
+                return Message(text=f"Deanonymization failed. Response: {response}")
 
-            elif self.operation == "file_anonymization":
+            if self.operation == "file_anonymization":
                 if not self.file:
                     return Message(text="Error: No file provided for anonymization.")
 
@@ -124,16 +121,14 @@ class AnymizeComponent(Component):
 
                 if "anonymized_text_raw" in final_response:
                     return Message(text=final_response["anonymized_text_raw"])
-                else:
-                    return Message(
-                        text=f"File anonymization completed but no anonymized text found. Response: {final_response}"
-                    )
-            else:
-                return Message(text=f"Error: Unknown operation '{self.operation}'")
+                return Message(
+                    text=f"File anonymization completed but no anonymized text found. Response: {final_response}"
+                )
+            return Message(text=f"Error: Unknown operation '{self.operation}'")
         except Exception as e:
-            return Message(text=f"Error during processing: {str(e)}")
+            return Message(text=f"Error during processing: {e!s}")
 
-    async def _anonymize_file(self, file_input) -> Dict[str, Any]:
+    async def _anonymize_file(self, file_input) -> dict[str, Any]:
         headers = {"Authorization": f"Bearer {self.anymize_api}"}
 
         if isinstance(file_input, str):
@@ -157,7 +152,7 @@ class AnymizeComponent(Component):
                 ) as response:
                     return await response.json()
 
-    async def _anonymize_text(self, text: str, language: str = "en") -> Dict[str, Any]:
+    async def _anonymize_text(self, text: str, language: str = "en") -> dict[str, Any]:
         body = {
             "text": text,
             "language": language,
@@ -165,10 +160,10 @@ class AnymizeComponent(Component):
 
         return await self._anymize_api_request("POST", "/api/anonymize", body)
 
-    async def _get_anonymization_status(self, job_id: str) -> Dict[str, Any]:
+    async def _get_anonymization_status(self, job_id: str) -> dict[str, Any]:
         return await self._anymize_api_request("GET", f"/api/status/{job_id}")
 
-    async def _deanonymize_text(self, text: str) -> Dict[str, Any]:
+    async def _deanonymize_text(self, text: str) -> dict[str, Any]:
         body = {
             "text": text,
         }
@@ -179,9 +174,9 @@ class AnymizeComponent(Component):
         self,
         method: str,
         resource: str,
-        body: Dict[str, Any] = {},
-        qs: Dict[str, Any] = {},
-    ) -> Dict[str, Any]:
+        body: dict[str, Any] = {},
+        qs: dict[str, Any] = {},
+    ) -> dict[str, Any]:
         headers = {
             "Authorization": f"Bearer {self.anymize_api}",
             "Content-Type": "application/json",
@@ -203,7 +198,7 @@ class AnymizeComponent(Component):
         max_retries: int = 150,
         retry_interval: int = 10000,
         error_message: str = "Anonymization timeout: Process did not complete within expected time",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         for i in range(max_retries):
             response = await self._get_anonymization_status(job_id)
             if response["status"] == "completed":

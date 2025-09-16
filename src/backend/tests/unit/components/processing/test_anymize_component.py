@@ -1,8 +1,10 @@
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import pytest
+
 from lfx.components.processing.anymize import AnymizeComponent
-from unittest.mock import AsyncMock, MagicMock, Mock, patch, mock_open
-from tests.base import ComponentTestBaseWithoutClient
 from lfx.schema import Message
+from tests.base import ComponentTestBaseWithoutClient
 
 
 class TestAnymizeComponent(ComponentTestBaseWithoutClient):
