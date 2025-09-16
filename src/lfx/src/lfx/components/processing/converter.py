@@ -95,6 +95,7 @@ def parse_structured_data(data: Data) -> Data:
     # Return original data if no parsing succeeded
     return data
 
+
 def _try_parse_json(text: str) -> Data | None:
     """Try to parse text as JSON and return Data object."""
     try:
