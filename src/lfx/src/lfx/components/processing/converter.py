@@ -88,7 +88,7 @@ def parse_structured_data(data: Data) -> Data:
     if _looks_like_csv(text):
         try:
             return _parse_csv_to_data(text)
-        except Exception:
+        except Exception:  # noqa: BLE001
             # Heuristic misfire or malformed CSV — keep original data
             return data
 
