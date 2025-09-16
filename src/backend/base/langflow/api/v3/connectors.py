@@ -109,7 +109,7 @@ async def connector_sync(request: Request, connector_service):
             status_code=201,
         )
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.exception("Connector sync failed", error=str(e))
         return JSONResponse({"error": f"Sync failed: {e!s}"}, status_code=500)
 
@@ -290,7 +290,7 @@ async def connector_webhook(request: Request, connector_service, session_manager
                 }
             )
 
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.exception(
                 "Failed to process webhook for connection",
                 connection_id=connection.connection_id,
@@ -310,7 +310,7 @@ async def connector_webhook(request: Request, connector_service, session_manager
                 status_code=500,
             )
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.exception("Webhook processing failed", error=str(e))
         return JSONResponse(
             {"error": f"Webhook processing failed: {e!s}"}, status_code=500
@@ -372,6 +372,6 @@ async def connector_token(request: Request, connector_service):
 
         return JSONResponse({"error": "Token not available for this connector type"}, status_code=400)
 
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.exception("Error getting connector token", error=str(e))
         return JSONResponse({"error": str(e)}, status_code=500)
