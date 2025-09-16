@@ -668,6 +668,8 @@ def create_new_project(
     project_icon,
     project_icon_bg_color,
     new_folder_id,
+    *,
+    mcp_enabled: bool | None = True,
 ) -> None:
     new_project = FlowCreate(
         name=project_name,
@@ -680,6 +682,7 @@ def create_new_project(
         folder_id=new_folder_id,
         gradient=project_gradient,
         tags=project_tags,
+        mcp_enabled=mcp_enabled,
     )
     db_flow = Flow.model_validate(new_project, from_attributes=True)
     session.add(db_flow)
@@ -957,6 +960,7 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
                         project_gradient=project_gradient,
                         project_tags=project_tags,
                         new_folder_id=new_folder.id,
+                        mcp_enabled=project.get("mcp_enabled", True),
                     )
                 except Exception:  # noqa: BLE001
                     await logger.aexception(f"Error while creating starter project {project_name}")
@@ -995,6 +999,7 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
                             project_gradient=project_gradient,
                             project_tags=project_tags,
                             new_folder_id=new_folder.id,
+                            mcp_enabled=project.get("mcp_enabled", True),
                         )
                     except Exception:  # noqa: BLE001
                         await logger.aexception(f"Error while creating starter project {project_name}")
