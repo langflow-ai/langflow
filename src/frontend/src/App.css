@@ -112,7 +112,12 @@ body {
 }
 
 .custom-hover:hover {
-  background-color: rgba(99, 102, 241, 0.1); /* Medium indigo color with 20% opacity */
+  background-color: rgba(
+    99,
+    102,
+    241,
+    0.1
+  ); /* Medium indigo color with 20% opacity */
 }
 
 /* This CSS is to not apply the border for the column having 'no-border' class */
@@ -226,6 +231,8 @@ code {
 
 /* Sidebar segmented layout utility */
 .sidebar-segmented {
-  max-width: calc(var(--sidebar-width) - var(--sidebar-width-icon));
+  max-width: calc(
+    var(--sidebar-width) - var(--sidebar-width-icon) - 2px
+  ); /* 2px is the border width */
   width: var(--sidebar-width);
 }
