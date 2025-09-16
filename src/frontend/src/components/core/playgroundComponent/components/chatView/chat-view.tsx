@@ -1,10 +1,9 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
 import { v5 as uuidv5 } from "uuid";
 import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 import CustomChatInput from "@/customization/components/custom-chat-input";
 import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
-import { useMessagesStore } from "@/stores/messagesStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
@@ -13,7 +12,6 @@ import { cn } from "@/utils/utils";
 import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
 import useFlowStore from "../../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
-import FlowRunningSqueleton from "../flow-running-squeleton";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "./chatInput/hooks/use-file-handler";
 import ChatMessage from "./chatMessage/chat-message";
@@ -42,14 +40,10 @@ export default function ChatView(): JSX.Element {
   const nodes = useFlowStore((state) => state.nodes);
   const chatInput = inputs.find((input) => input.type === "ChatInput");
   const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
-  const displayLoadingMessage = useMessagesStore(
-    (state) => state.displayLoadingMessage,
-  );
 
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
   const inputTypes = inputs.map((obj) => obj.type);
-  const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
   const isTabHidden = useTabVisibility();
 
@@ -95,7 +89,6 @@ export default function ChatView(): JSX.Element {
     setIsDragging(false);
   };
 
-  const flowRunningSkeletonMemo = useMemo(() => <FlowRunningSqueleton />, []);
   const isVoiceAssistantActive = useVoiceStore(
     (state) => state.isVoiceAssistantActive,
   );
@@ -125,18 +118,6 @@ export default function ChatView(): JSX.Element {
               playgroundPage={playgroundPage}
             />
           ))}
-        </div>
-        <div
-          className={
-            displayLoadingMessage
-              ? "w-full max-w-[768px] py-4 word-break-break-word"
-              : ""
-          }
-          ref={ref}
-        >
-          {displayLoadingMessage &&
-            !(messages?.[messages.length - 1]?.category === "error") &&
-            flowRunningSkeletonMemo}
         </div>
       </StickToBottom.Content>
 

@@ -1,6 +1,5 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { AxiosError } from "axios";
-import { flushSync } from "react-dom";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   BUILD_POLLING_INTERVAL,
@@ -12,7 +11,6 @@ import {
   customCancelBuildUrl,
   customEventsUrl,
 } from "@/customization/utils/custom-buildUtils";
-import { useMessagesStore } from "@/stores/messagesStore";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
@@ -20,6 +18,7 @@ import useFlowStore from "../stores/flowStore";
 import type { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import type { VertexLayerElementType } from "../types/zustand/flow";
+import { removeMessage, updateMessage } from "./messageUtils";
 import { isStringArray, tryParseJson } from "./utils";
 
 type BuildVerticesParams = {
@@ -611,20 +610,11 @@ async function onEvent(
     }
     case "add_message": {
       // Add a message to the messages store.
-      useMessagesStore.getState().addMessage(data);
-      return true;
-    }
-    case "token": {
-      // Use flushSync with a timeout to avoid React batching issues.
-      setTimeout(() => {
-        flushSync(() => {
-          useMessagesStore.getState().updateMessageText(data.id, data.chunk);
-        });
-      }, 10);
+      updateMessage(data);
       return true;
     }
     case "remove_message": {
-      useMessagesStore.getState().removeMessage(data);
+      removeMessage(data);
       return true;
     }
     case "end": {
@@ -635,7 +625,7 @@ async function onEvent(
     }
     case "error": {
       if (data?.category === "error") {
-        useMessagesStore.getState().addMessage(data);
+        updateMessage(data);
         // Use a falsy check to correctly determine if the source ID is missing.
         if (!data?.properties?.source?.id) {
           onBuildError && onBuildError("Error Building Flow", [data.text]);
