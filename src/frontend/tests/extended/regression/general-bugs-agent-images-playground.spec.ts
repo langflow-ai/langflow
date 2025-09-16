@@ -1,7 +1,7 @@
-import { expect, test } from "@playwright/test";
 import dotenv from "dotenv";
 import { readFileSync } from "fs";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(

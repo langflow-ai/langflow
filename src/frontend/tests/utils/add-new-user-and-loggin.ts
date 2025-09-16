@@ -1,4 +1,5 @@
-import { expect, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect } from "../fixtures";
 
 export const addNewUserAndLogin = async (page: Page) => {
   await page.route("**/api/v1/auto_login", (route) => {

@@ -1,6 +1,7 @@
-import { expect, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
 import fs from "fs";
 import path from "path";
+import { expect } from "../fixtures";
 import { generateRandomFilename } from "./generate-filename";
 
 // Function to get the correct mimeType based on file extension

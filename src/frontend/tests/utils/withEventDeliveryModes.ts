@@ -1,4 +1,5 @@
-import { type Page, test } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { test } from "../fixtures";
 
 type TestFunction = (args: { page: Page }) => Promise<void>;
 type TestConfig = Parameters<typeof test>[1];
