@@ -96,12 +96,9 @@ class AnymizeComponent(Component):
 
                 if "anonymized_text_raw" in final_response:
                     return Message(text=final_response["anonymized_text_raw"])
-                else:
-                    return Message(
-                        text=f"Anonymization completed but no anonymized text found. Response: {final_response}"
-                    )
+                return Message(text=f"Anonymization completed but no anonymized text found. Response: {final_response}")
 
-            elif self.operation == "deanonymize_text":
+            if self.operation == "deanonymize_text":
                 if not self.text:
                     return Message(text="Error: No text provided for deanonymization.")
 
@@ -109,10 +106,9 @@ class AnymizeComponent(Component):
 
                 if "text" in response:
                     return Message(text=response["text"])
-                else:
-                    return Message(text=f"Deanonymization failed. Response: {response}")
+                return Message(text=f"Deanonymization failed. Response: {response}")
 
-            elif self.operation == "file_anonymization":
+            if self.operation == "file_anonymization":
                 if not self.file:
                     return Message(text="Error: No file provided for anonymization.")
 
@@ -127,14 +123,12 @@ class AnymizeComponent(Component):
 
                 if "anonymized_text_raw" in final_response:
                     return Message(text=final_response["anonymized_text_raw"])
-                else:
-                    return Message(
-                        text=f"File anonymization completed but no anonymized text found. Response: {final_response}"
-                    )
-            else:
-                return Message(text=f"Error: Unknown operation '{self.operation}'")
+                return Message(
+                    text=f"File anonymization completed but no anonymized text found. Response: {final_response}"
+                )
+            return Message(text=f"Error: Unknown operation '{self.operation}'")
         except Exception as e:
-            return Message(text=f"Error during processing: {str(e)}")
+            return Message(text=f"Error during processing: {e!s}")
 
     async def _anonymize_file(self, file_input) -> dict[str, Any]:
         headers = {"Authorization": f"Bearer {self.anymize_api}"}
