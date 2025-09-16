@@ -139,7 +139,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         # Should use the recommended model
         assert 'model_name="gpt-4o-mini"' in content
 
-    def test_agent_workflow_direct_execution(self):
+    async def test_agent_workflow_direct_execution(self):
         """Test the agent workflow by executing the graph directly."""
         # Import the components for direct execution
         try:
@@ -161,7 +161,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
 
         # Configure URL component for tools
         url_component.set(urls=["https://httpbin.org/json"])
-        tools = url_component.to_toolkit()
+        tools = await url_component.to_toolkit()
 
         # Configure agent
         agent.set(
@@ -208,7 +208,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
             except Exception as e:
                 pytest.fail(f"Failed to instantiate {component_name}: {e}")
 
-    def test_url_component_to_toolkit_functionality(self):
+    async def test_url_component_to_toolkit_functionality(self):
         """Test that URLComponent.to_toolkit() works properly."""
         try:
             from lfx import components as cp
@@ -221,7 +221,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         url_component.set(urls=["https://httpbin.org/json"])
 
         # Test to_toolkit functionality
-        tools = url_component.to_toolkit()
+        tools = await url_component.to_toolkit()
 
         # Should return some kind of tools object/list
         assert tools is not None
