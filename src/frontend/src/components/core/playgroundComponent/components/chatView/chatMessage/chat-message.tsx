@@ -1,4 +1,3 @@
-import Convert from "ansi-to-html";
 import { useEffect, useRef, useState } from "react";
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
@@ -11,11 +10,9 @@ import { EMPTY_INPUT_SEND_MESSAGE } from "../../../../../../constants/constants"
 import useAlertStore from "../../../../../../stores/alertStore";
 import type { chatMessagePropsType } from "../../../../../../types/components";
 import { cn } from "../../../../../../utils/utils";
-import Robot from "../../../../../assets/robot.png";
 import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../../common/genericIconComponent";
-import SanitizedHTMLWrapper from "../../../../../common/sanitizedHTMLWrapper";
 import { ErrorView } from "./components/content-view";
 import EditMessageField from "./components/edit-message-field";
 import FileCardWrapper from "./components/file-card-wrapper";
@@ -28,8 +25,6 @@ export default function ChatMessage({
   updateChat,
   playgroundPage,
 }: chatMessagePropsType): JSX.Element {
-  const convert = new Convert({ newline: true });
-  const [hidden, setHidden] = useState(true);
   const flow_id = useFlowsManagerStore((state) => state.currentFlowId);
   const fitViewNode = useFlowStore((state) => state.fitViewNode);
   // We need to check if message is not undefined because
@@ -37,8 +32,6 @@ export default function ChatMessage({
   const [chatMessage, setChatMessage] = useState(
     chat.text ? chat.text.toString() : "",
   );
-  const [isStreaming, setIsStreaming] = useState(false);
-  const eventSource = useRef<EventSource | undefined>(undefined);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const chatMessageRef = useRef(chatMessage);
   const [editMessage, setEditMessage] = useState(false);
@@ -52,45 +45,6 @@ export default function ChatMessage({
     setChatMessage(chatMessageString);
     chatMessageRef.current = chatMessage;
   }, [chat, isBuilding]);
-
-  // The idea now is that chat.stream_url MAY be a URL if we should stream the output of the chat
-  // probably the message is empty when we have a stream_url
-  // what we need is to update the chat_message with the SSE data
-  const streamChunks = (url: string) => {
-    setIsStreaming(true); // Streaming starts
-    return new Promise<boolean>((resolve, reject) => {
-      eventSource.current = new EventSource(url);
-      eventSource.current.onmessage = (event) => {
-        const parsedData = JSON.parse(event.data);
-        if (parsedData.chunk) {
-          setChatMessage((prev) => prev + parsedData.chunk);
-        }
-      };
-      eventSource.current.onerror = (event: any) => {
-        setIsStreaming(false);
-        eventSource.current?.close();
-        if (JSON.parse(event.data)?.error) {
-          setErrorData({
-            title: "Error on Streaming",
-            list: [JSON.parse(event.data)?.error],
-          });
-        }
-        updateChat(chat, chatMessageRef.current);
-        reject(new Error("Streaming failed"));
-      };
-      eventSource.current.addEventListener("close", (event) => {
-        eventSource.current?.close();
-        setIsStreaming(false);
-        resolve(true);
-      });
-    });
-  };
-
-  useEffect(() => {
-    return () => {
-      eventSource.current?.close();
-    };
-  }, []);
 
   useEffect(() => {
     if (chat.category === "error") {
