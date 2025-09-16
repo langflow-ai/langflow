@@ -52,6 +52,11 @@ class OrganizationService:
             msg = "Missing organisation id"
             raise RuntimeError(msg)
 
+        return cls.get_db_service_for_org(org_id)
+
+    @classmethod
+    def get_db_service_for_org(cls, org_id: str) -> DatabaseService:
+        """Return a DatabaseService for the given organisation id."""
         settings_service = get_settings_service()
         base_url = settings_service.settings.database_url
         expected_url = cls._build_database_url_for_org(base_url, org_id)
@@ -269,6 +274,7 @@ class OrganizationService:
         """Return True if the organisation database already has required tables."""
         try:
             async with db_service.with_session() as session, session.bind.connect() as conn:
+
                 def check_tables(sync_conn):
                     inspector = sa.inspect(sync_conn)
                     required_tables = [
@@ -288,3 +294,25 @@ class OrganizationService:
         except Exception:  # noqa: BLE001
             logger.exception("Error checking organisation database existence")
             return False
+
+    @classmethod
+    async def list_existing_org_ids(cls) -> list[str]:
+        """Return a list of organisation IDs based on existing databases."""
+        settings_service = get_settings_service()
+        base_url = settings_service.settings.database_url
+        if base_url.startswith("sqlite"):
+            db_path = base_url.split("///", 1)[1]
+            base_dir = Path(db_path).parent
+            base_name = Path(db_path).stem
+            return [p.stem for p in base_dir.glob("*.db") if p.stem not in {base_name}]
+
+        url_obj = sa.engine.make_url(base_url)
+        driver = "postgresql+psycopg" if url_obj.drivername.startswith("postgres") else url_obj.drivername
+        admin_url = url_obj.set(drivername=driver, database=url_obj.database or "postgres")
+        engine = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
+        async with engine.connect() as conn:
+            result = await conn.execute(sa.text("SELECT datname FROM pg_database"))
+            names = [row[0] for row in result]
+        await engine.dispose()
+        exclude = {url_obj.database, "postgres", "template0", "template1"}
+        return [name for name in names if name not in exclude]
