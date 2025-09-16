@@ -11,6 +11,10 @@ interface MessagesQueryParams {
   useLocalStorage?: boolean;
 }
 
+interface MessageResponse extends Omit<Message, "files"> {
+  files: string;
+}
+
 export const useGetMessagesQuery: useQueryFunctionType<
   MessagesQueryParams,
   Message[]
@@ -27,8 +31,14 @@ export const useGetMessagesQuery: useQueryFunctionType<
     }
 
     if (!useLocalStorage) {
-      const data = await api.get<Message[]>(`${getURL("MESSAGES")}`, config);
-      return data.data;
+      const data = await api.get<MessageResponse[]>(
+        `${getURL("MESSAGES")}`,
+        config,
+      );
+      return data.data.map((message) => ({
+        ...message,
+        files: JSON.parse(message.files),
+      }));
     } else {
       return JSON.parse(window.sessionStorage.getItem(id ?? "") || "[]");
     }
