@@ -27,6 +27,7 @@ from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveMCPUser
 from langflow.api.v1.mcp_utils import (
+    current_request_variables_ctx,
     current_user_ctx,
     handle_call_tool,
     handle_list_resources,
@@ -266,6 +267,18 @@ async def handle_project_sse(
     # Set context variables
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
+    # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+    variables: dict[str, str] = {}
+    header_prefix = "x-langflow-global-var-"
+    try:
+        for header_name, header_value in request.headers.items():
+            header_lower = header_name.lower()
+            if header_lower.startswith(header_prefix):
+                var_name = header_lower[len(header_prefix) :].upper()
+                variables[var_name] = header_value
+    except Exception:  # noqa: BLE001
+        await logger.aexception("Failed to parse request variables from headers for project %s", project_id)
+    req_vars_token = current_request_variables_ctx.set(variables or None)
 
     try:
         async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
@@ -292,6 +305,7 @@ async def handle_project_sse(
     finally:
         current_user_ctx.reset(user_token)
         current_project_ctx.reset(project_token)
+        current_request_variables_ctx.reset(req_vars_token)
 
     return Response(status_code=200)
 
@@ -306,6 +320,18 @@ async def handle_project_messages(
     # Set context variables
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
+    # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+    variables: dict[str, str] = {}
+    header_prefix = "x-langflow-global-var-"
+    try:
+        for header_name, header_value in request.headers.items():
+            header_lower = header_name.lower()
+            if header_lower.startswith(header_prefix):
+                var_name = header_lower[len(header_prefix) :].upper()
+                variables[var_name] = header_value
+    except Exception:  # noqa: BLE001
+        await logger.aexception("Failed to parse request variables from headers for project %s", project_id)
+    req_vars_token = current_request_variables_ctx.set(variables or None)
 
     try:
         sse = get_project_sse(project_id)
@@ -316,6 +342,7 @@ async def handle_project_messages(
     finally:
         current_user_ctx.reset(user_token)
         current_project_ctx.reset(project_token)
+        current_request_variables_ctx.reset(req_vars_token)
 
 
 @router.post("/{project_id}/")
