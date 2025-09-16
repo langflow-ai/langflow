@@ -679,6 +679,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodesToValidate = downstream.nodes;
       edgesToValidate = downstream.edges;
     } else if (stopNodeId) {
+      get().setStopNodeId(stopNodeId);
       const upstream = getConnectedSubgraph(
         stopNodeId,
         get().nodes,
@@ -687,6 +688,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
       nodesToValidate = upstream.nodes;
       edgesToValidate = upstream.edges;
+    }
+    if (!stopNodeId) {
+      get().setStopNodeId(undefined);
     }
 
     for (const edge of edgesToValidate) {
@@ -812,6 +816,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().updateBuildStatus([vertexBuildData.id], status);
       }
     }
+
     await buildFlowVerticesWithFallback({
       session,
       input_value,
@@ -821,7 +826,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       stopNodeId,
       onGetOrderSuccess: () => {},
       onBuildComplete: (allNodesValid) => {
-        const _nodeId = startNodeId || stopNodeId;
         if (!silent) {
           if (allNodesValid) {
             get().setBuildInfo({ success: true });
@@ -903,10 +907,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateEdgesRunningByNodes: (ids: string[], running: boolean) => {
     const edges = get().edges;
+
     const newEdges = edges.map((edge) => {
       if (
         edge.data?.sourceHandle &&
-        ids.includes(edge.data.sourceHandle.id ?? "")
+        ids.includes(edge.data.sourceHandle.id ?? "") &&
+        edge.data.sourceHandle.id !== get().stopNodeId
       ) {
         edge.animated = running;
         edge.className = running ? "running" : "";
@@ -930,7 +936,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       resolve();
     });
   },
-
   updateVerticesBuild: (
     vertices: {
       verticesIds: string[];
@@ -1076,6 +1081,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ newChatOnPlayground: newChat });
   },
   newChatOnPlayground: false,
+  stopNodeId: undefined,
+  setStopNodeId: (nodeId: string | undefined) => {
+    set({ stopNodeId: nodeId });
+  },
 }));
 
 export default useFlowStore;
