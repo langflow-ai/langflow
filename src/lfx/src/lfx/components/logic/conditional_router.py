@@ -1,8 +1,8 @@
 import re
 
-from langflow.custom.custom_component.component import Component
-from langflow.io import BoolInput, DropdownInput, IntInput, MessageInput, MessageTextInput, Output
-from langflow.schema.message import Message
+from lfx.custom.custom_component.component import Component
+from lfx.io import BoolInput, DropdownInput, IntInput, MessageInput, MessageTextInput, Output
+from lfx.schema.message import Message
 
 
 class ConditionalRouterComponent(Component):
