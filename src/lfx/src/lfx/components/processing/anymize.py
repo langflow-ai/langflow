@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import aiohttp
+
 from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, FileInput, MultilineInput, SecretStrInput
 from lfx.schema import Message

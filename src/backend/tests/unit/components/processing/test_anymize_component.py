@@ -1,7 +1,8 @@
-from unittest.mock import AsyncMock, MagicMock, Mock, patch, mock_open
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, Mock, mock_open, patch
 
 import pytest
-import asyncio
+
 from lfx.components.processing.anymize import AnymizeComponent
 from lfx.schema import Message
 from tests.base import ComponentTestBaseWithoutClient
