@@ -269,8 +269,8 @@ export default function ChatMessage({
                         isSend
                           ? "text-foreground"
                           : isEmpty
-                          ? "text-muted-foreground"
-                          : "text-foreground",
+                            ? "text-muted-foreground"
+                            : "text-foreground",
                       )}
                       data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                     >
