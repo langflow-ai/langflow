@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from typing import Any
 
 from astrapy import Collection, DataAPIClient, Database
-from astrapy.admin import parse_api_endpoint
 from langchain_core.tools import StructuredTool, Tool
 from pydantic import BaseModel, Field, create_model
 
@@ -192,6 +191,11 @@ class AstraDBToolComponent(LCToolComponent):
     _cached_collection: Collection | None = None
 
     def _build_collection(self):
+        try:
+            from astrapy.admin import parse_api_endpoint
+        except ImportError as e:
+            msg = "Could not import Astra DB integration package. Please install it with `uv pip install astrapy`."
+            raise ImportError(msg) from e
         if self._cached_collection:
             return self._cached_collection
 

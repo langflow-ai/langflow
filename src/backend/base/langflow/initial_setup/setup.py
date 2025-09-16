@@ -1002,12 +1002,16 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
                 await logger.adebug(f"Successfully created {successfully_created_projects} starter projects")
 
 
-async def initialize_super_user_if_needed() -> None:
+async def initialize_auto_login_default_superuser() -> None:
     settings_service = get_settings_service()
     if not settings_service.auth_settings.AUTO_LOGIN:
         return
-    username = settings_service.auth_settings.SUPERUSER
-    password = settings_service.auth_settings.SUPERUSER_PASSWORD
+    # In AUTO_LOGIN mode, always use the default credentials for initial bootstrapping
+    # without persisting the password in memory after setup.
+    from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+
+    username = DEFAULT_SUPERUSER
+    password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
     if not username or not password:
         msg = "SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true."
         raise ValueError(msg)

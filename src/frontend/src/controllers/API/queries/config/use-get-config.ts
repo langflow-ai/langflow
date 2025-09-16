@@ -22,6 +22,7 @@ export interface ConfigResponse {
   serialization_max_items_length: number;
   event_delivery: EventDeliveryType;
   webhook_auth_enable: boolean;
+  voice_mode_available: boolean;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (

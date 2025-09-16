@@ -1,7 +1,7 @@
 import os
 
 import orjson
-from astrapy.admin import parse_api_endpoint
+from langchain_core.documents import Document
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
@@ -16,6 +16,7 @@ from lfx.inputs.inputs import (
     StrInput,
 )
 from lfx.schema.data import Data
+from lfx.serialization import serialize
 
 
 class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
@@ -174,6 +175,7 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
     @check_cached_vector_store
     def build_vector_store(self):
         try:
+            from astrapy.admin import parse_api_endpoint
             from langchain_astradb import AstraDBGraphVectorStore
             from langchain_astradb.utils.astradb import SetupMode
         except ImportError as e:
@@ -235,6 +237,11 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
             else:
                 msg = "Vector Store Inputs must be Data objects."
                 raise TypeError(msg)
+
+        # Serialize metadata to handle Properties objects and other non-JSON serializable types
+        documents = [
+            Document(page_content=doc.page_content, metadata=serialize(doc.metadata, to_str=True)) for doc in documents
+        ]
 
         if documents:
             self.log(f"Adding {len(documents)} documents to the Vector Store.")

@@ -12,7 +12,11 @@ from lfx.schema.dataframe import DataFrame
 from lfx.services.deps import get_settings_service
 from pydantic import SecretStr
 
-from langflow.base.knowledge_bases import get_knowledge_bases
+from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
+from langflow.custom import Component
+from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
+from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.services.auth.utils import decrypt_api_key
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import session_scope

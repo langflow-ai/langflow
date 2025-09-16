@@ -9,6 +9,7 @@ class SequentialCrewComponent(BaseCrewComponent):
     documentation: str = "https://docs.crewai.com/how-to/Sequential/"
     icon = "CrewAI"
     legacy = True
+    replacement = "agents.Agent"
 
     inputs = [
         *BaseCrewComponent.get_base_inputs(),

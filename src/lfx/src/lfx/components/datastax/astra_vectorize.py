@@ -6,15 +6,13 @@ from lfx.template.field.base import Output
 
 
 class AstraVectorizeComponent(Component):
-    display_name: str = "Astra Vectorize [DEPRECATED]"
-    description: str = (
-        "Configuration options for Astra Vectorize server-side embeddings. "
-        "This component is deprecated. Please use the Astra DB Component directly."
-    )
+    display_name: str = "Astra Vectorize"
+    description: str = "Configuration options for Astra Vectorize server-side embeddings. "
     documentation: str = "https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html"
     legacy = True
     icon = "AstraDB"
     name = "AstraVectorize"
+    replacement = ["datastax.AstraDB"]
 
     VECTORIZE_PROVIDERS_MAPPING = {
         "Azure OpenAI": ["azureOpenAI", ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"]],
