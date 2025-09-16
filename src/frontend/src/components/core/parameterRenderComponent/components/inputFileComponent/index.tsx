@@ -152,11 +152,11 @@ export default function InputFileComponent({
       ? Array.isArray(file_path)
         ? file_path.filter((value) => value !== "")
         : typeof file_path === "string"
-        ? [file_path]
-        : []
+          ? [file_path]
+          : []
       : Array.isArray(file_path)
-      ? file_path ?? []
-      : [file_path ?? ""]
+        ? (file_path ?? [])
+        : [file_path ?? ""]
   ).filter((value) => value !== "");
 
   useEffect(() => {
@@ -182,15 +182,15 @@ export default function InputFileComponent({
       }
       handleOnNewValue({
         value: isList
-          ? files
+          ? (files
               ?.filter((f) => selectedFiles.includes(f.path))
-              .map((f) => f.name) ?? []
-          : files?.find((f) => selectedFiles.includes(f.path))?.name ?? "",
+              .map((f) => f.name) ?? [])
+          : (files?.find((f) => selectedFiles.includes(f.path))?.name ?? ""),
         file_path: isList
-          ? files
+          ? (files
               ?.filter((f) => selectedFiles.includes(f.path))
-              .map((f) => f.path) ?? []
-          : files?.find((f) => selectedFiles.includes(f.path))?.path ?? "",
+              .map((f) => f.path) ?? [])
+          : (files?.find((f) => selectedFiles.includes(f.path))?.path ?? ""),
       });
     }
   }, [files, value, file_path]);
@@ -217,11 +217,11 @@ export default function InputFileComponent({
                               (file) =>
                                 files.find((f) => f.path === file)?.name,
                             )
-                          : files.find((f) => f.path == newSelectedFiles[0]) ??
-                            "",
+                          : (files.find((f) => f.path == newSelectedFiles[0]) ??
+                            ""),
                         file_path: isList
                           ? newSelectedFiles
-                          : newSelectedFiles[0] ?? "",
+                          : (newSelectedFiles[0] ?? ""),
                       });
                     }}
                   />
@@ -235,10 +235,10 @@ export default function InputFileComponent({
                         ? selectedFiles.map(
                             (file) => files.find((f) => f.path === file)?.name,
                           )
-                        : files.find((f) => f.path == selectedFiles[0]) ?? "",
+                        : (files.find((f) => f.path == selectedFiles[0]) ?? ""),
                       file_path: isList
                         ? selectedFiles
-                        : selectedFiles[0] ?? "",
+                        : (selectedFiles[0] ?? ""),
                     });
                   }}
                   disabled={isDisabled}
