@@ -1,70 +1,47 @@
 import { keepPreviousData } from "@tanstack/react-query";
-import type { ColDef, ColGroupDef } from "ag-grid-community";
-import { useMessagesStore } from "@/stores/messagesStore";
+import type { Message } from "@/types/messages";
 import type { useQueryFunctionType } from "../../../../types/api";
-import {
-  extractColumnsFromRows,
-  prepareSessionIdForAPI,
-} from "../../../../utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface MessagesQueryParams {
   id?: string;
-  mode: "intersection" | "union";
-  excludedFields?: string[];
-  params?: object;
+  session_id?: string;
   useLocalStorage?: boolean;
-}
-
-interface MessagesResponse {
-  rows: Array<object>;
-  columns: Array<ColDef | ColGroupDef>;
 }
 
 export const useGetMessagesQuery: useQueryFunctionType<
   MessagesQueryParams,
-  MessagesResponse
-> = ({ id, mode, excludedFields, params, useLocalStorage }, options) => {
+  Message[]
+> = ({ id, session_id, useLocalStorage }: MessagesQueryParams, options) => {
   const { query } = UseRequestProcessor();
 
-  const getMessagesFn = async (id?: string, params = {}) => {
-    const config = {};
+  const getMessagesFn = async (): Promise<Message[]> => {
+    const config: { params?: { flow_id?: string; session_id?: string } } = {};
     if (id) {
-      config["params"] = { flow_id: id };
+      config.params = { flow_id: id };
     }
-    if (params) {
-      // Process params to ensure session_id is properly encoded
-      const processedParams = { ...params } as any;
-      if (processedParams.session_id) {
-        processedParams.session_id = prepareSessionIdForAPI(
-          processedParams.session_id,
-        );
-      }
-      config["params"] = { ...config["params"], ...processedParams };
+    if (session_id) {
+      config.params = { ...config.params, session_id };
     }
 
     if (!useLocalStorage) {
-      return await api.get<any>(`${getURL("MESSAGES")}`, config);
+      const data = await api.get<Message[]>(`${getURL("MESSAGES")}`, config);
+      return data.data;
     } else {
-      return {
-        data: JSON.parse(window.sessionStorage.getItem(id ?? "") || "[]"),
-      };
+      return JSON.parse(window.sessionStorage.getItem(id ?? "") || "[]");
     }
   };
 
-  const responseFn = async () => {
-    const data = await getMessagesFn(id, params);
-    const columns = extractColumnsFromRows(data.data, mode, excludedFields);
-    useMessagesStore.getState().setMessages(data.data);
-    return { rows: data, columns };
-  };
-
-  const queryResult = query(["useGetMessagesQuery", { id }], responseFn, {
-    placeholderData: keepPreviousData,
-    ...options,
-  });
+  const queryResult = query(
+    ["useGetMessagesQuery", { id, session_id }],
+    getMessagesFn,
+    {
+      placeholderData: keepPreviousData,
+      ...options,
+    },
+  );
 
   return queryResult;
 };

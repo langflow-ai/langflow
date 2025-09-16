@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import Loading from "@/components/ui/loading";
 import {
   useDeleteMessages,
+  useGetMessagesQuery,
   useUpdateMessage,
 } from "@/controllers/API/queries/messages";
 import useAlertStore from "../../../stores/alertStore";
@@ -19,7 +20,10 @@ export default function SessionView({
   sessionId?: string;
   flowId?: string;
 }) {
-  const messages = useMessagesStore((state) => state.messages);
+  const { data: messages = [] } = useGetMessagesQuery({
+    id: flowId,
+    session_id: sessionId,
+  });
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const updateMessage = useMessagesStore((state) => state.updateMessage);

@@ -1,8 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
 import { v5 as uuidv5 } from "uuid";
-import LangflowLogo from "@/assets/LangflowLogo.svg?react";
-import { TextEffectPerChar } from "@/components/ui/textAnimation";
+import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 import CustomChatInput from "@/customization/components/custom-chat-input";
 import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import { useMessagesStore } from "@/stores/messagesStore";
@@ -42,7 +41,6 @@ export default function ChatView(): JSX.Element {
   const [chatHistory, setChatHistory] = useState<ChatMessageType[] | undefined>(
     undefined,
   );
-  const messages = useMessagesStore((state) => state.messages);
   const nodes = useFlowStore((state) => state.nodes);
   const chatInput = inputs.find((input) => input.type === "ChatInput");
   const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
@@ -56,6 +54,11 @@ export default function ChatView(): JSX.Element {
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
   const isTabHidden = useTabVisibility();
+
+  const { data: messages = [] } = useGetMessagesQuery({
+    id: currentFlowId,
+    session_id: visibleSession,
+  });
 
   //build chat history
   useEffect(() => {
