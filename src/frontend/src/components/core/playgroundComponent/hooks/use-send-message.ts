@@ -1,6 +1,8 @@
 import { useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 
@@ -13,6 +15,14 @@ export const useSendMessage = () => {
   );
   const selectedSession = usePlaygroundStore((state) => state.selectedSession);
   const eventDeliveryConfig = useUtilityStore((state) => state.eventDelivery);
+
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const isPlayground = usePlaygroundStore((state) => state.isPlayground);
+
+  const { data: sessions, refetch } = useGetSessionsFromFlowQuery({
+    flowId: currentFlowId,
+    useLocalStorage: isPlayground,
+  });
 
   const sendMessage = useCallback(
     async ({
@@ -33,8 +43,18 @@ export const useSendMessage = () => {
         console.error(err);
         throw err;
       });
+      if (selectedSession && !sessions?.includes(selectedSession)) {
+        refetch();
+      }
     },
-    [buildFlow, chatInputId, selectedSession, eventDeliveryConfig],
+    [
+      buildFlow,
+      chatInputId,
+      selectedSession,
+      eventDeliveryConfig,
+      sessions,
+      refetch,
+    ],
   );
 
   return { sendMessage };
