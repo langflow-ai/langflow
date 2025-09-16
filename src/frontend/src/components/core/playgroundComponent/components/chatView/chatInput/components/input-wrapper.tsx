@@ -52,7 +52,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto custom-scroll`;
 
   return (
-    <div className="flex w-full flex-col">
+    <div className="flex w-full flex-col-reverse">
       {/* File preview section */}
       {files.length > 0 && (
         <div className={classNameFilePreview}>

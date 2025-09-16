@@ -22,7 +22,7 @@ export function PlaygroundComponent(): JSX.Element {
       </AnimatedConditional>
       <div className="flex flex-col w-full h-full transition-all duration-300">
         <PlaygroundHeader />
-        <div className="flex flex-grow p-4">
+        <div className="flex flex-grow overflow-hidden">
           <ChatView />
         </div>
       </div>
