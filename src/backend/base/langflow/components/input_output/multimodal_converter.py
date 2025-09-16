@@ -7,11 +7,10 @@ import requests
 # Import Google GenAI for Veo video generation
 from google import genai
 from google.genai import types
-from openai import OpenAI
-
 from lfx.custom import Component
 from lfx.io import DropdownInput, HandleInput, IntInput, Output, SecretStrInput, TabInput
 from lfx.schema import Data, Message
+from openai import OpenAI
 
 
 class ModalConverterComponent(Component):
