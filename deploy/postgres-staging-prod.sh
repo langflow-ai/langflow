@@ -147,33 +147,53 @@ prepare_langflow_env() {
     err "--db-user, --db-password and --db-name are required"; exit 1;
   }
   [[ -f "$CONTAINER_ENV_FILE" ]] || { err "Env file not found: $CONTAINER_ENV_FILE"; exit 1; }
-  sed -i '/^LANGFLOW_DATABASE_URL=/d' "$CONTAINER_ENV_FILE"
-  if [[ -s "$CONTAINER_ENV_FILE" && $(tail -c1 "$CONTAINER_ENV_FILE") != "" ]]; then
-    echo "" >> "$CONTAINER_ENV_FILE"
+
+  local PG_IMAGE="postgres@sha256:d0f363f8366fbc3f52d172c6e76bc27151c3d643b870e1062b4e8bfe65baf609"
+
+  if ! docker image inspect "$PG_IMAGE" >/dev/null 2>&1; then
+    step "Pulling required PostgreSQL image: $PG_IMAGE"
+    docker pull "$PG_IMAGE"
+    ok "PostgreSQL image pulled"
+  else
+    ok "PostgreSQL image already present"
   fi
-  echo "LANGFLOW_DATABASE_URL=postgresql://$DB_USER:$DB_PASSWORD@postgres:5432/$DB_NAME" >> "$CONTAINER_ENV_FILE"
+
+  if grep -q '^LANGFLOW_DATABASE_URL=' "$CONTAINER_ENV_FILE"; then
+    sed -i "s|^LANGFLOW_DATABASE_URL=.*|LANGFLOW_DATABASE_URL=postgresql://$DB_USER:$DB_PASSWORD@postgres:5432/$DB_NAME|" "$CONTAINER_ENV_FILE"
+  else
+    echo "LANGFLOW_DATABASE_URL=postgresql://$DB_USER:$DB_PASSWORD@postgres:5432/$DB_NAME" >> "$CONTAINER_ENV_FILE"
+  fi
+
+  if ! grep -q '^POSTGRES_IMAGE=' "$CONTAINER_ENV_FILE"; then
+    echo "POSTGRES_IMAGE=$PG_IMAGE" >> "$CONTAINER_ENV_FILE"
+  fi
 }
 
 # ---------- Docker cleanup (keep last 2 images only) ----------
 cleanup_old_images() {
-  step "Cleaning up PostgreSQL container"
-  if docker_exists "postgres"; then
-    docker rm -f postgres >/dev/null 2>&1 || true
-    ok "Removed old PostgreSQL container"
-  else
-    ok "No old PostgreSQL container found"
-  fi
-
   step "Cleaning up old Docker images (keeping last 2)"
+
+  # Load POSTGRES_IMAGE from env file
+  local PG_IMAGE
+  PG_IMAGE=$(grep '^POSTGRES_IMAGE=' "$CONTAINER_ENV_FILE" | cut -d'=' -f2-)
+
   local images
   images=$(docker images --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedAt}}' \
-    | grep -v '^postgres:' \
     | sort -k3 -r \
     | awk 'NR>2 {print $2}')
 
   if [[ -n "$images" ]]; then
-    echo "$images" | xargs -r docker rmi -f >/dev/null 2>&1 || true
-    ok "Old images removed (except in-use ones)"
+    for img in $images; do
+      if [[ -n "$PG_IMAGE" ]] && docker image inspect "$img" >/dev/null 2>&1; then
+        if docker image inspect --format='{{index .RepoDigests 0}}' "$img" 2>/dev/null | grep -q "$PG_IMAGE"; then
+          ok "Skipping Postgres image to delete"
+          continue
+        fi
+      fi
+      # Try to remove other images
+      docker rmi -f "$img" >/dev/null 2>&1 || true
+    done
+    ok "Old images removed (pinned Postgres preserved)"
   else
     ok "No old images to remove"
   fi
@@ -556,6 +576,10 @@ ensure_postgres() {
   step "Ensuring langflow-net network"
   docker network inspect langflow-net >/dev/null 2>&1 || docker network create langflow-net
 
+  if [[ -z "${POSTGRES_IMAGE:-}" ]]; then
+    POSTGRES_IMAGE=$(grep '^POSTGRES_IMAGE=' "$CONTAINER_ENV_FILE" | cut -d= -f2-)
+  fi
+
   if docker_running "postgres"; then
     ok "PostgreSQL container already running"
     return 0
@@ -564,7 +588,7 @@ ensure_postgres() {
   if docker_exists "postgres"; then
     step "Starting existing PostgreSQL container"
     docker start postgres >/dev/null
-    ok "PostgreSQL container started"
+    ok "PostgreSQL container already exists and is now started"
   else
     step "Starting PostgreSQL container"
     docker run -d \
@@ -574,7 +598,7 @@ ensure_postgres() {
       -e POSTGRES_PASSWORD="${DB_PASSWORD}" \
       -e POSTGRES_DB="${DB_NAME}" \
       -v langflow-postgres:/var/lib/postgresql/data \
-      postgres:16
+      "${POSTGRES_IMAGE}"
     ok "PostgreSQL container started"
   fi
 }
