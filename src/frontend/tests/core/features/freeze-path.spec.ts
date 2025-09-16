@@ -1,6 +1,7 @@
-import { expect, type Page, test } from "@playwright/test";
+import { type Page } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
