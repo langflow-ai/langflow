@@ -10,9 +10,9 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any
 
-from langflow.logging.logger import logger
-from langflow.services.base import Service
-from langflow.services.deps import get_settings_service
+from lfx.log.logger import logger
+from lfx.services.base import Service
+from lfx.services.deps import get_settings_service
 
 GENERIC_STARTUP_ERROR_MSG = (
     "MCP Composer startup failed. Check OAuth configuration and check logs for more information."

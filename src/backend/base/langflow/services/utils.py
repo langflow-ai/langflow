@@ -231,6 +231,8 @@ def register_all_service_factories() -> None:
     service_manager = get_service_manager()
     from lfx.services.settings import factory as settings_factory
 
+    from lfx.services.mcp_composer import factory as mcp_composer_factory
+
     from langflow.services.auth import factory as auth_factory
     from langflow.services.cache import factory as cache_factory
     from langflow.services.chat import factory as chat_factory
@@ -262,6 +264,7 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(store_factory.StoreServiceFactory())
     service_manager.register_factory(shared_component_cache_factory.SharedComponentCacheServiceFactory())
     service_manager.register_factory(auth_factory.AuthServiceFactory())
+    service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())
     service_manager.set_factory_registered()
 
 

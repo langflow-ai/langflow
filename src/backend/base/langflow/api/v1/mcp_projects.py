@@ -1220,7 +1220,7 @@ async def get_or_start_mcp_composer(auth_config: dict, project_name: str, projec
     Raises:
         MCPComposerError: If MCP Composer fails to start
     """
-    from langflow.services.mcp_composer.service import MCPComposerConfigError
+    from lfx.services.mcp_composer.service import MCPComposerConfigError
 
     mcp_composer_service: MCPComposerService = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
 

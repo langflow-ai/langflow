@@ -1,7 +1,7 @@
 """Factory for creating MCP Composer service instances."""
 
-from langflow.services.factory import ServiceFactory
-from langflow.services.mcp_composer.service import MCPComposerService
+from lfx.services.factory import ServiceFactory
+from lfx.services.mcp_composer.service import MCPComposerService
 
 
 class MCPComposerServiceFactory(ServiceFactory):

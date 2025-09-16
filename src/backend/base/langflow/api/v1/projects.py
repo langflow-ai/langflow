@@ -37,7 +37,7 @@ from langflow.services.database.models.folder.model import (
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
 from langflow.services.deps import get_service, get_settings_service
-from langflow.services.mcp_composer.service import MCPComposerService
+from lfx.services.mcp_composer.service import MCPComposerService
 from langflow.services.schema import ServiceType
 
 router = APIRouter(prefix="/projects", tags=["Projects"])

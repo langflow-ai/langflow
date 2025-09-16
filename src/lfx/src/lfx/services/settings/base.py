@@ -206,7 +206,7 @@ class Settings(BaseSettings):
     Default is '*' for backward compatibility. In production, specify exact origins."""
     cors_allow_credentials: bool = True
     """Whether to allow credentials in CORS requests.
-    Default is True for backward compatibility. In v1.7, this will be changed to False when using wildcard origins."""
+    Default is True for backward compatibility. In v2.0, this will be changed to False when using wildcard origins."""
     cors_allow_methods: list[str] | str = "*"
     """Allowed HTTP methods for CORS requests."""
     cors_allow_headers: list[str] | str = "*"

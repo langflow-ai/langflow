@@ -41,7 +41,7 @@ from langflow.services.utils import initialize_services, initialize_settings_ser
 if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
 
-    from langflow.services.mcp_composer.service import MCPComposerService
+    from lfx.services.mcp_composer.service import MCPComposerService
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
