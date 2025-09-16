@@ -76,7 +76,8 @@ def parse_structured_data(data: Data) -> Data:
     Returns:
         Data: Modified Data object with parsed content or original if parsing fails
     """
-    text = data.get_text().strip()
+    raw_text = data.get_text() or ""
+    text = raw_text.lstrip("\ufeff").strip()
 
     # Try JSON parsing first
     parsed_json = _try_parse_json(text)
@@ -85,11 +86,14 @@ def parse_structured_data(data: Data) -> Data:
 
     # Try CSV parsing
     if _looks_like_csv(text):
-        return _parse_csv_to_data(text)
+        try:
+            return _parse_csv_to_data(text)
+        except Exception:
+            # Heuristic misfire or malformed CSV — keep original data
+            return data
 
     # Return original data if no parsing succeeded
     return data
-
 
 def _try_parse_json(text: str) -> Data | None:
     """Try to parse text as JSON and return Data object."""
