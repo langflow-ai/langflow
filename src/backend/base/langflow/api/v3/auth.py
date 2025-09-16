@@ -1,5 +1,6 @@
-from starlette.requests import Request
-from starlette.responses import JSONResponse
+
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
 
 async def auth_init(request: Request, auth_service):
