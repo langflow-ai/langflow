@@ -30,13 +30,12 @@ export default function ChatMessage({
 }: chatMessagePropsType): JSX.Element {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
-  const [streamUrl, setStreamUrl] = useState(chat.stream_url);
   const flow_id = useFlowsManagerStore((state) => state.currentFlowId);
   const fitViewNode = useFlowStore((state) => state.fitViewNode);
   // We need to check if message is not undefined because
   // we need to run .toString() on it
   const [chatMessage, setChatMessage] = useState(
-    chat.message ? chat.message.toString() : "",
+    chat.text ? chat.text.toString() : "",
   );
   const [isStreaming, setIsStreaming] = useState(false);
   const eventSource = useRef<EventSource | undefined>(undefined);
@@ -49,7 +48,7 @@ export default function ChatMessage({
   const isAudioMessage = chat.category === "audio";
 
   useEffect(() => {
-    const chatMessageString = chat.message ? chat.message.toString() : "";
+    const chatMessageString = chat.text ? chat.text.toString() : "";
     setChatMessage(chatMessageString);
     chatMessageRef.current = chatMessage;
   }, [chat, isBuilding]);
@@ -70,7 +69,6 @@ export default function ChatMessage({
       eventSource.current.onerror = (event: any) => {
         setIsStreaming(false);
         eventSource.current?.close();
-        setStreamUrl(undefined);
         if (JSON.parse(event.data)?.error) {
           setErrorData({
             title: "Error on Streaming",
@@ -81,7 +79,6 @@ export default function ChatMessage({
         reject(new Error("Streaming failed"));
       };
       eventSource.current.addEventListener("close", (event) => {
-        setStreamUrl(undefined); // Update state to reflect the stream is closed
         eventSource.current?.close();
         setIsStreaming(false);
         resolve(true);
@@ -89,19 +86,6 @@ export default function ChatMessage({
     });
   };
 
-  useEffect(() => {
-    if (streamUrl && !isStreaming) {
-      streamChunks(streamUrl)
-        .then(() => {
-          if (updateChat) {
-            updateChat(chat, chatMessageRef.current);
-          }
-        })
-        .catch((error) => {
-          console.error(error);
-        });
-    }
-  }, [streamUrl, chatMessage]);
   useEffect(() => {
     return () => {
       eventSource.current?.close();
@@ -135,9 +119,9 @@ export default function ChatMessage({
           files: convertFiles(chat.files),
           sender_name: chat.sender_name ?? "AI",
           text: message,
-          sender: chat.isSend ? "User" : "Machine",
+          sender: chat.sender,
           flow_id,
-          session_id: chat.session ?? "",
+          session_id: chat.session_id ?? "",
         },
         refetch: true,
       },
@@ -162,10 +146,10 @@ export default function ChatMessage({
           ...chat,
           files: convertFiles(chat.files),
           sender_name: chat.sender_name ?? "AI",
-          text: chat.message.toString(),
-          sender: chat.isSend ? "User" : "Machine",
+          text: chat.text.toString(),
+          sender: chat.sender,
           flow_id,
-          session_id: chat.session ?? "",
+          session_id: chat.session_id ?? "",
           properties: {
             ...chat.properties,
             positive_feedback: evaluation,
@@ -200,21 +184,22 @@ export default function ChatMessage({
       />
     );
   }
+  const isSend = chat.sender === "User";
 
   return (
     <>
-      <div className={cn("w-full py-2", chat.isSend ? "flex justify-end" : "")}>
+      <div className={cn("w-full py-2", isSend ? "flex justify-end" : "")}>
         <div
           className={cn(
             "group relative",
-            chat.isSend
+            isSend
               ? "rounded-xl bg-muted border border-border px-3 py-2 w-full"
               : "rounded-md",
             editMessage ? "" : "",
           )}
         >
           {/* Show sender name only for AI messages */}
-          {!chat.isSend && (
+          {!isSend && (
             <div
               className={cn("pb-1 text-xs font-medium text-muted-foreground")}
               data-testid={
@@ -224,9 +209,22 @@ export default function ChatMessage({
               {chat.sender_name}
             </div>
           )}
+          {chat.content_blocks && chat.content_blocks.length > 0 && (
+            <ContentBlockDisplay
+              playgroundPage={playgroundPage}
+              contentBlocks={chat.content_blocks}
+              isLoading={
+                chat.properties?.state === "partial" &&
+                isBuilding &&
+                lastMessage
+              }
+              state={chat.properties?.state}
+              chatId={chat.id}
+            />
+          )}
 
           <div className="flex w-full gap-3 items-center">
-            {chat.isSend && (
+            {isSend && (
               <div className=" h-[24px] w-[24px] items-center justify-center inline-flex">
                 {chat.properties?.icon ? (
                   chat.properties.icon.match(
@@ -244,19 +242,6 @@ export default function ChatMessage({
                   <CustomProfileIcon />
                 )}
               </div>
-            )}
-            {chat.content_blocks && chat.content_blocks.length > 0 && (
-              <ContentBlockDisplay
-                playgroundPage={playgroundPage}
-                contentBlocks={chat.content_blocks}
-                isLoading={
-                  chat.properties?.state === "partial" &&
-                  isBuilding &&
-                  lastMessage
-                }
-                state={chat.properties?.state}
-                chatId={chat.id}
-              />
             )}
 
             {/* Simplified message content */}
@@ -281,15 +266,15 @@ export default function ChatMessage({
                     <div
                       className={cn(
                         "whitespace-pre-wrap break-words text-sm",
-                        chat.isSend
+                        isSend
                           ? "text-foreground"
                           : isEmpty
-                            ? "text-muted-foreground"
-                            : "text-foreground",
+                          ? "text-muted-foreground"
+                          : "text-foreground",
                       )}
                       data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                     >
-                      {chat.isSend ? (
+                      {isSend ? (
                         isEmpty ? (
                           EMPTY_INPUT_SEND_MESSAGE
                         ) : (
@@ -311,7 +296,13 @@ export default function ChatMessage({
                   {chat.files && (
                     <div className="mt-2 flex flex-col gap-2">
                       {chat.files?.map((file, index) => {
-                        return <FileCardWrapper index={index} path={file} />;
+                        return (
+                          <FileCardWrapper
+                            index={index}
+                            path={file}
+                            key={index}
+                          />
+                        );
                       })}
                     </div>
                   )}
@@ -323,7 +314,7 @@ export default function ChatMessage({
             <div
               className={cn(
                 "invisible absolute group-hover:visible",
-                chat.isSend ? "-left-4 top-0" : "-right-4 top-0",
+                isSend ? "-left-4 top-0" : "-right-4 top-0",
               )}
             >
               <EditMessageButton
@@ -333,7 +324,7 @@ export default function ChatMessage({
                 onDelete={() => {}}
                 onEdit={() => setEditMessage(true)}
                 className="h-fit group-hover:visible"
-                isBotMessage={!chat.isSend}
+                isBotMessage={!isSend}
                 onEvaluate={handleEvaluateAnswer}
                 evaluation={chat.properties?.positive_feedback}
                 isAudioMessage={isAudioMessage}

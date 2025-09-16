@@ -16,6 +16,7 @@ import type {
   FlowType,
   NodeDataType,
 } from "../flow/index";
+import type { Message } from "../messages";
 export type InputComponentType = {
   name?: string;
   autoFocus?: boolean;
@@ -623,13 +624,9 @@ export type codeAreaModalPropsType = {
 };
 
 export type chatMessagePropsType = {
-  chat: ChatMessageType;
+  chat: Message;
   lastMessage: boolean;
-  updateChat: (
-    chat: ChatMessageType,
-    message: string,
-    stream_url?: string,
-  ) => void;
+  updateChat: (chat: Message, message: string) => void;
   closeChat?: () => void;
   playgroundPage?: boolean;
 };

@@ -8,11 +8,11 @@ import { useMessagesStore } from "@/stores/messagesStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
+import type { Message } from "@/types/messages";
 import { cn } from "@/utils/utils";
 import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
 import useFlowStore from "../../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
-import type { ChatMessageType } from "../../../../../types/chat";
 import FlowRunningSqueleton from "../flow-running-squeleton";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "./chatInput/hooks/use-file-handler";
@@ -20,9 +20,9 @@ import ChatMessage from "./chatMessage/chat-message";
 
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
-    prevProps.chat.message === nextProps.chat.message &&
+    prevProps.chat.text === nextProps.chat.text &&
     prevProps.chat.id === nextProps.chat.id &&
-    prevProps.chat.session === nextProps.chat.session &&
+    prevProps.chat.session_id === nextProps.chat.session_id &&
     prevProps.chat.content_blocks === nextProps.chat.content_blocks &&
     prevProps.chat.properties === nextProps.chat.properties &&
     prevProps.lastMessage === nextProps.lastMessage
@@ -38,9 +38,7 @@ export default function ChatView(): JSX.Element {
   const currentFlowId = playgroundPage
     ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
     : realFlowId;
-  const [chatHistory, setChatHistory] = useState<ChatMessageType[] | undefined>(
-    undefined,
-  );
+
   const nodes = useFlowStore((state) => state.nodes);
   const chatInput = inputs.find((input) => input.type === "ChatInput");
   const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
@@ -62,66 +60,17 @@ export default function ChatView(): JSX.Element {
 
   //build chat history
   useEffect(() => {
-    const messagesFromMessagesStore: ChatMessageType[] = messages
-      .filter(
-        (message) =>
-          message.flow_id === currentFlowId &&
-          (visibleSession === message.session_id || visibleSession === null),
-      )
-      .map((message) => {
-        let files = message.files;
-        // Handle the "[]" case, empty string, or already parsed array
-        if (Array.isArray(files)) {
-          // files is already an array, no need to parse
-        } else if (files === "[]" || files === "") {
-          files = [];
-        } else if (typeof files === "string") {
-          try {
-            files = JSON.parse(files);
-          } catch (error) {
-            console.error("Error parsing files:", error);
-            files = [];
-          }
-        }
-        return {
-          isSend: message.sender === "User",
-          message: message.text,
-          sender_name: message.sender_name,
-          files: files,
-          id: message.id,
-          timestamp: message.timestamp,
-          session: message.session_id,
-          edit: message.edit,
-          background_color: message.background_color || "",
-          text_color: message.text_color || "",
-          content_blocks: message.content_blocks || [],
-          category: message.category || "",
-          properties: message.properties || {},
-        };
-      });
-    const finalChatHistory = [...messagesFromMessagesStore].sort((a, b) => {
-      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-    });
-
     if (messages.length === 0 && !isBuilding && chatInputNode && isTabHidden) {
       setChatValueStore(
         chatInputNode.data.node.template["input_value"].value ?? "",
       );
     }
-
-    setChatHistory(finalChatHistory);
   }, [messages, visibleSession]);
 
   const ref = useRef<HTMLDivElement | null>(null);
 
-  function updateChat(chat: ChatMessageType, message: string) {
-    chat.message = message;
-    if (chat.componentId)
-      updateFlowPool(chat.componentId, {
-        message,
-        sender_name: chat.sender_name ?? "Bot",
-        sender: chat.isSend ? "User" : "Machine",
-      });
+  function updateChat(chat: Message, message: string) {
+    chat.text = message;
   }
 
   const { files, setFiles, handleFiles } = useFileHandler(realFlowId);
@@ -166,11 +115,11 @@ export default function ChatView(): JSX.Element {
       mass={1}
     >
       <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden p-4">
-        <div className="flex flex-col place-self-center max-w-[768px] ">
-          {chatHistory?.map((chat, index) => (
+        <div className="flex flex-col place-self-center max-w-[768px] w-full">
+          {messages?.map((chat, index) => (
             <MemoizedChatMessage
               chat={chat}
-              lastMessage={chatHistory.length - 1 === index}
+              lastMessage={messages.length - 1 === index}
               key={`${chat.id}-${index}`}
               updateChat={updateChat}
               playgroundPage={playgroundPage}
@@ -186,7 +135,7 @@ export default function ChatView(): JSX.Element {
           ref={ref}
         >
           {displayLoadingMessage &&
-            !(chatHistory?.[chatHistory.length - 1]?.category === "error") &&
+            !(messages?.[messages.length - 1]?.category === "error") &&
             flowRunningSkeletonMemo}
         </div>
       </StickToBottom.Content>
