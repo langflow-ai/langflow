@@ -1,4 +1,5 @@
 import { keepPreviousData } from "@tanstack/react-query";
+import type { Message } from "@/types/messages";
 import type { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -39,12 +40,14 @@ export const useGetSessionsFromFlowQuery: useQueryFunctionType<
       );
       // Extract unique session IDs from stored messages
       const sessionIdsSet = new Set(
-        data.map((msg: any) => msg.session_id).filter(Boolean),
+        data.map((msg: Message) => msg.session_id).filter(Boolean),
       );
 
       sessionIds = Array.from(sessionIdsSet) as string[];
     }
-    if (flowId && !sessionIds.includes(flowId)) {
+
+    sessionIds = sessionIds.filter((id) => id !== flowId);
+    if (flowId) {
       sessionIds.unshift(flowId);
     }
 
