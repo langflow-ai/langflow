@@ -1082,6 +1082,9 @@ async def sync_flows_from_fs():
                                         for field_name in ("name", "description", "data", "locked"):
                                             if new_value := update_data.get(field_name):
                                                 setattr(flow, field_name, new_value)
+                                        # Handle mcp_enabled explicitly to allow False values
+                                        if "mcp_enabled" in update_data:
+                                            flow.mcp_enabled = update_data["mcp_enabled"]
                                         if folder_id := update_data.get("folder_id"):
                                             flow.folder_id = UUID(folder_id)
                                         await session.commit()
