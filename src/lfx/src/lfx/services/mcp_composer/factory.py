@@ -8,8 +8,9 @@ class MCPComposerServiceFactory(ServiceFactory):
     """Factory for creating MCP Composer service instances."""
 
     def __init__(self):
-        super().__init__(MCPComposerService)
+        super().__init__()
+        self.service_class = MCPComposerService
 
-    def create(self):
+    def create(self, **kwargs):
         """Create a new MCP Composer service instance."""
         return MCPComposerService()
