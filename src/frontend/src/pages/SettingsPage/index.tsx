@@ -59,11 +59,11 @@ export default function SettingsPage(): JSX.Element {
       ),
     },
     {
-      title: "LLM Settings",
-      href: "/settings/llm-settings",
+      title: "Knowledge Base",
+      href: "/settings/kb-settings",
       icon: (
         <ForwardedIconComponent
-          name="Bot"
+          name="Database"
           className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
         />
       ),

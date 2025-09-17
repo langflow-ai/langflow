@@ -29,7 +29,7 @@ import HomePage from "./pages/MainPage/pages/homePage";
 import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
 import CollectionPage from "./pages/MainPage/pages/main-page";
 import SettingsPage from "./pages/SettingsPage";
-import LLMSettingsPage from "./pages/SettingsPage/LLMSettingsPage";
+import KBSettingsPage from "./pages/SettingsPage/KBSettingsPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
@@ -137,7 +137,7 @@ const router = createBrowserRouter(
                     path="global-variables"
                     element={<GlobalVariablesPage />}
                   />
-                  <Route path="llm-settings" element={<LLMSettingsPage />} />
+                  <Route path="kb-settings" element={<KBSettingsPage />} />
                   <Route path="mcp-servers" element={<MCPServersPage />} />
                   <Route path="api-keys" element={<ApiKeysPage />} />
                   <Route
