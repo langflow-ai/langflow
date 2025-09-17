@@ -38,10 +38,12 @@ from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
-# Initialize console with Windows-safe settings
-console = Console(legacy_windows=True, emoji=False) if platform.system() == "Windows" else Console()
 
 app = typer.Typer(no_args_is_help=True)
+console = Console()
+if platform.system() == "Windows":
+    console = Console(legacy_windows=True, emoji=False) # Initialize console with Windows-safe settings
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 # Add LFX commands as a sub-app
 try:
