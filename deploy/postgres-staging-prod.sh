@@ -172,10 +172,14 @@ prepare_langflow_env() {
 # ---------- Docker cleanup (keep last 2 images only) ----------
 cleanup_old_images() {
   step "Cleaning up old Docker images (keeping last 2)"
-
-  # Load POSTGRES_IMAGE from env file
   local PG_IMAGE
-  PG_IMAGE=$(grep '^POSTGRES_IMAGE=' "$CONTAINER_ENV_FILE" | cut -d'=' -f2-)
+  if [[ -f "$CONTAINER_ENV_FILE" ]]; then
+    PG_IMAGE=$(grep '^POSTGRES_IMAGE=' "$CONTAINER_ENV_FILE" | cut -d'=' -f2- || true)
+    if [[ -n "$PG_IMAGE" ]]; then
+      ok "POSTGRES_IMAGE is present in env file"
+    else
+      ok "No POSTGRES_IMAGE found in env file"
+    fi
 
   local images
   images=$(docker images --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedAt}}' \
