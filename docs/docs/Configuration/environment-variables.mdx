@@ -192,6 +192,10 @@ The following table lists the environment variables supported by Langflow.
 | `LANGFLOW_CREATE_STARTER_PROJECTS` | Boolean | True | Whether to create templates during initialization. If false, Langflow doesn't create templates, and `LANGFLOW_UPDATE_STARTER_PROJECTS` is treated as false. |
 | `LANGFLOW_CORS_ALLOW_CREDENTIALS` | Boolean | True | Whether to allow credentials such as cookies and authorization headers in CORS requests. |
 | `LANGFLOW_CORS_ORIGINS` | String | `*` | Comma-separated list of allowed CORS origins. Use `*` for wildcard, or specify specific origins like `https://yourdomain.com,https://anotherdomain.com`. |
+| `LANGFLOW_CORS_ALLOW_METHODS` | List[String] or String | `*` | Allowed HTTP methods for CORS requests. Can be a comma-separated string or list of methods like `GET,POST,PUT,DELETE`. Use `*` for all methods. |
+| `LANGFLOW_CORS_ALLOW_HEADERS` | List[String] or String | `*` | Allowed headers for CORS requests. Can be a comma-separated string or list of headers like `Content-Type,Authorization`. Use `*` for all headers. |
+
+
 | `LANGFLOW_UPDATE_STARTER_PROJECTS` | Boolean | True | Whether to update templates with the latest component versions when initializing after an upgrade. |
 | `LANGFLOW_SUPERUSER` | String | `langflow` | See [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](/api-keys-and-authentication#langflow-superuser). |
 | `LANGFLOW_SUPERUSER_PASSWORD` | String | `langflow` | See [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](/api-keys-and-authentication#langflow-superuser). |

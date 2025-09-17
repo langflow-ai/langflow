@@ -646,13 +646,13 @@ To configure the **Save File** component and use it in a flow, do the following:
     The **File Name** parameter controls where the file is saved.
     It can contain a file name or an entire file path:
 
-    * **Default location**: If you only provide a file name, then the file is stored in `.langflow/data`.
+    * **Default location**: If you only provide a file name, then the file is stored in the Langflow data directory. For example,`~/Library/Caches/langflow/data` on macOS.
 
     * **Subdirectory**: To store files in subdirectories, add the path to the **File Name** parameter.
-    For example, `subdirectory/my_file` creates `my_file` in `.langflow/data/subdirectory`.
     If a given subdirectory doesn't already exist, Langflow automatically creates it.
+    For example, `files/my_file` creates `my_file` in `/data/files`, and it creates the `files` subdirectory if it doesn't already exist.
 
-    * **Absolute or relative path**: To store files elsewhere in your `.langflow` installation or the local file system, provide the absolute or relative path to the desired location.
+    * **Absolute or relative path**: To store files elsewhere in your environment or local file storage, provide the absolute or relative path to the desired location.
     For example, `~/Desktop/my_file` saves `my_file` to the desktop.
 
     Don't include an extension in the file name.
@@ -680,7 +680,7 @@ To configure the **Save File** component and use it in a flow, do the following:
     For example:
 
     ```text
-    DataFrame saved successfully as 'my_file.csv' at /Users/user.name/.langflow/data/my_file.csv
+    DataFrame saved successfully as 'my_file.csv' at /Users/user.name/Library/Caches/langflow/data/my_file.csv
     ```
 
     If the **File Name** contains a subdirectory or other non-default path, this is reflected in the `Message` output.
