@@ -147,7 +147,6 @@ class AnymizeComponent(Component):
             raise TypeError(msg)
 
         timeout = aiohttp.ClientTimeout(total=300)
-        
         with Path(file_path).open("rb") as f: # noqa: ASYNC230
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 data = aiohttp.FormData()
