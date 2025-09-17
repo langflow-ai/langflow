@@ -48,6 +48,9 @@ from langflow.services.database.models.api_key.crud import check_key, create_api
 from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.user.model import User
 
+# Constants
+ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
+
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
 
@@ -448,7 +451,7 @@ def is_local_ip(ip_str: str) -> bool:
         return True
 
     # Check if it's exactly "0.0.0.0" (which binds to all interfaces)
-    if ip_str == "0.0.0.0":  # noqa: S104
+    if ip_str == ALL_INTERFACES_HOST:
         return True
 
     try:
@@ -888,8 +891,17 @@ async def get_project_sse_url(project_id: UUID) -> str:
     """Generate the SSE URL for a project, including WSL handling."""
     # Get settings service to build the SSE URL
     settings_service = get_settings_service()
-    host = getattr(settings_service.settings, "host", "localhost")
-    port = getattr(settings_service.settings, "port", 3000)
+    server_host = getattr(settings_service.settings, "host", "localhost")
+    # Use the actual running port (current_port) if available, otherwise fall back to configured port
+    server_port = getattr(settings_service.settings, "current_port", None) or getattr(
+        settings_service.settings, "port", 7860
+    )
+
+    # For MCP clients, always use localhost instead of 0.0.0.0
+    # 0.0.0.0 is a bind address, not a connect address
+    host = "localhost" if server_host == ALL_INTERFACES_HOST else server_host
+    port = server_port
+
     base_url = f"http://{host}:{port}".rstrip("/")
     project_sse_url = f"{base_url}/api/v1/mcp/project/{project_id}/sse"
 

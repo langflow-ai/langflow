@@ -214,6 +214,8 @@ class Settings(BaseSettings):
     """The host on which Langflow will run."""
     port: int = 7860
     """The port on which Langflow will run."""
+    current_port: int | None = None
+    """The actual port on which Langflow is running (after checking for port conflicts)."""
     workers: int = 1
     """The number of workers to run."""
     log_level: str = "critical"
