@@ -17,14 +17,35 @@ export const updateMessage = (updatedMessage: Message) => {
   );
 };
 
-export const removeMessage = (removedMessage: Message) => {
+export const updateMessages = (updatedMessages: Message[]) => {
   queryClient.setQueryData(
     [
       "useGetMessagesQuery",
-      { id: removedMessage.flow_id, session_id: removedMessage.session_id },
+      {
+        id: updatedMessages[0].flow_id,
+        session_id: updatedMessages[0].session_id,
+      },
     ],
+    (_) => {
+      return updatedMessages;
+    },
+  );
+};
+
+export const removeMessages = (
+  removedMessages: string[],
+  sessionId: string,
+  flowId: string,
+) => {
+  if (removedMessages.length === 0) {
+    return;
+  }
+  queryClient.setQueryData(
+    ["useGetMessagesQuery", { id: flowId, session_id: sessionId }],
     (old: Message[]) => {
-      return old.filter((message) => message.id !== removedMessage.id);
+      return old.filter(
+        (message) => !removedMessages.some((m) => m === message.id),
+      );
     },
   );
 };
