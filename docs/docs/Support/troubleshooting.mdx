@@ -255,6 +255,7 @@ This is a known issue when using MCP Tools with browser navigation actions, such
 This issue occurs because the MCP server runs from a Python process, which prevents it from opening browser windows in WSL or Windows.
 
 To work around this issue, use the standalone MCP server approach documented in the [Playwright MCP repository](https://github.com/microsoft/playwright-mcp?tab=readme-ov-file#standalone-mcp-server).
+After the server is up and running, you can add it as an SSE server in Langflow.
 For other browser navigation tools, see the provider's documentation for specific troubleshooting guidance.
 
 ## Token length limit errors in Embedding Model components
