@@ -147,6 +147,7 @@ class AnymizeComponent(Component):
             raise TypeError(msg)
 
         timeout = aiohttp.ClientTimeout(total=300)
+        # noqa: ASYNC230 - File must remain open during HTTP request for aiohttp FormData
         with Path(file_path).open("rb") as f:
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 data = aiohttp.FormData()
@@ -213,7 +214,8 @@ class AnymizeComponent(Component):
                         raise RuntimeError(error_msg)
                     return await response.json()
             else:
-                raise ValueError(f"Unsupported HTTP method: {method}")
+                error_msg = f"Unsupported method: {method}"
+                raise ValueError(error_msg)
 
     async def _poll_status(
         self,
@@ -228,4 +230,4 @@ class AnymizeComponent(Component):
                 return response
             await asyncio.sleep(retry_interval / 1000)
 
-        raise Exception(error_message)
+        raise RuntimeError(error_message)

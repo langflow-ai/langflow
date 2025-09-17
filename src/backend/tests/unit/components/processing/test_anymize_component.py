@@ -463,10 +463,10 @@ class TestAnymizeComponent(ComponentTestBaseWithoutClient):
         """Test API request with unsupported HTTP method."""
         component = AnymizeComponent(anymize_api="test_api_key")
 
-        with pytest.raises(ValueError, match=r"Unsupported HTTP method: PATCH") as exc_info:
+        with pytest.raises(ValueError, match=r"Unsupported method: PATCH") as exc_info:
             await component._anymize_api_request("PATCH", "/api/test")
 
-        assert "Unsupported HTTP method: PATCH" in str(exc_info.value)
+        assert "Unsupported method: PATCH" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_anymize_api_request_default_parameters(self):
