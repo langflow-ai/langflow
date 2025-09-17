@@ -271,11 +271,11 @@ class TestAnymizeComponent(ComponentTestBaseWithoutClient):
             mock_session_class.return_value.__aenter__.return_value = mock_session
             mock_session.post.return_value.__aenter__.return_value = mock_response
 
-            with patch("builtins.open", mock_open(read_data=b"fake pdf content")):
+            with patch("pathlib.Path.open", mock_open(read_data=b"fake pdf content")):
                 with pytest.raises(RuntimeError) as exc_info:
                     await component._anonymize_file(mock_file)
 
-                assert "anymize API error 401 for /api/ocr" in str(exc_info.value)
+                assert "anymize API error 401:" in str(exc_info.value)
                 assert "Unauthorized: Invalid API key" in str(exc_info.value)
 
     @pytest.mark.asyncio
@@ -295,7 +295,7 @@ class TestAnymizeComponent(ComponentTestBaseWithoutClient):
         with (
             patch("aiohttp.ClientSession") as mock_session_class,
             patch("aiohttp.ClientTimeout") as mock_timeout,
-            patch("builtins.open", mock_open(read_data=b"fake pdf content")),
+            patch("pathlib.Path.open", mock_open(read_data=b"fake pdf content")),
         ):
             mock_session = MagicMock()
             mock_session_class.return_value.__aenter__.return_value = mock_session
@@ -456,8 +456,7 @@ class TestAnymizeComponent(ComponentTestBaseWithoutClient):
             with pytest.raises(RuntimeError) as exc_info:
                 await component._anymize_api_request("GET", "/api/status/123")
 
-            assert "anymize API error 401 for /api/status/123" in str(exc_info.value)
-            assert "Unauthorized: Invalid API key provided" in str(exc_info.value)
+            assert "API error 401" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_anymize_api_request_unsupported_method(self):

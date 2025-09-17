@@ -1,5 +1,4 @@
 import asyncio
-import os
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +8,8 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, FileInput, MultilineInput, SecretStrInput
 from lfx.schema import Message
 from lfx.template import Output
+
+HTTP_BAD_REQUEST = 400
 
 
 class AnymizeComponent(Component):
@@ -146,9 +147,9 @@ class AnymizeComponent(Component):
             raise TypeError(msg)
 
         timeout = aiohttp.ClientTimeout(total=300)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            data = aiohttp.FormData()
-            with open(file_path, "rb") as f:
+        with Path(file_path).open("rb") as f:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                data = aiohttp.FormData()
                 data.add_field("file", f, filename=file_name)
 
                 async with session.post(
@@ -156,9 +157,10 @@ class AnymizeComponent(Component):
                     headers=headers,
                     data=data,
                 ) as response:
-                    if response.status >= 400:
+                    if response.status >= HTTP_BAD_REQUEST:
                         text = await response.text()
-                        raise RuntimeError(f"anymize API error {response.status} for /api/ocr: {text[:200]}")
+                        error_msg = f"anymize API error {response.status}: {text[:200]}"
+                        raise RuntimeError(error_msg)
                     return await response.json()
 
     async def _anonymize_text(self, text: str, language: str = "en") -> dict[str, Any]:
@@ -198,15 +200,17 @@ class AnymizeComponent(Component):
         async with aiohttp.ClientSession(timeout=timeout) as session:
             if method == "POST":
                 async with session.post(url, headers=headers, json=body, params=qs) as response:
-                    if response.status >= 400:
+                    if response.status >= HTTP_BAD_REQUEST:
                         text = await response.text()
-                        raise RuntimeError(f"anymize API error {response.status} for {resource}: {text[:200]}")
+                        error_msg = f"anymize API error {response.status}: {text[:200]}"
+                        raise RuntimeError(error_msg)
                     return await response.json()
             elif method == "GET":
                 async with session.get(url, headers=headers, params=qs) as response:
-                    if response.status >= 400:
+                    if response.status >= HTTP_BAD_REQUEST:
                         text = await response.text()
-                        raise RuntimeError(f"anymize API error {response.status} for {resource}: {text[:200]}")
+                        error_msg = f"API error {response.status}"
+                        raise RuntimeError(error_msg)
                     return await response.json()
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
