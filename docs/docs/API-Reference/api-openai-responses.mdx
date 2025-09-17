@@ -30,76 +30,73 @@ For more information, see [API keys and authentication](/api-keys-and-authentica
 This endpoint is compatible with OpenAI's API, but requires special configuration when using OpenAI client libraries.
 Langflow uses `x-api-key` headers for authentication, while OpenAI uses `Authorization: Bearer` headers.
 When sending requests to Langflow with OpenAI client libraries, you must configure custom headers and include an `api_key` configuration.
-The `api_key` parameter can have any value, such as `"api-dummy-key"` in the client examples, as the actual authentication is handled through the `default_headers` configuration.
+The `api_key` parameter can have any value, such as `"dummy-api-key"` in the client examples, as the actual authentication is handled through the `default_headers` configuration.
 
 In the following examples, replace the values for `LANGFLOW_SERVER_URL`, `LANGFLOW_API_KEY`, and `FLOW_ID` with values from your deployment.
 <Tabs groupId="client">
-  <TabItem value="Python" label="OpenAI Python Client" default>
+<TabItem value="Python" label="OpenAI Python Client" default>
 
-    ```python
-    from openai import OpenAI
+```python
+from openai import OpenAI
 
-    client = OpenAI(
-      base_url="LANGFLOW_SERVER_URL/api/v1/",
-      default_headers={"x-api-key": "LANGFLOW_API_KEY"},
-      api_key="dummy-api-key" # Required by OpenAI SDK but not used by Langflow
-    )
+client = OpenAI(
+  base_url="LANGFLOW_SERVER_URL/api/v1/",
+  default_headers={"x-api-key": "LANGFLOW_API_KEY"},
+  api_key="dummy-api-key" # Required by OpenAI SDK but not used by Langflow
+)
 
-    response = client.responses.create(
-      model="FLOW_ID",
-      input="There is an event that happens on the second wednesday of every month. What are the event dates in 2026?",
-    )
+response = client.responses.create(
+  model="FLOW_ID",
+  input="There is an event that happens on the second wednesday of every month. What are the event dates in 2026?",
+)
 
-    print(response.output_text)
-    ```
+print(response.output_text)
+```
 
-  </TabItem>
-  <TabItem value="JavaScript" label="OpenAI TypeScript Client">
+</TabItem>
+<TabItem value="JavaScript" label="OpenAI TypeScript Client">
 
-    ```typescript
-    import OpenAI from "openai";
+```typescript
+import OpenAI from "openai";
 
-    const client = new OpenAI({
-      baseURL: "LANGFLOW_SERVER_URL/api/v1/",
-      defaultHeaders: {
-        "x-api-key": "LANGFLOW_API_KEY"
-      },
-      apiKey: "dummy-api-key" # Required by OpenAI SDK but not used by Langflow
-    });
+const client = new OpenAI({
+  baseURL: "LANGFLOW_SERVER_URL/api/v1/",
+  defaultHeaders: {
+    "x-api-key": "LANGFLOW_API_KEY"
+  },
+  apiKey: "dummy-api-key" # Required by OpenAI SDK but not used by Langflow
+});
 
-    const response = await client.responses.create({
-      model: "FLOW_ID",
-      input: "There is an event that happens on the second wednesday of every month. What are the event dates in 2026?"
-    });
+const response = await client.responses.create({
+  model: "FLOW_ID",
+  input: "There is an event that happens on the second wednesday of every month. What are the event dates in 2026?"
+});
 
-    console.log(response.output_text);
-    ```
+console.log(response.output_text);
+```
 
-  </TabItem>
+</TabItem>
 </Tabs>
 
-    <details closed>
-    <summary>Response</summary>
-        ```text
-        Here are the event dates for the second Wednesday of each month in 2026:
-
-        - January 14, 2026
-        - February 11, 2026
-        - March 11, 2026
-        - April 8, 2026
-        - May 13, 2026
-        - June 10, 2026
-        - July 8, 2026
-        - August 12, 2026
-        - September 9, 2026
-        - October 14, 2026
-        - November 11, 2026
-        - December 9, 2026
-
-        If you need these in a different format or want a downloadable calendar, let me know!
-        ```
-     </details>
-
+<details closed>
+<summary>Response</summary>
+```text
+Here are the event dates for the second Wednesday of each month in 2026:
+- January 14, 2026
+- February 11, 2026
+- March 11, 2026
+- April 8, 2026
+- May 13, 2026
+- June 10, 2026
+- July 8, 2026
+- August 12, 2026
+- September 9, 2026
+- October 14, 2026
+- November 11, 2026
+- December 9, 2026
+If you need these in a different format or want a downloadable calendar, let me know!
+```
+</details>
 
 ## Example request
 
