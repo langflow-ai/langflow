@@ -76,7 +76,7 @@ jobs:
           echo "📦 Creating deployment for $ENVIRONMENT commit=$COMMIT_ID branch=$BRANCH"
 
           DEPLOYMENT_ID=$(gh api repos/${{ github.repository }}/deployments \
-            -F ref=$COMMIT_ID \
+            -F ref=${{ github.event.inputs.branch }} \
             -F environment=$ENVIRONMENT \
             -F description="Deployment by $ACTOR from branch $BRANCH with commit $COMMIT_ID" \
             -F auto_merge=false --jq '.id')
