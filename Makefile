@@ -617,9 +617,9 @@ load_test_ramp100: ## Run 100-user ramp load test (3min, 0->100 users @ 5/s). Op
 	cd src/backend/tests/locust && \
 	if [ "$(html)" = "true" ]; then \
 		echo "$(GREEN)Generating HTML report: ramp100_test.html$(NC)"; \
-		uv run locust -f locustfile_complex_serve.py --host $(load_test_host) --headless --shape RampToHundred --html ramp100_test.html; \
+		uv run locust -f locustfile_complex_serve.py --host $(load_test_host) --headless --html ramp100_test.html; \
 	else \
-		uv run locust -f locustfile_complex_serve.py --host $(load_test_host) --headless --shape RampToHundred; \
+		uv run locust -f locustfile_complex_serve.py --host $(load_test_host) --headless; \
 	fi
 
 load_test_cliff: ## Find performance cliff with step ramp (5->50 users, 30s steps). Options: html=true, load_test_host, load_test_flow_id, load_test_api_key
