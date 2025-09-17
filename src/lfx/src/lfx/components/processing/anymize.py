@@ -148,7 +148,7 @@ class AnymizeComponent(Component):
 
         timeout = aiohttp.ClientTimeout(total=300)
         
-        with Path(file_path).open("rb") as f: # ruff: noqa: ASYNC230
+        with Path(file_path).open("rb") as f: # noqa: ASYNC230
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 data = aiohttp.FormData()
                 data.add_field("file", f, filename=file_name)
