@@ -79,7 +79,8 @@ jobs:
             -F ref=${{ github.event.inputs.branch }} \
             -F environment=$ENVIRONMENT \
             -F description="Deployment by $ACTOR from branch $BRANCH with commit $COMMIT_ID" \
-            -F auto_merge=false --jq '.id')
+            -F auto_merge=false \
+            -F required_contexts[]=null --jq '.id')
 
           echo "DEPLOYMENT_ID=$DEPLOYMENT_ID" >> $GITHUB_ENV
 
