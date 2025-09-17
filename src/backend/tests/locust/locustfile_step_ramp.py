@@ -64,12 +64,21 @@ def on_test_start(environment, **_kwargs):
 
 
 @events.request.add_listener
-def on_request(_request_type, _name, response_time, _response_length, exception, _context, **_kwargs):
-    if exception is None and len(_env_bags) == 1:
-        bag = next(iter(_env_bags.values()))
-        if response_time > 10_000:
+def on_request(request_type, name, response_time, response_length, exception, context, **kwargs):  # noqa: ARG001
+    """Track slow requests using Locust's built-in timing."""
+    # response_time is in milliseconds from Locust
+    bag = _env_bags.get(context.get("environment") if context else None)
+    if bag is None:
+        # fallback: try the single environment we likely have
+        if len(_env_bags) == 1:
+            bag = next(iter(_env_bags.values()))
+        else:
+            return
+
+    if exception is None:  # Only count successful requests for timing
+        if response_time > 10_000:  # 10 seconds in ms
             bag["slow_10s"] += 1
-        if response_time > 20_000:
+        if response_time > 20_000:  # 20 seconds in ms
             bag["slow_20s"] += 1
 
 
@@ -114,14 +123,22 @@ class BaseLangflowUser(FastHttpUser):
             timeout=self.REQUEST_TIMEOUT,
             catch_response=True,
         ) as response:
+            # Handle successful responses
             if response.status_code == 200:
                 try:
                     data = response.json()
                 except json.JSONDecodeError:
                     return response.failure("Invalid JSON response")
-                if data.get("success", False):
+
+                # Strictly check for success=True in the response payload
+                success = data.get("success")
+                if success is True:
                     return response.success()
-                return response.failure(f"Flow failed: {str(data.get('result', ''))[:200]}")
+
+                # Application-level failure - success is False, None, or missing
+                msg = str(data.get("result", "Unknown error"))[:200]
+                success_status = f"success={success}" if success is not None else "success=missing"
+                return response.failure(f"Flow failed ({success_status}): {msg}")
 
             if response.status_code in (429, 503):
                 return response.failure(f"Backpressure: {response.status_code}")
