@@ -70,6 +70,13 @@ class ChatOutput(ChatComponent):
             advanced=True,
             info="Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
         ),
+        BoolInput(
+            name="clean_data",
+            display_name="Basic Clean Data",
+            value=True,
+            advanced=True,
+            info="Whether to clean data before converting to string.",
+        ),
     ]
     outputs = [
         Output(
