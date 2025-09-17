@@ -180,7 +180,7 @@ class BaseFileComponent(Component, ABC):
     ]
 
     _base_outputs = [
-        Output(display_name="Files", name="dataframe", method="load_files"),
+        Output(display_name="Files", name="dataframe", method="load_files", tool_mode=True),
     ]
 
     @abstractmethod
