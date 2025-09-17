@@ -50,6 +50,8 @@ from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
 from lfx.log import logger
 from lfx.services.deps import get_settings_service, session_scope
+from lfx.services.mcp_composer.service import MCPComposerError, MCPComposerService
+from lfx.services.schema import ServiceType
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
@@ -81,7 +83,6 @@ async def verify_project_auth(
     if (not auth_settings and not settings_service.auth_settings.AUTO_LOGIN) or (
         auth_settings and auth_settings.auth_type == "apikey"
     ):
-        # For MCP composer enabled, only use API key
         api_key = query_param or header_param
         if not api_key:
             raise HTTPException(
@@ -108,7 +109,7 @@ async def verify_project_auth(
     if not settings_service.auth_settings.SUPERUSER:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing first superuser credentials",
+            detail="Missing superuser username in auth settings",
         )
     # For MCP endpoints, always fall back to username lookup when no API key is provided
     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
