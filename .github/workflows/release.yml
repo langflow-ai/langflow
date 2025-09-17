@@ -44,6 +44,14 @@ on:
         required: false
         type: boolean
         default: false
+      runs_on:
+        description: "Runner to use for CI tests (use self-hosted for safe/release code)"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+        default: ubuntu-latest
 
 
 
@@ -56,6 +64,7 @@ jobs:
       python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
       release: true
+      runs-on: ${{ inputs.runs_on || 'ubuntu-latest' }}
     secrets: inherit
 
 
@@ -208,11 +217,12 @@ jobs:
   test-cross-platform:
     name: Test Cross-Platform Installation
     if: inputs.release_package_base == true || inputs.release_package_main == true
-    needs: [build-base, build-main]
+    needs: [build-base, build-main, build-lfx]
     uses: ./.github/workflows/cross-platform-test.yml
     with:
       base-artifact-name: "dist-base"
       main-artifact-name: "dist-main"
+      lfx-artifact-name: ${{ inputs.release_lfx == true && 'dist-lfx' || '' }}
 
   test-lfx-cross-platform:
     name: Test LFX Cross-Platform Installation

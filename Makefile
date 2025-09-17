@@ -1,7 +1,8 @@
-.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_all
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
+DOCKER=podman
 DOCKERFILE=docker/build_and_push.Dockerfile
 DOCKERFILE_BACKEND=docker/build_and_push_backend.Dockerfile
 DOCKERFILE_FRONTEND=docker/frontend/build_and_push_frontend.Dockerfile
@@ -86,6 +87,14 @@ clean_npm_cache:
 	$(call CLEAR_DIRS,src/frontend/node_modules src/frontend/build src/backend/base/langflow/frontend)
 	rm -f src/frontend/package-lock.json
 	@echo "$(GREEN)NPM cache and frontend directories cleaned.$(NC)"
+
+clean_frontend_build: ## clean frontend build artifacts to ensure fresh build
+	@echo "Cleaning frontend build artifacts..."
+	@echo "  - Removing src/frontend/build directory"
+	$(call CLEAR_DIRS,src/frontend/build)
+	@echo "  - Removing built frontend files from backend"
+	$(call CLEAR_DIRS,src/backend/base/langflow/frontend)
+	@echo "$(GREEN)Frontend build artifacts cleaned - fresh build guaranteed.$(NC)"
 
 clean_all: clean_python_cache clean_npm_cache # clean all caches and temporary directories
 	@echo "$(GREEN)All caches and temporary directories cleaned.$(NC)"
@@ -205,8 +214,18 @@ lint: install_backend ## run linters
 
 
 
-run_cli: install_frontend install_backend build_frontend ## run the CLI
-	@echo 'Running the CLI'
+run_clic: clean_frontend_build install_frontend install_backend build_frontend ## run the CLI with fresh frontend build
+	@echo 'Running the CLI with fresh frontend build'
+	@uv run langflow run \
+		--frontend-path $(path) \
+		--log-level $(log_level) \
+		--host $(host) \
+		--port $(port) \
+		$(if $(env),--env-file $(env),) \
+		$(if $(filter false,$(open_browser)),--no-open-browser)
+
+run_cli: install_frontend install_backend build_frontend ## run the CLI quickly (without cleaning build cache)
+	@echo 'Running the CLI quickly (reusing existing build cache if available)'
 	@uv run langflow run \
 		--frontend-path $(path) \
 		--log-level $(log_level) \
@@ -313,42 +332,45 @@ docker_build_frontend: dockerfile_build_fe clear_dockerimage ## build Frontend D
 
 dockerfile_build:
 	@echo 'BUILDING DOCKER IMAGE: ${DOCKERFILE}'
-	@docker build --rm \
+	@command -v $(DOCKER) >/dev/null 2>&1 || { echo "Error: $(DOCKER) is not installed. Please install $(DOCKER), or run 'make docker_build DOCKER=podman' (or DOCKER=docker) if you have an alternative installed."; exit 1; }
+	@$(DOCKER) build --rm \
 		-f ${DOCKERFILE} \
 		-t langflow:${VERSION} .
 
 dockerfile_build_be: dockerfile_build
 	@echo 'BUILDING DOCKER IMAGE BACKEND: ${DOCKERFILE_BACKEND}'
-	@docker build --rm \
+	@command -v $(DOCKER) >/dev/null 2>&1 || { echo "Error: $(DOCKER) is not installed. Please install $(DOCKER), or run 'make docker_build_backend DOCKER=podman' (or DOCKER=docker) if you have an alternative installed."; exit 1; }
+	@$(DOCKER) build --rm \
 		--build-arg LANGFLOW_IMAGE=langflow:${VERSION} \
 		-f ${DOCKERFILE_BACKEND} \
 		-t langflow_backend:${VERSION} .
 
 dockerfile_build_fe: dockerfile_build
 	@echo 'BUILDING DOCKER IMAGE FRONTEND: ${DOCKERFILE_FRONTEND}'
-	@docker build --rm \
+	@command -v $(DOCKER) >/dev/null 2>&1 || { echo "Error: $(DOCKER) is not installed. Please install $(DOCKER), or run 'make docker_build_frontend DOCKER=podman' (or DOCKER=docker) if you have an alternative installed."; exit 1; }
+	@$(DOCKER) build --rm \
 		--build-arg LANGFLOW_IMAGE=langflow:${VERSION} \
 		-f ${DOCKERFILE_FRONTEND} \
 		-t langflow_frontend:${VERSION} .
 
 clear_dockerimage:
 	@echo 'Clearing the docker build'
-	@if docker images -f "dangling=true" -q | grep -q '.*'; then \
-		docker rmi $$(docker images -f "dangling=true" -q); \
+	@if $(DOCKER) images -f "dangling=true" -q | grep -q '.*'; then \
+		$(DOCKER) rmi $$($(DOCKER) images -f "dangling=true" -q); \
 	fi
 
 docker_compose_up: docker_build docker_compose_down
 	@echo 'Running docker compose up'
-	docker compose -f $(DOCKER_COMPOSE) up --remove-orphans
+	$(DOCKER) compose -f $(DOCKER_COMPOSE) up --remove-orphans
 
 docker_compose_down:
 	@echo 'Running docker compose down'
-	docker compose -f $(DOCKER_COMPOSE) down || true
+	$(DOCKER) compose -f $(DOCKER_COMPOSE) down || true
 
 dcdev_up:
 	@echo 'Running docker compose up'
-	docker compose -f docker/dev.docker-compose.yml down || true
-	docker compose -f docker/dev.docker-compose.yml up --remove-orphans
+	$(DOCKER) compose -f docker/dev.docker-compose.yml down || true
+	$(DOCKER) compose -f docker/dev.docker-compose.yml up --remove-orphans
 
 lock_base:
 	cd src/backend/base && uv lock
