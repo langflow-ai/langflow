@@ -18,7 +18,9 @@ export default function EditMessageField({
   const adjustTextareaHeight = () => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight + 3}px`;
+      textareaRef.current.style.height = `${
+        textareaRef.current.scrollHeight + 3
+      }px`;
     }
   };
   useEffect(() => {

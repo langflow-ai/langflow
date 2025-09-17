@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useState } from "react";
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomMarkdownField } from "@/customization/components/custom-markdown-field";
@@ -7,30 +7,17 @@ import useAlertStore from "../../../../../../stores/alertStore";
 import type { chatMessagePropsType } from "../../../../../../types/components";
 import { cn } from "../../../../../../utils/utils";
 import IconComponent from "../../../../../common/genericIconComponent";
-import { ErrorView } from "./components/content-view";
 import EditMessageField from "./components/edit-message-field";
 import { EditMessageButton } from "./components/message-options";
 import { convertFiles } from "./helpers/convert-files";
 
 export const ChatMessage = memo(
   ({ chat, lastMessage, updateChat, playgroundPage }: chatMessagePropsType) => {
-    const fitViewNode = useFlowStore((state) => state.fitViewNode);
     const setErrorData = useAlertStore((state) => state.setErrorData);
     const [editMessage, setEditMessage] = useState(false);
-    const [showError, setShowError] = useState(false);
     const isBuilding = useFlowStore((state) => state.isBuilding);
 
     const isAudioMessage = chat.category === "audio";
-
-    useEffect(() => {
-      if (chat.category === "error") {
-        // Short delay before showing error to allow for loading animation
-        const timer = setTimeout(() => {
-          setShowError(true);
-        }, 50);
-        return () => clearTimeout(timer);
-      }
-    }, [chat.category]);
 
     const isEmpty = chat.text?.trim() === "";
     const { mutate: updateMessageMutation } = useUpdateMessage();
@@ -94,20 +81,6 @@ export const ChatMessage = memo(
     const editedFlag = chat.edit ? (
       <div className="text-sm text-muted-foreground">(Edited)</div>
     ) : null;
-
-    if (chat.category === "error") {
-      const blocks = chat.content_blocks ?? [];
-
-      return (
-        <ErrorView
-          blocks={blocks}
-          showError={showError}
-          lastMessage={lastMessage}
-          fitViewNode={fitViewNode}
-          chat={chat}
-        />
-      );
-    }
 
     return (
       <div className="w-full py-2">
@@ -182,7 +155,6 @@ export const ChatMessage = memo(
                 onDelete={() => {}}
                 onEdit={() => setEditMessage(true)}
                 className="h-fit group-hover:visible"
-                isBotMessage={true}
                 onEvaluate={handleEvaluateAnswer}
                 evaluation={chat.properties?.positive_feedback}
                 isAudioMessage={isAudioMessage}
