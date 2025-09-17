@@ -74,12 +74,14 @@ class MCPComposerService(Service):
         ] = {}  # Lock to prevent concurrent start operations for the same project
 
     def _is_port_available(self, port: int) -> bool:
-        """Check if a port is available (not in use)."""
+        """Check if a port is available by trying to bind to it."""
         try:
-            with socket.create_connection(("localhost", port), timeout=1.0):
-                return False  # Port is in use
-        except (OSError, ConnectionRefusedError):
-            return True  # Port is available
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                sock.bind(("0.0.0.0", port))
+                return True  # Port is available
+        except OSError:
+            return False  # Port is in use/bound
 
     async def start(self):
         """Check if the MCP Composer service is enabled."""
@@ -319,7 +321,7 @@ class MCPComposerService(Service):
         project_id: str,
         sse_url: str,
         auth_config: dict[str, Any] | None,
-        max_startup_checks: int = 3,
+        max_startup_checks: int = 5,
         startup_delay: float = 2.0,
     ) -> None:
         """Start an MCP Composer instance for a specific project.
@@ -344,10 +346,16 @@ class MCPComposerService(Service):
 
         async with self._start_locks[project_id]:
             # Check if already running (double-check after acquiring lock)
-            project_port = auth_config.get("oauth_port")
-            if not project_port:
+            project_port_str = auth_config.get("oauth_port")
+            if not project_port_str:
                 no_port_error_msg = "No OAuth port provided"
                 raise MCPComposerConfigError(no_port_error_msg, project_id)
+
+            try:
+                project_port = int(project_port_str)
+            except (ValueError, TypeError):
+                port_error_msg = f"Invalid OAuth port: {project_port_str}"
+                raise MCPComposerConfigError(port_error_msg, project_id)
 
             project_host = auth_config.get("oauth_host")
             if not project_host:
@@ -405,8 +413,8 @@ class MCPComposerService(Service):
         port: int,
         sse_url: str,
         auth_config: dict[str, Any] | None = None,
-        max_startup_checks: int = 3,
-        startup_delay: float = 1.0,
+        max_startup_checks: int = 5,
+        startup_delay: float = 2.0,
     ) -> subprocess.Popen:
         """Start the MCP Composer subprocess for a specific project."""
         cmd = [
