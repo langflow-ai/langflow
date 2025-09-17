@@ -52,7 +52,7 @@ log_config = LogConfig(
 chat_input = cp.ChatInput()
 agent = cp.AgentComponent()
 url_component = cp.URLComponent()
-tools = url_component.to_toolkit()
+tools = await url_component.to_toolkit()
 
 agent.set(
     model_name="gpt-4o-mini",
@@ -146,6 +146,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
             from lfx import components as cp
             from lfx.graph import Graph
             from lfx.log.logger import LogConfig
+            from lfx.utils.async_helpers import run_until_complete
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 
@@ -161,7 +162,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
 
         # Configure URL component for tools
         url_component.set(urls=["https://httpbin.org/json"])
-        tools = await url_component.to_toolkit()
+        tools = run_until_complete(url_component.to_toolkit())
 
         # Configure agent
         agent.set(
@@ -212,6 +213,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         """Test that URLComponent.to_toolkit() works properly."""
         try:
             from lfx import components as cp
+            from lfx.utils.async_helpers import run_until_complete
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 
@@ -221,7 +223,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         url_component.set(urls=["https://httpbin.org/json"])
 
         # Test to_toolkit functionality
-        tools = await url_component.to_toolkit()
+        tools = run_until_complete(url_component.to_toolkit())
 
         # Should return some kind of tools object/list
         assert tools is not None
@@ -314,6 +316,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
             from lfx import components as cp
             from lfx.graph import Graph
             from lfx.log.logger import LogConfig
+            from lfx.utils.async_helpers import run_until_complete
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 
@@ -329,7 +332,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
 
         # Configure URL component
         url_component.set(urls=["https://httpbin.org/json"])
-        tools = url_component.to_toolkit()
+        tools = run_until_complete(url_component.to_toolkit())
 
         # Configure agent with real API key
         agent.set(
