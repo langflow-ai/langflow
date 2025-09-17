@@ -104,11 +104,7 @@ export default function ChatView(): JSX.Element {
         <div className="flex flex-col place-self-center max-w-[768px] w-full">
           {messages?.map((chat, index) =>
             chat.category === "error" ? (
-              <ErrorMessage
-                chat={chat}
-                lastMessage={messages.length - 1 === index}
-                key={`${chat.id}-${index}`}
-              />
+              <ErrorMessage chat={chat} key={`${chat.id}-${index}`} />
             ) : chat.sender === "User" ? (
               <UserMessage
                 chat={chat}

@@ -633,7 +633,6 @@ export type chatMessagePropsType = {
 
 export type errorMessagePropsType = {
   chat: Message;
-  lastMessage: boolean;
 };
 
 export type genericModalPropsType = {
