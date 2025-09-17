@@ -115,7 +115,7 @@ def on_test_start(environment, **_kwargs):
 
 
 @events.request.add_listener
-def on_request(_request_type, _name, response_time, _response_length, exception, context, **_kwargs):
+def on_request(request_type, name, response_time, response_length, exception, context, **kwargs):  # noqa: ARG001
     """Track slow requests using Locust's built-in timing."""
     # response_time is in milliseconds from Locust
     bag = _env_bags.get(context.get("environment") if context else None)
@@ -216,12 +216,15 @@ class BaseLangflowUser(FastHttpUser):
                 except json.JSONDecodeError:
                     return response.failure("Invalid JSON response")
 
-                if data.get("success", False):
+                # Strictly check for success=True in the response payload
+                success = data.get("success")
+                if success is True:
                     return response.success()
 
-                # Application-level failure
+                # Application-level failure - success is False, None, or missing
                 msg = str(data.get("result", "Unknown error"))[:200]
-                return response.failure(f"Flow failed: {msg}")
+                success_status = f"success={success}" if success is not None else "success=missing"
+                return response.failure(f"Flow failed ({success_status}): {msg}")
 
             # Handle specific error cases for better monitoring
             if response.status_code in (429, 503):
