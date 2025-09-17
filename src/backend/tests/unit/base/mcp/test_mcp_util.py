@@ -411,6 +411,87 @@ class TestFieldNameConversion:
 
         assert result == expected
 
+    def test_json_schema_alias_functionality(self):
+        """Test that JSON schema creation includes aliases for camelCase field names."""
+        from pydantic import ValidationError
+
+        from lfx.schema.json_schema import create_input_schema_from_json_schema
+
+        # Create a JSON schema with snake_case field names
+        test_schema = {
+            "type": "object",
+            "properties": {
+                "weather_main": {"type": "string", "description": "Main weather condition"},
+                "top_n": {"type": "integer", "description": "Number of results"},
+                "user_id": {"type": "string", "description": "User identifier"},
+            },
+            "required": ["weather_main", "top_n"],
+        }
+
+        # Create the Pydantic model using our function
+        input_schema = create_input_schema_from_json_schema(test_schema)
+
+        # Test with snake_case field names (should work)
+        result1 = input_schema(weather_main="Rain", top_n=8)
+        assert result1.weather_main == "Rain"
+        assert result1.top_n == 8
+
+        # Test with camelCase field names (should also work due to aliases)
+        result2 = input_schema(weatherMain="Rain", topN=8)
+        assert result2.weather_main == "Rain"
+        assert result2.top_n == 8
+
+        # Test with mixed case field names (should work)
+        result3 = input_schema(weatherMain="Rain", top_n=8, userId="user123")
+        assert result3.weather_main == "Rain"
+        assert result3.top_n == 8
+        assert result3.user_id == "user123"
+
+        # Test validation error (should fail with missing required field)
+        with pytest.raises(ValidationError):
+            input_schema(weatherMain="Rain")  # Missing topN/top_n
+
+    @pytest.mark.asyncio
+    async def test_tool_empty_arguments_error_handling(self):
+        """Test that tools provide helpful error messages when called with no arguments."""
+        from unittest.mock import AsyncMock
+
+        from lfx.schema.json_schema import create_input_schema_from_json_schema
+
+        # Create a JSON schema with required fields
+        test_schema = {
+            "type": "object",
+            "properties": {
+                "weather_main": {"type": "string", "description": "Main weather condition"},
+                "top_n": {"type": "integer", "description": "Number of results"},
+            },
+            "required": ["weather_main", "top_n"],
+        }
+
+        # Create the Pydantic model using our function
+        input_schema = create_input_schema_from_json_schema(test_schema)
+
+        # Create a mock client
+        mock_client = AsyncMock()
+        mock_client.run_tool = AsyncMock(return_value="Success")
+
+        # Create the tool coroutine
+        tool_coroutine = util.create_tool_coroutine("test_tool", input_schema, mock_client)
+
+        # Test that calling with no arguments gives a helpful error message
+        with pytest.raises(ValueError, match="requires arguments but none were provided") as exc_info:
+            await tool_coroutine()
+
+        error_msg = str(exc_info.value)
+        assert "test_tool" in error_msg
+        assert "requires arguments but none were provided" in error_msg
+        assert "weather_main" in error_msg
+        assert "top_n" in error_msg
+
+        # Test that calling with correct arguments works
+        result = await tool_coroutine(weather_main="Rain", top_n=8)
+        assert result == "Success"
+
 
 class TestToolExecutionWithFieldConversion:
     """Test that field name conversion works in actual tool execution."""
@@ -1176,3 +1257,237 @@ class TestMCPSseClientUnit:
             assert result is not None
             # Should have cleaned up the failed session
             mock_manager._cleanup_session.assert_called_once_with("test_context")
+
+
+class TestMCPStructuredTool:
+    """Test the MCPStructuredTool class for parameter conversion."""
+
+    def test_mcp_structured_tool_parameter_conversion(self):
+        """Test that MCPStructuredTool converts camelCase parameters to snake_case."""
+        from unittest.mock import MagicMock
+
+        from pydantic import Field, create_model
+
+        from lfx.base.mcp.util import MCPStructuredTool
+
+        # Create test schema with snake_case fields
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+            user_id=(str, Field(default="default", description="User ID")),
+        )
+
+        # Create a mock function that captures the arguments
+        mock_func = MagicMock(return_value="tool_result")
+
+        # Create MCPStructuredTool
+        tool = MCPStructuredTool(
+            name="test_tool",
+            description="Test tool",
+            args_schema=test_schema,
+            func=mock_func,
+        )
+
+        # Test with camelCase input (what LLMs typically provide)
+        camel_case_input = {"weatherMain": "Rain", "topN": 5, "userId": "user123"}
+
+        result = tool.run(camel_case_input)
+
+        # Verify the result
+        assert result == "tool_result"
+
+        # Verify that the function was called with converted parameters
+        mock_func.assert_called_once()
+        # Check what arguments were actually passed
+        call_args, call_kwargs = mock_func.call_args
+
+        # LangChain may call with keyword arguments or with a dict argument
+        called_args = (call_args[0] if call_args else {}) if call_args else call_kwargs
+
+        # The converted arguments should have snake_case field names
+        expected_converted = {"weather_main": "Rain", "top_n": 5, "user_id": "user123"}
+
+        # Check if we got the expected structure
+        if isinstance(called_args, dict):
+            assert called_args == expected_converted
+        else:
+            # Check that the expected fields are present as keyword arguments
+            assert call_kwargs.get("weather_main") == "Rain"
+            assert call_kwargs.get("top_n") == 5
+            assert call_kwargs.get("user_id") == "user123"
+
+    @pytest.mark.asyncio
+    async def test_mcp_structured_tool_async_parameter_conversion(self):
+        """Test that MCPStructuredTool arun method converts parameters correctly."""
+        from unittest.mock import AsyncMock
+
+        from pydantic import Field, create_model
+
+        from lfx.base.mcp.util import MCPStructuredTool
+
+        # Create test schema with snake_case fields
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Main weather condition")),
+            max_results=(int, Field(..., description="Maximum results")),
+        )
+
+        # Create a mock async function
+        mock_coroutine = AsyncMock(return_value="async_result")
+
+        # Create MCPStructuredTool
+        tool = MCPStructuredTool(
+            name="test_async_tool",
+            description="Test async tool",
+            args_schema=test_schema,
+            coroutine=mock_coroutine,
+        )
+
+        # Test with camelCase input
+        camel_case_input = {"weatherMain": "Snow", "maxResults": 10}
+
+        result = await tool.arun(camel_case_input)
+
+        # Verify the result
+        assert result == "async_result"
+
+        # Verify that the coroutine was called with converted parameters
+        mock_coroutine.assert_called_once()
+        call_args, call_kwargs = mock_coroutine.call_args
+
+        called_args = (call_args[0] if call_args else {}) if call_args else call_kwargs
+
+        expected_converted = {"weather_main": "Snow", "max_results": 10}
+
+        if isinstance(called_args, dict):
+            assert called_args == expected_converted
+        else:
+            assert call_kwargs.get("weather_main") == "Snow"
+            assert call_kwargs.get("max_results") == 10
+
+    def test_mcp_structured_tool_mixed_case_handling(self):
+        """Test that MCPStructuredTool handles mixed camelCase and snake_case correctly."""
+        from unittest.mock import MagicMock
+
+        from pydantic import Field, create_model
+
+        from lfx.base.mcp.util import MCPStructuredTool
+
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+            existing_field=(str, Field(default="default", description="Already snake_case")),
+        )
+
+        mock_func = MagicMock(return_value="mixed_result")
+
+        tool = MCPStructuredTool(
+            name="mixed_tool",
+            description="Mixed case test tool",
+            args_schema=test_schema,
+            func=mock_func,
+        )
+
+        # Test with mixed camelCase and snake_case input
+        mixed_input = {
+            "weatherMain": "Cloudy",  # Should convert to weather_main
+            "top_n": 3,  # Already snake_case, keep as-is
+            "existingField": "test_value",  # Should convert to existing_field
+        }
+
+        result = tool.run(mixed_input)
+
+        assert result == "mixed_result"
+
+        call_args, call_kwargs = mock_func.call_args
+        called_args = call_args[0] if call_args else call_kwargs
+        expected_converted = {"weather_main": "Cloudy", "top_n": 3, "existing_field": "test_value"}
+
+        if isinstance(called_args, dict):
+            assert called_args == expected_converted
+        else:
+            assert call_kwargs.get("weather_main") == "Cloudy"
+            assert call_kwargs.get("top_n") == 3
+            assert call_kwargs.get("existing_field") == "test_value"
+
+    def test_mcp_structured_tool_string_input_parsing(self):
+        """Test that MCPStructuredTool correctly parses JSON string input."""
+        import json
+        from unittest.mock import MagicMock
+
+        from pydantic import Field, create_model
+
+        from lfx.base.mcp.util import MCPStructuredTool
+
+        test_schema = create_model(
+            "TestSchema",
+            weather_main=(str, Field(..., description="Weather condition")),
+            top_n=(int, Field(..., description="Number of results")),
+        )
+
+        mock_func = MagicMock(return_value="string_result")
+
+        tool = MCPStructuredTool(
+            name="string_tool",
+            description="String input test tool",
+            args_schema=test_schema,
+            func=mock_func,
+        )
+
+        # Test with JSON string input
+        json_input = json.dumps({"weatherMain": "Sunny", "topN": 7})
+
+        result = tool.run(json_input)
+
+        assert result == "string_result"
+
+        call_args, call_kwargs = mock_func.call_args
+        called_args = call_args[0] if call_args else call_kwargs
+        expected_converted = {"weather_main": "Sunny", "top_n": 7}
+
+        if isinstance(called_args, dict):
+            assert called_args == expected_converted
+        else:
+            assert call_kwargs.get("weather_main") == "Sunny"
+            assert call_kwargs.get("top_n") == 7
+
+    def test_mcp_structured_tool_invalid_json_fallback(self):
+        """Test that MCPStructuredTool handles invalid JSON strings gracefully."""
+        from unittest.mock import MagicMock
+
+        from pydantic import Field, create_model
+
+        from lfx.base.mcp.util import MCPStructuredTool
+
+        test_schema = create_model(
+            "TestSchema",
+            input=(str, Field(..., description="Input field")),
+        )
+
+        mock_func = MagicMock(return_value="fallback_result")
+
+        tool = MCPStructuredTool(
+            name="fallback_tool",
+            description="Fallback test tool",
+            args_schema=test_schema,
+            func=mock_func,
+        )
+
+        # Test with invalid JSON string
+        invalid_json = "not a valid json string"
+
+        result = tool.run(invalid_json)
+
+        assert result == "fallback_result"
+
+        # Should fallback to {"input": original_string}
+        call_args, call_kwargs = mock_func.call_args
+        called_args = call_args[0] if call_args else call_kwargs
+        expected_fallback = {"input": "not a valid json string"}
+
+        if isinstance(called_args, dict):
+            assert called_args == expected_fallback
+        else:
+            assert call_kwargs.get("input") == "not a valid json string"
