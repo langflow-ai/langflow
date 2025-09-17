@@ -5,12 +5,13 @@ from pathlib import Path
 
 import pandas as pd
 from fastapi import APIRouter, HTTPException
-from langchain_chroma import Chroma
 from lfx.log import logger
 from pydantic import BaseModel
 
 from langflow.api.utils import CurrentActiveUser
-from langflow.services.deps import get_settings_service
+from langflow.base.knowledge_bases.metadata_adapters import extract_metadata
+from langflow.base.knowledge_bases.vector_store_factory import build_kb_vector_store
+from langflow.services.deps import get_settings_service, session_scope
 
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases")
 
@@ -201,38 +202,11 @@ def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[i
     return int(total_words), int(total_characters)
 
 
-def get_kb_metadata(kb_path: Path) -> dict:
-    """Extract metadata from a knowledge base directory."""
-    metadata: dict[str, float | int | str] = {
-        "chunks": 0,
-        "words": 0,
-        "characters": 0,
-        "avg_chunk_size": 0.0,
-        "embedding_provider": "Unknown",
-        "embedding_model": "Unknown",
-    }
+async def get_kb_metadata(kb_path: Path, user_id: str) -> dict:
+    """Extract metadata from a knowledge base directory using user-aware provider configuration."""
+    from uuid import UUID
 
     try:
-        # First check embedding metadata file for accurate provider and model info
-        metadata_file = kb_path / "embedding_metadata.json"
-        if metadata_file.exists():
-            try:
-                with metadata_file.open("r", encoding="utf-8") as f:
-                    embedding_metadata = json.load(f)
-                    if isinstance(embedding_metadata, dict):
-                        if "embedding_provider" in embedding_metadata:
-                            metadata["embedding_provider"] = embedding_metadata["embedding_provider"]
-                        if "embedding_model" in embedding_metadata:
-                            metadata["embedding_model"] = embedding_metadata["embedding_model"]
-            except (OSError, json.JSONDecodeError) as _:
-                logger.exception("Error reading embedding metadata file '%s'", metadata_file)
-
-        # Fallback to detection if not found in metadata file
-        if metadata["embedding_provider"] == "Unknown":
-            metadata["embedding_provider"] = detect_embedding_provider(kb_path)
-        if metadata["embedding_model"] == "Unknown":
-            metadata["embedding_model"] = detect_embedding_model(kb_path)
-
         # Read schema for text column information
         schema_data = None
         schema_file = kb_path / "schema.json"
@@ -245,48 +219,39 @@ def get_kb_metadata(kb_path: Path) -> dict:
             except (ValueError, TypeError, OSError) as _:
                 logger.exception("Error reading schema file '%s'", schema_file)
 
-        # Create vector store
-        chroma = Chroma(
-            persist_directory=str(kb_path),
-            collection_name=kb_path.name,
-        )
+        # Create vector store using user's configuration from database
+        async with session_scope() as session:
+            vector_store = await build_kb_vector_store(
+                kb_path=kb_path,
+                collection_name=kb_path.name,
+                embedding_function=None,  # Not needed for metadata operations
+                user_id=UUID(user_id),
+                session=session,
+            )
 
-        # Access the raw collection
-        collection = chroma._collection
+            # Use the enhanced metadata extraction with provider-specific adapters
+            return extract_metadata(
+                vector_store=vector_store,
+                kb_path=kb_path,
+                schema_data=schema_data,
+            )
 
-        # Fetch all documents and metadata
-        results = collection.get(include=["documents", "metadatas"])
+    except (OSError, ValueError, ImportError, AttributeError) as e:
+        logger.exception("Error getting metadata for KB '%s': %s", kb_path.name, e)
 
-        # Convert to pandas DataFrame
-        source_chunks = pd.DataFrame(
-            {
-                "document": results["documents"],
-                "metadata": results["metadatas"],
-            }
-        )
-
-        # Process the source data for metadata
-        try:
-            metadata["chunks"] = len(source_chunks)
-
-            # Get text columns and calculate metrics
-            text_columns = get_text_columns(source_chunks, schema_data)
-            if text_columns:
-                words, characters = calculate_text_metrics(source_chunks, text_columns)
-                metadata["words"] = words
-                metadata["characters"] = characters
-
-                # Calculate average chunk size
-                if int(metadata["chunks"]) > 0:
-                    metadata["avg_chunk_size"] = round(int(characters) / int(metadata["chunks"]), 1)
-
-        except (OSError, ValueError, TypeError) as _:
-            logger.exception("Error processing Chroma DB '%s'", kb_path.name)
-
-    except (OSError, ValueError, TypeError) as _:
-        logger.exception("Error processing knowledge base directory '%s'", kb_path)
-
-    return metadata
+        # Return minimal metadata on error
+        return {
+            "chunks": 0,
+            "words": 0,
+            "characters": 0,
+            "avg_chunk_size": 0.0,
+            "embedding_provider": "Unknown",
+            "embedding_model": "Unknown",
+            "provider": "unknown",
+            "collection_info": {},
+            "provider_specific": {},
+            "supports_embeddings": False,
+        }
 
 
 @router.get("", status_code=HTTPStatus.OK)
@@ -312,7 +277,7 @@ async def list_knowledge_bases(current_user: CurrentActiveUser) -> list[Knowledg
                 size = get_directory_size(kb_dir)
 
                 # Get metadata from KB files
-                metadata = get_kb_metadata(kb_dir)
+                metadata = await get_kb_metadata(kb_dir, current_user.id)
 
                 kb_info = KnowledgeBaseInfo(
                     id=kb_dir.name,
@@ -357,7 +322,7 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
         size = get_directory_size(kb_path)
 
         # Get metadata from KB files
-        metadata = get_kb_metadata(kb_path)
+        metadata = await get_kb_metadata(kb_path, current_user.id)
 
         return KnowledgeBaseInfo(
             id=kb_name,
