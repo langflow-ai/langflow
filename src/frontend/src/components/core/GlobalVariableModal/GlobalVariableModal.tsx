@@ -97,7 +97,9 @@ export default function GlobalVariableModal({
         setOpen(false);
 
         setSuccessData({
-          title: `Variable ${name} ${initialData ? "updated" : "created"} successfully`,
+          title: `Variable ${name} ${
+            initialData ? "updated" : "created"
+          } successfully`,
         });
       },
       onError: (error) => {
@@ -106,7 +108,9 @@ export default function GlobalVariableModal({
           title: `Error ${initialData ? "updating" : "creating"} variable`,
           list: [
             responseError?.response?.data?.detail ??
-              `An unexpected error occurred while ${initialData ? "updating a new" : "creating"} variable. Please try again.`,
+              `An unexpected error occurred while ${
+                initialData ? "updating a new" : "creating"
+              } variable. Please try again.`,
           ],
         });
       },
@@ -224,6 +228,7 @@ export default function GlobalVariableModal({
         submit={{
           label: `${initialData ? "Update" : "Save"} Variable`,
           dataTestId: "save-variable-btn",
+          disabled: !key || !value,
         }}
       />
     </BaseModal>

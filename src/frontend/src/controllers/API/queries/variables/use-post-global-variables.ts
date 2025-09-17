@@ -38,6 +38,7 @@ export const usePostGlobalVariables: useMutationFunctionType<
       onSettled: () => {
         queryClient.refetchQueries({ queryKey: ["useGetGlobalVariables"] });
       },
+      retry: false,
       ...options,
     });
 
