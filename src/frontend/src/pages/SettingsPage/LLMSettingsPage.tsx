@@ -1,3 +1,6 @@
+import { CheckCircle2, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,11 +29,7 @@ import {
 import { useGetVariablesByCategory } from "@/controllers/API/queries/variables/use-get-variables-by-category";
 import { usePatchGlobalVariables } from "@/controllers/API/queries/variables/use-patch-global-variables";
 import { usePostGlobalVariables } from "@/controllers/API/queries/variables/use-post-global-variables";
-
 import useAlertStore from "@/stores/alertStore";
-import { CheckCircle2, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
 
 interface LLMSettingsFormValues {
   provider: string;

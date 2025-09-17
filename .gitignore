@@ -277,3 +277,7 @@ src/frontend/temp
 
 .dspy_cache/
 *.db
+*.mcp.json
+
+news-aggregated.json
+CLAUDE.md

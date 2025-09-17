@@ -2,20 +2,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-from loguru import logger
+from lfx.graph.vertex.base import Vertex
+from lfx.log.logger import logger
+from lfx.processing.utils import validate_and_repair_json
 from pydantic import BaseModel
 
-from langflow.graph.vertex.base import Vertex
-from langflow.processing.utils import validate_and_repair_json
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import InputValueRequest
-    from langflow.graph.graph.base import Graph
-    from langflow.graph.schema import RunOutputs
-    from langflow.services.event_manager import EventManager
+    from lfx.events.event_manager import EventManager
+    from lfx.graph.graph.base import Graph
+    from lfx.graph.schema import RunOutputs
+    from lfx.schema.schema import InputValueRequest
 
 
 class Result(BaseModel):
@@ -41,7 +41,7 @@ async def run_graph_internal(
     types = []
     for input_value_request in inputs:
         if input_value_request.input_value is None:
-            logger.warning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
+            await logger.awarning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
             input_value_request.input_value = ""
         components.append(input_value_request.components or [])
         inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
@@ -71,6 +71,7 @@ async def run_graph(
     session_id: str | None = None,
     fallback_to_env_vars: bool = False,
     output_component: str | None = None,
+    stream: bool = False,
 ) -> list[RunOutputs]:
     """Runs the given Langflow Graph with the specified input and returns the outputs.
 
@@ -83,6 +84,7 @@ async def run_graph(
         fallback_to_env_vars (bool, optional): Whether to fallback to environment variables.
             Defaults to False.
         output_component (Optional[str], optional): The specific output component to retrieve. Defaults to None.
+        stream (bool, optional): Whether to stream the results or not. Defaults to False.
 
     Returns:
         List[RunOutputs]: A list of RunOutputs objects representing the outputs of the graph.
@@ -103,7 +105,7 @@ async def run_graph(
     types = []
     for input_value_request in inputs:
         if input_value_request.input_value is None:
-            logger.warning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
+            await logger.awarning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
             input_value_request.input_value = ""
         components.append(input_value_request.components or [])
         inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
@@ -113,7 +115,7 @@ async def run_graph(
         inputs_components=components,
         types=types,
         outputs=outputs or [],
-        stream=False,
+        stream=stream,
         session_id=session_id,
         fallback_to_env_vars=fallback_to_env_vars,
     )
@@ -144,6 +146,9 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
 
     for tweak_name, tweak_value in node_tweaks.items():
         if tweak_name not in template_data:
+            continue
+        if tweak_name == "code":
+            logger.warning("Security: Code field cannot be overridden via tweaks.")
             continue
         if tweak_name in template_data:
             if template_data[tweak_name]["type"] == "NestedDict":

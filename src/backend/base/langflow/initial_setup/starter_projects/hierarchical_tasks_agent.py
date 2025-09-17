@@ -1,12 +1,11 @@
-from langflow.components.crewai.crewai import CrewAIAgentComponent
-from langflow.components.crewai.hierarchical_crew import HierarchicalCrewComponent
-from langflow.components.crewai.hierarchical_task import HierarchicalTaskComponent
-from langflow.components.inputs import ChatInput
-from langflow.components.models import OpenAIModelComponent
-from langflow.components.outputs import ChatOutput
-from langflow.components.prompts import PromptComponent
-from langflow.components.tools import SearchAPIComponent
-from langflow.graph import Graph
+from lfx.components.crewai.crewai import CrewAIAgentComponent
+from lfx.components.crewai.hierarchical_crew import HierarchicalCrewComponent
+from lfx.components.crewai.hierarchical_task import HierarchicalTaskComponent
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+from lfx.components.processing import PromptComponent
+from lfx.components.tools import SearchAPIComponent
+from lfx.graph import Graph
 
 
 def hierarchical_tasks_agent_graph():

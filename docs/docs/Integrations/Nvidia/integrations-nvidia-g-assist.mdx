@@ -1,0 +1,37 @@
+---
+title: Integrate NVIDIA G-Assist with Langflow
+slug: /integrations-nvidia-g-assist
+---
+
+The **NVIDIA System-Assist** component integrates your flows with NVIDIA G-Assist, enabling interaction with NVIDIA GPU drivers through natural language prompts.
+For example, prompt G-Assist with `"What is my current GPU temperature?"` or `"Show me the available GPU memory"` to get information, and then tell G-Assist to modify your GPU settings.
+For more information, see the [NVIDIA G-Assist repository](https://github.com/NVIDIA/g-assist).
+
+## Prerequisites
+
+The **NVIDIA System-Assist** component requires an NVIDIA GPU on a Windows operating system.
+
+It uses the `gassist.rise` package, which is installed with all Langflow versions that include this component.
+
+## Use NVIDIA G-Assist in a flow
+
+1. Create a flow with a **Chat Input** component, **NVIDIA System-Assist** component, and **Chat Output** components.
+
+    This is a simplified example that uses only three components.
+    Depending on your use case, your flow might use more components or different inputs and outputs.
+
+2. Connect the **Chat Input** component to the **NVIDIA System-Assist** component's **Prompt** input.
+
+    The **Prompt** parameter accepts a natural language prompt that is processed by the NVIDIA G-Assist AI Assistant.
+    In this example, you'll provide the prompt as chat input.
+    You could also enter a prompt directly in the **Prompt** input or connect another input component.
+
+3. Connect the **NVIDIA System-Assist** component's output to the **Chat Output** component.
+
+4. To test the flow, open the **Playground**, and then ask a question about your GPU.
+For example, `"What is my current GPU temperature?"`.
+
+    Through the **NVIDIA System-Assist** component, NVIDIA G-Assist queries your GPU based on the prompt, and then prints the response to the **Playground**.
+
+    The component's output is a [`Message`](/data-types#message) containing the NVIDIA G-Assist response.
+    The string response with the completed operation result is available in the `text` key in the `Message` object.

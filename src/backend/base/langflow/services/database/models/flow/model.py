@@ -9,22 +9,17 @@ from uuid import UUID, uuid4
 import emoji
 from emoji import purely_emoji
 from fastapi import HTTPException, status
-from loguru import logger
-from pydantic import (
-    BaseModel,
-    ValidationInfo,
-    field_serializer,
-    field_validator,
-)
+from lfx.log.logger import logger
+from pydantic import BaseModel, ValidationInfo, field_serializer, field_validator
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import Text, UniqueConstraint, text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from langflow.schema import Data
+from langflow.schema.data import Data
 
 if TYPE_CHECKING:
-    from langflow.services.database.models.folder import Folder
-    from langflow.services.database.models.user import User
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.database.models.user.model import User
 
 HEX_COLOR_LENGTH = 7
 
@@ -35,6 +30,9 @@ class AccessTypeEnum(str, Enum):
 
 
 class FlowBase(SQLModel):
+    # Supresses warnings during migrations
+    __mapper_args__ = {"confirm_deleted_rows": False}
+
     name: str = Field(index=True)
     description: str | None = Field(default=None, sa_column=Column(Text, index=True, nullable=True))
     icon: str | None = Field(default=None, nullable=True)
@@ -47,6 +45,15 @@ class FlowBase(SQLModel):
     endpoint_name: str | None = Field(default=None, nullable=True, index=True)
     tags: list[str] | None = None
     locked: bool | None = Field(default=False, nullable=True)
+    mcp_enabled: bool | None = Field(default=False, nullable=True, description="Can be exposed in the MCP server")
+    action_name: str | None = Field(
+        default=None, nullable=True, description="The name of the action associated with the flow"
+    )
+    action_description: str | None = Field(
+        default=None,
+        sa_column=Column(Text, nullable=True),
+        description="The description of the action associated with the flow",
+    )
     access_type: AccessTypeEnum = Field(
         default=AccessTypeEnum.PRIVATE,
         sa_column=Column(
@@ -233,6 +240,9 @@ class FlowHeader(BaseModel):
     data: dict | None = Field(None, description="The data of the component, if is_component is True")
     access_type: AccessTypeEnum | None = Field(None, description="The access type of the flow")
     tags: list[str] | None = Field(None, description="The tags of the flow")
+    mcp_enabled: bool | None = Field(None, description="Flag indicating whether the flow is exposed in the MCP server")
+    action_name: str | None = Field(None, description="The name of the action associated with the flow")
+    action_description: str | None = Field(None, description="The description of the action associated with the flow")
 
     @field_validator("data", mode="before")
     @classmethod
@@ -248,7 +258,10 @@ class FlowUpdate(SQLModel):
     data: dict | None = None
     folder_id: UUID | None = None
     endpoint_name: str | None = None
+    mcp_enabled: bool | None = None
     locked: bool | None = None
+    action_name: str | None = None
+    action_description: str | None = None
     access_type: AccessTypeEnum | None = None
     fs_path: str | None = None
 

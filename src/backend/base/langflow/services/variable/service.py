@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from loguru import logger
+from lfx.log.logger import logger
 from sqlmodel import select
 
 from langflow.services.auth import utils as auth_utils
@@ -17,9 +17,8 @@ from langflow.services.variable.constants import CATEGORY_GLOBAL, CREDENTIAL_TYP
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
-
-    from langflow.services.settings.service import SettingsService
 
 
 class DatabaseVariableService(VariableService, Service):
@@ -28,10 +27,9 @@ class DatabaseVariableService(VariableService, Service):
 
     async def initialize_user_variables(self, user_id: UUID | str, session: AsyncSession) -> None:
         if not self.settings_service.settings.store_environment_variables:
-            logger.info("Skipping environment variable storage.")
+            await logger.adebug("Skipping environment variable storage.")
             return
 
-        logger.info("Storing environment variables in the database.")
         for var_name in self.settings_service.settings.variables_to_get_from_environment:
             if var_name in os.environ and os.environ[var_name].strip():
                 value = os.environ[var_name].strip()
@@ -50,9 +48,9 @@ class DatabaseVariableService(VariableService, Service):
                             category=CATEGORY_GLOBAL,
                             session=session,
                         )
-                    logger.info(f"Processed {var_name} variable from environment.")
+                    await logger.adebug(f"Processed {var_name} variable from environment.")
                 except Exception as e:  # noqa: BLE001
-                    logger.exception(f"Error processing {var_name} variable: {e!s}")
+                    await logger.aexception(f"Error processing {var_name} variable: {e!s}")
 
     async def get_variable(
         self,
@@ -96,7 +94,7 @@ class DatabaseVariableService(VariableService, Service):
                 try:
                     value = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
                 except Exception as e:  # noqa: BLE001
-                    logger.debug(
+                    await logger.adebug(
                         f"Decryption of {variable.type} failed for variable '{variable.name}': {e}. Assuming plaintext."
                     )
                     value = variable.value

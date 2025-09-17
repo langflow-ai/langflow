@@ -1,22 +1,3 @@
-from langflow.custom import Component
+"""Backwards compatibility module for langflow.base.io.text."""
 
-
-class TextComponent(Component):
-    display_name = "Text Component"
-    description = "Used to pass text to the next component."
-
-    def build_config(self):
-        return {
-            "input_value": {
-                "display_name": "Value",
-                "input_types": ["Message", "Data"],
-                "info": "Text or Data to be passed.",
-            },
-            "data_template": {
-                "display_name": "Data Template",
-                "multiline": True,
-                "info": "Template to convert Data to Text. "
-                "If left empty, it will be dynamically set to the Data's text key.",
-                "advanced": True,
-            },
-        }
+from lfx.base.io.text import *  # noqa: F403

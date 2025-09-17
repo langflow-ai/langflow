@@ -1,6 +1,6 @@
 import anyio
 from aiofile import async_open
-from loguru import logger
+from lfx.log.logger import logger
 
 from .service import StorageService
 
@@ -37,7 +37,7 @@ class LocalStorageService(StorageService):
         try:
             async with async_open(str(file_path), "wb") as f:
                 await f.write(data)
-            logger.info(f"File {file_name} saved successfully in flow {flow_id}.")
+            await logger.ainfo(f"File {file_name} saved successfully in flow {flow_id}.")
         except Exception:
             logger.exception(f"Error saving file {file_name} in flow {flow_id}")
             raise
@@ -57,7 +57,7 @@ class LocalStorageService(StorageService):
         """
         file_path = self.data_dir / flow_id / file_name
         if not await file_path.exists():
-            logger.warning(f"File {file_name} not found in flow {flow_id}.")
+            await logger.awarning(f"File {file_name} not found in flow {flow_id}.")
             msg = f"File {file_name} not found in flow {flow_id}"
             raise FileNotFoundError(msg)
 
@@ -83,7 +83,7 @@ class LocalStorageService(StorageService):
             flow_id = str(flow_id)
         folder_path = self.data_dir / flow_id
         if not await folder_path.exists() or not await folder_path.is_dir():
-            logger.warning(f"Flow {flow_id} directory does not exist.")
+            await logger.awarning(f"Flow {flow_id} directory does not exist.")
             msg = f"Flow {flow_id} directory does not exist."
             raise FileNotFoundError(msg)
 
@@ -93,7 +93,7 @@ class LocalStorageService(StorageService):
             if await anyio.Path(file).is_file()
         ]
 
-        logger.info(f"Listed {len(files)} files in flow {flow_id}.")
+        await logger.ainfo(f"Listed {len(files)} files in flow {flow_id}.")
         return files
 
     async def delete_file(self, flow_id: str, file_name: str) -> None:
@@ -105,20 +105,20 @@ class LocalStorageService(StorageService):
         file_path = self.data_dir / flow_id / file_name
         if await file_path.exists():
             await file_path.unlink()
-            logger.info(f"File {file_name} deleted successfully from flow {flow_id}.")
+            await logger.ainfo(f"File {file_name} deleted successfully from flow {flow_id}.")
         else:
-            logger.warning(f"Attempted to delete non-existent file {file_name} in flow {flow_id}.")
+            await logger.awarning(f"Attempted to delete non-existent file {file_name} in flow {flow_id}.")
 
     async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down."""
         # No specific teardown actions required for local
 
-    async def get_file_size(self, flow_id: str, file_name: str) -> None:
+    async def get_file_size(self, flow_id: str, file_name: str):
         """Get the size of a file in the local storage."""
         # Get the file size from the file path
         file_path = self.data_dir / flow_id / file_name
         if not await file_path.exists():
-            logger.warning(f"File {file_name} not found in flow {flow_id}.")
+            await logger.awarning(f"File {file_name} not found in flow {flow_id}.")
             msg = f"File {file_name} not found in flow {flow_id}"
             raise FileNotFoundError(msg)
 

@@ -3,9 +3,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from langflow.components.vectorstores.chroma import ChromaVectorStoreComponent
-from langflow.schema.data import Data
 
+from lfx.components.chroma import ChromaVectorStoreComponent
+from lfx.schema.data import Data
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
 
@@ -19,7 +19,7 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self, tmp_path: Path) -> dict[str, Any]:
         """Return the default kwargs for the component."""
-        from langflow.components.embeddings.openai import OpenAIEmbeddingsComponent
+        from lfx.components.openai.openai import OpenAIEmbeddingsComponent
 
         if os.getenv("OPENAI_API_KEY") is None:
             pytest.skip("OPENAI_API_KEY is not set")
@@ -250,7 +250,7 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
         self, component_class: type[ChromaVectorStoreComponent], default_kwargs: dict[str, Any]
     ) -> None:
         """Test the chroma_collection_to_data function."""
-        from langflow.base.vectorstores.utils import chroma_collection_to_data
+        from lfx.base.vectorstores.utils import chroma_collection_to_data
 
         # Create a collection with documents and metadata
         test_data = [
@@ -279,7 +279,7 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
         self, component_class: type[ChromaVectorStoreComponent], default_kwargs: dict[str, Any]
     ) -> None:
         """Test the chroma_collection_to_data function with documents that have no metadata."""
-        from langflow.base.vectorstores.utils import chroma_collection_to_data
+        from lfx.base.vectorstores.utils import chroma_collection_to_data
 
         # Create a collection with documents but no metadata
         test_data = [
@@ -306,7 +306,7 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
         self, component_class: type[ChromaVectorStoreComponent], default_kwargs: dict[str, Any]
     ) -> None:
         """Test the chroma_collection_to_data function with an empty collection."""
-        from langflow.base.vectorstores.utils import chroma_collection_to_data
+        from lfx.base.vectorstores.utils import chroma_collection_to_data
 
         # Create an empty collection
         component: ChromaVectorStoreComponent = component_class().set(**default_kwargs)
@@ -318,3 +318,84 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
 
         # Verify the conversion
         assert len(data_objects) == 0
+
+    def test_metadata_filtering_with_complex_data(
+        self, component_class: type[ChromaVectorStoreComponent], default_kwargs: dict[str, Any]
+    ) -> None:
+        """Test that complex metadata is properly filtered and simple types are preserved."""
+        from langflow.base.vectorstores.utils import chroma_collection_to_data
+
+        # Create test data that covers the original error scenario and validation
+        test_data = [
+            Data(
+                data={
+                    "text": "Document with mixed metadata",
+                    "files": [],  # This empty list was causing the original ChromaDB error
+                    "tags": ["tag1", "tag2"],  # Lists should be filtered out
+                    "nested": {"key": "value"},  # Nested objects should be filtered out
+                    "simple_string": "preserved",
+                    "simple_int": 42,
+                    "simple_bool": True,
+                    "empty_string": "",  # Edge case: empty but valid
+                    "zero_value": 0,  # Edge case: falsy but valid
+                }
+            )
+        ]
+
+        default_kwargs["ingest_data"] = test_data
+        default_kwargs["collection_name"] = "test_metadata_filtering"
+
+        # This should not raise an error despite the complex metadata
+        component: ChromaVectorStoreComponent = component_class().set(**default_kwargs)
+        vector_store = component.build_vector_store()
+
+        # Verify document was added successfully
+        collection_dict = vector_store.get()
+        assert len(collection_dict["documents"]) == 1
+        assert "Document with mixed metadata" in collection_dict["documents"][0]
+
+        # Verify metadata filtering: simple types preserved, complex types filtered out
+        data_objects = chroma_collection_to_data(collection_dict)
+        data_obj = data_objects[0]
+
+        # Simple types should be preserved
+        assert data_obj.data["simple_string"] == "preserved"
+        assert data_obj.data["simple_int"] == 42
+        assert data_obj.data["simple_bool"] is True
+        assert data_obj.data["empty_string"] == ""
+        assert data_obj.data["zero_value"] == 0
+
+        # Complex types should be filtered out
+        assert "files" not in data_obj.data
+        assert "tags" not in data_obj.data
+        assert "nested" not in data_obj.data
+
+    def test_metadata_filtering_fallback(
+        self, component_class: type[ChromaVectorStoreComponent], default_kwargs: dict[str, Any], monkeypatch
+    ) -> None:
+        """Test the fallback behavior when filter_complex_metadata import fails."""
+        import builtins
+
+        original_import = builtins.__import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == "langchain_community.vectorstores.utils":
+                error_msg = "Mocked import error"
+                raise ImportError(error_msg)
+            return original_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", mock_import)
+
+        # Use simple test data to avoid ChromaDB errors when filtering is unavailable
+        test_data = [Data(data={"text": "Simple document", "simple_field": "simple_value"})]
+        default_kwargs["ingest_data"] = test_data
+        default_kwargs["collection_name"] = "test_fallback"
+
+        # Should work with fallback (no filtering)
+        component: ChromaVectorStoreComponent = component_class().set(**default_kwargs)
+        vector_store = component.build_vector_store()
+
+        # Verify document was added
+        collection_dict = vector_store.get()
+        assert len(collection_dict["documents"]) == 1
+        assert "Simple document" in collection_dict["documents"][0]

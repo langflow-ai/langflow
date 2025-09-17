@@ -1,6 +1,6 @@
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
-from loguru import logger
+from lfx.log.logger import logger
 
 from .service import StorageService
 
@@ -28,12 +28,12 @@ class S3StorageService(StorageService):
         """
         try:
             self.s3_client.put_object(Bucket=self.bucket, Key=f"{folder}/{file_name}", Body=data)
-            logger.info(f"File {file_name} saved successfully in folder {folder}.")
+            await logger.ainfo(f"File {file_name} saved successfully in folder {folder}.")
         except NoCredentialsError:
-            logger.exception("Credentials not available for AWS S3.")
+            await logger.aexception("Credentials not available for AWS S3.")
             raise
         except ClientError:
-            logger.exception(f"Error saving file {file_name} in folder {folder}")
+            await logger.aexception(f"Error saving file {file_name} in folder {folder}")
             raise
 
     async def get_file(self, folder: str, file_name: str):
@@ -51,10 +51,10 @@ class S3StorageService(StorageService):
         """
         try:
             response = self.s3_client.get_object(Bucket=self.bucket, Key=f"{folder}/{file_name}")
-            logger.info(f"File {file_name} retrieved successfully from folder {folder}.")
+            await logger.ainfo(f"File {file_name} retrieved successfully from folder {folder}.")
             return response["Body"].read()
         except ClientError:
-            logger.exception(f"Error retrieving file {file_name} from folder {folder}")
+            await logger.aexception(f"Error retrieving file {file_name} from folder {folder}")
             raise
 
     async def list_files(self, folder: str):
@@ -72,11 +72,11 @@ class S3StorageService(StorageService):
         try:
             response = self.s3_client.list_objects_v2(Bucket=self.bucket, Prefix=folder)
         except ClientError:
-            logger.exception(f"Error listing files in folder {folder}")
+            await logger.aexception(f"Error listing files in folder {folder}")
             raise
 
         files = [item["Key"] for item in response.get("Contents", []) if "/" not in item["Key"][len(folder) :]]
-        logger.info(f"{len(files)} files listed in folder {folder}.")
+        await logger.ainfo(f"{len(files)} files listed in folder {folder}.")
         return files
 
     async def delete_file(self, folder: str, file_name: str) -> None:
@@ -91,11 +91,14 @@ class S3StorageService(StorageService):
         """
         try:
             self.s3_client.delete_object(Bucket=self.bucket, Key=f"{folder}/{file_name}")
-            logger.info(f"File {file_name} deleted successfully from folder {folder}.")
+            await logger.ainfo(f"File {file_name} deleted successfully from folder {folder}.")
         except ClientError:
-            logger.exception(f"Error deleting file {file_name} from folder {folder}")
+            await logger.aexception(f"Error deleting file {file_name} from folder {folder}")
             raise
 
     async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down."""
         # No specific teardown actions required for S3 storage at the moment.
+
+    async def get_file_size(self, flow_id: str, file_name: str):
+        raise NotImplementedError

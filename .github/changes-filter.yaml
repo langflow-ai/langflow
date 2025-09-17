@@ -7,6 +7,7 @@ python:
   - "src/backend/base/pyproject.toml"
   - "src/backend/base/uv.lock"
   - "**/python_test.yml"
+  - ".github/workflows/ci.yml"
 components-changes:
   - "src/backend/base/langflow/components/**"
 starter-projects-changes:
@@ -16,6 +17,8 @@ frontend-tests:
 frontend:
   - "src/frontend/**"
   - "**/typescript_test.yml"
+  - "**/jest_test.yml"
+  - ".github/workflows/ci.yml"
 docs:
   - "docs/**"
 
@@ -53,6 +56,8 @@ components:
   - "src/backend/base/langflow/utils/**"
   - "src/backend/base/langflow/custom/**"
   - "src/backend/base/langflow/components/**"
+  - "src/backend/base/langflow/initial_setup/**"
+  - "src/backend/base/langflow/serialization/**"
 
 workspace:
   - "src/backend/base/langflow/inputs/**"
@@ -81,3 +86,6 @@ database:
   - "src/frontend/src/controllers/**"
   - "src/frontend/tests/core/features/**"
   - "src/frontend/tests/extended/features/**"
+
+mainpage:
+  - "src/frontend/src/pages/MainPage/**"

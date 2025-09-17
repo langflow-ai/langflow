@@ -1,7 +1,8 @@
-import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -29,14 +30,12 @@ test(
     //---------------------------------- CHAT INPUT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
-    await page.waitForSelector('[data-testid="inputsChat Input"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Input"]', {
       timeout: 2000,
     });
-
     await zoomOut(page, 6);
-
     await page
-      .getByTestId("inputsChat Input")
+      .getByTestId("input_outputChat Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
@@ -152,11 +151,11 @@ test(
     //---------------------------------- PROMPT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
-    await page.waitForSelector('[data-testid="promptsPrompt"]', {
+    await page.waitForSelector('[data-testid="processingPrompt Template"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("promptsPrompt")
+      .getByTestId("processingPrompt Template")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 350, y: 300 },
       });
@@ -164,11 +163,11 @@ test(
     //---------------------------------- OPENAI
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai");
-    await page.waitForSelector('[data-testid="modelsOpenAI"]', {
+    await page.waitForSelector('[data-testid="openai_openai_draggable"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("modelsOpenAI")
+      .getByTestId("openaiOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 300 },
       });
@@ -187,36 +186,41 @@ test(
     //---------------------------------- CHAT OUTPUT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 800, y: 300 },
       });
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 2000,
     });
     //---------------------------------- CHAT OUTPUT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 2000,
     });
     await page
-      .getByTestId("outputsChat Output")
+      .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 800, y: 400 },
       });
-    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 2000,
     });
     //----------------------------------
-    await page.getByTestId("fit_view").click();
+
+    await adjustScreenView(page);
+
     //---------------------------------- EDIT PROMPT
     await page.getByTestId("promptarea_prompt_template").first().click();
-    await page.getByTestId("modal-promptarea_prompt_template").first().fill(`
+    await page
+      .getByTestId("modal-promptarea_prompt_template")
+      .first()
+      .fill(`
       {Condition}
   Answer with either TRUE or FALSE (and nothing else).
   TRUE Examples:
@@ -245,7 +249,7 @@ test(
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-chatinput-noshownode-message-source")
+      .getByTestId("handle-chatinput-noshownode-chat message-source")
       .nth(0)
       .click();
     await page
@@ -258,7 +262,7 @@ test(
       .click();
     //quebrando aqui
     await page
-      .getByTestId("handle-prompt-shownode-true_examples-left")
+      .getByTestId("handle-prompt template-shownode-true_examples-left")
       .nth(0)
       .click();
     await page
@@ -266,7 +270,7 @@ test(
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-prompt-shownode-false_examples-left")
+      .getByTestId("handle-prompt template-shownode-false_examples-left")
       .nth(0)
       .click();
     await page
@@ -274,11 +278,11 @@ test(
       .nth(2)
       .click();
     await page
-      .getByTestId("handle-prompt-shownode-user_message-left")
+      .getByTestId("handle-prompt template-shownode-user_message-left")
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-prompt-shownode-prompt message-right")
+      .getByTestId("handle-prompt template-shownode-prompt-right")
       .first()
       .click();
     await page
@@ -286,7 +290,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-openaimodel-shownode-message-right")
+      .getByTestId("handle-openaimodel-shownode-model response-right")
       .nth(0)
       .click();
     await page
@@ -310,6 +314,7 @@ test(
       .fill("You're Sad! 🥲");
     await page.getByTestId("showignored_message").last().click();
     await page.getByText("Close").last().click();
+
     await page
       .getByTestId("handle-conditionalrouter-shownode-true-right")
       .nth(0)
@@ -331,7 +336,7 @@ test(
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(0)
       .click();
     await page
@@ -339,7 +344,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
+      .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(1)
       .click();
     const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
@@ -349,8 +354,9 @@ test(
     }
     await page.getByTestId("dropdown_str_model_name").click();
     await page.getByTestId("gpt-4o-1-option").click();
-    await page.getByTestId("fit_view").click();
-    await page.getByText("Playground", { exact: true }).last().click();
+    await adjustScreenView(page);
+
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });

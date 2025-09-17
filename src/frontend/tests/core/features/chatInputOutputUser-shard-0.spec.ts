@@ -1,7 +1,7 @@
-import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import { readFileSync } from "fs";
 import path from "path";
+import { test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
@@ -22,7 +22,7 @@ test(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
 
@@ -33,8 +33,7 @@ test(
     await page.getByText("Chat Input", { exact: true }).click();
     await page.getByTestId("edit-button-modal").last().click();
     await page.getByText("Close").last().click();
-
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     // Read the image file as a binary string
     const filePath = "tests/assets/chain.png";

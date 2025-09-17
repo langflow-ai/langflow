@@ -1,4 +1,3 @@
-from langflow.base.tools.component_tool import ComponentToolkit
 from langflow.custom import Component
 
 # Import all input types
@@ -20,8 +19,10 @@ from langflow.io import (
     StrInput,
     TableInput,
 )
-from langflow.schema import Data
 from pydantic import BaseModel
+
+from lfx.base.tools.component_tool import ComponentToolkit
+from lfx.schema import Data
 
 
 class AllInputsComponent(Component):
@@ -122,7 +123,7 @@ def test_component_inputs_toolkit():
     component = AllInputsComponent()
     component_toolkit = ComponentToolkit(component=component)
     component_tool = component_toolkit.get_tools()[0]
-    assert component_tool.name == "AllInputsComponent-build_output"
+    assert component_tool.name == "build_output"
     assert issubclass(component_tool.args_schema, BaseModel)
     properties = component_tool.args_schema.model_json_schema()["properties"]
 

@@ -4,13 +4,12 @@ from datetime import datetime, timezone
 from typing import Annotated, Literal
 from uuid import UUID
 
+from lfx.schema.content_block import ContentBlock
+from lfx.schema.content_types import ErrorContent
+from lfx.schema.properties import Properties
+from lfx.schema.validators import timestamp_to_str_validator
+from lfx.utils.constants import MESSAGE_SENDER_USER
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
-
-from langflow.schema.content_block import ContentBlock
-from langflow.schema.content_types import ErrorContent
-from langflow.schema.properties import Properties
-from langflow.schema.validators import timestamp_to_str_validator
-from langflow.utils.constants import MESSAGE_SENDER_USER
 
 
 class PlaygroundEvent(BaseModel):
@@ -170,12 +169,13 @@ _EVENT_CREATORS: dict[str, tuple[Callable, inspect.Signature]] = {
 }
 
 
-def create_event_by_type(
-    event_type: Literal["message", "error", "warning", "info", "token"], **kwargs
-) -> PlaygroundEvent | dict:
+def create_event_by_type(event_type: str, **kwargs) -> PlaygroundEvent | dict:
     if event_type not in _EVENT_CREATORS:
         return kwargs
-
-    creator_func, signature = _EVENT_CREATORS[event_type]
+    try:
+        creator_func, signature = _EVENT_CREATORS[event_type]
+    except KeyError as e:
+        msg = f"Invalid event type: {event_type}"
+        raise ValueError(msg) from e
     valid_params = {k: v for k, v in kwargs.items() if k in signature.parameters}
     return creator_func(**valid_params)

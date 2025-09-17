@@ -1,12 +1,12 @@
 import uuid
 
 from fastapi import APIRouter, HTTPException, status
-from loguru import logger
+from lfx.log.logger import logger
 from pydantic import BaseModel
 from sqlmodel import select
 
 from langflow.api.utils import DbSession
-from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_chat_service
 
 health_check_router = APIRouter(tags=["Health Check"])
@@ -49,7 +49,7 @@ async def health_check(
         (await session.exec(stmt)).first()
         response.db = "ok"
     except Exception:  # noqa: BLE001
-        logger.exception("Error checking database")
+        await logger.aexception("Error checking database")
 
     try:
         chat = get_chat_service()
@@ -57,7 +57,7 @@ async def health_check(
         await chat.get_cache("health_check")
         response.chat = "ok"
     except Exception:  # noqa: BLE001
-        logger.exception("Error checking chat service")
+        await logger.aexception("Error checking chat service")
 
     if response.has_error():
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response.model_dump())

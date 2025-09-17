@@ -3,14 +3,16 @@ import os
 import uuid
 from typing import Any
 
+import pytest
 import requests
 from astrapy.admin import parse_api_endpoint
-from langflow.api.v1.schemas import InputValueRequest
-from langflow.custom import Component
-from langflow.custom.eval import eval_custom_component_code
-from langflow.field_typing import Embeddings
-from langflow.graph import Graph
-from langflow.processing.process import run_graph_internal
+
+from lfx.custom import Component
+from lfx.custom.eval import eval_custom_component_code
+from lfx.field_typing import Embeddings
+from lfx.graph import Graph
+from lfx.processing.process import run_graph_internal
+from lfx.schema.schema import InputValueRequest
 
 
 def check_env_vars(*env_vars):
@@ -187,3 +189,11 @@ def build_component_instance_for_tests(version: str, module: str, file_name: str
     component = download_component_from_github(module, file_name, version)
     cc_class = eval_custom_component_code(component._code)
     return cc_class(**kwargs), component._code
+
+
+def pyleak_marker(**extra_args):
+    default_args = {
+        "enable_task_creation_tracking": True,  # log task creation stacks
+        "thread_name_filter": r"^(?!asyncio_\d+$).*",  # exclude `asyncio_{num}` threads
+    }
+    return pytest.mark.no_leaks(**default_args, **extra_args)

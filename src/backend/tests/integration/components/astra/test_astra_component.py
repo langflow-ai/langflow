@@ -4,10 +4,10 @@ import pytest
 from astrapy import DataAPIClient
 from langchain_astradb import AstraDBVectorStore, VectorServiceOptions
 from langchain_core.documents import Document
-from langflow.components.embeddings import OpenAIEmbeddingsComponent
-from langflow.components.vectorstores import AstraDBVectorStoreComponent
-from langflow.schema.data import Data
 
+from lfx.components.openai.openai import OpenAIEmbeddingsComponent
+from lfx.components.vectorstores import AstraDBVectorStoreComponent
+from lfx.schema.data import Data
 from tests.api_keys import get_astradb_api_endpoint, get_astradb_application_token, get_openai_api_key
 from tests.integration.components.mock_components import TextToData
 from tests.integration.utils import ComponentInputHandle, run_single_component
@@ -39,7 +39,7 @@ def astradb_client():
     for collection in ALL_COLLECTIONS:
         try:  # noqa: SIM105
             client.drop_collection(collection)
-        except Exception:  # noqa: BLE001, S110
+        except Exception:  # noqa: S110
             pass
 
 

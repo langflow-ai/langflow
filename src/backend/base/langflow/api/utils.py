@@ -1,22 +1,23 @@
 from __future__ import annotations
 
 import uuid
+from ast import literal_eval
 from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import Depends, HTTPException, Query
 from fastapi_pagination import Params
-from loguru import logger
+from lfx.graph.graph.base import Graph
+from lfx.log.logger import logger
 from sqlalchemy import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.graph.graph.base import Graph
-from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models import User
-from langflow.services.database.models.flow import Flow
-from langflow.services.database.models.message import MessageTable
+from langflow.services.auth.utils import get_current_active_user, get_current_active_user_mcp
+from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.transactions.model import TransactionTable
+from langflow.services.database.models.user.model import User
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import get_session, session_scope
 from langflow.services.store.utils import get_lf_version_from_pypi
@@ -32,6 +33,7 @@ MAX_PAGE_SIZE = 50
 MIN_PAGE_SIZE = 1
 
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
+CurrentActiveMCPUser = Annotated[User, Depends(get_current_active_user_mcp)]
 DbSession = Annotated[AsyncSession, Depends(get_session)]
 
 
@@ -117,7 +119,7 @@ async def check_langflow_version(component: StoreComponentCreate) -> None:
     if langflow_version is None:
         raise HTTPException(status_code=500, detail="Unable to verify the latest version of Langflow")
     if langflow_version != component.last_tested_version:
-        logger.warning(
+        await logger.awarning(
             f"Your version of Langflow ({component.last_tested_version}) is outdated. "
             f"Please update to the latest version ({langflow_version}) and try again."
         )
@@ -280,11 +282,18 @@ def get_suggestion_message(outdated_components: list[str]) -> str:
 def parse_value(value: Any, input_type: str) -> Any:
     """Helper function to parse the value based on input type."""
     if value == "":
-        return value
+        return {} if input_type == "DictInput" else value
     if input_type == "IntInput":
         return int(value) if value is not None else None
     if input_type == "FloatInput":
         return float(value) if value is not None else None
+    if input_type == "DictInput":
+        if isinstance(value, dict):
+            return value
+        try:
+            return literal_eval(value) if value is not None else {}
+        except (ValueError, SyntaxError):
+            return {}
     return value
 
 
@@ -362,7 +371,7 @@ async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | N
         user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
 
     except Exception as exc:
-        logger.exception(f"Error getting user for public flow {flow_id}")
+        await logger.aexception(f"Error getting user for public flow {flow_id}")
         raise HTTPException(status_code=403, detail="Flow is not accessible") from exc
 
     if not user:

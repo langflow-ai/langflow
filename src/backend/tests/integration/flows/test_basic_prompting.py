@@ -1,12 +1,11 @@
-from langflow.components.inputs import ChatInput
-from langflow.components.outputs import ChatOutput
-from langflow.components.prompts import PromptComponent
-from langflow.graph import Graph
-from langflow.schema.message import Message
-
-from tests.integration.utils import run_flow
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.components.processing import PromptComponent
+from lfx.graph import Graph
+from lfx.schema.message import Message
+from tests.integration.utils import pyleak_marker, run_flow
 
 
+@pyleak_marker()
 async def test_simple_no_llm():
     graph = Graph()
     flow_input = graph.add_component(ChatInput())

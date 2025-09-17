@@ -18,12 +18,14 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
       - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
+          prune-cache: false
       - name: Register problem matcher
         run: echo "::add-matcher::.github/workflows/matchers/ruff.json"
       - name: Run Ruff Check
         run: uv run --only-dev ruff check --output-format=github .
-      - name: Minimize uv cache
-        run: uv cache prune --ci
+

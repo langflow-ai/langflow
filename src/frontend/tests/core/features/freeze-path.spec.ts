@@ -1,6 +1,9 @@
-import { expect, Page, test } from "@playwright/test";
+import { type Page } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
+import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
@@ -20,6 +23,14 @@ test(
 
     await awaitBootstrapTest(page);
 
+    const firstRunLangflow = await page
+      .getByTestId("empty-project-description")
+      .count();
+
+    if (firstRunLangflow > 0) {
+      await addFlowToTestOnEmptyLangflow(page);
+    }
+
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
@@ -35,7 +46,7 @@ test(
     await page.getByTestId("dropdown_str_model_name").click();
     await page.getByTestId("gpt-4o-1-option").click();
 
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 3000,
@@ -45,12 +56,8 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 
@@ -72,12 +79,8 @@ test(
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 
@@ -116,12 +119,8 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-
     await page
-      .getByTestId("output-inspection-message-chatoutput")
+      .getByTestId("output-inspection-output message-chatoutput")
       .first()
       .click();
 
@@ -138,7 +137,7 @@ test(
   },
 );
 
-async function moveSlider(
+async function _moveSlider(
   page: Page,
   side: "left" | "right",
   advanced: boolean = false,

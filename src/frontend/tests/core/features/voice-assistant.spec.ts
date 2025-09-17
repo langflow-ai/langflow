@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -35,7 +35,7 @@ test(
           .click();
       }
     } catch (e) {
-      console.log(e);
+      console.error(e);
     }
 
     await expect(page.getByTestId("voice-assistant-container")).toBeVisible();

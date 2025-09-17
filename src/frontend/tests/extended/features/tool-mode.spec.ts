@@ -1,10 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "User should be able to use components as tool",
-  { tag: ["@release"] },
+  { tag: ["@release", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
@@ -34,7 +36,7 @@ test(
     await page.keyboard.press("ControlOrMeta+Shift+m");
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "visible",
     });
 
@@ -43,7 +45,7 @@ test(
     await page.keyboard.press("ControlOrMeta+Shift+m");
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "hidden",
     });
 
@@ -52,7 +54,7 @@ test(
     await page.getByTestId("tool-mode-button").click();
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "visible",
     });
 
@@ -61,7 +63,7 @@ test(
     await page.getByTestId("tool-mode-button").click();
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "hidden",
     });
 
@@ -70,7 +72,7 @@ test(
     await page.getByTestId("tool-mode-button").click();
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "visible",
     });
 
@@ -79,7 +81,7 @@ test(
     await page.getByTestId("tool-mode-button").click();
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "hidden",
     });
 
@@ -88,7 +90,7 @@ test(
     await page.getByTestId("tool-mode-button").click();
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "visible",
     });
 
@@ -97,7 +99,7 @@ test(
     await page.getByTestId("tool-mode-button").click();
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "hidden",
     });
 
@@ -106,7 +108,7 @@ test(
     await page.getByTestId("tool-mode-button").click();
 
     await page.waitForSelector("text=toolset", {
-      timeout: 3000,
+      timeout: 5000,
       state: "visible",
     });
 
@@ -114,9 +116,7 @@ test(
 
     await page.getByTestId("disclosure-agents").click();
 
-    await page.getByTestId("fit_view").click();
-
-    await zoomOut(page, 4);
+    await adjustScreenView(page, { numberOfZoomOut: 4 });
 
     await page.waitForSelector('[data-testid="agentsAgent"]', {
       timeout: 3000,
@@ -125,10 +125,9 @@ test(
     await page
       .getByTestId("agentsAgent")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 350, y: 100 },
+        targetPosition: { x: 50, y: 500 },
       });
-
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     // Move the Agent node a bit
 

@@ -10,14 +10,14 @@ from typing import TYPE_CHECKING, Any
 
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from loguru import logger
+from lfx.log.logger import logger
+from lfx.schema.data import Data
 from openinference.semconv.trace import OpenInferenceMimeTypeValues, SpanAttributes
 from opentelemetry.semconv.trace import SpanAttributes as OTELSpanAttributes
 from opentelemetry.trace import Span, Status, StatusCode, use_span
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from typing_extensions import override
 
-from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.services.tracing.base import BaseTracer
 
@@ -26,10 +26,10 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
+    from lfx.graph.vertex.base import Vertex
     from opentelemetry.propagators.textmap import CarrierT
     from opentelemetry.util.types import AttributeValue
 
-    from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
 
 
@@ -78,7 +78,7 @@ class ArizePhoenixTracer(BaseTracer):
             self.child_spans: dict[str, Span] = {}
 
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error setting up Arize/Phoenix tracer")
+            logger.debug("Error setting up Arize/Phoenix tracer", exc_info=True)
             self._ready = False
 
     @property
@@ -111,12 +111,17 @@ class ArizePhoenixTracer(BaseTracer):
         # Phoenix Config
         phoenix_api_key = os.getenv("PHOENIX_API_KEY", None)
         phoenix_collector_endpoint = os.getenv("PHOENIX_COLLECTOR_ENDPOINT", "https://app.phoenix.arize.com")
-        enable_phoenix_tracing = bool(phoenix_api_key)
+        phoenix_auth_disabled = "localhost" in phoenix_collector_endpoint or "127.0.0.1" in phoenix_collector_endpoint
+        enable_phoenix_tracing = bool(phoenix_api_key) or phoenix_auth_disabled
         phoenix_endpoint = f"{phoenix_collector_endpoint}/v1/traces"
-        phoenix_headers = {
-            "api_key": phoenix_api_key,
-            "authorization": f"Bearer {phoenix_api_key}",
-        }
+        phoenix_headers = (
+            {
+                "api_key": phoenix_api_key,
+                "authorization": f"Bearer {phoenix_api_key}",
+            }
+            if phoenix_api_key
+            else {}
+        )
 
         if not (enable_arize_tracing or enable_phoenix_tracing):
             return False
@@ -245,8 +250,7 @@ class ArizePhoenixTracer(BaseTracer):
             self._convert_to_arize_phoenix_types({log.get("name"): log for log in logs_dicts}) if logs else {}
         )
         if processed_logs:
-            for key, value in processed_logs.items():
-                child_span.set_attribute(f"logs.{key}", value)
+            child_span.set_attribute("logs", self._safe_json_dumps(processed_logs))
 
         self._set_span_status(child_span, error)
         child_span.end(end_time=self._get_current_timestamp())

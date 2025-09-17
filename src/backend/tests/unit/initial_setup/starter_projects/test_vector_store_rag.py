@@ -3,19 +3,19 @@ import operator
 from textwrap import dedent
 
 import pytest
-from langflow.components.data import FileComponent
-from langflow.components.embeddings import OpenAIEmbeddingsComponent
-from langflow.components.inputs import ChatInput
-from langflow.components.models import OpenAIModelComponent
-from langflow.components.outputs import ChatOutput
-from langflow.components.processing import ParseDataComponent
-from langflow.components.processing.split_text import SplitTextComponent
-from langflow.components.prompts import PromptComponent
-from langflow.components.vectorstores import AstraDBVectorStoreComponent
-from langflow.graph import Graph
-from langflow.graph.graph.constants import Finish
-from langflow.schema import Data
-from langflow.schema.dataframe import DataFrame
+
+from lfx.components.data import FileComponent
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.components.openai.openai import OpenAIEmbeddingsComponent
+from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+from lfx.components.processing import ParseDataComponent, PromptComponent
+from lfx.components.processing.split_text import SplitTextComponent
+from lfx.components.vectorstores import AstraDBVectorStoreComponent
+from lfx.graph.graph.base import Graph
+from lfx.graph.graph.constants import Finish
+from lfx.schema import Data
+from lfx.schema.dataframe import DataFrame
+from lfx.schema.message import Message
 
 
 @pytest.fixture
@@ -23,9 +23,9 @@ def ingestion_graph():
     # Ingestion Graph
     file_component = FileComponent(_id="file-123")
     file_component.set(path="test.txt")
-    file_component.set_on_output(name="data", value=Data(text="This is a test file."), cache=True)
+    file_component.set_on_output(name="message", value=Message(text="This is a test file."), cache=True)
     text_splitter = SplitTextComponent(_id="text-splitter-123")
-    text_splitter.set(data_inputs=file_component.load_files)
+    text_splitter.set(data_inputs=file_component.load_files_message)
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-123")
     openai_embeddings.set(
         openai_api_key="sk-123", openai_api_base="https://api.openai.com/v1", openai_api_type="openai"
@@ -53,7 +53,7 @@ def rag_graph():
     # RAG Graph
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-124")
     chat_input = ChatInput(_id="chatinput-123")
-    chat_input.get_output("message").value = "What is the meaning of life?"
+    chat_input.get_output("message").value = Message(text="What is the meaning of life?")
     rag_vector_store = AstraDBVectorStoreComponent(_id="rag-vector-store-123")
     rag_vector_store.set(
         search_query=chat_input.message_response,
@@ -96,7 +96,7 @@ def rag_graph():
     return Graph(start=chat_input, end=chat_output)
 
 
-def test_vector_store_rag(ingestion_graph, rag_graph):
+async def test_vector_store_rag(ingestion_graph, rag_graph):
     assert ingestion_graph is not None
     ingestion_ids = [
         "file-123",
@@ -115,8 +115,7 @@ def test_vector_store_rag(ingestion_graph, rag_graph):
         "openai-embeddings-124",
     ]
     for ids, graph, len_results in [(ingestion_ids, ingestion_graph, 5), (rag_ids, rag_graph, 8)]:
-        results = list(graph.start())
-
+        results = [result async for result in graph.async_start(reset_output_values=False)]
         assert len(results) == len_results
         vids = [result.vertex.id for result in results if hasattr(result, "vertex")]
         assert all(vid in ids for vid in vids), f"Diff: {set(vids) - set(ids)}"
@@ -199,7 +198,7 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
     assert rag_nodes[4]["data"]["type"] == "ParseData"
     assert rag_nodes[4]["id"] == "parse-data-123"
 
-    assert rag_nodes[5]["data"]["type"] == "Prompt"
+    assert rag_nodes[5]["data"]["type"] == "Prompt Template"
     assert rag_nodes[5]["id"] == "prompt-123"
 
     assert rag_nodes[6]["data"]["type"] == "AstraDB"
@@ -259,7 +258,7 @@ def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
             {"id": "openai-123", "type": "OpenAIModel"},
             {"id": "openai-embeddings-124", "type": "OpenAIEmbeddings"},
             {"id": "parse-data-123", "type": "ParseData"},
-            {"id": "prompt-123", "type": "Prompt"},
+            {"id": "prompt-123", "type": "Prompt Template"},
             {"id": "rag-vector-store-123", "type": "AstraDB"},
         ],
         key=operator.itemgetter("id"),

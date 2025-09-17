@@ -1,6 +1,6 @@
 import pytest
-from langflow.components.tools.calculator_core import CalculatorComponent
 
+from lfx.components.helpers.calculator_core import CalculatorComponent
 from tests.base import ComponentTestBaseWithoutClient
 
 

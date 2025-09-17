@@ -1,4 +1,4 @@
-import { Users } from "@/types/api";
+import type { Users } from "@/types/api";
 
 export interface AuthStoreType {
   isAdmin: boolean;

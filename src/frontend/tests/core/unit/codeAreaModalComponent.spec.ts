@@ -1,5 +1,6 @@
-import { test } from "@playwright/test";
+import { test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -30,8 +31,8 @@ test(
       .getByTestId("prototypesPython Function")
       .getByTestId("icon-Plus")
       .click();
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
+
     await page.getByTestId("div-generic-node").click();
 
     await page.getByTestId("code-button-modal").click();

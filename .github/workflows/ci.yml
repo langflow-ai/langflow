@@ -18,6 +18,11 @@ on:
         required: false
         type: boolean
         default: false
+      runs-on:
+        description: "Runner to use for the tests"
+        required: false
+        type: string
+        default: "ubuntu-latest"
   workflow_dispatch:
     inputs:
       branch:
@@ -37,63 +42,106 @@ on:
         required: false
         type: string
         default: "['3.10']"
+      runs-on:
+        description: "Runner to use for the tests"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+        default: ubuntu-latest
   pull_request:
-    types: [synchronize, labeled]
+    types: [opened, synchronize, labeled]
   merge_group:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
+  TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+
 jobs:
   check-nightly-status:
-    name: Check Nightly Status
+    name: Check PyPI Version Update
     runs-on: ubuntu-latest
     outputs:
-      should-proceed: ${{ steps.check-workflow.outputs.success }}
+      should-proceed: ${{ steps.check-pypi.outputs.success }}
     steps:
-      - name: Check nightly workflow status
-        id: check-workflow
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const workflow_name = 'nightly_build.yml';
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Set to beginning of day
+      - name: Check PyPI package update
+        id: check-pypi
+        run: |
+          # Get today's date in ISO format for comparison
+          TODAY=$(date -u +"%Y-%m-%d")
+          echo "Today's date: $TODAY"
 
-            const { data: runs } = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: workflow_name,
-              created: `>=${today.toISOString()}`,
-              per_page: 100, // Get more runs to check
-              status: 'completed'
-            });
+          # Query PyPI API for the langflow package
+          HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" https://pypi.org/pypi/langflow-nightly/json)
 
-            if (runs.workflow_runs.length === 0) {
-              console.log('No completed workflow runs found today');
-              return core.setOutput('success', 'true');
-            }
+          # Check HTTP status code first
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "Error: PyPI API returned HTTP status $HTTP_STATUS"
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
-            // Check if any runs today were successful
-            const successfulTodayRuns = runs.workflow_runs.filter(run => run.conclusion === 'success');
-            const hasSuccessfulRunToday = successfulTodayRuns.length > 0;
+          # Check if response is valid JSON before proceeding
+          if ! jq -e . response.json >/dev/null 2>&1; then
+            echo "Error: Invalid JSON response from PyPI API"
+            echo "Response preview:"
+            head -n 10 response.json
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
-            console.log(`Found ${runs.workflow_runs.length} completed runs today, ${successfulTodayRuns.length} successful`);
-            core.setOutput('success', hasSuccessfulRunToday.toString());
+          # Extract the latest version
+          LATEST_VERSION=$(jq -r '.info.version // empty' response.json)
+
+          if [ -z "$LATEST_VERSION" ]; then
+            echo "Could not extract latest version"
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Extract the release date of the latest version
+          RELEASE_DATE=$(jq -r --arg ver "$LATEST_VERSION" '.releases[$ver][0].upload_time_iso_8601 // empty' response.json | cut -d'T' -f1)
+
+          if [ -z "$RELEASE_DATE" ]; then
+            echo "Could not extract release date"
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Latest version: $LATEST_VERSION"
+          echo "Release date: $RELEASE_DATE"
+
+          # Check if the release date is today
+          if [[ "$RELEASE_DATE" == "$TODAY" ]]; then
+            echo "Package was updated today"
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "Package was not updated today"
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Clean up
+          rm -f response.json
 
   set-ci-condition:
-    needs: check-nightly-status
     name: Should Run CI
     runs-on: ubuntu-latest
     outputs:
-      should-run-ci: ${{ (needs.check-nightly-status.outputs.should-proceed == 'true' || github.event_name == 'workflow_dispatch') && ((contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group')) }}
+      should-run-ci: ${{ (github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group') }}
+      should-run-tests: ${{ !contains(github.event.pull_request.labels.*.name, 'fast-track') || github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' }}
     steps:
       #  Do anything just to make the job run
       - run: echo "Debug CI Condition"
       - run: echo "Labels -> ${{ join(github.event.pull_request.labels.*.name, ',') }}"
       - run: echo "IsDraft -> ${{ github.event.pull_request.draft }}"
       - run: echo "Event name -> ${{ github.event_name }}"
-      - run: echo "Nightly build status -> ${{ needs.check-nightly-status.outputs.should-proceed }}"
+      - run: echo "Should run tests -> ${{ !contains(github.event.pull_request.labels.*.name, 'fast-track') || github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' }}"
 
   path-filter:
     needs: set-ci-condition
@@ -112,6 +160,19 @@ jobs:
       workspace: ${{ steps.filter.outputs.workspace }}
       api: ${{ steps.filter.outputs.api }}
       database: ${{ steps.filter.outputs.database }}
+      docs-only: ${{
+        steps.filter.outputs.docs == 'true' &&
+        steps.filter.outputs.python != 'true' &&
+        steps.filter.outputs.frontend != 'true' &&
+        steps.filter.outputs['frontend-tests'] != 'true' &&
+        steps.filter.outputs['components-changes'] != 'true' &&
+        steps.filter.outputs['starter-projects-changes'] != 'true' &&
+        steps.filter.outputs['starter-projects'] != 'true' &&
+        steps.filter.outputs.components != 'true' &&
+        steps.filter.outputs.workspace != 'true' &&
+        steps.filter.outputs.api != 'true' &&
+        steps.filter.outputs.database != 'true'
+        }}
 
     steps:
       - name: Checkout code
@@ -125,20 +186,35 @@ jobs:
           filters: ./.github/changes-filter.yaml
 
   test-backend:
-    needs: path-filter
+    needs: [path-filter, set-ci-condition]
     name: Run Backend Tests
-    if: ${{ needs.path-filter.outputs.python == 'true'}}
+    if: ${{ needs.path-filter.outputs.python == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
+      runs-on: ${{ inputs.runs-on || 'ubuntu-latest' }}
+    secrets:
+      OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
+      ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
+      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+
+  test-frontend-unit:
+    needs: [path-filter, set-ci-condition]
+    name: Run Frontend Unit Tests
+    if: ${{ needs.path-filter.outputs.frontend == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    uses: ./.github/workflows/jest_test.yml
+    secrets:
+      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+
   test-frontend:
-    needs: path-filter
+    needs: [path-filter, set-ci-condition]
     name: Run Frontend Tests
-    if: ${{ needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.frontend-tests == 'true' || needs.path-filter.outputs.components-changes == 'true' || needs.path-filter.outputs.starter-projects-changes == 'true' || needs.path-filter.outputs.starter-projects == 'true' || needs.path-filter.outputs.components == 'true' || needs.path-filter.outputs.workspace == 'true' || needs.path-filter.outputs.api == 'true' || needs.path-filter.outputs.database == 'true' }}
+    if: ${{ (needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.frontend-tests == 'true' || needs.path-filter.outputs.components-changes == 'true' || needs.path-filter.outputs.starter-projects-changes == 'true' || needs.path-filter.outputs.starter-projects == 'true' || needs.path-filter.outputs.components == 'true' || needs.path-filter.outputs.workspace == 'true' || needs.path-filter.outputs.api == 'true' || needs.path-filter.outputs.database == 'true') && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}
       release: ${{ inputs.release || false }}
+      runs-on: ${{ inputs.runs-on || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
@@ -157,16 +233,49 @@ jobs:
     name: Test Docs Build
     uses: ./.github/workflows/docs_test.yml
 
+  test-templates:
+    needs: [path-filter, set-ci-condition]
+    name: Test Starter Templates
+    if: ${{ (needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true') && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || github.ref }}
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+
+      - name: Test all starter project templates
+        run: |
+          uv run pytest src/backend/tests/unit/template/test_starter_projects.py -v -n auto
+
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:
     name: "CI Success"
     needs:
       [
         test-backend,
+        test-frontend-unit,
         test-frontend,
         lint-backend,
         test-docs-build,
+        test-templates,
         set-ci-condition,
+        path-filter,
+        check-nightly-status
       ]
 
     if: always()
@@ -174,11 +283,94 @@ jobs:
     env:
       JOBS_JSON: ${{ toJSON(needs) }}
       RESULTS_JSON: ${{ toJSON(needs.*.result) }}
-      EXIT_CODE: ${{!contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && needs.set-ci-condition.outputs.should-run-ci == 'true' && '0' || '1'}}
+      # Skip nightly build check if only docs files changed
+      DOCS_ONLY: ${{ needs.path-filter.outputs.docs-only }}
+      EXIT_CODE: ${{ (contains(needs.*.result, 'failure') ||
+                      contains(needs.*.result, 'cancelled') ||
+                      (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch' && needs.path-filter.outputs.docs-only != 'true'))
+                      && '1' || '0' }}
     steps:
       - name: "CI Success"
         run: |
-          echo $JOBS_JSON
-          echo $RESULTS_JSON
-          echo "Exiting with $EXIT_CODE"
+          echo "=== CI Status Summary ==="
+          echo "Should run tests: ${{ needs.set-ci-condition.outputs.should-run-tests }}"
+          echo "Should run CI: ${{ needs.set-ci-condition.outputs.should-run-ci }}"
+          echo "Nightly build status: ${{ needs.check-nightly-status.outputs.should-proceed }}"
+          echo "Event type: ${{ github.event_name }}"
+          echo "Docs only changes: $DOCS_ONLY"
+          echo "Python changes: ${{ needs.path-filter.outputs.python }}"
+          echo "Frontend changes: ${{ needs.path-filter.outputs.frontend }}"
+          echo "Docs changes: ${{ needs.path-filter.outputs.docs }}"
+          echo ""
+
+          # Check for job failures
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "❌ CI FAILED: One or more jobs failed"
+            echo ""
+            echo "Failed jobs:"
+
+            # Dynamically list failed jobs with helpful descriptions
+            echo "$JOBS_JSON" | jq -r '
+              to_entries[]
+              | select(.value.result=="failure")
+              | .key as $job
+              | if $job == "test-backend" then
+                  "  - Backend Tests: Check Python code, tests, and dependencies"
+                elif $job == "test-frontend-unit" then
+                  "  - Frontend Unit Tests: Check React components and unit test logic"
+                elif $job == "test-frontend" then
+                  "  - Frontend E2E Tests: Check integration tests and UI functionality"
+                elif $job == "lint-backend" then
+                  "  - Backend Linting: Run '\''make format_backend'\'' then '\''make lint'\'' to fix code style issues"
+                elif $job == "test-docs-build" then
+                  "  - Documentation Build: Check documentation syntax and build process"
+                elif $job == "test-templates" then
+                  "  - Template Tests: Check starter project templates"
+                elif $job == "path-filter" then
+                  "  - Path Filter: File path filtering failed"
+                elif $job == "set-ci-condition" then
+                  "  - CI Condition Check: CI condition evaluation failed"
+                elif $job == "check-nightly-status" then
+                  "  - Nightly Status Check: PyPI package status check failed"
+                else
+                  "  - \($job): See job log for details"
+                end
+            '
+
+            echo ""
+            echo "🔧 Next steps:"
+            echo "  1. Review the failed job logs above"
+            echo "  2. Fix the identified issues in your code"
+            echo "  3. Push your changes to re-run the tests"
+
+          elif [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "⚠️  CI CANCELLED: One or more jobs were cancelled"
+            echo ""
+            echo "🔧 Next steps:"
+            echo "  1. Check if the cancellation was intentional"
+            echo "  2. Re-run the workflow if needed"
+
+          elif [[ "${{ needs.check-nightly-status.outputs.should-proceed }}" != "true" && "${{ github.event_name }}" != "workflow_dispatch" && "$DOCS_ONLY" != "true" ]]; then
+            echo "🚫 CI BLOCKED: Nightly build is broken"
+            echo ""
+            echo "The nightly PyPI package was not updated today, indicating the nightly build failed."
+            echo ""
+            echo "🔧 Next steps:"
+            echo "  1. Work with the team to investigate and fix the nightly build"
+            echo "  2. Check the nightly build logs for errors"
+            echo "  3. Once the nightly build is fixed and publishes successfully, re-run this workflow"
+            echo "  4. Alternatively, use 'workflow_dispatch' to manually override this check if needed"
+            echo "  5. Note: PRs with only documentation changes can bypass this check"
+
+          else
+            echo "✅ CI SUCCESS: All checks passed!"
+            echo ""
+            echo "🎉 Your changes are ready:"
+            echo "  - All tests passed"
+            echo "  - Code quality checks passed"
+            echo "  - Nightly build is healthy"
+          fi
+
+          echo ""
+          echo "Exit code: $EXIT_CODE"
           exit $EXIT_CODE

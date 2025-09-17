@@ -1,11 +1,5 @@
 const YouTubeIcon = (props) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    {...props}
-    viewBox="0 0 1080 1080"
-    width="1080"
-    height="1080"
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" {...props}>
     <g
       fill="None"
       fillOpacity="0.0"

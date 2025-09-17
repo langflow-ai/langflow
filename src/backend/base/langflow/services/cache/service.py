@@ -6,7 +6,8 @@ from collections import OrderedDict
 from typing import Generic, Union
 
 import dill
-from loguru import logger
+from lfx.log.logger import logger
+from lfx.services.cache.utils import CACHE_MISS
 from typing_extensions import override
 
 from langflow.services.cache.base import (
@@ -16,7 +17,6 @@ from langflow.services.cache.base import (
     ExternalAsyncBaseCacheService,
     LockType,
 )
-from langflow.services.cache.utils import CACHE_MISS
 
 
 class ThreadingInMemoryCache(CacheService, Generic[LockType]):
@@ -207,14 +207,9 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             expiration_time (int, optional): Time in seconds after which a
                 cached item expires. Default is 1 hour.
         """
-        try:
-            from redis.asyncio import StrictRedis
-        except ImportError as exc:
-            msg = (
-                "RedisCache requires the redis-py package."
-                " Please install Langflow with the deploy extra: pip install langflow[deploy]"
-            )
-            raise ImportError(msg) from exc
+        # Redis is a main dependency, no need to import check
+        from redis.asyncio import StrictRedis
+
         logger.warning(
             "RedisCache is an experimental feature and may not work as expected."
             " Please report any issues to our GitHub repository."
@@ -233,7 +228,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             await self._client.ping()
         except redis.exceptions.ConnectionError:
             msg = "RedisCache could not connect to the Redis server"
-            logger.exception(msg)
+            await logger.aexception(msg)
             return False
         return True
 
@@ -314,7 +309,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
             if time.time() - item["time"] < self.expiration_time:
                 self.cache.move_to_end(key)
                 return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
-            logger.info(f"Cache item for key '{key}' has expired and will be deleted.")
+            await logger.ainfo(f"Cache item for key '{key}' has expired and will be deleted.")
             await self._delete(key)  # Log before deleting the expired item
         return CACHE_MISS
 

@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from loguru import logger
+from lfx.log.logger import logger
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.attributes import flag_modified
 from sqlmodel import select
@@ -59,4 +59,11 @@ async def update_user_last_login_at(user_id: UUID, db: AsyncSession):
         user = await get_user_by_id(db, user_id)
         return await update_user(user, user_data, db)
     except Exception as e:  # noqa: BLE001
-        logger.error(f"Error updating user last login at: {e!s}")
+        await logger.aerror(f"Error updating user last login at: {e!s}")
+
+
+async def get_all_superusers(db: AsyncSession) -> list[User]:
+    """Get all superuser accounts from the database."""
+    stmt = select(User).where(User.is_superuser == True)  # noqa: E712
+    result = await db.exec(stmt)
+    return list(result.all())

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Langflow",
-    "version": "1.3.2"
+    "version": "1.5.1"
   },
   "paths": {
     "/api/v1/build/{flow_id}/vertices": {
@@ -104,7 +104,7 @@
           "Chat"
         ],
         "summary": "Build Flow",
-        "description": "Build and process a flow, returning a job ID for event polling.\n\nThis endpoint requires authentication through the CurrentActiveUser dependency.\nFor public flows that don't require authentication, use the /build_public_tmp/flow_id/flow endpoint.\n\nArgs:\n    flow_id: UUID of the flow to build\n    background_tasks: Background tasks manager\n    inputs: Optional input values for the flow\n    data: Optional flow data\n    files: Optional files to include\n    stop_component_id: Optional ID of component to stop at\n    start_component_id: Optional ID of component to start from\n    log_builds: Whether to log the build process\n    current_user: The authenticated user\n    queue_service: Queue service for job management\n    flow_name: Optional name for the flow\n    settings_service: Settings service\n\nReturns:\n    Dict with job_id that can be used to poll for build status",
+        "description": "Build and process a flow, returning a job ID for event polling.\n\nThis endpoint requires authentication through the CurrentActiveUser dependency.\nFor public flows that don't require authentication, use the /build_public_tmp/flow_id/flow endpoint.\n\nArgs:\n    flow_id: UUID of the flow to build\n    background_tasks: Background tasks manager\n    inputs: Optional input values for the flow\n    data: Optional flow data\n    files: Optional files to include\n    stop_component_id: Optional ID of component to stop at\n    start_component_id: Optional ID of component to start from\n    log_builds: Whether to log the build process\n    current_user: The authenticated user\n    queue_service: Queue service for job management\n    flow_name: Optional name for the flow\n    event_delivery: Optional event delivery type - default is streaming\n\nReturns:\n    Dict with job_id that can be used to poll for build status",
         "operationId": "build_flow_api_v1_build__flow_id__flow_post",
         "security": [
           {
@@ -185,6 +185,15 @@
               ],
               "title": "Flow Name"
             }
+          },
+          {
+            "name": "event_delivery",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/EventDeliveryType",
+              "default": "polling"
+            }
           }
         ],
         "requestBody": {
@@ -237,13 +246,12 @@
             }
           },
           {
-            "name": "stream",
+            "name": "event_delivery",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "boolean",
-              "default": true,
-              "title": "Stream"
+              "$ref": "#/components/schemas/EventDeliveryType",
+              "default": "streaming"
             }
           }
         ],
@@ -439,7 +447,7 @@
           "Chat"
         ],
         "summary": "Build Public Tmp",
-        "description": "Build a public flow without requiring authentication.\n\nThis endpoint is specifically for public flows that don't require authentication.\nIt uses a client_id cookie to create a deterministic flow ID for tracking purposes.\n\nThe endpoint:\n1. Verifies the requested flow is marked as public in the database\n2. Creates a deterministic UUID based on client_id and flow_id\n3. Uses the flow owner's permissions to build the flow\n\nRequirements:\n- The flow must be marked as PUBLIC in the database\n- The request must include a client_id cookie\n\nArgs:\n    flow_id: UUID of the public flow to build\n    background_tasks: Background tasks manager\n    inputs: Optional input values for the flow\n    data: Optional flow data\n    files: Optional files to include\n    stop_component_id: Optional ID of component to stop at\n    start_component_id: Optional ID of component to start from\n    log_builds: Whether to log the build process\n    flow_name: Optional name for the flow\n    request: FastAPI request object (needed for cookie access)\n    queue_service: Queue service for job management\n\nReturns:\n    Dict with job_id that can be used to poll for build status",
+        "description": "Build a public flow without requiring authentication.\n\nThis endpoint is specifically for public flows that don't require authentication.\nIt uses a client_id cookie to create a deterministic flow ID for tracking purposes.\n\nThe endpoint:\n1. Verifies the requested flow is marked as public in the database\n2. Creates a deterministic UUID based on client_id and flow_id\n3. Uses the flow owner's permissions to build the flow\n\nRequirements:\n- The flow must be marked as PUBLIC in the database\n- The request must include a client_id cookie\n\nArgs:\n    flow_id: UUID of the public flow to build\n    background_tasks: Background tasks manager\n    inputs: Optional input values for the flow\n    data: Optional flow data\n    files: Optional files to include\n    stop_component_id: Optional ID of component to stop at\n    start_component_id: Optional ID of component to start from\n    log_builds: Whether to log the build process\n    flow_name: Optional name for the flow\n    request: FastAPI request object (needed for cookie access)\n    queue_service: Queue service for job management\n    event_delivery: Optional event delivery type - default is streaming\n\nReturns:\n    Dict with job_id that can be used to poll for build status",
         "operationId": "build_public_tmp_api_v1_build_public_tmp__flow_id__flow_post",
         "parameters": [
           {
@@ -515,6 +523,15 @@
                 }
               ],
               "title": "Flow Name"
+            }
+          },
+          {
+            "name": "event_delivery",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/EventDeliveryType",
+              "default": "polling"
             }
           }
         ],
@@ -1829,7 +1846,7 @@
           "Flows"
         ],
         "summary": "Read Flows",
-        "description": "Retrieve a list of flows with pagination support.\n\nArgs:\n    current_user (User): The current authenticated user.\n    session (Session): The database session.\n    settings_service (SettingsService): The settings service.\n    components_only (bool, optional): Whether to return only components. Defaults to False.\n\n    get_all (bool, optional): Whether to return all flows without pagination. Defaults to True.\n    **This field must be True because of backward compatibility with the frontend - Release: 1.0.20**\n\n    folder_id (UUID, optional): The folder ID. Defaults to None.\n    params (Params): Pagination parameters.\n    remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.\n    header_flows (bool, optional): Whether to return only specific headers of the flows. Defaults to False.\n\nReturns:\n    list[FlowRead] | Page[FlowRead] | list[FlowHeader]\n    A list of flows or a paginated response containing the list of flows or a list of flow headers.",
+        "description": "Retrieve a list of flows with pagination support.\n\nArgs:\n    current_user (User): The current authenticated user.\n    session (Session): The database session.\n    settings_service (SettingsService): The settings service.\n    components_only (bool, optional): Whether to return only components. Defaults to False.\n\n    get_all (bool, optional): Whether to return all flows without pagination. Defaults to True.\n    **This field must be True because of backward compatibility with the frontend - Release: 1.0.20**\n\n    folder_id (UUID, optional): The project ID. Defaults to None.\n    params (Params): Pagination parameters.\n    remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.\n    header_flows (bool, optional): Whether to return only specific headers of the flows. Defaults to False.\n\nReturns:\n    list[FlowRead] | Page[FlowRead] | list[FlowHeader]\n    A list of flows or a paginated response containing the list of flows or a list of flow headers.",
         "operationId": "read_flows_api_v1_flows__get",
         "security": [
           {
@@ -3672,6 +3689,71 @@
         }
       }
     },
+    "/api/v1/monitor/messages/sessions": {
+      "get": {
+        "tags": [
+          "Monitor"
+        ],
+        "summary": "Get Message Sessions",
+        "operationId": "get_message_sessions_api_v1_monitor_messages_sessions_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Flow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Get Message Sessions Api V1 Monitor Messages Sessions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/monitor/messages": {
       "get": {
         "tags": [
@@ -4081,8 +4163,9 @@
         "tags": [
           "Folders"
         ],
-        "summary": "Read Folders",
-        "operationId": "read_folders_api_v1_folders__get",
+        "summary": "Read Folders Redirect",
+        "description": "Redirect to the projects endpoint.",
+        "operationId": "read_folders_redirect_api_v1_folders__get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4093,40 +4176,20 @@
                     "$ref": "#/components/schemas/FolderRead"
                   },
                   "type": "array",
-                  "title": "Response Read Folders Api V1 Folders  Get"
+                  "title": "Response Read Folders Redirect Api V1 Folders  Get"
                 }
               }
             }
           }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ]
+        }
       },
       "post": {
         "tags": [
           "Folders"
         ],
-        "summary": "Create Folder",
-        "operationId": "create_folder_api_v1_folders__post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FolderCreate"
-              }
-            }
-          },
-          "required": true
-        },
+        "summary": "Create Folder Redirect",
+        "description": "Redirect to the projects endpoint.",
+        "operationId": "create_folder_redirect_api_v1_folders__post",
         "responses": {
           "201": {
             "description": "Successful Response",
@@ -4137,29 +4200,8 @@
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ]
+        }
       }
     },
     "/api/v1/folders/{folder_id}": {
@@ -4167,19 +4209,9 @@
         "tags": [
           "Folders"
         ],
-        "summary": "Read Folder",
-        "operationId": "read_folder_api_v1_folders__folder_id__get",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ],
+        "summary": "Read Folder Redirect",
+        "description": "Redirect to the projects endpoint.",
+        "operationId": "read_folder_redirect_api_v1_folders__folder_id__get",
         "parameters": [
           {
             "name": "folder_id",
@@ -4268,7 +4300,7 @@
                       "$ref": "#/components/schemas/FolderReadWithFlows"
                     }
                   ],
-                  "title": "Response Read Folder Api V1 Folders  Folder Id  Get"
+                  "title": "Response Read Folder Redirect Api V1 Folders  Folder Id  Get"
                 }
               }
             }
@@ -4289,19 +4321,9 @@
         "tags": [
           "Folders"
         ],
-        "summary": "Update Folder",
-        "operationId": "update_folder_api_v1_folders__folder_id__patch",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ],
+        "summary": "Update Folder Redirect",
+        "description": "Redirect to the projects endpoint.",
+        "operationId": "update_folder_redirect_api_v1_folders__folder_id__patch",
         "parameters": [
           {
             "name": "folder_id",
@@ -4314,16 +4336,6 @@
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FolderUpdate"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4351,19 +4363,9 @@
         "tags": [
           "Folders"
         ],
-        "summary": "Delete Folder",
-        "operationId": "delete_folder_api_v1_folders__folder_id__delete",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ],
+        "summary": "Delete Folder Redirect",
+        "description": "Redirect to the projects endpoint.",
+        "operationId": "delete_folder_redirect_api_v1_folders__folder_id__delete",
         "parameters": [
           {
             "name": "folder_id",
@@ -4398,20 +4400,9 @@
         "tags": [
           "Folders"
         ],
-        "summary": "Download File",
-        "description": "Download all flows from folder as a zip file.",
-        "operationId": "download_file_api_v1_folders_download__folder_id__get",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ],
+        "summary": "Download File Redirect",
+        "description": "Redirect to the projects endpoint.",
+        "operationId": "download_file_redirect_api_v1_folders_download__folder_id__get",
         "parameters": [
           {
             "name": "folder_id",
@@ -4451,14 +4442,410 @@
         "tags": [
           "Folders"
         ],
+        "summary": "Upload File Redirect",
+        "description": "Redirect to the projects endpoint.",
+        "operationId": "upload_file_redirect_api_v1_folders_upload__post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FlowRead"
+                  },
+                  "type": "array",
+                  "title": "Response Upload File Redirect Api V1 Folders Upload  Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Read Projects",
+        "operationId": "read_projects_api_v1_projects__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FolderRead"
+                  },
+                  "type": "array",
+                  "title": "Response Read Projects Api V1 Projects  Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Create Project",
+        "operationId": "create_project_api_v1_projects__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FolderCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Read Project",
+        "operationId": "read_project_api_v1_projects__project_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "is_component",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Is Component"
+            }
+          },
+          {
+            "name": "is_flow",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Is Flow"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Search"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FolderWithPaginatedFlows"
+                    },
+                    {
+                      "$ref": "#/components/schemas/FolderReadWithFlows"
+                    }
+                  ],
+                  "title": "Response Read Project Api V1 Projects  Project Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Update Project",
+        "operationId": "update_project_api_v1_projects__project_id__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FolderUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Delete Project",
+        "operationId": "delete_project_api_v1_projects__project_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/download/{project_id}": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Download File",
+        "description": "Download all flows from project as a zip file.",
+        "operationId": "download_file_api_v1_projects_download__project_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/upload/": {
+      "post": {
+        "tags": [
+          "Projects"
+        ],
         "summary": "Upload File",
         "description": "Upload flows from a file.",
-        "operationId": "upload_file_api_v1_folders_upload__post",
+        "operationId": "upload_file_api_v1_projects_upload__post",
         "requestBody": {
           "content": {
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/Body_upload_file_api_v1_folders_upload__post"
+                "$ref": "#/components/schemas/Body_upload_file_api_v1_projects_upload__post"
               }
             }
           },
@@ -4474,7 +4861,7 @@
                     "$ref": "#/components/schemas/FlowRead"
                   },
                   "type": "array",
-                  "title": "Response Upload File Api V1 Folders Upload  Post"
+                  "title": "Response Upload File Api V1 Projects Upload  Post"
                 }
               }
             }
@@ -4540,37 +4927,6 @@
         ]
       }
     },
-    "/api/v1/voice/elevenlabs/voice_ids": {
-      "get": {
-        "tags": [
-          "Voice"
-        ],
-        "summary": "Get Elevenlabs Voice Ids",
-        "description": "Get available voice IDs from ElevenLabs API.",
-        "operationId": "get_elevenlabs_voice_ids_api_v1_voice_elevenlabs_voice_ids_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ]
-      }
-    },
     "/api/v1/mcp/sse": {
       "get": {
         "tags": [
@@ -4613,6 +4969,563 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/voice/elevenlabs/voice_ids": {
+      "get": {
+        "tags": [
+          "Voice"
+        ],
+        "summary": "Get Elevenlabs Voice Ids",
+        "description": "Get available voice IDs from ElevenLabs API.",
+        "operationId": "get_elevenlabs_voice_ids_api_v1_voice_elevenlabs_voice_ids_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mcp/project/{project_id}": {
+      "get": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "List Project Tools",
+        "description": "List all tools in a project that are enabled for MCP.",
+        "operationId": "list_project_tools_api_v1_mcp_project__project_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "mcp_enabled",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Mcp Enabled"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MCPSettings"
+                  },
+                  "title": "Response List Project Tools Api V1 Mcp Project  Project Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Handle Project Messages",
+        "description": "Handle POST messages for a project-specific MCP server.",
+        "operationId": "handle_project_messages_api_v1_mcp_project__project_id__post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Update Project Mcp Settings",
+        "description": "Update the MCP settings of all flows in a project.",
+        "operationId": "update_project_mcp_settings_api_v1_mcp_project__project_id__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/MCPSettings"
+                },
+                "title": "Settings"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/project/{project_id}/sse": {
+      "get": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Handle Project Sse",
+        "description": "Handle SSE connections for a specific project.",
+        "operationId": "handle_project_sse_api_v1_mcp_project__project_id__sse_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/project/{project_id}/": {
+      "post": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Handle Project Messages With Slash",
+        "description": "Handle POST messages for a project-specific MCP server with trailing slash.",
+        "operationId": "handle_project_messages_with_slash_api_v1_mcp_project__project_id___post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/project/{project_id}/install": {
+      "post": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Install Mcp Config",
+        "description": "Install MCP server configuration for Cursor, Windsurf, or Claude.",
+        "operationId": "install_mcp_config_api_v1_mcp_project__project_id__install_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MCPInstallRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/mcp/project/{project_id}/installed": {
+      "get": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Check Installed Mcp Servers",
+        "description": "Check if MCP server configuration is installed for this project in Cursor, Windsurf, or Claude.",
+        "operationId": "check_installed_mcp_servers_api_v1_mcp_project__project_id__installed_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/files/": {
+      "get": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "List Files",
+        "description": "List the files available to the current user.",
+        "operationId": "list_files_api_v2_files__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/langflow__services__database__models__file__model__File"
+                  },
+                  "type": "array",
+                  "title": "Response List Files Api V2 Files  Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Upload User File",
+        "description": "Upload a file for the current user and track it in the database.",
+        "operationId": "upload_user_file_api_v2_files__post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_user_file_api_v2_files__post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/langflow__api__schemas__UploadFileResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Delete All Files",
+        "description": "Delete all files for the current user.",
+        "operationId": "delete_all_files_api_v2_files__delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
       }
     },
     "/api/v2/files": {
@@ -4732,13 +5645,123 @@
         ]
       }
     },
+    "/api/v2/files/batch/": {
+      "post": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Download Files Batch",
+        "description": "Download multiple files as a zip file by their IDs.",
+        "operationId": "download_files_batch_api_v2_files_batch__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array",
+                "title": "File Ids"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Files"
+        ],
+        "summary": "Delete Files Batch",
+        "description": "Delete multiple files by their IDs.",
+        "operationId": "delete_files_batch_api_v2_files_batch__delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array",
+                "title": "File Ids"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      }
+    },
     "/api/v2/files/{file_id}": {
       "get": {
         "tags": [
           "Files"
         ],
         "summary": "Download File",
-        "description": "Download a file by its ID.",
+        "description": "Download a file by its ID or return its content as a string/bytes.\n\nArgs:\n    file_id: UUID of the file.\n    current_user: Authenticated user.\n    session: Database session.\n    storage_service: File storage service.\n    return_content: If True, return raw content (str) instead of StreamingResponse.\n\nReturns:\n    StreamingResponse for client downloads or str for internal use.",
         "operationId": "download_file_api_v2_files__file_id__get",
         "security": [
           {
@@ -4760,6 +5783,16 @@
               "type": "string",
               "format": "uuid",
               "title": "File Id"
+            }
+          },
+          {
+            "name": "return_content",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Return Content"
             }
           }
         ],
@@ -4873,6 +5906,286 @@
               "type": "string",
               "format": "uuid",
               "title": "File Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/mcp/servers": {
+      "get": {
+        "tags": [
+          "MCP"
+        ],
+        "summary": "Get Servers",
+        "description": "Get the list of available servers.",
+        "operationId": "get_servers_api_v2_mcp_servers_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "action_count",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action Count"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/mcp/servers/{server_name}": {
+      "get": {
+        "tags": [
+          "MCP"
+        ],
+        "summary": "Get Server Endpoint",
+        "description": "Get a specific server.",
+        "operationId": "get_server_endpoint_api_v2_mcp_servers__server_name__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "server_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Server Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "MCP"
+        ],
+        "summary": "Add Server",
+        "operationId": "add_server_api_v2_mcp_servers__server_name__post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "server_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Server Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "title": "Server Config"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "MCP"
+        ],
+        "summary": "Update Server Endpoint",
+        "operationId": "update_server_endpoint_api_v2_mcp_servers__server_name__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "server_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Server Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "title": "Server Config"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "MCP"
+        ],
+        "summary": "Delete Server",
+        "operationId": "delete_server_api_v2_mcp_servers__server_name__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "server_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Server Name"
             }
           }
         ],
@@ -5467,6 +6780,7 @@
           },
           "password": {
             "type": "string",
+            "format": "password",
             "title": "Password"
           },
           "scope": {
@@ -5494,6 +6808,7 @@
                 "type": "null"
               }
             ],
+            "format": "password",
             "title": "Client Secret"
           }
         },
@@ -5532,7 +6847,7 @@
         ],
         "title": "Body_upload_file_api_v1_flows_upload__post"
       },
-      "Body_upload_file_api_v1_folders_upload__post": {
+      "Body_upload_file_api_v1_projects_upload__post": {
         "properties": {
           "file": {
             "type": "string",
@@ -5544,7 +6859,21 @@
         "required": [
           "file"
         ],
-        "title": "Body_upload_file_api_v1_folders_upload__post"
+        "title": "Body_upload_file_api_v1_projects_upload__post"
+      },
+      "Body_upload_user_file_api_v2_files__post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_user_file_api_v2_files__post"
       },
       "Body_upload_user_file_api_v2_files_post": {
         "properties": {
@@ -5719,15 +7048,15 @@
           "feature_flags": {
             "$ref": "#/components/schemas/FeatureFlags"
           },
-          "serialization_max_items_lenght": {
+          "serialization_max_items_length": {
             "type": "integer",
-            "title": "Serialization Max Items Lenght",
+            "title": "Serialization Max Items Length",
             "default": 1000
           },
           "serialization_max_text_length": {
             "type": "integer",
             "title": "Serialization Max Text Length",
-            "default": 20000
+            "default": 2000
           },
           "frontend_timeout": {
             "type": "integer",
@@ -5980,7 +7309,15 @@
             "$ref": "#/components/schemas/SourceHandleDict"
           },
           "targetHandle": {
-            "$ref": "#/components/schemas/TargetHandleDict"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TargetHandleDict"
+              },
+              {
+                "$ref": "#/components/schemas/LoopTargetHandleDict"
+              }
+            ],
+            "title": "Targethandle"
           }
         },
         "type": "object",
@@ -6010,6 +7347,15 @@
           "stackTrace"
         ],
         "title": "ErrorLog"
+      },
+      "EventDeliveryType": {
+        "type": "string",
+        "enum": [
+          "streaming",
+          "direct",
+          "polling"
+        ],
+        "title": "EventDeliveryType"
       },
       "FeatureFlags": {
         "properties": {
@@ -6158,6 +7504,43 @@
             ],
             "title": "Locked",
             "default": false
+          },
+          "mcp_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mcp Enabled",
+            "description": "Can be exposed in the MCP server",
+            "default": false
+          },
+          "action_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Name",
+            "description": "The name of the action associated with the flow"
+          },
+          "action_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Description",
+            "description": "The description of the action associated with the flow"
           },
           "access_type": {
             "$ref": "#/components/schemas/AccessTypeEnum",
@@ -6346,6 +7729,43 @@
             "title": "Locked",
             "default": false
           },
+          "mcp_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mcp Enabled",
+            "description": "Can be exposed in the MCP server",
+            "default": false
+          },
+          "action_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Name",
+            "description": "The name of the action associated with the flow"
+          },
+          "action_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Description",
+            "description": "The description of the action associated with the flow"
+          },
           "access_type": {
             "$ref": "#/components/schemas/AccessTypeEnum",
             "default": "PRIVATE"
@@ -6526,6 +7946,42 @@
             ],
             "title": "Tags",
             "description": "The tags of the flow"
+          },
+          "mcp_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mcp Enabled",
+            "description": "Flag indicating whether the flow is exposed in the MCP server"
+          },
+          "action_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Name",
+            "description": "The name of the action associated with the flow"
+          },
+          "action_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Description",
+            "description": "The description of the action associated with the flow"
           }
         },
         "type": "object",
@@ -6688,6 +8144,43 @@
             "title": "Locked",
             "default": false
           },
+          "mcp_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mcp Enabled",
+            "description": "Can be exposed in the MCP server",
+            "default": false
+          },
+          "action_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Name",
+            "description": "The name of the action associated with the flow"
+          },
+          "action_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Description",
+            "description": "The description of the action associated with the flow"
+          },
           "access_type": {
             "$ref": "#/components/schemas/AccessTypeEnum",
             "default": "PRIVATE"
@@ -6789,6 +8282,17 @@
             ],
             "title": "Endpoint Name"
           },
+          "mcp_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mcp Enabled"
+          },
           "locked": {
             "anyOf": [
               {
@@ -6799,6 +8303,28 @@
               }
             ],
             "title": "Locked"
+          },
+          "action_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Name"
+          },
+          "action_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Description"
           },
           "access_type": {
             "anyOf": [
@@ -7918,6 +9444,120 @@
         ],
         "title": "Log"
       },
+      "LoopTargetHandleDict": {
+        "properties": {
+          "dataType": {
+            "type": "string",
+            "title": "Datatype"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "output_types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Output Types"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataType",
+          "id",
+          "name",
+          "output_types"
+        ],
+        "title": "LoopTargetHandleDict"
+      },
+      "MCPInstallRequest": {
+        "properties": {
+          "client": {
+            "type": "string",
+            "title": "Client"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client"
+        ],
+        "title": "MCPInstallRequest"
+      },
+      "MCPSettings": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "mcp_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mcp Enabled"
+          },
+          "action_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Name"
+          },
+          "action_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Description"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "MCPSettings",
+        "description": "Model representing MCP settings for a flow."
+      },
       "MediaContent": {
         "type": "object"
       },
@@ -8066,6 +9706,17 @@
           "edit": {
             "type": "boolean",
             "title": "Edit"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
           },
           "properties": {
             "anyOf": [
@@ -8357,6 +10008,11 @@
             "title": "Allows Loop",
             "default": false
           },
+          "group_outputs": {
+            "type": "boolean",
+            "title": "Group Outputs",
+            "default": false
+          },
           "options": {
             "anyOf": [
               {
@@ -8492,7 +10148,6 @@
         "type": "object",
         "required": [
           "items",
-          "total",
           "page",
           "size"
         ],
@@ -8559,7 +10214,6 @@
         "type": "object",
         "required": [
           "items",
-          "total",
           "page",
           "size"
         ],
@@ -8626,7 +10280,6 @@
         "type": "object",
         "required": [
           "items",
-          "total",
           "page",
           "size"
         ],
@@ -9648,6 +11301,22 @@
           "password": {
             "type": "string",
             "title": "Password"
+          },
+          "optins": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optins",
+            "default": {
+              "github_starred": false,
+              "dialog_dismissed": false,
+              "discord_clicked": false
+            }
           }
         },
         "type": "object",
@@ -9719,6 +11388,17 @@
               }
             ],
             "title": "Last Login At"
+          },
+          "optins": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optins"
           }
         },
         "type": "object",
@@ -9802,6 +11482,17 @@
               }
             ],
             "title": "Last Login At"
+          },
+          "optins": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optins"
           }
         },
         "type": "object",

@@ -16,7 +16,7 @@ const AudioSettingsHeader = () => {
         />
         Voice settings
       </p>
-      <p className="text-[13px] leading-4 text-muted-foreground">
+      <p className="text-mmd leading-4 text-muted-foreground">
         Voice chat is powered by OpenAI. You can also add more voices with
         ElevenLabs.
       </p>

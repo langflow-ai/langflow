@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
@@ -14,12 +15,12 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   });
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat output");
-  await page.waitForSelector('[data-testid="outputsChat Output"]', {
+  await page.waitForSelector('[data-testid="input_outputChat Output"]', {
     timeout: 2000,
   });
 
   await page
-    .getByTestId("outputsChat Output")
+    .getByTestId("input_outputChat Output")
     .hover()
     .then(async () => {
       await page.getByTestId("add-component-button-chat-output").click();
@@ -27,24 +28,26 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat input");
-  await page.waitForSelector('[data-testid="inputsChat Input"]', {
+  await page.waitForSelector('[data-testid="input_outputChat Input"]', {
     timeout: 2000,
   });
 
   await page
-    .getByTestId("inputsChat Input")
+    .getByTestId("input_outputChat Input")
     .dragTo(page.locator('//*[@id="react-flow-id"]'), {
       targetPosition: { x: 100, y: 100 },
     });
 
-  await page.waitForSelector('[data-testid="fit_view"]', {
+  await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
     timeout: 100000,
   });
 
-  await page.getByTestId("fit_view").click();
+  await adjustScreenView(page);
 
-  await page.getByTestId("handle-chatinput-noshownode-message-source").click();
-  await page.getByTestId("handle-chatoutput-noshownode-text-target").click();
+  await page
+    .getByTestId("handle-chatinput-noshownode-chat message-source")
+    .click();
+  await page.getByTestId("handle-chatoutput-noshownode-inputs-target").click();
 
   await page.getByText("Playground", { exact: true }).last().click();
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
