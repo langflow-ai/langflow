@@ -90,6 +90,8 @@ dependencies = [
     "langchain-ibm>=0.3.8",
     "trustcall>=0.0.38",
     "langchain-chroma>=0.1.4",
+    "docling>=2.36.1",
+    "docling_core>=2.36.1",
 ]
 
 [dependency-groups]
