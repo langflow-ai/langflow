@@ -538,9 +538,6 @@ export type ChatInputType = {
   setFiles: (
     files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
   ) => void;
-  inputRef: {
-    current: any;
-  };
   noInput: boolean;
   playgroundPage: boolean;
 };
@@ -626,7 +623,6 @@ export type codeAreaModalPropsType = {
 export type chatMessagePropsType = {
   chat: Message;
   lastMessage: boolean;
-  updateChat: (chat: Message, message: string) => void;
   closeChat?: () => void;
   playgroundPage?: boolean;
 };

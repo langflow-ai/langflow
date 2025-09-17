@@ -2,7 +2,6 @@ import ChatInput from "@/components/core/playgroundComponent/components/chatView
 import type { ChatInputType } from "@/types/components";
 
 export const CustomChatInput = ({
-  inputRef,
   noInput,
   files,
   setFiles,
@@ -11,7 +10,6 @@ export const CustomChatInput = ({
 }: ChatInputType) => {
   return (
     <ChatInput
-      inputRef={inputRef}
       noInput={noInput}
       files={files}
       setFiles={setFiles}

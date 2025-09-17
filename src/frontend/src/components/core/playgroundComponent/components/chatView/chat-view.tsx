@@ -7,7 +7,6 @@ import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
-import type { Message } from "@/types/messages";
 import { cn } from "@/utils/utils";
 import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
 import useFlowStore from "../../../../../stores/flowStore";
@@ -51,12 +50,6 @@ export default function ChatView(): JSX.Element {
       );
     }
   }, [messages, isBuilding, chatInputNode, isTabHidden, setChatValueStore]);
-
-  const ref = useRef<HTMLDivElement | null>(null);
-
-  function updateChat(chat: Message, message: string) {
-    chat.text = message;
-  }
 
   const { files, setFiles, handleFiles } = useFileHandler(realFlowId);
   const [isDragging, setIsDragging] = useState(false);
@@ -110,7 +103,6 @@ export default function ChatView(): JSX.Element {
                 chat={chat}
                 lastMessage={messages.length - 1 === index}
                 key={`${chat.id}-${index}`}
-                updateChat={updateChat}
                 playgroundPage={playgroundPage}
               />
             ) : (
@@ -118,7 +110,6 @@ export default function ChatView(): JSX.Element {
                 chat={chat}
                 lastMessage={messages.length - 1 === index}
                 key={`${chat.id}-${index}`}
-                updateChat={updateChat}
                 playgroundPage={playgroundPage}
               />
             ),
@@ -130,7 +121,6 @@ export default function ChatView(): JSX.Element {
         <CustomChatInput
           playgroundPage={!!playgroundPage}
           noInput={!inputTypes.includes("ChatInput")}
-          inputRef={ref}
           files={files}
           setFiles={setFiles}
           isDragging={isDragging}
