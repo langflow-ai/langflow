@@ -96,6 +96,7 @@ export default function NodeStatus({
   const version = useDarkStore((state) => state.version);
   const eventDeliveryConfig = useUtilityStore((state) => state.eventDelivery);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setFlowPool = useFlowStore((state) => state.setFlowPool);
 
   const postTemplateValue = usePostTemplateValue({
     parameterId: nodeAuth?.name ?? "auth",
@@ -287,6 +288,8 @@ export default function NodeStatus({
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const handleClickRun = () => {
+    setFlowPool({});
+
     if (BuildStatus.BUILDING === buildStatus && isHovered) {
       stopBuilding();
       return;
@@ -406,13 +409,24 @@ export default function NodeStatus({
             >
               <div className="cursor-help">
                 {conditionSuccess && validationStatus?.data?.duration ? (
-                  <div className="flex rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald">
+                  <div
+                    className="flex rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald"
+                    data-testid={`node_duration_` + display_name.toLowerCase()}
+                  >
                     <span>
                       {normalizeTimeString(validationStatus?.data?.duration)}
                     </span>
                   </div>
                 ) : (
-                  <div className="flex items-center self-center">
+                  <div
+                    data-testid={
+                      `node_status_icon_` +
+                      display_name.toLowerCase() +
+                      `_` +
+                      buildStatus?.toLowerCase()
+                    }
+                    className="flex items-center self-center"
+                  >
                     {iconStatus}
                   </div>
                 )}

@@ -1,5 +1,7 @@
 import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -24,12 +26,8 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.getByTestId("fit_view").click();
-
-    await zoomOut(page, 3);
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
@@ -85,10 +83,7 @@ test(
     await page.getByTestId("fetch-0-option").click();
 
     await page.waitForTimeout(2000);
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     await page.waitForSelector('[data-testid="int_int_max_length"]', {
       state: "visible",
@@ -237,12 +232,7 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-
-    await zoomOut(page, 3);
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     try {
       await page.getByText("Add MCP Server", { exact: true }).click({
@@ -412,12 +402,7 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-
-    await zoomOut(page, 3);
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     try {
       await page.getByText("Add MCP Server", { exact: true }).click({

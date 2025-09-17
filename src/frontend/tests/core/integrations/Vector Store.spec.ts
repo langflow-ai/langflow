@@ -1,5 +1,6 @@
 import path from "path";
 import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
@@ -28,14 +29,9 @@ withEventDeliveryModes(
       .getByRole("heading", { name: "Vector Store RAG" })
       .first()
       .click();
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.waitForSelector('[title="fit view"]', {
-      timeout: 20000,
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 100000,
     });
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await initialGPTsetup(page);
 
@@ -44,11 +40,9 @@ withEventDeliveryModes(
     });
 
     await page.waitForTimeout(500);
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.getByTestId("fit_view").click();
+    adjustScreenView(page);
 
-    await page.getByTestId("canvas_controls_dropdown").click();
     // Astra DB tokens
     await page
       .getByTestId("popover-anchor-input-token")
