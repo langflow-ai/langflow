@@ -14,18 +14,9 @@ import useFlowStore from "../../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "./chatInput/hooks/use-file-handler";
-import ChatMessage from "./chatMessage/chat-message";
-
-const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
-  return (
-    prevProps.chat.text === nextProps.chat.text &&
-    prevProps.chat.id === nextProps.chat.id &&
-    prevProps.chat.session_id === nextProps.chat.session_id &&
-    prevProps.chat.content_blocks === nextProps.chat.content_blocks &&
-    prevProps.chat.properties === nextProps.chat.properties &&
-    prevProps.lastMessage === nextProps.lastMessage
-  );
-});
+import { ChatMessage } from "./chatMessage/chat-message";
+import { ErrorMessage } from "./errorMessage/error-message";
+import { UserMessage } from "./userMessage/user-message";
 
 export default function ChatView(): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs);
@@ -59,7 +50,7 @@ export default function ChatView(): JSX.Element {
         chatInputNode.data.node.template["input_value"].value ?? "",
       );
     }
-  }, [messages, visibleSession]);
+  }, [messages, isBuilding, chatInputNode, isTabHidden, setChatValueStore]);
 
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -93,6 +84,8 @@ export default function ChatView(): JSX.Element {
     (state) => state.isVoiceAssistantActive,
   );
 
+  console.log("messages", messages);
+
   return (
     <StickToBottom
       className={cn(
@@ -109,15 +102,31 @@ export default function ChatView(): JSX.Element {
     >
       <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden p-4">
         <div className="flex flex-col place-self-center max-w-[768px] w-full">
-          {messages?.map((chat, index) => (
-            <MemoizedChatMessage
-              chat={chat}
-              lastMessage={messages.length - 1 === index}
-              key={`${chat.id}-${index}`}
-              updateChat={updateChat}
-              playgroundPage={playgroundPage}
-            />
-          ))}
+          {messages?.map((chat, index) =>
+            chat.category === "error" ? (
+              <ErrorMessage
+                chat={chat}
+                lastMessage={messages.length - 1 === index}
+                key={`${chat.id}-${index}`}
+              />
+            ) : chat.sender === "User" ? (
+              <UserMessage
+                chat={chat}
+                lastMessage={messages.length - 1 === index}
+                key={`${chat.id}-${index}`}
+                updateChat={updateChat}
+                playgroundPage={playgroundPage}
+              />
+            ) : (
+              <ChatMessage
+                chat={chat}
+                lastMessage={messages.length - 1 === index}
+                key={`${chat.id}-${index}`}
+                updateChat={updateChat}
+                playgroundPage={playgroundPage}
+              />
+            ),
+          )}
         </div>
       </StickToBottom.Content>
 
