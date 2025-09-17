@@ -84,7 +84,7 @@ jobs:
               -F environment=$ENVIRONMENT \
               -F description="Deployment by $ACTOR from branch $BRANCH with commit $COMMIT_ID" \
               -F auto_merge=false \
-              -f required_contexts=[] \
+              -f required_contexts=null \
               --jq '.id')
           fi
 
