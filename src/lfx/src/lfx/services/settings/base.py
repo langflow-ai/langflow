@@ -263,6 +263,11 @@ class Settings(BaseSettings):
     mcp_server_enable_progress_notifications: bool = False
     """If set to False, Langflow will not send progress notifications in the MCP server."""
 
+    # Add projects to MCP servers automatically on creation
+    add_projects_to_mcp_servers: bool = True
+    """If set to True, newly created projects will be added to the user's MCP servers config automatically.
+    Controlled by LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS env variable."""
+
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
     """The interval in seconds at which public temporary flows will be cleaned up.
