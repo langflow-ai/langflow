@@ -1,6 +1,7 @@
-import { expect, type Page, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { lockFlow, unlockFlow } from "../../utils/lock-flow";
 
@@ -21,13 +22,11 @@ test(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
       state: "visible",
     });
-    await page.getByTestId("canvas_controls_dropdown").click();
     await page.waitForTimeout(500);
 
     await lockFlow(page);
@@ -38,12 +37,10 @@ test(
     });
 
     await page.getByTestId("list-card").first().click();
-    await page.getByTestId("canvas_controls_dropdown").click();
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
       state: "visible",
     });
-    await page.getByTestId("canvas_controls_dropdown").click();
     await page.waitForTimeout(500);
 
     //ensure the UI is updated
@@ -60,13 +57,11 @@ test(
     });
 
     await page.getByTestId("list-card").first().click();
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
       state: "visible",
     });
-    await page.getByTestId("canvas_controls_dropdown").click();
     await page.waitForTimeout(500);
 
     await tryDeleteEdge(page);
@@ -146,7 +141,7 @@ async function tryConnectNodes(page: Page) {
 async function tryDeleteEdge(page: Page) {
   await lockFlow(page);
 
-  let numberOfEdges = await page.locator(".react-flow__edge-path").count();
+  const numberOfEdges = await page.locator(".react-flow__edge-path").count();
   expect(numberOfEdges).toBe(3);
   const numberOfTries = 5;
 

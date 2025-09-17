@@ -545,17 +545,17 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   const filterDescription =
     getFilterComponent !== ""
-      ? (baseData[category][component]?.display_name ?? "")
-      : (filterType?.type ?? "");
+      ? baseData[category][component]?.display_name ?? ""
+      : filterType?.type ?? "";
 
   const filterName =
     getFilterComponent !== ""
       ? "Component"
       : filterType
-        ? filterType.source
-          ? "Input"
-          : "Output"
-        : "";
+      ? filterType.source
+        ? "Input"
+        : "Output"
+      : "";
 
   const resetFilters = useCallback(() => {
     setFilterEdge([]);
