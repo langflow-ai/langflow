@@ -97,6 +97,8 @@ test(
     await page.getByTestId("popover-anchor-input-input_text").fill("1");
     await page.getByTestId("popover-anchor-input-match_text").fill("1");
 
+    await page.waitForTimeout(500);
+
     await page.getByTestId("button_run_text output").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
@@ -116,8 +118,12 @@ test(
 
     // Now we will change the input to make the flow go through the other branch of the If-Else component
 
+    await page.waitForTimeout(500);
+
     await page.getByTestId("popover-anchor-input-input_text").fill("2");
     await page.getByTestId("button_run_textoutputfalse").click();
+
+    await page.waitForTimeout(500);
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
@@ -154,7 +160,9 @@ test(
     expect(numberOfSuccessfullComponentsRun).toBe(1);
     expect(numberOfInactiveComponentsRun).toBe(1);
 
-    // retest to make sure we can run again the flow with the second branch of the If-Else component
+    // retest to make sure we can run again the flow with the second branch of the If-Else componen
+    //
+    await page.waitForTimeout(500);
 
     await page.getByTestId("popover-anchor-input-input_text").fill("2");
     await page.getByTestId("button_run_textoutputfalse").click();
