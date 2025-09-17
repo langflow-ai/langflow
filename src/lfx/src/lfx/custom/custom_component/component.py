@@ -1338,7 +1338,7 @@ class Component(CustomComponent):
         # If no metadata exists yet, filter based on enabled_tools
         return self._filter_tools_by_status(tools=tools, metadata=None)
 
-    def _get_tools(self) -> list[Tool]:
+    async def _get_tools(self) -> list[Tool]:
         """Get the list of tools for this component.
 
         This method can be overridden by subclasses to provide custom tool implementations.
@@ -1425,6 +1425,7 @@ class Component(CustomComponent):
         tools = []
         try:
             # Handle both sync and async _get_tools methods
+            # TODO: this check can be remomved ince get tools is async
             if asyncio.iscoroutinefunction(self._get_tools):
                 tools = await self._get_tools()
             else:

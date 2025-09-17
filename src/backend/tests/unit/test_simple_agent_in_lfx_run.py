@@ -139,7 +139,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         # Should use the recommended model
         assert 'model_name="gpt-4o-mini"' in content
 
-    def test_agent_workflow_direct_execution(self):
+    async def test_agent_workflow_direct_execution(self):
         """Test the agent workflow by executing the graph directly."""
         # Import the components for direct execution
         try:
@@ -209,7 +209,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
             except Exception as e:
                 pytest.fail(f"Failed to instantiate {component_name}: {e}")
 
-    def test_url_component_to_toolkit_functionality(self):
+    async def test_url_component_to_toolkit_functionality(self):
         """Test that URLComponent.to_toolkit() works properly."""
         try:
             from lfx import components as cp
