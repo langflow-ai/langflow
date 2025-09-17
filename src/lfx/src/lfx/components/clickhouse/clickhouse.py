@@ -17,7 +17,7 @@ from lfx.schema.data import Data
 class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
     display_name = "ClickHouse"
     description = "ClickHouse Vector Store with search capabilities"
-    name = "ClickHouse"
+    name = "Clickhouse"
     icon = "Clickhouse"
 
     inputs = [
