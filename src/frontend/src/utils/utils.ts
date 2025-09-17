@@ -553,6 +553,9 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       context: {
         ...(col.description ? { info: col.description } : {}),
         ...(col.load_from_db ? { globalVariable: col.load_from_db } : {}),
+        ...(col.allow_custom_value !== undefined
+          ? { allowCustomValue: col.allow_custom_value }
+          : {}),
       },
       cellClass: col.disable_edit ? "cell-disable-edit" : "",
       hide: col.hidden,
@@ -619,7 +622,7 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
           newCol.cellClass = "no-border !py-2";
           newCol.type = "boolean";
         } else {
-          if (col.global_variable) {
+          if (col.load_from_db) {
             newCol.editable = false;
             newCol.cellClass = "no-border !p-0";
           }
@@ -646,6 +649,7 @@ export function generateBackendColumnsFromValue(
       filterable: !tableOptions?.block_filter,
       default: null, // Initialize default to null or appropriate value
       hidden: false,
+      allow_custom_value: true, // Default to allowing custom values
     };
 
     // Attempt to infer the default value from the data, if possible
