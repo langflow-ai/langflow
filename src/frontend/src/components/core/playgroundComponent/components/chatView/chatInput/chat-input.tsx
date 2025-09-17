@@ -26,7 +26,6 @@ import { VoiceAssistant } from "./components/voice-assistant/voice-assistant";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 
 export default function ChatInput({
-  inputRef,
   noInput,
   files,
   setFiles,
@@ -40,6 +39,8 @@ export default function ChatInput({
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const chatValue = useUtilityStore((state) => state.chatValueStore);
+
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const [showAudioInput, setShowAudioInput] = useState(false);
 

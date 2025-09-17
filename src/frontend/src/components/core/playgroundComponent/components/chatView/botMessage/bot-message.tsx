@@ -12,7 +12,7 @@ import { EditMessageButton } from "./components/message-options";
 import { convertFiles } from "./helpers/convert-files";
 
 export const BotMessage = memo(
-  ({ chat, lastMessage, updateChat, playgroundPage }: chatMessagePropsType) => {
+  ({ chat, lastMessage, playgroundPage }: chatMessagePropsType) => {
     const setErrorData = useAlertStore((state) => state.setErrorData);
     const [editMessage, setEditMessage] = useState(false);
     const isBuilding = useFlowStore((state) => state.isBuilding);
@@ -20,25 +20,24 @@ export const BotMessage = memo(
     const isAudioMessage = chat.category === "audio";
 
     const isEmpty = chat.text?.trim() === "";
-    const { mutate: updateMessageMutation } = useUpdateMessage();
+    const { mutate: updateMessageMutation } = useUpdateMessage({
+      flowId: chat.flow_id,
+      sessionId: chat.session_id ?? "",
+    });
 
     const handleEditMessage = (message: string) => {
       updateMessageMutation(
         {
-          message: {
-            ...chat,
-            files: convertFiles(chat.files),
-            sender_name: chat.sender_name ?? "AI",
-            text: message,
-            sender: chat.sender,
-            flow_id: chat.flow_id,
-            session_id: chat.session_id ?? "",
-          },
-          refetch: true,
+          ...chat,
+          files: convertFiles(chat.files),
+          sender_name: chat.sender_name ?? "AI",
+          text: message,
+          sender: chat.sender,
+          flow_id: chat.flow_id,
+          session_id: chat.session_id ?? "",
         },
         {
           onSuccess: () => {
-            updateChat(chat, message);
             setEditMessage(false);
           },
           onError: () => {
@@ -53,20 +52,17 @@ export const BotMessage = memo(
     const handleEvaluateAnswer = (evaluation: boolean | null) => {
       updateMessageMutation(
         {
-          message: {
-            ...chat,
-            files: convertFiles(chat.files),
-            sender_name: chat.sender_name ?? "AI",
-            text: chat.text.toString(),
-            sender: chat.sender,
-            flow_id: chat.flow_id,
-            session_id: chat.session_id ?? "",
-            properties: {
-              ...chat.properties,
-              positive_feedback: evaluation,
-            },
+          ...chat,
+          files: convertFiles(chat.files),
+          sender_name: chat.sender_name ?? "AI",
+          text: chat.text.toString(),
+          sender: chat.sender,
+          flow_id: chat.flow_id,
+          session_id: chat.session_id ?? "",
+          properties: {
+            ...chat.properties,
+            positive_feedback: evaluation,
           },
-          refetch: true,
         },
         {
           onError: () => {

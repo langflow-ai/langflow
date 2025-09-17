@@ -8,7 +8,6 @@ import {
   useGetMessagesQuery,
   useUpdateMessage,
 } from "@/controllers/API/queries/messages";
-import { removeMessages, updateMessage } from "@/utils/messageUtils";
 import useAlertStore from "../../../stores/alertStore";
 import { extractColumnsFromRows, messagesSorter } from "../../../utils/utils";
 import TableComponent from "../parameterRenderComponent/components/tableComponent";
@@ -33,25 +32,33 @@ export default function SessionView({
   });
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  const { mutate: deleteMessages } = useDeleteMessages({
-    onSuccess: () => {
-      if (!sessionId || !flowId) {
-        return;
-      }
-      removeMessages(selectedRows, sessionId, flowId);
-      setSelectedRows([]);
-      setSuccessData({
-        title: "Messages deleted successfully.",
-      });
+  const { mutate: deleteMessages } = useDeleteMessages(
+    {
+      flowId: flowId ?? "",
+      sessionId: sessionId ?? "",
     },
-    onError: () => {
-      setErrorData({
-        title: "Error deleting messages.",
-      });
+    {
+      onSuccess: () => {
+        if (!sessionId || !flowId) {
+          return;
+        }
+        setSelectedRows([]);
+        setSuccessData({
+          title: "Messages deleted successfully.",
+        });
+      },
+      onError: () => {
+        setErrorData({
+          title: "Error deleting messages.",
+        });
+      },
     },
-  });
+  );
 
-  const { mutate: updateMessageMutation } = useUpdateMessage();
+  const { mutate: updateMessageMutation } = useUpdateMessage({
+    flowId: flowId ?? "",
+    sessionId: sessionId ?? "",
+  });
 
   function handleUpdateMessage(event: NewValueParams<any, string>) {
     const newValue = event.newValue;
@@ -61,25 +68,21 @@ export default function SessionView({
       ...row,
       [field]: newValue,
     };
-    updateMessageMutation(
-      { message: data },
-      {
-        onSuccess: () => {
-          updateMessage(data);
-          // Set success message
-          setSuccessData({
-            title: "Messages updated successfully.",
-          });
-        },
-        onError: () => {
-          setErrorData({
-            title: "Error updating messages.",
-          });
-          event.data[field] = event.oldValue;
-          event.api.refreshCells();
-        },
+    updateMessageMutation(data, {
+      onSuccess: () => {
+        // Set success message
+        setSuccessData({
+          title: "Messages updated successfully.",
+        });
       },
-    );
+      onError: () => {
+        setErrorData({
+          title: "Error updating messages.",
+        });
+        event.data[field] = event.oldValue;
+        event.api.refreshCells();
+      },
+    });
   }
 
   const filteredMessages = useMemo(() => {

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useGetDownloadFileMutation } from "@/controllers/API/queries/files";
+import { cn } from "@/utils/utils";
 import { BASE_URL_API } from "../../../../../../../constants/constants";
 import type { fileCardPropsType } from "../../../../../../../types/components";
 import { ForwardedIconComponent } from "../../../../../../common/genericIconComponent";
 import formatFileName from "../utils/format-file-name";
-import getClasses from "../utils/get-classes";
 import DownloadButton from "./download-button";
 
 const imgTypes = new Set(["png", "jpg", "jpeg", "gif", "webp", "image"]);
@@ -27,7 +27,10 @@ export default function FileCard({
     setIsHovered(false);
   }
 
-  const fileWrapperClasses = getClasses(isHovered);
+  const fileWrapperClasses = cn(
+    "relative h-20 w-80 cursor-pointer rounded-lg border border-ring bg-muted shadow transition duration-300 hover:drop-shadow-lg",
+    isHovered ? "shadow-md" : "",
+  );
 
   const imgSrc = `${BASE_URL_API}files/images/${path}`;
 
