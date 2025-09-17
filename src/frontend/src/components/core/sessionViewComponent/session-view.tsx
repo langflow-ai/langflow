@@ -8,8 +8,8 @@ import {
   useGetMessagesQuery,
   useUpdateMessage,
 } from "@/controllers/API/queries/messages";
+import { removeMessages, updateMessage } from "@/utils/messageUtils";
 import useAlertStore from "../../../stores/alertStore";
-import { useMessagesStore } from "../../../stores/messagesStore";
 import { extractColumnsFromRows, messagesSorter } from "../../../utils/utils";
 import TableComponent from "../parameterRenderComponent/components/tableComponent";
 
@@ -26,8 +26,6 @@ export default function SessionView({
   });
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const updateMessage = useMessagesStore((state) => state.updateMessage);
-  const deleteMessagesStore = useMessagesStore((state) => state.removeMessages);
   const columns = extractColumnsFromRows(messages, "intersection");
   const isFetching = useIsFetching({
     queryKey: ["useGetMessagesQuery"],
@@ -37,7 +35,10 @@ export default function SessionView({
 
   const { mutate: deleteMessages } = useDeleteMessages({
     onSuccess: () => {
-      deleteMessagesStore(selectedRows);
+      if (!sessionId || !flowId) {
+        return;
+      }
+      removeMessages(selectedRows, sessionId, flowId);
       setSelectedRows([]);
       setSuccessData({
         title: "Messages deleted successfully.",
