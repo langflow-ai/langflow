@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { uploadFile } from "../../utils/upload-file";
@@ -160,11 +160,6 @@ test(
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .first()
       .click();
-
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await zoomOut(page, 3);
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("div-generic-node").nth(5).click();
 
