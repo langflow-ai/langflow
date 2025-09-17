@@ -1,4 +1,5 @@
 import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 // Helper function to get JWT token for API requests
@@ -86,9 +87,7 @@ test(
       .first()
       .click();
 
-    await page.getByTestId("canvas_controls_dropdown").click();
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     const edges = await page.locator(".react-flow__edge-interaction").count();
     const nodes = await page.getByTestId("div-generic-node").count();

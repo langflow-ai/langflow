@@ -315,10 +315,7 @@ test(
     ).toBeTruthy();
 
     await page.getByText("Close").last().click();
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await zoomOut(page, 2);
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     await page.getByTestId("edit-button-modal").last().click();
 
