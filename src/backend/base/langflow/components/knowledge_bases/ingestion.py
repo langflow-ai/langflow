@@ -13,7 +13,6 @@ from typing import Any
 
 import pandas as pd
 from cryptography.fernet import InvalidToken
-from langchain_chroma import Chroma
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from lfx.components.processing.converter import convert_to_dataframe
 from lfx.custom import Component
@@ -26,6 +25,7 @@ from lfx.schema.dotdict import dotdict  # noqa: TC002
 from lfx.schema.table import EditMode
 
 from langflow.base.knowledge_bases import get_knowledge_bases
+from langflow.base.knowledge_bases.vector_store_factory import build_kb_vector_store
 from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_settings_service, get_variable_service, session_scope
@@ -344,7 +344,7 @@ class KnowledgeIngestionComponent(Component):
     async def _create_vector_store(
         self, df_source: pd.DataFrame, config_list: list[dict[str, Any]], embedding_model: str, api_key: str
     ) -> None:
-        """Create vector store following Local DB component pattern."""
+        """Create vector store using database-driven factory."""
         try:
             # Set up vector store directory
             vector_store_dir = await self._kb_path()
@@ -359,12 +359,19 @@ class KnowledgeIngestionComponent(Component):
             # Convert DataFrame to Data objects (following Local DB pattern)
             data_objects = await self._convert_df_to_data_objects(df_source, config_list)
 
-            # Create vector store
-            chroma = Chroma(
-                persist_directory=str(vector_store_dir),
-                embedding_function=embedding_function,
-                collection_name=self.knowledge_base,
-            )
+            # Create vector store using factory with user context
+            async with session_scope() as session:
+                if not self.user_id:
+                    msg = "User ID is required for vector store creation."
+                    raise ValueError(msg)
+
+                vector_store = await build_kb_vector_store(
+                    kb_path=vector_store_dir,
+                    collection_name=self.knowledge_base,
+                    embedding_function=embedding_function,
+                    user_id=self.user_id,
+                    session=session,
+                )
 
             # Convert Data objects to LangChain Documents
             documents = []
@@ -374,7 +381,7 @@ class KnowledgeIngestionComponent(Component):
 
             # Add documents to vector store
             if documents:
-                chroma.add_documents(documents)
+                vector_store.add_documents(documents)
                 self.log(f"Added {len(documents)} documents to vector store '{self.knowledge_base}'")
 
         except (OSError, ValueError, RuntimeError) as e:
@@ -390,13 +397,21 @@ class KnowledgeIngestionComponent(Component):
         kb_path = await self._kb_path()
 
         # If we don't allow duplicates, we need to get the existing hashes
-        chroma = Chroma(
-            persist_directory=str(kb_path),
-            collection_name=self.knowledge_base,
-        )
+        async with session_scope() as session:
+            if not self.user_id:
+                msg = "User ID is required for duplicate checking."
+                raise ValueError(msg)
 
-        # Get all documents and their metadata
-        all_docs = chroma.get()
+            vector_store = await build_kb_vector_store(
+                kb_path=kb_path,
+                collection_name=self.knowledge_base,
+                embedding_function=None,  # Not needed for duplicate checking
+                user_id=self.user_id,
+                session=session,
+            )
+
+            # Get all documents and their metadata
+            all_docs = vector_store.get()
 
         # Extract all _id values from metadata
         id_list = [metadata.get("_id") for metadata in all_docs["metadatas"] if metadata.get("_id")]

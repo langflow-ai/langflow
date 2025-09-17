@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Any
 
 from cryptography.fernet import InvalidToken
-from langchain_chroma import Chroma
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from lfx.log.logger import logger
@@ -13,6 +12,7 @@ from lfx.services.deps import get_settings_service
 from pydantic import SecretStr
 
 from langflow.base.knowledge_bases import get_knowledge_bases
+from langflow.base.knowledge_bases.vector_store_factory import build_kb_vector_store
 from langflow.services.auth.utils import decrypt_api_key
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import session_scope
@@ -197,45 +197,62 @@ class KnowledgeRetrievalComponent(Component):
         # Build the embedder for the knowledge base
         embedding_function = self._build_embeddings(metadata)
 
-        # Load vector store
-        chroma = Chroma(
-            persist_directory=str(kb_path),
-            embedding_function=embedding_function,
-            collection_name=self.knowledge_base,
-        )
+        # Load vector store using factory with user context
+        async with session_scope() as session:
+            if not self.user_id:
+                msg = "User ID is required for vector store access."
+                raise ValueError(msg)
 
-        # If a search query is provided, perform a similarity search
-        if self.search_query:
-            # Use the search query to perform a similarity search
-            logger.info(f"Performing similarity search with query: {self.search_query}")
-            results = chroma.similarity_search_with_score(
-                query=self.search_query or "",
-                k=self.top_k,
-            )
-        else:
-            results = chroma.similarity_search(
-                query=self.search_query or "",
-                k=self.top_k,
+            vector_store = await build_kb_vector_store(
+                kb_path=kb_path,
+                collection_name=self.knowledge_base,
+                embedding_function=embedding_function,
+                user_id=self.user_id,
+                session=session,
             )
 
-            # For each result, make it a tuple to match the expected output format
-            results = [(doc, 0) for doc in results]  # Assign a dummy score of 0
+            # If a search query is provided, perform a similarity search
+            if self.search_query:
+                # Use the search query to perform a similarity search
+                logger.info(f"Performing similarity search with query: {self.search_query}")
+                results = vector_store.similarity_search_with_score(
+                    query=self.search_query or "",
+                    k=self.top_k,
+                )
+            else:
+                results = vector_store.similarity_search(
+                    query=self.search_query or "",
+                    k=self.top_k,
+                )
 
-        # If include_embeddings is enabled, get embeddings for the results
-        id_to_embedding = {}
-        if self.include_embeddings and results:
-            doc_ids = [doc[0].metadata.get("_id") for doc in results if doc[0].metadata.get("_id")]
+                # For each result, make it a tuple to match the expected output format
+                results = [(doc, 0) for doc in results]  # Assign a dummy score of 0
 
-            # Only proceed if we have valid document IDs
-            if doc_ids:
-                # Access underlying client to get embeddings
-                collection = chroma._client.get_collection(name=self.knowledge_base)
-                embeddings_result = collection.get(where={"_id": {"$in": doc_ids}}, include=["metadatas", "embeddings"])
+            # If include_embeddings is enabled, get embeddings for the results
+            # Note: This feature is currently only supported for Chroma
+            id_to_embedding = {}
+            if self.include_embeddings and results:
+                try:
+                    # Check if this is a Chroma vector store and has the private client access
+                    if hasattr(vector_store, "_client") and hasattr(vector_store, "_collection"):
+                        doc_ids = [doc[0].metadata.get("_id") for doc in results if doc[0].metadata.get("_id")]
 
-                # Create a mapping from document ID to embedding
-                for i, metadata in enumerate(embeddings_result.get("metadatas", [])):
-                    if metadata and "_id" in metadata:
-                        id_to_embedding[metadata["_id"]] = embeddings_result["embeddings"][i]
+                        # Only proceed if we have valid document IDs
+                        if doc_ids:
+                            # Access underlying client to get embeddings (Chroma-specific)
+                            collection = vector_store._client.get_collection(name=self.knowledge_base)
+                            embeddings_result = collection.get(
+                                where={"_id": {"$in": doc_ids}}, include=["metadatas", "embeddings"]
+                            )
+
+                            # Create a mapping from document ID to embedding
+                            for i, metadata in enumerate(embeddings_result.get("metadatas", [])):
+                                if metadata and "_id" in metadata:
+                                    id_to_embedding[metadata["_id"]] = embeddings_result["embeddings"][i]
+                    else:
+                        logger.warning("Include embeddings is only supported for Chroma vector stores currently")
+                except (AttributeError, ValueError, ImportError) as e:
+                    logger.warning("Could not retrieve embeddings: %s", e)
 
         # Build output data based on include_metadata setting
         data_list = []
