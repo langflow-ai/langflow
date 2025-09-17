@@ -1,6 +1,7 @@
 import * as dotenv from "dotenv";
 import path from "path";
 import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
@@ -56,15 +57,7 @@ test(
       });
 
     await initialGPTsetup(page);
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 5000,
-      state: "visible",
-    });
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     await page
       .getByTestId("handle-chatinput-noshownode-chat message-source")
@@ -78,10 +71,7 @@ test(
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .last()
       .click();
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
@@ -148,12 +138,7 @@ test(
     await page.mouse.up();
     await page.mouse.down();
 
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     await page.getByTestId("playground-btn-flow-io").click({ force: true });
 

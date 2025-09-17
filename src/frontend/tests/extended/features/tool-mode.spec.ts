@@ -1,5 +1,7 @@
 import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -113,12 +115,8 @@ test(
     await page.getByTestId("disclosure-data").click();
 
     await page.getByTestId("disclosure-agents").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.getByTestId("fit_view").click();
-
-    await zoomOut(page, 4);
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 4 });
 
     await page.waitForSelector('[data-testid="agentsAgent"]', {
       timeout: 3000,
@@ -129,10 +127,7 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 500 },
       });
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     // Move the Agent node a bit
 
