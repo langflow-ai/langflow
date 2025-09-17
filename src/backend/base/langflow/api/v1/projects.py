@@ -12,16 +12,24 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
+from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
+from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.log.logger import logger
 from sqlalchemy import or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params, remove_api_keys
 from langflow.api.v1.flows import create_flows
+from langflow.api.v1.mcp_projects import get_project_sse_url
 from langflow.api.v1.schemas import FlowListCreate
+from langflow.api.v2.mcp import update_server
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.services.auth.mcp_encryption import encrypt_auth_settings
+from langflow.services.database.models.api_key.crud import create_api_key
+from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
@@ -32,6 +40,7 @@ from langflow.services.database.models.folder.model import (
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
+from langflow.services.deps import get_settings_service, get_storage_service
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -73,6 +82,46 @@ async def create_project(
         session.add(new_project)
         await session.commit()
         await session.refresh(new_project)
+
+        # Auto-register MCP server for this project with API key auth
+        if get_settings_service().settings.add_projects_to_mcp_servers:
+            try:
+                # Create API key
+                api_key_name = f"MCP Project {new_project.name} - default"
+                unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), current_user.id)
+
+                # Set folder auth to API key mode (encrypted at rest)
+                new_project.auth_settings = encrypt_auth_settings({"auth_type": "apikey"})
+                session.add(new_project)
+                await session.commit()
+                await session.refresh(new_project)
+
+                # Build SSE URL
+                sse_url = await get_project_sse_url(new_project.id)
+
+                # Prepare server config
+                command = "uvx"
+                args = [
+                    "mcp-proxy",
+                    "--headers",
+                    "x-api-key",
+                    unmasked_api_key.api_key,
+                    sse_url,
+                ]
+                server_config = {"command": command, "args": args}
+
+                # Determine server name and register in user's _mcp_servers.json
+                server_name = f"lf-{sanitize_mcp_name(new_project.name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+                await update_server(
+                    server_name,
+                    server_config,
+                    current_user,
+                    session,
+                    get_storage_service(),
+                    get_settings_service(),
+                )
+            except Exception as e:  # noqa: BLE001
+                await logger.aexception(f"Failed to auto-register MCP server for project {new_project.id}: {e}")
 
         if project.components_list:
             update_statement_components = (
