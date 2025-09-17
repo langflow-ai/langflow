@@ -347,13 +347,10 @@ def prepare_global_scope(module):
 
     for node in imports:
         for alias in node.names:
-            try:
-                module_name = alias.name
-                variable_name = alias.asname or alias.name
-                exec_globals[variable_name] = importlib.import_module(module_name)
-            except ModuleNotFoundError as e:
-                msg = f"Module {alias.name} not found. Please install it and try again."
-                raise ModuleNotFoundError(msg) from e
+            module_name = alias.name
+            variable_name = alias.asname or alias.name
+            # Let importlib.import_module raise its own ModuleNotFoundError with the actual missing module
+            exec_globals[variable_name] = importlib.import_module(module_name)
 
     for node in import_froms:
         module_names_to_try = [node.module]
@@ -379,8 +376,11 @@ def prepare_global_scope(module):
                 continue
 
         if not success:
+            # Re-raise the last error to preserve the actual missing module information
+            if last_error:
+                raise last_error
             msg = f"Module {node.module} not found. Please install it and try again"
-            raise ModuleNotFoundError(msg) from last_error
+            raise ModuleNotFoundError(msg)
 
     if definitions:
         combined_module = ast.Module(body=definitions, type_ignores=[])
