@@ -1,6 +1,5 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "should be able to see error when something goes wrong on Code Modal",
@@ -22,8 +21,6 @@ test(
     );
 
     await page.getByTestId("sidebar-custom-component-button").click();
-
-    zoomOut(page, 2);
 
     await page.getByTestId("div-generic-node").click();
     await page.getByTestId("code-button-modal").click();

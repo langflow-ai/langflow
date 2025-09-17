@@ -17,9 +17,8 @@ test(
 
     await page.getByTestId("blank-flow").click();
 
-    await page.waitForSelector("canvas_controls_dropdown", {
-      timeout: 5000,
-      state: "visible",
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 3000,
     });
 
     await page.getByTestId("sidebar-search-input").click();

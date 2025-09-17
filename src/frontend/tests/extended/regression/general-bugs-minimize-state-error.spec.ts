@@ -18,7 +18,6 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
-    await adjustScreenView(page);
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text output");
@@ -37,6 +36,8 @@ test(
     expect(await page.getByText("Toolset", { exact: true }).count()).toBe(0);
     await page.getByTestId("title-Text Output").click();
     expect(await page.getByTestId("hide-node-content").count()).toBe(0);
+
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     for (let i = 0; i < 5; i++) {
       await toggleNodeState(page, "minimize");

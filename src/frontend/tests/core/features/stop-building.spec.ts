@@ -28,7 +28,7 @@ test(
         targetPosition: { x: 50, y: 50 },
       });
 
-    await zoomOut(page, 2);
+    await zoomOut(page, 3);
     //second component
 
     await page.getByTestId("sidebar-search-input").click();
@@ -76,7 +76,7 @@ test(
     await updateOldComponents(page);
     await removeOldApiKeys(page);
 
-    await adjustScreenView(page, { numberOfZoomOut: 2 });
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     //connection 1
     await page
@@ -141,7 +141,7 @@ class CustomComponent(Component):
   `;
 
     await page.getByTestId("sidebar-custom-component-button").click();
-    await adjustScreenView(page, { numberOfZoomOut: 1 });
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     await page.getByTestId("title-Custom Component").first().click();
 
