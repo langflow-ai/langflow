@@ -220,79 +220,6 @@ def _convert_field_names(provided_args: dict[str, Any], arg_schema: type[BaseMod
     return converted_args
 
 
-class MCPStructuredTool(StructuredTool):
-    """Custom StructuredTool that handles parameter conversion before LangChain validation.
-
-    This tool intercepts the run/arun methods to convert camelCase parameters to snake_case
-    before they reach LangChain's schema validation, fixing the issue where LLMs pass
-    camelCase arguments but MCP schemas expect snake_case fields.
-    """
-
-    def run(self, tool_input: str | dict, config=None, **kwargs):
-        """Override the main run method to handle parameter conversion before validation."""
-        # Parse tool_input if it's a string
-        if isinstance(tool_input, str):
-            try:
-                import json
-
-                parsed_input = json.loads(tool_input)
-            except json.JSONDecodeError:
-                parsed_input = {"input": tool_input}
-        else:
-            parsed_input = tool_input or {}
-
-        # Convert camelCase parameters to snake_case
-        converted_input = self._convert_parameters(parsed_input)
-        logger.info(f"MCPStructuredTool.run parameter conversion: {parsed_input} -> {converted_input}")
-
-        # Call the parent run method with converted parameters
-        return super().run(converted_input, config=config, **kwargs)
-
-    async def arun(self, tool_input: str | dict, config=None, **kwargs):
-        """Override the main arun method to handle parameter conversion before validation."""
-        # Parse tool_input if it's a string
-        if isinstance(tool_input, str):
-            try:
-                import json
-
-                parsed_input = json.loads(tool_input)
-            except json.JSONDecodeError:
-                parsed_input = {"input": tool_input}
-        else:
-            parsed_input = tool_input or {}
-
-        # Convert camelCase parameters to snake_case
-        converted_input = self._convert_parameters(parsed_input)
-        logger.info(f"MCPStructuredTool.arun parameter conversion: {parsed_input} -> {converted_input}")
-
-        # Call the parent arun method with converted parameters
-        return await super().arun(converted_input, config=config, **kwargs)
-
-    def _convert_parameters(self, input_dict):
-        """Convert camelCase parameters to snake_case based on the schema fields."""
-        if not input_dict or not isinstance(input_dict, dict):
-            return input_dict
-
-        converted_dict = {}
-        original_fields = set(self.args_schema.model_fields.keys())
-
-        for key, value in input_dict.items():
-            if key in original_fields:
-                # Field exists as-is
-                converted_dict[key] = value
-            else:
-                # Try to convert camelCase to snake_case
-                snake_key = _camel_to_snake(key)
-                if snake_key in original_fields:
-                    logger.info(f"Converting parameter '{key}' to '{snake_key}' in MCPStructuredTool")
-                    converted_dict[snake_key] = value
-                else:
-                    # Keep original key - validation will handle any errors
-                    converted_dict[key] = value
-
-        return converted_dict
-
-
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
     async def tool_coroutine(*args, **kwargs):
         # Get field names from the model (preserving order)
@@ -312,6 +239,16 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
         try:
             validated = arg_schema.model_validate(provided_args)
         except Exception as e:
+            # Check if this is a case where the tool was called with no arguments
+            if not provided_args and hasattr(arg_schema, "model_fields"):
+                required_fields = [name for name, field in arg_schema.model_fields.items() if field.is_required()]
+                if required_fields:
+                    msg = (
+                        f"Tool '{tool_name}' requires arguments but none were provided. "
+                        f"Required fields: {', '.join(required_fields)}. "
+                        f"Please check that the LLM is properly calling the tool with arguments."
+                    )
+                    raise ValueError(msg) from e
             msg = f"Invalid input: {e}"
             raise ValueError(msg) from e
 
@@ -1497,6 +1434,68 @@ async def update_tools(
                 logger.warning(f"Could not create schema for tool '{tool.name}' from server '{server_name}'")
                 continue
 
+            # Create a custom StructuredTool that bypasses schema validation
+            class MCPStructuredTool(StructuredTool):
+                def run(self, tool_input: str | dict, config=None, **kwargs):
+                    """Override the main run method to handle parameter conversion before validation."""
+                    # Parse tool_input if it's a string
+                    if isinstance(tool_input, str):
+                        try:
+                            import json
+
+                            parsed_input = json.loads(tool_input)
+                        except json.JSONDecodeError:
+                            parsed_input = {"input": tool_input}
+                    else:
+                        parsed_input = tool_input or {}
+
+                    # Convert camelCase parameters to snake_case
+                    converted_input = self._convert_parameters(parsed_input)
+
+                    # Call the parent run method with converted parameters
+                    return super().run(converted_input, config=config, **kwargs)
+
+                async def arun(self, tool_input: str | dict, config=None, **kwargs):
+                    """Override the main arun method to handle parameter conversion before validation."""
+                    # Parse tool_input if it's a string
+                    if isinstance(tool_input, str):
+                        try:
+                            import json
+
+                            parsed_input = json.loads(tool_input)
+                        except json.JSONDecodeError:
+                            parsed_input = {"input": tool_input}
+                    else:
+                        parsed_input = tool_input or {}
+
+                    # Convert camelCase parameters to snake_case
+                    converted_input = self._convert_parameters(parsed_input)
+
+                    # Call the parent arun method with converted parameters
+                    return await super().arun(converted_input, config=config, **kwargs)
+
+                def _convert_parameters(self, input_dict):
+                    if not input_dict or not isinstance(input_dict, dict):
+                        return input_dict
+
+                    converted_dict = {}
+                    original_fields = set(self.args_schema.model_fields.keys())
+
+                    for key, value in input_dict.items():
+                        if key in original_fields:
+                            # Field exists as-is
+                            converted_dict[key] = value
+                        else:
+                            # Try to convert camelCase to snake_case
+                            snake_key = _camel_to_snake(key)
+                            if snake_key in original_fields:
+                                converted_dict[snake_key] = value
+                            else:
+                                # Keep original key
+                                converted_dict[key] = value
+
+                    return converted_dict
+
             tool_obj = MCPStructuredTool(
                 name=tool.name,
                 description=tool.description or "",
@@ -1506,6 +1505,7 @@ async def update_tools(
                 tags=[tool.name],
                 metadata={"server_name": server_name},
             )
+
             tool_list.append(tool_obj)
             tool_cache[tool.name] = tool_obj
         except (ConnectionError, TimeoutError, OSError, ValueError) as e:
