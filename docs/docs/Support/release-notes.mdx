@@ -89,11 +89,13 @@ Replace this component with the [**Chroma DB** component](/bundles-chroma).
 
 ### Breaking changes
 
-- Removed `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` environment variable
+- Authentication behavior changes for `LANGFLOW_AUTO_LOGIN` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN`
 
-    Continuing the stricter Langflow API authentication requirements introduced in version 1.5, this release removes the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` environment variable, which was a temporary bypass for backwards compatibility.
-    Starting with version 1.6, all Langflow API requests require a valid Langflow API key for authentication, regardless of the `LANGFLOW_AUTO_LOGIN` setting.
-    The only exceptions are the MCP endpoints (`/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`), which inherit authentication settings from your Langflow projects' [MCP servers](/mcp-server).
+    In Langflow version 1.6, `LANGFLOW_AUTO_LOGIN=True` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False` is the default behavior. This is a **breaking change** introduced in v1.6.
+    API Keys are now required to authenticate requests when `LANGFLOW_AUTO_LOGIN=True` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False`.
+    You may revert to prior behavior by setting `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=True`.
+
+    The only exceptions are some MCP endpoints that use the authentication settings from your Langflow projects' [MCP servers](/mcp-server).
     For more information, see [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login).
 
 ## 1.5.0
