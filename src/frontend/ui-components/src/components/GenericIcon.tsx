@@ -1,7 +1,7 @@
 import { Bot, Check } from "lucide-react";
 import React from "react";
 
-interface GenericIconProps {
+export interface GenericIconProps {
   name: string;
   className?: string;
   strokeWidth?: number;

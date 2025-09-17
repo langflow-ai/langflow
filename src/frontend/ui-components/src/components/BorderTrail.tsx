@@ -1,14 +1,14 @@
 import { motion, type Transition } from "framer-motion";
 import { cn } from "../utils/cn";
 
-type BorderTrailProps = {
+export interface BorderTrailProps {
   className?: string;
   size?: number | string;
   transition?: Transition;
   delay?: number;
   onAnimationComplete?: () => void;
   style?: React.CSSProperties;
-};
+}
 
 export function BorderTrail({
   className,

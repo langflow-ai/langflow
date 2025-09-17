@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-interface DurationDisplayProps {
+export interface DurationDisplayProps {
   duration?: number;
   chatId: string;
 }

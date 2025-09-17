@@ -13,7 +13,7 @@ import { DurationDisplay } from "./DurationDisplay";
 import { GenericIcon } from "./GenericIcon";
 import { Separator } from "./Separator";
 
-interface ContentBlockDisplayProps {
+export interface ContentBlockDisplayProps {
   contentBlocks: ContentBlock[];
   isLoading?: boolean;
   state?: string;

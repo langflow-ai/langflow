@@ -15,15 +15,17 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
   );
 }
 
+export interface ContentDisplayProps {
+  content: ContentType;
+  chatId: string;
+  playgroundPage?: boolean;
+}
+
 export function ContentDisplay({
   content,
   chatId,
   playgroundPage,
-}: {
-  content: ContentType;
-  chatId: string;
-  playgroundPage?: boolean;
-}) {
+}: ContentDisplayProps) {
   // First render the common BaseContent elements if they exist
   const renderHeader = content.header && (
     <>

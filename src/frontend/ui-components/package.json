@@ -2,19 +2,19 @@
   "name": "@langflow/ui-components",
   "version": "0.0.1",
   "type": "module",
-  "main": "./index.js",
-  "module": "./index.mjs",
+  "main": "./index.cjs",
+  "module": "./index.js",
   "types": "./src/index.d.ts",
   "exports": {
     ".": {
-      "import": "./index.mjs",
-      "require": "./index.js",
+      "import": "./index.js",
+      "require": "./index.cjs",
       "types": "./src/index.d.ts"
     }
   },
   "files": [
     "index.js",
-    "index.mjs",
+    "index.cjs",
     "src/"
   ],
   "dependencies": {
