@@ -38,10 +38,6 @@ from langflow.api.v1.schemas import (
     MCPProjectUpdateRequest,
     MCPSettings,
 )
-from lfx.services.deps import get_settings_service, session_scope
-from lfx.log import logger
-from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from lfx.base.mcp.util import sanitize_mcp_name
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.auth.utils import AUTO_LOGIN_WARNING
 from langflow.services.database.models import Flow, Folder
@@ -49,7 +45,11 @@ from langflow.services.database.models.api_key.crud import check_key, create_api
 from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_service, get_settings_service, session_scope
+from langflow.services.deps import get_service
+from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
+from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.log import logger
+from lfx.services.deps import get_settings_service, session_scope
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
