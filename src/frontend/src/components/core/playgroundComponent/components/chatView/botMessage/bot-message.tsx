@@ -11,7 +11,7 @@ import EditMessageField from "./components/edit-message-field";
 import { EditMessageButton } from "./components/message-options";
 import { convertFiles } from "./helpers/convert-files";
 
-export const ChatMessage = memo(
+export const BotMessage = memo(
   ({ chat, lastMessage, updateChat, playgroundPage }: chatMessagePropsType) => {
     const setErrorData = useAlertStore((state) => state.setErrorData);
     const [editMessage, setEditMessage] = useState(false);

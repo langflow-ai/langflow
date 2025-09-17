@@ -1,4 +1,4 @@
-import { MarkdownField } from "@/components/core/playgroundComponent/components/chatView/chatMessage/components/edit-message";
+import { MarkdownField } from "@/components/core/playgroundComponent/components/chatView/botMessage/components/edit-message";
 
 type CustomMarkdownFieldProps = {
   isAudioMessage: boolean;

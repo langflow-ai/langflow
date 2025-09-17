@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StickToBottom } from "use-stick-to-bottom";
 import { v5 as uuidv5 } from "uuid";
 import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
@@ -12,9 +12,9 @@ import { cn } from "@/utils/utils";
 import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
 import useFlowStore from "../../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
+import { BotMessage } from "./botMessage/bot-message";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "./chatInput/hooks/use-file-handler";
-import { ChatMessage } from "./chatMessage/chat-message";
 import { ErrorMessage } from "./errorMessage/error-message";
 import { UserMessage } from "./userMessage/user-message";
 
@@ -114,7 +114,7 @@ export default function ChatView(): JSX.Element {
                 playgroundPage={playgroundPage}
               />
             ) : (
-              <ChatMessage
+              <BotMessage
                 chat={chat}
                 lastMessage={messages.length - 1 === index}
                 key={`${chat.id}-${index}`}
