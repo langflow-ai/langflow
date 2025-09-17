@@ -47,8 +47,12 @@ jobs:
           if [ -n "${{ github.event.inputs.commit_id }}" ]; then
             echo "commit_id=${{ github.event.inputs.commit_id }}" >> $GITHUB_OUTPUT
           else
-            COMMIT_ID=$(git rev-parse HEAD)
-            echo "commit_id=$COMMIT_ID" >> $GITHUB_OUTPUT
+            if [ "${{ github.event.inputs.branch }}" = "main" ]; then
+              COMMIT_ID=$(git rev-parse HEAD)
+            else
+              COMMIT_ID=$(git log -1 --format="%H")
+            fi
+              echo "commit_id=$COMMIT_ID" >> $GITHUB_OUTPUT
           fi
 
       - name: Determine Branch Name
@@ -71,22 +75,11 @@ jobs:
 
           echo "📦 Creating deployment for $ENVIRONMENT commit=$COMMIT_ID branch=$BRANCH"
 
-          if [ "$BRANCH" = "main" ]; then
-            DEPLOYMENT_ID=$(gh api repos/${{ github.repository }}/deployments \
-              -F ref=$COMMIT_ID \
-              -F environment=$ENVIRONMENT \
-              -F description="Deployment by $ACTOR from branch $BRANCH with commit $COMMIT_ID" \
-              -F auto_merge=false \
-              --jq '.id')
-          else
-            DEPLOYMENT_ID=$(gh api repos/${{ github.repository }}/deployments \
-              -F ref=$COMMIT_ID \
-              -F environment=$ENVIRONMENT \
-              -F description="Deployment by $ACTOR from branch $BRANCH with commit $COMMIT_ID" \
-              -F auto_merge=false \
-              --raw-field required_contexts='[]' \
-              --jq '.id')
-          fi
+          DEPLOYMENT_ID=$(gh api repos/${{ github.repository }}/deployments \
+            -F ref=$COMMIT_ID \
+            -F environment=$ENVIRONMENT \
+            -F description="Deployment by $ACTOR from branch $BRANCH with commit $COMMIT_ID" \
+            -F auto_merge=false --jq '.id')
 
           echo "DEPLOYMENT_ID=$DEPLOYMENT_ID" >> $GITHUB_ENV
 
