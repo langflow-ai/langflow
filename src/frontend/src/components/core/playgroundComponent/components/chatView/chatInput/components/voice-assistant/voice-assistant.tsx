@@ -15,7 +15,6 @@ import { customUseStartRecording } from "@/customization/hooks/use-custom-start-
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
-import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
@@ -66,7 +65,6 @@ export function VoiceAssistant({
     (state) => state.setIsVoiceAssistantActive,
   );
   const setSoundDetected = useVoiceStore((state) => state.setSoundDetected);
-  const messagesStore = useMessagesStore();
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
   const edges = useFlowStore((state) => state.edges);
   const setEdges = useFlowStore((state) => state.setEdges);
@@ -180,7 +178,6 @@ export function VoiceAssistant({
       setMessage,
       edges,
       setStatus,
-      messagesStore,
       setEdges,
       addDataToFlowPool,
       updateEdgesRunningByNodes,

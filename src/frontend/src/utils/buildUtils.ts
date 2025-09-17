@@ -18,7 +18,7 @@ import useFlowStore from "../stores/flowStore";
 import type { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import type { VertexLayerElementType } from "../types/zustand/flow";
-import { removeMessage, updateMessage } from "./messageUtils";
+import { removeMessages, updateMessage } from "./messageUtils";
 import { isStringArray, tryParseJson } from "./utils";
 
 type BuildVerticesParams = {
@@ -163,6 +163,8 @@ const MIN_VISUAL_BUILD_TIME_MS = 300;
 
 async function pollBuildEvents(
   url: string,
+  flowId: string,
+  session: string,
   buildResults: Array<boolean>,
   verticesStartTimeMs: Map<string, number>,
   callbacks: {
@@ -226,6 +228,8 @@ async function pollBuildEvents(
       const result = await onEvent(
         event.event,
         event.data,
+        flowId,
+        session,
         buildResults,
         verticesStartTimeMs,
         callbacks,
@@ -333,14 +337,22 @@ export async function buildFlowVertices({
         onData: async (event) => {
           const type = event["event"];
           const data = event["data"];
-          return await onEvent(type, data, buildResults, verticesStartTimeMs, {
-            onBuildStart,
-            onBuildUpdate,
-            onBuildComplete,
-            onBuildError,
-            onGetOrderSuccess,
-            onValidateNodes,
-          });
+          return await onEvent(
+            type,
+            data,
+            flowId,
+            session ?? "",
+            buildResults,
+            verticesStartTimeMs,
+            {
+              onBuildStart,
+              onBuildUpdate,
+              onBuildComplete,
+              onBuildError,
+              onGetOrderSuccess,
+              onValidateNodes,
+            },
+          );
         },
         onError: (statusCode) => {
           if (statusCode === 404) {
@@ -413,14 +425,22 @@ export async function buildFlowVertices({
         onData: async (event) => {
           const type = event["event"];
           const data = event["data"];
-          return await onEvent(type, data, buildResults, verticesStartTimeMs, {
-            onBuildStart,
-            onBuildUpdate,
-            onBuildComplete,
-            onBuildError,
-            onGetOrderSuccess,
-            onValidateNodes,
-          });
+          return await onEvent(
+            type,
+            data,
+            flowId,
+            session ?? "",
+            buildResults,
+            verticesStartTimeMs,
+            {
+              onBuildStart,
+              onBuildUpdate,
+              onBuildComplete,
+              onBuildError,
+              onGetOrderSuccess,
+              onValidateNodes,
+            },
+          );
         },
         onError: (statusCode) => {
           if (statusCode === 404) {
@@ -450,6 +470,8 @@ export async function buildFlowVertices({
       };
       return await pollBuildEvents(
         eventsUrl,
+        flowId,
+        session ?? "",
         buildResults,
         verticesStartTimeMs,
         callbacks,
@@ -489,6 +511,8 @@ export async function buildFlowVertices({
 async function onEvent(
   type: string,
   data: any,
+  flowId: string,
+  session: string,
   buildResults: boolean[],
   verticesStartTimeMs: Map<string, number>,
   callbacks: {
@@ -614,7 +638,7 @@ async function onEvent(
       return true;
     }
     case "remove_message": {
-      removeMessage(data);
+      removeMessages([data.id], session, flowId);
       return true;
     }
     case "end": {

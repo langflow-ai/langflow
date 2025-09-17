@@ -1,4 +1,5 @@
 import { BuildStatus } from "@/constants/enums";
+import { updateMessage } from "@/utils/messageUtils";
 import { base64ToFloat32Array } from "../helpers/utils";
 
 export const useHandleWebsocketMessage = (
@@ -14,7 +15,6 @@ export const useHandleWebsocketMessage = (
   setMessage: React.Dispatch<React.SetStateAction<string>>,
   edges,
   setStatus: React.Dispatch<React.SetStateAction<string>>,
-  messagesStore,
   setEdges,
   addDataToFlowPool: (data: any, nodeId: string) => void,
   updateEdgesRunningByNodes: (nodeIds: string[], isRunning: boolean) => void,
@@ -113,7 +113,7 @@ export const useHandleWebsocketMessage = (
           break;
 
         case "add_message":
-          messagesStore.addMessage(buildData.data);
+          updateMessage(buildData.data);
           break;
       }
       break;
