@@ -1,5 +1,6 @@
 import { type Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { renameFlow } from "../../utils/rename-flow";
 
@@ -51,13 +52,7 @@ test(
 
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 10000,
-      state: "visible",
-    });
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     await renameFlow(page, { flowName: randomFlowName });
 

@@ -38,14 +38,7 @@ test(
 
     await page.getByText("Close").last().click();
 
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     await page.getByTestId("toggle_bool_load_hidden").click();
     expect(

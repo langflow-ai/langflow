@@ -1,6 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 import { uploadFile } from "../../utils/upload-file";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -27,9 +29,7 @@ test(
       timeout: 1000,
     });
 
-    await page.getByTestId("canvas_controls_dropdown").click();
     await zoomOut(page, 3);
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page
       .getByTestId("dataURL")
@@ -112,12 +112,8 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 940, y: 100 },
       });
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.getByTestId("fit_view").click();
-
-    await zoomOut(page, 2);
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     // Loop Item -> Update Data
 

@@ -1,4 +1,5 @@
 import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 // Helper function to get JWT token for API requests
@@ -34,9 +35,11 @@ test(
     expect(response.status()).toBe(200);
     const responseBody = await response.json();
 
-    const astraStarterProject = responseBody.find((project) => {
+    const astraStarterProject = responseBody.find((project: any) => {
       if (project.data.nodes) {
-        return project.data.nodes.some((node) => node.id.includes("Astra"));
+        return project.data.nodes.some((node: any) =>
+          node.id.includes("Astra"),
+        );
       }
     });
 
@@ -52,7 +55,7 @@ test(
           });
           const flowsData = await response.json();
 
-          const modifiedFlows = flowsData.map((flow) => {
+          const modifiedFlows = flowsData.map((flow: any) => {
             if (flow.name === "Vector Store RAG" && flow.user_id === null) {
               return {
                 ...flow,
@@ -86,9 +89,7 @@ test(
       .first()
       .click();
 
-    await page.getByTestId("canvas_controls_dropdown").click();
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     const edges = await page.locator(".react-flow__edge-interaction").count();
     const nodes = await page.getByTestId("div-generic-node").count();

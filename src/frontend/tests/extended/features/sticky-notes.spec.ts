@@ -1,5 +1,7 @@
 import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -48,15 +50,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
     await page.mouse.up();
     await page.mouse.down();
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("fit_view").click();
-    await zoomOut(page, 6);
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 6 });
 
     await page.getByTestId("note_node").click();
 
@@ -123,10 +117,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     await page.getByTestId("more-options-modal").click();
 
     await page.getByText("Copy").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     //double click
     await targetElement.click();

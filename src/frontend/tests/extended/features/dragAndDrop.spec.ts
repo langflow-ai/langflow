@@ -12,12 +12,10 @@ test(
     //add a new flow just to have the workspace available
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 100000,
@@ -68,12 +66,10 @@ test(
     //add a new flow just to have the workspace available
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 100000,

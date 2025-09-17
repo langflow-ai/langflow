@@ -9,12 +9,10 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");

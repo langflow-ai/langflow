@@ -28,12 +28,10 @@ withEventDeliveryModes(
     await page
       .getByRole("heading", { name: "Portfolio Website Code Generator" })
       .click();
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await initialGPTsetup(page, {
       skipAdjustScreenView: true,
