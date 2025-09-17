@@ -12,14 +12,14 @@ from typing import Any, ParamSpec, TypeVar
 from urllib.parse import quote, unquote, urlparse
 from uuid import uuid4
 
-from loguru import logger
+from lfx.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
+from lfx.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
+from lfx.log.logger import logger
 from mcp import types
 from sqlmodel import select
 
 from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
-from langflow.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
-from langflow.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
 from langflow.services.database.models import Flow
@@ -32,6 +32,10 @@ P = ParamSpec("P")
 
 # Create context variables
 current_user_ctx: ContextVar[User] = ContextVar("current_user_ctx")
+# Carries per-request variables injected via HTTP headers (e.g., X-Langflow-Global-Var-*)
+current_request_variables_ctx: ContextVar[dict[str, str] | None] = ContextVar(
+    "current_request_variables_ctx", default=None
+)
 
 
 def handle_mcp_errors(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
@@ -43,7 +47,7 @@ def handle_mcp_errors(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[
             return await func(*args, **kwargs)
         except Exception as e:
             msg = f"Error in {func.__name__}: {e!s}"
-            logger.exception(msg)
+            await logger.aexception(msg)
             raise
 
     return wrapper
@@ -108,11 +112,11 @@ async def handle_list_resources(project_id=None):
                             resources.append(resource)
                     except FileNotFoundError as e:
                         msg = f"Error listing files for flow {flow.id}: {e}"
-                        logger.debug(msg)
+                        await logger.adebug(msg)
                         continue
     except Exception as e:
         msg = f"Error in listing resources: {e!s}"
-        logger.exception(msg)
+        await logger.aexception(msg)
         raise
     return resources
 
@@ -150,7 +154,7 @@ async def handle_read_resource(uri: str) -> bytes:
         return base64.b64encode(content)
     except Exception as e:
         msg = f"Error reading resource {uri}: {e!s}"
-        logger.exception(msg)
+        await logger.aexception(msg)
         raise
 
 
@@ -172,6 +176,9 @@ async def handle_call_tool(
         mcp_config.enable_progress_notifications = settings_service.settings.mcp_server_enable_progress_notifications
 
     current_user = current_user_ctx.get()
+    # Build execution context with request-level variables if present
+    request_variables = current_request_variables_ctx.get()
+    exec_context = {"request_variables": request_variables} if request_variables else None
 
     async def execute_tool(session):
         # Get flow id from name
@@ -228,6 +235,7 @@ async def handle_call_tool(
                         input_request=input_request,
                         stream=False,
                         api_key_user=current_user,
+                        context=exec_context,
                     )
                     # Process all outputs and messages, ensuring no duplicates
                     processed_texts = set()
@@ -271,7 +279,7 @@ async def handle_call_tool(
         return await with_db_session(execute_tool)
     except Exception as e:
         msg = f"Error executing tool {name}: {e!s}"
-        logger.exception(msg)
+        await logger.aexception(msg)
         raise
 
 
@@ -339,10 +347,10 @@ async def handle_list_tools(project_id=None, *, mcp_enabled_only=False):
                     existing_names.add(name)
                 except Exception as e:  # noqa: BLE001
                     msg = f"Error in listing tools: {e!s} from flow: {base_name}"
-                    logger.warning(msg)
+                    await logger.awarning(msg)
                     continue
     except Exception as e:
         msg = f"Error in listing tools: {e!s}"
-        logger.exception(msg)
+        await logger.aexception(msg)
         raise
     return tools

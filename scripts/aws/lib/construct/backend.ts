@@ -27,7 +27,7 @@ interface BackEndProps {
 }
 
 export class BackEndCluster extends Construct {
-  
+
   constructor(scope: Construct, id: string, props:BackEndProps) {
     super(scope, id)
     const backendServiceName = 'backend'
@@ -76,7 +76,7 @@ export class BackEndCluster extends Construct {
         "password": ecs.Secret.fromSecretsManager(secretsDB, 'password'),
       },
     });
-    
+
     const backendService = new ecs.FargateService(this, 'BackEndService', {
       cluster: props.cluster,
       serviceName: backendServiceName,

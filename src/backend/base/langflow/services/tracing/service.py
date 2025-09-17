@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
+from lfx.log.logger import logger
 
 from langflow.services.base import Service
 
@@ -15,10 +15,10 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
+    from lfx.custom.custom_component.component import Component
+    from lfx.graph.vertex.base import Vertex
+    from lfx.services.settings.service import SettingsService
 
-    from langflow.custom.custom_component.component import Component
-    from langflow.graph.vertex.base import Vertex
-    from langflow.services.settings.service import SettingsService
     from langflow.services.tracing.base import BaseTracer
     from langflow.services.tracing.schema import Log
 
@@ -133,7 +133,7 @@ class TracingService(Service):
             try:
                 trace_func(*args)
             except Exception:  # noqa: BLE001
-                logger.exception("Error processing trace_func")
+                await logger.aexception("Error processing trace_func")
             finally:
                 trace_context.traces_queue.task_done()
 
@@ -144,7 +144,7 @@ class TracingService(Service):
             trace_context.running = True
             trace_context.worker_task = asyncio.create_task(self._trace_worker(trace_context))
         except Exception:  # noqa: BLE001
-            logger.exception("Error starting tracing service")
+            await logger.aexception("Error starting tracing service")
 
     def _initialize_langsmith_tracer(self, trace_context: TraceContext) -> None:
         langsmith_tracer = _get_langsmith_tracer()
@@ -248,7 +248,7 @@ class TracingService(Service):
             self._initialize_opik_tracer(trace_context)
             self._initialize_traceloop_tracer(trace_context)
         except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error initializing tracers: {e}")
+            await logger.adebug(f"Error initializing tracers: {e}")
 
     async def _stop(self, trace_context: TraceContext) -> None:
         try:
@@ -261,7 +261,7 @@ class TracingService(Service):
                 trace_context.worker_task = None
 
         except Exception:  # noqa: BLE001
-            logger.exception("Error stopping tracing service")
+            await logger.aexception("Error stopping tracing service")
 
     def _end_all_tracers(self, trace_context: TraceContext, outputs: dict, error: Exception | None = None) -> None:
         for tracer in trace_context.tracers.values():
@@ -287,8 +287,7 @@ class TracingService(Service):
             return
         trace_context = trace_context_var.get()
         if trace_context is None:
-            msg = "called end_tracers but no trace context found"
-            raise RuntimeError(msg)
+            return
         await self._stop(trace_context)
         self._end_all_tracers(trace_context, outputs, error)
 
@@ -381,7 +380,9 @@ class TracingService(Service):
         trace_context = trace_context_var.get()
         if trace_context is None:
             msg = "called trace_component but no trace context found"
-            raise RuntimeError(msg)
+            logger.warning(msg)
+            yield self
+            return
         trace_context.all_inputs[trace_name] |= inputs or {}
         await trace_context.traces_queue.put((self._start_component_traces, (component_trace_context, trace_context)))
         try:
@@ -403,7 +404,8 @@ class TracingService(Service):
         trace_context = trace_context_var.get()
         if trace_context is None:
             msg = "called project_name but no trace context found"
-            raise RuntimeError(msg)
+            logger.warning(msg)
+            return None
         return trace_context.project_name
 
     def add_log(self, trace_name: str, log: Log) -> None:
@@ -434,14 +436,16 @@ class TracingService(Service):
         trace_context = trace_context_var.get()
         if trace_context is None:
             msg = "called set_outputs but no trace context found"
-            raise RuntimeError(msg)
+            logger.warning(msg)
+            return
         trace_context.all_outputs[trace_name] |= outputs or {}
 
     def get_tracer(self, tracer_name: str) -> BaseTracer | None:
         trace_context = trace_context_var.get()
         if trace_context is None:
             msg = "called get_tracer but no trace context found"
-            raise RuntimeError(msg)
+            logger.warning(msg)
+            return None
         return trace_context.tracers.get(tracer_name)
 
     def get_langchain_callbacks(self) -> list[BaseCallbackHandler]:
@@ -451,7 +455,8 @@ class TracingService(Service):
         trace_context = trace_context_var.get()
         if trace_context is None:
             msg = "called get_langchain_callbacks but no trace context found"
-            raise RuntimeError(msg)
+            logger.warning(msg)
+            return []
         for tracer in trace_context.tracers.values():
             if not tracer.ready:  # type: ignore[truthy-function]
                 continue

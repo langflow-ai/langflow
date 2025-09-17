@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from langchain_chroma import Chroma
-from loguru import logger
+from lfx.log import logger
 from pydantic import BaseModel
 
 from langflow.api.utils import CurrentActiveUser
@@ -330,7 +330,7 @@ async def list_knowledge_bases(current_user: CurrentActiveUser) -> list[Knowledg
 
             except OSError as _:
                 # Log the exception and skip directories that can't be read
-                logger.exception("Error reading knowledge base directory '%s'", kb_dir)
+                await logger.aexception("Error reading knowledge base directory '%s'", kb_dir)
                 continue
 
         # Sort by name alphabetically
@@ -422,7 +422,7 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
                 shutil.rmtree(kb_path)
                 deleted_count += 1
             except (OSError, PermissionError) as e:
-                logger.exception("Error deleting knowledge base '%s': %s", kb_name, e)
+                await logger.aexception("Error deleting knowledge base '%s': %s", kb_name, e)
                 # Continue with other deletions even if one fails
 
         if not_found_kbs and deleted_count == 0:

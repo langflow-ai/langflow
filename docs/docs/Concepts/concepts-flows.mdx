@@ -4,6 +4,8 @@ slug: /concepts-flows
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialConfigDirPaths from '@site/docs/_partial-config-dir-paths.mdx';
+import PartialDBDirPaths from '@site/docs/_partial-db-dir-paths.mdx';
 
 A _flow_ is a functional representation of an application workflow.
 Flows receive input, process it, and produce output.
@@ -80,7 +82,7 @@ Each node is built and executed sequentially, with results from each built node 
 ## Manage flows in projects {#projects}
 
 The **Projects** page is where you arrive when you launch Langflow.
-It is where you view and manage flows on a high level.
+From here, you can manage flows and your projects' [MCP servers](/mcp-server).
 
 Langflow projects are like folders that you can use to organize related flows.
 The default project is **Starter Project**, and your flows are stored here unless you create another project.
@@ -88,30 +90,32 @@ To create a project, click <Icon name="Plus" aria-hidden="true"/> **Create new p
 
 ![Projects page with multiple flows in a project](/img/my-projects.png)
 
-From the **Projects** page, you can manage flows within each of your projects:
-
-* **View flows in a project**: Select the project name in the **Projects** list.
-* **Create flows**: See [Create a flow](#create-a-flow).
-* **Edit a flow's name and description**: Locate the flow you want to edit, click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Edit details**.
-* **Delete a flow**: Locate the flow you want to delete, click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Delete**.
-* **Serve flows as MCP tools**: See [Use Langflow as an MCP server](/mcp-server).
-
 :::tip
 To get back to the **Projects** page after editing a flow, click the project name or Langflow icon in the Langflow header.
 :::
 
+### Edit flow details
+
+1. On the **Projects** page, locate the flow you want to edit.
+2. Click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Edit details**.
+3. Edit the **Name** and **Description**, and then click **Save**.
+
+### Delete a flow
+
+1. On the **Projects** page, locate the flow you want to delete.
+2. Click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Delete**.
+
 ## Flow storage and logs
 
-By default, flows and [flow logs](/logging) are stored on local disk at the following default locations:
+By default, flows and flow execution data are stored in a SQLite database at the following locations.
+<PartialDBDirPaths/>
 
-- **macOS Desktop**: `/Users/<username>/.langflow/cache`
-- **Windows Desktop**: `C:\Users\<username>\AppData\Roaming\com.Langflow\cache`
-- **OSS macOS/Windows/Linux/WSL (uv pip install)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/cache`
-- **OSS macOS/Windows/Linux/WSL (git clone)**: `<path_to_clone>/src/backend/base/langflow/cache`
+The database storage location can be customized using the `LANGFLOW_CONFIG_DIR` and `LANGFLOW_SAVE_DB_IN_CONFIG_DIR` environment variables. The config directory can be customized with the `LANGFLOW_CONFIG_DIR` environment variable.
 
-The overall storage location can be customized with the `LANGFLOW_CONFIG_DIR` environment variable, and the flow log storage location can be customized separately with the `LANGFLOW_LOG_FILE` environment variable.
+Langflow logs are stored in the config directory specified in the `LANGFLOW_CONFIG_DIR` environment variable.
+<PartialConfigDirPaths/>
 
-For more information, see [Memory management options](/memory).
+For more information, see [Memory management options](/memory) and [Logging](/logging).
 
 ## See also
 

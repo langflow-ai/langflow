@@ -3,18 +3,19 @@ import operator
 from textwrap import dedent
 
 import pytest
-from langflow.components.data import FileComponent
-from langflow.components.input_output import ChatInput, ChatOutput
-from langflow.components.openai.openai import OpenAIEmbeddingsComponent
-from langflow.components.openai.openai_chat_model import OpenAIModelComponent
-from langflow.components.processing import ParseDataComponent, PromptComponent
-from langflow.components.processing.split_text import SplitTextComponent
-from langflow.components.vectorstores import AstraDBVectorStoreComponent
-from langflow.graph.graph.base import Graph
-from langflow.graph.graph.constants import Finish
-from langflow.schema import Data
-from langflow.schema.dataframe import DataFrame
-from langflow.schema.message import Message
+
+from lfx.components.data import FileComponent
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.components.openai.openai import OpenAIEmbeddingsComponent
+from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+from lfx.components.processing import ParseDataComponent, PromptComponent
+from lfx.components.processing.split_text import SplitTextComponent
+from lfx.components.vectorstores import AstraDBVectorStoreComponent
+from lfx.graph.graph.base import Graph
+from lfx.graph.graph.constants import Finish
+from lfx.schema import Data
+from lfx.schema.dataframe import DataFrame
+from lfx.schema.message import Message
 
 
 @pytest.fixture
@@ -52,7 +53,7 @@ def rag_graph():
     # RAG Graph
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-124")
     chat_input = ChatInput(_id="chatinput-123")
-    chat_input.get_output("message").value = "What is the meaning of life?"
+    chat_input.get_output("message").value = Message(text="What is the meaning of life?")
     rag_vector_store = AstraDBVectorStoreComponent(_id="rag-vector-store-123")
     rag_vector_store.set(
         search_query=chat_input.message_response,
@@ -95,7 +96,7 @@ def rag_graph():
     return Graph(start=chat_input, end=chat_output)
 
 
-def test_vector_store_rag(ingestion_graph, rag_graph):
+async def test_vector_store_rag(ingestion_graph, rag_graph):
     assert ingestion_graph is not None
     ingestion_ids = [
         "file-123",
@@ -114,8 +115,7 @@ def test_vector_store_rag(ingestion_graph, rag_graph):
         "openai-embeddings-124",
     ]
     for ids, graph, len_results in [(ingestion_ids, ingestion_graph, 5), (rag_ids, rag_graph, 8)]:
-        results = list(graph.start())
-
+        results = [result async for result in graph.async_start(reset_output_values=False)]
         assert len(results) == len_results
         vids = [result.vertex.id for result in results if hasattr(result, "vertex")]
         assert all(vid in ids for vid in vids), f"Diff: {set(vids) - set(ids)}"

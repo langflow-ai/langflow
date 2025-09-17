@@ -1,6 +1,7 @@
-import { expect, type Page, test } from "@playwright/test";
+import { type Page } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -21,12 +22,13 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
       state: "visible",
     });
-
-    await page.getByTestId("lock_unlock").click();
+    await page.getByTestId("flow_name").click();
+    await page.getByTestId("lock-flow-switch").click();
+    await page.getByTestId("save-flow-settings").click();
 
     //ensure the UI is updated
     await page.waitForTimeout(500);
@@ -41,7 +43,7 @@ test(
     });
 
     await page.getByTestId("list-card").first().click();
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
       state: "visible",
     });
@@ -53,10 +55,12 @@ test(
       timeout: 3000,
     });
 
-    await page.getByTestId("lock_unlock").click();
-    await page.waitForSelector('[data-testid="icon-LockOpen"]', {
+    await page.getByTestId("flow_name").click();
+    await page.getByTestId("lock-flow-switch").click();
+    await page.waitForSelector('[data-testid="icon-Lock"]', {
       timeout: 3000,
     });
+    await page.getByTestId("save-flow-settings").click();
 
     await page.getByTestId("icon-ChevronLeft").click();
     await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -65,13 +69,8 @@ test(
 
     await page.getByTestId("list-card").first().click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
-      state: "visible",
-    });
-
-    await page.waitForSelector('[data-testid="icon-LockOpen"]', {
-      timeout: 3000,
       state: "visible",
     });
 
@@ -118,7 +117,10 @@ test(
 );
 
 async function tryConnectNodes(page: Page) {
-  await page.getByTestId("lock_unlock").click();
+  await page.getByTestId("flow_name").click();
+  await page.getByTestId("lock-flow-switch").click();
+  await page.getByTestId("icon-Unlock").isVisible();
+  await page.getByTestId("save-flow-settings").click();
 
   const numberOfTries = 5;
   let numberOfEdges = await page.locator(".react-flow__edge-path").count();
@@ -146,12 +148,18 @@ async function tryConnectNodes(page: Page) {
       expect(numberOfEdges).toBe(0);
     }
   }
+  await page.getByTestId("flow_name").click();
+  await page.getByTestId("lock-flow-switch").click();
 
-  await page.getByTestId("lock_unlock").click();
+  await page.getByTestId("lock_Unlock").isVisible();
+  await page.getByTestId("save-flow-settings").click();
 }
 
 async function tryDeleteEdge(page: Page) {
-  await page.getByTestId("lock_unlock").click();
+  await page.getByTestId("flow_name").click();
+  await page.getByTestId("lock-flow-switch").click();
+  await page.getByTestId("icon-Lock").isVisible();
+  await page.getByTestId("save-flow-settings").click();
 
   let numberOfEdges = await page.locator(".react-flow__edge-path").count();
   expect(numberOfEdges).toBe(3);
@@ -168,5 +176,8 @@ async function tryDeleteEdge(page: Page) {
     expect(numberOfEdges).toBe(3);
   }
   //unlock the flow
-  await page.getByTestId("lock_unlock").click();
+  await page.getByTestId("flow_name").click();
+  await page.getByTestId("lock-flow-switch").click();
+  await page.getByTestId("lock_Unlock").isVisible();
+  await page.getByTestId("save-flow-settings").click();
 }

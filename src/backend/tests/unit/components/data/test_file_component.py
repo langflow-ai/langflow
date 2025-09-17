@@ -1,5 +1,6 @@
-from langflow.components.data import FileComponent
 from langflow.io import Output
+
+from lfx.components.data import FileComponent
 
 
 class TestFileComponentDynamicOutputs:

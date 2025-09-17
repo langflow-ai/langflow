@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -37,6 +37,7 @@ test(
     // Press Tab to focus first result
     await page.keyboard.press("Tab");
     await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
 
     // Verify some expected chat-related components are visible
     await expect(page.getByTestId("input_outputChat Input")).toBeVisible();
@@ -60,6 +61,7 @@ test(
     // Verify disclosures open with new search
     await expect(page.getByTestId("processingPrompt Template")).toBeVisible();
 
+    await page.keyboard.press("Tab");
     await page.keyboard.press("Tab");
     await page.keyboard.press("Tab");
     await page.keyboard.press("Enter");

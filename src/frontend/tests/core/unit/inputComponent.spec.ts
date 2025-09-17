@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -15,11 +15,11 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Chroma");
 
-    await page.waitForSelector('[data-testid="vectorstoresChroma DB"]', {
+    await page.waitForSelector('[data-testid="chromaChroma DB"]', {
       timeout: 3000,
     });
     await page
-      .getByTestId("vectorstoresChroma DB")
+      .getByTestId("chromaChroma DB")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();

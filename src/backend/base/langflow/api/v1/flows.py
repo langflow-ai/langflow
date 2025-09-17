@@ -16,6 +16,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
+from lfx.log import logger
 from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -23,7 +24,6 @@ from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
-from langflow.logging import logger
 from langflow.services.database.models.flow.model import (
     AccessTypeEnum,
     Flow,
@@ -55,7 +55,7 @@ async def _save_flow_to_fs(flow: Flow) -> None:
             try:
                 await f.write(flow.model_dump_json())
             except OSError:
-                logger.exception("Failed to write flow %s to path %s", flow.name, flow.fs_path)
+                await logger.aexception("Failed to write flow %s to path %s", flow.name, flow.fs_path)
 
 
 async def _new_flow(

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -121,7 +121,7 @@ test(
     await expect(page.getByTestId("disclosure-tools")).toBeVisible();
 
     await expect(page.getByTestId("dataAPI Request")).toBeVisible();
-    await expect(page.getByTestId("vectorstoresAstra DB")).toBeVisible();
+    await expect(page.getByTestId("datastaxAstra DB")).toBeVisible();
     await expect(page.getByTestId("logicSub Flow [Deprecated]")).toBeVisible();
 
     await page.getByTestId("sidebar-options-trigger").click();
@@ -137,7 +137,7 @@ test(
     await page.getByTestId("icon-X").first().click();
 
     await expect(page.getByTestId("dataAPI Request")).not.toBeVisible();
-    await expect(page.getByTestId("vectorstoresAstra DB")).not.toBeVisible();
+    await expect(page.getByTestId("datastaxAstra DB")).not.toBeVisible();
     await expect(
       page.getByTestId("logicSub Flow [Deprecated]"),
     ).not.toBeVisible();

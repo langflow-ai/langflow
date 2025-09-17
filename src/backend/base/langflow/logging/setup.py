@@ -1,4 +1,4 @@
-from loguru import logger
+from lfx.log.logger import logger
 
 LOGGING_CONFIGURED = False
 
