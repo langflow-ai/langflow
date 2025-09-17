@@ -117,3 +117,7 @@ class VariableService(Service):
             user_id: The user ID.
             session: The database session.
         """
+
+    @abc.abstractmethod
+    async def get_by_category(self, user_id: UUID | str, category: str, session: AsyncSession) -> list[VariableRead]:
+        """Get all variables for a user by category."""
