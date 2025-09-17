@@ -19,6 +19,7 @@ test(
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 3000,
+      state: "visible",
     });
 
     await page.getByTestId("sidebar-search-input").click();
