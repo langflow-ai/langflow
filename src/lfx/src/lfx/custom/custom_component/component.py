@@ -111,7 +111,6 @@ class Component(CustomComponent):
         self._ctx: dict = {}
         self._code: str | None = None
         self._logs: list[Log] = []
-        self._llm: BaseChatModel | None = None
 
         # Initialize component-specific collections
         self._inputs: dict[str, InputTypes] = {}
