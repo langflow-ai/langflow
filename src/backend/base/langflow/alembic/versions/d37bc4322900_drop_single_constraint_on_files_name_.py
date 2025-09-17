@@ -5,12 +5,14 @@ Revises: 0882f9657f22
 Create Date: 2025-09-15 11:11:37.610294
 
 """
+import logging
 
 from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.engine.reflection import Inspector
+
+logger = logging.getLogger(__name__)
 
 # revision identifiers, used by Alembic.
 revision: str = "d37bc4322900"
@@ -27,17 +29,24 @@ def upgrade() -> None:
     # Check if file table exists
     table_names = inspector.get_table_names()
     if "file" not in table_names:
-        print("file table does not exist, skipping")
+        logger.info("file table does not exist, skipping")
         return
     
     db_dialect = conn.dialect.name
-    print(f"Running migration on {db_dialect} database")
+    logger.info(f"Running migration on {db_dialect} database")
     
     try:
         if db_dialect == "sqlite":
             # SQLite: Recreate table without single UNIQUE constraint
-            print("SQLite: Recreating table to remove single UNIQUE constraint on name")
+            logger.info("SQLite: Recreating table to remove single UNIQUE constraint on name")
             
+            # Guard against schema drift: ensure expected columns before destructive rebuild
+            res = conn.execute(sa.text('PRAGMA table_info("file")'))
+            cols = [row[1] for row in res]
+            expected = ['id', 'user_id', 'name', 'path', 'size', 'provider', 'created_at', 'updated_at']
+            if set(cols) != set(expected):
+                raise RuntimeError(f"SQLite: Unexpected columns on file table: {cols}. Aborting migration to avoid data loss.")
+
             # Create the new table without the single UNIQUE(name) constraint
             op.execute("""
                 CREATE TABLE file_new (
@@ -63,14 +72,21 @@ def upgrade() -> None:
             """)
             
             # Drop old table and rename new table
-            op.execute("DROP TABLE file")
-            op.execute("ALTER TABLE file_new RENAME TO file")
+            op.execute("PRAGMA foreign_keys=OFF")
+            try:
+                op.execute("DROP TABLE file")
+                op.execute("ALTER TABLE file_new RENAME TO file")
+            finally:
+                op.execute("PRAGMA foreign_keys=ON")
             
-            print("SQLite: Successfully recreated file table without single UNIQUE constraint on name")
+            logger.info("SQLite: Successfully recreated file table without single UNIQUE constraint on name")
             
         elif db_dialect == "postgresql":
             # PostgreSQL: Find and drop single-column unique constraints on 'name'
-            print("PostgreSQL: Finding and dropping single UNIQUE constraint on name")
+            logger.info("PostgreSQL: Finding and dropping single UNIQUE constraints and indexes on name")
+            
+            # Determine target schema
+            schema = sa.inspect(conn).default_schema_name or "public"
             
             # Get constraint names that are single-column unique on 'name'
             result = conn.execute(sa.text("""
@@ -79,7 +95,7 @@ def upgrade() -> None:
                 JOIN pg_class t ON c.conrelid = t.oid
                 JOIN pg_namespace n ON t.relnamespace = n.oid
                 WHERE t.relname = 'file' 
-                AND n.nspname = 'public'
+                AND n.nspname = :schema
                 AND c.contype = 'u'
                 AND array_length(c.conkey, 1) = 1
                 AND EXISTS (
@@ -88,22 +104,41 @@ def upgrade() -> None:
                     AND a.attnum = c.conkey[1]
                     AND a.attname = 'name'
                 )
-            """))
+            """), {"schema": schema})
             
             constraints_to_drop = [row[0] for row in result.fetchall()]
             
             if constraints_to_drop:
                 for constraint_name in constraints_to_drop:
-                    op.execute(f'ALTER TABLE "file" DROP CONSTRAINT "{constraint_name}"')
-                    print(f"PostgreSQL: Dropped constraint {constraint_name}")
+                    op.drop_constraint(constraint_name, "file", type_="unique", schema=schema)
+                    logger.info(f"PostgreSQL: Dropped constraint {constraint_name}")
             else:
-                print("PostgreSQL: No single UNIQUE constraints found on name column")
-                
+                logger.info("PostgreSQL: No single UNIQUE constraints found on name column")
+            
+            # Also drop any single-column UNIQUE indexes on name not backed by constraints
+            idx_result = conn.execute(sa.text("""
+                SELECT i.relname
+                FROM pg_class t
+                JOIN pg_namespace n ON n.oid = t.relnamespace
+                JOIN pg_index ix ON ix.indrelid = t.oid
+                JOIN pg_class i ON i.oid = ix.indexrelid
+                WHERE t.relname = 'file'
+                  AND n.nspname = :schema
+                  AND ix.indisunique = TRUE
+                  AND array_length(ix.indkey, 1) = 1
+                  AND NOT EXISTS (SELECT 1 FROM pg_constraint c WHERE c.conindid = ix.indexrelid)
+                  AND (SELECT a.attname FROM pg_attribute a 
+                       WHERE a.attrelid = t.oid AND a.attnum = ix.indkey[1]) = 'name'
+            """), {"schema": schema})
+            for (index_name,) in idx_result.fetchall():
+                op.drop_index(index_name, table_name="file", schema=schema)
+                logger.info(f"PostgreSQL: Dropped unique index {index_name}")
+        
         else:
             raise ValueError(f"Unsupported database dialect: {db_dialect}")
             
     except Exception as e:
-        print(f"Error during constraint removal: {e}")
+        logger.error(f"Error during constraint removal: {e}")
         raise
 
 
@@ -115,15 +150,28 @@ def downgrade() -> None:
     # Check if file table exists
     table_names = inspector.get_table_names()
     if "file" not in table_names:
-        print("file table does not exist, skipping downgrade")
+        logger.info("file table does not exist, skipping downgrade")
         return
     
     db_dialect = conn.dialect.name
     
     try:
+        # Pre-check for duplicates that would violate UNIQUE(name)
+        dup = conn.execute(sa.text("SELECT name FROM file GROUP BY name HAVING COUNT(*) > 1 LIMIT 1")).first()
+        if dup:
+            raise RuntimeError(
+                "Downgrade aborted: duplicates in file.name would violate UNIQUE(name). "
+                "Deduplicate before downgrading."
+            )
         if db_dialect == "sqlite":
+            # Add the same column validation as upgrade
+            res = conn.execute(sa.text('PRAGMA table_info("file")'))
+            cols = [row[1] for row in res]
+            expected = ['id', 'user_id', 'name', 'path', 'size', 'provider', 'created_at', 'updated_at']
+            if set(cols) != set(expected):
+                raise RuntimeError(f"SQLite: Unexpected columns on file table: {cols}. Aborting downgrade.")
             # SQLite: Recreate table with both constraints
-            print("SQLite: Recreating table with both constraints")
+            logger.info("SQLite: Recreating table with both constraints")
             
             op.execute("""
                 CREATE TABLE file_new (
@@ -150,20 +198,25 @@ def downgrade() -> None:
             """)
             
             # Replace table
-            op.execute("DROP TABLE file")
-            op.execute("ALTER TABLE file_new RENAME TO file")
+            op.execute("PRAGMA foreign_keys=OFF")
+            try:
+                op.execute("DROP TABLE file")
+                op.execute("ALTER TABLE file_new RENAME TO file")
+            finally:
+                op.execute("PRAGMA foreign_keys=ON")
             
-            print("SQLite: Restored single unique constraint on name column")
+            logger.info("SQLite: Restored single unique constraint on name column")
             
         elif db_dialect == "postgresql":
             # PostgreSQL: Add constraint back
-            op.execute('ALTER TABLE "file" ADD CONSTRAINT file_name_unique UNIQUE (name)')
-            print("PostgreSQL: Added back single unique constraint on 'name' column")
+            schema = sa.inspect(conn).default_schema_name or "public"
+            op.create_unique_constraint("file_name_unique", "file", ["name"], schema=schema)
+            logger.info("PostgreSQL: Added back single unique constraint on 'name' column")
             
         else:
-            print(f"Downgrade not supported for dialect: {db_dialect}")
+            logger.info(f"Downgrade not supported for dialect: {db_dialect}")
             
     except Exception as e:
-        print(f"Error during downgrade: {e}")
-        # Don't raise in downgrade - log and continue
-        pass
+        logger.error(f"Error during downgrade: {e}")
+        if "constraint" not in str(e).lower():
+            raise
