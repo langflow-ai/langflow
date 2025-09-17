@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 const useAutoResizeTextArea = (
   value: string,
-  inputRef: React.RefObject<HTMLInputElement>,
+  inputRef: React.RefObject<HTMLTextAreaElement>,
 ) => {
   useEffect(() => {
     if (inputRef.current && inputRef.current.scrollHeight! !== 0) {
