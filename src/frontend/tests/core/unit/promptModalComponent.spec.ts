@@ -1,11 +1,10 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { zoomOut } from "../../utils/zoom-out";
 
 // Helper function to verify prompt variables
 async function verifyPromptVariables(
-  page,
+  page: any,
   template: string,
   expectedVars: string[],
   isFirstTime = true,

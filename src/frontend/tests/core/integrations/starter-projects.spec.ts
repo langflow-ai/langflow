@@ -35,9 +35,11 @@ test(
     expect(response.status()).toBe(200);
     const responseBody = await response.json();
 
-    const astraStarterProject = responseBody.find((project) => {
+    const astraStarterProject = responseBody.find((project: any) => {
       if (project.data.nodes) {
-        return project.data.nodes.some((node) => node.id.includes("Astra"));
+        return project.data.nodes.some((node: any) =>
+          node.id.includes("Astra"),
+        );
       }
     });
 
@@ -53,7 +55,7 @@ test(
           });
           const flowsData = await response.json();
 
-          const modifiedFlows = flowsData.map((flow) => {
+          const modifiedFlows = flowsData.map((flow: any) => {
             if (flow.name === "Vector Store RAG" && flow.user_id === null) {
               return {
                 ...flow,

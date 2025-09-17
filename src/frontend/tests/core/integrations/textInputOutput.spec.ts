@@ -49,11 +49,11 @@ test.skip(
         break;
       }
     }
-    await visibleElementHandle.waitFor({
+    await visibleElementHandle!.waitFor({
       state: "visible",
       timeout: 30000,
     });
-    await visibleElementHandle.hover();
+    await visibleElementHandle!.hover();
     await page.mouse.down();
     for (const element of elementsTextInputOutput) {
       if (await element.isVisible()) {
@@ -61,12 +61,12 @@ test.skip(
         break;
       }
     }
-    await visibleElementHandle.waitFor({
+    await visibleElementHandle!.waitFor({
       state: "visible",
       timeout: 30000,
     });
     // Move to the second element
-    await visibleElementHandle.hover();
+    await visibleElementHandle!.hover();
     // Release the mouse
     await page.mouse.up();
     await page.getByTestId("sidebar-search-input").click();
@@ -87,12 +87,12 @@ test.skip(
         break;
       }
     }
-    await visibleElementHandle.waitFor({
+    await visibleElementHandle!.waitFor({
       state: "visible",
       timeout: 30000,
     });
     // Click and hold on the first element
-    await visibleElementHandle.hover();
+    await visibleElementHandle!.hover();
     await page.mouse.down();
     const elementTextOutputInput = await page
       .getByTestId("handle-textoutput-shownode-inputs-left")
@@ -103,12 +103,12 @@ test.skip(
         break;
       }
     }
-    await visibleElementHandle.waitFor({
+    await visibleElementHandle!.waitFor({
       state: "visible",
       timeout: 30000,
     });
     // Move to the second element
-    await visibleElementHandle.hover();
+    await visibleElementHandle!.hover();
     // Release the mouse
     await page.mouse.up();
     await page
