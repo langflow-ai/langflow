@@ -180,6 +180,7 @@ cleanup_old_images() {
     else
       ok "No POSTGRES_IMAGE found in env file"
     fi
+  fi
 
   local images
   images=$(docker images --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedAt}}' \
