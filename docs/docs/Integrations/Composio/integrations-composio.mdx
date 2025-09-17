@@ -26,8 +26,8 @@ The **Composio** bundle includes an aggregate **Composio Tools** component and t
 - **Linear**
 - **Outlook**
 - **Reddit**
-- **Slack**
-- **Slackbot**
+- **Slack** (your Slack account)
+- **Slackbot** (bot integration)
 - **Supabase**
 - **Todoist**
 - **Youtube**
@@ -155,7 +155,7 @@ All single-service Composio components have the same parameters, and the **Compo
 | entity_id | String | Input parameter. The entity ID for the Composio account. Default: `default`. This parameter is hidden by default in the visual editor. If you need to set this parameter, you can access it through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus). |
 | api_key | SecretString | Input parameter. The Composio API key for authentication with the Composio platform. Make sure the key authorizes the specific service that you want to use. For more information, see [Composio authentication](#composio-authentication). |
 | tool_name | Connection | Input parameter for the **Composio Tools** component only. Select the Composio service (tool) to connect to. |
-| action | List | Input parameter. Select actions to use. Available actions vary by service. |
+| action | List | Input parameter. Select actions to use. Available actions vary by service. Some actions might require premium access to a particular service. |
 
 ## Composio authentication
 
