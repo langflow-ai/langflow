@@ -1888,7 +1888,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_openai",
-                    "version": "0.3.23"
+                    "version": "0.3.32"
                   },
                   {
                     "name": "lfx",
