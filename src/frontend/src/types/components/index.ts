@@ -631,6 +631,11 @@ export type chatMessagePropsType = {
   playgroundPage?: boolean;
 };
 
+export type errorMessagePropsType = {
+  chat: Message;
+  lastMessage: boolean;
+};
+
 export type genericModalPropsType = {
   field_name?: string;
   setValue: (value: string) => void;
