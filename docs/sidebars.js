@@ -471,7 +471,7 @@ module.exports = {
         {
           type: "doc",
           id: "Support/luna-for-langflow",
-          label: "IBM Elite Support for Langflow",
+          label: "Enterprise support",
         },
       ],
     },
