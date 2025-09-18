@@ -219,6 +219,10 @@ For detailed information about database configuration, see [Memory management op
 | `LANGFLOW_BUNDLE_URLS` | List[String] | `[]` | A list of URLs from which to load component bundles and flows. Supports GitHub URLs. If LANGFLOW_AUTO_LOGIN is enabled, flows from these bundles are loaded into the database. |
 | `LANGFLOW_LOAD_FLOWS_PATH` | String | Not set | Path to a directory containing flow JSON files to be loaded on startup. Note that this feature only works if `LANGFLOW_AUTO_LOGIN` is enabled. |
 | `LANGFLOW_CREATE_STARTER_PROJECTS` | Boolean | True | Whether to create templates during initialization. If false, Langflow doesn't create templates, and `LANGFLOW_UPDATE_STARTER_PROJECTS` is treated as false. |
+| `LANGFLOW_CORS_ALLOW_CREDENTIALS` | Boolean | True | Whether to allow credentials such as cookies and authorization headers in CORS requests. |
+| `LANGFLOW_CORS_ALLOW_HEADERS` | List[String] or String | `*` | The allowed headers for CORS requests. Can be a comma-separated string or list of headers like `Content-Type,Authorization`. Use `*` to allow all headers. |
+| `LANGFLOW_CORS_ALLOW_METHODS` | List[String] or String | `*` | The allowed HTTP methods for CORS requests. Can be a comma-separated string or list of methods like `GET,POST,PUT,DELETE`. Use `*` to allow all methods. |
+| `LANGFLOW_CORS_ORIGINS` | String | `*` | Comma-separated list of allowed CORS origins. Use `*` for wildcard, or specify specific origins like `https://yourdomain.com,https://anotherdomain.com`. |
 | `LANGFLOW_UPDATE_STARTER_PROJECTS` | Boolean | True | Whether to update templates with the latest component versions when initializing after an upgrade. |
 | `LANGFLOW_LAZY_LOAD_COMPONENTS` | Boolean | False | If true, Langflow only partially loads components at startup and fully loads them on demand. This significantly reduces startup time but may cause a slight delay when a component is first used. |
 | `LANGFLOW_EVENT_DELIVERY` | String | `streaming` | How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'. |

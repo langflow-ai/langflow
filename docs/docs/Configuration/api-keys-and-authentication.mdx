@@ -260,6 +260,33 @@ LANGFLOW_NEW_USER_IS_ACTIVE=False
 Only superusers can manage user accounts for a Langflow server, but user management only matters if your server has authentication enabled.
 For more information, see [Start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled).
 
+### LANGFLOW_CORS_ORIGINS and LANGFLOW_CORS_ALLOW_CREDENTIALS {#cors-configuration-for-authentication}
+
+Cross-Origin Resource Sharing (CORS) configuration controls how authentication credentials are handled when your Langflow frontend and backend are served from different origins.
+
+The current default configuration allows all origins (`*`) with credentials enabled, which can be a security risk in production environments.
+
+```text
+LANGFLOW_CORS_ORIGINS=*
+LANGFLOW_CORS_ALLOW_CREDENTIALS=true
+```
+
+The default settings enable the following:
+- Any website can make requests to your Langflow API.
+- Any website can include credentials in cross-origin requests, including authentication cookies and authorization headers.
+
+Production deployments should specify exact origins in `LANGFLOW_CORS_ORIGINS`.
+
+```text
+LANGFLOW_CORS_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
+LANGFLOW_CORS_ALLOW_CREDENTIALS=true
+```
+
+In a future release, if you configure CORS with a wildcard origin using `LANGFLOW_CORS_ORIGINS=*`, the Langflow server will automatically disable credentialed requests such as cookies, authorization headers, and TLS client certificates.
+This change prevents insecure configurations where credentials could be exposed to all origins.
+
+For more information about all Langflow environment variables, see [Environment variables](/environment-variables#supported-variables).
+
 ## Start a Langflow server with authentication enabled
 
 This section shows you how to use the [authentication environment variables](/api-keys-and-authentication#authentication-environment-variables) to deploy a Langflow server with authentication enabled.
