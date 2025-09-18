@@ -3,7 +3,7 @@
 This module provides a unified interface for extracting metadata from different
 vector store backends, making metadata operations provider-agnostic.
 """
-# ruff: noqa: BLE001, G004, ARG002, TRY401
+# ruff: noqa: BLE001, G004, TRY401, TRY300
 
 from __future__ import annotations
 
@@ -183,31 +183,64 @@ class ChromaMetadataAdapter(MetadataAdapter):
 
 
 class OpenSearchMetadataAdapter(MetadataAdapter):
-    """Metadata adapter for OpenSearch vector stores (including mock)."""
+    """Metadata adapter for OpenSearch vector stores."""
 
     def get_documents_and_metadata(self, *, include_embeddings: bool = False) -> dict[str, Any]:
         """Get documents and metadata from OpenSearch."""
         try:
-            include_list = ["documents", "metadatas"]
-            if include_embeddings:
-                include_list.append("embeddings")
+            if hasattr(self.vector_store, "get"):
+                include_list = ["documents", "metadatas"]
+                if include_embeddings:
+                    include_list.append("embeddings")
+                return self.vector_store.get(include=include_list)
 
-            return self.vector_store.get(include=include_list)
+            if hasattr(self.vector_store, "search"):
+                response = self.vector_store.search(
+                    index=getattr(self.vector_store, "_index_name", "langflow"),
+                    body={
+                        "query": {"match_all": {}},
+                        "size": 1000,
+                        "_source": True,
+                    },
+                )
+
+                hits = response.get("hits", {}).get("hits", [])
+                documents = []
+                metadatas = []
+
+                for hit in hits:
+                    source = hit.get("_source", {})
+                    text = source.get("text", "")
+                    documents.append(text)
+
+                    metadata = {k: v for k, v in source.items() if k != "text"}
+                    metadatas.append(metadata)
+
+                result = {"documents": documents, "metadatas": metadatas}
+                if include_embeddings:
+                    result["embeddings"] = []
+
+                return result
+            # Fallback - return empty
+            return {"documents": [], "metadatas": [], "embeddings": [] if include_embeddings else None}
+
         except Exception as e:
-            logger.warning(f"Error getting documents from OpenSearch: {e}")
+            logger.warning("Error getting documents from OpenSearch: %s", e)
             return {"documents": [], "metadatas": [], "embeddings": [] if include_embeddings else None}
 
     def get_document_count(self) -> int:
         """Get document count from OpenSearch."""
         try:
-            # For mock implementation, count documents directly
-            if hasattr(self.vector_store, "_documents"):
-                return len(self.vector_store._documents)
-            # For real OpenSearch, would query the index
-            result = self.vector_store.get()
-            return len(result.get("documents", []))
+            if hasattr(self.vector_store, "get"):
+                result = self.vector_store.get()
+                return len(result.get("documents", []))
+            if hasattr(self.vector_store, "count"):
+                index_name = getattr(self.vector_store, "_index_name", "langflow")
+                response = self.vector_store.count(index=index_name, body={"query": {"match_all": {}}})
+                return response.get("count", 0)
+            return 0
         except Exception as e:
-            logger.warning(f"Error getting document count from OpenSearch: {e}")
+            logger.warning("Error getting document count from OpenSearch: %s", e)
             return 0
 
     def get_collection_info(self) -> dict[str, Any]:
@@ -228,13 +261,11 @@ class OpenSearchMetadataAdapter(MetadataAdapter):
         return info
 
     def supports_embeddings_retrieval(self) -> bool:
-        """OpenSearch mock doesn't support embeddings retrieval yet."""
-        # For real OpenSearch implementation, this would check if embeddings are stored
+        """OpenSearch doesn't support embeddings retrieval yet."""
         return False
 
-    def get_embeddings_for_documents(self, document_ids: list[str]) -> dict[str, list[float]]:
+    def get_embeddings_for_documents(self, _document_ids: list[str]) -> dict[str, list[float]]:
         """Get embeddings for specific documents from OpenSearch."""
-        # Mock implementation doesn't support embeddings yet
         return {}
 
     def get_provider_specific_metadata(self) -> dict[str, Any]:
@@ -275,20 +306,28 @@ def create_metadata_adapter(vector_store: VectorStoreProtocol, kb_path: Path) ->
     # Import here to avoid circular imports
     from pathlib import Path  # noqa: F401
 
-    from langflow.base.knowledge_bases.vector_store_factory import ChromaVectorStoreAdapter, MockOpenSearchVectorStore
+    from langflow.base.knowledge_bases.vector_store_factory import (
+        ChromaVectorStoreAdapter,
+        OpenSearchVectorStoreAdapter,
+    )
 
-    # Direct type checking with our specific adapter types
     if isinstance(vector_store, ChromaVectorStoreAdapter):
         return ChromaMetadataAdapter(vector_store, kb_path)
-    if isinstance(vector_store, MockOpenSearchVectorStore):
+    if isinstance(vector_store, OpenSearchVectorStoreAdapter):
         return OpenSearchMetadataAdapter(vector_store, kb_path)
     # Fallback to attribute-based detection for any other implementations
     store_type = type(vector_store).__name__.lower()
-    if hasattr(vector_store, "opensearch_url") or hasattr(vector_store, "index_name"):
-        logger.info(f"Detected OpenSearch-like vector store: {store_type}")
+    # Check for real OpenSearch client
+    if "opensearch" in store_type or hasattr(vector_store, "_index_name"):
+        logger.info("Detected OpenSearch vector store: %s", store_type)
         return OpenSearchMetadataAdapter(vector_store, kb_path)
-    if hasattr(vector_store, "_collection") or hasattr(vector_store, "_client"):
-        logger.info(f"Detected Chroma-like vector store: {store_type}")
+    # Check for Chroma adapter or direct Chroma client
+    if (
+        hasattr(vector_store, "_collection")
+        or hasattr(vector_store, "_client")
+        or isinstance(vector_store, ChromaVectorStoreAdapter)
+    ):
+        logger.info("Detected Chroma-like vector store: %s", store_type)
         return ChromaMetadataAdapter(vector_store, kb_path)
     error_msg = f"Unsupported vector store type: {store_type}"
     raise ValueError(error_msg)
