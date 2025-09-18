@@ -30,7 +30,7 @@ from lfx.schema.message import Message
 class FileComponent(BaseFileComponent):
     """File component with optional Docling processing (isolated in a subprocess)."""
 
-    display_name = "File"
+    display_name = "Read File"
     description = "Loads content from files with optional advanced document processing and export using Docling."
     documentation: str = "https://docs.langflow.org/components-data#file"
     icon = "file-text"
