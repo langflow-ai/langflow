@@ -6,6 +6,7 @@ containing LFX graph variables.
 
 import ast
 import importlib.util
+import inspect
 import json
 import sys
 from contextlib import contextmanager
@@ -71,26 +72,39 @@ def _validate_graph_instance(graph_obj: Any) -> Graph:
     return graph_obj
 
 
-def load_graph_from_script(script_path: Path) -> Graph:
-    """Load and execute a Python script to extract the 'graph' variable.
+async def load_graph_from_script(script_path: Path) -> Graph:
+    """Load and execute a Python script to extract the 'graph' variable or call 'get_graph' function.
 
     Args:
         script_path (Path): Path to the Python script file
 
     Returns:
-        dict: Information about the loaded graph variable including the graph object itself
+        Graph: The loaded and validated graph instance
     """
     try:
         # Load the module
         module = _load_module_from_script(script_path)
 
-        # Check if 'graph' variable exists
-        if not hasattr(module, "graph"):
-            msg = "No 'graph' variable found in the executed script"
+        graph_obj = None
+
+        # First, try to get graph from 'get_graph' function (preferred for async code)
+        if hasattr(module, "get_graph") and callable(module.get_graph):
+            get_graph_func = module.get_graph
+
+            # Check if get_graph is async and handle accordingly
+            if inspect.iscoroutinefunction(get_graph_func):
+                graph_obj = await get_graph_func()
+            else:
+                graph_obj = get_graph_func()
+
+        # Fallback to 'graph' variable for backward compatibility
+        elif hasattr(module, "graph"):
+            graph_obj = module.graph
+
+        if graph_obj is None:
+            msg = "No 'graph' variable or 'get_graph()' function found in the executed script"
             raise ValueError(msg)
 
-        # Extract graph information
-        graph_obj = module.graph
         return _validate_graph_instance(graph_obj)
 
     except (
