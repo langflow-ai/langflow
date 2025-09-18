@@ -229,9 +229,8 @@ def register_all_service_factories() -> None:
     from lfx.services.manager import get_service_manager
 
     service_manager = get_service_manager()
-    from lfx.services.settings import factory as settings_factory
-
     from lfx.services.mcp_composer import factory as mcp_composer_factory
+    from lfx.services.settings import factory as settings_factory
 
     from langflow.services.auth import factory as auth_factory
     from langflow.services.cache import factory as cache_factory

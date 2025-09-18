@@ -21,8 +21,8 @@ from lfx.inputs.inputs import HandleInput
 from lfx.io import BoolInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput, TableInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame  # noqa: TC002
-from lfx.schema.dotdict import dotdict  # noqa: TC002
+from lfx.schema.dataframe import DataFrame
+from lfx.schema.dotdict import dotdict
 from lfx.schema.table import EditMode
 
 from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases

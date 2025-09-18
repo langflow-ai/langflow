@@ -15,8 +15,7 @@ from lfx.schema.data import Data
 TEXT_FILE_TYPES = [
     "csv",
     "json",
-    "pdf"
-    "txt",
+    "pdftxt",
     "md",
     "mdx",
     "csv",

@@ -228,7 +228,6 @@ class Message(Data):
                 case _ if message.get("type") == "tool":
                     messages.append(ToolMessage(content=message.get("content")))
 
-
         self.prompt["kwargs"]["messages"] = messages
         return load(self.prompt)
 

@@ -14,6 +14,12 @@ from uuid import UUID
 from anyio import BrokenResourceError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse
+from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
+from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.log import logger
+from lfx.services.deps import get_settings_service, session_scope
+from lfx.services.mcp_composer.service import MCPComposerError, MCPComposerService
+from lfx.services.schema import ServiceType
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
@@ -47,12 +53,6 @@ from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service
-from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from lfx.base.mcp.util import sanitize_mcp_name
-from lfx.log import logger
-from lfx.services.deps import get_settings_service, session_scope
-from lfx.services.mcp_composer.service import MCPComposerError, MCPComposerService
-from lfx.services.schema import ServiceType
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 

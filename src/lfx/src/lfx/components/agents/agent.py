@@ -2,10 +2,9 @@ import json
 import re
 
 from langchain_core.tools import StructuredTool, Tool
-from lfx.base.agents.agent import LCToolsAgentComponent
-from lfx.inputs.inputs import BoolInput
 from pydantic import ValidationError
 
+from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.events import ExceptionWithMessageError
 from lfx.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
@@ -20,7 +19,8 @@ from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComp
 from lfx.custom.custom_component.component import get_component_toolkit
 from lfx.custom.utils import update_component_build_config
 from lfx.helpers.base_model import build_model_from_schema
-from lfx.io import DropdownInput, Output, MultilineInput, IntInput, TableInput
+from lfx.inputs.inputs import BoolInput
+from lfx.io import DropdownInput, IntInput, MultilineInput, Output, TableInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict

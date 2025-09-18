@@ -525,7 +525,6 @@ class Settings(BaseSettings):
                 logger.debug(f"Updated {key}")
             logger.debug(f"{key}: {getattr(self, key)}")
 
-    
     @property
     def voice_mode_available(self) -> bool:
         """Check if voice mode is available by testing webrtcvad import."""

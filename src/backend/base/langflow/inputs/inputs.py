@@ -41,13 +41,13 @@ from lfx.inputs.inputs import (
 
 __all__ = [
     "AuthInput",
-    "BoolInput", 
+    "BoolInput",
     "CodeInput",
     "DataFrameInput",
     "DataInput",
     "DefaultPromptField",
     "DictInput",
-    "DropdownInput", 
+    "DropdownInput",
     "FileInput",
     "FloatInput",
     "HandleInput",
