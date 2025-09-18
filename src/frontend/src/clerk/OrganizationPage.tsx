@@ -15,7 +15,7 @@ export default function OrganizationSwitcherPage() {
   const { mutateAsync: logout } = useLogout();
   const bootstrapped = useRef(false);
   const { login } = useContext(AuthContext);
-
+  const justLoggedIn = useRef(false);
   const searchParams = new URLSearchParams(location.search);
   const isOrgSelectedManually = searchParams.get("selected") === "true";
 
@@ -35,42 +35,40 @@ useEffect(() => {
         user?.primaryEmailAddress?.emailAddress ||
         user?.id ||
         "clerk_user";
-
-      // Step 1: Create backend organization (DB provisioning or linking)
-      console.debug("[OrgSwitcherPage] Calling createOrganisation()");
-      await createOrganisation(orgToken);
-      console.debug("[OrgSwitcherPage] createOrganisation() completed");
-
-      // Step 2: Ensure Langflow user exists via /whoami or /users
-      console.debug("[OrgSwitcherPage] Calling ensureLangflowUser()");
-      const { justCreated } = await ensureLangflowUser(orgToken, username);
-
-      if (justCreated) {
-        console.warn(
-          "[OrgSwitcherPage] User just created, forcing logout to trigger backend login via Clerk"
-        );
-        // ⚠️ Important: don't mark org selected yet
-        await logout();
-        navigate("/login", { replace: true });
-        return;
+      try{
+        // Step 1: Create backend organization (DB provisioning or linking)
+        console.debug("[OrgSwitcherPage] Calling createOrganisation()");
+        await createOrganisation(orgToken);
+        console.debug("[OrgSwitcherPage] createOrganisation() completed");
+  
+        // Step 2: Ensure Langflow user exists via /whoami or /users
+        console.debug("[OrgSwitcherPage] Calling ensureLangflowUser()");
+        await ensureLangflowUser(orgToken, username);
+        // Step 3: Backend login using dummy password flow
+        console.debug("[OrgSwitcherPage] Calling backendLogin()");
+        const tokens = await backendLogin(username, orgToken);
+        console.debug("[OrgSwitcherPage] backendLogin() succeeded");
+  
+        // Step 4: Save access & refresh tokens into store and cookies
+        login(orgToken, "login", tokens.refresh_token);
+        justLoggedIn.current = true;
+  
+        // Step 5: Only now mark org as selected
+        authStore.getState().setIsOrgSelected(true);
+        sessionStorage.setItem("isOrgSelected", "true");
+        console.debug("[OrgSwitcherPage] Org selection state marked");
+  
+        // Step 6: Navigate to /flows
+        console.debug("[OrgSwitcherPage] Redirecting to /flows");
+        navigate("/flows", { replace: true });
+      }catch(err){
+        if(!justLoggedIn.current){
+          console.error("[OrgSwitcherPage] Error during bootstrap", err);
+          await logout();
+        }else{
+          console.warn("[OrgSwitcherPage] Ignoring error after successful login", err);
+        }
       }
-
-      // Step 3: Backend login using dummy password flow
-      console.debug("[OrgSwitcherPage] Calling backendLogin()");
-      const tokens = await backendLogin(username, orgToken);
-      console.debug("[OrgSwitcherPage] backendLogin() succeeded");
-
-      // Step 4: Save access & refresh tokens into store and cookies
-      login(orgToken, "login", tokens.refresh_token);
-
-      // Step 5: Only now mark org as selected
-      authStore.getState().setIsOrgSelected(true);
-      sessionStorage.setItem("isOrgSelected", "true");
-      console.debug("[OrgSwitcherPage] Org selection state marked");
-
-      // Step 6: Navigate to /flows
-      console.debug("[OrgSwitcherPage] Redirecting to /flows");
-      navigate("/flows", { replace: true });
     })().catch((err) => {
       console.error("[OrgSwitcherPage] Bootstrap failed", err);
       bootstrapped.current = false;
