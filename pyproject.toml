@@ -244,7 +244,9 @@ postgresql = [
 [tool.uv]
 override-dependencies = [
     # temporary force a newer python-pptx
-    "python-pptx>=1.0.2"
+    "python-pptx>=1.0.2",
+    # Fix chromadb version for Python 3.12 < 3.12.4 to avoid tokenizers conflict
+    'chromadb==0.5.20; python_version >= "3.12" and python_version < "3.12.4"',
 ]
 
 [project.scripts]
