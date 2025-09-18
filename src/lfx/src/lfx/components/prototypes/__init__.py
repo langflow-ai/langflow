@@ -12,7 +12,7 @@ from lfx.components._importing import import_mod
 _dynamic_imports = {
     "PythonFunctionComponent": "python_function",
 }
-s
+
 # __all__ = ["KnowledgeIngestionComponent", "KnowledgeRetrievalComponent"]
 __all__ = ["PythonFunctionComponent"]
 
