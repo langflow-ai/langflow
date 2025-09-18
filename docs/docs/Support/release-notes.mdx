@@ -87,6 +87,17 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - The **Local DB** component is now in legacy status.
 Replace this component with the [**Chroma DB** component](/bundles-chroma).
 
+### Breaking changes
+
+- Authentication behavior changes for `LANGFLOW_AUTO_LOGIN` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN`
+
+    In Langflow version 1.6, `LANGFLOW_AUTO_LOGIN=True` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False` is the default behavior. This is a **breaking change** introduced in v1.6.
+    API Keys are now required to authenticate requests when `LANGFLOW_AUTO_LOGIN=True` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False`.
+    You may revert to prior behavior by setting `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=True`.
+
+    The only exceptions are some MCP endpoints that use the authentication settings from your Langflow projects' [MCP servers](/mcp-server).
+    For more information, see [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login).
+
 ## 1.5.0
 
 Highlights of this release include the following changes.
