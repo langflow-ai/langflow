@@ -27,23 +27,47 @@ async def get_starter_projects_from_api(host: str, access_token: str) -> list[di
     """Get starter projects from Langflow API."""
     import httpx
 
+    # Ensure proper URL formatting
+    base_host = host.rstrip("/")
+    url = f"{base_host}/api/v1/starter-projects/"
+    print(f"   🔍 Fetching starter projects from: {url}")
+
     try:
         async with httpx.AsyncClient() as client:
+            # Try with authentication first
             response = await client.get(
-                f"{host}/api/v1/starter-projects/",
+                url,
                 headers={"Authorization": f"Bearer {access_token}"},
                 timeout=30.0,
             )
+
+            print(f"   📡 Response status: {response.status_code}")
+
+            # If auth fails, try without authentication (some endpoints might be public)
+            if response.status_code == 401:
+                print("   🔄 Trying without authentication...")
+                response = await client.get(url, timeout=30.0)
+                print(f"   📡 Response status (no auth): {response.status_code}")
 
             if response.status_code != 200:
                 print(f"⚠️  Failed to get starter projects: {response.status_code}")
                 print(f"Response: {response.text}")
                 return []
 
-            return response.json()
+            # Check if response is empty
+            if not response.text.strip():
+                print("⚠️  Empty response from starter projects endpoint")
+                return []
+
+            data = response.json()
+            print(f"   ✅ Found {len(data)} starter projects")
+            return data
 
     except Exception as e:
         print(f"⚠️  Error fetching starter projects: {e}")
+        if hasattr(e, "response"):
+            print(f"   Status code: {e.response.status_code}")
+            print(f"   Response text: {e.response.text}")
         return []
 
 
