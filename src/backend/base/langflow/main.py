@@ -177,17 +177,6 @@ def get_lifespan(*, fix_migration=False, version=None):
                     f"Default super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
                 )
 
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Loading bundles")
-            temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
-            get_settings_service().settings.components_path.extend(bundles_components_paths)
-            await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Caching types")
-            all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
-            await logger.adebug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
             await logger.adebug("Initializing super user")
             await initialize_auto_login_default_superuser()
             await logger.adebug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")

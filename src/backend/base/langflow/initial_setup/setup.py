@@ -1008,7 +1008,7 @@ async def initialize_auto_login_default_superuser() -> None:
         return
     # In AUTO_LOGIN mode, always use the default credentials for initial bootstrapping
     # without persisting the password in memory after setup.
-    from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+    from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 
     username = DEFAULT_SUPERUSER
     password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
