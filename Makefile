@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_help
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -199,7 +199,7 @@ fix_codespell: ## run codespell to fix spelling errors
 
 format_backend: ## backend code formatters
 	@uv run ruff check . --fix
-	@uv run ruff format . --config pyproject.toml
+	@uv run ruff format .
 
 format: format_backend format_frontend ## run code formatters
 
@@ -630,12 +630,12 @@ load_test_cliff: ## Find performance cliff with step ramp (5->50 users, 30s step
 	cd src/backend/tests/locust && \
 	if [ "$(html)" = "true" ]; then \
 		echo "$(GREEN)Generating HTML report: cliff_test.html$(NC)"; \
-		uv run locust -f locustfile_step_ramp.py --host $(load_test_host) --headless --html cliff_test.html; \
+		uv run locust -f lfx_step_ramp.py --host $(load_test_host) --headless --html cliff_test.html; \
 	else \
-		uv run locust -f locustfile_step_ramp.py --host $(load_test_host) --headless; \
+		uv run locust -f lfx_step_ramp.py --host $(load_test_host) --headless; \
 	fi
 
-load_test_quick: ## Quick 30-user load test (60s). Options: html=true, load_test_host, load_test_flow_id, load_test_api_key
+load_test_lfx_quick: ## Quick LFX load test (30 users, 60s). Options: html=true, load_test_host, load_test_flow_id, load_test_api_key
 	@echo "$(YELLOW)Running quick 30-user load test (60 seconds)$(NC)"
 	@export FLOW_ID=$(load_test_flow_id) && \
 	export API_KEY=$(load_test_api_key) && \
@@ -643,10 +643,85 @@ load_test_quick: ## Quick 30-user load test (60s). Options: html=true, load_test
 	cd src/backend/tests/locust && \
 	if [ "$(html)" = "true" ]; then \
 		echo "$(GREEN)Generating HTML report: quick_test.html$(NC)"; \
-		uv run locust -f locustfile_complex_serve.py --host $(load_test_host) --headless -u 30 -r 5 -t 60s --html quick_test.html; \
+		uv run locust -f lfx_serve_locustfile.py --host $(load_test_host) --headless -u 30 -r 5 -t 60s --html quick_test.html; \
 	else \
-		uv run locust -f locustfile_complex_serve.py --host $(load_test_host) --headless -u 30 -r 5 -t 60s; \
+		uv run locust -f lfx_serve_locustfile.py --host $(load_test_host) --headless -u 30 -r 5 -t 60s; \
 	fi
+
+######################
+# ENHANCED LOAD TESTING
+######################
+
+# Enhanced load testing system with API-based flow loading
+load_test_setup: ## Set up load test environment with starter project flows
+	@echo "$(YELLOW)Setting up Langflow load test environment$(NC)"
+	@cd src/backend/tests/locust && uv run python langflow_setup_test.py --interactive
+
+load_test_setup_basic: ## Set up load test environment with Basic Prompting flow
+	@echo "$(YELLOW)Setting up load test environment with Basic Prompting flow$(NC)"
+	@cd src/backend/tests/locust && uv run python langflow_setup_test.py --flow "Basic Prompting" --save-credentials load_test_creds.json
+
+load_test_list_flows: ## List available starter project flows
+	@echo "$(YELLOW)Listing available starter project flows$(NC)"
+	@cd src/backend/tests/locust && uv run python langflow_setup_test.py --list-flows
+
+load_test_run: ## Run load test with saved credentials (requires setup first)
+	@echo "$(YELLOW)Running load test with enhanced error logging$(NC)"
+	@if [ ! -f "src/backend/tests/locust/load_test_creds.json" ]; then \
+		echo "$(RED)Error: No credentials found. Run 'make load_test_setup_basic' first$(NC)"; \
+		exit 1; \
+	fi
+	@cd src/backend/tests/locust && uv run python langflow_run_load_test.py --headless --users 25 --duration 120 --no-start-langflow --html load_test_report.html --csv load_test_results
+
+load_test_langflow_quick: ## Quick Langflow load test (10 users, 30s) with HTML report
+	@echo "$(YELLOW)Running quick Langflow load test with HTML report$(NC)"
+	@if [ ! -f "src/backend/tests/locust/load_test_creds.json" ]; then \
+		echo "$(RED)Error: No credentials found. Run 'make load_test_setup_basic' first$(NC)"; \
+		exit 1; \
+	fi
+	@cd src/backend/tests/locust && uv run python langflow_run_load_test.py --headless --users 10 --duration 30 --no-start-langflow --html quick_test_report.html
+
+load_test_stress: ## Stress test (100 users, 5 minutes) with comprehensive reporting
+	@echo "$(YELLOW)Running stress test with comprehensive reporting$(NC)"
+	@if [ ! -f "src/backend/tests/locust/load_test_creds.json" ]; then \
+		echo "$(RED)Error: No credentials found. Run 'make load_test_setup_basic' first$(NC)"; \
+		exit 1; \
+	fi
+	@cd src/backend/tests/locust && uv run python langflow_run_load_test.py --headless --users 100 --spawn-rate 5 --duration 300 --no-start-langflow --html stress_test_report.html --csv stress_test_results --shape ramp100
+
+load_test_example: ## Run complete example workflow (setup + test + reports)
+	@echo "$(YELLOW)Running complete load test example workflow$(NC)"
+	@cd src/backend/tests/locust && uv run python langflow_example_workflow.py --auto
+
+load_test_clean: ## Clean up load test files and credentials
+	@echo "$(YELLOW)Cleaning up load test files$(NC)"
+	@cd src/backend/tests/locust && rm -f *.json *.html *.csv *.log
+	@echo "$(GREEN)Load test files cleaned$(NC)"
+
+load_test_help: ## Show detailed load testing help
+	@echo "$(GREEN)Langflow Enhanced Load Testing System$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Quick Start:$(NC)"
+	@echo "  1. make load_test_setup_basic    # Set up with Basic Prompting flow"
+	@echo "  2. make load_test_langflow_quick # Run quick Langflow test"
+	@echo "  3. Open quick_test_report.html  # View results"
+	@echo ""
+	@echo "$(YELLOW)Available Commands:$(NC)"
+	@echo "  load_test_setup        - Interactive flow selection setup"
+	@echo "  load_test_setup_basic  - Quick setup with Basic Prompting"
+	@echo "  load_test_list_flows   - List available starter flows"
+	@echo "  load_test_run          - Standard load test (25 users, 2 min)"
+	@echo "  load_test_langflow_quick - Quick Langflow test (10 users, 30s)"
+	@echo "  load_test_quick        - Quick complex serve test (30 users, 60s)"
+	@echo "  load_test_stress       - Stress test (100 users, 5 min)"
+	@echo "  load_test_example      - Complete example workflow"
+	@echo "  load_test_clean        - Clean up generated files"
+	@echo ""
+	@echo "$(YELLOW)Generated Reports:$(NC)"
+	@echo "  - *.html files         - Interactive HTML reports"
+	@echo "  - *_results_*.csv      - Raw performance data"
+	@echo "  - *_detailed_errors_*.log - Comprehensive error logs"
+	@echo "  - *_error_summary_*.json  - Error analysis"
 
 ######################
 # INCLUDE FRONTEND MAKEFILE
