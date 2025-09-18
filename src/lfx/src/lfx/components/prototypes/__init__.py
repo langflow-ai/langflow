@@ -8,12 +8,14 @@ if TYPE_CHECKING:
     from langflow.components.knowledge_bases.ingestion import KnowledgeIngestionComponent
     from langflow.components.knowledge_bases.retrieval import KnowledgeRetrievalComponent
 
-_dynamic_imports = {
-    "KnowledgeIngestionComponent": "ingestion",
-    "KnowledgeRetrievalComponent": "retrieval",
-}
+# _dynamic_imports = {
+#     "KnowledgeIngestionComponent": "ingestion",
+#     "KnowledgeRetrievalComponent": "retrieval",
+# }
+_dynamic_imports = {}
 
-__all__ = ["KnowledgeIngestionComponent", "KnowledgeRetrievalComponent"]
+# __all__ = ["KnowledgeIngestionComponent", "KnowledgeRetrievalComponent"]
+__all__ = []
 
 
 def __getattr__(attr_name: str) -> Any:
