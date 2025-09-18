@@ -1,6 +1,7 @@
-import { expect, type Page, test } from "@playwright/test";
+import { type Page } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -20,14 +21,11 @@ test(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
       state: "visible",
     });
-    await page.getByTestId("canvas_controls_dropdown").click();
-
     await page.getByTestId("flow_name").click();
     await page.getByTestId("lock-flow-switch").click();
     await page.getByTestId("save-flow-settings").click();
@@ -45,12 +43,10 @@ test(
     });
 
     await page.getByTestId("list-card").first().click();
-    await page.getByTestId("canvas_controls_dropdown").click();
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
       state: "visible",
     });
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     //ensure the UI is updated
     await page.waitForTimeout(1000);
@@ -72,13 +68,11 @@ test(
     });
 
     await page.getByTestId("list-card").first().click();
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
       state: "visible",
     });
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await tryDeleteEdge(page);
     await page.locator(".react-flow__edge-path").nth(0).click();
