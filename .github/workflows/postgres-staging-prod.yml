@@ -256,6 +256,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           source "${GITHUB_WORKSPACE}/deploy_status.env"
+          # Encode container info for safe URL usage
+          CONTAINER_ENCODED=$(echo "$FINAL_CONTAINER" | jq -s -R -r @uri)
+
           gh api repos/${{ github.repository }}/deployments/${{ env.DEPLOYMENT_ID }}/statuses \
-          -F state=$FINAL_STATUS \
-          -F description="$FINAL_DESCRIPTION"
+            -F state=$FINAL_STATUS \
+            -F description="$FINAL_DESCRIPTION" \
+            -F log_url="https://logs.${{ github.repository_owner }}.com/deploy/${{ env.DEPLOYMENT_ID }}?container=${CONTAINER_ENCODED}"
