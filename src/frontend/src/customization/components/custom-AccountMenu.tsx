@@ -1,4 +1,4 @@
-import { AccountMenu } from "@/components/core/appHeaderComponent/components/AccountMenu";
+import { ClerkAccountMenu as AccountMenu } from "./ClerkAccountMenu"
 
 export function CustomAccountMenu() {
   return <AccountMenu />;
