@@ -1,5 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { zoomOut } from "../../utils/zoom-out";
 
 test.skip(
   "user must be able to interact with table input component",
@@ -28,21 +29,13 @@ test.skip(
       },
     );
 
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.waitForSelector('[data-testid="zoom_out"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 3000,
     });
 
-    await page.getByTestId("canvas_controls_dropdown").click();
-
     await page.getByTestId("sidebar-custom-component-button").click();
 
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await zoomOut(page, 2);
 
     await page.getByTestId("div-generic-node").click();
     await page.getByTestId("code-button-modal").click();

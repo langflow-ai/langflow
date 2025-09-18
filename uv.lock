@@ -5803,6 +5803,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "httpx", extra = ["http2"] },
     { name = "json-repair" },
+    { name = "langchain" },
     { name = "langchain-core" },
     { name = "loguru" },
     { name = "nanoid" },
@@ -5821,6 +5822,7 @@ dependencies = [
     { name = "typer" },
     { name = "typing-extensions" },
     { name = "uvicorn" },
+    { name = "validators" },
 ]
 
 [package.dev-dependencies]
@@ -5847,6 +5849,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115.13" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.24.0" },
     { name = "json-repair", specifier = ">=0.30.3" },
+    { name = "langchain", specifier = "~=0.3.23" },
     { name = "langchain-core", specifier = ">=0.3.66" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "nanoid", specifier = ">=2.0.0" },
@@ -5865,6 +5868,7 @@ requires-dist = [
     { name = "typer", specifier = ">=0.16.0" },
     { name = "typing-extensions", specifier = ">=4.14.0" },
     { name = "uvicorn", specifier = ">=0.34.3" },
+    { name = "validators", specifier = ">=0.34.0" },
 ]
 
 [package.metadata.requires-dev]

@@ -1,7 +1,7 @@
-import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import { readFileSync } from "fs";
 import path from "path";
+import { test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
