@@ -187,7 +187,7 @@ async def run(
             verbose_print(f"Type: {graph_info['type']}")
             verbose_print(f"Source: {graph_info['source_line']}")
             verbose_print("Loading and executing script...")
-            graph = load_graph_from_script(script_path)
+            graph = await load_graph_from_script(script_path)
         elif file_extension == ".json":
             verbose_print("Valid JSON flow file detected")
             verbose_print("\nLoading and executing JSON flow...")
