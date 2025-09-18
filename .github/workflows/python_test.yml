@@ -43,6 +43,7 @@ on:
         options:
           - ubuntu-latest
           - self-hosted
+          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
         default: ubuntu-latest
 env:
   POETRY_VERSION: "1.8.2"
@@ -55,7 +56,7 @@ jobs:
   build:
 
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
-    runs-on: ${{ inputs.runs-on || 'ubuntu-latest' }}
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
@@ -121,7 +122,7 @@ jobs:
 
   integration-tests:
     name: Integration Tests - Python ${{ matrix.python-version }}
-    runs-on: ${{ inputs.runs-on || 'ubuntu-latest' }}
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
@@ -146,7 +147,7 @@ jobs:
 
   lfx-tests:
     name: LFX Tests - Python ${{ matrix.python-version }}
-    runs-on: ${{ inputs.runs-on || 'ubuntu-latest' }}
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
@@ -168,7 +169,7 @@ jobs:
 
   test-cli:
     name: Test CLI - Python ${{ matrix.python-version }}
-    runs-on: ${{ inputs.runs-on || 'ubuntu-latest' }}
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}

@@ -51,6 +51,7 @@ on:
         options:
           - ubuntu-latest
           - self-hosted
+          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
         default: ubuntu-latest
 
 
@@ -64,7 +65,7 @@ jobs:
       python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
       release: true
-      runs-on: ${{ inputs.runs_on || 'ubuntu-latest' }}
+      runs-on: ${{ (inputs['runs_on'] && startsWith(format('{0}', inputs['runs_on']), '[') && fromJSON(inputs['runs_on'])) || inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
     secrets: inherit
 
 
