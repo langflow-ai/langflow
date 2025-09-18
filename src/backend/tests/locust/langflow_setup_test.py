@@ -178,12 +178,12 @@ async def setup_langflow_environment(host: str, flow_name: str | None = None, in
 
     async with httpx.AsyncClient(base_url=host, timeout=60.0) as client:
         # Step 1: Health check
-        print("\n1. Checking Langflow health...")
+        print(f"\n1. Checking Langflow health at {host}...")
         try:
             health_response = await client.get("/health")
             if health_response.status_code != 200:
                 raise Exception(f"Health check failed: {health_response.status_code}")
-            print("   ✅ Langflow is running")
+            print("   ✅ Langflow is running and accessible")
         except Exception as e:
             print(f"   ❌ Health check failed: {e}")
             raise
@@ -406,7 +406,9 @@ Examples:
     )
 
     parser.add_argument(
-        "--host", default="http://localhost:7860", help="Langflow host URL (default: http://localhost:7860)"
+        "--host",
+        default="http://localhost:7860",
+        help="Langflow host URL (default: http://localhost:7860, use https:// for remote instances)",
     )
     parser.add_argument("--flow", help="Name of the starter project flow to use")
     parser.add_argument("--interactive", action="store_true", help="Interactive flow selection")

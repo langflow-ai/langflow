@@ -193,7 +193,9 @@ Examples:
 
     # Langflow options
     parser.add_argument(
-        "--host", default="http://localhost:7860", help="Langflow host URL (default: http://localhost:7860)"
+        "--host",
+        default="http://localhost:7860",
+        help="Langflow host URL (default: http://localhost:7860, use https:// for remote instances)",
     )
     parser.add_argument("--port", type=int, default=7860, help="Port to start Langflow on (default: 7860)")
     parser.add_argument(
@@ -229,6 +231,12 @@ Examples:
     try:
         # Start Langflow if needed
         if not args.no_start_langflow:
+            if args.host.startswith("https://") or not args.host.startswith("http://localhost"):
+                print(f"⚠️  Remote host detected: {args.host}")
+                print("   For remote instances, use --no-start-langflow flag")
+                print("   Example: --host https://your-remote-instance.com --no-start-langflow")
+                sys.exit(1)
+
             langflow_process = start_langflow(args.host, args.port)
             if not langflow_process:
                 print("❌ Failed to start Langflow")
@@ -236,8 +244,15 @@ Examples:
         # Just check if it's running
         elif not check_langflow_running(args.host):
             print(f"❌ Langflow is not running at {args.host}")
-            print("Either start Langflow manually or remove --no-start-langflow flag")
+            if args.host.startswith("https://"):
+                print("   Make sure your remote Langflow instance is accessible")
+            else:
+                print("Either start Langflow manually or remove --no-start-langflow flag")
             sys.exit(1)
+        else:
+            print(f"🔗 Using existing Langflow instance at {args.host}")
+            if args.host.startswith("https://"):
+                print("   ✅ Remote instance mode")
 
         # Run the load test
         run_locust_test(args)
