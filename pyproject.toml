@@ -342,6 +342,34 @@ external = ["RUF027"]
     "SLF001",
     "BLE001",  # allow broad-exception catching in tests
 ]
+"src/backend/tests/locust/*" = [
+    "D1",      # Missing docstrings (CLI tools don't need full docstrings)
+    "T201",    # Print statements (needed for CLI output)
+    "S603",    # Subprocess calls (needed for running commands)
+    "S607",    # Starting process with partial executable path
+    "S104",    # Binding to all interfaces (needed for Langflow server)
+    "S105",    # Hardcoded passwords (test credentials)
+    "FBT001",  # Boolean-typed positional arguments (common in CLI)
+    "FBT002",  # Boolean default arguments (common in CLI tools)
+    "TRY002",  # Custom exceptions (generic exceptions OK for CLI)
+    "TRY003",  # Long exception messages (descriptive errors for users)
+    "TRY300",  # Consider moving to else block (return patterns)
+    "EM101",   # String literals in exceptions (user-facing messages)
+    "EM102",   # F-string literals in exceptions (user-facing messages)
+    "EXE001",  # Shebang without executable (may be run via python)
+    "D415",    # First line punctuation (CLI docstrings)
+    "F401",    # Unused imports (imports for availability checking)
+    "PTH123",  # Use Path.open (open() is fine for simple cases)
+    "PTH107",  # Use Path.unlink (os.remove is fine for simple cases)
+    "PTH207",  # Use Path.glob (glob.glob is fine for simple cases)
+    "B007",    # Unused loop variables (tuple unpacking)
+    "PLW0602", # Global variable usage (needed for locust state)
+    "PLW0603", # Global variable updates (needed for locust state)
+    "DTZ005",  # Datetime without timezone (local time is fine for logs)
+    "G004",    # Logging f-strings (detailed error logging)
+    "SIM102",  # Nested if statements (readability over optimization)
+    "E501",    # Line too long (some CLI commands are naturally long)
+]
 
 [tool.ruff.lint.flake8-builtins]
 builtins-allowed-modules = [ "io", "logging", "socket"]
