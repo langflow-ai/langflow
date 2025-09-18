@@ -92,6 +92,7 @@ const SidebarProvider = React.forwardRef<
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
     width?: string;
+    shortcut?: string;
     segmentedSidebar?: boolean;
     defaultSection?: SidebarSection;
     activeSection?: SidebarSection;
@@ -110,6 +111,7 @@ const SidebarProvider = React.forwardRef<
       style,
       children,
       width = SIDEBAR_WIDTH,
+      shortcut,
       segmentedSidebar = false,
       ...props
     },
@@ -193,7 +195,7 @@ const SidebarProvider = React.forwardRef<
     );
 
     useHotkeys(
-      toggleSidebarShortcut,
+      shortcut ?? toggleSidebarShortcut,
       (e: KeyboardEvent) => {
         if (isWrappedWithClass(e, "noflow")) return;
         e.preventDefault();

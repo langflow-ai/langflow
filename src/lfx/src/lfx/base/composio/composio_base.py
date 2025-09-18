@@ -1950,7 +1950,7 @@ class ComposioBaseComponent(Component):
             configured_tools.append(tool)
         return configured_tools
 
-    async def _get_tools(self) -> list[Tool]:
+    def _get_tools(self) -> list[Tool]:
         """Get tools with cached results and optimized name sanitization."""
         composio = self._build_wrapper()
         self.set_default_tools()
