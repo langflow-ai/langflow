@@ -268,6 +268,10 @@ export const lazyIconsMapping = {
     import("@/icons/Pinecone").then((mod) => ({ default: mod.PineconeIcon })),
   Postgres: () =>
     import("@/icons/Postgres").then((mod) => ({ default: mod.PostgresIcon })),
+  PolarisOffice: () =>
+    import("@/icons/PolarisOffice").then((mod) => ({
+      default: mod.PolarisOfficeIcon,
+    })),
   Python: () =>
     import("@/icons/Python").then((mod) => ({ default: mod.PythonIcon })),
   QDrant: () =>

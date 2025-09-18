@@ -129,6 +129,7 @@ dependencies = [
     "aiosqlite==0.21.0",
     "fastparquet>=2024.11.0",
     "traceloop-sdk>=0.43.1",
+    "langchain-polaris-ai-datainsight>=1.0.0",
 ]
 
 [dependency-groups]
