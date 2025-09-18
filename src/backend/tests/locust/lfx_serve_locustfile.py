@@ -1,7 +1,9 @@
-"""Langflow Locust Load Testing File.
+"""LFX Locust Load Testing File.
 
 Based on the weakness-focused stress test scripts with additional user behaviors.
 Includes production-ready fixes for timing, error handling, and reporting.
+
+This file tests the LFX API (complex serve), not the Langflow API.
 
 Usage:
     # Run with web UI (recommended)
@@ -176,8 +178,8 @@ def on_test_stop(environment, **_kwargs):
     _env_bags.pop(environment, None)
 
 
-class BaseLangflowUser(FastHttpUser):
-    """Base class for all Langflow API load testing user types."""
+class BaseLfxUser(FastHttpUser):
+    """Base class for all LFX API load testing user types."""
 
     abstract = True
     REQUEST_TIMEOUT = float(os.getenv("REQUEST_TIMEOUT", "10"))  # Tighter timeout for production
@@ -239,7 +241,7 @@ class BaseLangflowUser(FastHttpUser):
             return response.failure(f"HTTP {response.status_code}")
 
 
-class NormalUser(BaseLangflowUser):
+class NormalUser(BaseLfxUser):
     """Normal user simulating typical API interactions.
 
     Based on the main stress test patterns with realistic message distribution.
@@ -267,7 +269,7 @@ class NormalUser(BaseLangflowUser):
         self.make_request(message_type="complex")
 
 
-class AggressiveUser(BaseLangflowUser):
+class AggressiveUser(BaseLfxUser):
     """Aggressive user with minimal wait times.
 
     Tests the system under extreme concurrent load.
@@ -282,7 +284,7 @@ class AggressiveUser(BaseLangflowUser):
         self.make_request(message_type="simple", tag_suffix="-rapid")
 
 
-class SustainedLoadUser(BaseLangflowUser):
+class SustainedLoadUser(BaseLfxUser):
     """Maintains exactly 1 request/second for steady load testing.
 
     Based on constant throughput testing patterns.
@@ -297,7 +299,7 @@ class SustainedLoadUser(BaseLangflowUser):
         self.make_request(message_type="medium", tag_suffix="-steady")
 
 
-class TailLatencyHunter(BaseLangflowUser):
+class TailLatencyHunter(BaseLfxUser):
     """Mixed workload designed to expose tail latency issues.
 
     Alternates between light and heavy requests to stress the system.
@@ -315,7 +317,7 @@ class TailLatencyHunter(BaseLangflowUser):
             self.make_request(message_type="large", tag_suffix="-tail-heavy")
 
 
-class ScalabilityTestUser(BaseLangflowUser):
+class ScalabilityTestUser(BaseLfxUser):
     """Tests for the scalability cliff at 30 users.
 
     Uses patterns that specifically stress concurrency limits.
@@ -330,7 +332,7 @@ class ScalabilityTestUser(BaseLangflowUser):
         self.make_request(message_type="medium", tag_suffix="-scale")
 
 
-class BurstUser(BaseLangflowUser):
+class BurstUser(BaseLfxUser):
     """Sends bursts of 10 requests to test connection pooling.
 
     Based on connection pool exhaustion test patterns.
