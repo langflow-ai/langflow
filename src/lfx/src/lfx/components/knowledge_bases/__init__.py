@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from langflow.components._importing import import_mod
+from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from langflow.components.knowledge_bases.ingestion import KnowledgeIngestionComponent
-    from langflow.components.knowledge_bases.retrieval import KnowledgeRetrievalComponent
+    from lfx.components.knowledge_bases.ingestion import KnowledgeIngestionComponent
+    from lfx.components.knowledge_bases.retrieval import KnowledgeRetrievalComponent
 
 _dynamic_imports = {
     "KnowledgeIngestionComponent": "ingestion",

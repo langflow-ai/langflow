@@ -1,6 +1,5 @@
 import json
-import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
@@ -8,10 +7,10 @@ from langflow.components.knowledge_bases.ingestion import KnowledgeIngestionComp
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 
-from tests.base import ComponentTestBaseWithoutClient
+from tests.base import ComponentTestBaseWithClient
 
 
-class TestKnowledgeIngestionComponent(ComponentTestBaseWithoutClient):
+class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
@@ -23,43 +22,8 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithoutClient):
         with patch("langflow.components.knowledge_bases.ingestion.KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
             yield
 
-    class MockUser:
-        def __init__(self, user_id):
-            self.id = user_id
-            self.username = "langflow"
-
     @pytest.fixture
-    def mock_user_data(self):
-        """Create mock user data that persists for the test function."""
-        mock_uuid = uuid.uuid4()
-        mock_user = self.MockUser(mock_uuid)
-        return {"user_id": mock_uuid, "user": mock_user.username, "user_obj": mock_user}
-
-    @pytest.fixture(autouse=True)
-    def setup_mocks(self, mock_user_data):
-        """Mock the component's user_id attribute and User object."""
-        with (
-            patch.object(KnowledgeIngestionComponent, "user_id", mock_user_data["user_id"]),
-            patch(
-                "langflow.components.knowledge_bases.ingestion.get_user_by_id",
-                new_callable=AsyncMock,
-                return_value=mock_user_data["user_obj"],
-            ),
-            patch(
-                "langflow.base.knowledge_bases.knowledge_base_utils.get_user_by_id",
-                new_callable=AsyncMock,
-                return_value=mock_user_data["user_obj"],
-            ),
-        ):
-            yield
-
-    @pytest.fixture
-    def mock_user_id(self, mock_user_data):
-        """Get the mock user data."""
-        return {"user_id": mock_user_data["user_id"], "user": mock_user_data["user"]}
-
-    @pytest.fixture
-    def default_kwargs(self, tmp_path, mock_user_id):
+    def default_kwargs(self, tmp_path, active_user):
         """Return default kwargs for component instantiation."""
         # Create a sample DataFrame
         data_df = DataFrame(
@@ -75,7 +39,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithoutClient):
 
         # Create knowledge base directory
         kb_name = "test_kb"
-        kb_path = tmp_path / mock_user_id["user"] / kb_name
+        kb_path = tmp_path / active_user.username / kb_name
         kb_path.mkdir(parents=True, exist_ok=True)
 
         # Create embedding metadata file
@@ -98,6 +62,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithoutClient):
             "api_key": None,
             "allow_duplicates": False,
             "silent_errors": False,
+            "_user_id": active_user.id,
         }
 
     @pytest.fixture
@@ -332,14 +297,14 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithoutClient):
         assert "rows" in result.data
         assert result.data["rows"] == 2
 
-    async def test_get_knowledge_bases(self, tmp_path, mock_user_id):
+    async def test_get_knowledge_bases(self, tmp_path, active_user):
         """Test getting list of knowledge bases."""
         # Create additional test directories
-        (tmp_path / mock_user_id["user"] / "kb1").mkdir(parents=True, exist_ok=True)
-        (tmp_path / mock_user_id["user"] / "kb2").mkdir(parents=True, exist_ok=True)
-        (tmp_path / mock_user_id["user"] / ".hidden").mkdir(parents=True, exist_ok=True)  # Should be ignored
+        (tmp_path / active_user.username / "kb1").mkdir(parents=True, exist_ok=True)
+        (tmp_path / active_user.username / "kb2").mkdir(parents=True, exist_ok=True)
+        (tmp_path / active_user.username / ".hidden").mkdir(parents=True, exist_ok=True)  # Should be ignored
 
-        kb_list = await get_knowledge_bases(tmp_path, user_id=mock_user_id["user_id"])
+        kb_list = await get_knowledge_bases(tmp_path, user_id=active_user.id)
 
         assert "test_kb" in kb_list
         assert "kb1" in kb_list

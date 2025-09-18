@@ -1,23 +1,24 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from lfx.components._importing import import_mod
 
-if TYPE_CHECKING:
-    from .python_function import PythonFunctionComponent
+# _dynamic_imports = {
+#     "KnowledgeIngestionComponent": "ingestion",
+#     "KnowledgeRetrievalComponent": "retrieval",
 
+# }
 _dynamic_imports = {
     "PythonFunctionComponent": "python_function",
 }
 
-__all__ = [
-    "PythonFunctionComponent",
-]
+# __all__ = ["KnowledgeIngestionComponent", "KnowledgeRetrievalComponent"]
+__all__ = ["PythonFunctionComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:
-    """Lazily import prototype components on attribute access."""
+    """Lazily import input/output components on attribute access."""
     if attr_name not in _dynamic_imports:
         msg = f"module '{__name__}' has no attribute '{attr_name}'"
         raise AttributeError(msg)
