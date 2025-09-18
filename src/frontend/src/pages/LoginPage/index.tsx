@@ -3,6 +3,7 @@ import { useContext, useState } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
+import { useSanitizeRedirectUrl } from "@/hooks/use-sanitize-redirect-url";
 import InputComponent from "../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -21,6 +22,9 @@ export default function LoginPage(): JSX.Element {
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
 
   const { password, username } = inputState;
+
+  useSanitizeRedirectUrl();
+
   const { login } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
