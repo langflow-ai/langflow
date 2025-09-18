@@ -21,10 +21,20 @@ def compute_tfidf(documents: list[str], query_terms: list[str]) -> list[float]:
     tokenized_docs = [doc.lower().split() for doc in documents]
     n_docs = len(documents)
 
-    # Calculate document frequency for each term
+    # Precompute lowercase query terms
+    query_terms_lower = [term.lower() for term in query_terms]
+
+    # Calculate document frequency for each term using sets for efficiency
+    doc_token_sets = [set(doc) for doc in tokenized_docs]
     document_frequencies = {}
-    for term in query_terms:
-        document_frequencies[term] = sum(1 for doc in tokenized_docs if term.lower() in doc)
+    for term in query_terms_lower:
+        document_frequencies[term] = sum(1 for doc_set in doc_token_sets if term in doc_set)
+
+    # Precompute IDF values
+    idfs = {}
+    for term in query_terms_lower:
+        df = document_frequencies[term]
+        idfs[term] = math.log(n_docs / df) if df > 0 else 0
 
     scores = []
 
@@ -33,14 +43,12 @@ def compute_tfidf(documents: list[str], query_terms: list[str]) -> list[float]:
         doc_length = len(doc_tokens)
         term_counts = Counter(doc_tokens)
 
-        for term in query_terms:
-            term_lower = term.lower()
-
+        for term in query_terms_lower:
             # Term frequency (TF)
-            tf = term_counts[term_lower] / doc_length if doc_length > 0 else 0
+            tf = term_counts.get(term, 0) / doc_length if doc_length > 0 else 0
 
             # Inverse document frequency (IDF)
-            idf = math.log(n_docs / document_frequencies[term]) if document_frequencies[term] > 0 else 0
+            idf = idfs[term]
 
             # TF-IDF score
             doc_score += tf * idf
