@@ -43,6 +43,14 @@ if TYPE_CHECKING:
 
 
 def set_advanced_true(component_input):
+    """Set the advanced flag to True for a component input.
+
+    Args:
+        component_input: The component input to modify
+
+    Returns:
+        The modified component input with advanced=True
+    """
     component_input.advanced = True
     return component_input
 
@@ -51,6 +59,21 @@ MODEL_PROVIDERS_LIST = ["OpenAI"]
 
 
 class CugaComponent(ToolCallingAgentComponent):
+    """Cuga Agent Component for advanced AI task execution.
+
+    The Cuga component is an advanced AI agent that can execute complex tasks using
+    various tools, browser automation, and structured output generation. It supports
+    custom policies, web applications, and API interactions.
+
+    Attributes:
+        display_name: Human-readable name for the component
+        description: Brief description of the component's purpose
+        documentation: URL to component documentation
+        icon: Icon identifier for the UI
+        beta: Whether the component is in beta status
+        name: Internal component name
+    """
+
     display_name: str = "Cuga"
     description: str = "Define the Cuga agent's policies, then assign it a task."
     documentation: str = "https://docs.langflow.org/agents"
@@ -196,9 +219,25 @@ class CugaComponent(ToolCallingAgentComponent):
     async def call_agent(
         self, current_input: str, tools: list[Tool], history_messages: list[Message], llm
     ) -> AsyncIterator[dict[str, Any]]:
-        """Stub function that returns an async iterator of agent events for process_agent_events.
+        """Execute the Cuga agent with the given input and tools.
 
-        Includes more dummy events like thinking, doing, and generating code.
+        This method initializes and runs the Cuga agent, processing the input through
+        the agent's workflow and yielding events for real-time monitoring.
+
+        Args:
+            current_input: The user input to process
+            tools: List of available tools for the agent
+            history_messages: Previous conversation history
+            llm: The language model instance to use
+
+        Yields:
+            dict: Agent events including tool usage, thinking, and final results
+
+        Raises:
+            ValueError: If there's an error in agent initialization
+            TypeError: If there's a type error in processing
+            RuntimeError: If there's a runtime error during execution
+            ConnectionError: If there's a connection issue
         """
         yield {
             "event": "on_chain_start",
@@ -208,7 +247,7 @@ class CugaComponent(ToolCallingAgentComponent):
         }
         logger.debug(f"LLM MODEL TYPE: {type(llm)}")
         if current_input:
-            os.environ["DYNA_ADVANCED_FEATURES__REGISRY"] = "false"
+            os.environ["DYNA_ADVANCED_FEATURES__REGISTRY"] = "false"
             from cuga.backend.activity_tracker.tracker import ActivityTracker
             from cuga.backend.cuga_graph.utils.agent_loop import StreamEvent
             from cuga.backend.cuga_graph.utils.controller import (
@@ -334,8 +373,18 @@ class CugaComponent(ToolCallingAgentComponent):
                 "data": {"error": error_msg},
             }
 
-    # Modified message_response method to use the event iterator
     async def message_response(self) -> Message:
+        """Generate a message response using the Cuga agent.
+
+        This method processes the input through the Cuga agent and returns a structured
+        message response. It handles agent initialization, tool setup, and event processing.
+
+        Returns:
+            Message: The agent's response message
+
+        Raises:
+            Exception: If there's an error during agent execution
+        """
         logger.info("[CUGA] Starting Cuga agent run for message_response.")
         logger.info(f"[CUGA] Agent input value: {self.input_value}")
 
@@ -384,7 +433,18 @@ class CugaComponent(ToolCallingAgentComponent):
             return result
 
     async def get_agent_requirements(self):
-        """Get the agent requirements for the Cuga agent."""
+        """Get the agent requirements for the Cuga agent.
+
+        This method retrieves and configures all necessary components for the agent
+        including the language model, chat history, and tools.
+
+        Returns:
+            tuple: A tuple containing (llm_model, chat_history, tools)
+
+        Raises:
+            ValueError: If no language model is selected or if there's an error
+                in model initialization
+        """
         llm_model, display_name = await self.get_llm()
         if llm_model is None:
             msg = "No language model selected. Please choose a model to proceed."
@@ -463,7 +523,17 @@ class CugaComponent(ToolCallingAgentComponent):
     #         return result
 
     def _preprocess_schema(self, schema):
-        """Preprocess schema to ensure correct data types for build_model_from_schema."""
+        """Preprocess schema to ensure correct data types for build_model_from_schema.
+
+        This method validates and normalizes the output schema to ensure it's compatible
+        with the Pydantic model building process.
+
+        Args:
+            schema: List of schema field definitions
+
+        Returns:
+            list: Processed schema with validated data types
+        """
         processed_schema = []
         for field in schema:
             processed_field = {
@@ -479,7 +549,17 @@ class CugaComponent(ToolCallingAgentComponent):
         return processed_schema
 
     async def build_structured_output_base(self, content: str):
-        """Build structured output with optional BaseModel validation."""
+        """Build structured output with optional BaseModel validation.
+
+        This method parses JSON content from the agent response and optionally validates
+        it against a provided schema using Pydantic models.
+
+        Args:
+            content: The raw content from the agent response
+
+        Returns:
+            dict or list: Parsed and optionally validated JSON data
+        """
         # --- ADDED LOGGING START ---
         logger.info(f"[CUGA] Attempting to build structured output from content: {content}")
         # --- ADDED LOGGING END ---
@@ -540,7 +620,20 @@ class CugaComponent(ToolCallingAgentComponent):
             return json_data
 
     async def json_response(self) -> Data:
-        """Convert agent response to structured JSON Data output with schema validation."""
+        """Convert agent response to structured JSON Data output with schema validation.
+
+        This method generates a structured JSON response by combining system instructions,
+        format instructions, and schema information, then processing the agent's response
+        through structured output validation.
+
+        Returns:
+            Data: Structured data object containing the validated JSON response
+
+        Raises:
+            ExceptionWithMessageError: If there's an error in structured processing
+            ValueError: If there's a validation error
+            TypeError: If there's a type error in processing
+        """
         # --- ADDED LOGGING START ---
         logger.info("[CUGA] Starting Cuga agent run for json_response.")
         logger.info(f"[CUGA] Agent input value: {self.input_value}")
@@ -635,7 +728,14 @@ class CugaComponent(ToolCallingAgentComponent):
             return Data(data={"content": content, "error": str(e)})
 
     async def get_memory_data(self):
-        """Retrieve chat history messages."""
+        """Retrieve chat history messages.
+
+        This method fetches the conversation history from memory, excluding the current
+        input message to avoid duplication.
+
+        Returns:
+            list: List of Message objects representing the chat history
+        """
         logger.info("[CUGA] Retrieving chat history messages.")
         messages = (
             await MemoryComponent(**self.get_base_args())
@@ -647,7 +747,17 @@ class CugaComponent(ToolCallingAgentComponent):
         ]
 
     async def get_llm(self):
-        """Get language model for the Cuga agent."""
+        """Get language model for the Cuga agent.
+
+        This method initializes and configures the language model based on the
+        selected provider and parameters.
+
+        Returns:
+            tuple: A tuple containing (llm_model, display_name)
+
+        Raises:
+            ValueError: If the model provider is invalid or model initialization fails
+        """
         logger.info("[CUGA] Getting language model for the agent.")
         logger.info(f"[CUGA] Requested LLM provider: {self.agent_llm}")
 
@@ -674,7 +784,19 @@ class CugaComponent(ToolCallingAgentComponent):
             raise ValueError(msg) from e
 
     def _build_llm_model(self, component, inputs, prefix=""):
-        """Build LLM model with parameters."""
+        """Build LLM model with parameters.
+
+        This method constructs a language model instance using the provided component
+        class and input parameters.
+
+        Args:
+            component: The LLM component class to instantiate
+            inputs: List of input field definitions
+            prefix: Optional prefix for parameter names
+
+        Returns:
+            The configured LLM model instance
+        """
         model_kwargs = {}
         for input_ in inputs:
             if hasattr(self, f"{prefix}{input_.name}"):
@@ -682,7 +804,17 @@ class CugaComponent(ToolCallingAgentComponent):
         return component.set(**model_kwargs).build_model()
 
     def set_component_params(self, component):
-        """Set component parameters based on provider."""
+        """Set component parameters based on provider.
+
+        This method configures component parameters according to the selected
+        model provider's requirements.
+
+        Args:
+            component: The component to configure
+
+        Returns:
+            The configured component
+        """
         provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
         if provider_info:
             inputs = provider_info.get("inputs")
@@ -695,12 +827,29 @@ class CugaComponent(ToolCallingAgentComponent):
         return component
 
     def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:
-        """Delete specified fields from build_config."""
+        """Delete specified fields from build_config.
+
+        This method removes unwanted fields from the build configuration.
+
+        Args:
+            build_config: The build configuration dictionary
+            fields: Fields to remove (can be dict or list of strings)
+        """
         for field in fields:
             build_config.pop(field, None)
 
     def update_input_types(self, build_config: dotdict) -> dotdict:
-        """Update input types for all fields in build_config."""
+        """Update input types for all fields in build_config.
+
+        This method ensures all fields in the build configuration have proper
+        input types defined.
+
+        Args:
+            build_config: The build configuration to update
+
+        Returns:
+            dotdict: Updated build configuration with input types
+        """
         for key, value in build_config.items():
             if isinstance(value, dict):
                 if value.get("input_types") is None:
@@ -712,7 +861,22 @@ class CugaComponent(ToolCallingAgentComponent):
     async def update_build_config(
         self, build_config: dotdict, field_value: str, field_name: str | None = None
     ) -> dotdict:
-        """Update build configuration based on field changes."""
+        """Update build configuration based on field changes.
+
+        This method dynamically updates the component's build configuration when
+        certain fields change, particularly the model provider selection.
+
+        Args:
+            build_config: The current build configuration
+            field_value: The new value for the field
+            field_name: The name of the field being changed
+
+        Returns:
+            dotdict: Updated build configuration
+
+        Raises:
+            ValueError: If required keys are missing from the configuration
+        """
         if field_name in ("agent_llm",):
             build_config["agent_llm"]["value"] = field_value
             provider_info = MODEL_PROVIDERS_DICT.get(field_value)
@@ -804,7 +968,14 @@ class CugaComponent(ToolCallingAgentComponent):
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
 
     async def _get_tools(self) -> list[Tool]:
-        """Build agent tools."""
+        """Build agent tools.
+
+        This method constructs the list of tools available to the Cuga agent,
+        including component tools and any additional configured tools.
+
+        Returns:
+            list[Tool]: List of available tools for the agent
+        """
         logger.info("[CUGA] Building agent tools.")
         component_toolkit = _get_component_toolkit()
         tools_names = self._build_tools_names()

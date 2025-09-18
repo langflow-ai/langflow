@@ -14,15 +14,40 @@ from tests.unit.mock_language_model import MockLanguageModel
 
 
 class TestCugaComponent(ComponentTestBaseWithoutClient):
+    """Test suite for CugaComponent without client dependencies.
+
+    This class contains unit tests for the CugaComponent that don't require
+    external API calls or client connections.
+    """
+
     @pytest.fixture
     def component_class(self):
+        """Return the CugaComponent class for testing.
+
+        Returns:
+            type: The CugaComponent class
+        """
         return CugaComponent
 
     @pytest.fixture
     def file_names_mapping(self):
+        """Return empty file names mapping for testing.
+
+        Returns:
+            list: Empty list since no file mappings are needed
+        """
         return []
 
     async def component_setup(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> Component:
+        """Set up component instance for testing with mocked methods.
+
+        Args:
+            component_class: The component class to instantiate
+            default_kwargs: Default keyword arguments for the component
+
+        Returns:
+            Component: Configured component instance with mocked methods
+        """
         component_instance = await super().component_setup(component_class, default_kwargs)
         # Mock _should_process_output method
         component_instance._should_process_output = lambda output: False  # noqa: ARG005
@@ -30,6 +55,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
 
     @pytest.fixture
     def default_kwargs(self):
+        """Return default keyword arguments for CugaComponent testing.
+
+        Returns:
+            dict: Default configuration for the CugaComponent
+        """
         return {
             "_type": "Cuga",
             "add_current_date_tool": True,
@@ -45,6 +75,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         }
 
     async def test_build_config_update(self, component_class, default_kwargs):
+        """Test that build configuration updates correctly for different providers.
+
+        This test verifies that the component's build configuration is properly
+        updated when switching between different model providers (OpenAI, Custom).
+        """
         component = await self.component_setup(component_class, default_kwargs)
         frontend_node = component.to_frontend_node()
         build_config = frontend_node["data"]["node"]["template"]
@@ -83,7 +118,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert "model_name" not in updated_config
 
     async def test_cuga_has_dual_outputs(self, component_class, default_kwargs):
-        """Test that Cuga component has both Response and Structured Response outputs."""
+        """Test that Cuga component has both Response and Structured Response outputs.
+
+        This test verifies that the CugaComponent has the correct output configuration
+        with both regular message response and structured JSON response capabilities.
+        """
         component = await self.component_setup(component_class, default_kwargs)
 
         assert len(component.outputs) == 2
@@ -97,7 +136,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert component.outputs[1].tool_mode is False
 
     async def test_json_mode_filtered_from_openai_inputs(self, component_class, default_kwargs):
-        """Test that json_mode is filtered out from OpenAI inputs."""
+        """Test that json_mode is filtered out from OpenAI inputs.
+
+        This test ensures that the json_mode parameter is properly excluded from
+        the component's input fields since Cuga handles structured output differently.
+        """
         component = await self.component_setup(component_class, default_kwargs)
 
         # Check that json_mode is not in the component's inputs
@@ -110,7 +153,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert "temperature" in input_names
 
     async def test_json_response_parsing_valid_json(self, component_class, default_kwargs):
-        """Test that json_response correctly parses JSON from agent response."""
+        """Test that json_response correctly parses JSON from agent response.
+
+        This test verifies that the json_response method can properly parse
+        valid JSON content from the agent's response.
+        """
         component = await self.component_setup(component_class, default_kwargs)
         # Mock the get_agent_requirements method to avoid actual LLM calls
         from unittest.mock import AsyncMock
@@ -126,7 +173,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert result.data == {"name": "test", "value": 123}
 
     async def test_json_response_parsing_embedded_json(self, component_class, default_kwargs):
-        """Test that json_response handles text containing JSON."""
+        """Test that json_response handles text containing JSON.
+
+        This test verifies that the json_response method can extract JSON
+        from text that contains other content alongside the JSON.
+        """
         component = await self.component_setup(component_class, default_kwargs)
         # Mock the get_agent_requirements method to avoid actual LLM calls
         from unittest.mock import AsyncMock
@@ -142,7 +193,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert result.data == {"status": "success"}
 
     async def test_json_response_error_handling(self, component_class, default_kwargs):
-        """Test that json_response handles completely non-JSON responses."""
+        """Test that json_response handles completely non-JSON responses.
+
+        This test verifies that the json_response method gracefully handles
+        responses that don't contain any valid JSON content.
+        """
         component = await self.component_setup(component_class, default_kwargs)
         # Mock the get_agent_requirements method to avoid actual LLM calls
         from unittest.mock import AsyncMock
@@ -159,7 +214,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert result.data["content"] == "This is just plain text with no JSON"
 
     async def test_model_building_without_json_mode(self, component_class, default_kwargs):
-        """Test that model building works without json_mode attribute."""
+        """Test that model building works without json_mode attribute.
+
+        This test ensures that the component can build models without requiring
+        the json_mode attribute that has been filtered out.
+        """
         component = await self.component_setup(component_class, default_kwargs)
         component.agent_llm = "OpenAI"
 
@@ -177,7 +236,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         mock_component.set.assert_called_once()
 
     async def test_json_response_with_schema_validation(self, component_class, default_kwargs):
-        """Test that json_response validates against provided schema."""
+        """Test that json_response validates against provided schema.
+
+        This test verifies that the json_response method can validate JSON
+        content against a provided Pydantic schema.
+        """
         # Set up component with output schema
         default_kwargs["output_schema"] = [
             {"name": "name", "type": "str", "description": "Name field", "multiple": False},
@@ -198,7 +261,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert result.data == {"name": "John", "age": 25}
 
     async def test_cuga_component_initialization(self, component_class, default_kwargs):
-        """Test that Cuga component initializes correctly with filtered inputs."""
+        """Test that Cuga component initializes correctly with filtered inputs.
+
+        This test verifies that the CugaComponent can be properly initialized
+        with all required attributes and filtered input fields.
+        """
         component = await self.component_setup(component_class, default_kwargs)
 
         # Should not raise any errors during initialization
@@ -208,7 +275,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert len(component.outputs) == 2
 
     async def test_frontend_node_structure(self, component_class, default_kwargs):
-        """Test that frontend node has correct structure with filtered inputs."""
+        """Test that frontend node has correct structure with filtered inputs.
+
+        This test verifies that the frontend node representation has the correct
+        structure and excludes unwanted fields like json_mode.
+        """
         component = await self.component_setup(component_class, default_kwargs)
 
         frontend_node = component.to_frontend_node()
@@ -226,7 +297,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert "API" in build_config
 
     async def test_preprocess_schema(self, component_class, default_kwargs):
-        """Test that _preprocess_schema correctly handles schema validation."""
+        """Test that _preprocess_schema correctly handles schema validation.
+
+        This test verifies that the schema preprocessing method correctly
+        converts string boolean values to actual booleans and validates field types.
+        """
         component = await self.component_setup(component_class, default_kwargs)
 
         # Test schema preprocessing
@@ -242,7 +317,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert processed[1]["multiple"] is False
 
     async def test_build_structured_output_base_with_validation(self, component_class, default_kwargs):
-        """Test build_structured_output_base with schema validation."""
+        """Test build_structured_output_base with schema validation.
+
+        This test verifies that the structured output building method can
+        validate JSON content against a provided schema.
+        """
         default_kwargs["output_schema"] = [
             {"name": "name", "type": "str", "description": "Name field", "multiple": False},
             {"name": "count", "type": "int", "description": "Count field", "multiple": False},
@@ -255,7 +334,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert result == [{"name": "test", "count": 42}]
 
     async def test_build_structured_output_base_without_schema(self, component_class, default_kwargs):
-        """Test build_structured_output_base without schema validation."""
+        """Test build_structured_output_base without schema validation.
+
+        This test verifies that the structured output building method works
+        correctly when no schema validation is provided.
+        """
         component = await self.component_setup(component_class, default_kwargs)
 
         # Test with no output_schema
@@ -264,7 +347,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert result == {"any": "data", "number": 123}
 
     async def test_build_structured_output_base_embedded_json(self, component_class, default_kwargs):
-        """Test extraction of JSON from embedded text."""
+        """Test extraction of JSON from embedded text.
+
+        This test verifies that the structured output building method can
+        extract JSON content from text that contains other content.
+        """
         component = await self.component_setup(component_class, default_kwargs)
 
         content = 'Here is some text with {"embedded": "json"} inside it.'
@@ -272,7 +359,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert result == {"embedded": "json"}
 
     async def test_build_structured_output_base_no_json(self, component_class, default_kwargs):
-        """Test handling of content with no JSON."""
+        """Test handling of content with no JSON.
+
+        This test verifies that the structured output building method handles
+        content that doesn't contain any JSON gracefully.
+        """
         component = await self.component_setup(component_class, default_kwargs)
 
         content = "This is just plain text with no JSON at all."
@@ -281,7 +372,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert result["content"] == content
 
     async def test_new_input_fields_present(self, component_class, default_kwargs):
-        """Test that new input fields are present in the component."""
+        """Test that new input fields are present in the component.
+
+        This test verifies that all the new input fields specific to the Cuga
+        component are properly defined and have correct default values.
+        """
         component = await self.component_setup(component_class, default_kwargs)
 
         input_names = [inp.name for inp in component.inputs if hasattr(inp, "name")]
@@ -308,7 +403,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert component.API is False
 
     async def test_cuga_has_correct_outputs(self, component_class, default_kwargs):
-        """Test that Cuga component has the correct output configuration."""
+        """Test that Cuga component has the correct output configuration.
+
+        This test verifies that the CugaComponent has the expected output
+        configuration with both response and structured response outputs.
+        """
         component = await self.component_setup(component_class, default_kwargs)
 
         assert len(component.outputs) == 2
@@ -327,11 +426,22 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert structured_output.tool_mode is False
 
     async def test_memory_inputs_advanced_setting(self, component_class, default_kwargs):
-        """Test that memory inputs are properly set to advanced."""
+        """Test that memory inputs are properly set to advanced.
+
+        This test verifies that memory-related input fields are properly
+        configured as advanced settings.
+
+        Note:
+            This test is currently a placeholder (TBD).
+        """
         # TBD: Add test for memory inputs
 
     async def test_browser_configuration(self, component_class, default_kwargs):
-        """Test browser configuration options."""
+        """Test browser configuration options.
+
+        This test verifies that the browser-related configuration options
+        (browser_enabled, web_apps) work correctly.
+        """
         component = await self.component_setup(component_class, default_kwargs)
 
         # Test default browser settings
@@ -345,7 +455,11 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
         assert component.web_apps == "https://example.com"
 
     async def test_api_subagent_configuration(self, component_class, default_kwargs):
-        """Test API sub-agent configuration."""
+        """Test API sub-agent configuration.
+
+        This test verifies that the API sub-agent configuration option
+        works correctly.
+        """
         component = await self.component_setup(component_class, default_kwargs)
 
         # Test default API setting
@@ -357,17 +471,41 @@ class TestCugaComponent(ComponentTestBaseWithoutClient):
 
 
 class TestCugaComponentWithClient(ComponentTestBaseWithClient):
+    """Test suite for CugaComponent with client dependencies.
+
+    This class contains integration tests for the CugaComponent that require
+    external API calls and client connections.
+    """
+
     @pytest.fixture
     def component_class(self):
+        """Return the CugaComponent class for testing.
+
+        Returns:
+            type: The CugaComponent class
+        """
         return CugaComponent
 
     @pytest.fixture
     def file_names_mapping(self):
+        """Return empty file names mapping for testing.
+
+        Returns:
+            list: Empty list since no file mappings are needed
+        """
         return []
 
     @pytest.mark.api_key_required
     @pytest.mark.no_blockbuster
     async def test_cuga_component_with_calculator(self):
+        """Test CugaComponent with calculator tool using real API.
+
+        This integration test verifies that the CugaComponent can work with
+        actual tools (calculator) and make real API calls to OpenAI.
+
+        Requires:
+            OPENAI_API_KEY environment variable
+        """
         # Now you can access the environment variables
         api_key = os.getenv("OPENAI_API_KEY")
         tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
@@ -393,6 +531,14 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
     @pytest.mark.no_blockbuster
     @pytest.mark.timeout(300)  # 5 minutes timeout for testing key OpenAI models
     async def test_cuga_component_with_all_openai_models(self):
+        """Test CugaComponent with multiple OpenAI models.
+
+        This integration test verifies that the CugaComponent works correctly
+        with various OpenAI model configurations.
+
+        Requires:
+            OPENAI_API_KEY environment variable
+        """
         # Mock inputs
         api_key = os.getenv("OPENAI_API_KEY")
         input_value = "What is 2 + 2?"
@@ -425,13 +571,30 @@ class TestCugaComponentWithClient(ComponentTestBaseWithClient):
     @pytest.mark.api_key_required
     @pytest.mark.no_blockbuster
     async def test_cuga_structured_response_with_schema(self):
+        """Test CugaComponent structured response with schema validation.
+
+        This test verifies that the CugaComponent can generate structured
+        responses with schema validation using real API calls.
+
+        Note:
+            This test is currently a placeholder (TODO).
+
+        Requires:
+            OPENAI_API_KEY environment variable
+        """
         # TODO: Add test for structured response with schema
-        pass
 
     @pytest.mark.api_key_required
     @pytest.mark.no_blockbuster
     async def test_cuga_with_policies(self):
-        """Test Cuga with custom policies."""
+        """Test Cuga with custom policies.
+
+        This integration test verifies that the CugaComponent can apply
+        custom policies to modify its behavior during execution.
+
+        Requires:
+            OPENAI_API_KEY environment variable
+        """
         api_key = os.getenv("OPENAI_API_KEY")
         input_value = "What is 2 + 2?"
         policies = "## Answer\n\nYou must always respond with enthusiasm and use exclamation marks!"

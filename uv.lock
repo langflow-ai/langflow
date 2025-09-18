@@ -1667,7 +1667,7 @@ wheels = [
 
 [[package]]
 name = "cuga"
-version = "0.1.1.dev1"
+version = "0.1.1.dev2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1693,9 +1693,9 @@ dependencies = [
     { name = "typer" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3a/4d/48ee2d9623e9c53b6ab63a1e08eeebefe0ee4d8d27ec868f617686f70594/cuga-0.1.1.dev1.tar.gz", hash = "sha256:ec131ddc14b7d4c987f0b1077dfd2b12930e0753c936226edaa5ad5790bf9e9f", size = 18576383, upload-time = "2025-09-17T22:09:29.541Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/57/13/97b55c342321ee5ef8454ce46f0585168633c2110a757af418f7425b2a9e/cuga-0.1.1.dev2.tar.gz", hash = "sha256:d1c653cfd377a6eea3f2ac433efb1cd9fcb663653a2866fe09552573660ece32", size = 18576679, upload-time = "2025-09-18T15:14:54.613Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/53/94/7cb21717d0c554de32ab8c49b00b29de7e1cbeb30b7398a87572d512df5c/cuga-0.1.1.dev1-py3-none-any.whl", hash = "sha256:6daaf3ca5ff2970131cb97b26379472dfec0b4f84548376d25b3197385f719d5", size = 19412934, upload-time = "2025-09-17T22:09:20.892Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/4e/e7a6541041f0aa0666826fa1b13e5361c0aee7981efb07fb0a6c3a7b9e06/cuga-0.1.1.dev2-py3-none-any.whl", hash = "sha256:4dd996fd02418f48239c0ead3b02b5364b7dc51ad08ef2b421f893ada083312b", size = 19413264, upload-time = "2025-09-18T15:14:48.989Z" },
 ]
 
 [[package]]
@@ -5488,7 +5488,7 @@ requires-dist = [
     { name = "composio-langchain", specifier = "==0.8.5" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "cuga", specifier = "==0.1.1.dev1" },
+    { name = "cuga", specifier = "==0.1.1.dev2" },
     { name = "datasets", specifier = ">2.14.7" },
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.36.1" },
     { name = "docling-core", specifier = ">=2.36.1" },
