@@ -385,11 +385,29 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         return return_ids
 
     # ---------- auth / client ----------
-    def _build_auth_kwargs(self) -> dict[str, Any]:
+    @classmethod
+    def _build_auth_kwargs(
+        cls,
+        auth_mode: str = "basic",
+        username: str = "",
+        password: str = "",
+        jwt_token: str = "",
+        jwt_header: str = "Authorization",
+        *,
+        bearer_prefix: bool = True,
+    ) -> dict[str, Any]:
         """Build authentication configuration for OpenSearch client.
 
         Constructs the appropriate authentication parameters based on the
         selected auth mode (basic username/password or JWT token).
+
+        Args:
+            auth_mode: Authentication mode ('basic' or 'jwt')
+            username: Username for basic auth
+            password: Password for basic auth
+            jwt_token: JWT token for JWT auth
+            jwt_header: Header name for JWT token
+            bearer_prefix: Whether to prefix JWT token with 'Bearer '
 
         Returns:
             Dictionary containing authentication configuration
@@ -397,43 +415,99 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         Raises:
             ValueError: If required authentication parameters are missing
         """
-        mode = (self.auth_mode or "basic").strip().lower()
+        mode = (auth_mode or "basic").strip().lower()
         if mode == "jwt":
-            token = (self.jwt_token or "").strip()
+            token = (jwt_token or "").strip()
             if not token:
                 msg = "Auth Mode is 'jwt' but no jwt_token was provided."
                 raise ValueError(msg)
-            header_name = (self.jwt_header or "Authorization").strip()
-            header_value = f"Bearer {token}" if self.bearer_prefix else token
+            header_name = (jwt_header or "Authorization").strip()
+            header_value = f"Bearer {token}" if bearer_prefix else token
             return {"headers": {header_name: header_value}}
-        user = (self.username or "").strip()
-        pwd = (self.password or "").strip()
+        user = (username or "").strip()
+        pwd = (password or "").strip()
         if not user or not pwd:
             msg = "Auth Mode is 'basic' but username/password are missing."
             raise ValueError(msg)
         return {"http_auth": (user, pwd)}
 
-    def build_client(self) -> OpenSearch:
+    def _build_auth_kwargs_instance(self) -> dict[str, Any]:
+        """Build authentication configuration using instance attributes."""
+        return self._build_auth_kwargs(
+            auth_mode=self.auth_mode,
+            username=self.username,
+            password=self.password,
+            jwt_token=self.jwt_token,
+            jwt_header=self.jwt_header,
+            bearer_prefix=self.bearer_prefix,
+        )
+
+    @classmethod
+    def build_client(
+        cls,
+        opensearch_url: str,
+        *,
+        use_ssl: bool = True,
+        verify_certs: bool = False,
+        auth_mode: str = "basic",
+        username: str = "",
+        password: str = "",
+        jwt_token: str = "",
+        jwt_header: str = "Authorization",
+        bearer_prefix: bool = True,
+    ) -> OpenSearch:
         """Create and configure an OpenSearch client instance.
+
+        Args:
+            opensearch_url: OpenSearch cluster URL
+            use_ssl: Whether to use SSL/TLS
+            verify_certs: Whether to verify SSL certificates
+            auth_mode: Authentication mode ('basic' or 'jwt')
+            username: Username for basic auth
+            password: Password for basic auth
+            jwt_token: JWT token for JWT auth
+            jwt_header: Header name for JWT token
+            bearer_prefix: Whether to prefix JWT token with 'Bearer '
 
         Returns:
             Configured OpenSearch client ready for operations
         """
-        auth_kwargs = self._build_auth_kwargs()
+        auth_kwargs = cls._build_auth_kwargs(
+            auth_mode=auth_mode,
+            username=username,
+            password=password,
+            jwt_token=jwt_token,
+            jwt_header=jwt_header,
+            bearer_prefix=bearer_prefix,
+        )
         return OpenSearch(
-            hosts=[self.opensearch_url],
-            use_ssl=self.use_ssl,
-            verify_certs=self.verify_certs,
+            hosts=[opensearch_url],
+            use_ssl=use_ssl,
+            verify_certs=verify_certs,
             ssl_assert_hostname=False,
             ssl_show_warn=False,
             **auth_kwargs,
+        )
+
+    def build_client_instance(self) -> OpenSearch:
+        """Create and configure an OpenSearch client using instance attributes."""
+        return self.build_client(
+            opensearch_url=self.opensearch_url,
+            use_ssl=self.use_ssl,
+            verify_certs=self.verify_certs,
+            auth_mode=self.auth_mode,
+            username=self.username,
+            password=self.password,
+            jwt_token=self.jwt_token,
+            jwt_header=self.jwt_header,
+            bearer_prefix=self.bearer_prefix,
         )
 
     @check_cached_vector_store
     def build_vector_store(self) -> OpenSearch:
         # Return raw OpenSearch client as our “vector store.”
         self.log(self.ingest_data)
-        client = self.build_client()
+        client = self.build_client_instance()
         self._add_documents_to_vector_store(client=client)
         return client
 
@@ -493,7 +567,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         dim = len(vectors[0]) if vectors else 768  # default fallback
 
         # Check for AOSS
-        auth_kwargs = self._build_auth_kwargs()
+        auth_kwargs = self._build_auth_kwargs_instance()
         is_aoss = self._is_aoss_enabled(auth_kwargs.get("http_auth"))
 
         # Validate engine with AOSS
@@ -624,7 +698,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             ValueError: If embedding component is not provided or filter JSON is invalid
         """
         logger.info(self.ingest_data)
-        client = self.build_client()
+        client = self.build_client_instance()
         q = (query or "").strip()
 
         # Parse optional filter expression (can be either A or B shape; see _coerce_filter_clauses)
