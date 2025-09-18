@@ -42,7 +42,7 @@ async def get_graph() -> Graph:
     chat_input = cp.ChatInput()
     agent = cp.AgentComponent()
 
-    # For this example, we'll use a calculator tool that can be built synchronously
+    # Use URLComponent for web search capabilities
     url_component = cp.URLComponent()
     tools = await url_component.to_toolkit()
 
