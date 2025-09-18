@@ -176,7 +176,7 @@ async def list_project_tools(
     tools: list[MCPSettings] = []
     try:
         async with session_scope() as session:
-            # Fetch the project first to verify it exists and user has access
+            # Fetch the project first to verify it exists and belongs to the current user
             project = (
                 await session.exec(
                     select(Folder)
@@ -184,8 +184,6 @@ async def list_project_tools(
                     .where(Folder.id == project_id, Folder.user_id == current_user.id)
                 )
             ).first()
-
-            # If not found, check if it's the starter projects folder (which has user_id = NULL)
 
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
