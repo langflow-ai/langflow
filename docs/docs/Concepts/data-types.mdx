@@ -39,39 +39,33 @@ The schema is defined in [`data.py`](https://github.com/langflow-ai/langflow/blo
 
 The following attributes are available:
 
-- `data`: A dictionary that stores key-value pairs.
+- `data`: A `Data` object stores key-value pairs within the `.data` attribute. This is the `Data` object's core dictionary. Each key is a field name, and the values can be any supported data type.
 - `text_key`: The key in `data` that is considered the primary text value.
 - `default_value`: Fallback if `text_key` is missing. The default `text_key` is `"text"`.
 
-### Data structure
-
-A `Data` object stores key-value pairs within the `.data` attribute, where each key is a field name and its value can be any supported data type. `text_key` tells Langflow which key in the data dictionary is the primary text value for that object.
-
 ```python
 data_obj = Data(
-    text_key="text",            # Field 1
-    data={                      # Field 2 (the actual dict)
+    text_key="text",
+    data={
         "text": "Hello world",
         "name": "Charlie",
         "age": 28
     },
-    default_value=""            # Field 3
+    default_value=""
 )
 ```
 
 `Data` objects can be serialized to JSON, created from JSON, or created from other dictionary data.
 However, the resulting `Data` object is a structured object with validation and methods, not a plain dictionary.
-
-For example, when serialized into JSON, the previous example becomes the following JSON object:
+For example, when serialized into JSON, the previous Python example becomes the following JSON object:
 
 ```json
 {
   "text_key": "text",
   "data": {
-    "text": "User Profile",
-    "name": "Charlie Lastname",
-    "age": 28,
-    "email": "charlie.lastname@example.com"
+    "text": "Hello world",
+    "name": "Charlie",
+    "age": 28
   },
   "default_value": ""
 }
@@ -260,16 +254,16 @@ Hover over the port to see the accepted or produced data types.
 
 ## View data types in flows
 
-In Langflow, you can use <Icon name="TextSearch" aria-hidden="True" /> **Inspect output** to view the output of individual components.
+In Langflow, you can use <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to view the output of individual components.
 This can help you learn about the different data type and debug problems with invalid or malformed inputs and output.
 
-The following example shows how to inspect the output of a **Type Convert** component, which can convert `Message`, `Data`, or `DataFrame` input into `Message`, `Data`, or `DataFrame` output:
+The following example shows how to inspect the output of a [**Type Convert** component](/components-processing#type-convert), which can convert data from one type to another:
 
 1. Create a flow, and then connect a **Chat Input** component to a **Type Convert** component.
 
 2. In the **Chat Input** component, enter some text for the type converter to process.
 
-3. On the **Type Convert** component, click <Icon name="Play" aria-hidden="true"/> **Run component**, and then click <Icon name="TextSearch" aria-hidden="True" /> **Inspect output**.
+3. On the **Type Convert** component, click <Icon name="Play" aria-hidden="true"/> **Run component**, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output**.
 
     The default output is `Message` data, which is the same as the input coming from the **Chat Input** component.
     To see the `Message` data converted to `Data` or `DataFrame`, change the **Output Type** on the **Type Convert** component, and then rerun the component.
@@ -344,6 +338,7 @@ The following example shows how to inspect the output of a **Type Convert** comp
 
 ## See also
 
+- [**Processing** components](/components-processing)
 - [Custom components](/components-custom-components)
 - [Pydantic Models](https://docs.pydantic.dev/latest/api/base_model/)
 - [pandas.DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html)

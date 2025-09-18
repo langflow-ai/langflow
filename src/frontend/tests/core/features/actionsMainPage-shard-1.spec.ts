@@ -1,5 +1,8 @@
-import { test } from "@playwright/test";
+import { test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "select and delete a flow",
@@ -84,13 +87,7 @@ test(
       await page.getByTestId("side_nav_options_all-templates").click();
       await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-      await page.waitForSelector('[data-testid="fit_view"]', {
-        timeout: 100000,
-      });
-
-      await page.getByTestId("fit_view").click();
-      await page.getByTestId("zoom_out").click();
-      await page.getByTestId("zoom_out").click();
+      await adjustScreenView(page, { numberOfZoomOut: 2 });
 
       await page.getByText("Chat Input").first().click();
       await page.waitForSelector('[data-testid="more-options-modal"]', {

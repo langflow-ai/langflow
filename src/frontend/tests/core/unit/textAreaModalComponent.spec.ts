@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -43,6 +43,21 @@ test(
       .fill(
         "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!",
       );
+
+    // Test cursor position preservation
+    const textInput = page.getByTestId("textarea_str_text");
+    await textInput.click();
+    await textInput.press("Home"); // Move cursor to start
+    await textInput.press("ArrowRight"); // Move cursor to position 1
+    await textInput.press("ArrowRight"); // Move cursor to position 2
+    await textInput.pressSequentially("Y", { delay: 100 }); // Type at position 2
+    const cursorValue = await textInput.inputValue();
+    if (!cursorValue.startsWith("teY")) {
+      expect(false).toBeTruthy();
+    }
+    await textInput.fill(
+      "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!",
+    );
 
     await page
       .getByTestId("button_open_text_area_modal_textarea_str_text")

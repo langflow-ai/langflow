@@ -54,7 +54,34 @@ For more information about the **File** component and other data loading compone
 ### Load files at runtime
 
 You can use preloaded files in your flows, and you can load files at runtime, if your flow accepts file input.
-For an example, see [Create a chatbot that can ingest files](/chat-with-files).
+To enable file input in your flow, do the following:
+1. Add a [**File** component](/components-data#file) to your flow.
+2. Click **Share**, select **API access**, and then click **Input Schema** to add [`tweaks`](/concepts-publish#input-schema) to the request payload in the flow's automatically generated code snippets.
+3. Expand the **File** section, find the **Files** row, and then enable **Expose Input** to allow the parameter to be set at runtime through the Langflow API.
+4. Close the **Input Schema** pane to return to the **API access** pane.
+The payload in each code snippet now includes `tweaks` with your **File** component's ID and the `path` key that you enabled in **Input Schema**:
+
+    ```json
+    "tweaks": {
+	    "File-qYD5w": {
+		    "path": []
+	    }
+	}
+    ```
+
+5. When you run this flow programmatically, your script must upload a file to Langflow file management, and then pass the returned `file_path` to the `path` tweak in the `/run` request:
+
+    ```json
+    "tweaks": {
+        "FILE_COMPONENT_ID": {
+            "path": [ "file_path" ]
+        }
+    }
+    ```
+
+    For a complete example see [Create a chatbot that can ingest files](/chat-with-files) and [Files endpoints](/api-files).
+
+    If you want to upload multiple files, you can pass multiple `file_path` values in the `path` array, such as `[ "path1", "path2" ]`.
 
 ## Upload images
 
@@ -95,6 +122,15 @@ For videos, see the **Twelve Labs** and **YouTube** [bundles](/components-bundle
 
 By default, the maximum file size is 100 MB.
 To modify this value, change the `--max-file-size-upload` [environment variable](/environment-variables).
+
+## File management configuration
+
+You can configure file management behavior using the following [environment variables](/environment-variables):
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_MAX_FILE_SIZE_UPLOAD` | Integer | `100` | Set the maximum file size for the upload in megabytes. |
+| `LANGFLOW_STORAGE_TYPE` | String | `local` | Type of storage to use for file uploads and data. |
 
 ## See also
 

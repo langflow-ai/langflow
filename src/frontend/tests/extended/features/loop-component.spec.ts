@@ -1,6 +1,8 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 import { uploadFile } from "../../utils/upload-file";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -111,9 +113,7 @@ test(
         targetPosition: { x: 940, y: 100 },
       });
 
-    await page.getByTestId("fit_view").click();
-
-    await zoomOut(page, 2);
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     // Loop Item -> Update Data
 
@@ -156,8 +156,6 @@ test(
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .first()
       .click();
-
-    await zoomOut(page, 3);
 
     await page.getByTestId("div-generic-node").nth(5).click();
 

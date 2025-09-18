@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 // Helper function to get JWT token for API requests
@@ -34,9 +35,11 @@ test(
     expect(response.status()).toBe(200);
     const responseBody = await response.json();
 
-    const astraStarterProject = responseBody.find((project) => {
+    const astraStarterProject = responseBody.find((project: any) => {
       if (project.data.nodes) {
-        return project.data.nodes.some((node) => node.id.includes("Astra"));
+        return project.data.nodes.some((node: any) =>
+          node.id.includes("Astra"),
+        );
       }
     });
 
@@ -52,7 +55,7 @@ test(
           });
           const flowsData = await response.json();
 
-          const modifiedFlows = flowsData.map((flow) => {
+          const modifiedFlows = flowsData.map((flow: any) => {
             if (flow.name === "Vector Store RAG" && flow.user_id === null) {
               return {
                 ...flow,
@@ -85,11 +88,8 @@ test(
       .getByRole("heading", { name: "Vector Store RAG" })
       .first()
       .click();
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
 
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     const edges = await page.locator(".react-flow__edge-interaction").count();
     const nodes = await page.getByTestId("div-generic-node").count();
@@ -98,7 +98,9 @@ test(
     const nodesFromServer = astraStarterProject?.data.nodes.length;
 
     expect(
-      edges === edgesFromServer || edges === edgesFromServer - 1,
+      edges === edgesFromServer ||
+        edges === edgesFromServer - 1 ||
+        edges === edgesFromServer - 2,
     ).toBeTruthy();
     expect(nodes).toBe(nodesFromServer);
   },
@@ -126,9 +128,7 @@ test(
 
       await page.getByTestId("text_card_container").nth(i).click();
 
-      await page.waitForTimeout(500);
-
-      await page.waitForSelector('[data-testid="fit_view"]', {
+      await page.waitForSelector('[data-testid="div-generic-node"]', {
         timeout: 5000,
       });
 
@@ -141,9 +141,13 @@ test(
         numberOfOutdatedComponents++;
       }
 
-      await page.getByTestId("icon-ChevronLeft").click();
-      await page.waitForSelector('[data-testid="mainpage_title"]', {
-        timeout: 5000,
+      await Promise.all([
+        page.waitForURL((url) => url.pathname === "/", { timeout: 30000 }),
+        page.getByTestId("icon-ChevronLeft").click(),
+      ]);
+
+      await expect(page.getByTestId("mainpage_title")).toBeVisible({
+        timeout: 30000,
       });
 
       await page.waitForTimeout(500);

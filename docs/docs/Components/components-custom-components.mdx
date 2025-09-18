@@ -39,13 +39,13 @@ class MyCsvReader(Component):
     documentation = "http://docs.example.com/csv_reader"
 ```
 
-* `display_name`: A user-friendly label shown in the **Components** menu and on the component itself when you add it to a flow.
+* `display_name`: A user-friendly label shown in the visual editor.
 * `description`: A brief summary shown in tooltips and printed below the component name when added to a flow.
 * `icon`: A decorative icon from Langflow's icon library, printed next to the name.
 
     Langflow uses [Lucide](https://lucide.dev/icons) for icons. To assign an icon to your component, set the icon attribute to the name of a Lucide icon as a string, such as `icon = "file-text"`. Langflow renders icons from the Lucide library automatically.
 
-* `name`: A unique internal identifier.
+* `name`: A unique internal identifier, typically the same name as the folder containing your component code.
 * `documentation`: An optional link to external documentation, such as API or product documentation.
 
 ### Structure of a custom component
@@ -243,9 +243,13 @@ By default, Langflow looks for custom components in the `/components` directory.
 
 If you're creating custom components in a different location using the `LANGFLOW_COMPONENTS_PATH` [environment variable](/environment-variables), components must be organized in a specific directory structure to be properly loaded and displayed in the visual editor:
 
+Each category directory **must** contain an `__init__.py` file for Langflow to properly recognize and load the components.
+This is a Python package requirement that ensures the directory is treated as a module.
+
 ```
 /your/custom/components/path/    # Base directory set by LANGFLOW_COMPONENTS_PATH
     └── category_name/          # Required category subfolder that determines menu name
+        ├── __init__.py         # Required
         └── custom_component.py # Component file
 ```
 
@@ -257,6 +261,7 @@ For example, to add a component to the **Helpers** category, place it in the `he
 ```
 /app/custom_components/          # LANGFLOW_COMPONENTS_PATH
     └── helpers/                 # Displayed within the "Helpers" category
+        ├── __init__.py          # Required
         └── custom_component.py  # Your component
 ```
 
@@ -264,8 +269,10 @@ You can have multiple category folders to organize components into different cat
 ```
 /app/custom_components/
     ├── helpers/
+    │   ├── __init__.py
     │   └── helper_component.py
     └── tools/
+        ├── __init__.py
         └── tool_component.py
 ```
 

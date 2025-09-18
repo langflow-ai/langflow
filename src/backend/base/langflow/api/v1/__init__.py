@@ -4,10 +4,12 @@ from langflow.api.v1.endpoints import router as endpoints_router
 from langflow.api.v1.files import router as files_router
 from langflow.api.v1.flows import router as flows_router
 from langflow.api.v1.folders import router as folders_router
+from langflow.api.v1.knowledge_bases import router as knowledge_bases_router
 from langflow.api.v1.login import router as login_router
 from langflow.api.v1.mcp import router as mcp_router
 from langflow.api.v1.mcp_projects import router as mcp_projects_router
 from langflow.api.v1.monitor import router as monitor_router
+from langflow.api.v1.openai_responses import router as openai_responses_router
 from langflow.api.v1.projects import router as projects_router
 from langflow.api.v1.starter_projects import router as starter_projects_router
 from langflow.api.v1.store import router as store_router
@@ -23,10 +25,12 @@ __all__ = [
     "files_router",
     "flows_router",
     "folders_router",
+    "knowledge_bases_router",
     "login_router",
     "mcp_projects_router",
     "mcp_router",
     "monitor_router",
+    "openai_responses_router",
     "projects_router",
     "starter_projects_router",
     "store_router",

@@ -4,6 +4,7 @@ slug: /components-logic
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 Langflow's **Logic** components provide functionalities for routing, conditional processing, and flow management.
 
@@ -33,7 +34,10 @@ The following example uses the **If-Else** component to check incoming chat mess
 
 1. Add an **If-Else** component to your flow, and then configure it as follows:
 
-    * **Text Input**: Connect the **Text Input** port to a **Chat Input** component.
+    * **Text Input**: Connect the **Text Input** port to a **Chat Input** component or another `Message` input.
+
+        If your input isn't in `Message` format, you can use another component to transform it, such as the [**Type Convert** component](/components-processing#type-convert) or [**Parser** component](/components-processing#parser).
+        If your input isn't appropriate for `Message` format, consider using another component for conditional routing, such as the [**Data Operations** component](/components-processing#data-operations).
 
     * **Match Text**: Enter `.*(urgent|warning|caution).*` so the component looks for these values in incoming input. The regex match is case sensitive, so if you need to look for all permutations of `warning`, enter `warning|Warning|WARNING`.
 
@@ -79,8 +83,7 @@ The chat output should reflect the instructions in your prompts based on the reg
 
 ### If-Else parameters
 
-Some **If-Else** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name           | Type     | Description                                                       |
 |----------------|----------|-------------------------------------------------------------------|
@@ -88,7 +91,6 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | match_text     | String   | Input parameter. The text to compare against. |
 | operator       | Dropdown | Input parameter. The operator used to compare texts. Options include `equals`, `not equals`, `contains`, `starts with`, `ends with`, and `regex`. The default is `equals`. |
 | case_sensitive | Boolean  | Input parameter. When true, the comparison is case sensitive. The default is false. This setting doesn't apply to regex comparisons. |
-| message        | Message  | Input parameter. The message to pass through either route. |
 | max_iterations | Integer  | Input parameter. The maximum number of iterations allowed for the conditional router. The default is 10. |
 | default_route  | Dropdown | Input parameter. The route to take when max iterations are reached. Options include `true_result` or `false_result`. The default is `false_result`. |
 | true_result  | Message | Output parameter. The output produced when the condition is true. |
@@ -96,7 +98,10 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 
 ## Loop
 
-The **Loop** component iterates over a list of input by passing individual items to other components attached at the **Item** output port until there are no items left to process. Then, the **Loop** component passes the aggregated result of all looping to the component connected to the **Done** port.
+The **Loop** component iterates over a list of input by passing individual items to other components attached at the **Item** output port until there are no items left to process.
+Then, the **Loop** component passes the aggregated result of all looping to the component connected to the **Done** port.
+
+### The looping process
 
 The **Loop** component is like a miniature flow within your flow.
 Here's a breakdown of the looping process:
@@ -115,9 +120,13 @@ Here's a breakdown of the looping process:
 
     Only one component connects to the **Item** port, but you can pass the data through as many components as you need, as long as the last component in the chain connects back to the **Looping** port.
 
+    The **If-Else** component isn't compatible with the **Loop** component.
+    For more information, see [Conditional looping](#conditional-looping).
+
 4. After processing all items, the results are aggregated into a single `Data` object that is passed from the **Loop** component's **Done** port to the next component in the flow.
 
-In terms of simplified code, the **Loop** component works like this:
+The following simplified Python code summarizes how the **Loop** component works.
+This _isn't_ the actual component code; it is only meant to help you understand the general process.
 
 ```python
 for i in input:             # Receive input data as a list
@@ -132,8 +141,7 @@ done = aggregate_results()  # Compile all returned items
 print(done)                 # Send the aggregated results from the Done port to another component
 ```
 
-<details>
-<summary>Loop example</summary>
+### Loop example
 
 In the follow example, the **Loop** component iterates over a CSV file until there are no rows left to process.
 In this case, the **Item** port passes each row to a **Type Convert** component to convert the row into a `Message` object, passes the `Message` to a **Structured Output** component to be processed into structured data that is then passed back to the **Loop** component's **Looping** port.
@@ -145,7 +153,13 @@ After processing all rows, the **Loop** component loads the aggregated list of s
 For more examples of the **Loop** component, try the **Research Translation Loop** template in Langflow, or see the video tutorial [Mastering the Loop Component & Agentic RAG in Langflow](https://www.youtube.com/watch?v=9Wx7WODSKTo).
 :::
 
-</details>
+### Conditional looping
+
+The **If-Else** component isn't compatible with the **Loop** component.
+If you need conditional loop events, redesign your flow to process conditions before the loop.
+For example, if you are looping over a `DataFrame`, you could use multiple [**DataFrame Operations** components](/components-processing#dataframe-operations) to conditionally filter data, and then run separate loops on each set of filtered data.
+
+![A flow with conditional looping.](/img/conditional-looping.png)
 
 ## Notify and Listen
 
@@ -168,8 +182,7 @@ When you select a flow for the **Run Flow** component, it uses the target flow's
 
 ### Run Flow parameters
 
-Some **Run Flow** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name              | Type     | Description                                                    |
 |-------------------|----------|----------------------------------------------------------------|

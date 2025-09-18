@@ -4,8 +4,6 @@ slug: /chat-with-files
 ---
 
 import Icon from "@site/src/components/icon";
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
 
 This tutorial shows you how to build a chatbot that can read and answer questions about files you upload, such as meeting notes or job applications.
 
@@ -31,8 +29,10 @@ The following steps modify the **Basic Prompting** template to accept file input
 2. In the **Language Model** component, enter your OpenAI API key.
 
     If you want to use a different provider or model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
+
 3. To verify that your API key is valid, click <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the LLM a question.
 The LLM should respond according to the specifications in the **Prompt Template** component's **Template** field.
+
 4. Exit the **Playground**, and then modify the **Prompt Template** component to accept file input in addition to chat input.
 To do this, edit the **Template** field, and then replace the default prompt with the following text:
 

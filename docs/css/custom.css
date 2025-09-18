@@ -4,15 +4,34 @@
  * work well for content-centric websites.
  */
 :root {
-  --ifm-background-color: var(--token-primary-bg-c);
-  --ifm-color-primary: hsla(330, 81%, 60%, 1);
   --ifm-navbar-link-hover-color: initial;
   --ifm-navbar-padding-vertical: 0;
+  --ifm-global-radius: 16px;
   --ifm-navbar-item-padding-vertical: 0;
   --ifm-font-family-base: Inter, -apple-system, BlinkMacSystemFont, Helvetica,
     Arial, sans-serif, "Apple Color Emoji", "Segoe UI emoji";
   --ifm-font-family-monospace: "SFMono-Regular", "Roboto Mono", Consolas,
     "Liberation Mono", Menlo, Courier, monospace;
+}
+
+/* Light theme - Pure white background */
+html[data-theme="light"] {
+  --ifm-color-primary: hsla(333, 71%, 51%, 1); /* Slightly darker pink for light theme */
+  --ifm-background-color: var(--ifm-color-white);
+  --ifm-background-surface-color: var(--ifm-color-white);
+}
+
+/* Dark theme - Pure black background */
+html[data-theme="dark"] {
+  --ifm-color-primary: hsla(329, 86%, 70%, 1); /* Lighter pink for dark theme */
+  --ifm-background-color: var(--ifm-color-black);
+  --ifm-background-surface-color: var(--ifm-color-black);
+}
+
+/* override the infima navbar docs/node_modules/infima/dist/css/default/default.css */
+.navbar {
+  box-shadow: none !important;
+  border-bottom: 1px solid var(--ifm-toc-border-color);
 }
 
 .theme-doc-sidebar-item-category.menu__list-item:not(:first-child) {
@@ -54,6 +73,34 @@ p {
   text-align: start;
 }
 
+/* Tabs Styling */
+.tabs-container {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-global-radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tabs {
+  margin-bottom: 1rem;
+}
+
+.tabs__item {
+  border: none;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  margin-right: 0rem;
+  padding-bottom: 0.5rem;
+  border-radius: 0;
+}
+
+.tabs__item:hover {
+  background-color: var(--ifm-hover-overlay);
+}
+
+.tabs__item--active {
+  border-bottom-color: var(--ifm-tabs-color-active);
+}
+
 /* apply */
 #hero-apply {
   z-index: -1;
@@ -80,21 +127,19 @@ p {
   );
 }
 
-/**
-  * Hero component title overrides to match other heading styles
-  */
+/* Hero component title overrides to match other heading styles */
 .hero-title {
   color: rgb(28, 30, 33);
   font-family: var(--ifm-heading-font-family);
 }
 h1 {
-  font-size: 26px;
+  font-size: 30px;
 }
 h2 {
-  font-size: 22px;
+  font-size: 25px;
 }
 h3 {
-  font-size: 18px;
+  font-size: 22px;
 }
 
 body {
@@ -154,7 +199,6 @@ body {
 }
 
 /* Discord */
-
 .header-discord-link {
   margin-right: 0.5rem;
 }
@@ -279,8 +323,10 @@ body {
 
 /* Footer Styles */
 .footer {
-  padding: 8px 0;
-  background-color: var(--ifm-navbar-background-color);
+  /* padding: 8px 0; */
+  padding: 1rem 0 0;
+  background-color: var(--ifm-background-color);
+  border-top: 1px solid var(--ifm-color-emphasis-200);
 }
 
 [data-theme="light"] .footer {
@@ -317,11 +363,16 @@ body {
 }
 
 .footer .container {
-  padding: 0 5rem;
+  padding: 0 1.25rem;
   display: flex;
-  justify-content: space-between;
+  justify-content: left;
   align-items: center;
   flex-direction: row-reverse;
+  max-width: 100%;
+}
+
+.footer__title {
+  margin-bottom: 0;
 }
 
 /* Sidebar Styles */
@@ -335,15 +386,11 @@ body {
   height: 100%;
 }
 
-.theme-doc-sidebar-menu > :nth-last-child(2) {
-  margin-bottom: auto;
-}
-
 /* Sidebar Ad Styles */
 .sidebar-ad {
   margin-left: -0.5rem;
   margin-right: -0.5rem;
-  margin-top: 1rem;
+  margin-top: auto;
   border-radius: 0;
   border-top: 1px solid var(--ifm-color-emphasis-300);
   position: sticky;
@@ -416,3 +463,96 @@ body {
   padding: 0;
 }
 
+/* DocSearch Input Styling - Simple border override */
+.DocSearch-Button {
+  border: 1px solid var(--ifm-color-emphasis-300) !important;
+  border-radius: 6px !important;
+  background: var(--ifm-color-content-inverse) !important;
+  color: var(--ifm-color-emphasis-500) !important;
+}
+
+.DocSearch-Button:hover,
+.DocSearch-Button:focus {
+  border-color: var(--ifm-color-primary) !important;
+  box-shadow: 0 0 0 1px var(--ifm-color-primary) !important;
+}
+
+.DocSearch-Search-Icon {
+  color: var(--ifm-color-emphasis-500) !important;
+  size: 16px !important;
+}
+
+/* Table Styling */
+.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: var(--ifm-global-radius);
+  border: var(--ifm-table-border-width) solid var(--ifm-table-border-color);
+  font-size: 1rem;
+  margin: 1.5rem 0;
+  overflow: scroll;
+  scrollbar-width: none;
+  table-layout: fixed;
+}
+
+/* Table header */
+.markdown table thead th {
+  background-color: var(--ifm-color-emphasis-100);
+  padding: .5rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: var(--ifm-table-border-width) solid var(--ifm-table-border-color);
+  border-top: none;
+  border-left: none;
+}
+
+.markdown table thead tr {
+  border: none;
+}
+
+.markdown table thead th:last-child {
+  border: none;
+}
+
+/* Table body */
+.markdown table td {
+  padding: .6rem;
+  vertical-align: top;
+  border-right: var(--ifm-table-border-width) solid var(--ifm-table-border-color);
+  border-left: none;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.markdown table td:last-child {
+  border: none;
+}
+
+/* Fixed column widths for consistent sizing */
+.markdown table th,
+.markdown table td {
+  width: 20%;
+}
+
+.markdown table th:last-child,
+.markdown table td:last-child {
+  width: auto; /* Final column */
+}
+
+/* Consistent row heights */
+.markdown table tbody tr {
+  height: auto;
+  min-height: 2.2rem;
+}
+
+.markdown table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Code elements in tables */
+.markdown table code {
+  background-color: var(--ifm-color-emphasis-100);
+  border-radius: 4px;
+  padding: 0.1rem 0.3rem;
+  font-family: var(--ifm-font-family-monospace);
+}

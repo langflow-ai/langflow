@@ -3,13 +3,14 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
-from loguru import logger
+from lfx.log.logger import logger
 
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
+    from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
@@ -17,8 +18,6 @@ if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
     from langflow.services.job_queue.service import JobQueueService
     from langflow.services.session.service import SessionService
-    from langflow.services.settings.service import SettingsService
-    from langflow.services.socket.service import SocketIOService
     from langflow.services.state.service import StateService
     from langflow.services.storage.service import StorageService
     from langflow.services.store.service import StoreService
@@ -40,12 +39,16 @@ def get_service(service_type: ServiceType, default=None):
         Any: The service instance.
 
     """
-    from langflow.services.manager import service_manager
+    from lfx.services.manager import get_service_manager
 
-    if not service_manager.factories:
+    service_manager = get_service_manager()
+
+    if not service_manager.are_factories_registered():
         # ! This is a workaround to ensure that the service manager is initialized
         # ! Not optimal, but it works for now
-        service_manager.register_factories()
+        from langflow.services.manager import ServiceManager
+
+        service_manager.register_factories(ServiceManager.get_factories())
     return service_manager.get(service_type, default)
 
 
@@ -82,15 +85,6 @@ def get_state_service() -> StateService:
     return get_service(ServiceType.STATE_SERVICE, StateServiceFactory())
 
 
-def get_socket_service() -> SocketIOService:
-    """Get the SocketIOService instance from the service manager.
-
-    Returns:
-        SocketIOService: The SocketIOService instance.
-    """
-    return get_service(ServiceType.SOCKETIO_SERVICE)  # type: ignore[attr-defined]
-
-
 def get_storage_service() -> StorageService:
     """Retrieves the storage service instance.
 
@@ -125,7 +119,7 @@ def get_settings_service() -> SettingsService:
     Raises:
         ValueError: If the service cannot be retrieved or initialized.
     """
-    from langflow.services.settings.factory import SettingsServiceFactory
+    from lfx.services.settings.factory import SettingsServiceFactory
 
     return get_service(ServiceType.SETTINGS_SERVICE, SettingsServiceFactory())
 
@@ -149,7 +143,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         AsyncSession: An async session object.
 
     """
-    async with get_db_service().with_session() as session:
+    async with session_scope() as session:
         yield session
 
 
@@ -174,7 +168,7 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
             yield session
             await session.commit()
         except Exception:
-            logger.exception("An error occurred during the session scope.")
+            await logger.aexception("An error occurred during the session scope.")
             await session.rollback()
             raise
 

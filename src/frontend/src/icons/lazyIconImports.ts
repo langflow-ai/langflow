@@ -19,6 +19,41 @@ export const lazyIconsMapping = {
     import("@/icons/AssemblyAI").then((mod) => ({
       default: mod.AssemblyAIIcon,
     })),
+  Googledocs: () =>
+    import("@/icons/googledocs").then((mod) => ({
+      default: mod.GoogledocsIcon,
+    })),
+  Googlesheets: () =>
+    import("@/icons/googlesheets").then((mod) => ({
+      default: mod.GooglesheetsIcon,
+    })),
+  Klaviyo: () =>
+    import("@/icons/klaviyo").then((mod) => ({ default: mod.KlaviyoIcon })),
+  One_Drive: () =>
+    import("@/icons/one_drive").then((mod) => ({ default: mod.One_DriveIcon })),
+  Wrike: () =>
+    import("@/icons/wrike").then((mod) => ({ default: mod.WrikeIcon })),
+  Miro: () => import("@/icons/miro").then((mod) => ({ default: mod.MiroIcon })),
+  Figma: () =>
+    import("@/icons/figma").then((mod) => ({ default: mod.FigmaIcon })),
+  Discord: () =>
+    import("@/icons/discord").then((mod) => ({
+      default: mod.DiscordIcon,
+    })),
+  Contentful: () =>
+    import("@/icons/contentful").then((mod) => ({
+      default: mod.ContentfulIcon,
+    })),
+  Calendly: () =>
+    import("@/icons/calendly").then((mod) => ({
+      default: mod.CalendlyIcon,
+    })),
+  Attio: () =>
+    import("@/icons/attio").then((mod) => ({ default: mod.AttioIcon })),
+  Asana: () =>
+    import("@/icons/asana").then((mod) => ({ default: mod.AsanaIcon })),
+  Airtable: () =>
+    import("@/icons/airtable").then((mod) => ({ default: mod.AirtableIcon })),
   AstraDB: () =>
     import("@/icons/AstraDB").then((mod) => ({ default: mod.AstraDBIcon })),
   Athena: () =>
@@ -106,6 +141,14 @@ export const lazyIconsMapping = {
     import("@/icons/GoogleDrive").then((mod) => ({
       default: mod.GoogleDriveIcon,
     })),
+  Googlemeet: () =>
+    import("@/icons/googlemeet").then((mod) => ({
+      default: mod.GooglemeetIcon,
+    })),
+  GoogleTasks: () =>
+    import("@/icons/GoogleTasks").then((mod) => ({
+      default: mod.GoogleTasksIcon,
+    })),
   GoogleGenerativeAI: () =>
     import("@/icons/GoogleGenerativeAI").then((mod) => ({
       default: mod.GoogleGenerativeAIIcon,
@@ -121,6 +164,18 @@ export const lazyIconsMapping = {
   GradientInfinity: () =>
     import("@/icons/GradientSparkles").then((mod) => ({
       default: mod.GradientInfinity,
+    })),
+  Googlemaps: () =>
+    import("@/icons/googlemaps").then((mod) => ({
+      default: mod.GooglemapsIcon,
+    })),
+  Todoist: () =>
+    import("@/icons/todoist").then((mod) => ({
+      default: mod.TodoistIcon,
+    })),
+  Zoom: () =>
+    import("@/icons/zoom").then((mod) => ({
+      default: mod.ZoomIcon,
     })),
   GradientUngroup: () =>
     import("@/icons/GradientSparkles").then((mod) => ({
@@ -158,6 +213,8 @@ export const lazyIconsMapping = {
     import("@/icons/JigsawStack").then((mod) => ({
       default: mod.JigsawStackIcon,
     })),
+  Linear: () =>
+    import("@/icons/linear").then((mod) => ({ default: mod.LinearIcon })),
   LangChain: () =>
     import("@/icons/LangChain").then((mod) => ({ default: mod.LangChainIcon })),
   Langwatch: () =>
@@ -221,6 +278,8 @@ export const lazyIconsMapping = {
     })),
   Redis: () =>
     import("@/icons/Redis").then((mod) => ({ default: mod.RedisIcon })),
+  Reddit: () =>
+    import("@/icons/reddit").then((mod) => ({ default: mod.RedditIcon })),
   SambaNova: () =>
     import("@/icons/SambaNova").then((mod) => ({ default: mod.SambaNovaIcon })),
   ScrapeGraph: () =>
@@ -287,6 +346,10 @@ export const lazyIconsMapping = {
     import("@/icons/Upstash").then((mod) => ({ default: mod.UpstashSvgIcon })),
   Vectara: () =>
     import("@/icons/VectaraIcon").then((mod) => ({ default: mod.VectaraIcon })),
+  VectorStores: () =>
+    import("@/icons/vectorstores").then((mod) => ({
+      default: mod.VectorStoresIcon,
+    })),
   VertexAI: () =>
     import("@/icons/VertexAI").then((mod) => ({ default: mod.VertexAIIcon })),
   WatsonxAI: () =>

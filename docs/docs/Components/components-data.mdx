@@ -4,6 +4,9 @@ slug: /components-data
 ---
 
 import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 You can use Langflow's **Data** components to bring data into your flows from various sources like files, API endpoints, and URLs.
 For example:
@@ -31,11 +34,11 @@ This can include basic operations, like saving a file in a specific format, or m
 
 **Data** components are used often in flows because they offer a versatile way to perform common, basic functions.
 
-You can use **Data** components to perform their base functions as isolated steps in your flow, or you can connect them to an **Agent** component as tools.
+You can use these components to perform their base functions as isolated steps in your flow, or you can connect them to an **Agent** component as tools.
 
 ![An agent flow with three Data components connected to the agent as tools](/img/connect-data-components-to-agent.png)
 
-For examples of **Data** components in flows, see the following:
+For example flows, see the following:
 
 * [Create a chatbot that can ingest files](/chat-with-files): Learn how to use a **File** component to load a file as context for a chatbot.
 The file and user input are both passed to the LLM so you can ask questions about the file you uploaded.
@@ -50,7 +53,7 @@ When used as tools, the agent autonomously decides when to call a component base
 
 ## API Request
 
-The **API Request** component constructs and sends an HTTP requests using URLs or curl commands:
+The **API Request** component constructs and sends HTTP requests using URLs or curl commands:
 
 * **URL mode**: Enter one or more comma-separated URLs, and then select the method for the request to each URL.
 * **curl mode**: Enter the curl command to execute.
@@ -63,8 +66,7 @@ For provider-specific API components, see [Bundles](/components-bundle-component
 
 ### API Request parameters
 
-Most **API Request** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -90,8 +92,7 @@ Outputs either a [`Data`](/data-types#data) or [`DataFrame`](/data-types#datafra
 
 ### Directory parameters
 
-Many **Directory** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name               | Type             | Description                                        |
 | ------------------ | ---------------- | -------------------------------------------------- |
@@ -157,8 +158,7 @@ For videos, see the **Twelve Labs** and **YouTube** [bundles](/components-bundle
 
 ### File parameters
 
-Most **File** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -202,8 +202,7 @@ The agent decides whether to use the **News Search** component based on the user
 
 ### News Search parameters
 
-Most **News Search** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -344,8 +343,7 @@ Instead, you only need to provide enough context for the agent to understand tha
 
 ### SQL Database parameters
 
-Some **SQL Database** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -362,8 +360,7 @@ It follows links recursively to a given depth, and it supports output in plain t
 
 ### URL parameters
 
-Most **URL** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 Some of the available parameters include the following:
 
@@ -396,7 +393,7 @@ There are two settings that control the output of the **URL** component at diffe
 When used as a standard component in a flow, the **URL** component must be connected to a component that accepts the selected output data type (`DataFrame` or `Message`).
 You can connect the **URL** component directly to a compatible component, or you can use a [**Type Convert** component](/components-processing#type-convert) to convert the output to another type before passing the data to other components if the data types aren't directly compatible.
 
-Processing components, like the **Type Convert** component, are useful with the **URL** component because it can extract a large amount of data from the crawled pages.
+**Processing** components like the **Type Convert** component are useful with the **URL** component because it can extract a large amount of data from the crawled pages.
 For example, if you only want to pass specific fields to other components, you can use a [**Parser** component](/components-processing#parser) to extract only that data from the crawled pages before passing the data to other components.
 
 When used in **Tool Mode** with an **Agent** component, the **URL** component can be connected directly to the **Agent** component's **Tools** port without converting the data.
@@ -410,7 +407,7 @@ For other search APIs, see [Bundles](/components-bundle-components).
 :::important
 The **Web Search** component uses web scraping that can be subject to rate limits.
 
-For production use, consider using another search component with more robust API support, such as a provider-specific [bundle](/components-bundle-components).
+For production use, consider using another search component with more robust API support, such as provider-specific bundles.
 :::
 
 ### Use the Web Search component in a flow
@@ -519,6 +516,6 @@ Replace these components with the **File** component, which supports loading CSV
 
 ## See also
 
-- [Google components](/bundles-google)
-- [Composio components](/integrations-composio)
+- [**Google** bundle](/bundles-google)
+- [**Composio** bundle](/integrations-composio)
 - [File management](/concepts-file-management)

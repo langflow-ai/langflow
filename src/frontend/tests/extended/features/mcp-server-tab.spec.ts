@@ -1,5 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -56,6 +58,8 @@ test(
         // Verify actions modal is open
         await expect(page.getByText("MCP Server Tools")).toBeVisible();
 
+        await page.waitForSelector("text=Flow Name", { timeout: 3000 });
+
         // Select some actions
         const rowsCount = await page.getByRole("row").count();
         expect(rowsCount).toBeGreaterThan(0);
@@ -85,12 +89,37 @@ test(
           await page.waitForTimeout(1000);
         }
 
+        // Verify if the state is maintained
+
+        await page.locator('input[data-ref="eInput"]').first().click();
+
+        await page.waitForTimeout(1000);
+
+        await page.reload();
+
+        // Navigate to MCP server tab
+        await page.getByTestId("mcp-btn").click({ timeout: 10000 });
+
+        // Verify MCP server tab is visible
+        await expect(page.getByTestId("mcp-server-title")).toBeVisible();
+        await expect(page.getByText("Flows/Tools")).toBeVisible();
+
+        // Click on Edit Tools button
+        await page.getByTestId("button_open_actions").click();
+        await page.waitForTimeout(500);
+
+        // Verify actions modal is open
+        await expect(page.getByText("MCP Server Tools")).toBeVisible();
+
         const isCheckedAgainAgain = await page
           .locator('input[data-ref="eInput"]')
           .first()
           .isChecked();
 
-        expect(isCheckedAgainAgain).toBeFalsy();
+        expect(isCheckedAgainAgain).toBeTruthy();
+
+        await page.locator('input[data-ref="eInput"]').first().click();
+        await page.waitForTimeout(1000);
 
         // Select first action
         let element = page.locator('input[data-ref="eInput"]').last();
@@ -216,12 +245,10 @@ test(
         await page
           .getByTestId("agentsMCP Tools")
           .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-            targetPosition: { x: 0, y: 0 },
+            targetPosition: { x: 50, y: 50 },
           });
 
-        await page.getByTestId("fit_view").click();
-
-        await zoomOut(page, 3);
+        await adjustScreenView(page, { numberOfZoomOut: 3 });
 
         await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 

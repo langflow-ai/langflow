@@ -185,7 +185,7 @@ LANGFLOW_SUPERUSER_PASSWORD=securepassword
 They are required if `LANGFLOW_AUTO_LOGIN=False`.
 Otherwise, they aren't relevant.
 
-If required and not set in when you [start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled), then the default values are `langflow` and `langflow` for system auto-login behavior.
+When you [start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled), if these variables are required but _not_ set, then Langflow uses the default values of `langflow` and `langflow`.
 These defaults don't apply when using the Langflow CLI command [`langflow superuser`](/configuration-cli#langflow-superuser).
 
 ### LANGFLOW_SECRET_KEY {#langflow-secret-key}
@@ -248,6 +248,13 @@ To generate a secret encryption key for `LANGFLOW_SECRET_KEY`, do the following:
     ```text
     LANGFLOW_SECRET_KEY=dBuu...2kM2_fb
     ```
+
+    If you're running Langflow on Docker, reference the `LANGFLOW_SECRET_KEY` from your `.env` file in the `docker-compose.yml` file like this:
+
+        ```yaml
+        environment:
+          - LANGFLOW_SECRET_KEY=${LANGFLOW_SECRET_KEY}
+        ```
 
 ### LANGFLOW_NEW_USER_IS_ACTIVE {#langflow-new-user-is-active}
 
@@ -317,7 +324,7 @@ Additionally, you must sign in as a superuser to manage users and [create a Lang
     uv run langflow run --env-file .env
     ```
 
-    Starting Langflow with an `.env` file automatically authenticates you as the superuser set in `LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`.
+    Starting Langflow with a `.env` file automatically authenticates you as the superuser set in `LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`.
     If you don't explicitly set these variables, the default values are `langflow` and `langflow` for system auto-login.
 
 6. Verify the server is running. The default location is `http://localhost:7860`.

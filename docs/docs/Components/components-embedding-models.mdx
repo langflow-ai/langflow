@@ -8,9 +8,7 @@ import Icon from "@site/src/components/icon";
 **Embedding Model** components in Langflow generate text embeddings using a specified Large Language Model (LLM).
 
 Langflow includes an **Embedding Model** core component that has built-in support for some LLMs.
-Alternatively, you can use any [additional **Embedding Model** component](#additional-embedding-model-components) in place of the core **Embedding Model** component.
-
-The built-in LLMs are appropriate for most text-based embedding model use cases in Langflow.
+Alternatively, you can use [additional embedding models](#additional-embedding-model-components) in place of the core **Embedding Model** component.
 
 ## Use Embedding Model components in a flow
 
@@ -21,22 +19,16 @@ This flow loads a text file, splits the text into chunks, generates embeddings f
 
 ![A semantic search flow that uses Embedding Model, File, Split Text, Chroma DB, Chat Input, and Chat Output components](/img/component-embedding-models-add-chat.png)
 
-:::tip
-This example uses the **Embedding Model** core component.
-
-To use another model, you can replace the **Embedding Model** core component with any [additional **Embedding Model** component](#additional-embedding-model-components) in these steps.
-However, your component might have different parameters than the **Embedding Model** core component.
-:::
-
 1. Create a flow, add a **File** component, and then select a file containing text data, such as a PDF, that you can use to test the flow.
 
 2. Add an **Embedding Model** component, and then provide a valid OpenAI API key.
+You can enter the API key directly or use a <Icon name="Globe" aria-hidden="true"/> [global variable](/configuration-global-variables).
 
-    By default, the **Embedding Model** component uses an OpenAI model.
-    If you want to use a different model, edit the **Model Name**, and **API Key** fields accordingly.
-    Or, see [Additional Embedding Model components](#additional-embedding-model-components) for other components that you can use in place of the **Embedding Model** core component.
+    :::tip
+    If your preferred embedding model provider or model isn't supported by the **Embedding Model** core component, you can use [additional embedding models](#additional-embedding-model-components) in place of the core component.
 
-    You can enter component API keys directly or use Langflow global variables to reference your API keys.
+    Search the **Components** menu for your preferred provider to find additional embedding models, such as the [**Hugging Face Embeddings Inference** component](/bundles-huggingface#hugging-face-embeddings-inference).
+    :::
 
 3. Add a [**Split Text** component](/components-processing#split-text) to your flow.
 This component splits text input into smaller chunks to be processed into embeddings.
@@ -57,10 +49,14 @@ This component stores the generated embeddings so they can be used for similarit
 
 7. Click **Playground**, and then enter a search query to retrieve text chunks that are most semantically similar to your query.
 
-## Embedding Model
+## Embedding Model parameters
 
-Some **Embedding Model** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+The following parameters are for the **Embedding Model** core component.
+Other embedding model components can have additional or different parameters.
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
 
 | Name | Display Name | Type | Description |
 |------|--------------|------|-------------|
@@ -76,9 +72,9 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | model_kwargs | Model Kwargs | Dictionary | Input parameter. Additional keyword arguments to pass to the model. |
 | embeddings | Embeddings | Embeddings | Output parameter. An instance for generating embeddings using the selected provider. |
 
-## Additional Embedding Model components
+## Additional embedding models {#additional-embedding-model-components}
 
-If your provider or model isn't supported by the **Embedding Model** core component, additional single-provider **Embedding Model** components are available in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
+If your provider or model isn't supported by the **Embedding Model** core component, additional provider-specific **Embedding Model** components are available in the [**Bundles**](/components-bundle-components) section of the **Components** menu.
 
 ## Legacy embedding components
 
