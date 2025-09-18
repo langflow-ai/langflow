@@ -14,13 +14,26 @@ from lfx.schema.data import Data
 
 
 @vector_store_connection
-class OpenSearchHybridComponent(LCVectorStoreComponent):
-    """OpenSearch hybrid search: KNN (k=10, boost=0.7) + multi_match (boost=0.3) with optional filters & min_score."""
+class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
+    """OpenSearch Vector Store Component with Hybrid Search Capabilities.
 
-    display_name: str = "OpenSearch (Hybrid)"
-    name: str = "OpenSearchHybrid"
+    This component provides vector storage and retrieval using OpenSearch, combining semantic
+    similarity search (KNN) with keyword-based search for optimal results. It supports document
+    ingestion, vector embeddings, and advanced filtering with authentication options.
+
+    Features:
+    - Vector storage with configurable engines (jvector, nmslib, faiss, lucene)
+    - Hybrid search combining KNN vector similarity and keyword matching
+    - Flexible authentication (Basic auth, JWT tokens)
+    - Advanced filtering and aggregations
+    - Metadata injection during document ingestion
+    """
+
+    display_name: str = "OpenSearch"
     icon: str = "OpenSearch"
-    description: str = "Hybrid search: KNN + keyword, with optional filters, min_score, and aggregations."
+    description: str = (
+        "Store and search documents using OpenSearch with hybrid semantic and keyword search capabilities."
+    )
 
     # Keys we consider baseline
     default_keys: list[str] = [
@@ -49,8 +62,11 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
     inputs = [
         TableInput(
             name="docs_metadata",
-            display_name="Ingestion Metadata",
-            info="Key value pairs to be inserted into each ingested document.",
+            display_name="Document Metadata",
+            info=(
+                "Additional metadata key-value pairs to be added to all ingested documents. "
+                "Useful for tagging documents with source information, categories, or other custom attributes."
+            ),
             table_schema=[
                 {
                     "name": "key",
@@ -72,81 +88,105 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
             name="opensearch_url",
             display_name="OpenSearch URL",
             value="http://localhost:9200",
-            info="URL for your OpenSearch cluster.",
+            info=(
+                "The connection URL for your OpenSearch cluster "
+                "(e.g., http://localhost:9200 for local development or your cloud endpoint)."
+            ),
         ),
         StrInput(
             name="index_name",
             display_name="Index Name",
             value="langflow",
-            info="The index to search.",
+            info=(
+                "The OpenSearch index name where documents will be stored and searched. "
+                "Will be created automatically if it doesn't exist."
+            ),
         ),
         DropdownInput(
             name="engine",
-            display_name="Engine",
+            display_name="Vector Engine",
             options=["jvector", "nmslib", "faiss", "lucene"],
             value="jvector",
-            info="Vector search engine to use.",
+            info=(
+                "Vector search engine for similarity calculations. 'jvector' is recommended for most use cases. "
+                "Note: Amazon OpenSearch Serverless only supports 'nmslib' or 'faiss'."
+            ),
             advanced=True,
         ),
         DropdownInput(
             name="space_type",
-            display_name="Space Type",
+            display_name="Distance Metric",
             options=["l2", "l1", "cosinesimil", "linf", "innerproduct"],
             value="l2",
-            info="Distance metric for vector similarity.",
+            info=(
+                "Distance metric for calculating vector similarity. 'l2' (Euclidean) is most common, "
+                "'cosinesimil' for cosine similarity, 'innerproduct' for dot product."
+            ),
             advanced=True,
         ),
         IntInput(
             name="ef_construction",
             display_name="EF Construction",
             value=512,
-            info="Size of the dynamic list used during k-NN graph creation.",
+            info=(
+                "Size of the dynamic candidate list during index construction. "
+                "Higher values improve recall but increase indexing time and memory usage."
+            ),
             advanced=True,
         ),
         IntInput(
             name="m",
             display_name="M Parameter",
             value=16,
-            info="Number of bidirectional links created for each new element.",
+            info=(
+                "Number of bidirectional connections for each vector in the HNSW graph. "
+                "Higher values improve search quality but increase memory usage and indexing time."
+            ),
             advanced=True,
         ),
         *LCVectorStoreComponent.inputs,  # includes search_query, add_documents, etc.
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         StrInput(
             name="vector_field",
-            display_name="Vector Field",
+            display_name="Vector Field Name",
             value="chunk_embedding",
             advanced=True,
-            info="Vector field used for KNN.",
+            info="Name of the field in OpenSearch documents that stores the vector embeddings for similarity search.",
         ),
         IntInput(
             name="number_of_results",
-            display_name="Default Size (limit)",
+            display_name="Default Result Limit",
             value=10,
             advanced=True,
-            info="Default number of hits when no limit provided in filter_expression.",
+            info=(
+                "Default maximum number of search results to return when no limit is "
+                "specified in the filter expression."
+            ),
         ),
         MultilineInput(
             name="filter_expression",
-            display_name="Filter Expression (JSON)",
+            display_name="Search Filters (JSON)",
             value="",
             info=(
-                "Optional JSON to control filters/limit/score threshold.\n"
-                "Accepted shapes:\n"
-                '1) {"filter": [ {"term": {"filename":"foo"}}, '
-                '{"terms":{"owner":["u1","u2"]}} ], "limit": 10, "score_threshold": 1.6 }\n'
-                '2) Context-style maps: {"data_sources":["fileA"], '
-                '"document_types":["application/pdf"], "owners":["123"]}\n'
-                "Placeholders with __IMPOSSIBLE_VALUE__ are ignored."
+                "Optional JSON configuration for search filtering, result limits, and score thresholds.\n\n"
+                "Format 1 - Explicit filters:\n"
+                '{"filter": [{"term": {"filename":"doc.pdf"}}, '
+                '{"terms":{"owner":["user1","user2"]}}], "limit": 10, "score_threshold": 1.6}\n\n'
+                "Format 2 - Context-style mapping:\n"
+                '{"data_sources":["file.pdf"], "document_types":["application/pdf"], "owners":["user123"]}\n\n'
+                "Use __IMPOSSIBLE_VALUE__ as placeholder to ignore specific filters."
             ),
         ),
         # ----- Auth controls (dynamic) -----
         DropdownInput(
             name="auth_mode",
-            display_name="Auth Mode",
+            display_name="Authentication Mode",
             value="basic",
             options=["basic", "jwt"],
-            info="Choose Basic (username/password) or JWT (Bearer token).",
+            info=(
+                "Authentication method: 'basic' for username/password authentication, "
+                "or 'jwt' for JSON Web Token (Bearer) authentication."
+            ),
             real_time_refresh=True,
             advanced=False,
         ),
@@ -168,7 +208,10 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
             value="JWT",
             load_from_db=True,
             show=True,
-            info="Paste a valid JWT (sent as a header).",
+            info=(
+                "Valid JSON Web Token for authentication. "
+                "Will be sent in the Authorization header (with optional 'Bearer ' prefix)."
+            ),
         ),
         StrInput(
             name="jwt_header",
@@ -185,12 +228,22 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
             advanced=True,
         ),
         # ----- TLS -----
-        BoolInput(name="use_ssl", display_name="Use SSL", value=True, advanced=True),
+        BoolInput(
+            name="use_ssl",
+            display_name="Use SSL/TLS",
+            value=True,
+            advanced=True,
+            info="Enable SSL/TLS encryption for secure connections to OpenSearch.",
+        ),
         BoolInput(
             name="verify_certs",
-            display_name="Verify Certificates",
+            display_name="Verify SSL Certificates",
             value=False,
             advanced=True,
+            info=(
+                "Verify SSL certificates when connecting. "
+                "Disable for self-signed certificates in development environments."
+            ),
         ),
     ]
 
@@ -205,7 +258,23 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
         m: int = 16,
         vector_field: str = "vector_field",
     ) -> dict[str, Any]:
-        """For Approximate k-NN Search, this is the default mapping to create index."""
+        """Create the default OpenSearch index mapping for vector search.
+
+        This method generates the index configuration with k-NN settings optimized
+        for approximate nearest neighbor search using the specified vector engine.
+
+        Args:
+            dim: Dimensionality of the vector embeddings
+            engine: Vector search engine (jvector, nmslib, faiss, lucene)
+            space_type: Distance metric for similarity calculation
+            ef_search: Size of dynamic list used during search
+            ef_construction: Size of dynamic list used during index construction
+            m: Number of bidirectional links for each vector
+            vector_field: Name of the field storing vector embeddings
+
+        Returns:
+            Dictionary containing OpenSearch index mapping configuration
+        """
         return {
             "settings": {"index": {"knn": True, "knn.algo_param.ef_search": ef_search}},
             "mappings": {
@@ -225,13 +294,31 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
         }
 
     def _validate_aoss_with_engines(self, *, is_aoss: bool, engine: str) -> None:
-        """Validate AOSS with the engine."""
+        """Validate engine compatibility with Amazon OpenSearch Serverless (AOSS).
+
+        Amazon OpenSearch Serverless has restrictions on which vector engines
+        can be used. This method ensures the selected engine is compatible.
+
+        Args:
+            is_aoss: Whether the connection is to Amazon OpenSearch Serverless
+            engine: The selected vector search engine
+
+        Raises:
+            ValueError: If AOSS is used with an incompatible engine
+        """
         if is_aoss and engine not in {"nmslib", "faiss"}:
             msg = "Amazon OpenSearch Service Serverless only supports `nmslib` or `faiss` engines"
             raise ValueError(msg)
 
     def _is_aoss_enabled(self, http_auth: Any) -> bool:
-        """Check if the service is http_auth is set as `aoss`."""
+        """Determine if Amazon OpenSearch Serverless (AOSS) is being used.
+
+        Args:
+            http_auth: The HTTP authentication object
+
+        Returns:
+            True if AOSS is enabled, False otherwise
+        """
         return http_auth is not None and hasattr(http_auth, "service") and http_auth.service == "aoss"
 
     def _bulk_ingest_embeddings(
@@ -249,7 +336,27 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
         *,
         is_aoss: bool = False,
     ) -> list[str]:
-        """Bulk Ingest Embeddings into given index."""
+        """Efficiently ingest multiple documents with embeddings into OpenSearch.
+
+        This method uses bulk operations to insert documents with their vector
+        embeddings and metadata into the specified OpenSearch index.
+
+        Args:
+            client: OpenSearch client instance
+            index_name: Target index for document storage
+            embeddings: List of vector embeddings for each document
+            texts: List of document texts
+            metadatas: Optional metadata dictionaries for each document
+            ids: Optional document IDs (UUIDs generated if not provided)
+            vector_field: Field name for storing vector embeddings
+            text_field: Field name for storing document text
+            mapping: Optional index mapping configuration
+            max_chunk_bytes: Maximum size per bulk request chunk
+            is_aoss: Whether using Amazon OpenSearch Serverless
+
+        Returns:
+            List of document IDs that were successfully ingested
+        """
         if not mapping:
             mapping = {}
 
@@ -272,12 +379,24 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
                 request["_id"] = _id
             requests.append(request)
             return_ids.append(_id)
-        self.log(metadatas[i])
+        if metadatas:
+            self.log(f"Sample metadata: {metadatas[0] if metadatas else {}}")
         helpers.bulk(client, requests, max_chunk_bytes=max_chunk_bytes)
         return return_ids
 
     # ---------- auth / client ----------
     def _build_auth_kwargs(self) -> dict[str, Any]:
+        """Build authentication configuration for OpenSearch client.
+
+        Constructs the appropriate authentication parameters based on the
+        selected auth mode (basic username/password or JWT token).
+
+        Returns:
+            Dictionary containing authentication configuration
+
+        Raises:
+            ValueError: If required authentication parameters are missing
+        """
         mode = (self.auth_mode or "basic").strip().lower()
         if mode == "jwt":
             token = (self.jwt_token or "").strip()
@@ -295,6 +414,11 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
         return {"http_auth": (user, pwd)}
 
     def build_client(self) -> OpenSearch:
+        """Create and configure an OpenSearch client instance.
+
+        Returns:
+            Configured OpenSearch client ready for operations
+        """
         auth_kwargs = self._build_auth_kwargs()
         return OpenSearch(
             hosts=[self.opensearch_url],
@@ -315,6 +439,17 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
 
     # ---------- ingest ----------
     def _add_documents_to_vector_store(self, client: OpenSearch) -> None:
+        """Process and ingest documents into the OpenSearch vector store.
+
+        This method handles the complete document ingestion pipeline:
+        - Prepares document data and metadata
+        - Generates vector embeddings
+        - Creates appropriate index mappings
+        - Bulk inserts documents with vectors
+
+        Args:
+            client: OpenSearch client for performing operations
+        """
         # Convert DataFrame to Data if needed using parent's method
         self.ingest_data = self._prepare_ingest_data()
 
@@ -403,11 +538,24 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
         return any(v == "__IMPOSSIBLE_VALUE__" for v in term_obj.values())
 
     def _coerce_filter_clauses(self, filter_obj: dict | None) -> list[dict]:
-        """Accepts two formats of filters.
+        """Convert filter expressions into OpenSearch-compatible filter clauses.
 
-        A) {"filter":[ ...term/terms objects... ], "limit":..., "score_threshold":...}
-        B) Context-style: {"data_sources":[...], "document_types":[...], "owners":[...]}
-        Returns a list of OS filter clauses (term/terms), skipping placeholders and empty terms.
+        This method accepts two filter formats and converts them to standardized
+        OpenSearch query clauses:
+
+        Format A - Explicit filters:
+        {"filter": [{"term": {"field": "value"}}, {"terms": {"field": ["val1", "val2"]}}],
+         "limit": 10, "score_threshold": 1.5}
+
+        Format B - Context-style mapping:
+        {"data_sources": ["file1.pdf"], "document_types": ["pdf"], "owners": ["user1"]}
+
+        Args:
+            filter_obj: Filter configuration dictionary or None
+
+        Returns:
+            List of OpenSearch filter clauses (term/terms objects)
+            Placeholder values with "__IMPOSSIBLE_VALUE__" are ignored
         """
         if not filter_obj:
             return []
@@ -425,15 +573,15 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
             raw = filter_obj["filter"]
             if isinstance(raw, dict):
                 raw = [raw]
-            clauses: list[dict] = []
+            explicit_clauses: list[dict] = []
             for f in raw or []:
                 if "term" in f and isinstance(f["term"], dict) and not self._is_placeholder_term(f["term"]):
-                    clauses.append(f)
+                    explicit_clauses.append(f)
                 elif "terms" in f and isinstance(f["terms"], dict):
                     field, vals = next(iter(f["terms"].items()))
                     if isinstance(vals, list) and len(vals) > 0:
-                        clauses.append(f)
-            return clauses
+                        explicit_clauses.append(f)
+            return explicit_clauses
 
         # Case B: convert context-style maps into clauses
         field_mapping = {
@@ -441,23 +589,40 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
             "document_types": "mimetype",
             "owners": "owner",
         }
-        clauses: list[dict] = []
+        context_clauses: list[dict] = []
         for k, values in filter_obj.items():
             if not isinstance(values, list):
                 continue
             field = field_mapping.get(k, k)
             if len(values) == 0:
                 # Match-nothing placeholder (kept to mirror your tool semantics)
-                clauses.append({"term": {field: "__IMPOSSIBLE_VALUE__"}})
+                context_clauses.append({"term": {field: "__IMPOSSIBLE_VALUE__"}})
             elif len(values) == 1:
                 if values[0] != "__IMPOSSIBLE_VALUE__":
-                    clauses.append({"term": {field: values[0]}})
+                    context_clauses.append({"term": {field: values[0]}})
             else:
-                clauses.append({"terms": {field: values}})
-        return clauses
+                context_clauses.append({"terms": {field: values}})
+        return context_clauses
 
     # ---------- search (single hybrid path matching your tool) ----------
     def search(self, query: str | None = None) -> list[dict[str, Any]]:
+        """Perform hybrid search combining vector similarity and keyword matching.
+
+        This method executes a sophisticated search that combines:
+        - K-nearest neighbor (KNN) vector similarity search (70% weight)
+        - Multi-field keyword search with fuzzy matching (30% weight)
+        - Optional filtering and score thresholds
+        - Aggregations for faceted search results
+
+        Args:
+            query: Search query string (used for both vector embedding and keyword search)
+
+        Returns:
+            List of search results with page_content, metadata, and relevance scores
+
+        Raises:
+            ValueError: If embedding component is not provided or filter JSON is invalid
+        """
         logger.info(self.ingest_data)
         client = self.build_client()
         q = (query or "").strip()
@@ -479,7 +644,7 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
         vec = self.embedding.embed_query(q)
 
         # Build filter clauses (accept both shapes)
-        clauses = self._coerce_filter_clauses(filter_obj)
+        filter_clauses = self._coerce_filter_clauses(filter_obj)
 
         # Respect the tool's limit/threshold defaults
         limit = (filter_obj or {}).get("limit", self.number_of_results)
@@ -529,8 +694,8 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
             ],
             "size": limit,
         }
-        if clauses:
-            body["query"]["bool"]["filter"] = clauses
+        if filter_clauses:
+            body["query"]["bool"]["filter"] = filter_clauses
 
         if isinstance(score_threshold, (int, float)) and score_threshold > 0:
             # top-level min_score (matches your tool)
@@ -548,6 +713,17 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
         ]
 
     def search_documents(self) -> list[Data]:
+        """Search documents and return results as Data objects.
+
+        This is the main interface method that performs the search using the
+        configured search_query and returns results in Langflow's Data format.
+
+        Returns:
+            List of Data objects containing search results with text and metadata
+
+        Raises:
+            Exception: If search operation fails
+        """
         try:
             raw = self.search(self.search_query or "")
             return [Data(text=hit["page_content"], **hit["metadata"]) for hit in raw]
@@ -558,6 +734,19 @@ class OpenSearchHybridComponent(LCVectorStoreComponent):
 
     # -------- dynamic UI handling (auth switch) --------
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
+        """Dynamically update component configuration based on field changes.
+
+        This method handles real-time UI updates, particularly for authentication
+        mode changes that show/hide relevant input fields.
+
+        Args:
+            build_config: Current component configuration
+            field_value: New value for the changed field
+            field_name: Name of the field that changed
+
+        Returns:
+            Updated build configuration with appropriate field visibility
+        """
         try:
             if field_name == "auth_mode":
                 mode = (field_value or "basic").strip().lower()
