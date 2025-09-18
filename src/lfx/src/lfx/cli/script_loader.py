@@ -178,13 +178,13 @@ def extract_structured_result(results: list, *, extract_text: bool = True) -> di
 
 
 def find_graph_variable(script_path: Path) -> dict | None:
-    """Parse a Python script and find the 'graph' variable assignment.
+    """Parse a Python script and find the 'graph' variable assignment or 'get_graph' function.
 
     Args:
         script_path (Path): Path to the Python script file
 
     Returns:
-        dict | None: Information about the graph variable if found, None otherwise
+        dict | None: Information about the graph variable or get_graph function if found, None otherwise
     """
     try:
         with script_path.open(encoding="utf-8") as f:
@@ -193,8 +193,36 @@ def find_graph_variable(script_path: Path) -> dict | None:
         # Parse the script using AST
         tree = ast.parse(content)
 
-        # Look for assignments to 'graph' variable
+        # Look for 'get_graph' function definitions (preferred) or 'graph' variable assignments
         for node in ast.walk(tree):
+            # Check for get_graph function definition
+            if isinstance(node, ast.FunctionDef) and node.name == "get_graph":
+                line_number = node.lineno
+                is_async = isinstance(node, ast.AsyncFunctionDef)
+
+                return {
+                    "line_number": line_number,
+                    "type": "function_definition",
+                    "function": "get_graph",
+                    "is_async": is_async,
+                    "arg_count": len(node.args.args),
+                    "source_line": content.split("\n")[line_number - 1].strip(),
+                }
+
+            # Check for async get_graph function definition
+            if isinstance(node, ast.AsyncFunctionDef) and node.name == "get_graph":
+                line_number = node.lineno
+
+                return {
+                    "line_number": line_number,
+                    "type": "function_definition",
+                    "function": "get_graph",
+                    "is_async": True,
+                    "arg_count": len(node.args.args),
+                    "source_line": content.split("\n")[line_number - 1].strip(),
+                }
+
+            # Fallback: look for assignments to 'graph' variable
             if isinstance(node, ast.Assign):
                 # Check if any target is named 'graph'
                 for target in node.targets:
