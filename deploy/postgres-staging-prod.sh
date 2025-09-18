@@ -717,21 +717,22 @@ report_status() {
 
   if [[ "$DEPLOY_SUCCESS" -eq 1 ]]; then
     status="success"
-    desc="Deployment succeeded. Running=$running"
+    desc="Deployment succeeded"
   elif [[ "$STOPPED_ACTIVE" -eq 1 && "$HAD_ACTIVE" -eq 1 ]]; then
     status="failure"
-    desc="Deployment failed, rolled back. Still running=$running"
+    desc="Deployment failed, rolled back"
   elif [[ -n "$running" ]]; then
     status="failure"
-    desc="Deployment failed. Website live with older container: $running"
+    desc="Deployment failed. Older container live"
   else
     status="failure"
-    desc="Deployment failed. No container running."
+    desc="Deployment failed. No container running"
   fi
 
   {
     echo "FINAL_STATUS=\"$status\""
-    echo "FINAL_DESCRIPTION=\"$desc\""
+    echo "FINAL_DESCRIPTION=\"${desc:0:140}\""
+    echo "FINAL_CONTAINER=\"$running\""
   } > /root/deploy_status.env
 }
 
