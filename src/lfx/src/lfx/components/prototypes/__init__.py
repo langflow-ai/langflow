@@ -4,18 +4,21 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.components._importing import import_mod
 
-if TYPE_CHECKING:
-    from langflow.components.knowledge_bases.ingestion import KnowledgeIngestionComponent
-    from langflow.components.knowledge_bases.retrieval import KnowledgeRetrievalComponent
+# if TYPE_CHECKING:
+#     from langflow.components.knowledge_bases.ingestion import KnowledgeIngestionComponent
+#     from langflow.components.knowledge_bases.retrieval import KnowledgeRetrievalComponent
 
 # _dynamic_imports = {
 #     "KnowledgeIngestionComponent": "ingestion",
 #     "KnowledgeRetrievalComponent": "retrieval",
+
 # }
-_dynamic_imports = {}
+_dynamic_imports = {
+    "PythonFunctionComponent": "python_function",
+}
 
 # __all__ = ["KnowledgeIngestionComponent", "KnowledgeRetrievalComponent"]
-__all__ = []
+__all__ = ["PythonFunctionComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:
