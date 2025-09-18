@@ -216,8 +216,8 @@ jobs:
           username: root
           password: ${{ secrets.VM_PASSWORD }}
           script: |
-            chmod +x /root/deploy/postgres-staging-prod.sh
-            /root/deploy/postgres-staging-prod.sh \
+            chmod +x /root/postgres-staging-prod.sh
+            /root/postgres-staging-prod.sh \
               --image forwardemailforaifirstdesk/langflow:staging-${{ steps.branch.outputs.branch_name }}-${{ steps.commit.outputs.commit_id }} \
               --domain ${{env.STAGING_HOST}} \
               --email ${{ github.event.inputs.email }} \
@@ -234,8 +234,8 @@ jobs:
           username: root
           password: ${{ secrets.PROD_VM_PASSWORD }}
           script: |
-            chmod +x /root/deploy/postgres-staging-prod.sh
-            /root/deploy/postgres-staging-prod.sh \
+            chmod +x /root/postgres-staging-prod.sh
+            /root/postgres-staging-prod.sh \
               --image forwardemailforaifirstdesk/langflow:prod-${{ steps.branch.outputs.branch_name }}-${{ steps.commit.outputs.commit_id }} \
               --domain ${{env.PROD_HOST}} \
               --email ${{ github.event.inputs.email }} \
