@@ -1148,20 +1148,6 @@ async def auto_configure_starter_projects_mcp(session):
                         )
                     )
                 ).first()
-
-                # Also check for "Starter Project" (singular) in case of name variation
-                if not user_starter_folder:
-                    user_starter_folder = (
-                        await session.exec(
-                            select(Folder).where(
-                                Folder.name == "Starter Project",  # Try singular version
-                                Folder.user_id == user.id,
-                            )
-                        )
-                    ).first()
-                    if user_starter_folder:
-                        await logger.ainfo(f"Found 'Starter Project' (singular) for {user.username}")
-
                 if not user_starter_folder:
                     await logger.adebug(f"No starter projects folder found for user {user.username}, skipping")
                     continue
