@@ -15,8 +15,8 @@ from lfx.schema.data import Data
 
 
 class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
-    display_name = "Clickhouse"
-    description = "Clickhouse Vector Store with search capabilities"
+    display_name = "ClickHouse"
+    description = "ClickHouse Vector Store with search capabilities"
     name = "Clickhouse"
     icon = "Clickhouse"
 
@@ -69,7 +69,7 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
             import clickhouse_connect
         except ImportError as e:
             msg = (
-                "Failed to import Clickhouse dependencies. "
+                "Failed to import ClickHouse dependencies. "
                 "Install it using `uv pip install langflow[clickhouse-connect] --pre`"
             )
             raise ImportError(msg) from e
