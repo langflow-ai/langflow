@@ -183,7 +183,7 @@ jobs:
             fi
           fi
   build:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     needs: [get-version, setup]
     steps:
       - name: Check out the code at a specific ref
@@ -256,7 +256,7 @@ jobs:
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     permissions:
       packages: write
     needs: [build, get-version]
