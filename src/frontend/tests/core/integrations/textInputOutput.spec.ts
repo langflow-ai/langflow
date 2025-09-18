@@ -49,11 +49,11 @@ test.skip(
         break;
       }
     }
-    await visibleElementHandle.waitFor({
+    await visibleElementHandle!.waitFor({
       state: "visible",
       timeout: 30000,
     });
-    await visibleElementHandle.hover();
+    await visibleElementHandle!.hover();
     await page.mouse.down();
     for (const element of elementsTextInputOutput) {
       if (await element.isVisible()) {
@@ -61,12 +61,12 @@ test.skip(
         break;
       }
     }
-    await visibleElementHandle.waitFor({
+    await visibleElementHandle!.waitFor({
       state: "visible",
       timeout: 30000,
     });
     // Move to the second element
-    await visibleElementHandle.hover();
+    await visibleElementHandle!.hover();
     // Release the mouse
     await page.mouse.up();
     await page.getByTestId("sidebar-search-input").click();
@@ -76,18 +76,7 @@ test.skip(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 6 });
 
     const elementsOpenAiOutput = await page
       .getByTestId("handle-openaimodel-shownode-text-right")
@@ -98,12 +87,12 @@ test.skip(
         break;
       }
     }
-    await visibleElementHandle.waitFor({
+    await visibleElementHandle!.waitFor({
       state: "visible",
       timeout: 30000,
     });
     // Click and hold on the first element
-    await visibleElementHandle.hover();
+    await visibleElementHandle!.hover();
     await page.mouse.down();
     const elementTextOutputInput = await page
       .getByTestId("handle-textoutput-shownode-inputs-left")
@@ -114,12 +103,12 @@ test.skip(
         break;
       }
     }
-    await visibleElementHandle.waitFor({
+    await visibleElementHandle!.waitFor({
       state: "visible",
       timeout: 30000,
     });
     // Move to the second element
-    await visibleElementHandle.hover();
+    await visibleElementHandle!.hover();
     // Release the mouse
     await page.mouse.up();
     await page
