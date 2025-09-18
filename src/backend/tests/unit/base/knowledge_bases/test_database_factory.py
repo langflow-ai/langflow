@@ -6,9 +6,10 @@ from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 import pytest
+
 from langflow.base.knowledge_bases.vector_store_factory import (
     ChromaVectorStoreAdapter,
-    MockOpenSearchVectorStore,
+    OpenSearchVectorStoreAdapter,
     build_kb_vector_store,
 )
 
@@ -105,10 +106,13 @@ class TestVectorStoreFactory:
             session=mock_session,
         )
 
-        # Verify result
-        assert isinstance(result, MockOpenSearchVectorStore)
-        assert result.opensearch_url == "https://localhost:9200"
+        # Verify result - now returns the real OpenSearch adapter
+
+        assert isinstance(result, OpenSearchVectorStoreAdapter)
         assert result.index_name == "test-test_collection"
+        # Verify the underlying client is configured correctly
+        assert hasattr(result, "_client")
+        assert hasattr(result._client, "_index_name")
 
     @pytest.mark.asyncio
     @patch("langflow.base.knowledge_bases.vector_store_factory.get_variable_service")
@@ -273,68 +277,3 @@ class TestChromaVectorStoreAdapter:
 
         assert adapter._collection == mock_collection
         assert adapter._client == mock_client
-
-
-class TestMockOpenSearchVectorStore:
-    """Test MockOpenSearchVectorStore."""
-
-    @pytest.fixture
-    def mock_store(self):
-        """MockOpenSearchVectorStore instance."""
-        return MockOpenSearchVectorStore(opensearch_url="https://localhost:9200", index_name="test-index")
-
-    def test_mock_store_initialization(self, mock_store):
-        """Test mock store initializes correctly."""
-        assert mock_store.opensearch_url == "https://localhost:9200"
-        assert mock_store.index_name == "test-index"
-        assert mock_store._documents == []
-
-    def test_mock_store_add_documents(self, mock_store):
-        """Test adding documents to mock store."""
-        mock_doc1 = Mock()
-        mock_doc1.page_content = "Document 1 content"
-        mock_doc1.metadata = {"source": "doc1"}
-
-        mock_doc2 = Mock()
-        mock_doc2.page_content = "Document 2 content"
-        mock_doc2.metadata = {"source": "doc2"}
-
-        doc_ids = mock_store.add_documents([mock_doc1, mock_doc2])
-
-        assert len(doc_ids) == 2
-        assert doc_ids == ["doc_0", "doc_1"]
-        assert len(mock_store._documents) == 2
-        assert mock_store._documents[0]["content"] == "Document 1 content"
-        assert mock_store._documents[1]["content"] == "Document 2 content"
-
-    def test_mock_store_similarity_search(self, mock_store):
-        """Test similarity search on mock store."""
-        # Add some documents first
-        mock_doc = Mock()
-        mock_doc.page_content = "Test content"
-        mock_doc.metadata = {"source": "test"}
-        mock_store.add_documents([mock_doc])
-
-        results = mock_store.similarity_search("query", k=1)
-
-        assert len(results) == 1
-        # Results should be Data objects
-        assert hasattr(results[0], "data")
-
-    def test_mock_store_get_method(self, mock_store):
-        """Test get method on mock store."""
-        # Add a document first
-        mock_doc = Mock()
-        mock_doc.page_content = "Test content"
-        mock_doc.metadata = {"key": "value"}
-        mock_store.add_documents([mock_doc])
-
-        result = mock_store.get(include=["documents", "metadatas", "ids"])
-
-        assert "documents" in result
-        assert "metadatas" in result
-        assert "ids" in result
-        assert len(result["documents"]) == 1
-        assert result["documents"][0] == "Test content"
-        assert result["metadatas"][0] == {"key": "value"}
-        assert result["ids"][0] == "doc_0"
