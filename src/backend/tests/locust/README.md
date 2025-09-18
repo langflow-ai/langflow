@@ -32,6 +32,33 @@ This directory contains comprehensive load testing tools for both Langflow and L
 pip install locust httpx
 ```
 
+## 🌐 **Remote Instance Testing**
+
+For testing against a remote Langflow instance:
+
+### Setup for Remote Testing
+
+```bash
+# 1. Setup against your remote instance
+python langflow_setup_test.py --host https://your-langflow-instance.com --interactive
+
+# 2. Run load test against remote instance (no local server startup)
+python langflow_run_load_test.py --host https://your-langflow-instance.com --no-start-langflow --headless --users 50 --duration 300
+
+# 3. Use environment variables for automation
+export LANGFLOW_HOST="https://your-langflow-instance.com"
+python langflow_setup_test.py --flow "Basic Prompting" --save-credentials remote_test_creds.json
+python langflow_run_load_test.py --no-start-langflow --headless --users 100 --duration 600 --html remote_load_test.html
+```
+
+### Important Notes for Remote Testing
+
+- **Always use `--no-start-langflow`** when testing remote instances
+- **Use HTTPS** for production remote instances
+- **Consider network latency** in your performance expectations
+- **Monitor both client and server resources** during testing
+- **Use realistic user counts** based on your remote instance specs
+
 ### Two-Step Process
 
 #### Step 1: Setup (Run Once)
@@ -72,14 +99,14 @@ python langflow_run_load_test.py --shape ramp100 --headless --users 100 --durati
 ### Advanced Usage
 
 ```bash
-# Setup with custom host
-python langflow_setup_test.py --host http://localhost:8000 --interactive
+# Setup with custom host (e.g., remote instance)
+python langflow_setup_test.py --host https://your-remote-instance.com --interactive
 
 # Save credentials to file
 python langflow_setup_test.py --interactive --save-credentials my_test_creds.json
 
-# Test against existing Langflow instance
-python langflow_run_load_test.py --host http://localhost:8000 --no-start-langflow
+# Test against existing remote Langflow instance
+python langflow_run_load_test.py --host https://your-remote-instance.com --no-start-langflow
 
 # Save results to CSV and HTML
 python langflow_run_load_test.py --headless --csv results --html report.html --users 50 --duration 300
