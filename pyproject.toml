@@ -53,7 +53,7 @@ dependencies = [
     "datasets>2.14.7",
     "assemblyai==0.35.1",
     "litellm>=1.60.2,<2.0.0",
-    "chromadb==0.5.23",
+    "chromadb>=0.6.0",
     "zep-python==2.0.2",
     "youtube-transcript-api==0.6.3",
     "Markdown==3.7",
@@ -85,7 +85,7 @@ dependencies = [
     "langchain-groq==0.2.1",
     "langchain-pinecone>=0.2.8",
     "langchain-mistralai==0.2.3",
-    "langchain-chroma==0.1.4",
+    "langchain-chroma>=0.1.4",
     "langchain-aws==0.2.7",
     "langchain-unstructured==0.1.5",
     "langchain-milvus==0.1.7",
@@ -123,6 +123,7 @@ dependencies = [
     'gassist>=0.0.1; sys_platform == "win32"',
     "twelvelabs>=0.4.7",
     "docling>=2.36.1",
+    "transformers>=4.56.1",
     "filelock>=3.18.0",
     "jigsawstack==0.2.7",
     "structlog>=25.4.0",
@@ -131,9 +132,6 @@ dependencies = [
     "traceloop-sdk>=0.43.1",
     "easyocr>=1.7.2",
     "opencv-python>=4.11",
-    'transformers>=4.44.0,<4.50.0; python_version == "3.10"',
-    'transformers>=4.44.0,<4.56.0; python_version == "3.11"',
-    'transformers>=4.56.1; python_version >= "3.12"',
 ]
 
 [dependency-groups]
@@ -244,9 +242,7 @@ postgresql = [
 [tool.uv]
 override-dependencies = [
     # temporary force a newer python-pptx
-    "python-pptx>=1.0.2",
-    # Fix chromadb version for Python 3.12 < 3.12.4 to avoid tokenizers conflict
-    'chromadb==0.5.20; python_version >= "3.12" and python_version < "3.12.4"',
+    "python-pptx>=1.0.2"
 ]
 
 [project.scripts]
