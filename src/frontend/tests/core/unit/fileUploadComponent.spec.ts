@@ -35,12 +35,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("file");
 
-    await page.waitForSelector('[data-testid="dataFile"]', {
+    await page.waitForSelector('[data-testid="dataRead File"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("dataFile")
+      .getByTestId("dataRead File")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
