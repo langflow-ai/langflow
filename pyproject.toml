@@ -131,6 +131,7 @@ dependencies = [
     "traceloop-sdk>=0.43.1",
     "easyocr>=1.7.2",
     "opencv-python>=4.11",
+    "transformers>=4.44.0,<4.50.0",
 ]
 
 [dependency-groups]
