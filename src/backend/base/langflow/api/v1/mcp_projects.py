@@ -257,7 +257,6 @@ async def handle_project_sse(
     # Verify project exists and user has access
 
     async with session_scope() as session:
-        # First try to find user's own project
         project = (
             await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
         ).first()
