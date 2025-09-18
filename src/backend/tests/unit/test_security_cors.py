@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from langflow.services.settings.base import Settings
+from lfx.services.settings.base import Settings
 
 
 class TestCORSConfiguration:
@@ -313,7 +313,7 @@ class TestRefreshTokenSecurity:
 
     def test_refresh_token_samesite_setting_current_behavior(self):
         """Test current refresh token SameSite settings (warns about security)."""
-        from langflow.services.settings.auth import AuthSettings
+        from lfx.services.settings.auth import AuthSettings
 
         with tempfile.TemporaryDirectory() as temp_dir, patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": temp_dir}):
             auth_settings = AuthSettings(CONFIG_DIR=temp_dir)

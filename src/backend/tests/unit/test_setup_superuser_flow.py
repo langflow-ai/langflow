@@ -2,7 +2,7 @@ import pytest
 from langflow.services.auth.utils import verify_password
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
-from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from langflow.services.utils import initialize_services, setup_superuser, teardown_superuser
 from sqlmodel import select
 

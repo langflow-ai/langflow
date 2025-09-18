@@ -197,7 +197,8 @@
                 "fileTypes": [
                   "csv",
                   "json",
-                  "pdftxt",
+                  "pdf",
+                  "txt",
                   "md",
                   "mdx",
                   "csv",

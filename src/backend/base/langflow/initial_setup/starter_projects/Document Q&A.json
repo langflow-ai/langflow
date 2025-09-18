@@ -204,7 +204,8 @@
                 "fileTypes": [
                   "csv",
                   "json",
-                  "pdftxt",
+                  "pdf",
+                  "txt",
                   "md",
                   "mdx",
                   "csv",
@@ -1438,7 +1439,8 @@
                 "fileTypes": [
                   "csv",
                   "json",
-                  "pdftxt",
+                  "pdf",
+                  "txt",
                   "md",
                   "mdx",
                   "csv",
@@ -1483,7 +1485,7 @@
                   "gz"
                 ],
                 "file_path": [],
-                "info": "Supported file extensions: csv, json, pdftxt, md, mdx, csv, json, yaml, yml, xml, html, htm, pdf, docx, py, sh, sql, js, ts, tsx, adoc, asciidoc, asc, bmp, dotx, dotm, docm, jpeg, png, potx, ppsx, pptm, potm, ppsm, pptx, tiff, xls, xlsx, xhtml, webp; optionally bundled in file extensions: zip, tar, tgz, bz2, gz",
+                "info": "Supported file extensions: csv, json, pdf, txt, md, mdx, csv, json, yaml, yml, xml, html, htm, pdf, docx, py, sh, sql, js, ts, tsx, adoc, asciidoc, asc, bmp, dotx, dotm, docm, jpeg, png, potx, ppsx, pptm, potm, ppsm, pptx, tiff, xls, xlsx, xhtml, webp; optionally bundled in file extensions: zip, tar, tgz, bz2, gz",
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "path",
