@@ -79,8 +79,8 @@ test(
 
     //This one is for testing the wrong loop message
 
-    await page.getByTestId("sidebar-search-input").fill("File");
-    await page.waitForSelector('[data-testid="dataFile"]', {
+    await page.getByTestId("sidebar-search-input").fill("Read File");
+    await page.waitForSelector('[data-testid="dataRead File"]', {
       timeout: 1000,
     });
 
