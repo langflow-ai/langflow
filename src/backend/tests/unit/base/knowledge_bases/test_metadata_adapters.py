@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+
 from langflow.base.knowledge_bases.metadata_adapters import (
     ChromaMetadataAdapter,
     OpenSearchMetadataAdapter,
@@ -13,7 +14,7 @@ from langflow.base.knowledge_bases.metadata_adapters import (
 )
 from langflow.base.knowledge_bases.vector_store_factory import (
     ChromaVectorStoreAdapter,
-    MockOpenSearchVectorStore,
+    OpenSearchVectorStoreAdapter,
 )
 
 
@@ -38,7 +39,8 @@ class TestMetadataAdapterCreation:
 
     def test_create_opensearch_adapter(self):
         """Test creating OpenSearch metadata adapter."""
-        opensearch_store = MockOpenSearchVectorStore(opensearch_url="https://localhost:9200", index_name="test-index")
+        # Create a mock that looks like an OpenSearchVectorStoreAdapter
+        opensearch_store = OpenSearchVectorStoreAdapter(Mock(), "test-index")
         kb_path = Path("/test/kb")
 
         adapter = create_metadata_adapter(opensearch_store, kb_path)
@@ -48,8 +50,8 @@ class TestMetadataAdapterCreation:
         assert adapter.kb_path == kb_path
 
     def test_create_mock_opensearch_adapter(self):
-        """Test creating adapter for mock OpenSearch."""
-        mock_opensearch_store = MockOpenSearchVectorStore()
+        """Test creating adapter for OpenSearch."""
+        mock_opensearch_store = OpenSearchVectorStoreAdapter(Mock(), "test-index")
         kb_path = Path("/test/kb")
 
         adapter = create_metadata_adapter(mock_opensearch_store, kb_path)
@@ -173,7 +175,10 @@ class TestOpenSearchMetadataAdapter:
     @pytest.fixture
     def mock_opensearch_store(self):
         """Mock OpenSearch vector store."""
-        return MockOpenSearchVectorStore(opensearch_url="https://localhost:9200", index_name="test-index")
+        # Create a mock OpenSearch client and wrap it in the adapter
+        mock_client = Mock()
+        mock_client._index_name = "test-index"
+        return OpenSearchVectorStoreAdapter(mock_client, "test-index")
 
     @pytest.fixture
     def adapter(self, mock_opensearch_store):
@@ -275,16 +280,17 @@ class TestExtractEnhancedMetadata:
 
     def test_extract_metadata_opensearch(self):
         """Test extracting metadata from OpenSearch vector store."""
-        opensearch_store = MockOpenSearchVectorStore(opensearch_url="https://localhost:9200", index_name="test-index")
+        mock_client = Mock()
+        mock_client._index_name = "test-index"
+        opensearch_store = OpenSearchVectorStoreAdapter(mock_client, "test-index")
 
-        # Add test documents
-        mock_doc1 = Mock()
-        mock_doc1.page_content = "Test document one"
-        mock_doc1.metadata = {"source": "test1"}
-        mock_doc2 = Mock()
-        mock_doc2.page_content = "Test document two"
-        mock_doc2.metadata = {"source": "test2"}
-        opensearch_store.add_documents([mock_doc1, mock_doc2])
+        # Mock the get method to return test data
+        opensearch_store.get = Mock(
+            return_value={
+                "documents": ["Test document one", "Test document two"],
+                "metadatas": [{"source": "test1"}, {"source": "test2"}],
+            }
+        )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             kb_path = Path(temp_dir)
@@ -335,7 +341,7 @@ class TestExtractEnhancedMetadata:
             # Should return minimal metadata on error
             assert metadata["chunks"] == 0
             assert metadata["embedding_provider"] == "Unknown"
-            assert metadata["provider"] == "chroma"  # Adapter still identifies as chroma even on error
+            assert metadata["provider"] == "unknown"  # Error in adapter returns unknown provider
 
     def test_extract_metadata_with_schema_data(self):
         """Test extracting metadata with schema data provided."""
