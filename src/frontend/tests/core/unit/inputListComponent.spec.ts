@@ -25,6 +25,21 @@ test(
 
     await page.getByTestId("inputlist_str_urls_0").fill("test test test test");
 
+    // Test cursor position preservation
+    const input = page.getByTestId("inputlist_str_urls_0");
+    await input.click();
+    await input.press("Home"); // Move cursor to start
+    await input.press("ArrowRight"); // Move cursor to position 1
+    await input.press("ArrowRight"); // Move cursor to position 2
+    await input.pressSequentially("XD", { delay: 100 }); // Type at position 2
+
+    const cursorValue = await input.inputValue();
+    if (!cursorValue.startsWith("teXD")) {
+      expect(false).toBeTruthy();
+    }
+
+    await page.getByTestId("inputlist_str_urls_0").fill("test test test test");
+
     await page.getByTestId("input-list-plus-btn_urls-0").click();
 
     await page.getByTestId("input-list-plus-btn_urls-0").click();

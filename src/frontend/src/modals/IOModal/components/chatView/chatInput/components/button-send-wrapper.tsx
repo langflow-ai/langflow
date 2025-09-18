@@ -44,7 +44,8 @@ const ButtonSendWrapper = ({
 
   const buttonClasses = classNames("form-modal-send-button", getButtonState());
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
     if (showStopButton && isBuilding) {
       stopBuilding();
     } else if (!showStopButton) {

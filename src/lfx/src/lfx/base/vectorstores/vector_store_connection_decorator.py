@@ -31,7 +31,7 @@ def vector_store_connection(cls):
                 [
                     Output(
                         display_name="Vector Store Connection",
-                        hidden=True,
+                        hidden=False,
                         name="vectorstoreconnection",
                         method="as_vector_store",
                         group_outputs=False,

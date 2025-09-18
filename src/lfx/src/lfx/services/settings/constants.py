@@ -1,5 +1,8 @@
+from pydantic import SecretStr
+
 DEFAULT_SUPERUSER = "langflow"
-DEFAULT_SUPERUSER_PASSWORD = "langflow"
+DEFAULT_SUPERUSER_PASSWORD = SecretStr("langflow")
+
 VARIABLES_TO_GET_FROM_ENVIRONMENT = [
     "COMPOSIO_API_KEY",
     "OPENAI_API_KEY",

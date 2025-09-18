@@ -363,6 +363,7 @@ const TableComponent = forwardRef<
         </div>
       );
     }
+
     return (
       <div
         className={cn(
@@ -396,61 +397,67 @@ const TableComponent = forwardRef<
           }}
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
-          onCellValueChanged={(e) => {
-            // Handle single-toggle column changes (Vectorize and Identifier) to refresh grid editability
-            const isSingleToggleField =
-              e.colDef.field === "Vectorize" ||
-              e.colDef.field === "vectorize" ||
-              e.colDef.field === "Identifier" ||
-              e.colDef.field === "identifier";
+          onCellValueChanged={
+            props.onCellValueChanged
+              ? (e) => {
+                  // Handle single-toggle column changes (Vectorize and Identifier) to refresh grid editability
+                  const isSingleToggleField =
+                    e.colDef.field === "Vectorize" ||
+                    e.colDef.field === "vectorize" ||
+                    e.colDef.field === "Identifier" ||
+                    e.colDef.field === "identifier";
 
-            if (isSingleToggleField) {
-              setTimeout(() => {
-                if (
-                  realRef.current?.api &&
-                  !realRef.current.api.isDestroyed()
-                ) {
-                  // Refresh all cells with force to update cell renderer params
-                  if (e.colDef.field) {
-                    realRef.current.api.refreshCells({
-                      force: true,
-                      columns: [e.colDef.field],
-                    });
+                  if (isSingleToggleField) {
+                    setTimeout(() => {
+                      if (
+                        realRef.current?.api &&
+                        !realRef.current.api.isDestroyed()
+                      ) {
+                        // Refresh all cells with force to update cell renderer params
+                        if (e.colDef.field) {
+                          realRef.current.api.refreshCells({
+                            force: true,
+                            columns: [e.colDef.field],
+                          });
+                        }
+                        // Also refresh all other single-toggle column cells if they exist
+                        const allSingleToggleColumns = realRef.current.api
+                          .getColumns()
+                          ?.filter((col) => {
+                            const field = col.getColDef().field;
+                            return (
+                              field === "Vectorize" ||
+                              field === "vectorize" ||
+                              field === "Identifier" ||
+                              field === "identifier"
+                            );
+                          });
+                        if (
+                          allSingleToggleColumns &&
+                          allSingleToggleColumns.length > 0
+                        ) {
+                          const columnFields = allSingleToggleColumns
+                            .map((col) => col.getColDef().field)
+                            .filter(
+                              (field): field is string => field !== undefined,
+                            );
+                          if (columnFields.length > 0) {
+                            realRef.current.api.refreshCells({
+                              force: true,
+                              columns: columnFields,
+                            });
+                          }
+                        }
+                      }
+                    }, 0);
                   }
-                  // Also refresh all other single-toggle column cells if they exist
-                  const allSingleToggleColumns = realRef.current.api
-                    .getColumns()
-                    ?.filter((col) => {
-                      const field = col.getColDef().field;
-                      return (
-                        field === "Vectorize" ||
-                        field === "vectorize" ||
-                        field === "Identifier" ||
-                        field === "identifier"
-                      );
-                    });
-                  if (
-                    allSingleToggleColumns &&
-                    allSingleToggleColumns.length > 0
-                  ) {
-                    const columnFields = allSingleToggleColumns
-                      .map((col) => col.getColDef().field)
-                      .filter((field): field is string => field !== undefined);
-                    if (columnFields.length > 0) {
-                      realRef.current.api.refreshCells({
-                        force: true,
-                        columns: columnFields,
-                      });
-                    }
+                  // Call original onCellValueChanged if it exists
+                  if (props.onCellValueChanged) {
+                    props.onCellValueChanged(e);
                   }
                 }
-              }, 0);
-            }
-            // Call original onCellValueChanged if it exists
-            if (props.onCellValueChanged) {
-              props.onCellValueChanged(e);
-            }
-          }}
+              : undefined
+          }
           onStateUpdated={(e) => {
             if (e.sources.some((source) => source.includes("column"))) {
               localStorage.setItem(

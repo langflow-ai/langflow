@@ -68,11 +68,11 @@ test(
       timeout: 30000,
     });
 
-    await page.getByPlaceholder("Fields").fill("System");
+    await page.getByPlaceholder("Fields").fill("AgentQL API Key");
 
-    await page.waitForSelector("text=System", { timeout: 30000 });
+    await page.waitForSelector("text=AgentQL API Key", { timeout: 30000 });
 
-    await page.getByText("System").last().click();
+    await page.getByText("AgentQL API Key").last().click();
 
     await page.getByPlaceholder("Fields").fill("openAI");
 

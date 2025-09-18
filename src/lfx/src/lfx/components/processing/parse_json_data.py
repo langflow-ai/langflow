@@ -18,6 +18,7 @@ class ParseJSONDataComponent(Component):
     icon = "braces"
     name = "ParseJSONData"
     legacy: bool = True
+    replacement = ["processing.ParserComponent"]
 
     inputs = [
         HandleInput(

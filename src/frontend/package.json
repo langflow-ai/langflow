@@ -1,6 +1,6 @@
 {
   "name": "langflow",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "private": true,
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
@@ -23,7 +23,6 @@
     "@radix-ui/react-switch": "^1.0.3",
     "@radix-ui/react-tabs": "^1.0.4",
     "@radix-ui/react-tooltip": "^1.0.7",
-    "@smakss/react-scroll-direction": "^4.2.0",
     "@tabler/icons-react": "^3.6.0",
     "@tailwindcss/forms": "^0.5.7",
     "@tailwindcss/line-clamp": "^0.4.4",
@@ -82,6 +81,7 @@
     "sortablejs": "^1.15.6",
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",
+    "use-stick-to-bottom": "^1.1.1",
     "uuid": "^10.0.0",
     "vanilla-jsoneditor": "^2.3.3",
     "vite-plugin-svgr": "^4.2.0",

@@ -7,7 +7,11 @@ interface IGetInstalledMCP {
   projectId: string;
 }
 
-type getInstalledMCPResponse = Array<string>;
+type getInstalledMCPResponse = Array<{
+  name: string;
+  installed: boolean;
+  available: boolean;
+}>;
 
 export const useGetInstalledMCP: useQueryFunctionType<
   IGetInstalledMCP,

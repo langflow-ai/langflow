@@ -20,6 +20,7 @@ class MergeDataComponent(Component):
     icon = "merge"
     MIN_INPUTS_REQUIRED = 2
     legacy = True
+    replacement = ["processing.DataOperations"]
 
     inputs = [
         DataInput(name="data_inputs", display_name="Data Inputs", info="Data to combine", is_list=True, required=True),

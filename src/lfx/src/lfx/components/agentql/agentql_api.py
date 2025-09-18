@@ -17,7 +17,7 @@ class AgentQL(Component):
     inputs = [
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
+            display_name="AgentQL API Key",
             required=True,
             password=True,
             info="Your AgentQL API key from dev.agentql.com",

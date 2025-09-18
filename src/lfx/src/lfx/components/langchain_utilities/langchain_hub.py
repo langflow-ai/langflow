@@ -19,7 +19,7 @@ class LangChainHubPromptComponent(Component):
     inputs = [
         SecretStrInput(
             name="langchain_api_key",
-            display_name="Your LangChain API Key",
+            display_name="LangChain API Key",
             info="The LangChain API Key to use.",
             required=True,
         ),

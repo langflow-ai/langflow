@@ -188,6 +188,8 @@ class APIRequestComponent(Component):
         """Process the body input into a valid dictionary."""
         if body is None:
             return {}
+        if hasattr(body, "data"):
+            body = body.data
         if isinstance(body, dict):
             return self._process_dict_body(body)
         if isinstance(body, str):
@@ -212,10 +214,18 @@ class APIRequestComponent(Component):
         processed_dict = {}
         try:
             for item in body:
-                if not self._is_valid_key_value_item(item):
+                # Unwrap Data objects
+                current_item = item
+                if hasattr(item, "data"):
+                    unwrapped_data = item.data
+                    # If the unwrapped data is a dict but not key-value format, use it directly
+                    if isinstance(unwrapped_data, dict) and not self._is_valid_key_value_item(unwrapped_data):
+                        return unwrapped_data
+                    current_item = unwrapped_data
+                if not self._is_valid_key_value_item(current_item):
                     continue
-                key = item["key"]
-                value = self._parse_json_value(item["value"])
+                key = current_item["key"]
+                value = self._parse_json_value(current_item["value"])
                 processed_dict[key] = value
         except (KeyError, TypeError, ValueError) as e:
             self.log(f"Failed to process body list: {e}")

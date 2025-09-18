@@ -51,7 +51,7 @@ export default function AppHeader(): JSX.Element {
 
   return (
     <div
-      className={`z-10 flex h-[48px] w-full items-center justify-between border-b px-6 dark:bg-background`}
+      className={`z-10 flex h-[48px] w-full items-center justify-between border-b pr-5 pl-2.5 dark:bg-background`}
       data-testid="app-header"
     >
       {/* Left Section */}
@@ -68,7 +68,7 @@ export default function AppHeader(): JSX.Element {
           {ENABLE_DATASTAX_LANGFLOW ? (
             <DataStaxLogo className="fill-black dark:fill-[white]" />
           ) : (
-            <LangflowLogo className="h-6 w-6" />
+            <LangflowLogo className="h-5 w-5" />
           )}
         </Button>
         {ENABLE_DATASTAX_LANGFLOW && (

@@ -16,7 +16,8 @@ const VoiceButton = ({ toggleRecording }: VoiceButtonProps) => {
     <>
       <div>
         <Button
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             toggleRecording();
             setNewSessionCloseVoiceAssistant(false);
           }}

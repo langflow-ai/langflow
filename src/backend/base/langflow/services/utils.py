@@ -71,18 +71,20 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
     if settings_service.auth_settings.AUTO_LOGIN:
         await logger.adebug("AUTO_LOGIN is set to True. Creating default superuser.")
         username = DEFAULT_SUPERUSER
-        password = DEFAULT_SUPERUSER_PASSWORD
+        password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
     else:
         # Remove the default superuser if it exists
         await teardown_superuser(settings_service, session)
-        username = settings_service.auth_settings.SUPERUSER
-        password = settings_service.auth_settings.SUPERUSER_PASSWORD
+        # If AUTO_LOGIN is disabled, attempt to use configured credentials
+        # or fall back to default credentials if none are provided.
+        username = settings_service.auth_settings.SUPERUSER or DEFAULT_SUPERUSER
+        password = (settings_service.auth_settings.SUPERUSER_PASSWORD or DEFAULT_SUPERUSER_PASSWORD).get_secret_value()
 
     if not username or not password:
         msg = "Username and password must be set"
         raise ValueError(msg)
 
-    is_default = (username == DEFAULT_SUPERUSER) and (password == DEFAULT_SUPERUSER_PASSWORD)
+    is_default = (username == DEFAULT_SUPERUSER) and (password == DEFAULT_SUPERUSER_PASSWORD.get_secret_value())
 
     try:
         user = await get_or_create_super_user(
@@ -95,6 +97,7 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         msg = "Could not create superuser. Please create a superuser manually."
         raise RuntimeError(msg) from exc
     finally:
+        # Scrub credentials from in-memory settings after setup
         settings_service.auth_settings.reset_credentials()
 
 
@@ -226,6 +229,7 @@ def register_all_service_factories() -> None:
     from lfx.services.manager import get_service_manager
 
     service_manager = get_service_manager()
+    from lfx.services.mcp_composer import factory as mcp_composer_factory
     from lfx.services.settings import factory as settings_factory
 
     from langflow.services.auth import factory as auth_factory
@@ -259,6 +263,7 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(store_factory.StoreServiceFactory())
     service_manager.register_factory(shared_component_cache_factory.SharedComponentCacheServiceFactory())
     service_manager.register_factory(auth_factory.AuthServiceFactory())
+    service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())
     service_manager.set_factory_registered()
 
 

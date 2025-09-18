@@ -34,7 +34,7 @@ class InputDict(TypedDict):
 
 def _build_agent_input_text_content(agent_input_dict: InputDict) -> str:
     final_input = agent_input_dict.get("input", "")
-    return f"**Input**: {final_input}"
+    return f"{final_input}"
 
 
 def _calculate_duration(start_time: float) -> int:

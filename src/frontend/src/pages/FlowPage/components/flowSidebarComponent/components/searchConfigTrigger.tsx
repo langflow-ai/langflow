@@ -12,18 +12,17 @@ export const SearchConfigTrigger = ({
   setShowConfig,
 }: SearchConfigTriggerProps) => {
   return (
-    <div>
+    <div className="flex items-center justify-center">
       <ShadTooltip content="Component settings" styleClasses="z-50">
         <Button
           variant={showConfig ? "ghostActive" : "ghost"}
           size="iconMd"
           data-testid="sidebar-options-trigger"
           onClick={() => setShowConfig(!showConfig)}
+          className="hover:text-primary text-muted-foreground"
+          style={{ padding: "0px" }}
         >
-          <ForwardedIconComponent
-            name="SlidersHorizontal"
-            className="h-4 w-4"
-          />
+          <ForwardedIconComponent name="Settings2" className="h-4 w-4" />
         </Button>
       </ShadTooltip>
     </div>

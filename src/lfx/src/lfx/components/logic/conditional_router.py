@@ -129,20 +129,55 @@ class ConditionalRouterComponent(Component):
         return False
 
     def iterate_and_stop_once(self, route_to_stop: str):
+        """Handles cycle iteration counting and branch exclusion.
+
+        Uses two complementary mechanisms:
+        1. stop() - ACTIVE/INACTIVE state for cycle management (gets reset each iteration)
+        2. exclude_branch_conditionally() - Persistent exclusion for conditional routing
+
+        When max_iterations is reached, breaks the cycle by allowing the default_route to execute.
+        """
         if not self.__iteration_updated:
             self.update_ctx({f"{self._id}_iteration": self.ctx.get(f"{self._id}_iteration", 0) + 1})
             self.__iteration_updated = True
-            if self.ctx.get(f"{self._id}_iteration", 0) >= self.max_iterations and route_to_stop == self.default_route:
+            current_iteration = self.ctx.get(f"{self._id}_iteration", 0)
+
+            # Check if max iterations reached and we're trying to stop the default route
+            if current_iteration >= self.max_iterations and route_to_stop == self.default_route:
+                # Clear ALL conditional exclusions to allow default route to execute
+                if self._id in self.graph.conditional_exclusion_sources:
+                    previous_exclusions = self.graph.conditional_exclusion_sources[self._id]
+                    self.graph.conditionally_excluded_vertices -= previous_exclusions
+                    del self.graph.conditional_exclusion_sources[self._id]
+
+                # Switch which route to stop - stop the NON-default route to break the cycle
                 route_to_stop = "true_result" if route_to_stop == "false_result" else "false_result"
+
+                # Call stop to break the cycle
+                self.stop(route_to_stop)
+                # Don't apply conditional exclusion when breaking cycle
+                return
+
+            # Normal case: Use BOTH mechanisms
+            # 1. stop() for cycle management (marks INACTIVE, updates run manager, gets reset)
             self.stop(route_to_stop)
+
+            # 2. Conditional exclusion for persistent routing (doesn't get reset except by this router)
+            self.graph.exclude_branch_conditionally(self._id, output_name=route_to_stop)
 
     def true_response(self) -> Message:
         result = self.evaluate_condition(
             self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive
         )
-        if result:
+
+        # Check if we should force output due to max_iterations on default route
+        current_iteration = self.ctx.get(f"{self._id}_iteration", 0)
+        force_output = current_iteration >= self.max_iterations and self.default_route == "true_result"
+
+        if result or force_output:
             self.status = self.true_case_message
-            self.iterate_and_stop_once("false_result")
+            if not force_output:  # Only stop the other branch if not forcing due to max iterations
+                self.iterate_and_stop_once("false_result")
             return self.true_case_message
         self.iterate_and_stop_once("true_result")
         return Message(content="")
@@ -151,10 +186,12 @@ class ConditionalRouterComponent(Component):
         result = self.evaluate_condition(
             self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive
         )
+
         if not result:
             self.status = self.false_case_message
             self.iterate_and_stop_once("true_result")
             return self.false_case_message
+
         self.iterate_and_stop_once("false_result")
         return Message(content="")
 

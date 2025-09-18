@@ -87,7 +87,6 @@ class TraceloopTracer(BaseTracer):
     def _validate_configuration(self) -> bool:
         api_key = os.getenv("TRACELOOP_API_KEY", "").strip()
         if not api_key:
-            logger.warning("TRACELOOP_API_KEY not set or empty.")
             return False
 
         base_url = os.getenv("TRACELOOP_BASE_URL", "https://api.traceloop.com")

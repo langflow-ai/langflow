@@ -11,6 +11,7 @@ class AlterMetadataComponent(Component):
     icon = "merge"
     name = "AlterMetadata"
     legacy = True
+    replacement = ["processing.DataOperations"]
 
     inputs = [
         HandleInput(

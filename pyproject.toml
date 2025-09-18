@@ -129,6 +129,8 @@ dependencies = [
     "aiosqlite==0.21.0",
     "fastparquet>=2024.11.0",
     "traceloop-sdk>=0.43.1",
+    "easyocr>=1.7.2",
+    "opencv-python>=4.11",
 ]
 
 [dependency-groups]

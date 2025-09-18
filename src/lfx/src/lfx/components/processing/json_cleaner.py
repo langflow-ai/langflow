@@ -15,6 +15,7 @@ class JSONCleaner(Component):
         "so that they are fully compliant with the JSON spec."
     )
     legacy = True
+    replacement = ["processing.ParserComponent"]
     inputs = [
         MessageTextInput(
             name="json_str", display_name="JSON String", info="The JSON string to be cleaned.", required=True

@@ -12,10 +12,11 @@ from lfx.schema.dotdict import dotdict
 
 
 class SubFlowComponent(Component):
-    display_name = "Sub Flow [Deprecated]"
+    display_name = "Sub Flow"
     description = "Generates a Component from a Flow, with all of its inputs, and "
     name = "SubFlow"
     legacy: bool = True
+    replacement = ["logic.RunFlow"]
     icon = "Workflow"
 
     async def get_flow_names(self) -> list[str]:

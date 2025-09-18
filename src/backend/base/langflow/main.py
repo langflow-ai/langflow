@@ -6,7 +6,7 @@ import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from urllib.parse import urlencode
 
 import anyio
@@ -28,17 +28,20 @@ from langflow.api import health_check_router, log_router, router
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
-    initialize_super_user_if_needed,
+    initialize_auto_login_default_superuser,
     load_bundles_from_urls,
     load_flows_from_directory,
     sync_flows_from_fs,
 )
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.deps import get_queue_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import get_queue_service, get_service, get_settings_service, get_telemetry_service
+from langflow.services.schema import ServiceType
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
 
 if TYPE_CHECKING:
     from tempfile import TemporaryDirectory
+
+    from lfx.services.mcp_composer.service import MCPComposerService
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -113,6 +116,28 @@ async def load_bundles_with_error_handling():
         return [], []
 
 
+def warn_about_future_cors_changes(settings):
+    """Warn users about upcoming CORS security changes in version 1.7."""
+    # Check if using default (backward compatible) settings
+    using_defaults = settings.cors_origins == "*" and settings.cors_allow_credentials is True
+
+    if using_defaults:
+        logger.warning(
+            "DEPRECATION NOTICE: Starting in v2.0, CORS will be more restrictive by default. "
+            "Current behavior allows all origins (*) with credentials enabled. "
+            "Consider setting LANGFLOW_CORS_ORIGINS for production deployments. "
+            "See documentation for secure CORS configuration."
+        )
+
+    # Additional warning for potentially insecure configuration
+    if settings.cors_origins == "*" and settings.cors_allow_credentials:
+        logger.warning(
+            "SECURITY NOTICE: Current CORS configuration allows all origins with credentials. "
+            "In v2.0, credentials will be automatically disabled when using wildcard origins. "
+            "Specify exact origins in LANGFLOW_CORS_ORIGINS to use credentials securely."
+        )
+
+
 def get_lifespan(*, fix_migration=False, version=None):
     initialize_settings_service()
     telemetry_service = get_telemetry_service()
@@ -131,6 +156,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
         temp_dirs: list[TemporaryDirectory] = []
         sync_flows_from_fs_task = None
+        mcp_init_task = None
 
         try:
             start_time = asyncio.get_event_loop().time()
@@ -144,9 +170,16 @@ def get_lifespan(*, fix_migration=False, version=None):
             setup_llm_caching()
             await logger.adebug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            current_time = asyncio.get_event_loop().time()
+            if get_settings_service().auth_settings.AUTO_LOGIN:
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Initializing default super user")
+                await initialize_auto_login_default_superuser()
+                await logger.adebug(
+                    f"Default super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                )
+
             await logger.adebug("Initializing super user")
-            await initialize_super_user_if_needed()
+            await initialize_auto_login_default_superuser()
             await logger.adebug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
@@ -192,6 +225,14 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug(f"started telemetry service in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Starting MCP Composer service")
+            mcp_composer_service = cast("MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE))
+            await mcp_composer_service.start()
+            await logger.adebug(
+                f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s"
+            )
+
+            current_time = asyncio.get_event_loop().time()
             await logger.adebug("Loading flows")
             await load_flows_from_directory()
             sync_flows_from_fs_task = asyncio.create_task(sync_flows_from_fs())
@@ -200,13 +241,33 @@ def get_lifespan(*, fix_migration=False, version=None):
                 queue_service.start()
             await logger.adebug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Loading mcp servers for projects")
-            await init_mcp_servers()
-            await logger.adebug(f"mcp servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
+
+            async def delayed_init_mcp_servers():
+                await asyncio.sleep(3.0)
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Loading mcp servers for projects")
+                try:
+                    await init_mcp_servers()
+                    await logger.adebug(f"mcp servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"First MCP server initialization attempt failed: {e}")
+                    await asyncio.sleep(3.0)
+                    current_time = asyncio.get_event_loop().time()
+                    await logger.adebug("Retrying mcp servers initialization")
+                    try:
+                        await init_mcp_servers()
+                        await logger.adebug(
+                            f"mcp servers loaded on retry in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                        )
+                    except Exception as e2:  # noqa: BLE001
+                        await logger.aexception(f"Failed to initialize MCP servers after retry: {e2}")
+
+            # Start the delayed initialization as a background task
+            # Allows the server to start first to avoid race conditions with MCP Server startup
+            mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
+
             yield
 
         except asyncio.CancelledError:
@@ -238,21 +299,35 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 1: Cancelling Background Tasks
                 with shutdown_progress.step(1):
+                    tasks_to_cancel = []
                     if sync_flows_from_fs_task:
                         sync_flows_from_fs_task.cancel()
-                        await asyncio.wait([sync_flows_from_fs_task])
+                        tasks_to_cancel.append(sync_flows_from_fs_task)
+                    if mcp_init_task and not mcp_init_task.done():
+                        mcp_init_task.cancel()
+                        tasks_to_cancel.append(mcp_init_task)
+                    if tasks_to_cancel:
+                        # Wait for all tasks to complete, capturing exceptions
+                        results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
+                        # Log any non-cancellation exceptions
+                        for result in results:
+                            if isinstance(result, Exception) and not isinstance(result, asyncio.CancelledError):
+                                await logger.aerror(f"Error during task cleanup: {result}", exc_info=result)
 
                 # Step 2: Cleaning Up Services
                 with shutdown_progress.step(2):
                     try:
-                        await asyncio.wait_for(teardown_services(), timeout=10)
+                        await asyncio.wait_for(teardown_services(), timeout=30)
                     except asyncio.TimeoutError:
-                        await logger.awarning("Teardown services timed out.")
+                        await logger.awarning("Teardown services timed out after 30s.")
 
                 # Step 3: Clearing Temporary Files
                 with shutdown_progress.step(3):
                     temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
-                    await asyncio.gather(*temp_dir_cleanups)
+                    try:
+                        await asyncio.wait_for(asyncio.gather(*temp_dir_cleanups), timeout=10)
+                    except asyncio.TimeoutError:
+                        await logger.awarning("Temporary file cleanup timed out after 10s.")
 
                 # Step 4: Finalizing Shutdown
                 with shutdown_progress.step(4):
@@ -291,14 +366,24 @@ def create_app():
     )
 
     setup_sentry(app)
-    origins = ["*"]
 
+    settings = get_settings_service().settings
+
+    # Warn about future CORS changes
+    warn_about_future_cors_changes(settings)
+
+    # Configure CORS using settings (with backward compatible defaults)
+    origins = settings.cors_origins
+    if isinstance(origins, str) and origins != "*":
+        origins = [origins]
+
+    # Apply current CORS configuration (maintains backward compatibility)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_credentials=settings.cors_allow_credentials,
+        allow_methods=settings.cors_allow_methods,
+        allow_headers=settings.cors_allow_headers,
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
 
@@ -347,7 +432,6 @@ def create_app():
 
         return await call_next(request)
 
-    settings = get_settings_service().settings
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
         prome_port = int(prome_port_str)

@@ -12,6 +12,7 @@ class OutputParserComponent(Component):
     icon = "type"
     name = "OutputParser"
     legacy = True
+    replacement = ["processing.StructuredOutput", "processing.ParserComponent"]
 
     inputs = [
         DropdownInput(

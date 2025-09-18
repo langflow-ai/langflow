@@ -8,7 +8,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 // This type is now updated to allow nulls for mode/toolsCount
 // type getMCPServersResponse = Array<MCPServerInfoType>;
 
-type getMCPServersResponse = Array<MCPServerInfoType>;
+export type getMCPServersResponse = Array<MCPServerInfoType>;
 
 export const useGetMCPServers: useQueryFunctionType<
   undefined,

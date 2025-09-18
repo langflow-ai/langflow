@@ -9,28 +9,43 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
+from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
+from langflow.services.database.models.user.crud import get_user_by_id
+
+from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from lfx.components.processing.converter import convert_to_dataframe
 from lfx.custom import Component
-from lfx.inputs.inputs import HandleInput
-from lfx.io import BoolInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput, TableInput
-from lfx.log.logger import logger
+from lfx.io import (
+    BoolInput,
+    DropdownInput,
+    HandleInput,
+    IntInput,
+    Output,
+    SecretStrInput,
+    StrInput,
+    TableInput,
+)
 from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame  # noqa: TC002
-from lfx.schema.dotdict import dotdict  # noqa: TC002
 from lfx.schema.table import EditMode
+from lfx.services.deps import (
+    get_settings_service,
+    get_variable_service,
+    session_scope,
+)
 
-from langflow.base.knowledge_bases import get_knowledge_bases
-from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
-from langflow.services.database.models.user.crud import get_user_by_id
-from langflow.services.deps import get_settings_service, get_variable_service, session_scope
+if TYPE_CHECKING:
+    from lfx.schema.dataframe import DataFrame
 
-HUGGINGFACE_MODEL_NAMES = ["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"]
+HUGGINGFACE_MODEL_NAMES = [
+    "sentence-transformers/all-MiniLM-L6-v2",
+    "sentence-transformers/all-mpnet-base-v2",
+]
 COHERE_MODEL_NAMES = ["embed-english-v3.0", "embed-multilingual-v3.0"]
 
 settings = get_settings_service().settings
@@ -64,7 +79,11 @@ class KnowledgeIngestionComponent(Component):
                         "name": "create_knowledge_base",
                         "description": "Create new knowledge in Langflow.",
                         "display_name": "Create new knowledge",
-                        "field_order": ["01_new_kb_name", "02_embedding_model", "03_api_key"],
+                        "field_order": [
+                            "01_new_kb_name",
+                            "02_embedding_model",
+                            "03_api_key",
+                        ],
                         "template": {
                             "01_new_kb_name": StrInput(
                                 name="new_kb_name",
@@ -74,7 +93,7 @@ class KnowledgeIngestionComponent(Component):
                             ),
                             "02_embedding_model": DropdownInput(
                                 name="embedding_model",
-                                display_name="Model Name",
+                                display_name="Choose Embedding",
                                 info="Select the embedding model to use for this knowledge base.",
                                 required=True,
                                 options=OPENAI_EMBEDDING_MODEL_NAMES + HUGGINGFACE_MODEL_NAMES + COHERE_MODEL_NAMES,
@@ -273,7 +292,6 @@ class KnowledgeIngestionComponent(Component):
                 encrypted_api_key = encrypt_api_key(api_key_to_save, settings_service=settings_service)
             except (TypeError, ValueError) as e:
                 self.log(f"Could not encrypt API key: {e}")
-                logger.error(f"Could not encrypt API key: {e}")
 
         return {
             "embedding_provider": embedding_provider,
@@ -342,7 +360,11 @@ class KnowledgeIngestionComponent(Component):
         return metadata
 
     async def _create_vector_store(
-        self, df_source: pd.DataFrame, config_list: list[dict[str, Any]], embedding_model: str, api_key: str
+        self,
+        df_source: pd.DataFrame,
+        config_list: list[dict[str, Any]],
+        embedding_model: str,
+        api_key: str,
     ) -> None:
         """Create vector store following Local DB component pattern."""
         try:
@@ -533,7 +555,7 @@ class KnowledgeIngestionComponent(Component):
                 try:
                     api_key = decrypt_api_key(metadata["api_key"], settings_service)
                 except (InvalidToken, TypeError, ValueError) as e:
-                    logger.error(f"Could not decrypt API key. Please provide it manually. Error: {e}")
+                    self.log(f"Could not decrypt API key. Please provide it manually. Error: {e}")
 
             # Check if a custom API key was provided, update metadata if so
             if self.api_key:
@@ -591,10 +613,10 @@ class KnowledgeIngestionComponent(Component):
 
     async def update_build_config(
         self,
-        build_config: dotdict,
+        build_config,
         field_value: Any,
         field_name: str | None = None,
-    ) -> dotdict:
+    ):
         """Update build configuration based on provider selection."""
         # Create a new knowledge base
         if field_name == "knowledge_base":

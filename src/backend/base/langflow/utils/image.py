@@ -99,4 +99,4 @@ def create_image_content_dict(image_path: str | Path, mime_type: str | None = No
         msg = f"Failed to create image content dict: {e}"
         raise type(e)(msg) from e
 
-    return {"type": "image", "source_type": "url", "url": f"data:{mime_type};base64,{base64_data}"}
+    return {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{base64_data}"}}
