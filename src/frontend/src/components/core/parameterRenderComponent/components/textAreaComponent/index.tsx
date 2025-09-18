@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GRADIENT_CLASS } from "@/constants/constants";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { getCurlWebhookCode } from "@/modals/apiModal/utils/get-curl-code";
@@ -78,6 +78,21 @@ export default function TextAreaComponent({
   const webhookAuthEnable = useUtilityStore((state) => state.webhookAuthEnable);
   const [cursor, setCursor] = useState<number | null>(null);
 
+  // --- IME handling ---
+  const [localValue, setLocalValue] = useState<string>(value ?? "");
+  const [isComposing, setIsComposing] = useState(false);
+
+  useEffect(() => {
+    if (!isComposing) setLocalValue(value ?? "");
+  }, [value, isComposing]);
+
+  const normalizeNFC = useCallback((v: string) => {
+    // alguns ambientes não têm normalize
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    return typeof v?.normalize === "function" ? v.normalize("NFC") : v;
+  }, []);
+
   const isWebhook = useMemo(
     () => nodeInformationMetadata?.nodeType === "webhook",
     [nodeInformationMetadata?.nodeType],
@@ -114,7 +129,7 @@ export default function TextAreaComponent({
     if (cursor !== null && inputRef.current) {
       inputRef.current.setSelectionRange(cursor, cursor);
     }
-  }, [cursor, value]);
+  }, [cursor, localValue]);
 
   const getInputClassName = () => {
     return cn(
@@ -126,10 +141,36 @@ export default function TextAreaComponent({
     );
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCursor(e.target.selectionStart);
-    handleOnNewValue({ value: e.target.value });
-  };
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const v = e.target.value;
+      setLocalValue(v);
+      setCursor(e.target.selectionStart);
+
+      // cobre a maioria dos casos (especialmente Linux/IBus)
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const nativeIsComposing = !!e.nativeEvent?.isComposing;
+      if (isComposing || nativeIsComposing) return;
+
+      handleOnNewValue({ value: normalizeNFC(v) });
+    },
+    [handleOnNewValue, isComposing, normalizeNFC],
+  );
+
+  const handleCompositionStart = useCallback(() => {
+    setIsComposing(true);
+  }, []);
+
+  const handleCompositionEnd = useCallback(
+    (e: React.CompositionEvent<HTMLInputElement>) => {
+      setIsComposing(false);
+      const finalV = normalizeNFC(e.currentTarget.value ?? "");
+      setLocalValue(finalV);
+      handleOnNewValue({ value: finalV });
+    },
+    [handleOnNewValue, normalizeNFC],
+  );
 
   const changeWebhookFormat = (format: "multiline" | "singleline") => {
     if (isWebhook) {
@@ -170,7 +211,9 @@ export default function TextAreaComponent({
       )}
 
       <IconComponent
-        dataTestId={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
+        dataTestId={`button_open_text_area_modal_${id}${
+          editNode ? "_advanced" : ""
+        }`}
         name={getIconName(disabled, "", "", false, isToolMode) || "Scan"}
         className={cn(
           "cursor-pointer bg-background",
@@ -193,12 +236,14 @@ export default function TextAreaComponent({
         onBlur={() => setIsFocused(false)}
         id={id}
         data-testid={id}
-        value={disabled ? "" : value}
-        onChange={handleInputChange}
+        value={disabled ? "" : localValue}
+        onChange={handleChange}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
         disabled={disabled}
         className={getInputClassName()}
         placeholder={getPlaceholder(disabled, placeholder)}
-        aria-label={disabled ? value : undefined}
+        aria-label={disabled ? localValue : undefined}
         ref={inputRef}
         type={password ? (passwordVisible ? "text" : "password") : "text"}
         readOnly={isWebhook}
@@ -206,8 +251,12 @@ export default function TextAreaComponent({
 
       <ComponentTextModal
         changeVisibility={updateVisibility}
-        value={value}
-        setValue={(newValue) => handleOnNewValue({ value: newValue })}
+        value={localValue}
+        setValue={(newValue) => {
+          const nv = normalizeNFC(newValue ?? "");
+          setLocalValue(nv);
+          handleOnNewValue({ value: nv });
+        }}
         disabled={disabled}
         onCloseModal={() => changeWebhookFormat("singleline")}
       >
@@ -218,6 +267,7 @@ export default function TextAreaComponent({
           {renderIcon()}
         </div>
       </ComponentTextModal>
+
       {password && !isFocused && (
         <div
           onClick={() => {
