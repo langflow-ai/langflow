@@ -12,9 +12,8 @@ export function EditMessageButton({
   evaluation,
   isAudioMessage,
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
-  onEdit: () => void;
+  onEdit?: () => void;
   onCopy: () => void;
-  onDelete: () => void;
   onEvaluate?: (value: boolean | null) => void;
   isBotMessage?: boolean;
   evaluation?: boolean | null;
@@ -34,7 +33,7 @@ export function EditMessageButton({
 
   return (
     <div className="flex items-center rounded-md border border-border bg-background">
-      {!isAudioMessage && (
+      {!isAudioMessage && onEdit && (
         <ShadTooltip styleClasses="z-50" content="Edit message" side="top">
           <div className="p-1">
             <Button

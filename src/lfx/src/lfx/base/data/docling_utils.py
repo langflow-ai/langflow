@@ -16,6 +16,15 @@ if TYPE_CHECKING:
     from langchain_core.language_models.chat_models import BaseChatModel
 
 
+class DoclingDependencyError(Exception):
+    """Custom exception for missing Docling dependencies."""
+
+    def __init__(self, dependency_name: str, install_command: str):
+        self.dependency_name = dependency_name
+        self.install_command = install_command
+        super().__init__(f"{dependency_name} is not correctly installed. {install_command}")
+
+
 def extract_docling_documents(data_inputs: Data | list[Data] | DataFrame, doc_key: str) -> list[DoclingDocument]:
     documents: list[DoclingDocument] = []
     if isinstance(data_inputs, DataFrame):
@@ -249,22 +258,48 @@ def docling_worker(
             logger.debug(f"Processing file {i + 1}/{len(file_paths)}: {file_path}")
 
             try:
-                # Process single file (we can't easily interrupt convert_all)
                 single_result = converter.convert_all([file_path])
                 results.extend(single_result)
-
-                # Check for shutdown after each file
                 check_shutdown()
 
-            except (OSError, ValueError, RuntimeError, ImportError) as file_error:
-                # Handle specific file processing errors
+            except ImportError as import_error:
+                # Simply pass ImportError to main process for handling
+                queue.put(
+                    {"error": str(import_error), "error_type": "import_error", "original_exception": "ImportError"}
+                )
+                return
+
+            except (OSError, ValueError, RuntimeError) as file_error:
+                error_msg = str(file_error)
+
+                # Check for specific dependency errors and identify the dependency name
+                dependency_name = None
+                if "ocrmac is not correctly installed" in error_msg:
+                    dependency_name = "ocrmac"
+                elif "easyocr" in error_msg and "not installed" in error_msg:
+                    dependency_name = "easyocr"
+                elif "tesserocr" in error_msg and "not installed" in error_msg:
+                    dependency_name = "tesserocr"
+                elif "rapidocr" in error_msg and "not installed" in error_msg:
+                    dependency_name = "rapidocr"
+
+                if dependency_name:
+                    queue.put(
+                        {
+                            "error": error_msg,
+                            "error_type": "dependency_error",
+                            "dependency_name": dependency_name,
+                            "original_exception": type(file_error).__name__,
+                        }
+                    )
+                    return
+
+                # If not a dependency error, log and continue with other files
                 logger.error(f"Error processing file {file_path}: {file_error}")
-                # Continue with other files, but check for shutdown
                 check_shutdown()
+
             except Exception as file_error:  # noqa: BLE001
-                # Catch any other unexpected errors to prevent worker crash
                 logger.error(f"Unexpected error processing file {file_path}: {file_error}")
-                # Continue with other files, but check for shutdown
                 check_shutdown()
 
         # Final shutdown check before sending results
