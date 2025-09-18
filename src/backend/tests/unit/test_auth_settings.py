@@ -1,9 +1,10 @@
 from pathlib import Path
 
 import pytest
+from pydantic import SecretStr
+
 from lfx.services.settings.auth import AuthSettings
 from lfx.services.settings.constants import DEFAULT_SUPERUSER
-from pydantic import SecretStr
 
 
 @pytest.mark.parametrize("auto_login", [True, False])
