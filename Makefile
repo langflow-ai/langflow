@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_help
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -698,13 +698,42 @@ load_test_clean: ## Clean up load test files and credentials
 	@cd src/backend/tests/locust && rm -f *.json *.html *.csv *.log
 	@echo "$(GREEN)Load test files cleaned$(NC)"
 
+load_test_remote_setup: ## Set up load test for remote instance (requires LANGFLOW_HOST)
+	@if [ -z "$(LANGFLOW_HOST)" ]; then \
+		echo "$(RED)Error: LANGFLOW_HOST environment variable required$(NC)"; \
+		echo "$(YELLOW)Example: export LANGFLOW_HOST=https://your-remote-instance.com$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(YELLOW)Setting up load test for remote instance: $(LANGFLOW_HOST)$(NC)"
+	@cd src/backend/tests/locust && uv run python langflow_setup_test.py --host $(LANGFLOW_HOST) --flow "Basic Prompting" --save-credentials remote_test_creds.json
+
+load_test_remote_run: ## Run load test against remote instance (requires prior setup)
+	@if [ -z "$(LANGFLOW_HOST)" ]; then \
+		echo "$(RED)Error: LANGFLOW_HOST environment variable required$(NC)"; \
+		exit 1; \
+	fi
+	@if [ ! -f "src/backend/tests/locust/remote_test_creds.json" ]; then \
+		echo "$(RED)Error: No remote credentials found. Run 'make load_test_remote_setup' first$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(YELLOW)Running load test against remote instance: $(LANGFLOW_HOST)$(NC)"
+	@cd src/backend/tests/locust && \
+	export API_KEY=$$(python -c "import json; print(json.load(open('remote_test_creds.json'))['api_key'])") && \
+	export FLOW_ID=$$(python -c "import json; print(json.load(open('remote_test_creds.json'))['flow_id'])") && \
+	uv run python langflow_run_load_test.py --host $(LANGFLOW_HOST) --no-start-langflow --headless --users 25 --duration 120 --html remote_test_report.html
+
 load_test_help: ## Show detailed load testing help
 	@echo "$(GREEN)Langflow Enhanced Load Testing System$(NC)"
 	@echo ""
-	@echo "$(YELLOW)Quick Start:$(NC)"
+	@echo "$(YELLOW)Quick Start (Local):$(NC)"
 	@echo "  1. make load_test_setup_basic    # Set up with Basic Prompting flow"
 	@echo "  2. make load_test_langflow_quick # Run quick Langflow test"
 	@echo "  3. Open quick_test_report.html  # View results"
+	@echo ""
+	@echo "$(YELLOW)Remote Testing:$(NC)"
+	@echo "  1. export LANGFLOW_HOST=https://your-instance.com"
+	@echo "  2. make load_test_remote_setup   # Set up for remote testing"
+	@echo "  3. make load_test_remote_run     # Run test against remote instance"
 	@echo ""
 	@echo "$(YELLOW)Available Commands:$(NC)"
 	@echo "  load_test_setup        - Interactive flow selection setup"
