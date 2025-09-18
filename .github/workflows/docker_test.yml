@@ -16,7 +16,7 @@ env:
 
 jobs:
   test-docker:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     name: Test docker images
     steps:
       - uses: actions/checkout@v4
@@ -31,6 +31,25 @@ jobs:
             exit 1
           fi
           echo "Using container runtime: ${{ env.CONTAINER_RUNTIME }}"
+      - name: Docker System Info and Cleanup
+        run: |
+          echo "=== Docker System Usage Before Cleanup ==="
+          ${{ env.CONTAINER_RUNTIME }} system df || true
+          if command -v docker &> /dev/null; then
+            docker buildx du || true
+          fi
+
+          echo "=== Cleaning up Docker System ==="
+          ${{ env.CONTAINER_RUNTIME }} system prune -af --volumes || true
+          if command -v docker &> /dev/null; then
+            docker buildx prune -af || true
+          fi
+
+          echo "=== Docker System Usage After Cleanup ==="
+          ${{ env.CONTAINER_RUNTIME }} system df || true
+          if command -v docker &> /dev/null; then
+            docker buildx du || true
+          fi
       - name: Build image
         run: |
           ${{ env.CONTAINER_RUNTIME }} build -t langflowai/langflow:latest-dev \

@@ -214,6 +214,20 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
+      - name: Docker System Info and Cleanup
+        run: |
+          echo "=== Docker System Usage Before Cleanup ==="
+          docker system df || true
+          docker buildx du || true
+
+          echo "=== Cleaning up Docker System ==="
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+          echo "=== Docker System Usage After Cleanup ==="
+          docker system df || true
+          docker buildx du || true
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
