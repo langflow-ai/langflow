@@ -188,7 +188,7 @@ test(
     await uploadFile(page, "test_file.txt");
 
     // Build and run, expect the wrong loop message
-    await page.getByTestId("button_run_read_file").click();
+    await page.getByTestId("button_run_read file").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
