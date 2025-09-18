@@ -11,6 +11,6 @@ class MCPComposerServiceFactory(ServiceFactory):
         super().__init__()
         self.service_class = MCPComposerService
 
-    def create(self, **kwargs):
+    def create(self, **kwargs):  # noqa: ARG002
         """Create a new MCP Composer service instance."""
         return MCPComposerService()

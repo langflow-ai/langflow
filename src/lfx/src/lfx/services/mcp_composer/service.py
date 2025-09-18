@@ -353,9 +353,9 @@ class MCPComposerService(Service):
 
             try:
                 project_port = int(project_port_str)
-            except (ValueError, TypeError):
+            except (ValueError, TypeError) as e:
                 port_error_msg = f"Invalid OAuth port: {project_port_str}"
-                raise MCPComposerConfigError(port_error_msg, project_id)
+                raise MCPComposerConfigError(port_error_msg, project_id) from e
 
             project_host = auth_config.get("oauth_host")
             if not project_host:

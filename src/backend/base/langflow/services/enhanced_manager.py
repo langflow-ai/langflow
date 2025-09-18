@@ -54,10 +54,7 @@ class ServiceManager(BaseServiceManager):
         for name in service_names:
             try:
                 # Special handling for services that are in lfx module
-                if name in ["settings", "mcp_composer"]:
-                    base_module = "lfx.services"
-                else:
-                    base_module = "langflow.services"
+                base_module = "lfx.services" if name in ["settings", "mcp_composer"] else "langflow.services"
                 module_name = f"{base_module}.{name}.factory"
                 module = importlib.import_module(module_name)
 
