@@ -111,6 +111,7 @@ class Component(CustomComponent):
         self._ctx: dict = {}
         self._code: str | None = None
         self._logs: list[Log] = []
+        self._alias: str | None = None
 
         # Initialize component-specific collections
         self._inputs: dict[str, InputTypes] = {}
@@ -951,7 +952,7 @@ class Component(CustomComponent):
     def _update_template(self, frontend_node: dict):
         return frontend_node
 
-    def to_frontend_node(self):
+    def to_frontend_node(self, graph_data=None):
         # ! This part here is clunky but we need it like this for
         # ! backwards compatibility. We can change how prompt component
         # ! works and then update this later
@@ -995,6 +996,10 @@ class Component(CustomComponent):
         node_dict = frontend_node.to_dict(keep_name=False)
         if self.selected_output is not None:
             node_dict["selected_output"] = self.selected_output
+
+        # Calculate dynamic alias based on graph context if available
+        if graph_data:
+            node_dict["alias"] = self._calculate_dynamic_alias(graph_data)
 
         return {
             "data": {

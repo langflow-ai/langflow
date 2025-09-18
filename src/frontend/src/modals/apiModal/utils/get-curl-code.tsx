@@ -1,6 +1,7 @@
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { GetCodeType } from "@/types/tweaks";
+import { convertTweaksToAliases } from "@/utils/aliasUtils";
 import {
   getAllChatInputNodeIds,
   getAllFileNodeIds,
@@ -56,12 +57,14 @@ export function getNewCurlCode({
   processedPayload,
   platform,
   shouldDisplayApiKey,
+  nodes,
 }: {
   flowId: string;
   endpointName: string;
   processedPayload: any;
   platform?: "unix" | "powershell";
   shouldDisplayApiKey: boolean;
+  nodes?: any[];
 }): { steps: { title: string; code: string }[] } | string {
   const { protocol, host } = customGetHostProtocol();
   const baseUrl = `${protocol}//${host}`;
@@ -75,14 +78,21 @@ export function getNewCurlCode({
       : "unix");
 
   // Check if there are file uploads
-  const tweaks = processedPayload.tweaks || {};
-  const hasFiles = hasFileTweaks(tweaks);
+  const originalTweaks = processedPayload.tweaks || {};
+  const tweaks = convertTweaksToAliases(originalTweaks, nodes);
+  const hasFiles = hasFileTweaks(originalTweaks); // Use original tweaks for file detection
+
+  // Create payload with aliased tweaks
+  const payloadWithAliases = {
+    ...processedPayload,
+    tweaks: tweaks,
+  };
 
   // If no file uploads, use existing logic
   if (!hasFiles) {
     if (detectedPlatform === "powershell") {
       const payloadWithSession = {
-        ...processedPayload,
+        ...payloadWithAliases,
         session_id: "YOUR_SESSION_ID_HERE",
       };
       const singleLinePayload = JSON.stringify(payloadWithSession);
@@ -103,7 +113,7 @@ curl.exe --request POST \`
      --data $jsonData`;
     } else {
       const payloadWithSession = {
-        ...processedPayload,
+        ...payloadWithAliases,
         session_id: "YOUR_SESSION_ID_HERE",
       };
       // Unix-like systems (Linux, Mac, WSL2)
@@ -126,9 +136,9 @@ curl.exe --request POST \`
   }
 
   // File upload logic - handle multiple file types additively
-  const chatInputNodeIds = getAllChatInputNodeIds(tweaks);
-  const fileNodeIds = getAllFileNodeIds(tweaks);
-  const nonFileTweaks = getNonFileTypeTweaks(tweaks);
+  const chatInputNodeIds = getAllChatInputNodeIds(originalTweaks); // Use original tweaks for detection
+  const fileNodeIds = getAllFileNodeIds(originalTweaks); // Use original tweaks for detection
+  const nonFileTweaks = getNonFileTypeTweaks(tweaks); // Use aliased tweaks for display
 
   // Build upload commands and tweak entries
   const uploadCommands: string[] = [];
@@ -152,16 +162,17 @@ curl.exe --request POST \`
      --form "file=@your_image_${uploadCounter}.jpg"`,
       );
     }
-    const originalTweak = tweaks[nodeId];
+
+    // Get alias for this node
+    const node = nodes?.find((n) => n.id === nodeId);
+    const alias = node ? getEffectiveAliasFromAnyNode(node) : nodeId;
+
+    const originalTweak = originalTweaks[nodeId];
     const modifiedTweak = { ...originalTweak };
     modifiedTweak.files = [
       `REPLACE_WITH_FILE_PATH_FROM_UPLOAD_${uploadCounter}`,
     ];
-    const tweakEntry = `    "${nodeId}": ${JSON.stringify(
-      modifiedTweak,
-      null,
-      6,
-    )
+    const tweakEntry = `    "${alias}": ${JSON.stringify(modifiedTweak, null, 6)
       .split("\n")
       .join("\n    ")}`;
     tweakEntries.push(tweakEntry);
@@ -185,7 +196,11 @@ curl.exe --request POST \`
      --form "file=@your_file_${uploadCounter}.pdf"`,
       );
     }
-    const originalTweak = tweaks[nodeId];
+    // Get alias for this node
+    const node = nodes?.find((n) => n.id === nodeId);
+    const alias = node ? getEffectiveAliasFromAnyNode(node) : nodeId;
+
+    const originalTweak = originalTweaks[nodeId];
     const modifiedTweak = { ...originalTweak };
     if ("path" in originalTweak) {
       modifiedTweak.path = [
@@ -194,21 +209,17 @@ curl.exe --request POST \`
     } else if ("file_path" in originalTweak) {
       modifiedTweak.file_path = `REPLACE_WITH_FILE_PATH_FROM_UPLOAD_${uploadCounter}`;
     }
-    const tweakEntry = `    "${nodeId}": ${JSON.stringify(
-      modifiedTweak,
-      null,
-      6,
-    )
+    const tweakEntry = `    "${alias}": ${JSON.stringify(modifiedTweak, null, 6)
       .split("\n")
       .join("\n    ")}`;
     tweakEntries.push(tweakEntry);
     uploadCounter++;
   });
 
-  // Add non-file tweaks
-  Object.entries(nonFileTweaks).forEach(([nodeId, tweak]) => {
+  // Add non-file tweaks (already aliased)
+  Object.entries(nonFileTweaks).forEach(([aliasOrNodeId, tweak]) => {
     tweakEntries.push(
-      `    "${nodeId}": ${JSON.stringify(tweak, null, 6)
+      `    "${aliasOrNodeId}": ${JSON.stringify(tweak, null, 6)
         .split("\n")
         .join("\n    ")}`,
     );

@@ -198,7 +198,7 @@ def process_tweaks(
 
     :param graph_data: The dictionary containing the graph data. It must contain a 'data' key with
                        'nodes' as its child or directly contain 'nodes' key. Each node should have an 'id' and 'data'.
-    :param tweaks: The dictionary containing the tweaks. The keys can be the node id or the name of the tweak.
+    :param tweaks: The dictionary containing the tweaks. The keys can be the node id, alias, or display name.
                    The values can be a dictionary containing the tweaks for the node or the value of the tweak.
     :param stream: A boolean flag indicating whether streaming should be deactivated across all components or not.
                    Default is False.
@@ -209,16 +209,65 @@ def process_tweaks(
     if "stream" not in tweaks_dict:
         tweaks_dict |= {"stream": stream}
     nodes = validate_input(graph_data, cast("dict[str, str | dict[str, Any]]", tweaks_dict))
-    nodes_map = {node.get("id"): node for node in nodes}
-    nodes_display_name_map = {node.get("data", {}).get("node", {}).get("display_name"): node for node in nodes}
+
+    # Create all resolution mappings in a single pass
+    nodes_map = {}
+    alias_map = {}
+    display_name_map = {}
+
+    for node in nodes:
+        node_id = node.get("id")
+        node_info = node.get("data", {}).get("node", {})
+
+        # Map node ID
+        if node_id:
+            nodes_map[node_id] = node
+
+        # Map aliases (both user-defined and auto-generated)
+        alias = node_info.get("alias")
+        if alias:
+            alias_map[alias] = node
+
+        # Map display_name only if no alias is set (for single components)
+        display_name = node_info.get("display_name")
+        if display_name and not alias:
+            display_name_map[display_name] = node
 
     all_nodes_tweaks = {}
+    processed_nodes = {}  # {node_id: (key, key_type)}
+
+    # Process tweaks with immediate conflict detection
     for key, value in tweaks_dict.items():
         if isinstance(value, dict):
-            if (node := nodes_map.get(key)) or (node := nodes_display_name_map.get(key)):
+            node = None
+            key_type = ""
+
+            if node := nodes_map.get(key):
+                key_type = "node ID"
+            elif node := alias_map.get(key):
+                key_type = "alias"
+            elif node := display_name_map.get(key):
+                key_type = "display name"
+
+            if node:
+                node_id = node.get("id")
+
+                # Check for immediate conflict
+                if node_id in processed_nodes:
+                    first_key, first_key_type = processed_nodes[node_id]
+                    error_msg = (
+                        f"Conflicting tweaks found for the same component (ID: {node_id}). "
+                        f"Keys '{first_key}' ({first_key_type}) and '{key}' ({key_type}) "
+                        f"both refer to the same component. Please use only one key per component."
+                    )
+                    raise ValueError(error_msg)
+
+                # Apply tweak immediately and mark node as processed
+                processed_nodes[node_id] = (key, key_type)
                 apply_tweaks(node, value)
         else:
             all_nodes_tweaks[key] = value
+
     if all_nodes_tweaks:
         for node in nodes:
             apply_tweaks(node, all_nodes_tweaks)
