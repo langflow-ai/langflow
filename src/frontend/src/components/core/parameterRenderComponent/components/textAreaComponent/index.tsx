@@ -87,7 +87,6 @@ export default function TextAreaComponent({
   }, [value, isComposing]);
 
   const normalizeNFC = useCallback((v: string) => {
-    // alguns ambientes não têm normalize
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     return typeof v?.normalize === "function" ? v.normalize("NFC") : v;
@@ -124,7 +123,6 @@ export default function TextAreaComponent({
     webhookAuthEnable,
   ]);
 
-  // Restore cursor position after value changes
   useEffect(() => {
     if (cursor !== null && inputRef.current) {
       inputRef.current.setSelectionRange(cursor, cursor);
