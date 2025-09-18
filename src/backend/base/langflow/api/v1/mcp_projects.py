@@ -46,6 +46,7 @@ from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import check_key, create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
+from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.user.model import User
 
 # Constants
@@ -175,8 +176,6 @@ async def list_project_tools(
     tools: list[MCPSettings] = []
     try:
         async with session_scope() as session:
-            from langflow.initial_setup.constants import STARTER_FOLDER_NAME
-
             # Fetch the project first to verify it exists and user has access
             project = (
                 await session.exec(
@@ -187,20 +186,6 @@ async def list_project_tools(
             ).first()
 
             # If not found, check if it's the starter projects folder (which has user_id = NULL)
-            if not project:
-                starter_project = (
-                    await session.exec(
-                        select(Folder)
-                        .options(selectinload(Folder.flows))
-                        .where(
-                            Folder.id == project_id,
-                            Folder.name == STARTER_FOLDER_NAME,
-                            Folder.user_id == current_user.id,
-                        )
-                    )
-                ).first()
-                if starter_project:
-                    project = starter_project
 
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
@@ -272,25 +257,12 @@ async def handle_project_sse(
 ):
     """Handle SSE connections for a specific project."""
     # Verify project exists and user has access
-    from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 
     async with session_scope() as session:
         # First try to find user's own project
         project = (
             await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
         ).first()
-
-        # If not found, check if it's the starter projects folder (which has user_id = NULL)
-        if not project:
-            starter_project = (
-                await session.exec(
-                    select(Folder).where(
-                        Folder.id == project_id, Folder.name == STARTER_FOLDER_NAME, Folder.user_id == current_user.id
-                    )
-                )
-            ).first()
-            if starter_project:
-                project = starter_project
 
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -401,8 +373,6 @@ async def update_project_mcp_settings(
     """Update the MCP settings of all flows in a project and project-level auth settings."""
     try:
         async with session_scope() as session:
-            from langflow.initial_setup.constants import STARTER_FOLDER_NAME
-
             # Fetch the project first to verify it exists and user has access
             project = (
                 await session.exec(
@@ -411,22 +381,6 @@ async def update_project_mcp_settings(
                     .where(Folder.id == project_id, Folder.user_id == current_user.id)
                 )
             ).first()
-
-            # If not found, check if it's the starter projects folder (which has user_id = NULL)
-            if not project:
-                starter_project = (
-                    await session.exec(
-                        select(Folder)
-                        .options(selectinload(Folder.flows))
-                        .where(
-                            Folder.id == project_id,
-                            Folder.name == STARTER_FOLDER_NAME,
-                            Folder.user_id == current_user.id,
-                        )
-                    )
-                ).first()
-                if starter_project:
-                    project = starter_project
 
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
@@ -556,25 +510,9 @@ async def install_mcp_config(
     try:
         # Verify project exists and user has access
         async with session_scope() as session:
-            from langflow.initial_setup.constants import STARTER_FOLDER_NAME
-
             project = (
                 await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
             ).first()
-
-            # If not found, check if it's the starter projects folder (which has user_id = NULL)
-            if not project:
-                starter_project = (
-                    await session.exec(
-                        select(Folder).where(
-                            Folder.id == project_id,
-                            Folder.name == STARTER_FOLDER_NAME,
-                            Folder.user_id == current_user.id,
-                        )
-                    )
-                ).first()
-                if starter_project:
-                    project = starter_project
 
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
@@ -806,25 +744,9 @@ async def check_installed_mcp_servers(
     try:
         # Verify project exists and user has access
         async with session_scope() as session:
-            from langflow.initial_setup.constants import STARTER_FOLDER_NAME
-
             project = (
                 await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
             ).first()
-
-            # If not found, check if it's the starter projects folder (which has user_id = NULL)
-            if not project:
-                starter_project = (
-                    await session.exec(
-                        select(Folder).where(
-                            Folder.id == project_id,
-                            Folder.name == STARTER_FOLDER_NAME,
-                            Folder.user_id == current_user.id,
-                        )
-                    )
-                ).first()
-                if starter_project:
-                    project = starter_project
 
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
@@ -1183,7 +1105,6 @@ async def init_mcp_servers():
 async def auto_configure_starter_projects_mcp(session):
     """Auto-configure MCP servers for starter projects for all users at startup."""
     from langflow.api.v2.mcp import update_server
-    from langflow.initial_setup.constants import STARTER_FOLDER_NAME
     from langflow.services.auth.mcp_encryption import encrypt_auth_settings
     from langflow.services.database.models.api_key.crud import create_api_key
     from langflow.services.database.models.api_key.model import ApiKeyCreate
@@ -1225,7 +1146,7 @@ async def auto_configure_starter_projects_mcp(session):
                 user_starter_folder = (
                     await session.exec(
                         select(Folder).where(
-                            Folder.name == STARTER_FOLDER_NAME,
+                            Folder.name == DEFAULT_FOLDER_NAME,
                             Folder.user_id == user.id,  # Each user has their own!
                         )
                     )
@@ -1280,7 +1201,7 @@ async def auto_configure_starter_projects_mcp(session):
                     await logger.adebug(f"Set up auth settings for user {user.username}'s starter folder")
 
                 # Create API key for this user to access their own starter projects
-                api_key_name = f"MCP Project {STARTER_FOLDER_NAME} - {user.username}"
+                api_key_name = f"MCP Project {DEFAULT_FOLDER_NAME} - {user.username}"
                 unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), user.id)
 
                 # Build SSE URL for THIS USER'S starter folder (unique ID per user)
@@ -1298,7 +1219,7 @@ async def auto_configure_starter_projects_mcp(session):
                 server_config = {"command": command, "args": args}
 
                 # Create unique server name for starter projects
-                server_name = f"lf-{sanitize_mcp_name(STARTER_FOLDER_NAME)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+                server_name = f"lf-{sanitize_mcp_name(DEFAULT_FOLDER_NAME)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
 
                 # Add to user's MCP servers configuration
                 await logger.adebug(f"Adding MCP server '{server_name}' for user {user.username}")
