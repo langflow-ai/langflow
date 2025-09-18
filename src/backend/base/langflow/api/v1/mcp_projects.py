@@ -371,7 +371,7 @@ async def update_project_mcp_settings(
     """Update the MCP settings of all flows in a project and project-level auth settings."""
     try:
         async with session_scope() as session:
-            # Fetch the project first to verify it exists and user has access
+            # Fetch the project first to verify it exists and belongs to the current user
             project = (
                 await session.exec(
                     select(Folder)
