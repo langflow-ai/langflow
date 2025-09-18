@@ -85,7 +85,7 @@ test(
     });
 
     await page
-      .getByTestId("dataFile")
+      .getByTestId("dataRead File")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 720, y: 400 },
       });
