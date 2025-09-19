@@ -1,39 +1,45 @@
-import warnings
-from collections.abc import AsyncIterator, Iterator
-from typing import Any, TypeAlias, get_args
+"""Re-export of all input classes from lfx.
 
-from pandas import DataFrame
-from pydantic import Field, field_validator, model_validator
+This module maintains backward compatibility by re-exporting all input classes from lfx.
+All input classes have been migrated to lfx and this file serves as a compatibility layer.
+"""
 
-from langflow.inputs.validators import CoalesceBool
-from langflow.schema.data import Data
-from langflow.schema.message import Message
-from langflow.services.database.models.message.model import MessageBase
-from langflow.template.field.base import Input
-
-from .input_mixin import (
-    AuthMixin,
-    BaseInputMixin,
-    ConnectionMixin,
-    DatabaseLoadMixin,
-    DropDownMixin,
-    FieldTypes,
-    FileMixin,
-    InputTraceMixin,
-    LinkMixin,
-    ListableInputMixin,
-    MetadataTraceMixin,
-    MultilineMixin,
-    QueryMixin,
-    RangeMixin,
-    SerializableFieldTypes,
-    SliderMixin,
-    SortableListMixin,
-    TableMixin,
-    TabMixin,
-    ToolModeMixin,
+# Re-export all inputs from lfx
+from lfx.inputs.inputs import (
+    AuthInput,
+    BoolInput,
+    CodeInput,
+    DataFrameInput,
+    DataInput,
+    DefaultPromptField,
+    DictInput,
+    DropdownInput,
+    FileInput,
+    FloatInput,
+    HandleInput,
+    InputTypes,
+    InputTypesMap,
+    IntInput,
+    LinkInput,
+    McpInput,
+    MessageInput,
+    MessageTextInput,
+    MultilineInput,
+    MultilineSecretInput,
+    MultiselectInput,
+    NestedDictInput,
+    PromptInput,
+    QueryInput,
+    SecretStrInput,
+    SliderInput,
+    StrInput,
+    TabInput,
+    TableInput,
+    ToolsInput,
+    instantiate_input,
 )
 
+<<<<<<< HEAD
 
 class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.TABLE
@@ -704,3 +710,38 @@ def instantiate_input(input_type: str, data: dict) -> InputTypes:
         return input_type_class(**data)
     msg = f"Invalid input type: {input_type}"
     raise ValueError(msg)
+=======
+__all__ = [
+    "AuthInput",
+    "BoolInput",
+    "CodeInput",
+    "DataFrameInput",
+    "DataInput",
+    "DefaultPromptField",
+    "DictInput",
+    "DropdownInput",
+    "FileInput",
+    "FloatInput",
+    "HandleInput",
+    "InputTypes",
+    "InputTypesMap",
+    "IntInput",
+    "LinkInput",
+    "McpInput",
+    "MessageInput",
+    "MessageTextInput",
+    "MultilineInput",
+    "MultilineSecretInput",
+    "MultiselectInput",
+    "NestedDictInput",
+    "PromptInput",
+    "QueryInput",
+    "SecretStrInput",
+    "SliderInput",
+    "StrInput",
+    "TabInput",
+    "TableInput",
+    "ToolsInput",
+    "instantiate_input",
+]
+>>>>>>> main

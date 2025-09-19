@@ -6,6 +6,10 @@ import uuid
 from collections.abc import AsyncIterator
 
 from fastapi import BackgroundTasks, HTTPException, Response
+from lfx.graph.graph.base import Graph
+from lfx.graph.utils import log_vertex_build
+from lfx.log.logger import logger
+from lfx.schema.schema import InputValueRequest
 from sqlmodel import select
 
 from langflow.api.disconnect import DisconnectHandlerStreamingResponse
@@ -19,12 +23,9 @@ from langflow.api.utils import (
     get_top_level_vertices,
     parse_exception,
 )
-from langflow.api.v1.schemas import FlowDataRequest, InputValueRequest, ResultDataResponse, VertexBuildResponse
+from langflow.api.v1.schemas import FlowDataRequest, ResultDataResponse, VertexBuildResponse
 from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildError
-from langflow.graph.graph.base import Graph
-from langflow.graph.utils import log_vertex_build
-from langflow.logging.logger import logger
 from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow.model import Flow
@@ -344,9 +345,14 @@ async def generate_flow_events(
             result_data_response.duration = duration
             result_data_response.timedelta = timedelta
             vertex.add_build_time(timedelta)
-            inactivated_vertices = list(graph.inactivated_vertices)
+            # Capture both inactivated and conditionally excluded vertices
+            inactivated_vertices = list(graph.inactivated_vertices.union(graph.conditionally_excluded_vertices))
             graph.reset_inactivated_vertices()
             graph.reset_activated_vertices()
+
+            # Note: Do not reset conditionally_excluded_vertices each iteration
+            # This is handled by the ConditionalRouter component
+
             # graph.stop_vertex tells us if the user asked
             # to stop the build of the graph at a certain vertex
             # if it is in next_vertices_ids, we need to remove other
@@ -406,7 +412,7 @@ async def generate_flow_events(
         try:
             vertex_build_response: VertexBuildResponse = await _build_vertex(vertex_id, graph, event_manager)
         except asyncio.CancelledError as exc:
-            await logger.aerror(f"Build cancelled: {exc}")
+            await logger.ainfo(f"Build cancelled: {exc}")
             raise
 
         # send built event or error event

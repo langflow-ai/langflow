@@ -64,11 +64,37 @@ LANGFLOW_BASE_URL=http://0.0.0.0:7860
 OPENAI_API_KEY=sk-...
 ```
 
-The specific values you include depend on your application's needs and how you want to configure Langflow.
-For more information, see [Langflow environment variables](/environment-variables) and [Global variables](/configuration-global-variables).
+You can set environment variables in the Dockerfile, but if you set an environment variable in both `docker.env` and the Dockerfile, Langflow uses the value set in `docker.env`.
 
-You can also set environment variables in the Dockerfile.
-However, if you set an environment variable in both `docker.env` and the Dockerfile, Langflow uses the value set in `docker.env`.
+Langflow automatically converts a [predefined list](/configuration-global-variables#default-environment-variables) of environment variables into global variables.
+
+If your custom environment variables aren't in this predefined list, you need to explicitly include them using the `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` environment variable.
+
+This environment variable accepts a comma-separated list of environment variables to get from the environment and store as global variables.
+
+For example, this configuration creates global variables named `WATSONX_PROJECT_ID` and `WATSONX_API_KEY` in Langflow's database and makes them available for use in components:
+
+```text
+LANGFLOW_AUTO_LOGIN=True
+LANGFLOW_SAVE_DB_IN_CONFIG_DIR=True
+WATSONX_PROJECT_ID=your_project_id
+WATSONX_API_KEY=your_api_key
+LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=WATSONX_PROJECT_ID,WATSONX_API_KEY
+```
+
+Alternatively, set `LANGFLOW_FALLBACK_TO_ENV_VAR=True` to allow global variables set in Langflow Settings to use an environment variable with the same name if Langflow can't retrieve the variable value from the global variables.
+
+For example, in this configuration, when a component references the global variables `WATSONX_PROJECT_ID` or `WATSONX_API_KEY` that don't exist in Langflow's database, Langflow will automatically use the corresponding environment variable value as a fallback.
+
+```text
+LANGFLOW_AUTO_LOGIN=True
+LANGFLOW_SAVE_DB_IN_CONFIG_DIR=True
+LANGFLOW_FALLBACK_TO_ENV_VAR=True
+WATSONX_PROJECT_ID=your_project_id
+WATSONX_API_KEY=your_api_key
+```
+
+For more information, see [Langflow environment variables](/environment-variables) and [Global variables](/configuration-global-variables).
 
 ### Secrets
 

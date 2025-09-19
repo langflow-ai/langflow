@@ -1,8 +1,14 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+<<<<<<< HEAD
 from langflow.components.serper.google_serper_api_core import GoogleSerperAPICore
 from langflow.schema import DataFrame
+=======
+
+from lfx.components.google.google_serper_api_core import GoogleSerperAPICore
+from lfx.schema import DataFrame
+>>>>>>> main
 
 
 @pytest.fixture

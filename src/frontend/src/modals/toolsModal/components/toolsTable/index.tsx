@@ -45,6 +45,8 @@ export default function ToolsTable({
   const [sidebarName, setSidebarName] = useState<string>("");
   const [sidebarDescription, setSidebarDescription] = useState<string>("");
 
+  const editedSelection = useRef<boolean>(false);
+
   const { setOpen: setSidebarOpen } = useSidebar();
 
   const getRowId = useMemo(() => {
@@ -59,7 +61,7 @@ export default function ToolsTable({
   }, [rows, open]);
 
   const applyInitialSelection = () => {
-    if (!agGrid.current?.api) return;
+    if (!agGrid.current?.api || editedSelection.current) return;
 
     const initialData = cloneDeep(rows);
     const filter = initialData.filter((row) => row.status === true);
@@ -197,6 +199,7 @@ export default function ToolsTable({
   const handleSelectionChanged = (event) => {
     if (open) {
       const selectedData = event.api.getSelectedRows();
+      editedSelection.current = true;
       setSelectedRows(selectedData);
     }
   };
@@ -358,7 +361,10 @@ export default function ToolsTable({
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-1" data-testid="sidebar_header">
+              <div
+                className="flex flex-col gap-1 p-4"
+                data-testid="sidebar_header"
+              >
                 <h3
                   className="text-base font-medium"
                   data-testid="sidebar_header_name"
@@ -373,7 +379,11 @@ export default function ToolsTable({
                 </p>
               </div>
             ))}
+<<<<<<< HEAD
           {!isAction && <Separator />}
+=======
+          {!isAction && actionArgs.length > 0 && <Separator />}
+>>>>>>> main
           {focusedRow && (
             <div className="flex h-full flex-col gap-4 p-2">
               <SidebarGroup className="flex-1">

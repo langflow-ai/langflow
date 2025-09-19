@@ -12,6 +12,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
+from lfx.services.mcp_composer.service import MCPComposerService
 from sqlalchemy import or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
@@ -37,7 +38,10 @@ from langflow.services.database.models.folder.model import (
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
 from langflow.services.deps import get_service, get_settings_service
+<<<<<<< HEAD
 from langflow.services.mcp_composer.service import MCPComposerService
+=======
+>>>>>>> main
 from langflow.services.schema import ServiceType
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -207,6 +211,14 @@ async def update_project(
     if not existing_project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    result = await session.exec(
+        select(Flow.id, Flow.is_component).where(Flow.folder_id == existing_project.id, Flow.user_id == current_user.id)
+    )
+    flows_and_components = result.all()
+
+    project.flows = [flow_id for flow_id, is_component in flows_and_components if not is_component]
+    project.components = [flow_id for flow_id, is_component in flows_and_components if is_component]
+
     try:
         # Track if MCP Composer needs to be started or stopped
         should_start_mcp_composer = False
@@ -261,7 +273,7 @@ async def update_project(
 
         flows_ids = (await session.exec(select(Flow.id).where(Flow.folder_id == existing_project.id))).all()
 
-        excluded_flows = list(set(flows_ids) - set(concat_project_components))
+        excluded_flows = list(set(flows_ids) - set(project.flows))
 
         my_collection_project = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
         if my_collection_project:

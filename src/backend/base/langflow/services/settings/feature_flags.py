@@ -1,5 +1,6 @@
-from pydantic_settings import BaseSettings
+from lfx.services.settings.feature_flags import FEATURE_FLAGS
 
+<<<<<<< HEAD
 
 class FeatureFlags(BaseSettings):
     mvp_components: bool = False
@@ -9,3 +10,6 @@ class FeatureFlags(BaseSettings):
 
 
 FEATURE_FLAGS = FeatureFlags()
+=======
+__all__ = ["FEATURE_FLAGS"]
+>>>>>>> main

@@ -1,5 +1,11 @@
 import type { ChatMessageType } from "../../../../../types/chat";
 
+<<<<<<< HEAD
+=======
+// Cache for parsed timestamps to improve performance during sorting
+const timestampCache = new WeakMap<ChatMessageType, number>();
+
+>>>>>>> main
 /**
  * Sorts chat messages by timestamp with proper handling of identical timestamps.
  *
@@ -14,8 +20,23 @@ import type { ChatMessageType } from "../../../../../types/chat";
  * @returns Sort comparison result (-1, 0, 1)
  */
 const sortSenderMessages = (a: ChatMessageType, b: ChatMessageType): number => {
+<<<<<<< HEAD
   const timeA = new Date(a.timestamp).getTime();
   const timeB = new Date(b.timestamp).getTime();
+=======
+  // Use WeakMap cache to avoid repeated Date parsing for same message objects
+  let timeA = timestampCache.get(a);
+  if (timeA === undefined) {
+    timeA = new Date(a.timestamp).getTime();
+    timestampCache.set(a, timeA);
+  }
+
+  let timeB = timestampCache.get(b);
+  if (timeB === undefined) {
+    timeB = new Date(b.timestamp).getTime();
+    timestampCache.set(b, timeB);
+  }
+>>>>>>> main
 
   // Primary sort: by timestamp
   if (timeA !== timeB) {

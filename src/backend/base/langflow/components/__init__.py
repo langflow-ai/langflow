@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from langflow.components._importing import import_mod
+from lfx.components import __all__ as _lfx_all
 
+<<<<<<< HEAD
 if TYPE_CHECKING:
     from langflow.components import (
         Notion,
@@ -231,40 +232,18 @@ __all__: list[str] = [
     "youtube",
     "zep",
 ]
+=======
+__all__: list[str] = list(_lfx_all)
+>>>>>>> main
 
 
 def __getattr__(attr_name: str) -> Any:
-    """Lazily import component modules on attribute access.
+    """Forward attribute access to lfx.components."""
+    from lfx import components
 
-    Args:
-        attr_name (str): The attribute/module name to import.
-
-    Returns:
-        Any: The imported module or attribute.
-
-    Raises:
-        AttributeError: If the attribute is not a known component or cannot be imported.
-    """
-    if attr_name not in _dynamic_imports:
-        msg = f"module '{__name__}' has no attribute '{attr_name}'"
-        raise AttributeError(msg)
-    try:
-        # Use import_mod as in LangChain, passing the module name and package
-        result = import_mod(attr_name, "__module__", __spec__.parent)
-    except (ModuleNotFoundError, ImportError, AttributeError) as e:
-        msg = f"Could not import '{attr_name}' from '{__name__}': {e}"
-        raise AttributeError(msg) from e
-    globals()[attr_name] = result  # Cache for future access
-    return result
+    return getattr(components, attr_name)
 
 
 def __dir__() -> list[str]:
-    """Return list of available attributes for tab-completion and dir()."""
+    """Forward dir() to lfx.components."""
     return list(__all__)
-
-
-# Optional: Consistency check (can be removed in production)
-_missing = set(__all__) - set(_dynamic_imports)
-if _missing:
-    msg = f"Missing dynamic import mapping for: {', '.join(_missing)}"
-    raise ImportError(msg)

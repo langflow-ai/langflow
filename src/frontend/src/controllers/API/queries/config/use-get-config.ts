@@ -21,6 +21,10 @@ export interface ConfigResponse {
   webhook_polling_interval: number;
   serialization_max_items_length: number;
   event_delivery: EventDeliveryType;
+<<<<<<< HEAD
+=======
+  webhook_auth_enable: boolean;
+>>>>>>> main
   voice_mode_available: boolean;
 }
 
@@ -45,6 +49,9 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
     (state) => state.setWebhookPollingInterval,
   );
   const setEventDelivery = useUtilityStore((state) => state.setEventDelivery);
+  const setWebhookAuthEnable = useUtilityStore(
+    (state) => state.setWebhookAuthEnable,
+  );
 
   const { query } = UseRequestProcessor();
 
@@ -67,6 +74,7 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
         data.webhook_polling_interval ?? DEFAULT_POLLING_INTERVAL,
       );
       setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
+      setWebhookAuthEnable(data.webhook_auth_enable ?? true);
     }
     return data;
   };

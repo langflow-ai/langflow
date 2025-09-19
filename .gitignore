@@ -279,4 +279,7 @@ src/frontend/temp
 *.db
 *.mcp.json
 
+news-aggregated.json
+CLAUDE.md
+
 member_servers.json

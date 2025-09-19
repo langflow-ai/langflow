@@ -14,6 +14,12 @@ from uuid import UUID
 from anyio import BrokenResourceError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse
+from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
+from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.log import logger
+from lfx.services.deps import get_settings_service, session_scope
+from lfx.services.mcp_composer.service import MCPComposerError, MCPComposerService
+from lfx.services.schema import ServiceType
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
@@ -24,6 +30,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.api.utils import CurrentActiveMCPUser
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.mcp_utils import (
+    current_request_variables_ctx,
     current_user_ctx,
     handle_call_tool,
     handle_list_resources,
@@ -38,9 +45,12 @@ from langflow.api.v1.schemas import (
     MCPProjectUpdateRequest,
     MCPSettings,
 )
+<<<<<<< HEAD
 from langflow.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from langflow.base.mcp.util import sanitize_mcp_name
 from langflow.logging.logger import logger
+=======
+>>>>>>> main
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.auth.utils import AUTO_LOGIN_WARNING
 from langflow.services.database.models import Flow, Folder
@@ -48,9 +58,13 @@ from langflow.services.database.models.api_key.crud import check_key, create_api
 from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
+<<<<<<< HEAD
 from langflow.services.deps import get_service, get_settings_service, session_scope
 from langflow.services.mcp_composer.service import MCPComposerError, MCPComposerService
 from langflow.services.schema import ServiceType
+=======
+from langflow.services.deps import get_service
+>>>>>>> main
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
@@ -82,7 +96,10 @@ async def verify_project_auth(
     if (not auth_settings and not settings_service.auth_settings.AUTO_LOGIN) or (
         auth_settings and auth_settings.auth_type == "apikey"
     ):
+<<<<<<< HEAD
         # For MCP composer enabled, only use API key
+=======
+>>>>>>> main
         api_key = query_param or header_param
         if not api_key:
             raise HTTPException(
@@ -109,7 +126,11 @@ async def verify_project_auth(
     if not settings_service.auth_settings.SUPERUSER:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
+<<<<<<< HEAD
             detail="Missing first superuser credentials",
+=======
+            detail="Missing superuser username in auth settings",
+>>>>>>> main
         )
     # For MCP endpoints, always fall back to username lookup when no API key is provided
     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
@@ -284,6 +305,15 @@ async def handle_project_sse(
     current_user: Annotated[User, Depends(verify_project_auth_conditional)],
 ):
     """Handle SSE connections for a specific project."""
+    # Verify project exists and user has access
+    async with session_scope() as session:
+        project = (
+            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
+        ).first()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
     # Get project-specific SSE transport and MCP server
     sse = get_project_sse(project_id)
     project_server = get_project_mcp_server(project_id)
@@ -292,6 +322,18 @@ async def handle_project_sse(
     # Set context variables
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
+    # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+    variables: dict[str, str] = {}
+    header_prefix = "x-langflow-global-var-"
+    try:
+        for header_name, header_value in request.headers.items():
+            header_lower = header_name.lower()
+            if header_lower.startswith(header_prefix):
+                var_name = header_lower[len(header_prefix) :].upper()
+                variables[var_name] = header_value
+    except Exception:  # noqa: BLE001
+        await logger.aexception("Failed to parse request variables from headers for project %s", project_id)
+    req_vars_token = current_request_variables_ctx.set(variables or None)
 
     try:
         async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
@@ -318,6 +360,7 @@ async def handle_project_sse(
     finally:
         current_user_ctx.reset(user_token)
         current_project_ctx.reset(project_token)
+        current_request_variables_ctx.reset(req_vars_token)
 
     return Response(status_code=200)
 
@@ -332,6 +375,18 @@ async def handle_project_messages(
     # Set context variables
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
+    # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+    variables: dict[str, str] = {}
+    header_prefix = "x-langflow-global-var-"
+    try:
+        for header_name, header_value in request.headers.items():
+            header_lower = header_name.lower()
+            if header_lower.startswith(header_prefix):
+                var_name = header_lower[len(header_prefix) :].upper()
+                variables[var_name] = header_value
+    except Exception:  # noqa: BLE001
+        await logger.aexception("Failed to parse request variables from headers for project %s", project_id)
+    req_vars_token = current_request_variables_ctx.set(variables or None)
 
     try:
         sse = get_project_sse(project_id)
@@ -342,6 +397,7 @@ async def handle_project_messages(
     finally:
         current_user_ctx.reset(user_token)
         current_project_ctx.reset(project_token)
+        current_request_variables_ctx.reset(req_vars_token)
 
 
 @router.post("/{project_id}/")
@@ -386,7 +442,11 @@ async def update_project_mcp_settings(
             should_stop_composer = False
 
             # Update project-level auth settings with encryption
+<<<<<<< HEAD
             if "auth_settings" in request.model_fields_set:
+=======
+            if "auth_settings" in request.model_fields_set and request.auth_settings is not None:
+>>>>>>> main
                 auth_result = handle_auth_settings_update(
                     existing_project=project,
                     new_auth_settings=request.auth_settings,
@@ -1212,7 +1272,11 @@ async def get_or_start_mcp_composer(auth_config: dict, project_name: str, projec
     Raises:
         MCPComposerError: If MCP Composer fails to start
     """
+<<<<<<< HEAD
     from langflow.services.mcp_composer.service import MCPComposerConfigError
+=======
+    from lfx.services.mcp_composer.service import MCPComposerConfigError
+>>>>>>> main
 
     mcp_composer_service: MCPComposerService = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
 

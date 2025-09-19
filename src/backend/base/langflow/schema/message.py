@@ -1,14 +1,9 @@
-from __future__ import annotations
+"""Message class for langflow - imports from lfx.
 
-import asyncio
-import json
-import re
-import traceback
-from collections.abc import AsyncIterator, Iterator
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Annotated, Any, Literal
-from uuid import UUID
+This maintains backward compatibility while using the lfx implementation.
+"""
 
+<<<<<<< HEAD
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
@@ -476,3 +471,9 @@ class ErrorMessage(Message):
             ],
             flow_id=flow_id,
         )
+=======
+# Import and re-export to ensure class identity is preserved
+from lfx.schema.message import ContentBlock, DefaultModel, ErrorMessage, Message, MessageResponse
+
+__all__ = ["ContentBlock", "DefaultModel", "ErrorMessage", "Message", "MessageResponse"]
+>>>>>>> main

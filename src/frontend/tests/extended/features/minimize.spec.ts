@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
@@ -32,10 +32,8 @@ test(
     await page.mouse.up();
 
     await adjustScreenView(page);
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await zoomOut(page, 4);
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("more-options-modal").click();
 

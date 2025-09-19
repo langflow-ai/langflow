@@ -51,7 +51,7 @@ const McpEmptyState = ({ isLoading }: { isLoading?: boolean }) => {
           onClick={handleAddMcpServerClick}
           data-testid="add-mcp-server-button-sidebar"
         >
-          Add MCP Server
+          <span>Add MCP Server</span>
         </Button>
       </div>
       <AddMcpServerModal open={addMcpOpen} setOpen={setAddMcpOpen} />
@@ -108,7 +108,11 @@ const McpSidebarGroup = ({
   }
 
   return (
+<<<<<<< HEAD
     <SidebarGroup className={`p-3 pt-0${!hasMcpServers ? " h-full" : ""}`}>
+=======
+    <SidebarGroup className={`p-3 ${!hasMcpServers ? " h-full" : ""}`}>
+>>>>>>> main
       {hasMcpServers && (
         <SidebarGroupLabel className="cursor-default w-full flex items-center justify-between">
           <span>MCP Servers</span>

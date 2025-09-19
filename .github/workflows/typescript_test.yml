@@ -31,6 +31,11 @@ on:
         description: "(Optional) ref to checkout"
         required: false
         type: string
+      runs-on:
+        description: "Runner to use for the tests"
+        required: false
+        type: string
+        default: "ubuntu-latest"
   workflow_dispatch:
     inputs:
       suites:
@@ -48,6 +53,15 @@ on:
         required: false
         type: string
         default: "tests"
+      runs-on:
+        description: "Runner to use for the tests"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+        default: ubuntu-latest
 
 env:
   NODE_VERSION: "21"
@@ -60,13 +74,13 @@ env:
 jobs:
   determine-test-suite:
     name: Determine Test Suites and Shard Distribution
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     outputs:
       matrix: ${{ steps.setup-matrix.outputs.matrix }}
       test_grep: ${{ steps.set-matrix.outputs.test_grep }}
       suites: ${{ steps.set-matrix.outputs.suites }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref || github.ref }}
           fetch-depth: 0
@@ -246,7 +260,7 @@ jobs:
 
   setup-and-test:
     name: Playwright Tests - Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     if: ${{ needs.determine-test-suite.outputs.test_grep != '' }}
     needs: determine-test-suite
     strategy:
@@ -265,7 +279,7 @@ jobs:
       failed: ${{ steps.check-failure.outputs.failed }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref || github.ref }}
 
@@ -291,10 +305,16 @@ jobs:
             playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
 
       - name: Install Playwright Browser Dependencies
-        if: steps.cache-playwright.outputs.cache-hit != 'true'
+        if: steps.cache-playwright.outputs.cache-hit != 'true' && inputs.runs-on != 'self-hosted'
         run: |
           cd ./src/frontend
           npx playwright install --with-deps chromium
+
+      - name: Install Playwright Browsers (Self-Hosted)
+        if: steps.cache-playwright.outputs.cache-hit != 'true' && inputs.runs-on == 'self-hosted'
+        run: |
+          cd ./src/frontend
+          npx playwright install chromium
 
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
@@ -341,7 +361,7 @@ jobs:
     # We need to repeat the condition at every step
     # https://github.com/actions/runner/issues/662
     needs: setup-and-test
-    runs-on: ubuntu-latest
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     if: always()
     env:
       EXIT_CODE: ${{!contains(needs.setup-and-test.result, 'failure') && !contains(needs.setup-and-test.result, 'cancelled') && '0' || '1'}}
@@ -358,7 +378,7 @@ jobs:
           fi
       - name: Checkout code
         if: ${{ steps.should_merge_reports.outputs.should_merge_reports == 'true' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
 
