@@ -31,7 +31,6 @@ from lfx.graph.graph.utils import (
     should_continue,
 )
 from lfx.graph.schema import InterfaceComponentTypes, RunOutputs
-from lfx.graph.utils import log_vertex_build
 from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
@@ -1818,14 +1817,20 @@ class Graph:
             "used_frozen_result": False,
         }
 
-        await log_vertex_build(
-            flow_id=self.flow_id or "",
-            vertex_id=vertex_id or "errors",
-            valid=False,
-            params=params,
-            data=result_data_response,
-            artifacts={},
-        )
+        try:
+            from langflow.graph.utils import log_vertex_build
+
+            await log_vertex_build(
+                flow_id=self.flow_id or "",
+                vertex_id=vertex_id or "errors",
+                valid=False,
+                params=params,
+                data=result_data_response,
+                artifacts={},
+            )
+        except ImportError:
+            # langflow not available, skip logging
+            pass
 
     async def _execute_tasks(
         self, tasks: list[asyncio.Task], lock: asyncio.Lock, *, has_webhook_component: bool = False
@@ -1856,14 +1861,20 @@ class Graph:
                 raise result
             if isinstance(result, VertexBuildResult):
                 if self.flow_id is not None:
-                    await log_vertex_build(
-                        flow_id=self.flow_id,
-                        vertex_id=result.vertex.id,
-                        valid=result.valid,
-                        params=result.params,
-                        data=result.result_dict,
-                        artifacts=result.artifacts,
-                    )
+                    try:
+                        from langflow.graph.utils import log_vertex_build
+
+                        await log_vertex_build(
+                            flow_id=self.flow_id,
+                            vertex_id=result.vertex.id,
+                            valid=result.valid,
+                            params=result.params,
+                            data=result.result_dict,
+                            artifacts=result.artifacts,
+                        )
+                    except ImportError:
+                        # langflow not available, skip logging
+                        pass
 
                 vertices.append(result.vertex)
             else:
