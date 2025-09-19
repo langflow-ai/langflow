@@ -50,14 +50,19 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url,
-        target_metadata=target_metadata,
-        literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,
-        prepare_threshold=None,
-    )
+    configure_kwargs = {
+        "url": url,
+        "target_metadata": target_metadata,
+        "literal_binds": True,
+        "dialect_opts": {"paramstyle": "named"},
+        "render_as_batch": True,
+    }
+
+    # Only add prepare_threshold for PostgreSQL
+    if url and "postgresql" in url:
+        configure_kwargs["prepare_threshold"] = None
+
+    context.configure(**configure_kwargs)
 
     with context.begin_transaction():
         context.run_migrations()
@@ -79,9 +84,17 @@ def _sqlite_do_begin(conn):
 
 
 def _do_run_migrations(connection):
-    context.configure(
-        connection=connection, target_metadata=target_metadata, render_as_batch=True, prepare_threshold=None
-    )
+    configure_kwargs = {
+        "connection": connection,
+        "target_metadata": target_metadata,
+        "render_as_batch": True,
+    }
+
+    # Only add prepare_threshold for PostgreSQL
+    if connection.dialect.name == "postgresql":
+        configure_kwargs["prepare_threshold"] = None
+
+    context.configure(**configure_kwargs)
 
     with context.begin_transaction():
         if connection.dialect.name == "postgresql":
@@ -91,11 +104,19 @@ def _do_run_migrations(connection):
 
 
 async def _run_async_migrations() -> None:
+    # Get database URL to determine dialect
+    url = config.get_main_option("sqlalchemy.url")
+    connect_args = {}
+
+    # Only add prepare_threshold for PostgreSQL
+    if url and "postgresql" in url:
+        connect_args["prepare_threshold"] = None
+
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
-        connect_args={"prepare_threshold": None},
+        connect_args=connect_args,
     )
 
     if connectable.dialect.name == "sqlite":
