@@ -1,5 +1,6 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, Mock, mock_open, patch
+from pydantic import SecretStr
 
 import pytest
 
@@ -25,6 +26,16 @@ class TestAnymizeComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def file_names_mapping(self):
         return []
+
+    @pytest.mark.asyncio
+    async def test_api_key_secretstr_extraction(self):
+        comp = AnymizeComponent(anymize_api=SecretStr("sekret"), operation="deanonymize_text", text="[[X-123]]")
+        # Patch deanonymize_text to observe header construction through anymize_api_request
+        with patch.object(comp, "_deanonymize_text", new_callable=AsyncMock) as mock_deanon:
+            mock_deanon.return_value = {"text": "ok"}
+            res = await comp.process()
+            assert isinstance(res, Message)
+            assert res.text == "ok"
 
     def test_update_build_config_anonymize_text(self):
         """Test build config updates for anonymize_text operation."""
@@ -546,3 +557,73 @@ class TestAnymizeComponent(ComponentTestBaseWithoutClient):
         assert len(component.outputs) == 1
         assert component.outputs[0].name == "process"
         assert component.outputs[0].display_name == "Process"
+
+    @pytest.mark.asyncio
+    async def test_process_missing_api_key(self):
+        """Test process method with missing API key."""
+        # Test with None API key
+        component = AnymizeComponent(anymize_api=None, operation="anonymize_text", text="Test text", language="en")
+
+        result = await component.process()
+
+        assert isinstance(result, Message)
+        assert result.text == "Error: Missing anymize API key."
+
+    @pytest.mark.asyncio
+    async def test_process_empty_api_key(self):
+        """Test process method with empty string API key."""
+        # Test with empty string API key
+        component = AnymizeComponent(anymize_api="", operation="anonymize_text", text="Test text", language="en")
+
+        result = await component.process()
+
+        assert isinstance(result, Message)
+        assert result.text == "Error: Missing anymize API key."
+
+    @pytest.mark.asyncio
+    async def test_process_whitespace_api_key(self):
+        """Test process method with whitespace-only API key."""
+        # Test with whitespace-only API key
+        component = AnymizeComponent(anymize_api="   ", operation="anonymize_text", text="Test text", language="en")
+
+        result = await component.process()
+
+        assert isinstance(result, Message)
+        assert result.text == "Error: Missing anymize API key."
+
+    def test_get_api_key_value_regular_string(self):
+        """Test _get_api_key_value with regular string API key."""
+        component = AnymizeComponent(anymize_api="test_api_key_123")
+
+        result = component._get_api_key_value()
+
+        assert result == "test_api_key_123"
+
+    def test_get_api_key_value_none_and_empty(self):
+        """Test _get_api_key_value with None and empty string values."""
+        # Test with None
+        component = AnymizeComponent(anymize_api=None)
+        result = component._get_api_key_value()
+        assert result == ""
+
+        # Test with empty string
+        component.anymize_api = ""
+        result = component._get_api_key_value()
+        assert result == ""
+
+    def test_get_api_key_value_secret_str(self):
+        """Test _get_api_key_value with pydantic SecretStr object."""
+        # Test successful SecretStr
+        mock_secret = MagicMock()
+        mock_secret.get_secret_value.return_value = "secret_api_key_456"
+
+        component = AnymizeComponent()
+        component.anymize_api = mock_secret
+
+        result = component._get_api_key_value()
+        assert result == "secret_api_key_456"
+
+        # Test SecretStr that raises exception
+        mock_secret.get_secret_value.side_effect = Exception("Access denied")
+        result = component._get_api_key_value()
+        assert result == ""

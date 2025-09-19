@@ -5,9 +5,8 @@ from typing import Any
 import aiohttp
 
 from lfx.custom.custom_component.component import Component
-from lfx.io import DropdownInput, FileInput, MultilineInput, SecretStrInput
+from lfx.io import DropdownInput, FileInput, MultilineInput, SecretStrInput, Output
 from lfx.schema import Message
-from lfx.template import Output
 
 HTTP_BAD_REQUEST = 400
 
@@ -31,6 +30,7 @@ class AnymizeComponent(Component):
                 "Your anymize.ai API key for authentication. Get your API key from "
                 "https://anymize.ai after creating an account. Required for all operations."
             ),
+            required=True,
         ),
         DropdownInput(
             name="operation",
@@ -73,6 +73,15 @@ class AnymizeComponent(Component):
             build_config.setdefault("file", {})["show"] = field_value == "file_anonymization"
         return build_config
 
+    def _get_api_key_value(self) -> str:
+        val = getattr(self, "anymize_api", None)
+        if hasattr(val, "get_secret_value"):
+            try:
+                return val.get_secret_value()
+            except Exception:
+                return ""
+        return val or ""
+
     def _pre_run_setup(self):
         if hasattr(self, "operation") and not self.operation:
             self.operation = "anonymize_text"
@@ -85,6 +94,9 @@ class AnymizeComponent(Component):
 
     async def process(self) -> Message:
         try:
+            if not self._get_api_key_value().strip():
+                return Message(text="Error: Missing anymize API key.")
+
             if self.operation == "anonymize_text":
                 if not self.text:
                     return Message(text="Error: No text provided for anonymization.")
@@ -134,7 +146,7 @@ class AnymizeComponent(Component):
             return Message(text=f"Error during processing: {e!s}")
 
     async def _anonymize_file(self, file_input) -> dict[str, Any]:
-        headers = {"Authorization": f"Bearer {self.anymize_api}"}
+        headers = {"Authorization": f"Bearer {self._get_api_key_value()}"}
 
         if isinstance(file_input, str):
             file_path = file_input
@@ -189,7 +201,7 @@ class AnymizeComponent(Component):
         qs: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         headers = {
-            "Authorization": f"Bearer {self.anymize_api}",
+            "Authorization": f"Bearer {self._get_api_key_value()}",
             "Accept": "application/json",
             "Content-Type": "application/json",
         }
