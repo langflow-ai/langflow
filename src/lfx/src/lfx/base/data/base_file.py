@@ -1,5 +1,4 @@
 import ast
-import orjson
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
@@ -8,6 +7,7 @@ from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 from zipfile import ZipFile, is_zipfile
 
+import orjson
 import pandas as pd
 
 from lfx.custom.custom_component.component import Component
@@ -263,13 +263,12 @@ class BaseFileComponent(Component, ABC):
                 elif data_text:
                     # get_text() returned non-string, convert it
                     parts.append(str(data_text))
+                elif isinstance(d.data, dict):
+                    # convert the data dict to a readable string
+                    parts.append(orjson.dumps(d.data, indent=2, default=str))
                 else:
-                    if isinstance(d.data, dict):
-                        # convert the data dict to a readable string
-                        parts.append(orjson.dumps(d.data, indent=2, default=str))
-                    else:
-                        parts.append(str(d))
-            except Exception as e:
+                    parts.append(str(d))
+            except Exception:
                 # Final fallback - just try to convert to string
                 parts.append(str(d))
 

@@ -76,7 +76,7 @@ def get_file_paths(files: list[str | dict]):
 
         file_path = Path(file_path_str)
         # Handle edge case where path might be just a filename without parent
-        if file_path.parent == Path("."):
+        if file_path.parent == Path():
             flow_id, file_name = "", file_path.name
         else:
             flow_id, file_name = str(file_path.parent), file_path.name
@@ -131,7 +131,7 @@ async def get_files(
 
         file_path = Path(file)
         # Handle edge case where path might be just a filename without parent
-        if file_path.parent == Path("."):
+        if file_path.parent == Path():
             flow_id, file_name = "", file_path.name
         else:
             flow_id, file_name = str(file_path.parent), file_path.name
@@ -149,7 +149,7 @@ async def get_files(
                 file_objects.append(file_base64)
             else:
                 file_objects.append(file_object)
-        except Exception as e: # noqa: BLE001
+        except Exception as e:
             msg = f"Error getting file {file} from storage: {e}"
             raise FileNotFoundError(msg) from e
     return file_objects
