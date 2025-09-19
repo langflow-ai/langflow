@@ -5122,7 +5122,6 @@ couchbase = [
     { name = "couchbase" },
 ]
 docling = [
-    { name = "docling" },
     { name = "langchain-docling" },
     { name = "ocrmac", marker = "sys_platform == 'darwin'" },
     { name = "rapidocr-onnxruntime" },
@@ -5205,7 +5204,7 @@ requires-dist = [
     { name = "cassio", marker = "extra == 'cassio'", specifier = ">=0.1.7" },
     { name = "certifi", specifier = "==2024.8.30" },
     { name = "certifi", specifier = ">=2023.11.17,<2025.0.0" },
-    { name = "chromadb", specifier = "==0.5.23" },
+    { name = "chromadb", specifier = ">=0.5.6,<0.6.0" },
     { name = "cleanlab-tlm", specifier = ">=1.1.2" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
     { name = "composio", specifier = "==0.8.5" },
@@ -5214,7 +5213,6 @@ requires-dist = [
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "datasets", specifier = ">2.14.7" },
     { name = "docling", specifier = ">=2.36.1" },
-    { name = "docling", marker = "extra == 'docling'", specifier = ">=2.36.1" },
     { name = "dspy-ai", specifier = "==2.5.41" },
     { name = "duckduckgo-search", specifier = "==7.2.1" },
     { name = "easyocr", specifier = ">=1.7.2" },
@@ -5240,7 +5238,7 @@ requires-dist = [
     { name = "langchain-anthropic", specifier = "==0.3.14" },
     { name = "langchain-astradb", specifier = "~=0.6.0" },
     { name = "langchain-aws", specifier = "==0.2.7" },
-    { name = "langchain-chroma", specifier = "==0.1.4" },
+    { name = "langchain-chroma", specifier = ">=0.1.4,<0.2.0" },
     { name = "langchain-cohere", specifier = "==0.3.3" },
     { name = "langchain-community", specifier = "~=0.3.21" },
     { name = "langchain-docling", marker = "extra == 'docling'", specifier = ">=1.1.0" },
