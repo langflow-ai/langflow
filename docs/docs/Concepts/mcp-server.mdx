@@ -147,23 +147,42 @@ For example:
     If you are using a [public Langflow server](/deployment-public-server), the server address is automatically included.
 
     If your Langflow server requires authentication, you must include your Langflow API key or OAuth settings in the configuration.
-    For more information, see [MCP server authentication and environment variables](#authentication).
+    For more information, see [MCP server authentication](#authentication).
 
-6. Save and close your client's MCP configuration file.
+6. To include other environment variables with your MCP server command, add an `env` object with key-value pairs of environment variables:
 
-7. Confirm that your Langflow MCP server is on the client's list of MCP servers.
+    ```json
+    {
+      "mcpServers": {
+        "PROJECT_NAME": {
+          "command": "uvx",
+          "args": [
+            "mcp-proxy",
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
+          ],
+          "env": {
+            "KEY": "VALUE"
+          }
+        }
+      }
+    }
+    ```
+
+7. Save and close your client's MCP configuration file.
+
+8. Confirm that your Langflow MCP server is on the client's list of MCP servers.
 If necessary, restart your client to apply the modified configuration file.
 
 </TabItem>
 <TabItem value="auto" label="Auto install">
 
-1. Install [Cursor](https://docs.cursor.com/get-started/installation), [Claude](https://claude.ai/download), or [Windsurf](https://windsurf.com/download/editor) on the same computer where your Langflow server is running.
+:::info
+The auto install option is available only for specific MCP clients.
+Auto install requires the client to be installed locally so Langflow can write to the client's configuration file.
+If your client isn't supported, is installed remotely, or you need to pass additional environment variables, use the **JSON** option.
+:::
 
-    :::info
-    The auto install option is available only for specific MCP clients.
-    Auto install requires the client to be installed locally so Langflow can automatically update the client's configuration files.
-    If your client isn't supported or is installed remotely, use the **JSON** option.
-    :::
+1. Install [Cursor](https://docs.cursor.com/get-started/installation), [Claude](https://claude.ai/download), or [Windsurf](https://windsurf.com/download/editor) on the same computer where your Langflow server is running.
 
 2. Recommended: Configure [authentication](#authentication) for your MCP server.
 
@@ -184,7 +203,7 @@ Once your MCP client is connected to your Langflow project's MCP server, your fl
 Cursor determines when to use tools based on your queries, and requests permissions when necessary.
 For more information, see the MCP documentation for your client, such as [Cursor's MCP documentation](https://docs.cursor.com/context/model-context-protocol).
 
-### MCP server authentication and environment variables {#authentication}
+## MCP server authentication {#authentication}
 
 Each [Langflow project](/concepts-flows#projects) has its own MCP server with its own MCP server authentication settings.
 
@@ -239,15 +258,16 @@ To configure OAuth authentication:
     Your MCP server's **JSON** code snippets and **Auto install** configuration are automatically updated with OAuth values. These are automatically used for new installations after enabling OAuth. However, you must manually update any existing installations, as explained in the next step.
 
 4. If you already installed your Langflow MCP server in your MCP client, you must update your MCP client configuration to use the new OAuth settings after enabling OAuth on your MCP server.
-    The client update method depends on how you installed the server on the client:
+The client update method depends on how you installed the server on the client:
 
     - **Auto install**: Manually update your client's config file using the updated JSON snippet from the **JSON** tab, or repeat the steps in [Auto-install](#connect-clients-to-use-the-servers-actions) to re-install the client with the updated settings.
     - **JSON option**: Copy the updated JSON snippet from the **JSON** tab and replace your existing configuration.
     - **New connections**: Use either the **Auto install** or **JSON** option. The OAuth settings are included automatically.
 
-    An OAuth callback page will now appear each time your MCP client attempts to authenticate with the server.
-    A successful authentication displays `Authentication complete. You may close this window.`
-    If your application doesn't display the OAuth popup, try restarting the MCP client to retrieve the updated configuration.
+After you enable OAuth and update your client configuration, an OAuth callback window opens each time your MCP client attempts to authenticate with the server.
+A successful authentication returns `Authentication complete. You may close this window.`
+If your client doesn't open the OAuth window, try restarting the client to retrieve the updated configuration.
+
 </TabItem>
 <TabItem value="None" label="None">
 
@@ -257,29 +277,16 @@ Only use this option when Langflow is running in a trusted environment.
 </TabItem>
 </Tabs>
 
-#### Environment Variables
+## MCP server environment variables
 
-To include other environment variables with your MCP server command, use the `env` object with key-value pairs of environment variables:
+The following environment variables set behaviors related to your Langflow projects' MCP servers:
 
-```json
-{
-  "mcpServers": {
-    "PROJECT_NAME": {
-      "command": "uvx",
-      "args": [
-        "mcp-proxy",
-        "--headers",
-        "x-api-key",
-        "YOUR_API_KEY",
-        "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
-      ],
-      "env": {
-        "KEY": "VALUE"
-      }
-    }
-  }
-}
-```
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_MCP_SERVER_ENABLED` | Boolean | True | Whether to initialize an MCP server for each of your Langflow projects. If false, Langflow doesn't initialize MCP servers. |
+| `LANGFLOW_MCP_SERVER_ENABLE_PROGRESS_NOTIFICATIONS` | Boolean | False | If true, Langflow MCP servers send progress notifications. |
+| `LANGFLOW_MCP_SERVER_TIMEOUT` | Integer | `20` | The number of seconds to wait before an MCP server operation expires due to poor connectivity or long-running requests. |
+| `LANGFLOW_MCP_MAX_SESSIONS_PER_SERVER` | Integer | `10` | Maximum number of MCP sessions to keep per unique server. |
 
 {/* The anchor on this section (deploy-your-server-externally) is currently a link target in the Langflow UI. Do not change. */}
 ### Deploy your Langflow MCP server externally {#deploy-your-server-externally}

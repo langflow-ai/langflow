@@ -6,14 +6,15 @@ slug: /environment-variables
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Link from '@docusaurus/Link';
-import EnvGlobalVars from '@site/docs/_partial-env-global-vars.mdx';
 
-Langflow uses environment variables to configure certain settings.
-You can also import environment variables for use in your deployment, such as environment variables used by certain components in your flows.
+In general, environment variables, like `LANGFLOW_PORT` or `LANGFLOW_LOG_LEVEL`, configure how Langflow runs.
+These are broad settings that apply to your entire Langflow deployment.
+
+In contrast, global variables are user-defined values stored in Langflow's database for use in flows, such as `OPENAI_API_KEY`.
+Langflow can also source global variables from environment variables.
+For more information, see [Langflow global variables](/configuration-global-variables).
 
 You can set Langflow environment variables in your terminal, in `.env`, and with the [Langflow CLI](./configuration-cli).
-
-<EnvGlobalVars />
 
 ## Precedence {#precedence}
 
@@ -147,25 +148,15 @@ On startup, Langflow imports the environment variables from your `.env` file, as
 
 ## Supported environment variables {#supported-variables}
 
-The following tables list the environment variables supported by Langflow.
+The following sections provide information about specific Langflow environment variables.
 
 ### Authentication and security
 
-For information about authentication and security environment variables, see [API keys and authentication](/api-keys-and-authentication).
+See [API keys and authentication](/api-keys-and-authentication).
 
 ### Caching configuration
 
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_CACHE_TYPE` | String | `async` | Set the cache type for Langflow. Possible values: `async`, `redis`, `memory`, `disk`. If you set the type to `redis`, then you must also set the following environment variables: `LANGFLOW_REDIS_HOST`, `LANGFLOW_REDIS_PORT`, `LANGFLOW_REDIS_DB`, and `LANGFLOW_REDIS_CACHE_EXPIRE`. See also [`langflow run`](/configuration-cli#langflow-run). |
-| `LANGFLOW_LANGCHAIN_CACHE` | String | `InMemoryCache` | Type of cache storage to use, separate from `LANGFLOW_CACHE_TYPE`. Possible values: `InMemoryCache`, `SQLiteCache`. See [Cache configuration](/memory#configure-cache-memory). |
-| `LANGFLOW_REDIS_HOST` | String | `localhost` | Redis host for cache. See `LANGFLOW_CACHE_TYPE`. |
-| `LANGFLOW_REDIS_PORT` | String | `6379` | Redis port for cache. See `LANGFLOW_CACHE_TYPE`. |
-| `LANGFLOW_REDIS_DB` | Integer | `0` | Redis database number for cache. See `LANGFLOW_CACHE_TYPE`. |
-| `LANGFLOW_REDIS_PASSWORD` | String | Not set | Password for Redis authentication when using Redis cache type. |
-| `LANGFLOW_REDIS_CACHE_EXPIRE` | Integer | `3600` | Cache expiration time in seconds. See `LANGFLOW_CACHE_TYPE`. |
-
-For detailed information about cache configuration, see [Memory management options](/memory#configure-cache-memory).
+See [Configure cache memory](/memory#configure-cache-memory).
 
 ### Database configuration {#database-configuration}
 
@@ -212,49 +203,6 @@ For detailed information about database configuration, see [Memory management op
 | `LANGFLOW_EVENT_DELIVERY` | String | `streaming` | How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'. |
 | `LANGFLOW_REMOVE_API_KEYS` | Boolean | False | Set to true to automatically remove API keys and tokens from flow data before saving a flow to the database. If a field is marked as a password field _and_ it contains `api`, `key`, or `token` in its name, then the field's value is set to `null` before the flow is saved. This prevents credentials from being stored in the database. |
 
-### Global variables and environment variables interaction
-
-For detailed information about the relationship between Langflow global variables and environment variables, as well as environment variables that control handling of global variables, see [Global variables](/configuration-global-variables).
-
-### Logging configuration {#logging}
-
-For detailed information about logging configuration, including environment variables, see [Configure log options](/logging#configure-log-options).
-
-### MCP (Model Context Protocol) {#mcp}
-
-The following environment variables set behaviors related to your Langflow projects' MCP servers.
-For detailed information about MCP server configuration, see [Use Langflow as an MCP server](/mcp-server#mcp-server-configuration).
-
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_MCP_SERVER_ENABLED` | Boolean | True | If this option is set to False, Langflow doesn't enable the MCP server. |
-| `LANGFLOW_MCP_SERVER_ENABLE_PROGRESS_NOTIFICATIONS` | Boolean | False | If this option is set to True, Langflow sends progress notifications in the MCP server. |
-| `LANGFLOW_MCP_SERVER_TIMEOUT` | Integer | `20` | The number of seconds to wait before timing out MCP server operations. |
-| `LANGFLOW_MCP_MAX_SESSIONS_PER_SERVER` | Integer | `10` | Maximum number of MCP sessions to keep per unique server. |
-
-### Monitoring and metrics
-
-For environment variables for specific monitoring service providers, see the Langflow monitoring integration guides, such as [Langfuse](/integrations-langfuse).
-
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_PROMETHEUS_ENABLED` | Boolean | False | Expose Prometheus metrics. |
-| `LANGFLOW_PROMETHEUS_PORT` | Integer | `9090` | Set the port on which Langflow exposes Prometheus metrics. |
-
-### Other environment variables
-
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_STORE` | Boolean | True | Whether to enable the Langflow Store features. |
-| `LANGFLOW_STORE_URL` | String | `https://api.langflow.store` | URL for the Langflow Store API. |
-| `LANGFLOW_DOWNLOAD_WEBHOOK_URL` | String | Not set | Webhook URL for Langflow store "download" events. |
-| `LANGFLOW_LIKE_WEBHOOK_URL` | String | Not set | Webhook URL for Langflow store "like" events. |
-| `LANGFLOW_DEV` | Boolean | False | Enable development mode. |
-| `LANGFLOW_DEACTIVATE_TRACING` | Boolean | False | Deactivate tracing functionality. |
-| `LANGFLOW_CELERY_ENABLED` | Boolean | False | Enable Celery for distributed task processing. |
-
-### Public flow settings
-
 Public flows are flows that are exposed in shared Langflow playgrounds.
 For detailed information about shared Playground configuration, see [Share a flow's Playground](/concepts-playground#share-a-flows-playground).
 
@@ -263,6 +211,22 @@ For detailed information about shared Playground configuration, see [Share a flo
 | `LANGFLOW_PUBLIC_FLOW_CLEANUP_INTERVAL` | Integer | `3600` | The interval in seconds at which public temporary flows will be cleaned up. Default is 1 hour (3600 seconds). Minimum is 600 seconds (10 minutes). |
 | `LANGFLOW_PUBLIC_FLOW_EXPIRATION` | Integer | `86400` | The time in seconds after which a public temporary flow will be considered expired and eligible for cleanup. Default is 24 hours (86400 seconds). Minimum is 600 seconds (10 minutes). |
 
+### Global variables
+
+For information about the relationship between Langflow global variables and environment variables, as well as environment variables that control handling of global variables, see [Global variables](/configuration-global-variables).
+
+### Logs {#logging}
+
+See [Configure log options](/logging#log-storage) and [Log endpoints](/api-logs).
+
+### MCP servers {#mcp}
+
+See [Use Langflow as an MCP server](/mcp-server).
+
+### Monitoring and metrics
+
+For environment variables for specific monitoring service providers, see the Langflow monitoring integration guides, such as [Langfuse](/integrations-langfuse) and [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices).
+
 ### Server configuration
 
 | Variable | Format | Default | Description |
@@ -270,6 +234,7 @@ For detailed information about shared Playground configuration, see [Share a flo
 | `LANGFLOW_HOST` | String | `localhost` | The host on which the Langflow server will run. See [`langflow run`](/configuration-cli#langflow-run). |
 | `LANGFLOW_PORT` | Integer | `7860` | The port on which the Langflow server runs. The server automatically selects a free port if the specified port is in use. |
 | `LANGFLOW_BACKEND_ONLY` | Boolean | False | Run only the Langflow backend service (no frontend). |
+| `LANGFLOW_DEV` | Boolean | False | Whether to run Langflow in development mode (may contain bugs). |
 | `LANGFLOW_OPEN_BROWSER` | Boolean | False | Open the system web browser on startup. |
 | `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for the health check. See [`langflow run`](/configuration-cli#langflow-run). |
 | `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. |
@@ -279,7 +244,18 @@ For detailed information about shared Playground configuration, see [Share a flo
 
 ### Telemetry
 
-For telemetry configuration options, see [Telemetry](/contributing-telemetry).
+See [Telemetry](/contributing-telemetry).
+
+### Other environment variables
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_STORE` | Boolean | True | Whether to enable the Langflow Store features. |
+| `LANGFLOW_STORE_URL` | String | `https://api.langflow.store` | URL for the Langflow Store API. |
+| `LANGFLOW_DOWNLOAD_WEBHOOK_URL` | String | Not set | Webhook URL for Langflow store "download" events. |
+| `LANGFLOW_LIKE_WEBHOOK_URL` | String | Not set | Webhook URL for Langflow store "like" events. |
+| `LANGFLOW_DEACTIVATE_TRACING` | Boolean | False | Deactivate tracing functionality. |
+| `LANGFLOW_CELERY_ENABLED` | Boolean | False | Enable Celery for distributed task processing. |
 
 ## Configure .env, override.conf, and tasks.json files
 

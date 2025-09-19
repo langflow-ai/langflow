@@ -48,53 +48,49 @@ For more information, see the database models in the [source code](https://githu
 
 To replace the default Langflow SQLite database with another database, modify the `LANGFLOW_DATABASE_URL` environment variable, and then start Langflow with your `.env` file:
 
-```
+```text
 LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
 ```
 
-For an example, see [Configure an external PostgreSQL database](/configuration-custom-database).
+For more information and an example, see [Configure an external PostgreSQL database](/configuration-custom-database).
 
-The `LANGFLOW_DB_CONNECTION_SETTINGS` is a JSON configuration for database connection pool settings that allows you to fine-tune your database connection pool and timeout settings.
+To fine-tune your database connection pool and timeout settings, use the `LANGFLOW_DB_CONNECTION_SETTINGS` environment variable to define the JSON configuration for database connection pool settings:
 
-
-```bash
+```text
 LANGFLOW_DB_CONNECTION_SETTINGS='{"pool_size": 20, "max_overflow": 30, "pool_timeout": 30, "pool_pre_ping": true, "pool_recycle": 1800, "echo": false}'
 ```
 
-### Connection pool parameters
+This variable accepts a JSON object containing the database connection pool parameters:
+
 - `pool_size`: Maximum number of database connections to keep in the pool. Default: 20 connections.
 - `max_overflow`: Maximum number of connections that can be created beyond the pool_size. Default: 30 connections.
 - `pool_timeout`: Number of seconds to wait before timing out on getting a connection from the pool. Default: 30 seconds.
-- `pool_pre_ping`: If `true`, the pool tests connections for liveness upon each checkout. Default: `true`.
+- `pool_pre_ping`: If true, the pool tests connections for liveness upon each checkout. Default: True.
 - `pool_recycle`: Number of seconds after which a connection is automatically recycled. Default: 1800 seconds (30 minutes).
-- `echo`: If `true`, SQL queries are logged for debugging purposes. Default: `false`.
+- `echo`: If true, SQL queries are logged for debugging purposes. Default: False.
 
 ## Configure cache memory
 
-The default Langflow caching behavior is an asynchronous, in-memory cache.
-```
+The default Langflow caching behavior is an asynchronous, in-memory cache:
+
+```text
 LANGFLOW_LANGCHAIN_CACHE=InMemoryCache
 LANGFLOW_CACHE_TYPE=async
 ```
 
-Langflow officially supports only the default asynchronous, in-memory cache. Other backends are experimental and may change without notice.
-The default behavior is suitable for most use cases.
-
-:::warning
-Redis and other external cache settings are experimental and not officially supported.
-:::
-
-### Cache environment variables
+Langflow officially supports only the default asynchronous, in-memory cache, which is suitable for most use cases.
+Other cache options, such as Redis, are experimental and can change without notice.
+If you want to use a non-default cache setting, you can use the following environment variables:
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `LANGFLOW_CACHE_TYPE` | String | `async` | Set the cache type for Langflow's internal caching system. |
-| `LANGFLOW_LANGCHAIN_CACHE` | String | `InMemoryCache` | Set the cache type for Langchain's caching system. |
-| `LANGFLOW_REDIS_HOST` | String | `localhost` | Redis server hostname. |
-| `LANGFLOW_REDIS_PORT` | Integer | `6379` | Redis server port. |
-| `LANGFLOW_REDIS_DB` | Integer | `0` | Redis database number. |
-| `LANGFLOW_REDIS_CACHE_EXPIRE` | Integer | `3600` | Cache expiration time in seconds. |
-| `LANGFLOW_REDIS_PASSWORD` | String | Not set | Redis authentication password (optional). |
+| `LANGFLOW_CACHE_TYPE` | String | `async` | Set the cache type for Langflow's internal caching system. Possible values: `async`, `redis`, `memory`, `disk`. If you set the type to `redis`, then you must also set the `LANGFLOW_REDIS_*` environment variables. |
+| `LANGFLOW_LANGCHAIN_CACHE` | String | `InMemoryCache` | Set the cache storage type for the LangChain caching system (a Langflow dependency), either `InMemoryCache` or `SQLiteCache`. |
+| `LANGFLOW_REDIS_HOST` | String | `localhost` | Redis server hostname if `LANGFLOW_CACHE_TYPE=redis`. |
+| `LANGFLOW_REDIS_PORT` | Integer | `6379` | Redis server port if `LANGFLOW_CACHE_TYPE=redis`. |
+| `LANGFLOW_REDIS_DB` | Integer | `0` | Redis database number if `LANGFLOW_CACHE_TYPE=redis`. |
+| `LANGFLOW_REDIS_CACHE_EXPIRE` | Integer | `3600` | Cache expiration time in seconds if `LANGFLOW_CACHE_TYPE=redis`. |
+| `LANGFLOW_REDIS_PASSWORD` | String | Not set | Optional password for Redis authentication if `LANGFLOW_CACHE_TYPE=redis`. |
 
 ## Store chat memory
 
@@ -153,3 +149,4 @@ For more information and examples, see [**Message History** component](/componen
 
 * [Langflow file management](/concepts-file-management)
 * [Langflow logs](/logging)
+* [Langflow environment variables](/environment-variables)

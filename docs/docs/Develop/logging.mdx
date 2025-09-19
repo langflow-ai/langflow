@@ -22,65 +22,63 @@ Log files are stored in JSON format with structured metadata.
 Langflow logs are stored in the config directory specified in the `LANGFLOW_CONFIG_DIR` environment variable.
 <PartialConfigDirPaths/>
 
-To customize log storage, see [Configure log options](#configure-log-storage-options).
-
-### Configure log storage options
-
-Use [Langflow environment variables](/environment-variables) to configure logging options in your Langflow `.env` file, and then start Langflow with `uv run langflow run --env-file .env`.
-
-The following environment variables are available to configure logging:
+To customize log storage locations and behaviors set the following [Langflow environment variables](/environment-variables] in your Langflow `.env` file, and then start Langflow with `uv run langflow run --env-file .env`:
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
 | `LANGFLOW_LOG_LEVEL` | String | `ERROR` | Sets the log level as one of `DEBUG`, `ERROR`, `INFO`, `WARNING`, and `CRITICAL`. For example, `LANGFLOW_LOG_LEVEL=DEBUG`. |
 | `LANGFLOW_LOG_FILE` | String | Not set | Sets the log file storage location if you want to use a non-default location. For example, `LANGFLOW_LOG_FILE=path/to/logfile.log`. If this option isn't set, logs are written to stdout. |
 | `LANGFLOW_LOG_ENV` | String | `default` | Controls how logs are formatted and displayed. `container`: JSON format for Docker/structured logging. `container_csv`: CSV format for data analysis. `default` or unset: Pretty, colorful format for development/reading using [RichHandler](https://rich.readthedocs.io/en/stable/reference/logging.html). |
-| `LANGFLOW_LOG_ROTATION` | String | `1 day` | Controls when the log file is rotated, either based on time or file size. Time-based rotation: "1 day", "12 hours", "1 week". Size-based rotation: "10 MB", "1 GB". Disable rotation: "None" (log files will grow without limit). |
-| `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` | Integer | `10000` | Set the buffer size for log retrieval. Only used if `LANGFLOW_ENABLE_LOG_RETRIEVAL` is enabled. |
+| `LANGFLOW_LOG_ROTATION` | String | `1 day` | Controls when the log file is rotated, either based on time or file size. For time-based rotation, set to `1 day`, `12 hours`, or `1 week`. For size-based rotation, set to `10 MB` or `1 GB`. To disable rotation, set to `None`. If disabled, log files grow without limit or expiration. |
+| `LANGFLOW_ENABLE_LOG_RETRIEVAL` | Boolean | False | Enables retrieval of logs from your Langflow instance. |
+| `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` | Integer | `10000` | Set the buffer size for log retrieval if `LANGFLOW_ENABLE_LOG_RETRIEVAL=True`. Must be greater than `0` for log retrieval to function. |
 | `LANGFLOW_LOG_FORMAT` | String | Not set | Set the log format configuration. |
 | `LANGFLOW_PRETTY_LOGS` | Boolean | True | Enable pretty log formatting with colors and rich console output. |
 
 ## View logs in real-time
 
-To monitor Langflow logs as they are generated, you can use the `tail -f` command to follow the log file:
+To monitor Langflow logs as they are generated, you can follow the log file:
 
 1. Change to your [Langflow config directory](#log-storage):
 
     <Tabs groupId="cd-command">
-      <TabItem value="macOS" label="macOS" default>
+    <TabItem value="macOS" label="macOS" default>
 
-        ```bash
-        cd /Users/**USERNAME**/Library/Caches/langflow
-        ```
+    ```bash
+    cd /Users/**USERNAME**/Library/Caches/langflow
+    ```
 
-      </TabItem>
-      <TabItem value="Windows" label="Windows">
-        ```cmd
-        cd C:\Users\**USERNAME**\AppData\Local\langflow\langflow\Cache
-        ```
+    </TabItem>
+    <TabItem value="Windows" label="Windows">
 
-      </TabItem>
+    ```cmd
+    cd C:\Users\**USERNAME**\AppData\Local\langflow\langflow\Cache
+    ```
+
+    </TabItem>
     </Tabs>
 
 2. Tail the main log file:
 
     <Tabs groupId="tail-command">
-      <TabItem value="macOS" label="macOS" default>
+    <TabItem value="macOS" label="macOS" default>
 
-        ```bash
-        tail -f langflow.log
-        ```
+    ```bash
+    tail -f langflow.log
+    ```
 
-      </TabItem>
-      <TabItem value="Windows" label="Windows">
-        ```cmd
-        Get-Content -Wait -Path langflow.log
-        ```
+    </TabItem>
+    <TabItem value="Windows" label="Windows">
 
-      </TabItem>
+    ```cmd
+    Get-Content -Wait -Path langflow.log
+    ```
+
+    </TabItem>
     </Tabs>
 
-    If you don't see new log entries, check that Langflow is running and generating logs. You can also check the terminal where you started Langflow to see if logs are being displayed there.
+    If you don't see new log entries, check that Langflow is running, and perform some actions to generate logs events. You can also check the terminal where you started Langflow to see if logs are being printed there.
+
 ## Flow and component logs
 
 After you run a flow, you can inspect the logs for the each component and flow run.
@@ -146,20 +144,24 @@ Follow the steps for your operating system.
    ```
 
 3. Locate the `langflow.log` file.
+
 </TabItem>
 <TabItem value="windows" label="Windows">
 
 1. Open the Command Prompt (CMD), and then run the following command:
+
    ```cmd
    cd %LOCALAPPDATA%\com.langflow\logs
    ```
 
-2. To open the folder and view the log files, run the command:
+2. Open the folder and view the log files:
+
    ```cmd
    start .
    ```
 
 3. Locate the `langflow.log` file.
+
 </TabItem>
 </Tabs>
 
