@@ -902,8 +902,10 @@ async def get_project_sse_url(project_id: UUID) -> str:
     settings_service = get_settings_service()
     server_host = getattr(settings_service.settings, "host", "localhost")
     # Use the actual running port (current_port) if available, otherwise fall back to configured port
-    server_port = getattr(settings_service.settings, "current_port", None) or getattr(
-        settings_service.settings, "port", 7860
+    server_port = (
+        getattr(settings_service.settings, "current_port", None)
+        or getattr(settings_service.settings, "port", None)
+        or 7860
     )
 
     # For MCP clients, always use localhost instead of 0.0.0.0
