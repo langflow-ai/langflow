@@ -222,7 +222,6 @@ class BaseFileComponent(Component, ABC):
             # Delete temporary directories
             for temp_dir in self._temp_dirs:
                 temp_dir.cleanup()
-
             # Delete files marked for deletion
             for file in final_files:
                 if file.delete_after_processing and file.path.exists():
