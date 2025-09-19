@@ -78,7 +78,7 @@ class AnymizeComponent(Component):
         if hasattr(val, "get_secret_value"):
             try:
                 return val.get_secret_value()
-            except Exception:
+            except (AttributeError, ValueError, TypeError):
                 return ""
         return val or ""
 

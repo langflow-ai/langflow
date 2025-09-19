@@ -1,8 +1,8 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, Mock, mock_open, patch
-from pydantic import SecretStr
 
 import pytest
+from pydantic import SecretStr
 
 from lfx.components.processing.anymize import AnymizeComponent
 from lfx.schema import Message
@@ -616,14 +616,15 @@ class TestAnymizeComponent(ComponentTestBaseWithoutClient):
         # Test successful SecretStr
         mock_secret = MagicMock()
         mock_secret.get_secret_value.return_value = "secret_api_key_456"
-
         component = AnymizeComponent()
         component.anymize_api = mock_secret
-
         result = component._get_api_key_value()
         assert result == "secret_api_key_456"
 
-        # Test SecretStr that raises exception
-        mock_secret.get_secret_value.side_effect = Exception("Access denied")
-        result = component._get_api_key_value()
+        # Test SecretStr that raises exception - create new component and mock
+        component2 = AnymizeComponent()
+        mock_secret_error = MagicMock()
+        mock_secret_error.get_secret_value.side_effect = ValueError("Access denied")
+        component2.anymize_api = mock_secret_error
+        result = component2._get_api_key_value()
         assert result == ""
