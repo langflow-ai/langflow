@@ -28,7 +28,7 @@ Langflow can more efficiently handle multiple users and larger workloads by usin
     - If you're running PostgreSQL in a separate Docker container with `docker run`, use the container's IP address or network alias.
     - If you're running a cloud-hosted PostgreSQL, your provider will share your connection string, which includes a username and password.
 
-3. Create a Langflow `.env` file:
+3. Edit or create a Langflow `.env` file:
 
     ```
     touch .env
@@ -47,6 +47,8 @@ Langflow can more efficiently handle multiple users and larger workloads by usin
     ```bash
     uv run langflow run --env-file .env
     ```
+
+    For optional connection pooling and timeout settings, see [Configure external memory](/memory#configure-external-memory).
 
 6. In Langflow, run any flow to create traffic.
 
@@ -86,6 +88,9 @@ This approach means you only have to manage deployment variables in one file, in
     LANGFLOW_PORT_2=7861
     LANGFLOW_HOST=0.0.0.0
     ```
+
+    For optional connection pooling and timeout settings, see [Configure external memory](/memory#configure-external-memory).
+
 2. Reference these variables in your `docker-compose.yml`.
 For example:
 
@@ -157,7 +162,7 @@ Your container name may vary.
 6. Examine the query results for multiple connections with different `client_addr` values, for example `172.21.0.3` and `172.21.0.4`.
 Since each Langflow instance runs in its own container on the Docker network, using different incoming IP addresses confirms that both instances are actively connected to the PostgreSQL database.
 
-7. To quit psql, type `quit`.
+7. To quit `psql`, type `quit`.
 
 ## See also
 

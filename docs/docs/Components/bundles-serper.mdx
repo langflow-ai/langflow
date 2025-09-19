@@ -1,0 +1,33 @@
+---
+title: Serper
+slug: /bundles-serper
+---
+
+import Icon from "@site/src/components/icon";
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Serper** bundle.
+
+For more information, see the [Serper documentation](https://serper.dev/).
+
+## Serper Google Search API
+
+This component allows you to call the Serper.dev Google Search API.
+
+It returns a list of search results as a [`DataFrame`](/data-types#dataframe).
+
+### Google Serper API parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| **Serper API Key** (`serper_api_key`) | SecretString | Input parameter. An API key for Serper.dev API authentication. |
+| **Input Value** (`input_value`) | String | Input parameter. The search query input. |
+| **Number of Results** (`k`) | Integer | Input parameter. The number of search results to return. |
+
+## See also
+
+* [**Web Search** component](/components-data#web-search)
+* [**Google** bundle](/bundles-google)
+* [**Bing** bundle](/bundles-bing)
+* [**DuckDuckGo** bundle](/bundles-duckduckgo)

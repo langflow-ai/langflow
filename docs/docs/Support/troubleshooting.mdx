@@ -5,6 +5,7 @@ slug: /troubleshoot
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
 
 This page provides troubleshooting advice for issues you might encounter when using Langflow or contributing to Langflow.
 
@@ -12,10 +13,11 @@ This page provides troubleshooting advice for issues you might encounter when us
 
 As Langflow development continues, components are often recategorized or deprecated for better alignment or to prepare for new components.
 
-If a component appears to be missing from the expected location on the **Components** menu, try the following:
+If a component appears to be missing from the <Icon name="Component" aria-hidden="true" /> **Core components** and  menus, try the following:
 
-* Search for the component or check other component categories, including [bundles](/components-bundle-components).
-* [Expose legacy components](/concepts-components#component-menus), which are hidden by default.
+* <Icon name="Search" aria-hidden="true" /> **Search** for the component.
+* Check other component categories and <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components).
+* Check [legacy components](/concepts-components#legacy-components), which are hidden by default.
 * Check the [Changelog](https://github.com/langflow-ai/langflow/releases/latest) for component changes in recent releases.
 * Make sure the component isn't already present in your flow if it is a single-use component.
 
@@ -193,10 +195,68 @@ To fully remove a Langflow Desktop macOS installation, you must also delete `~/.
     rm -rf .langflow
     ```
 
-## MCP server issues
+## Langflow MCP issues {#mcp}
 
-- [Use MCP Inspector to test and debug flows](/mcp-server#test-and-debug-flows)
-- [Troubleshooting MCP server](/mcp-server#troubleshooting-mcp-server)
+The following issues can occur when using Langflow as an MCP server or client.
+
+### Claude for Desktop doesn't use MCP server tools correctly
+
+If Claude for Desktop doesn't use your server's tools correctly, try explicitly defining the path to your local `uvx` or `npx` executable file in the `claude_desktop_config.json` configuration file:
+
+1. To find your `uvx` path, run `which uvx`.
+
+    To find your `npx` path, run `which npx`.
+
+2. In your `claude_desktop_config.json` file, add the path to your Langflow MCP server configuration, as shown in the following examples.
+
+    <Tabs>
+    <TabItem value="uvx" label="uvx" default>
+
+    ```json
+    {
+      "mcpServers": {
+        "PROJECT_NAME": {
+          "command": "PATH_TO_UVX",
+          "args": [
+            "mcp-proxy",
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
+          ]
+        }
+      }
+    }
+    ```
+
+    </TabItem>
+    <TabItem value="npx" label="npx">
+
+    ```json
+    {
+      "mcpServers": {
+        "PROJECT_NAME": {
+          "command": "PATH_TO_NPX",
+          "args": [
+            "-y",
+            "supergateway",
+            "--sse",
+            "http://LANGFLOW_SERVER_ADDRESS/api/v1/mcp/project/PROJECT_ID/sse"
+          ]
+        }
+      }
+    }
+    ```
+
+    </TabItem>
+    </Tabs>
+
+### MCP browser-based flows don't open a browser on Windows
+
+This is a known issue when using MCP Tools with browser navigation actions, such as Playwright, on Windows: The agent can execute the tool successfully but the browser tab or window doesn't open.
+
+This issue occurs because the MCP server runs from a Python process, which prevents it from opening browser windows in WSL or Windows.
+
+To work around this issue, use the standalone MCP server approach documented in the [Playwright MCP repository](https://github.com/microsoft/playwright-mcp?tab=readme-ov-file#standalone-mcp-server).
+After the server is up and running, you can add it as an SSE server in Langflow.
+For other browser navigation tools, see the provider's documentation for specific troubleshooting guidance.
 
 ## Token length limit errors in Embedding Model components
 

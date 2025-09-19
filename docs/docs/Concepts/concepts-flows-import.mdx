@@ -28,7 +28,7 @@ When exporting from the **Projects** page or **Share** menu, you can select **Sa
 Non-API key variables are included in the export regardless of the **Save with my API keys** setting.
 
 :::warning
-If you enter the literal key into a component's **API key** field, then **Save with my API keys** exports the literal key value.
+If you enter the literal key into a component's API key field, then **Save with my API keys** exports the literal key value.
 
 If your key is stored in a Langflow global variable, **Save with my API keys** exports only the variable name.
 :::
@@ -55,9 +55,12 @@ For more information, see [Save with my API keys](/concepts-flows-import#save-wi
 
 An exported flow is downloaded to your local machine as a JSON file named `FLOW_NAME.json`.
 
-Langflow JSON files contain [nodes](#nodes) and [edges](#edges) that describe components and connections, and [additional metadata](#additional-metadata-and-project-information) that describe the flow.
+Langflow JSON files contain the following:
 
-For an example Langflow JSON file, examine the [Basic Prompting.json](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/initial_setup/starter_projects/Basic%20Prompting.json) file in the Langflow repository.
+* [Nodes](#nodes) and [edges](#edges) that describe components and connections in the flow.
+* [Additional metadata](#additional-metadata-and-project-information) that describes the flow and the project it belongs to.
+
+For example Langflow JSON files, you can examine any of the https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/initial_setup/starter_projects[templates in the Langflow repository], or you can create a flow from a template in Langflow, export it, and then open the exported JSON file in a text editor.
 
 ### Nodes
 
@@ -110,7 +113,7 @@ Entrypoint nodes, such as the `ChatInput` node, are the first node executed when
 
 Edges represent the connections between nodes.
 
-The connection between the `ChatInput` node and the `OpenAIModel` node is represented as an edge:
+The following example represents the edge (or connection) between the `ChatInput` node and the `OpenAIModel` node:
 
 ```json
 {
@@ -142,9 +145,10 @@ The `OpenAIModel` component accepts the `Message` type at the `input_value` fiel
 
 ### Additional metadata and project information
 
-Additional information about the flow is stored in the root `data` object.
+Additional information about the flow is stored in the root `data` object:
 
-* Metadata and project information including the name, description, and `last_tested_version` of the flow:
+* Metadata and project information including the name, description, and `last_tested_version` of the flow.
+For example:
 
     ```json
     {
@@ -158,7 +162,7 @@ Additional information about the flow is stored in the root `data` object.
     }
     ```
 
-* Visual information about the flow defining the initial position of the flow in the workspace:
+* Visual information about the flow defining the position of the viewport when you open the flow in the workspace:
 
     ```json
     "viewport": {
@@ -168,9 +172,9 @@ Additional information about the flow is stored in the root `data` object.
     }
     ```
 
-* Notes are comments that help you understand the flow within the workspace.
-They may contain links, code snippets, and other information.
-Notes are written in Markdown and stored as `node` objects.
+* <Icon name="StickyNote" aria-hidden="true"/> **Notes** are comments that help explain the flow's purpose, configuration details, and any other information relevant to users who might be editing the flow.
+They can contain text, links, code snippets, and other information.
+They are encoded in Markdown format and stored as `node` objects.
 
     ```json
     {

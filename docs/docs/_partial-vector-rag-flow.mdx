@@ -1,0 +1,75 @@
+import Icon from "@site/src/components/icon";
+
+:::tip
+For a tutorial that uses vector data in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
+
+The following example demonstrates how to use vector store components in flows alongside related components like embedding model and language model components.
+These steps walk through important configuration details, functionality, and best practices for using these components effectively.
+This is only one example; it isn't a prescriptive guide to all possible use cases or configurations.
+
+1. Create a flow with the **Vector Store RAG** template.
+
+    This template has two subflows.
+    The **Load Data** subflow loads embeddings and content into a vector database, and the **Retriever** subflow runs a vector search to retrieve relevant context based on a user's query.
+
+2. Configure the database connection for both [**Astra DB** components](/bundles-datastax#astra-db), or replace them with another pair of vector store components of your choice.
+Make sure the components connect to the same vector store, and that the component in the **Retriever** subflow is able to run a similarity search.
+
+    The parameters you set in each vector store component depend on the component's role in your flow.
+    In this example, the **Load Data** subflow _writes_ to the vector store, whereas the **Retriever** subflow _reads_ from the vector store.
+    Therefore, search-related parameters are only relevant to the **Vector Search** component in the **Retriever** subflow.
+
+    For information about specific parameters, see the documentation for your chosen vector store component.
+
+3. To configure the embedding model, do one of the following:
+
+    * **Use an OpenAI model**: In both **OpenAI Embeddings** components, enter your OpenAI API key.
+    You can use the default model or select a different OpenAI embedding model.
+
+    * **Use another provider**: Replace the **OpenAI Embeddings** components with another pair of [embedding model components](/components-embedding-models) of your choice, and then configure the parameters and credentials accordingly.
+
+    * **Use Astra DB vectorize**: If you are using an Astra DB vector store that has a vectorize integration, you can remove both **OpenAI Embeddings** components.
+    If you do this, the vectorize integration automatically generates embeddings from the **Ingest Data** (in the **Load Data** subflow) and **Search Query** (in the **Retriever** subflow).
+
+
+    :::tip
+    If your vector store already contains embeddings, make sure your embedding model components use the same model as your previous embeddings.
+    Mixing embedding models in the same vector store can produce inaccurate search results.
+    :::
+
+4. Recommended: In the [**Split Text** component](/components-processing#split-text), optimize the chunking settings for your embedding model.
+For example, if your embedding model has a token limit of 512, then the **Chunk Size** parameter must not exceed that limit.
+
+    Additionally, because the **Retriever** subflow passes the chat input directly to the vector store component for vector search, make sure that your chat input string doesn't exceed your embedding model's limits.
+    For this example, you can enter a query that is within the limits; however, in a production environment, you might need to implement additional checks or preprocessing steps to ensure compliance.
+    For example, use additional components to prepare the chat input before running the vector search, or enforce chat input limits in your application code.
+
+5. In the **Language Model** component, enter your OpenAI API key, or select a different provider and model to use for the chat portion of the flow.
+
+6. Run the **Load Data** subflow to populate your vector store.
+In the **File** component, select one or more files, and then click <Icon name="Play" aria-hidden="true" /> **Run component** on the vector store component in the **Load Data** subflow.
+
+    The **Load Data** subflow loads files from your local machine, chunks them, generates embeddings for the chunks, and then stores the chunks and their embeddings in the vector database.
+
+    ![Embedding data into a vector store](/img/vector-store-document-ingestion.png)
+
+    The **Load Data** subflow is separate from the **Retriever** subflow because you probably won't run it every time you use the chat.
+    You can run the **Load Data** subflow as needed to preload or update the data in your vector store.
+    Then, your chat interactions only use the components that are necessary for chat.
+
+    If your vector store already contains data that you want to use for vector search, then you don't need to run the **Load Data** subflow.
+
+7. Open the **Playground** and start chatting to run the **Retriever** subflow.
+
+    The **Retriever** subflow generates an embedding from chat input, runs a vector search to retrieve similar content from your vector store, parses the search results into supplemental context for the LLM, and then uses the LLM to generate a natural language response to your query.
+    The LLM uses the vector search results along with its internal training data and tools, such as basic web search and datetime information, to produce the response.
+
+    ![Retrieval from a vector store](/img/vector-store-retrieval.png)
+
+    To avoid passing the entire block of raw search results to the LLM, the **Parser** component extracts `text` strings from the search results `Data` object, and then passes them to the **Prompt Template** component in `Message` format.
+    From there, the strings and other template content are compiled into natural language instructions for the LLM.
+
+    You can use other components for this transformation, such as the **Data Operations** component, depending on how you want to use the search results.
+
+    To view the raw search results, click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** on the vector store component after running the **Retriever** subflow.

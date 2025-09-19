@@ -6,6 +6,7 @@ slug: /mcp-tutorial
 import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import McpIcon from '@site/static/logos/mcp-icon.svg';
 
 This tutorial shows you how to connect MCP servers to your applications using Langflow's [**MCP Tools** component](/mcp-client).
 
@@ -82,6 +83,10 @@ You need one **MCP Tools** component for each MCP server that you want your flow
 2. In your **Simple Agent** flow, remove the **URL** and **Calculator** tools, and then add an [**MCP Tools**](/mcp-client) component.
 
 3. Click the **MCP Tools** component, and then click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**.
+
+    :::tip
+    To manage all of your MCP server connections, click <McpIcon /> **MCP servers** in the visual editor, or click your profile icon, select **Settings**, and then click **MCP Servers**.
+    :::
 
 4. In the **Add MCP Server** pane, provide the server startup command and arguments to connect the weather MCP server to your flow. For this tutorial, use either the **JSON** or **STDIO** option.
 
