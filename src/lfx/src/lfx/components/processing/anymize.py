@@ -5,7 +5,7 @@ from typing import Any
 import aiohttp
 
 from lfx.custom.custom_component.component import Component
-from lfx.io import DropdownInput, FileInput, MultilineInput, SecretStrInput, Output
+from lfx.io import DropdownInput, FileInput, MultilineInput, Output, SecretStrInput
 from lfx.schema import Message
 
 HTTP_BAD_REQUEST = 400
