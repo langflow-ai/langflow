@@ -69,7 +69,6 @@ def test_no_conflict_with_lfx_logging():
     # Import both
     from langflow.logging import configure as lf_configure
     from langflow.logging import logger as lf_logger
-
     from lfx.logging import configure as lfx_configure
     from lfx.logging import logger as lfx_logger
 
@@ -92,7 +91,6 @@ def test_no_conflict_with_lfx_logging():
 def test_langflow_logging_imports_from_lfx():
     """Test that langflow.logging correctly imports from lfx."""
     from langflow.logging import configure, logger
-
     from lfx.log.logger import configure as lfx_configure
     from lfx.log.logger import logger as lfx_logger
 
@@ -120,7 +118,6 @@ def test_backwards_compatibility_scenario():
     # Import from all paths
     from langflow.logging import configure as lf_configure
     from langflow.logging import logger as lf_logger
-
     from lfx.log.logger import configure as orig_configure
     from lfx.log.logger import logger as orig_logger
     from lfx.logging import configure as lfx_configure
@@ -158,6 +155,7 @@ def test_importing_langflow_logging_in_langflow():
     # Test that langflow.logging can be used in component code created via create_class
     code = dedent("""
 from langflow.logging import logger, configure
+from langflow.logging.logger import logger
 from langflow.custom import Component
 
 class TestLangflowLoggingComponent(Component):
