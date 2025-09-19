@@ -279,8 +279,7 @@ class Settings(BaseSettings):
 
     # Add projects to MCP servers automatically on creation
     add_projects_to_mcp_servers: bool = True
-    """If set to True, newly created projects will be added to the user's MCP servers config automatically.
-    Controlled by LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS env variable."""
+    """If set to True, newly created projects will be added to the user's MCP servers config automatically."""
     # MCP Composer
     mcp_composer_enabled: bool = True
     """If set to False, Langflow will not start the MCP Composer service."""
