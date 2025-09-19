@@ -97,7 +97,9 @@ def setup_error_logging():
         print("   • Langflow logs: Not found (will monitor common locations)")
 
 
-def log_detailed_error(user_class, method, url, status_code, response_text, exception=None, request_data=None):
+def log_detailed_error(
+    user_class, method, url, status_code, response_text, exception=None, request_data=None, traceback=None
+):
     """Log detailed error information."""
     global DETAILED_ERRORS
 
@@ -112,7 +114,7 @@ def log_detailed_error(user_class, method, url, status_code, response_text, exce
         "response_text": response_text[:1000] if response_text else None,  # Limit response size
         "request_data": request_data,
         "exception": str(exception) if exception else None,
-        "traceback": traceback.format_exc() if exception else None,
+        "traceback": traceback if traceback else None,
     }
 
     DETAILED_ERRORS.append(error_info)
@@ -478,15 +480,25 @@ class BaseLangflowUser(FastHttpUser):
                 return response.failure(f"HTTP {response.status_code}")
 
         except Exception as e:
+            # Get more detailed error information
+            error_details = {
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "is_timeout": "timeout" in str(e).lower(),
+                "is_connection_error": "connection" in str(e).lower(),
+                "is_dns_error": "name resolution" in str(e).lower() or "dns" in str(e).lower(),
+            }
+
             # Log any exceptions that occur during the request
             log_detailed_error(
                 user_class=self.__class__.__name__,
                 method="POST",
                 url=f"{self.host}{endpoint}",
-                status_code=None,
-                response_text=None,
+                status_code=0,  # Connection error
+                response_text=f"Connection Error: {error_details}",
                 request_data=payload,
-                exception=e,
+                exception=str(e),
+                traceback=traceback.format_exc(),
             )
             # Re-raise the exception so Locust can handle it properly
             raise
