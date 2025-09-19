@@ -69,9 +69,9 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         component_instance._user_id = str(uuid4())  # Required for server fetching
         return component_instance
 
-
-class TestMCPComponentCacheEnabled(TestMCPComponentCache):
-    """Test cache functionality when cache is enabled (default behavior)."""
+    # ========================================
+    # Cache Enabled Tests
+    # ========================================
 
     @pytest.mark.asyncio
     async def test_cache_enabled_by_default(self, component_class, default_kwargs):
@@ -156,9 +156,9 @@ class TestMCPComponentCacheEnabled(TestMCPComponentCache):
             # Verify update_tools was NOT called (cache was used)
             mock_update_tools.assert_not_called()
 
-
-class TestMCPComponentCacheDisabled(TestMCPComponentCache):
-    """Test cache functionality when cache is disabled."""
+    # ========================================
+    # Cache Disabled Tests
+    # ========================================
 
     @pytest.mark.asyncio
     async def test_cache_disabled_logic(self, component_class, default_kwargs):
@@ -224,9 +224,9 @@ class TestMCPComponentCacheDisabled(TestMCPComponentCache):
         servers_cache = safe_cache_get(component._shared_component_cache, "servers", {})
         assert server_name not in servers_cache
 
-
-class TestMCPComponentCacheToggle(TestMCPComponentCache):
-    """Test behavior when toggling cache on/off."""
+    # ========================================
+    # Cache Toggle Tests
+    # ========================================
 
     @pytest.mark.asyncio
     async def test_switching_from_cache_enabled_to_disabled(
@@ -327,9 +327,9 @@ class TestMCPComponentCacheToggle(TestMCPComponentCache):
         assert len(cached["tools"]) == 2
         assert cached["tool_names"] == ["test_tool", "second_tool"]
 
-
-class TestMCPComponentCacheEdgeCases(TestMCPComponentCache):
-    """Test edge cases and error handling for cache functionality."""
+    # ========================================
+    # Edge Cases Tests
+    # ========================================
 
     @pytest.mark.asyncio
     async def test_cache_with_empty_server_name(self, component_class, default_kwargs):
@@ -424,9 +424,9 @@ class TestMCPComponentCacheEdgeCases(TestMCPComponentCache):
         assert len(tools) == 2
         assert tools[0].name == "test_tool"
 
-
-class TestMCPComponentBuildConfigCaching(TestMCPComponentCache):
-    """Test cache behavior in build config updates."""
+    # ========================================
+    # Build Config Caching Tests
+    # ========================================
 
     @pytest.mark.asyncio
     async def test_build_config_respects_cache_setting(self, component_class, default_kwargs, mock_tools_list):
@@ -460,9 +460,9 @@ class TestMCPComponentBuildConfigCaching(TestMCPComponentCache):
         assert "test_tool" in updated_config["tool"]["options"]
         assert "second_tool" in updated_config["tool"]["options"]
 
-
-class TestMCPComponentIntegrationWithCache(TestMCPComponentCache):
-    """Test cache behavior in full component workflows."""
+    # ========================================
+    # Integration Tests
+    # ========================================
 
     @pytest.mark.asyncio
     async def test_build_output_with_cached_tools(self, component_class, default_kwargs, mock_tools_list):
