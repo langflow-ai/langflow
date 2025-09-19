@@ -3,8 +3,10 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 from langchain_core.agents import AgentFinish
-from langflow.base.agents.agent import process_agent_events
-from langflow.base.agents.events import (
+
+from lfx.base.agents.agent import process_agent_events
+from lfx.base.agents.events import (
+    _extract_output_text,
     handle_on_chain_end,
     handle_on_chain_start,
     handle_on_chain_stream,
@@ -12,10 +14,10 @@ from langflow.base.agents.events import (
     handle_on_tool_error,
     handle_on_tool_start,
 )
-from langflow.schema.content_block import ContentBlock
-from langflow.schema.content_types import ToolContent
-from langflow.schema.message import Message
-from langflow.utils.constants import MESSAGE_SENDER_AI
+from lfx.schema.content_block import ContentBlock
+from lfx.schema.content_types import ToolContent
+from lfx.schema.message import Message
+from lfx.utils.constants import MESSAGE_SENDER_AI
 
 
 async def create_event_iterator(events: list[dict[str, Any]]) -> AsyncIterator[dict[str, Any]]:
@@ -541,3 +543,190 @@ async def test_handle_on_chain_stream_no_output():
     assert updated_message.text == ""
     assert updated_message.properties.state == "partial"
     assert isinstance(start_time, float)
+
+
+# Comprehensive tests for _extract_output_text function
+
+
+def test_extract_output_text_string_input():
+    """Test _extract_output_text with string input (backward compatibility)."""
+    result = _extract_output_text("simple text output")
+    assert result == "simple text output"
+
+
+def test_extract_output_text_empty_string():
+    """Test _extract_output_text with empty string."""
+    result = _extract_output_text("")
+    assert result == ""
+
+
+def test_extract_output_text_empty_list():
+    """Test _extract_output_text with empty list."""
+    result = _extract_output_text([])
+    assert result == ""
+
+
+def test_extract_output_text_single_string_in_list():
+    """Test _extract_output_text with single string in list."""
+    result = _extract_output_text(["text content"])
+    assert result == "text content"
+
+
+def test_extract_output_text_single_dict_with_text():
+    """Test _extract_output_text with single dict containing 'text' key (backward compatibility)."""
+    result = _extract_output_text([{"text": "message content"}])
+    assert result == "message content"
+
+
+def test_extract_output_text_tool_use_type():
+    """Test _extract_output_text with tool_use type (backward compatibility)."""
+    result = _extract_output_text([{"type": "tool_use", "name": "some_tool"}])
+    assert result == ""
+
+
+def test_extract_output_text_partial_json():
+    """Test _extract_output_text with partial_json (backward compatibility)."""
+    result = _extract_output_text([{"partial_json": '{"incomplete": true'}])
+    assert result == ""
+
+
+def test_extract_output_text_chatbedrockconverse_index_only():
+    """Test _extract_output_text with ChatBedrockConverse index-only format (NEW FIX)."""
+    # This is the specific case that was failing before the fix
+    result = _extract_output_text([{"index": 0}])
+    assert result == ""
+
+
+def test_extract_output_text_chatbedrockconverse_index_with_extra_data():
+    """Test _extract_output_text with ChatBedrockConverse index plus other data."""
+    result = _extract_output_text([{"index": 0, "some_other_field": "value"}])
+    assert result == ""
+
+
+def test_extract_output_text_multiple_items_mixed():
+    """Test _extract_output_text with multiple items including text and non-text."""
+    result = _extract_output_text(
+        [{"text": "First part"}, {"type": "tool_use", "name": "some_tool"}, {"text": "Second part"}, {"index": 0}]
+    )
+    assert result == "First partSecond part"
+
+
+def test_extract_output_text_multiple_strings():
+    """Test _extract_output_text with multiple strings in list."""
+    result = _extract_output_text(["Hello", " ", "World"])
+    assert result == "Hello World"
+
+
+def test_extract_output_text_mixed_strings_and_dicts():
+    """Test _extract_output_text with mixed strings and text dicts."""
+    result = _extract_output_text(["Start: ", {"text": "middle content"}, " End."])
+    assert result == "Start: middle content End."
+
+
+def test_extract_output_text_complex_chatbedrockconverse_response():
+    """Test _extract_output_text with complex ChatBedrockConverse-like response."""
+    result = _extract_output_text(
+        [
+            {"type": "text", "text": "I'll help you with that.", "index": 0},
+            {"type": "tool_use", "name": "get_weather", "id": "tool_123", "index": 1},
+            {"index": 2},  # Index-only item
+        ]
+    )
+    assert result == "I'll help you with that."
+
+
+def test_extract_output_text_all_non_text_items():
+    """Test _extract_output_text with all non-text items."""
+    result = _extract_output_text(
+        [{"type": "tool_use", "name": "some_tool"}, {"index": 0}, {"partial_json": '{"incomplete": true'}]
+    )
+    assert result == ""
+
+
+def test_extract_output_text_anthropic_style():
+    """Test _extract_output_text with Anthropic-style response format."""
+    result = _extract_output_text(
+        [
+            {"type": "text", "text": "Here's my response"},
+            {"type": "tool_use", "name": "calculator", "input": {"expression": "2+2"}},
+        ]
+    )
+    assert result == "Here's my response"
+
+
+def test_extract_output_text_edge_case_none_values():
+    """Test _extract_output_text with None/null values in dicts."""
+    result = _extract_output_text([{"text": None}, {"text": "valid text"}, {"index": None}])
+    assert result == "valid text"
+
+
+def test_extract_output_text_edge_case_empty_text():
+    """Test _extract_output_text with empty text values."""
+    result = _extract_output_text([{"text": ""}, {"text": "actual content"}, {"text": ""}])
+    assert result == "actual content"
+
+
+def test_extract_output_text_single_dict_no_text_key():
+    """Test _extract_output_text with dict that has no text key (graceful handling)."""
+    result = _extract_output_text([{"some_field": "some_value"}])
+    assert result == ""
+
+
+def test_extract_output_text_single_dict_multiple_keys_no_text():
+    """Test _extract_output_text with dict having multiple keys but no text."""
+    result = _extract_output_text([{"field1": "value1", "field2": "value2"}])
+    assert result == ""
+
+
+def test_extract_output_text_realistic_streaming_scenario():
+    """Test _extract_output_text with realistic streaming scenario."""
+    # Simulate a streaming response with multiple chunks
+    inputs = [
+        [{"text": "I'm"}],
+        [{"text": " thinking"}],
+        [{"text": " about"}],
+        [{"index": 0}],  # Empty streaming marker
+        [{"text": " your"}],
+        [{"text": " question."}],
+    ]
+
+    results = [_extract_output_text(inp) for inp in inputs]
+    full_text = "".join(results)
+    assert full_text == "I'm thinking about your question."
+
+
+def test_extract_output_text_backward_compatibility_scenarios():
+    """Test various backward compatibility scenarios that should still work."""
+    # Original OpenAI/Anthropic style
+    assert _extract_output_text([{"text": "response"}]) == "response"
+
+    # Tool use should return empty
+    assert _extract_output_text([{"type": "tool_use"}]) == ""
+
+    # Partial JSON should return empty
+    assert _extract_output_text([{"partial_json": "{}"}]) == ""
+
+    # String input should work
+    assert _extract_output_text("direct string") == "direct string"
+
+    # Empty list should work
+    assert _extract_output_text([]) == ""
+
+
+def test_extract_output_text_chatbedrockconverse_compatibility():
+    """Test all ChatBedrockConverse-specific scenarios that were causing errors."""
+    # The specific failing case from the error message
+    assert _extract_output_text([{"index": 0}]) == ""
+
+    # Other index variations
+    assert _extract_output_text([{"index": 1}]) == ""
+    assert _extract_output_text([{"index": 10}]) == ""
+
+    # Index with additional fields
+    assert _extract_output_text([{"index": 0, "metadata": "something"}]) == ""
+
+    # Multiple index-only items
+    assert _extract_output_text([{"index": 0}, {"index": 1}]) == ""
+
+    # Mixed with text
+    assert _extract_output_text([{"text": "Hello"}, {"index": 0}]) == "Hello"

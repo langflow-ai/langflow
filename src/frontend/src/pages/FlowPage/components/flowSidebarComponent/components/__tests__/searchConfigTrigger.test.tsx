@@ -53,7 +53,7 @@ describe("SearchConfigTrigger", () => {
 
     expect(screen.getByTestId("sidebar-options-trigger")).toBeInTheDocument();
     expect(screen.getByTestId("tooltip")).toBeInTheDocument();
-    expect(screen.getByTestId("icon-SlidersHorizontal")).toBeInTheDocument();
+    expect(screen.getByTestId("icon-Settings2")).toBeInTheDocument();
   });
 
   it("displays correct tooltip content", () => {
@@ -118,10 +118,10 @@ describe("SearchConfigTrigger", () => {
     expect(setShowConfig).toHaveBeenCalledWith(false);
   });
 
-  it("renders SlidersHorizontal icon with correct styling", () => {
+  it("renders Settings2 icon with correct styling", () => {
     render(<SearchConfigTrigger {...defaultProps} />);
 
-    const icon = screen.getByTestId("icon-SlidersHorizontal");
+    const icon = screen.getByTestId("icon-Settings2");
     expect(icon).toHaveClass("h-4", "w-4");
   });
 

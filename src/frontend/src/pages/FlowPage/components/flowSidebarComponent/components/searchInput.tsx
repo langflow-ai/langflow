@@ -1,6 +1,6 @@
 import { memo } from "react";
-import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
+import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import ShortcutDisplay from "../../nodeToolbarComponent/shortcutDisplay";
 
 export const SearchInput = memo(function SearchInput({
@@ -19,7 +19,7 @@ export const SearchInput = memo(function SearchInput({
   handleInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
   return (
-    <div className="relative w-full flex-1">
+    <div className={`relative w-full flex-1 ${!ENABLE_NEW_SIDEBAR && "pb-2"}`}>
       <Input
         ref={searchInputRef}
         type="search"
@@ -33,7 +33,9 @@ export const SearchInput = memo(function SearchInput({
         value={search}
       />
       {!isInputFocused && search === "" && (
-        <div className="pointer-events-none absolute inset-y-0 right-3 top-1/2 flex -translate-y-1/2 items-center justify-between gap-2 text-sm text-muted-foreground">
+        <div
+          className={`pointer-events-none absolute inset-y-0 right-2 top-[19px] flex -translate-y-1/2 items-center justify-between gap-2 text-sm text-muted-foreground ${ENABLE_NEW_SIDEBAR && "top-1/2"}`}
+        >
           <span>
             <ShortcutDisplay sidebar shortcut="/" />
           </span>

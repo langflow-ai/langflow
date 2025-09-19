@@ -16,7 +16,7 @@ jobs:
           - "3.13"
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:

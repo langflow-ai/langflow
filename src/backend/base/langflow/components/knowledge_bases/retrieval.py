@@ -4,14 +4,14 @@ from typing import Any
 
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
-from loguru import logger
+from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
+from lfx.custom import Component
+from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
+from lfx.log.logger import logger
+from lfx.schema.data import Data
+from lfx.schema.dataframe import DataFrame
 from pydantic import SecretStr
 
-from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
-from langflow.custom import Component
-from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
-from langflow.schema.data import Data
-from langflow.schema.dataframe import DataFrame
 from langflow.services.auth.utils import decrypt_api_key
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_settings_service, session_scope

@@ -53,8 +53,8 @@ export default defineConfig(({ mode }) => {
       "process.env.LANGFLOW_AUTO_LOGIN": JSON.stringify(
         envLangflow.LANGFLOW_AUTO_LOGIN ?? true,
       ),
-      "process.env.LANGFLOW_FEATURE_MCP_COMPOSER": JSON.stringify(
-        envLangflow.LANGFLOW_FEATURE_MCP_COMPOSER ?? "false",
+      "process.env.LANGFLOW_MCP_COMPOSER_ENABLED": JSON.stringify(
+        envLangflow.LANGFLOW_MCP_COMPOSER_ENABLED ?? "true",
       ),
     },
     plugins: [react(), svgr(), tsconfigPaths()],

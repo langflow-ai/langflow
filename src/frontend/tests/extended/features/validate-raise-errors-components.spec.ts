@@ -1,6 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { addCustomComponent } from "../../utils/add-custom-component";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user should be able to see errors on popups when raise an error",
@@ -53,11 +56,7 @@ class CustomComponent(Component):
     );
 
     await addCustomComponent(page);
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 1 });
 
     await page.waitForTimeout(1000);
 

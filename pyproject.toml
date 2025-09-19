@@ -53,7 +53,7 @@ dependencies = [
     "datasets>2.14.7",
     "assemblyai==0.35.1",
     "litellm>=1.60.2,<2.0.0",
-    "chromadb==0.5.23",
+    "chromadb>=0.5.6,<0.6.0",
     "zep-python==2.0.2",
     "youtube-transcript-api==0.6.3",
     "Markdown==3.7",
@@ -66,8 +66,8 @@ dependencies = [
     "yfinance==0.2.50",
     "wolframalpha==5.1.3",
     "astra-assistants[tools]>=2.2.13,<3.0.0",
-    "composio-langchain==0.8.5",
     "composio==0.8.5",
+    "composio-langchain==0.8.5",
     "spider-client==0.1.24",
     "nltk==3.9.1",
     "lark==1.2.2",
@@ -85,7 +85,7 @@ dependencies = [
     "langchain-groq==0.2.1",
     "langchain-pinecone>=0.2.8",
     "langchain-mistralai==0.2.3",
-    "langchain-chroma==0.1.4",
+    "langchain-chroma>=0.1.4,<0.2.0",
     "langchain-aws==0.2.7",
     "langchain-unstructured==0.1.5",
     "langchain-milvus==0.1.7",
@@ -122,13 +122,15 @@ dependencies = [
     "cleanlab-tlm>=1.1.2",
     'gassist>=0.0.1; sys_platform == "win32"',
     "twelvelabs>=0.4.7",
-    "docling_core>=2.36.1",
+    "docling>=2.36.1",
     "filelock>=3.18.0",
     "jigsawstack==0.2.7",
     "structlog>=25.4.0",
     "aiosqlite==0.21.0",
     "fastparquet>=2024.11.0",
     "traceloop-sdk>=0.43.1",
+    "easyocr>=1.7.2",
+    "opencv-python>=4.11",
 ]
 
 [dependency-groups]
@@ -179,15 +181,19 @@ dev = [
     "pytest-timeout>=2.3.1",
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
-    "docling>=2.36.1"
 ]
 
 [tool.uv.sources]
 langflow-base = { workspace = true }
 langflow = { workspace = true }
+lfx = { workspace = true }
 
 [tool.uv.workspace]
-members = ["src/backend/base", "."]
+members = [
+    "src/backend/base",
+    ".",
+    "src/lfx",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/backend/langflow"]
@@ -198,7 +204,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 docling = [
-    "docling>=2.36.1",
+    "langchain-docling>=1.1.0",
     "tesserocr>=2.8.0",
     "rapidocr-onnxruntime>=1.4.4",
     "ocrmac>=1.0.0; sys_platform == 'darwin'",
@@ -256,13 +262,21 @@ ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 timeout = 150
 timeout_method = "signal"
 minversion = "6.0"
-testpaths = ["src/backend/tests"]
+testpaths = ["src/backend/tests", "src/lfx/tests"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
 log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
-markers = ["async_test", "api_key_required", "no_blockbuster", "benchmark"]
+markers = [
+    "async_test",
+    "api_key_required",
+    "no_blockbuster",
+    "benchmark",
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow-running tests"
+]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = "-p no:benchmark"
@@ -312,7 +326,7 @@ ignore = [
     "D10", # Missing docstrings
     "PLW1641", # Object does not implement `__hash__` method (mutable objects shouldn't be hashable)
     # Rules that are TODOs
-    "ANN",
+    "ANN"
 ]
 
 # Preview rules that are not yet activated
