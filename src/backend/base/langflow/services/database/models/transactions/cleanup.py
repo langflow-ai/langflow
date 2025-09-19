@@ -5,10 +5,10 @@ import contextlib
 import threading
 from typing import TYPE_CHECKING
 
+from lfx.log.logger import logger
 from sqlmodel import select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.logging.logger import logger
 from langflow.services.database.models.transactions.crud import cleanup_old_transactions_for_flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.utils import session_getter
