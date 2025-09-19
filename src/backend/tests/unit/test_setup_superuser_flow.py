@@ -1,10 +1,10 @@
 import pytest
+from sqlmodel import select
+
 from langflow.services.auth.utils import verify_password
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import initialize_services, setup_superuser, teardown_superuser
-from sqlmodel import select
-
 from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 
 
@@ -132,8 +132,9 @@ async def test_setup_superuser_with_no_configured_credentials(client):  # noqa: 
 @pytest.mark.asyncio
 async def test_setup_superuser_with_custom_credentials(client):  # noqa: ARG001
     """Test setup_superuser behavior with custom superuser credentials."""
-    from langflow.services.deps import session_scope
     from pydantic import SecretStr
+
+    from langflow.services.deps import session_scope
 
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = False
