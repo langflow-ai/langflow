@@ -31,8 +31,6 @@ from lfx.io import (
 )
 from lfx.schema.data import Data
 from lfx.schema.table import EditMode
-from lfx.services.auth.utils import decrypt_api_key, encrypt_api_key
-from lfx.services.database.models.user.crud import get_user_by_id
 from lfx.services.deps import (
     get_settings_service,
     get_variable_service,
@@ -289,7 +287,14 @@ class KnowledgeIngestionComponent(Component):
         if api_key_to_save:
             settings_service = get_settings_service()
             try:
-                encrypted_api_key = encrypt_api_key(api_key_to_save, settings_service=settings_service)
+                try:
+                    from langflow.services.auth.utils import encrypt_api_key
+
+                    encrypted_api_key = encrypt_api_key(api_key_to_save, settings_service=settings_service)
+                except ImportError as e:
+                    # langflow not available, skip encryption
+                    msg = "Knowledge bases are not available in lfx."
+                    raise ValueError(msg) from e
             except (TypeError, ValueError) as e:
                 self.log(f"Could not encrypt API key: {e}")
 
@@ -514,11 +519,18 @@ class KnowledgeIngestionComponent(Component):
             if not self.user_id:
                 msg = "User ID is required for fetching knowledge base path."
                 raise ValueError(msg)
-            current_user = await get_user_by_id(db, self.user_id)
-            if not current_user:
-                msg = f"User with ID {self.user_id} not found."
-                raise ValueError(msg)
-            kb_user = current_user.username
+            try:
+                from langflow.services.database.models.user.crud import get_user_by_id
+
+                current_user = await get_user_by_id(db, self.user_id)
+                if not current_user:
+                    msg = f"User with ID {self.user_id} not found."
+                    raise ValueError(msg)
+                kb_user = current_user.username
+            except ImportError as e:
+                # langflow not available, use user_id as username fallback
+                msg = "Knowledge bases are not available in lfx."
+                raise ValueError(msg) from e
 
         kb_root = self._get_kb_root()
 
@@ -553,7 +565,13 @@ class KnowledgeIngestionComponent(Component):
                 metadata = json.loads(metadata_path.read_text())
                 embedding_model = metadata.get("embedding_model")
                 try:
-                    api_key = decrypt_api_key(metadata["api_key"], settings_service)
+                    try:
+                        from langflow.services.auth.utils import decrypt_api_key
+
+                        api_key = decrypt_api_key(metadata["api_key"], settings_service)
+                    except ImportError as e:
+                        msg = "Knowledge bases are not available in lfx."
+                        raise ValueError(msg) from e
                 except (InvalidToken, TypeError, ValueError) as e:
                     self.log(f"Could not decrypt API key. Please provide it manually. Error: {e}")
 
@@ -597,10 +615,17 @@ class KnowledgeIngestionComponent(Component):
             if not self.user_id:
                 msg = "User ID is required for fetching global variables."
                 raise ValueError(msg)
-            current_user = await get_user_by_id(db, self.user_id)
-            if not current_user:
-                msg = f"User with ID {self.user_id} not found."
-                raise ValueError(msg)
+            try:
+                from langflow.services.database.models.user.crud import get_user_by_id
+
+                current_user = await get_user_by_id(db, self.user_id)
+                if not current_user:
+                    msg = f"User with ID {self.user_id} not found."
+                    raise ValueError(msg)
+            except ImportError as e:
+                # langflow not available, create a mock user object
+                msg = "Knowledge bases are not available in lfx."
+                raise ValueError(msg) from e
             variable_service = get_variable_service()
 
             # Process the api_key field variable
@@ -624,11 +649,18 @@ class KnowledgeIngestionComponent(Component):
                 if not self.user_id:
                     msg = "User ID is required for fetching knowledge base list."
                     raise ValueError(msg)
-                current_user = await get_user_by_id(db, self.user_id)
-                if not current_user:
-                    msg = f"User with ID {self.user_id} not found."
-                    raise ValueError(msg)
-                kb_user = current_user.username
+                try:
+                    from langflow.services.database.models.user.crud import get_user_by_id
+
+                    current_user = await get_user_by_id(db, self.user_id)
+                    if not current_user:
+                        msg = f"User with ID {self.user_id} not found."
+                        raise ValueError(msg)
+                    kb_user = current_user.username
+                except ImportError as e:
+                    # langflow not available, use user_id as username fallback
+                    msg = "Knowledge bases are not available in lfx."
+                    raise ValueError(msg) from e
             if isinstance(field_value, dict) and "01_new_kb_name" in field_value:
                 # Validate the knowledge base name - Make sure it follows these rules:
                 if not self.is_valid_collection_name(field_value["01_new_kb_name"]):
