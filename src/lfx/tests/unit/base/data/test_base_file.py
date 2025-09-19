@@ -1,7 +1,6 @@
 """Tests for BaseFileComponent.load_files_message method."""
 
 import json
-import pytest
 import tempfile
 from pathlib import Path
 
@@ -19,24 +18,26 @@ class TestFileComponent(BaseFileComponent):
         """Initialize with proper component setup."""
         super().__init__(**data)
         # Initialize the inputs to avoid AttributeError
-        self.set_attributes({
-            "path": [],
-            "file_path": None,
-            "separator": "\n\n",
-            "silent_errors": False,
-            "delete_server_file_after_processing": True,
-            "ignore_unsupported_extensions": True,
-            "ignore_unspecified_files": False
-        })
+        self.set_attributes(
+            {
+                "path": [],
+                "file_path": None,
+                "separator": "\n\n",
+                "silent_errors": False,
+                "delete_server_file_after_processing": True,
+                "ignore_unsupported_extensions": True,
+                "ignore_unspecified_files": False,
+            }
+        )
 
     def process_files(self, file_list):
         """Test implementation that creates Data objects from file content."""
         processed_files = []
         for file in file_list:
             if file.path.exists():
-                content = file.path.read_text(encoding='utf-8')
+                content = file.path.read_text(encoding="utf-8")
                 # Create Data objects based on file extension
-                if file.path.suffix == '.json':
+                if file.path.suffix == ".json":
                     try:
                         json_data = json.loads(content)
                         data = Data(data=json_data)
@@ -78,7 +79,7 @@ class TestLoadFilesMessage:
         """Test load_files_message with a simple text file."""
         # Create a simple text file
         text_file = self.temp_path / "simple.txt"
-        text_file.write_text("Hello world", encoding='utf-8')
+        text_file.write_text("Hello world", encoding="utf-8")
 
         self.component.path = [str(text_file)]
         result = self.component.load_files_message()
@@ -91,7 +92,7 @@ class TestLoadFilesMessage:
         # Create JSON file with dict content
         json_content = {"content": "dict content", "metadata": "extra info", "type": "test"}
         json_file = self.temp_path / "test.json"
-        json_file.write_text(json.dumps(json_content), encoding='utf-8')
+        json_file.write_text(json.dumps(json_content), encoding="utf-8")
 
         self.component.path = [str(json_file)]
         result = self.component.load_files_message()
@@ -107,10 +108,10 @@ class TestLoadFilesMessage:
         """Test load_files_message with multiple files."""
         # Create multiple text files
         file1 = self.temp_path / "first.txt"
-        file1.write_text("First text", encoding='utf-8')
+        file1.write_text("First text", encoding="utf-8")
 
         file2 = self.temp_path / "second.txt"
-        file2.write_text("Second text", encoding='utf-8')
+        file2.write_text("Second text", encoding="utf-8")
 
         self.component.path = [str(file1), str(file2)]
         result = self.component.load_files_message()
@@ -126,10 +127,10 @@ class TestLoadFilesMessage:
 
         # Create two text files
         file1 = self.temp_path / "first.txt"
-        file1.write_text("First", encoding='utf-8')
+        file1.write_text("First", encoding="utf-8")
 
         file2 = self.temp_path / "second.txt"
-        file2.write_text("Second", encoding='utf-8')
+        file2.write_text("Second", encoding="utf-8")
 
         self.component.path = [str(file1), str(file2)]
         result = self.component.load_files_message()
@@ -141,10 +142,10 @@ class TestLoadFilesMessage:
         complex_data = {
             "metadata": {"type": "document", "version": 1},
             "properties": {"author": "test", "date": "2024-01-01"},
-            "content": "This should be extracted"
+            "content": "This should be extracted",
         }
         json_file = self.temp_path / "complex.json"
-        json_file.write_text(json.dumps(complex_data), encoding='utf-8')
+        json_file.write_text(json.dumps(complex_data), encoding="utf-8")
 
         self.component.path = [str(json_file)]
         result = self.component.load_files_message()
@@ -157,11 +158,11 @@ class TestLoadFilesMessage:
         """Test with JSON that has no common text fields (should use orjson.dumps)."""
         complex_data = {
             "metadata": {"type": "document", "version": 1},
-            "properties": {"author": "test", "date": "2024-01-01"}
+            "properties": {"author": "test", "date": "2024-01-01"},
             # No "text", "content", "value", or "message" fields
         }
         json_file = self.temp_path / "no_text_fields.json"
-        json_file.write_text(json.dumps(complex_data), encoding='utf-8')
+        json_file.write_text(json.dumps(complex_data), encoding="utf-8")
 
         self.component.path = [str(json_file)]
         result = self.component.load_files_message()
@@ -177,23 +178,23 @@ class TestLoadFilesMessage:
         self.component.separator = None
 
         file1 = self.temp_path / "first.txt"
-        file1.write_text("First", encoding='utf-8')
+        file1.write_text("First", encoding="utf-8")
 
         file2 = self.temp_path / "second.txt"
-        file2.write_text("Second", encoding='utf-8')
+        file2.write_text("Second", encoding="utf-8")
 
         self.component.path = [str(file1), str(file2)]
         result = self.component.load_files_message()
 
         # Should default to "\n\n" when separator is None
-        assert "First\n\nSecond" == result.text
+        assert result.text == "First\n\nSecond"
 
     def test_load_files_message_ensures_all_parts_are_strings(self):
         """Test that the method never tries to join non-string elements (core bug test)."""
         # Create a mixed content scenario - JSON with dict content
         dict_content = {"nested": {"data": "value"}, "another": "dict"}
         json_file = self.temp_path / "mixed_content.json"
-        json_file.write_text(json.dumps(dict_content), encoding='utf-8')
+        json_file.write_text(json.dumps(dict_content), encoding="utf-8")
 
         self.component.path = [str(json_file)]
 
@@ -212,12 +213,12 @@ class TestLoadFilesMessage:
             ({"content": "Content text"}, "Content text"),
             ({"value": "Value text"}, "Value text"),
             ({"message": "Message text"}, "Message text"),
-            ({"some_field": "ignored", "content": "Content wins"}, "Content wins")
+            ({"some_field": "ignored", "content": "Content wins"}, "Content wins"),
         ]
 
         for i, (data_dict, expected_text) in enumerate(test_cases):
             json_file = self.temp_path / f"test_field_{i}.json"
-            json_file.write_text(json.dumps(data_dict), encoding='utf-8')
+            json_file.write_text(json.dumps(data_dict), encoding="utf-8")
 
             self.component.path = [str(json_file)]
             result = self.component.load_files_message()
@@ -229,15 +230,15 @@ class TestLoadFilesMessage:
         """Test mixed scenarios with text files and JSON files."""
         # Create text file
         text_file = self.temp_path / "text_response.txt"
-        text_file.write_text("String response", encoding='utf-8')
+        text_file.write_text("String response", encoding="utf-8")
 
         # Create JSON file with dict content
         json_file = self.temp_path / "json_response.json"
-        json_file.write_text(json.dumps({"parsed": "Dict content"}), encoding='utf-8')
+        json_file.write_text(json.dumps({"parsed": "Dict content"}), encoding="utf-8")
 
         # Create JSON file with content field
         content_file = self.temp_path / "content_response.json"
-        content_file.write_text(json.dumps({"content": "Field extraction"}), encoding='utf-8')
+        content_file.write_text(json.dumps({"content": "Field extraction"}), encoding="utf-8")
 
         self.component.path = [str(text_file), str(json_file), str(content_file)]
         result = self.component.load_files_message()
