@@ -23,11 +23,11 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
+    from lfx.schema.log import Log
     from opentelemetry.propagators.textmap import CarrierT
     from opentelemetry.trace import Span
 
     from langflow.graph.vertex.base import Vertex
-    from langflow.services.tracing.schema import Log
 
 
 class TraceloopTracer(BaseTracer):

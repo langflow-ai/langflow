@@ -3,19 +3,15 @@ from __future__ import annotations
 import asyncio
 import time
 import traceback
-import uuid
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
-from lfx.graph.graph.base import Graph
-from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
-from lfx.schema.schema import InputValueRequest, OutputValue
+from lfx.schema.schema import InputValueRequest, OutputValue, ResultDataResponse
 from lfx.services.cache.utils import CacheMiss
 
 from langflow.api.build import cancel_flow_build, get_flow_events_response, start_flow_build
-from langflow.api.limited_background_tasks import LimitVertexBuildBackgroundTasks
 from langflow.api.utils import (
     CurrentActiveUser,
     DbSession,
@@ -31,13 +27,12 @@ from langflow.api.utils import (
 from langflow.api.v1.schemas import (
     CancelFlowResponse,
     FlowDataRequest,
-    ResultDataResponse,
     StreamData,
     VertexBuildResponse,
     VerticesOrderResponse,
 )
 from langflow.exceptions.component import ComponentBuildError
-from langflow.services.chat.service import ChatService
+from langflow.graph.utils import log_vertex_build
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import (
     get_chat_service,
@@ -50,7 +45,13 @@ from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueS
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
+    import uuid
+
+    from lfx.graph.graph.base import Graph
     from lfx.graph.vertex.vertex_types import InterfaceVertex
+
+    from langflow.api.limited_background_tasks import LimitVertexBuildBackgroundTasks
+    from langflow.services.chat.service import ChatService
 
 router = APIRouter(tags=["Chat"])
 

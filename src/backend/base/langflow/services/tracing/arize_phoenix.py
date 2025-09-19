@@ -27,10 +27,9 @@ if TYPE_CHECKING:
 
     from langchain.callbacks.base import BaseCallbackHandler
     from lfx.graph.vertex.base import Vertex
+    from lfx.schema.log import Log
     from opentelemetry.propagators.textmap import CarrierT
     from opentelemetry.util.types import AttributeValue
-
-    from langflow.services.tracing.schema import Log
 
 
 class ArizePhoenixTracer(BaseTracer):
