@@ -226,6 +226,8 @@ class Settings(BaseSettings):
     """The host on which Langflow will run."""
     port: int = 7860
     """The port on which Langflow will run."""
+    current_port: int | None = None
+    """The actual port on which Langflow is running (after checking for port conflicts)."""
     workers: int = 1
     """The number of workers to run."""
     log_level: str = "critical"
@@ -275,6 +277,10 @@ class Settings(BaseSettings):
     mcp_server_enable_progress_notifications: bool = False
     """If set to False, Langflow will not send progress notifications in the MCP server."""
 
+    # Add projects to MCP servers automatically on creation
+    add_projects_to_mcp_servers: bool = True
+    """If set to True, newly created projects will be added to the user's MCP servers config automatically.
+    Controlled by LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS env variable."""
     # MCP Composer
     mcp_composer_enabled: bool = True
     """If set to False, Langflow will not start the MCP Composer service."""
