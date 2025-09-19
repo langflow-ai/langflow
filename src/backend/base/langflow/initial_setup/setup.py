@@ -741,11 +741,12 @@ async def load_flows_from_directory() -> None:
         user = result.first()
         if user is None:
             msg = "No superuser found in the database"
+            await logger.aerror(msg)
             raise NoResultFound(msg)
-
+        await logger.adebug(f"Superuser found in the database: {user.username}")
         # Ensure that the default folder exists for this user
         _ = await get_or_create_default_folder(session, user.id)
-
+        await logger.adebug("Default folder created for superuser")
         for file_path in await asyncio.to_thread(Path(flows_path).iterdir):
             if not await anyio.Path(file_path).is_file() or file_path.suffix != ".json":
                 continue
@@ -753,6 +754,7 @@ async def load_flows_from_directory() -> None:
             async with async_open(str(file_path), "r", encoding="utf-8") as f:
                 content = await f.read()
             await upsert_flow_from_file(content, file_path.stem, session, user.id)
+        await logger.adebug("Successfully loaded flows from directory")
 
 
 async def detect_github_url(url: str) -> str:
