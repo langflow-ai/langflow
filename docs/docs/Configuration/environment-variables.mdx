@@ -159,57 +159,13 @@ The following sections provide information about specific Langflow environment v
 
 See [API keys and authentication](/api-keys-and-authentication).
 
-### Caching configuration
-
-See [Configure cache memory](/memory#configure-cache-memory).
-
-### Database configuration
-
-See [Memory management options](/memory).
-
-### File and data management
-
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_CONFIG_DIR` | String | Varies | Set the Langflow configuration directory where files and logs are stored. Default path depends on your installation. If `LANGFLOW_SAVE_DB_IN_CONFIG_DIR=True` then the [Langflow database](/memory) is also stored at this path. |
-| `LANGFLOW_COMPONENTS_PATH` | String | Not set | Path to the directory containing custom components. |
-| `LANGFLOW_FRONTEND_PATH` | String | `./frontend` | Path to the frontend directory containing build files. This is for development purposes only. |
-| `LANGFLOW_MAX_FILE_SIZE_UPLOAD` | Integer | `100` | Set the maximum file size for the upload in megabytes. |
-| `LANGFLOW_MAX_ITEMS_LENGTH` | Integer | `100` | Maximum number of items to store and display in the visual editor. Lists longer than this will be truncated when displayed in the visual editor. Doesn't affect data passed between components nor outputs. |
-| `LANGFLOW_MAX_TEXT_LENGTH` | Integer | `1000` | Maximum number of characters to store and display in the visual editor. Responses longer than this will be truncated when displayed in the visual editor. Doesn't truncate responses between components nor outputs. |
-| `LANGFLOW_STORAGE_TYPE` | String | `local` | Type of storage to use for file uploads and data. |
-| `LANGFLOW_MAX_TRANSACTIONS_TO_KEEP` | Integer | `3000` | Maximum number of transactions to keep in the database. |
-| `LANGFLOW_MAX_VERTEX_BUILDS_TO_KEEP` | Integer | `3000` | Maximum number of vertex builds to keep in the database. |
-| `LANGFLOW_MAX_VERTEX_BUILDS_PER_VERTEX` | Integer | `2` | Maximum number of builds to keep per vertex. Older builds are deleted. |
-
-### Flow and project management
-
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_AUTO_SAVING` | Boolean | True | Enable flow auto-saving. |
-| `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `1000` | Set the interval for flow auto-saving in milliseconds. |
-| `LANGFLOW_BUNDLE_URLS` | List[String] | `[]` | A list of URLs from which to load component bundles and flows. Supports GitHub URLs. If `LANGFLOW_AUTO_LOGIN=True`, flows from these bundles are loaded into the database. |
-| `LANGFLOW_LOAD_FLOWS_PATH` | String | Not set | Path to a directory containing flow JSON files to be loaded on startup. Note that this feature only works if `LANGFLOW_AUTO_LOGIN=True`. |
-| `LANGFLOW_CREATE_STARTER_PROJECTS` | Boolean | True | Whether to create templates during initialization. If false, Langflow doesn't create templates, and `LANGFLOW_UPDATE_STARTER_PROJECTS` is treated as false. |
-| `LANGFLOW_UPDATE_STARTER_PROJECTS` | Boolean | True | Whether to update templates with the latest component versions when initializing after an upgrade. |
-| `LANGFLOW_LAZY_LOAD_COMPONENTS` | Boolean | False | If true, Langflow only partially loads components at startup and fully loads them on demand. This significantly reduces startup time but may cause a slight delay when a component is first used. |
-| `LANGFLOW_EVENT_DELIVERY` | String | `streaming` | How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'. |
-
-Public flows are flows that are exposed in shared Langflow playgrounds.
-For detailed information about shared Playground configuration, see [Share a flow's Playground](/concepts-playground#share-a-flows-playground).
-
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_PUBLIC_FLOW_CLEANUP_INTERVAL` | Integer | `3600` | The interval in seconds at which public temporary flows will be cleaned up. Default is 1 hour (3600 seconds). Minimum is 600 seconds (10 minutes). |
-| `LANGFLOW_PUBLIC_FLOW_EXPIRATION` | Integer | `86400` | The time in seconds after which a public temporary flow will be considered expired and eligible for cleanup. Default is 24 hours (86400 seconds). Minimum is 600 seconds (10 minutes). |
-
 ### Global variables
 
 For information about the relationship between Langflow global variables and environment variables, as well as environment variables that control handling of global variables, see [Global variables](/configuration-global-variables).
 
 ### Logs {#logging}
 
-See [Configure log options](/logging#log-storage) and [Logs endpoints](/api-logs).
+See [Configure log options](/logging#log-storage).
 
 ### MCP servers {#mcp}
 
@@ -235,23 +191,46 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. |
 | `LANGFLOW_SSL_CERT_FILE` | String | Not set | Path to the SSL certificate file on the local system for SSL-encrypted connections. |
 | `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file on the local system for SSL-encrypted connections. |
+| `LANGFLOW_DEACTIVATE_TRACING` | Boolean | False | Deactivate tracing functionality. |
+| `LANGFLOW_CELERY_ENABLED` | Boolean | False | Enable Celery for distributed task processing. |
 
 For more information about deploying Langflow servers, see [Langflow deployment overview](/deployment-overview).
+
+### Storage
+
+See [Memory management options](/memory) and [Manage files](/concepts-file-management).
 
 ### Telemetry
 
 See [Telemetry](/contributing-telemetry).
 
-### Other environment variables
+### Visual editor and Playground behavior
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_STORE` | Boolean | True | Whether to enable the Langflow Store features. |
-| `LANGFLOW_STORE_URL` | String | `https://api.langflow.store` | URL for the Langflow Store API. |
-| `LANGFLOW_DOWNLOAD_WEBHOOK_URL` | String | Not set | Webhook URL for Langflow store "download" events. |
-| `LANGFLOW_LIKE_WEBHOOK_URL` | String | Not set | Webhook URL for Langflow store "like" events. |
-| `LANGFLOW_DEACTIVATE_TRACING` | Boolean | False | Deactivate tracing functionality. |
-| `LANGFLOW_CELERY_ENABLED` | Boolean | False | Enable Celery for distributed task processing. |
+| `LANGFLOW_AUTO_SAVING` | Boolean | True | Enable flow auto-saving. |
+| `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `1000` | Set the interval for flow auto-saving in milliseconds. |
+| `LANGFLOW_BUNDLE_URLS` | List[String] | `[]` | A list of URLs from which to load component bundles and flows. Supports GitHub URLs. If `LANGFLOW_AUTO_LOGIN=True`, flows from these bundles are loaded into the database. |
+| `LANGFLOW_COMPONENTS_PATH` | String | Not set | Path to the directory containing custom components. |
+| `LANGFLOW_LOAD_FLOWS_PATH` | String | Not set | Path to a directory containing flow JSON files to be loaded on startup. Note that this feature only works if `LANGFLOW_AUTO_LOGIN=True`. |
+| `LANGFLOW_CREATE_STARTER_PROJECTS` | Boolean | True | Whether to create templates during initialization. If false, Langflow doesn't create templates, and `LANGFLOW_UPDATE_STARTER_PROJECTS` is treated as false. |
+| `LANGFLOW_UPDATE_STARTER_PROJECTS` | Boolean | True | Whether to update templates with the latest component versions when initializing after an upgrade. |
+| `LANGFLOW_LAZY_LOAD_COMPONENTS` | Boolean | False | If true, Langflow only partially loads components at startup and fully loads them on demand. This significantly reduces startup time but may cause a slight delay when a component is first used. |
+| `LANGFLOW_EVENT_DELIVERY` | String | `streaming` | How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'. |
+| `LANGFLOW_FRONTEND_PATH` | String | `./frontend` | Path to the frontend directory containing build files. This is for development purposes only. |
+| `LANGFLOW_MAX_ITEMS_LENGTH` | Integer | `100` | Maximum number of items to store and display in the visual editor. Lists longer than this will be truncated when displayed in the visual editor. Doesn't affect data passed between components nor outputs. |
+| `LANGFLOW_MAX_TEXT_LENGTH` | Integer | `1000` | Maximum number of characters to store and display in the visual editor. Responses longer than this will be truncated when displayed in the visual editor. Doesn't truncate responses between components nor outputs. |
+| `LANGFLOW_MAX_TRANSACTIONS_TO_KEEP` | Integer | `3000` | Maximum number of transactions to keep in the database. |
+| `LANGFLOW_MAX_VERTEX_BUILDS_TO_KEEP` | Integer | `3000` | Maximum number of vertex builds to keep in the database. |
+| `LANGFLOW_MAX_VERTEX_BUILDS_PER_VERTEX` | Integer | `2` | Maximum number of builds to keep per vertex. Older builds are deleted. |
+
+Public flows are flows that are exposed in shared Langflow playgrounds.
+For detailed information about shared Playground configuration, see [Share a flow's Playground](/concepts-playground#share-a-flows-playground).
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_PUBLIC_FLOW_CLEANUP_INTERVAL` | Integer | `3600` | The interval in seconds at which public temporary flows will be cleaned up. Default is 1 hour (3600 seconds). Minimum is 600 seconds (10 minutes). |
+| `LANGFLOW_PUBLIC_FLOW_EXPIRATION` | Integer | `86400` | The time in seconds after which a public temporary flow will be considered expired and eligible for cleanup. Default is 24 hours (86400 seconds). Minimum is 600 seconds (10 minutes). |
 
 ## Configure .env, override.conf, and tasks.json files
 
