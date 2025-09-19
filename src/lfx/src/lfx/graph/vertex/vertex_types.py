@@ -9,7 +9,7 @@ import yaml
 from langchain_core.messages import AIMessage, AIMessageChunk
 
 from lfx.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
-from lfx.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path
+from lfx.graph.utils import UnbuiltObject, rewrite_file_path
 from lfx.graph.vertex.base import Vertex
 from lfx.graph.vertex.exceptions import NoComponentInstanceError
 from lfx.log.logger import logger
@@ -441,14 +441,20 @@ class InterfaceVertex(ComponentVertex):
             and hasattr(self.custom_component, "store_message")
         ):
             await self.custom_component.store_message(message)
-        await log_vertex_build(
-            flow_id=self.graph.flow_id,
-            vertex_id=self.id,
-            valid=True,
-            params=self.built_object_repr(),
-            data=self.result,
-            artifacts=self.artifacts,
-        )
+        try:
+            from langflow.graph.utils import log_vertex_build
+
+            await log_vertex_build(
+                flow_id=self.graph.flow_id,
+                vertex_id=self.id,
+                valid=True,
+                params=self.built_object_repr(),
+                data=self.result,
+                artifacts=self.artifacts,
+            )
+        except ImportError:
+            # langflow not available, skip logging
+            pass
 
         self._validate_built_object()
         self.built = True
