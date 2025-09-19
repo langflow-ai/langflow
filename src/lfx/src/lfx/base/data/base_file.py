@@ -1,5 +1,5 @@
 import ast
-import json
+import orjson
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
@@ -256,9 +256,22 @@ class BaseFileComponent(Component, ABC):
 
         parts: list[str] = []
         for d in data_list:
-            # Prefer explicit text if available, fall back to full dict, lastly str()
-            text = (getattr(d, "get_text", lambda: None)() or d.data.get("text")) if isinstance(d.data, dict) else None
-            parts.append(text if text is not None else str(d))
+            try:
+                data_text = d.get_text()
+                if data_text and isinstance(data_text, str):
+                    parts.append(data_text)
+                elif data_text:
+                    # get_text() returned non-string, convert it
+                    parts.append(str(data_text))
+                else:
+                    if isinstance(d.data, dict):
+                        # convert the data dict to a readable string
+                        parts.append(orjson.dumps(d.data, indent=2, default=str))
+                    else:
+                        parts.append(str(d))
+            except Exception as e:
+                # Final fallback - just try to convert to string
+                parts.append(str(d))
 
         return Message(text=sep.join(parts))
 
@@ -325,10 +338,10 @@ class BaseFileComponent(Component, ABC):
     def parse_string_to_dict(self, s: str) -> dict:
         # Try JSON first (handles true/false/null)
         try:
-            result = json.loads(s)
+            result = orjson.loads(s)
             if isinstance(result, dict):
                 return result
-        except json.JSONDecodeError:
+        except orjson.JSONDecodeError:
             pass
 
         # Fall back to Python literal evaluation
