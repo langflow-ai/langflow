@@ -2,34 +2,31 @@ import io
 import json
 import zipfile
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, cast
 from urllib.parse import quote
 from uuid import UUID
 
 import orjson
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
-from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from lfx.base.mcp.util import sanitize_mcp_name
-from lfx.log.logger import logger
+from lfx.services.mcp_composer.service import MCPComposerService
 from sqlalchemy import or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params, remove_api_keys
+from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.flows import create_flows
-from langflow.api.v1.mcp_projects import get_project_sse_url
+from langflow.api.v1.mcp_projects import register_project_with_composer
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.api.v2.mcp import update_server
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.logging import logger
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
-from langflow.services.database.models.api_key.crud import create_api_key
-from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
@@ -40,7 +37,8 @@ from langflow.services.database.models.folder.model import (
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
-from langflow.services.deps import get_settings_service, get_storage_service
+from langflow.services.deps import get_service, get_settings_service
+from langflow.services.schema import ServiceType
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -79,49 +77,20 @@ async def create_project(
                 else:
                     new_project.name = f"{new_project.name} (1)"
 
+        settings_service = get_settings_service()
+
+        # If AUTO_LOGIN is false, automatically enable API key authentication
+        if not settings_service.auth_settings.AUTO_LOGIN and not new_project.auth_settings:
+            default_auth = {"auth_type": "apikey"}
+            new_project.auth_settings = encrypt_auth_settings(default_auth)
+            await logger.adebug(
+                f"Auto-enabled API key authentication for project {new_project.name} "
+                f"({new_project.id}) due to AUTO_LOGIN=false"
+            )
+
         session.add(new_project)
         await session.commit()
         await session.refresh(new_project)
-
-        # Auto-register MCP server for this project with API key auth
-        if get_settings_service().settings.add_projects_to_mcp_servers:
-            try:
-                # Create API key
-                api_key_name = f"MCP Project {new_project.name} - default"
-                unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), current_user.id)
-
-                # Set folder auth to API key mode (encrypted at rest)
-                new_project.auth_settings = encrypt_auth_settings({"auth_type": "apikey"})
-                session.add(new_project)
-                await session.commit()
-                await session.refresh(new_project)
-
-                # Build SSE URL
-                sse_url = await get_project_sse_url(new_project.id)
-
-                # Prepare server config
-                command = "uvx"
-                args = [
-                    "mcp-proxy",
-                    "--headers",
-                    "x-api-key",
-                    unmasked_api_key.api_key,
-                    sse_url,
-                ]
-                server_config = {"command": command, "args": args}
-
-                # Determine server name and register in user's _mcp_servers.json
-                server_name = f"lf-{sanitize_mcp_name(new_project.name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
-                await update_server(
-                    server_name,
-                    server_config,
-                    current_user,
-                    session,
-                    get_storage_service(),
-                    get_settings_service(),
-                )
-            except Exception as e:  # noqa: BLE001
-                await logger.aexception(f"Failed to auto-register MCP server for project {new_project.id}: {e}")
 
         if project.components_list:
             update_statement_components = (
@@ -136,7 +105,6 @@ async def create_project(
             )
             await session.exec(update_statement_flows)
             await session.commit()
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -227,6 +195,7 @@ async def update_project(
     project_id: UUID,
     project: FolderUpdate,  # Assuming FolderUpdate is a Pydantic model defining updatable fields
     current_user: CurrentActiveUser,
+    background_tasks: BackgroundTasks,
 ):
     try:
         existing_project = (
@@ -238,27 +207,69 @@ async def update_project(
     if not existing_project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    result = await session.exec(
+        select(Flow.id, Flow.is_component).where(Flow.folder_id == existing_project.id, Flow.user_id == current_user.id)
+    )
+    flows_and_components = result.all()
+
+    project.flows = [flow_id for flow_id, is_component in flows_and_components if not is_component]
+    project.components = [flow_id for flow_id, is_component in flows_and_components if is_component]
+
     try:
+        # Track if MCP Composer needs to be started or stopped
+        should_start_mcp_composer = False
+        should_stop_mcp_composer = False
+
+        # Check if auth_settings is being updated
+        if "auth_settings" in project.model_fields_set:  # Check if auth_settings was explicitly provided
+            auth_result = handle_auth_settings_update(
+                existing_project=existing_project,
+                new_auth_settings=project.auth_settings,
+            )
+
+            should_start_mcp_composer = auth_result["should_start_composer"]
+            should_stop_mcp_composer = auth_result["should_stop_composer"]
+
+        # Handle other updates
         if project.name and project.name != existing_project.name:
             existing_project.name = project.name
-            session.add(existing_project)
-            await session.commit()
-            await session.refresh(existing_project)
-            return existing_project
 
-        project_data = existing_project.model_dump(exclude_unset=True)
-        for key, value in project_data.items():
-            if key not in {"components", "flows"}:
-                setattr(existing_project, key, value)
+        if project.description is not None:
+            existing_project.description = project.description
+
+        if project.parent_id is not None:
+            existing_project.parent_id = project.parent_id
+
         session.add(existing_project)
         await session.commit()
         await session.refresh(existing_project)
+
+        # Start MCP Composer if auth changed to OAuth
+        if should_start_mcp_composer:
+            await logger.adebug(
+                f"Auth settings changed to OAuth for project {existing_project.name} ({existing_project.id}), "
+                "starting MCP Composer"
+            )
+            background_tasks.add_task(register_project_with_composer, existing_project)
+
+        # Stop MCP Composer if auth changed FROM OAuth to something else
+        elif should_stop_mcp_composer:
+            await logger.ainfo(
+                f"Auth settings changed from OAuth for project {existing_project.name} ({existing_project.id}), "
+                "stopping MCP Composer"
+            )
+
+            # Get the MCP Composer service and stop the project's composer
+            mcp_composer_service: MCPComposerService = cast(
+                MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+            )
+            await mcp_composer_service.stop_project_composer(str(existing_project.id))
 
         concat_project_components = project.components + project.flows
 
         flows_ids = (await session.exec(select(Flow.id).where(Flow.folder_id == existing_project.id))).all()
 
-        excluded_flows = list(set(flows_ids) - set(concat_project_components))
+        excluded_flows = list(set(flows_ids) - set(project.flows))
 
         my_collection_project = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
         if my_collection_project:
@@ -304,6 +315,18 @@ async def delete_project(
 
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    # Check if project has OAuth authentication and stop MCP Composer if needed
+    if project.auth_settings and project.auth_settings.get("auth_type") == "oauth":
+        try:
+            mcp_composer_service: MCPComposerService = cast(
+                MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+            )
+            await mcp_composer_service.stop_project_composer(str(project_id))
+            await logger.adebug(f"Stopped MCP Composer for deleted OAuth project {project.name} ({project_id})")
+        except Exception as e:  # noqa: BLE001
+            # Log but don't fail the deletion if MCP Composer cleanup fails
+            await logger.aerror(f"Failed to stop MCP Composer for deleted project {project_id}: {e}")
 
     try:
         await session.delete(project)
@@ -387,10 +410,21 @@ async def upload_file(
     new_project = Folder.model_validate(project, from_attributes=True)
     new_project.id = None
     new_project.user_id = current_user.id
+
+    settings_service = get_settings_service()
+
+    # If AUTO_LOGIN is false, automatically enable API key authentication
+    if not settings_service.auth_settings.AUTO_LOGIN and not new_project.auth_settings:
+        default_auth = {"auth_type": "apikey"}
+        new_project.auth_settings = encrypt_auth_settings(default_auth)
+        await logger.adebug(
+            f"Auto-enabled API key authentication for uploaded project {new_project.name} "
+            f"({new_project.id}) due to AUTO_LOGIN=false"
+        )
+
     session.add(new_project)
     await session.commit()
     await session.refresh(new_project)
-
     del data["folder_name"]
     del data["folder_description"]
 

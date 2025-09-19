@@ -1,18 +1,17 @@
 import contextlib
 import json
-import uuid
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from langflow.components.knowledge_bases.retrieval import KnowledgeRetrievalComponent
 from pydantic import SecretStr
 
-from tests.base import ComponentTestBaseWithoutClient
+from tests.base import ComponentTestBaseWithClient
 
 
-class TestKnowledgeRetrievalComponent(ComponentTestBaseWithoutClient):
+class TestKnowledgeRetrievalComponent(ComponentTestBaseWithClient):
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
@@ -24,47 +23,12 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithoutClient):
         with patch("langflow.components.knowledge_bases.retrieval.KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
             yield
 
-    class MockUser:
-        def __init__(self, user_id):
-            self.id = user_id
-            self.username = "langflow"
-
     @pytest.fixture
-    def mock_user_data(self):
-        """Create mock user data that persists for the test function."""
-        mock_uuid = uuid.uuid4()
-        mock_user = self.MockUser(mock_uuid)
-        return {"user_id": mock_uuid, "user": mock_user.username, "user_obj": mock_user}
-
-    @pytest.fixture(autouse=True)
-    def setup_mocks(self, mock_user_data):
-        """Mock the component's user_id attribute and User object."""
-        with (
-            patch.object(KnowledgeRetrievalComponent, "user_id", mock_user_data["user_id"]),
-            patch(
-                "langflow.components.knowledge_bases.retrieval.get_user_by_id",
-                new_callable=AsyncMock,
-                return_value=mock_user_data["user_obj"],
-            ),
-            patch(
-                "langflow.base.knowledge_bases.knowledge_base_utils.get_user_by_id",
-                new_callable=AsyncMock,
-                return_value=mock_user_data["user_obj"],
-            ),
-        ):
-            yield
-
-    @pytest.fixture
-    def mock_user_id(self, mock_user_data):
-        """Get the mock user data."""
-        return {"user_id": mock_user_data["user_id"], "user": mock_user_data["user"]}
-
-    @pytest.fixture
-    def default_kwargs(self, tmp_path, mock_user_id):
+    def default_kwargs(self, tmp_path, active_user):
         """Return default kwargs for component instantiation."""
         # Create knowledge base directory structure
         kb_name = "test_kb"
-        kb_path = tmp_path / mock_user_id["user"] / kb_name
+        kb_path = tmp_path / active_user.username / kb_name
         kb_path.mkdir(parents=True, exist_ok=True)
 
         # Create embedding metadata file
@@ -85,6 +49,7 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithoutClient):
             "search_query": "",
             "top_k": 5,
             "include_embeddings": True,
+            "_user_id": active_user.id,
         }
 
     @pytest.fixture
@@ -93,27 +58,27 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithoutClient):
         # This is a new component, so it doesn't exist in older versions
         return []
 
-    async def test_get_knowledge_bases(self, tmp_path, mock_user_id):
+    async def test_get_knowledge_bases(self, tmp_path, active_user):
         """Test getting list of knowledge bases."""
         # Create additional test directories
-        (tmp_path / mock_user_id["user"] / "kb1").mkdir(parents=True, exist_ok=True)
-        (tmp_path / mock_user_id["user"] / "kb2").mkdir(parents=True, exist_ok=True)
-        (tmp_path / mock_user_id["user"] / ".hidden").mkdir(parents=True, exist_ok=True)  # Should be ignored
+        (tmp_path / active_user.username / "kb1").mkdir(parents=True, exist_ok=True)
+        (tmp_path / active_user.username / "kb2").mkdir(parents=True, exist_ok=True)
+        (tmp_path / active_user.username / ".hidden").mkdir(parents=True, exist_ok=True)  # Should be ignored
 
-        kb_list = await get_knowledge_bases(tmp_path, user_id=mock_user_id["user_id"])
+        kb_list = await get_knowledge_bases(tmp_path, user_id=active_user.id)
 
         assert "test_kb" in kb_list
         assert "kb1" in kb_list
         assert "kb2" in kb_list
         assert ".hidden" not in kb_list
 
-    async def test_update_build_config(self, component_class, default_kwargs, tmp_path, mock_user_id):
+    async def test_update_build_config(self, component_class, default_kwargs, tmp_path, active_user):
         """Test updating build configuration."""
         component = component_class(**default_kwargs)
 
         # Create additional KB directories
-        (tmp_path / mock_user_id["user"] / "kb1").mkdir(parents=True, exist_ok=True)
-        (tmp_path / mock_user_id["user"] / "kb2").mkdir(parents=True, exist_ok=True)
+        (tmp_path / active_user.username / "kb1").mkdir(parents=True, exist_ok=True)
+        (tmp_path / active_user.username / "kb2").mkdir(parents=True, exist_ok=True)
 
         build_config = {"knowledge_base": {"value": "test_kb", "options": []}}
 
@@ -133,10 +98,10 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithoutClient):
 
         assert result["knowledge_base"]["value"] is None
 
-    def test_get_kb_metadata_success(self, component_class, default_kwargs, mock_user_id):
+    def test_get_kb_metadata_success(self, component_class, default_kwargs, active_user):
         """Test successful metadata loading."""
         component = component_class(**default_kwargs)
-        kb_path = Path(default_kwargs["kb_root_path"]) / mock_user_id["user"] / default_kwargs["knowledge_base"]
+        kb_path = Path(default_kwargs["kb_root_path"]) / active_user.username / default_kwargs["knowledge_base"]
 
         with patch("langflow.components.knowledge_bases.retrieval.decrypt_api_key") as mock_decrypt:
             mock_decrypt.return_value = "decrypted_key"
@@ -147,20 +112,20 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithoutClient):
         assert metadata["embedding_model"] == "sentence-transformers/all-MiniLM-L6-v2"
         assert "chunk_size" in metadata
 
-    def test_get_kb_metadata_no_file(self, component_class, default_kwargs, tmp_path, mock_user_id):
+    def test_get_kb_metadata_no_file(self, component_class, default_kwargs, tmp_path, active_user):
         """Test metadata loading when file doesn't exist."""
         component = component_class(**default_kwargs)
-        nonexistent_path = tmp_path / mock_user_id["user"] / "nonexistent"
+        nonexistent_path = tmp_path / active_user.username / "nonexistent"
         nonexistent_path.mkdir(parents=True, exist_ok=True)
 
         metadata = component._get_kb_metadata(nonexistent_path)
 
         assert metadata == {}
 
-    def test_get_kb_metadata_json_error(self, component_class, default_kwargs, tmp_path, mock_user_id):
+    def test_get_kb_metadata_json_error(self, component_class, default_kwargs, tmp_path, active_user):
         """Test metadata loading with invalid JSON."""
         component = component_class(**default_kwargs)
-        kb_path = tmp_path / mock_user_id["user"] / "invalid_json_kb"
+        kb_path = tmp_path / active_user.username / "invalid_json_kb"
         kb_path.mkdir(parents=True, exist_ok=True)
 
         # Create invalid JSON file
@@ -170,10 +135,10 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithoutClient):
 
         assert metadata == {}
 
-    def test_get_kb_metadata_decrypt_error(self, component_class, default_kwargs, tmp_path, mock_user_id):
+    def test_get_kb_metadata_decrypt_error(self, component_class, default_kwargs, tmp_path, active_user):
         """Test metadata loading with decryption error."""
         component = component_class(**default_kwargs)
-        kb_path = tmp_path / mock_user_id["user"] / "decrypt_error_kb"
+        kb_path = tmp_path / active_user.username / "decrypt_error_kb"
         kb_path.mkdir(parents=True, exist_ok=True)
 
         # Create metadata with encrypted key
@@ -327,10 +292,10 @@ class TestKnowledgeRetrievalComponent(ComponentTestBaseWithoutClient):
                 chunk_size=1000,
             )
 
-    async def test_retrieve_data_no_metadata(self, component_class, default_kwargs, tmp_path, mock_user_id):
+    async def test_retrieve_data_no_metadata(self, component_class, default_kwargs, tmp_path, active_user):
         """Test retrieving data when metadata is missing."""
         # Remove metadata file
-        kb_path = tmp_path / mock_user_id["user"] / default_kwargs["knowledge_base"]
+        kb_path = tmp_path / active_user.username / default_kwargs["knowledge_base"]
         metadata_file = kb_path / "embedding_metadata.json"
         if metadata_file.exists():
             metadata_file.unlink()

@@ -218,9 +218,11 @@ def configure(
     if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
 
-    requested_min_level = LOG_LEVEL_MAP.get(
-        (log_level or os.getenv("LANGFLOW_LOG_LEVEL", "ERROR")).upper(), logging.ERROR
-    )
+    log_level_str = os.getenv("LANGFLOW_LOG_LEVEL", "ERROR")
+    if log_level is not None:
+        log_level_str = log_level
+
+    requested_min_level = LOG_LEVEL_MAP.get(log_level_str.upper(), logging.ERROR)
     if current_min_level == requested_min_level:
         return
 
@@ -243,20 +245,38 @@ def configure(
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="iso"),
-        add_serialized,
-        remove_exception_in_production,
-        buffer_writer,
     ]
+
+    # Add callsite information only when LANGFLOW_DEV is set
+    if DEV:
+        processors.append(
+            structlog.processors.CallsiteParameterAdder(
+                parameters=[
+                    structlog.processors.CallsiteParameter.FILENAME,
+                    structlog.processors.CallsiteParameter.FUNC_NAME,
+                    structlog.processors.CallsiteParameter.LINENO,
+                ]
+            )
+        )
+
+    processors.extend(
+        [
+            add_serialized,
+            remove_exception_in_production,
+            buffer_writer,
+        ]
+    )
 
     # Configure output based on environment
     if log_env.lower() == "container" or log_env.lower() == "container_json":
         processors.append(structlog.processors.JSONRenderer())
     elif log_env.lower() == "container_csv":
-        processors.append(
-            structlog.processors.KeyValueRenderer(
-                key_order=["timestamp", "level", "module", "event"], drop_missing=True
-            )
-        )
+        # Include callsite fields in key order when DEV is enabled
+        key_order = ["timestamp", "level", "event"]
+        if DEV:
+            key_order += ["filename", "func_name", "lineno"]
+
+        processors.append(structlog.processors.KeyValueRenderer(key_order=key_order, drop_missing=True))
     else:
         # Use rich console for pretty printing based on environment variable
         log_stdout_pretty = os.getenv("LANGFLOW_PRETTY_LOGS", "true").lower() == "true"
