@@ -3,11 +3,11 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
+from langflow.services.database.models.vertex_builds.crud import cleanup_old_vertex_builds_for_flow, log_vertex_build
+from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from langflow.services.database.models.vertex_builds.crud import cleanup_old_vertex_builds_for_flow, log_vertex_build
-from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
 from lfx.services.settings.base import Settings
 
 

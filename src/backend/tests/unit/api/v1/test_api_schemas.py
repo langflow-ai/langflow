@@ -2,11 +2,11 @@ from datetime import datetime, timezone
 
 from hypothesis import HealthCheck, example, given, settings
 from hypothesis import strategies as st
-from pydantic import BaseModel
-
 from langflow.api.v1.schemas import VertexBuildResponse
 from langflow.schema.schema import OutputValue
 from langflow.serialization import serialize
+from pydantic import BaseModel
+
 from lfx.schema.log import Log
 from lfx.schema.schema import ResultDataResponse
 
