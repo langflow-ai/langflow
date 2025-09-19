@@ -194,7 +194,7 @@ test(
 
     // Delete the second parse data used to test
 
-    await page.getByTestId("title-File").last().click();
+    await page.getByTestId("title-Read File").last().click();
 
     await page.getByTestId("more-options-modal").click();
 
