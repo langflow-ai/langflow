@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 import traceback
+import uuid  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, status
@@ -12,6 +13,7 @@ from lfx.schema.schema import InputValueRequest, OutputValue, ResultDataResponse
 from lfx.services.cache.utils import CacheMiss
 
 from langflow.api.build import cancel_flow_build, get_flow_events_response, start_flow_build
+from langflow.api.limited_background_tasks import LimitVertexBuildBackgroundTasks  # noqa: TC001
 from langflow.api.utils import (
     CurrentActiveUser,
     DbSession,
@@ -45,12 +47,9 @@ from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueS
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
-    import uuid
-
     from lfx.graph.graph.base import Graph
     from lfx.graph.vertex.vertex_types import InterfaceVertex
 
-    from langflow.api.limited_background_tasks import LimitVertexBuildBackgroundTasks
     from langflow.services.chat.service import ChatService
 
 router = APIRouter(tags=["Chat"])
