@@ -139,7 +139,8 @@ class Message(Data):
         if self.sender == MESSAGE_SENDER_USER or not self.sender:
             if self.files:
                 contents = [{"type": "text", "text": text}]
-                contents.extend(self.get_file_content_dicts())
+                file_contents = self.get_file_content_dicts()
+                contents.extend(file_contents)
                 human_message = HumanMessage(content=contents)
             else:
                 human_message = HumanMessage(content=text)
@@ -198,7 +199,11 @@ class Message(Data):
     # Keep this async method for backwards compatibility
     def get_file_content_dicts(self):
         content_dicts = []
-        files = get_file_paths(self.files)
+        try:
+            files = get_file_paths(self.files)
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error getting file paths: {e}")
+            return content_dicts
 
         for file in files:
             if isinstance(file, Image):
