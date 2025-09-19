@@ -151,24 +151,7 @@ The following tables list the environment variables supported by Langflow.
 
 ### Authentication and security
 
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_AUTO_LOGIN` | Boolean | True | See [Authentication variables](/api-keys-and-authentication#authentication-environment-variables). |
-| `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` | Boolean | False | See [Authentication variables](/api-keys-and-authentication#authentication-environment-variables). |
-| `LANGFLOW_SECRET_KEY` | String | Automated | See [Authentication variables](/api-keys-and-authentication#authentication-environment-variables). |
-| `LANGFLOW_SUPERUSER` | String | `langflow` | See [Authentication variables](/api-keys-and-authentication#authentication-environment-variables). |
-| `LANGFLOW_SUPERUSER_PASSWORD` | String | `langflow` | See [Authentication variables](/api-keys-and-authentication#authentication-environment-variables). |
-| `LANGFLOW_ENABLE_SUPERUSER_CLI` | Boolean | True | See [Authentication variables](/api-keys-and-authentication#authentication-environment-variables). |
-| `LANGFLOW_NEW_USER_IS_ACTIVE` | Boolean | False | See [Authentication variables](/api-keys-and-authentication#authentication-environment-variables). |
-| `LANGFLOW_REMOVE_API_KEYS` | Boolean | False | When `true`, automatically removes API keys and tokens from flow data before saving to the database. Fields that contain `api`, `key`, or `token` in their names AND are marked as password fields will have their values set to `null`. This prevents credentials from being stored in the database. |
-| `LANGFLOW_DISABLE_TRACK_APIKEY_USAGE` | Boolean | False | Whether to track API key usage. If true, disables tracking of API key usage (`total_uses` and `last_used_at`) to avoid database contention under high concurrency. |
-| `LANGFLOW_WEBHOOK_AUTH_ENABLE` | Boolean | False | Enable API key authentication for webhook endpoints. If false, webhooks run as flow owner without authentication. |
-| `LANGFLOW_CORS_ALLOW_CREDENTIALS` | Boolean | True | See [Authentication variables](/api-keys-and-authentication#authentication-environment-variables). |
-| `LANGFLOW_CORS_ALLOW_HEADERS` | List[String] or String | `*` | See [Authentication variables](/api-keys-and-authentication#authentication-environment-variables). |
-| `LANGFLOW_CORS_ALLOW_METHODS` | List[String] or String | `*` | See [Authentication variables](/api-keys-and-authentication#authentication-environment-variables). |
-| `LANGFLOW_CORS_ORIGINS` | String | `*` | See [Authentication variables](/api-keys-and-authentication#authentication-environment-variables). |
-
-For detailed information about authentication configuration, see [API keys and authentication](/api-keys-and-authentication).
+For information about authentication and security environment variables, see [API keys and authentication](/api-keys-and-authentication).
 
 ### Caching configuration
 
@@ -184,7 +167,7 @@ For detailed information about authentication configuration, see [API keys and a
 
 For detailed information about cache configuration, see [Memory management options](/memory#configure-cache-memory).
 
-### Database configuration
+### Database configuration {#database-configuration}
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
@@ -196,6 +179,7 @@ For detailed information about cache configuration, see [Memory management optio
 | `LANGFLOW_DB_MAX_OVERFLOW` | Integer | `30` | **DEPRECATED:** Use `LANGFLOW_DB_CONNECTION_SETTINGS` instead. The number of connections to allow that can be opened beyond the pool size. |
 | `LANGFLOW_SAVE_DB_IN_CONFIG_DIR` | Boolean | False | If false (default), the Langflow database is saved in the `langflow` root directory. This means the database isn't shared between different virtual environments, and the database is deleted when you uninstall Langflow. If true, the database is saved in the `LANGFLOW_CONFIG_DIR`. |
 | `LANGFLOW_USE_NOOP_DATABASE` | Boolean | False | If true, disables all database operations and uses a no-op session. Useful for testing. |
+| `LANGFLOW_DISABLE_TRACK_APIKEY_USAGE` | Boolean | False | Whether to track API key usage (`total_uses` and `last_used_at`) in the database. If true, API key usage tracking is disabled, which can help avoid database contention during periods of high concurrency. |
 
 For detailed information about database configuration, see [Memory management options](/memory).
 
@@ -212,9 +196,9 @@ For detailed information about database configuration, see [Memory management op
 | `LANGFLOW_STORAGE_TYPE` | String | `local` | Type of storage to use for file uploads and data. |
 | `LANGFLOW_MAX_TRANSACTIONS_TO_KEEP` | Integer | `3000` | Maximum number of transactions to keep in the database. |
 | `LANGFLOW_MAX_VERTEX_BUILDS_TO_KEEP` | Integer | `3000` | Maximum number of vertex builds to keep in the database. |
-| `LANGFLOW_MAX_VERTEX_BUILDS_PER_VERTEX` | Integer | `2` | Maximum number of builds to keep per vertex. Older builds will be deleted. |
+| `LANGFLOW_MAX_VERTEX_BUILDS_PER_VERTEX` | Integer | `2` | Maximum number of builds to keep per vertex. Older builds are deleted. |
 
-### Flow and project management
+### Flow and project management {#flow-and-project-management}
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
@@ -226,10 +210,11 @@ For detailed information about database configuration, see [Memory management op
 | `LANGFLOW_UPDATE_STARTER_PROJECTS` | Boolean | True | Whether to update templates with the latest component versions when initializing after an upgrade. |
 | `LANGFLOW_LAZY_LOAD_COMPONENTS` | Boolean | False | If true, Langflow only partially loads components at startup and fully loads them on demand. This significantly reduces startup time but may cause a slight delay when a component is first used. |
 | `LANGFLOW_EVENT_DELIVERY` | String | `streaming` | How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'. |
+| `LANGFLOW_REMOVE_API_KEYS` | Boolean | False | Set to true to automatically remove API keys and tokens from flow data before saving a flow to the database. If a field is marked as a password field _and_ it contains `api`, `key`, or `token` in its name, then the field's value is set to `null` before the flow is saved. This prevents credentials from being stored in the database. |
 
 ### Global variables and environment variables interaction
 
-For detailed information about how global and environment variables interact, see [Global variables](/configuration-global-variables).
+For detailed information about the relationship between Langflow global variables and environment variables, as well as environment variables that control handling of global variables, see [Global variables](/configuration-global-variables).
 
 ### Logging configuration {#logging}
 
@@ -262,8 +247,8 @@ For environment variables for specific monitoring service providers, see the Lan
 |----------|--------|---------|-------------|
 | `LANGFLOW_STORE` | Boolean | True | Whether to enable the Langflow Store features. |
 | `LANGFLOW_STORE_URL` | String | `https://api.langflow.store` | URL for the Langflow Store API. |
-| `LANGFLOW_DOWNLOAD_WEBHOOK_URL` | String | Not set | Webhook URL for download events. |
-| `LANGFLOW_LIKE_WEBHOOK_URL` | String | Not set | Webhook URL for like events. |
+| `LANGFLOW_DOWNLOAD_WEBHOOK_URL` | String | Not set | Webhook URL for Langflow store "download" events. |
+| `LANGFLOW_LIKE_WEBHOOK_URL` | String | Not set | Webhook URL for Langflow store "like" events. |
 | `LANGFLOW_DEV` | Boolean | False | Enable development mode. |
 | `LANGFLOW_DEACTIVATE_TRACING` | Boolean | False | Deactivate tracing functionality. |
 | `LANGFLOW_CELERY_ENABLED` | Boolean | False | Enable Celery for distributed task processing. |
