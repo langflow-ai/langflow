@@ -3,14 +3,14 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlmodel import SQLModel
-from sqlmodel.ext.asyncio.session import AsyncSession
-
 from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 from langflow.services.variable.service import DatabaseVariableService
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlmodel import SQLModel
+from sqlmodel.ext.asyncio.session import AsyncSession
+
 from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 
 

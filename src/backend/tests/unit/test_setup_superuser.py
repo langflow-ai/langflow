@@ -2,11 +2,11 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from sqlalchemy.exc import IntegrityError
-
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.user.model import User
 from langflow.services.utils import teardown_superuser
+from sqlalchemy.exc import IntegrityError
+
 from lfx.services.settings.constants import (
     DEFAULT_SUPERUSER,
     DEFAULT_SUPERUSER_PASSWORD,
