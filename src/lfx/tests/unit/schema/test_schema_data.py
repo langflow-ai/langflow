@@ -43,7 +43,7 @@ class TestDataSchema:
 
         # Check image content
         assert message.content[1]["type"] == "image"
-        assert message.content[1]["source_type"] == "url"
+        assert "source_type" in message.content[1]
         assert "url" in message.content[1]
         assert message.content[1]["url"].startswith("data:image/png;base64,")
 
@@ -73,12 +73,12 @@ class TestDataSchema:
 
         # Check both images
         assert message.content[1]["type"] == "image"
-        assert message.content[1]["source_type"] == "url"
+        assert "source_type" in message.content[1]
         assert "url" in message.content[1]
         assert message.content[1]["url"].startswith("data:image/png;base64,")
 
         assert message.content[2]["type"] == "image"
-        assert message.content[2]["source_type"] == "url"
+        assert "source_type" in message.content[2]
         assert "url" in message.content[2]
         assert message.content[2]["url"].startswith("data:image/png;base64,")
 

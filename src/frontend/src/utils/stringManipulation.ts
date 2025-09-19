@@ -94,9 +94,6 @@ function sanitizeMcpName(str: string, maxLength: number = 46): string {
   name = name.replace(/[-\s]+/g, "_"); // Replace spaces and hyphens with underscores
   name = name.replace(/_+/g, "_"); // Collapse multiple underscores
 
-  // Remove leading/trailing underscores
-  name = name.replace(/^_+|_+$/g, "");
-
   // Ensure it starts with a letter or underscore (not a number)
   if (name && /^\d/.test(name)) {
     name = `_${name}`;
