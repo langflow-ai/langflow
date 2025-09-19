@@ -24,6 +24,7 @@ class MCPToolsComponent(ComponentWithCache):
     _not_load_actions: bool = False
     _tool_cache: dict = {}
     _last_selected_server: str | None = None  # Cache for the last selected server
+    _refresh_pending: bool = False
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
@@ -118,7 +119,7 @@ class MCPToolsComponent(ComponentWithCache):
         else:
             return schema_inputs
 
-    async def update_tool_list(self, mcp_server_value=None):
+    async def update_tool_list(self, mcp_server_value=None, *, force_refresh: bool = False):
         # Accepts mcp_server_value as dict {name, config} or uses self.mcp_server
         mcp_server = mcp_server_value if mcp_server_value is not None else getattr(self, "mcp_server", None)
         server_name = None
@@ -132,16 +133,9 @@ class MCPToolsComponent(ComponentWithCache):
             self.tools = []
             return [], {"name": server_name, "config": server_config_from_value}
 
-        # Use shared cache if available
+        # Use shared cache if available (do not early-return; decide after comparing config/flags)
         servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
         cached = servers_cache.get(server_name) if isinstance(servers_cache, dict) else None
-
-        if cached is not None:
-            self.tools = cached["tools"]
-            self.tool_names = cached["tool_names"]
-            self._tool_cache = cached["tool_cache"]
-            server_config_from_value = cached["config"]
-            return self.tools, {"name": server_name, "config": server_config_from_value}
 
         try:
             try:
@@ -171,6 +165,15 @@ class MCPToolsComponent(ComponentWithCache):
             # If get_server returns empty but we have a config, use it
             if not server_config and server_config_from_value:
                 server_config = server_config_from_value
+
+            # If we have cache and not forcing refresh, and configs match, serve cache
+            if cached is not None and not force_refresh:
+                cached_config = cached.get("config")
+                if (server_config or {}) == (cached_config or {}):
+                    self.tools = cached["tools"]
+                    self.tool_names = cached["tool_names"]
+                    self._tool_cache = cached["tool_cache"]
+                    return self.tools, {"name": server_name, "config": cached_config}
 
             if not server_config:
                 self.tools = []
@@ -334,12 +337,16 @@ class MCPToolsComponent(ComponentWithCache):
                 if field_value:
                     self._not_load_actions = True
                 else:
+                    # Leaving tool mode, schedule a refresh for next tool fetch
+                    self._refresh_pending = True
                     build_config["tool"]["value"] = uuid.uuid4()
                     build_config["tool"]["options"] = []
                     build_config["tool"]["show"] = True
                     build_config["tool"]["placeholder"] = "Loading tools..."
             elif field_name == "tools_metadata":
                 self._not_load_actions = False
+                # Opening metadata should ensure the latest tools are fetched
+                self._refresh_pending = True
 
         except Exception as e:
             msg = f"Error in update_build_config: {e!s}"
@@ -505,7 +512,27 @@ class MCPToolsComponent(ComponentWithCache):
     async def _get_tools(self):
         """Get cached tools or update if necessary."""
         mcp_server = getattr(self, "mcp_server", None)
-        if not self._not_load_actions:
-            tools, _ = await self.update_tool_list(mcp_server)
-            return tools
-        return []
+        if self._not_load_actions:
+            return []
+        force = False
+        if getattr(self, "_refresh_pending", False):
+            force = True
+            self._refresh_pending = False
+        tools, _ = await self.update_tool_list(mcp_server, force_refresh=force)
+        return tools
+
+    def invalidate_tools_cache(self, server_name: str | None = None) -> None:
+        """Manually invalidate the cached tools for a given server (or current)."""
+        servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+        if isinstance(servers_cache, dict):
+            key = server_name
+            if key is None:
+                mcp_server = getattr(self, "mcp_server", None)
+                key = mcp_server.get("name") if isinstance(mcp_server, dict) else mcp_server
+            if key and key in servers_cache:
+                del servers_cache[key]
+                safe_cache_set(self._shared_component_cache, "servers", servers_cache)
+        # Reset local tool state
+        self.tools = []
+        self.tool_names = []
+        self._tool_cache = {}
