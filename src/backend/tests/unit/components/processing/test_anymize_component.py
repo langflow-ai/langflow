@@ -1,8 +1,8 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, Mock, mock_open, patch
-from pydantic import SecretStr
 
 import pytest
+from pydantic import SecretStr
 
 from lfx.components.processing.anymize import AnymizeComponent
 from lfx.schema import Message
