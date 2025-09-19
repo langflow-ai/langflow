@@ -245,7 +245,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
 
             async def delayed_init_mcp_servers():
-                await asyncio.sleep(3.0)
+                await asyncio.sleep(10.0)  # Increased delay to allow starter projects to be created
                 current_time = asyncio.get_event_loop().time()
                 await logger.adebug("Loading mcp servers for projects")
                 try:
@@ -253,7 +253,7 @@ def get_lifespan(*, fix_migration=False, version=None):
                     await logger.adebug(f"mcp servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
                 except Exception as e:  # noqa: BLE001
                     await logger.awarning(f"First MCP server initialization attempt failed: {e}")
-                    await asyncio.sleep(3.0)
+                    await asyncio.sleep(5.0)  # Increased retry delay
                     current_time = asyncio.get_event_loop().time()
                     await logger.adebug("Retrying mcp servers initialization")
                     try:
