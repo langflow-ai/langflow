@@ -85,11 +85,27 @@ async def list_available_flows(host: str, access_token: str) -> list[tuple[str, 
 
     # Known starter project names and descriptions based on the source code
     known_projects = [
-        ("Basic Prompting", "Basic Prompting", "A simple chat interface with OpenAI that answers like a pirate"),
-        ("Blog Writer", "Blog Writer", "Generate blog posts using web content as reference material"),
-        ("Document Q&A", "Document Q&A", "Question and answer system for document content"),
-        ("Memory Chatbot", "Memory Chatbot", "Chatbot with conversation memory using context"),
-        ("Vector Store RAG", "Vector Store RAG", "Retrieval-Augmented Generation with vector storage"),
+        (
+            "Basic Prompting",
+            "Basic Prompting",
+            "A simple chat interface with OpenAI that answers like a pirate ✅ Great for load testing",
+        ),
+        (
+            "Blog Writer",
+            "Blog Writer",
+            "Generate blog posts using web content as reference material ✅ Good for load testing",
+        ),
+        (
+            "Document Q&A",
+            "Document Q&A",
+            "Question and answer system for document content ⚠️  Requires file uploads - not ideal for load testing",
+        ),
+        ("Memory Chatbot", "Memory Chatbot", "Chatbot with conversation memory using context ✅ Good for load testing"),
+        (
+            "Vector Store RAG",
+            "Vector Store RAG",
+            "Retrieval-Augmented Generation with vector storage ⚠️  May require setup - test first",
+        ),
     ]
 
     # Return the known projects if we have the expected number
@@ -309,10 +325,11 @@ async def setup_langflow_environment(host: str, flow_name: str | None = None, in
             if "id" in flow_upload_data:
                 del flow_upload_data["id"]
 
-            # Ensure endpoint_name is unique
-            flow_upload_data["endpoint_name"] = (
-                f"loadtest_{int(time.time())}_{setup_state['flow_name'].lower().replace(' ', '_')}"
-            )
+            # Ensure endpoint_name is unique and valid (only letters, numbers, hyphens, underscores)
+            import re
+
+            sanitized_name = re.sub(r"[^a-zA-Z0-9_-]", "_", setup_state["flow_name"].lower())
+            flow_upload_data["endpoint_name"] = f"loadtest_{int(time.time())}_{sanitized_name}"
 
             flow_response = await client.post("/api/v1/flows/", json=flow_upload_data, headers=headers)
 
