@@ -51,6 +51,21 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 Highlights of this release include the following changes.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
 
+### Breaking changes
+
+- Authentication enforced for Langflow API requests by default
+
+    In Langflow version 1.6, `LANGFLOW_AUTO_LOGIN=True` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False` by default.
+    This enforces authentication for Langflow API requests, the Langflow CLI, and the visual editor.
+
+    **This is a breaking change from 1.5 where both of these environment variables were true by default, bypassing all authentication.**
+
+    For temporary backwards compatibility, you can revert to the earlier unauthenticated behavior by setting both variables to true.
+    However, a future release will set `LANGFLOW_AUTO_LOGIN=False` and remove `LANGFLOW_SKIP_AUTH_AUTO_LOGIN`.
+    At that point, Langflow will strictly enforce API key authentication for API requests, and you can manually disable authentication for the CLI and visual editor by setting `LANGFLOW_AUTO_LOGIN=True`.
+
+    For more information, see [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login).
+
 ### New features and enhancements
 
 - OpenAI Responses API compatibility
@@ -87,17 +102,6 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - The **Local DB** component is now in legacy status.
 Replace this component with the [**Chroma DB** component](/bundles-chroma).
 
-### Breaking changes
-
-- Authentication behavior changes for `LANGFLOW_AUTO_LOGIN` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN`
-
-    In Langflow version 1.6, `LANGFLOW_AUTO_LOGIN=True` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False` is the default behavior. This is a **breaking change** introduced in v1.6.
-    API Keys are now required to authenticate requests when `LANGFLOW_AUTO_LOGIN=True` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False`.
-    You may revert to prior behavior by setting `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=True`.
-
-    The only exceptions are some MCP endpoints that use the authentication settings from your Langflow projects' [MCP servers](/mcp-server).
-    For more information, see [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login).
-
 ## 1.5.0
 
 Highlights of this release include the following changes.
@@ -105,10 +109,13 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
-- Authentication changes
+- Langflow API requests can require authentication
 
-    To enhance security and ensure proper authentication for automatic login features, most API endpoints now require authentication with a Langflow API key, regardless of the `AUTO_LOGIN` setting.
-    The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
+    To enhance security and ensure proper authentication for automatic login features, Langflow API endpoints now require authentication with a Langflow API key, even when `LANGFLOW_AUTO_LOGIN=True`.
+    This change will be enforced in a future release.
+    For temporary backwards compatibility, this release adds the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` environment variable.
+    The default value is true, which disables API authentication enforcement.
+    To enforce API authentication, set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False`.
     For more information, see [API keys and authentication](/api-keys-and-authentication).
 
 - Centralized **Language Model** and **Embedding Model** components
