@@ -665,35 +665,62 @@ load_test_list_flows: ## List available starter project flows
 	@echo "$(YELLOW)Listing available starter project flows$(NC)"
 	@cd src/backend/tests/locust && uv run python langflow_setup_test.py --list-flows
 
-load_test_run: ## Run load test with saved credentials (requires setup first)
+load_test_run: ## Run load test (automatically sets up if needed). Use FLOW_NAME="Flow Name" to specify flow
 	@echo "$(YELLOW)Running load test with enhanced error logging$(NC)"
 	@if [ ! -f "src/backend/tests/locust/load_test_creds.json" ]; then \
-		echo "$(RED)Error: No credentials found. Run 'make load_test_setup_basic' first$(NC)"; \
-		exit 1; \
+		echo "$(BLUE)No credentials found. Running automatic setup...$(NC)"; \
+		if [ -z "$(FLOW_NAME)" ]; then \
+			echo "$(CYAN)Available flows:$(NC)"; \
+			cd src/backend/tests/locust && uv run python langflow_setup_test.py --list-flows; \
+			echo "$(RED)Please specify a flow: make load_test_run FLOW_NAME=\"Basic Prompting\"$(NC)"; \
+			exit 1; \
+		else \
+			echo "$(BLUE)Setting up with flow: $(FLOW_NAME)$(NC)"; \
+			cd src/backend/tests/locust && uv run python langflow_setup_test.py --flow "$(FLOW_NAME)" --save-credentials load_test_creds.json; \
+		fi \
 	fi
 	@cd src/backend/tests/locust && \
 	export API_KEY=$$(python -c "import json; print(json.load(open('load_test_creds.json'))['api_key'])") && \
 	export FLOW_ID=$$(python -c "import json; print(json.load(open('load_test_creds.json'))['flow_id'])") && \
 	uv run python langflow_run_load_test.py --headless --users 20 --duration 120 --no-start-langflow --html load_test_report.html --csv load_test_results
 
-load_test_langflow_quick: ## Quick Langflow load test (10 users, 30s) with HTML report
+load_test_langflow_quick: ## Quick Langflow load test (10 users, 30s) with HTML report (automatically sets up if needed). Use FLOW_NAME="Flow Name" to specify flow
 	@echo "$(YELLOW)Running quick Langflow load test with HTML report$(NC)"
 	@if [ ! -f "src/backend/tests/locust/load_test_creds.json" ]; then \
-		echo "$(RED)Error: No credentials found. Run 'make load_test_setup_basic' first$(NC)"; \
-		exit 1; \
+		echo "$(BLUE)No credentials found. Running automatic setup...$(NC)"; \
+		if [ -z "$(FLOW_NAME)" ]; then \
+			echo "$(CYAN)Available flows:$(NC)"; \
+			cd src/backend/tests/locust && uv run python langflow_setup_test.py --list-flows; \
+			echo "$(RED)Please specify a flow: make load_test_langflow_quick FLOW_NAME=\"Basic Prompting\"$(NC)"; \
+			exit 1; \
+		else \
+			echo "$(BLUE)Setting up with flow: $(FLOW_NAME)$(NC)"; \
+			cd src/backend/tests/locust && uv run python langflow_setup_test.py --flow "$(FLOW_NAME)" --save-credentials load_test_creds.json; \
+		fi \
 	fi
 	@cd src/backend/tests/locust && \
 	export API_KEY=$$(python -c "import json; print(json.load(open('load_test_creds.json'))['api_key'])") && \
 	export FLOW_ID=$$(python -c "import json; print(json.load(open('load_test_creds.json'))['flow_id'])") && \
 	uv run python langflow_run_load_test.py --headless --users 10 --duration 30 --no-start-langflow --html quick_test_report.html
 
-load_test_stress: ## Stress test (100 users, 5 minutes) with comprehensive reporting
+load_test_stress: ## Stress test (100 users, 5 minutes) with comprehensive reporting (automatically sets up if needed). Use FLOW_NAME="Flow Name" to specify flow
 	@echo "$(YELLOW)Running stress test with comprehensive reporting$(NC)"
 	@if [ ! -f "src/backend/tests/locust/load_test_creds.json" ]; then \
-		echo "$(RED)Error: No credentials found. Run 'make load_test_setup_basic' first$(NC)"; \
-		exit 1; \
+		echo "$(BLUE)No credentials found. Running automatic setup...$(NC)"; \
+		if [ -z "$(FLOW_NAME)" ]; then \
+			echo "$(CYAN)Available flows:$(NC)"; \
+			cd src/backend/tests/locust && uv run python langflow_setup_test.py --list-flows; \
+			echo "$(RED)Please specify a flow: make load_test_stress FLOW_NAME=\"Basic Prompting\"$(NC)"; \
+			exit 1; \
+		else \
+			echo "$(BLUE)Setting up with flow: $(FLOW_NAME)$(NC)"; \
+			cd src/backend/tests/locust && uv run python langflow_setup_test.py --flow "$(FLOW_NAME)" --save-credentials load_test_creds.json; \
+		fi \
 	fi
-	@cd src/backend/tests/locust && uv run python langflow_run_load_test.py --headless --users 100 --spawn-rate 5 --duration 300 --no-start-langflow --html stress_test_report.html --csv stress_test_results --shape ramp100
+	@cd src/backend/tests/locust && \
+	export API_KEY=$$(python -c "import json; print(json.load(open('load_test_creds.json'))['api_key'])") && \
+	export FLOW_ID=$$(python -c "import json; print(json.load(open('load_test_creds.json'))['flow_id'])") && \
+	uv run python langflow_run_load_test.py --headless --users 100 --spawn-rate 5 --duration 300 --no-start-langflow --html stress_test_report.html --csv stress_test_results --shape ramp100
 
 load_test_example: ## Run complete example workflow (setup + test + reports)
 	@echo "$(YELLOW)Running complete load test example workflow$(NC)"
