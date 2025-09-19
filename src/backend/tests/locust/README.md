@@ -19,9 +19,11 @@ This directory contains comprehensive load testing tools for both Langflow and L
 ## Features
 
 - **Automatic Environment Setup**: Creates users, API keys, and test flows automatically
+- **Pre-flight Testing**: Validates connectivity and flow execution before load testing
 - **Multiple User Types**: Different user behaviors to simulate realistic load patterns
 - **Load Test Shapes**: Predefined load patterns for different testing scenarios
 - **Comprehensive Metrics**: Performance grading and detailed reporting
+- **Enhanced Error Logging**: Detailed connection error analysis and Langflow log capture
 - **Easy Setup**: One-command execution with automatic Langflow startup
 
 ## Quick Start
@@ -29,7 +31,32 @@ This directory contains comprehensive load testing tools for both Langflow and L
 ### Prerequisites
 
 ```bash
+# Using uv (recommended)
+uv add locust httpx
+
+# Or using pip
 pip install locust httpx
+```
+
+### Using Makefile Commands (Recommended)
+
+The easiest way to use the load testing system:
+
+```bash
+# 1. Setup test environment (interactive flow selection)
+make load_test_setup
+
+# 2. Run a quick test
+make load_test_langflow_quick
+
+# 3. Run a full load test
+make load_test_run
+
+# 4. Clean up when done
+make load_test_clean
+
+# See all available commands
+make load_test_help
 ```
 
 ## 🌐 **Remote Instance Testing**
@@ -39,16 +66,16 @@ For testing against a remote Langflow instance:
 ### Setup for Remote Testing
 
 ```bash
-# 1. Setup against your remote instance
-python langflow_setup_test.py --host https://your-langflow-instance.com --interactive
+# Using Makefile (recommended)
+make load_test_remote_setup LANGFLOW_HOST="https://your-remote-instance.com"
+make load_test_remote_run LANGFLOW_HOST="https://your-remote-instance.com"
 
-# 2. Run load test against remote instance (no local server startup)
-python langflow_run_load_test.py --host https://your-langflow-instance.com --no-start-langflow --headless --users 50 --duration 300
+# Or using Python scripts directly
+python langflow_setup_test.py --host https://your-remote-instance.com --interactive
+python langflow_run_load_test.py --host https://your-remote-instance.com --no-start-langflow --headless --users 10 --duration 120
 
-# 3. Use environment variables for automation
-export LANGFLOW_HOST="https://your-langflow-instance.com"
-python langflow_setup_test.py --flow "Basic Prompting" --save-credentials remote_test_creds.json
-python langflow_run_load_test.py --no-start-langflow --headless --users 100 --duration 600 --html remote_load_test.html
+# Test remote instance before setup (optional)
+python diagnose_remote.py --host https://your-remote-instance.com --load-test 5
 ```
 
 ### Important Notes for Remote Testing
@@ -81,7 +108,7 @@ python langflow_setup_test.py --list-flows
 
 This will:
 
-- Create a test user account
+- Use default Langflow credentials (langflow/langflow)
 - Generate API keys
 - Upload a real starter project flow
 - Provide credentials for load testing
@@ -92,8 +119,8 @@ This will:
 # Interactive mode with web UI
 python langflow_run_load_test.py
 
-# Headless mode with 25 users for 2 minutes
-python langflow_run_load_test.py --headless --users 25 --duration 120
+# Headless mode with 20 users for 2 minutes
+python langflow_run_load_test.py --headless --users 20 --duration 120
 
 # Use predefined load shape
 python langflow_run_load_test.py --shape ramp100 --headless --users 100 --duration 180
@@ -158,11 +185,10 @@ Use with: `--shape ramp100` or `--shape stepramp`
 
 1. **Health Check**: Verify Langflow is running
 2. **Flow Selection**: Choose from 40+ real starter project flows
-3. **User Creation**: Create a test user account
-4. **Authentication**: Login and get JWT access tokens
-5. **API Key Generation**: Create API key for load testing
-6. **Flow Upload**: Upload the selected starter project flow
-7. **Credential Export**: Provide environment variables for testing
+3. **Authentication**: Login with default credentials (langflow/langflow)
+4. **API Key Generation**: Create API key for load testing
+5. **Flow Upload**: Upload the selected starter project flow
+6. **Credential Export**: Provide environment variables for testing
 
 ### Real Starter Project Flows
 
@@ -214,9 +240,10 @@ The test tracks:
 ### Common Issues
 
 1. **Setup Failed**: Ensure Langflow is accessible and not in read-only mode
-2. **Authentication Errors**: Check if user creation is enabled in Langflow settings
+2. **Authentication Errors**: Verify default credentials (langflow/langflow) are enabled
 3. **Flow Creation Failed**: Verify the user has permission to create flows
 4. **Connection Errors**: Check network connectivity and firewall settings
+5. **Status Code 0 Errors**: Usually indicates connection overload - reduce user count or spawn rate
 
 ### Debug Mode
 
@@ -226,6 +253,7 @@ For debugging, you can:
 2. Check the Langflow logs for detailed error information
 3. Use the web UI to verify the test flow was created correctly
 4. Test API endpoints manually with curl or httpx
+5. Use the diagnostic tool for remote instances: `python diagnose_remote.py --host <url> --load-test 10`
 
 ### Manual Setup
 
@@ -240,7 +268,7 @@ If automatic setup fails, you can set up manually:
 ```bash
 export API_KEY="your-api-key"
 export FLOW_ID="your-flow-id"
-locust -f locustfile.py --host http://localhost:7860
+locust -f langflow_locustfile.py --host http://localhost:7860
 ```
 
 ## Contributing
