@@ -280,6 +280,10 @@ class Settings(BaseSettings):
     # Add projects to MCP servers automatically on creation
     add_projects_to_mcp_servers: bool = True
     """If set to True, newly created projects will be added to the user's MCP servers config automatically."""
+    # Default authentication type for auto-added MCP servers
+    default_mcp_auth_type: str = "apikey"
+    """Default authentication type for auto-added MCP servers. Options: 'none', 'apikey', 'oauth'.
+    If set to 'oauth', a NotImplementedError will be raised."""
     # MCP Composer
     mcp_composer_enabled: bool = True
     """If set to False, Langflow will not start the MCP Composer service."""

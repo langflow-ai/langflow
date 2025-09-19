@@ -97,15 +97,20 @@ async def create_project(
         await session.commit()
         await session.refresh(new_project)
 
-        # Auto-register MCP server for this project with API key auth
+        # Auto-register MCP server for this project with configured default auth
         if get_settings_service().settings.add_projects_to_mcp_servers:
             try:
-                # Create API key
-                api_key_name = f"MCP Project {new_project.name} - default"
-                unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), current_user.id)
+                # Get default MCP auth type from settings
+                default_auth_type = settings_service.settings.default_mcp_auth_type
 
-                # Set folder auth to API key mode (encrypted at rest)
-                new_project.auth_settings = encrypt_auth_settings({"auth_type": "apikey"})
+                # Check if OAuth is selected and raise NotImplementedError
+                if default_auth_type == "oauth":
+                    msg = "OAuth as default MCP authentication type is not yet implemented"
+                    await logger.aerror(msg)
+                    raise NotImplementedError(msg)
+
+                # Set folder auth to configured default mode (encrypted at rest)
+                new_project.auth_settings = encrypt_auth_settings({"auth_type": default_auth_type})
                 session.add(new_project)
                 await session.commit()
                 await session.refresh(new_project)
@@ -113,15 +118,28 @@ async def create_project(
                 # Build SSE URL
                 sse_url = await get_project_sse_url(new_project.id)
 
-                # Prepare server config
-                command = "uvx"
-                args = [
-                    "mcp-proxy",
-                    "--headers",
-                    "x-api-key",
-                    unmasked_api_key.api_key,
-                    sse_url,
-                ]
+                # Prepare server config based on auth type
+                if default_auth_type == "apikey":
+                    # Create API key for API key authentication
+                    api_key_name = f"MCP Project {new_project.name} - default"
+                    unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), current_user.id)
+
+                    command = "uvx"
+                    args = [
+                        "mcp-proxy",
+                        "--headers",
+                        "x-api-key",
+                        unmasked_api_key.api_key,
+                        sse_url,
+                    ]
+                else:  # default_auth_type == "none"
+                    # No authentication - direct connection
+                    command = "uvx"
+                    args = [
+                        "mcp-proxy",
+                        sse_url,
+                    ]
+
                 server_config = {"command": command, "args": args}
 
                 # Determine server name and register in user's _mcp_servers.json
@@ -134,6 +152,10 @@ async def create_project(
                     get_storage_service(),
                     get_settings_service(),
                 )
+            except NotImplementedError:
+                msg = "OAuth as default MCP authentication type is not yet implemented"
+                await logger.aerror(msg)
+                raise
             except Exception as e:  # noqa: BLE001
                 await logger.aexception(f"Failed to auto-register MCP server for project {new_project.id}: {e}")
 
@@ -277,7 +299,58 @@ async def update_project(
 
         # Handle other updates
         if project.name and project.name != existing_project.name:
+            old_project_name = existing_project.name
             existing_project.name = project.name
+
+            # Update corresponding MCP server name if auto-add is enabled
+            if get_settings_service().settings.add_projects_to_mcp_servers:
+                try:
+                    # Generate old and new server names
+                    old_server_name = f"lf-{sanitize_mcp_name(old_project_name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+                    new_server_name = f"lf-{sanitize_mcp_name(project.name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+
+                    # Only proceed if the server names would be different
+                    if old_server_name != new_server_name:
+                        from langflow.api.v2.mcp import get_server_list
+
+                        # Check if the old MCP server exists
+                        try:
+                            server_list = await get_server_list(
+                                current_user, session, get_storage_service(), get_settings_service()
+                            )
+                            if old_server_name in server_list.get("mcpServers", {}):
+                                # Get the existing server config
+                                existing_server_config = server_list["mcpServers"][old_server_name]
+
+                                # Remove the old server and add with new name
+                                await update_server(
+                                    old_server_name,
+                                    {},  # Empty config for deletion
+                                    current_user,
+                                    session,
+                                    get_storage_service(),
+                                    get_settings_service(),
+                                    delete=True,
+                                )
+
+                                # Add server with new name and existing config
+                                await update_server(
+                                    new_server_name,
+                                    existing_server_config,
+                                    current_user,
+                                    session,
+                                    get_storage_service(),
+                                    get_settings_service(),
+                                )
+                                msg = f"Updated MCP server name from {old_server_name} to {new_server_name}"
+                                await logger.adebug(msg)
+                        except Exception as e:  # noqa: BLE001
+                            # Log but don't fail the project update if MCP server update fails
+                            await logger.awarning(f"Failed to update MCP server name for project rename: {e}")
+
+                except Exception as e:  # noqa: BLE001
+                    # Log but don't fail the project update if MCP server handling fails
+                    await logger.awarning(f"Failed to handle MCP server name update for project rename: {e}")
 
         if project.description is not None:
             existing_project.description = project.description
@@ -372,6 +445,41 @@ async def delete_project(
         except Exception as e:  # noqa: BLE001
             # Log but don't fail the deletion if MCP Composer cleanup fails
             await logger.aerror(f"Failed to stop MCP Composer for deleted project {project_id}: {e}")
+
+    # Delete corresponding MCP server if auto-add was enabled
+    if get_settings_service().settings.add_projects_to_mcp_servers:
+        try:
+            # Generate server name that would have been used for this project
+            server_name = f"lf-{sanitize_mcp_name(project.name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+
+            from langflow.api.v2.mcp import get_server_list
+
+            # Check if the MCP server exists
+            try:
+                server_list = await get_server_list(
+                    current_user, session, get_storage_service(), get_settings_service()
+                )
+                if server_name in server_list.get("mcpServers", {}):
+                    # Delete the MCP server
+                    await update_server(
+                        server_name,
+                        {},  # Empty config for deletion
+                        current_user,
+                        session,
+                        get_storage_service(),
+                        get_settings_service(),
+                        delete=True,
+                    )
+                    await logger.adebug(
+                        f"Deleted MCP server {server_name} for deleted project {project.name} ({project_id})"
+                    )
+            except Exception as e:  # noqa: BLE001
+                # Log but don't fail the deletion if MCP server cleanup fails
+                await logger.awarning(f"Failed to delete MCP server for deleted project {project_id}: {e}")
+
+        except Exception as e:  # noqa: BLE001
+            # Log but don't fail the project deletion if MCP server handling fails
+            await logger.awarning(f"Failed to handle MCP server cleanup for deleted project {project_id}: {e}")
 
     try:
         await session.delete(project)
