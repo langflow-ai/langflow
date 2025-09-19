@@ -58,6 +58,9 @@ python langflow_run_load_test.py --no-start-langflow --headless --users 100 --du
 - **Consider network latency** in your performance expectations
 - **Monitor both client and server resources** during testing
 - **Use realistic user counts** based on your remote instance specs
+- **Start with fewer users** (10 instead of 20) to avoid overwhelming remote instances
+- **Use slower spawn rates** (1 user/sec) for more realistic load patterns
+- **Status code 0 errors** indicate connection failures, usually from overloading the remote instance
 
 ### Two-Step Process
 
