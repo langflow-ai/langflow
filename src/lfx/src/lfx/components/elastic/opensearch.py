@@ -198,7 +198,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         ),
         SecretStrInput(
             name="password",
-            display_name="Password",
+            display_name="OpenSearch Password",
             value="admin",
             show=False,
         ),

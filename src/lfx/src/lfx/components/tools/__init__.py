@@ -9,8 +9,6 @@ from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from .calculator import CalculatorToolComponent
-    from .google_search_api import GoogleSearchAPIComponent
-    from .google_serper_api import GoogleSerperAPIComponent
     from .python_code_structured_tool import PythonCodeStructuredTool
     from .python_repl import PythonREPLToolComponent
     from .search_api import SearchAPIComponent
@@ -23,8 +21,6 @@ if TYPE_CHECKING:
 
 _dynamic_imports = {
     "CalculatorToolComponent": "calculator",
-    "GoogleSearchAPIComponent": "google_search_api",
-    "GoogleSerperAPIComponent": "google_serper_api",
     "PythonCodeStructuredTool": "python_code_structured_tool",
     "PythonREPLToolComponent": "python_repl",
     "SearchAPIComponent": "search_api",
@@ -38,8 +34,6 @@ _dynamic_imports = {
 
 __all__ = [
     "CalculatorToolComponent",
-    "GoogleSearchAPIComponent",
-    "GoogleSerperAPIComponent",
     "PythonCodeStructuredTool",
     "PythonREPLToolComponent",
     "SearXNGToolComponent",
