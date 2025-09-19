@@ -28,7 +28,7 @@ from langflow.api import health_check_router, log_router, router
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
-    initialize_super_user_if_needed,
+    initialize_auto_login_default_superuser,
     load_bundles_from_urls,
     load_flows_from_directory,
     sync_flows_from_fs,
@@ -146,7 +146,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Initializing super user")
-            await initialize_super_user_if_needed()
+            await initialize_auto_login_default_superuser()
             await logger.adebug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
