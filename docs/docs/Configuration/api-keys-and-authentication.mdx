@@ -24,7 +24,10 @@ There are three types of credentials that you use in Langflow:
 ## Langflow API keys {#langflow-api-keys}
 
 You can use Langflow API keys to interact with Langflow programmatically.
-By default, Langflow API endpoints require authentication with a Langflow API key.
+
+By default, most Langflow API endpoints, such as `/v1/run/$FLOW_ID`, require authentication with a Langflow API key.
+To require API key authentication for flow webhook endpoints, use the [`LANGFLOW_WEBHOOK_AUTH_ENABLE`](/webhooks#require-authentication-for-webhooks) environment variable.
+To configure authentication for Langflow MCP servers, see [Use Langflow as an MCP server](/mcp-server).
 
 ### Langflow API key permissions
 
@@ -103,11 +106,12 @@ curl -X POST \
 
 For more information about forming Langflow API requests, see [Get started with the Langflow API](/api-reference-api-examples) and [Trigger flows with the Langflow API](/concepts-publish).
 
-:::tip
-* Tracking of API key usage is controlled by the [`LANGFLOW_DISABLE_TRACK_APIKEY_USAGE`](/environment-variables#database-configuration) environment variable.
+### Track API key usage
 
-* To require API key authentication for webhook endpoints, use the [`LANGFLOW_WEBHOOK_AUTH_ENABLE`](/webhooks#require-authentication-for-webhooks) environment variable.
-:::
+By default, Langflow tracks API key usage through `total_uses` and `last_used_at` records in your [Langflow database](/memory).
+
+To disable API key tracking, set `LANGFLOW_DISABLE_TRACK_APIKEY_USAGE=True` in your [Langflow environment variables](/environment-variables).
+This can help avoid database contention during periods of high concurrency.
 
 ### Revoke an API key
 
@@ -119,13 +123,12 @@ To revoke and delete an API key, do the following:
 
 This action immediately invalidates the key and prevents it from being used again.
 
-## Component API keys
+## Component API keys {#component-api-keys}
 
 Component API keys authorize access to external services that are called by components in your flows, such as model providers, databases, or third-party APIs.
 These aren't Langflow API keys or general application credentials.
 
-In Langflow, you can store component API keys in global variables in your **Settings** or import them from your Langflow `.env` file.
-When creating global variables, use the **Credential** type for secure handling of sensitive information.
+In Langflow, you can store component API keys in global variables in your **Settings** or import them from your runtime environment.
 For more information, see [Global variables](/configuration-global-variables).
 
 You create and manage component API keys within the service provider's platform.
@@ -133,8 +136,8 @@ Langflow only stores the encrypted key value or a secure reference to a key stor
 This means that deleting a global variable from Langflow doesn't delete or invalidate the actual API key in the service provider's system.
 You must delete or rotate component API keys directly using the service provider's interface or API.
 
-To omit API keys and tokens from flow data in your Langflow database, set `LANGFLOW_REMOVE_API_KEYS=True`.
-For more information, see [Flow and project management environment variables](/environment-variables#flow-and-project-management).
+For added security, you can set `LANGFLOW_REMOVE_API_KEYS=True` to omit API keys and tokens from flow data in your [Langflow database](/memory).
+Additionally, when [exporting flows](/concepts-flows-import), you can choose to omit API keys from the exported flow JSON.
 
 ## Authentication environment variables
 
