@@ -671,7 +671,10 @@ load_test_run: ## Run load test with saved credentials (requires setup first)
 		echo "$(RED)Error: No credentials found. Run 'make load_test_setup_basic' first$(NC)"; \
 		exit 1; \
 	fi
-	@cd src/backend/tests/locust && uv run python langflow_run_load_test.py --headless --users 25 --duration 120 --no-start-langflow --html load_test_report.html --csv load_test_results
+	@cd src/backend/tests/locust && \
+	export API_KEY=$$(python -c "import json; print(json.load(open('load_test_creds.json'))['api_key'])") && \
+	export FLOW_ID=$$(python -c "import json; print(json.load(open('load_test_creds.json'))['flow_id'])") && \
+	uv run python langflow_run_load_test.py --headless --users 20 --duration 120 --no-start-langflow --html load_test_report.html --csv load_test_results
 
 load_test_langflow_quick: ## Quick Langflow load test (10 users, 30s) with HTML report
 	@echo "$(YELLOW)Running quick Langflow load test with HTML report$(NC)"
@@ -679,7 +682,10 @@ load_test_langflow_quick: ## Quick Langflow load test (10 users, 30s) with HTML 
 		echo "$(RED)Error: No credentials found. Run 'make load_test_setup_basic' first$(NC)"; \
 		exit 1; \
 	fi
-	@cd src/backend/tests/locust && uv run python langflow_run_load_test.py --headless --users 10 --duration 30 --no-start-langflow --html quick_test_report.html
+	@cd src/backend/tests/locust && \
+	export API_KEY=$$(python -c "import json; print(json.load(open('load_test_creds.json'))['api_key'])") && \
+	export FLOW_ID=$$(python -c "import json; print(json.load(open('load_test_creds.json'))['flow_id'])") && \
+	uv run python langflow_run_load_test.py --headless --users 10 --duration 30 --no-start-langflow --html quick_test_report.html
 
 load_test_stress: ## Stress test (100 users, 5 minutes) with comprehensive reporting
 	@echo "$(YELLOW)Running stress test with comprehensive reporting$(NC)"
@@ -720,7 +726,7 @@ load_test_remote_run: ## Run load test against remote instance (requires prior s
 	@cd src/backend/tests/locust && \
 	export API_KEY=$$(python -c "import json; print(json.load(open('remote_test_creds.json'))['api_key'])") && \
 	export FLOW_ID=$$(python -c "import json; print(json.load(open('remote_test_creds.json'))['flow_id'])") && \
-	uv run python langflow_run_load_test.py --host $(LANGFLOW_HOST) --no-start-langflow --headless --users 25 --duration 120 --html remote_test_report.html
+	uv run python langflow_run_load_test.py --host $(LANGFLOW_HOST) --no-start-langflow --headless --users 10 --spawn-rate 1 --duration 120 --html remote_test_report.html
 
 load_test_help: ## Show detailed load testing help
 	@echo "$(GREEN)Langflow Enhanced Load Testing System$(NC)"
