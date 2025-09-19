@@ -1252,6 +1252,12 @@ async def auto_configure_starter_projects_mcp(session):
     if not settings_service.settings.add_projects_to_mcp_servers:
         await logger.adebug("Auto-add MCP servers disabled, skipping starter project MCP configuration")
         return
+    await logger.adebug(
+        f"Auto-configure settings: add_projects_to_mcp_servers="
+        f"{settings_service.settings.add_projects_to_mcp_servers}, "
+        f"create_starter_projects={settings_service.settings.create_starter_projects}, "
+        f"update_starter_projects={settings_service.settings.update_starter_projects}"
+    )
 
     try:
         # Get all users in the system
@@ -1287,10 +1293,17 @@ async def auto_configure_starter_projects_mcp(session):
                     )
                 ).first()
                 if not user_starter_folder:
-                    await logger.adebug(f"No starter projects folder found for user {user.username}, skipping")
+                    await logger.adebug(
+                        f"No starter projects folder ('{DEFAULT_FOLDER_NAME}') found for user {user.username}, skipping"
+                    )
+                    # Log what folders this user does have for debugging
+                    await logger.adebug(f"User {user.username} available folders: {folder_names}")
                     continue
 
-                await logger.adebug(f"Found starter folder for {user.username}: ID={user_starter_folder.id}")
+                await logger.adebug(
+                    f"Found starter folder '{user_starter_folder.name}' for {user.username}: "
+                    f"ID={user_starter_folder.id}"
+                )
 
                 # Configure MCP settings for flows in THIS USER'S starter folder
                 flows_query = select(Flow).where(
