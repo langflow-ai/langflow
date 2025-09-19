@@ -189,6 +189,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   const {
     setHandleDragging,
     setFilterType,
+    setFilterComponent,
     handleDragging,
     filterType,
     onConnect,
@@ -197,6 +198,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       (state) => ({
         setHandleDragging: state.setHandleDragging,
         setFilterType: state.setFilterType,
+        setFilterComponent: state.setFilterComponent,
         handleDragging: state.handleDragging,
         filterType: state.filterType,
         onConnect: state.onConnect,
@@ -272,7 +274,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       (edge) => edge.target === nodeId && edge.targetHandle === myId,
     );
     const outputType = connectedEdge?.data?.sourceHandle?.output_types?.[0];
-    const connectedColor = outputType ? nodeColorsName[outputType] : "gray";
+    const connectedColor = (outputType && nodeColorsName[outputType]) || "gray";
 
     const isNullHandle =
       filterPresent && !(openHandle || ownDraggingHandle || ownFilterHandle);
@@ -365,10 +367,12 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     const nodes = useFlowStore.getState().nodes;
     setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
     setFilterType(currentFilter);
+    setFilterComponent("");
     if (filterOpenHandle && filterType) {
       onConnect(getConnection(filterType));
       setFilterType(undefined);
       setFilterEdge([]);
+      setFilterComponent("");
     }
   }, [
     myData,
@@ -376,6 +380,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     left,
     setFilterEdge,
     setFilterType,
+    setFilterComponent,
     currentFilter,
     filterOpenHandle,
     filterType,

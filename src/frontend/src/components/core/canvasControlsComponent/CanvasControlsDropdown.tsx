@@ -43,9 +43,7 @@ const CanvasControlsDropdown = () => {
           break;
         case KEYBOARD_SHORTCUTS.ZOOM_OUT.code:
           event.preventDefault();
-          if (minZoomReached || zoom <= 0.6) {
-            zoomTo(1);
-          } else {
+          if (!minZoomReached) {
             zoomOut();
           }
           break;
@@ -62,7 +60,7 @@ const CanvasControlsDropdown = () => {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [zoomIn, zoomOut, fitView, zoomTo, maxZoomReached, minZoomReached, zoom]);
+  }, [zoomIn, zoomOut, fitView, zoomTo, maxZoomReached, minZoomReached]);
 
   const handleZoomIn = useCallback(() => {
     zoomIn();
@@ -91,13 +89,13 @@ const CanvasControlsDropdown = () => {
           title="Canvas Controls"
         >
           <div className="flex items-center justify-center ">
-            <div className="text-sm text-primary pr-1">
+            <div className="text-sm pr-1 text-muted-foreground">
               {formatZoomPercentage(zoom)}
             </div>
             <IconComponent
               name={isOpen ? "ChevronDown" : "ChevronUp"}
               aria-hidden="true"
-              className="text-primary group-hover:text-primary !h-5 !w-5"
+              className="text-muted-foreground group-hover:text-primary !h-5 !w-5"
             />
           </div>
         </Button>
