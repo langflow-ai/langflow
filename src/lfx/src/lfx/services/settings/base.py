@@ -226,8 +226,10 @@ class Settings(BaseSettings):
     """The host on which Langflow will run."""
     port: int = 7860
     """The port on which Langflow will run."""
-    current_port: int | None = None
-    """The actual port on which Langflow is running (after checking for port conflicts)."""
+    runtime_port: int | None = Field(default=None, exclude=True)
+    """TEMPORARY: The port detected at runtime after checking for conflicts.
+    This field is system-managed only and will be removed in future versions
+    when strict port enforcement is implemented (errors will be raised if port unavailable)."""
     workers: int = 1
     """The number of workers to run."""
     log_level: str = "critical"

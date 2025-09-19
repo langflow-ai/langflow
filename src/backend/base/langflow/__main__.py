@@ -341,8 +341,8 @@ def run(
         if is_port_in_use(port, host):
             port = get_free_port(port)
 
-        # Store the actual port being used in settings
-        get_settings_service().settings.current_port = port
+        # Store the runtime-detected port in settings (temporary until strict port enforcement)
+        get_settings_service().settings.runtime_port = port
 
         protocol = "https" if ssl_cert_file_path and ssl_key_file_path else "http"
 

@@ -54,9 +54,9 @@ async def get_project_sse_url(project_id: UUID) -> str:
     # Get settings service to build the SSE URL
     settings_service = get_settings_service()
     server_host = getattr(settings_service.settings, "host", "localhost")
-    # Use the actual running port (current_port) if available, otherwise fall back to configured port
+    # Use the runtime-detected port if available, otherwise fall back to configured port
     server_port = (
-        getattr(settings_service.settings, "current_port", None)
+        getattr(settings_service.settings, "runtime_port", None)
         or getattr(settings_service.settings, "port", None)
         or 7860
     )
