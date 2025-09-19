@@ -102,6 +102,9 @@ class Graph:
         self.vertices_to_run: set[str] = set()
         self.stop_vertex: str | None = None
         self.inactive_vertices: set = set()
+        # Conditional routing system (separate from ACTIVE/INACTIVE cycle management)
+        self.conditionally_excluded_vertices: set = set()  # Vertices excluded by conditional routing
+        self.conditional_exclusion_sources: dict[str, set[str]] = {}  # Maps source vertex -> excluded vertices
         self.edges: list[CycleEdge] = []
         self.vertices: list[Vertex] = []
         self.run_manager = RunnableVerticesManager()
@@ -965,6 +968,59 @@ class Graph:
             run_predecessors=new_predecessor_map,
             vertices_to_run=self.vertices_to_run,
         )
+
+    def exclude_branch_conditionally(self, vertex_id: str, output_name: str | None = None) -> None:
+        """Marks a branch as conditionally excluded (for conditional routing).
+
+        This system is separate from the ACTIVE/INACTIVE state used for cycle management:
+        - ACTIVE/INACTIVE: Reset after each cycle iteration to allow cycles to continue
+        - Conditional exclusion: Persists until explicitly cleared by the same source vertex
+
+        Used by ConditionalRouter to ensure only one branch executes per condition evaluation.
+        If this vertex has previously excluded branches, they are cleared first to allow
+        re-evaluation on subsequent iterations (e.g., in cycles where condition may change).
+
+        Args:
+            vertex_id: The source vertex making the exclusion decision
+            output_name: The output name to follow when excluding downstream vertices
+        """
+        # Clear any previous exclusions from this source vertex
+        if vertex_id in self.conditional_exclusion_sources:
+            previous_exclusions = self.conditional_exclusion_sources[vertex_id]
+            self.conditionally_excluded_vertices -= previous_exclusions
+            del self.conditional_exclusion_sources[vertex_id]
+
+        # Now exclude the new branch
+        visited: set[str] = set()
+        excluded: set[str] = set()
+        self._exclude_branch_conditionally(vertex_id, visited, excluded, output_name, skip_first=True)
+
+        # Track which vertices this source excluded
+        if excluded:
+            self.conditional_exclusion_sources[vertex_id] = excluded
+
+    def _exclude_branch_conditionally(
+        self, vertex_id: str, visited: set, excluded: set, output_name: str | None = None, *, skip_first: bool = False
+    ) -> None:
+        """Recursively excludes vertices in a branch for conditional routing."""
+        if vertex_id in visited:
+            return
+        visited.add(vertex_id)
+
+        # Don't exclude the first vertex (the router itself)
+        if not skip_first:
+            self.conditionally_excluded_vertices.add(vertex_id)
+            excluded.add(vertex_id)
+
+        for child_id in self.parent_child_map[vertex_id]:
+            # If we're at the router (skip_first=True) and have an output_name,
+            # only follow edges from that specific output
+            if skip_first and output_name:
+                edge = self.get_edge(vertex_id, child_id)
+                if edge and edge.source_handle.name != output_name:
+                    continue
+            # After the first level, exclude all descendants
+            self._exclude_branch_conditionally(child_id, visited, excluded, output_name=None, skip_first=False)
 
     def get_edge(self, source_id: str, target_id: str) -> CycleEdge | None:
         """Returns the edge between two vertices."""
@@ -2135,6 +2191,9 @@ class Graph:
 
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Returns whether a vertex is runnable."""
+        # Check if vertex is conditionally excluded (for conditional routing)
+        if vertex_id in self.conditionally_excluded_vertices:
+            return False
         is_active = self.get_vertex(vertex_id).is_active()
         is_loop = self.get_vertex(vertex_id).is_loop
         return self.run_manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
@@ -2167,10 +2226,8 @@ class Graph:
             if predecessor_id in visited:
                 return
             visited.add(predecessor_id)
-            predecessor_vertex = self.get_vertex(predecessor_id)
-            is_active = predecessor_vertex.is_active()
-            is_loop = predecessor_vertex.is_loop
-            if self.run_manager.is_vertex_runnable(predecessor_id, is_active=is_active, is_loop=is_loop):
+
+            if self.is_vertex_runnable(predecessor_id):
                 runnable_vertices.append(predecessor_id)
             else:
                 for pred_pred_id in self.run_manager.run_predecessors.get(predecessor_id, []):

@@ -25,6 +25,7 @@ class GmailLoaderComponent(Component):
     description = "Loads emails from Gmail using provided credentials."
     icon = "Google"
     legacy: bool = True
+    replacement = ["composio.ComposioGmailAPIComponent"]
 
     inputs = [
         SecretStrInput(

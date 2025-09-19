@@ -200,6 +200,18 @@ class Settings(BaseSettings):
     backend_only: bool = False
     """If set to True, Langflow will not serve the frontend."""
 
+    # CORS Settings
+    cors_origins: list[str] | str = "*"
+    """Allowed origins for CORS. Can be a list of origins or '*' for all origins.
+    Default is '*' for backward compatibility. In production, specify exact origins."""
+    cors_allow_credentials: bool = True
+    """Whether to allow credentials in CORS requests.
+    Default is True for backward compatibility. In v2.0, this will be changed to False when using wildcard origins."""
+    cors_allow_methods: list[str] | str = "*"
+    """Allowed HTTP methods for CORS requests."""
+    cors_allow_headers: list[str] | str = "*"
+    """Allowed headers for CORS requests."""
+
     # Telemetry
     do_not_track: bool = False
     """If set to True, Langflow will not track telemetry."""
@@ -269,6 +281,9 @@ class Settings(BaseSettings):
     add_projects_to_mcp_servers: bool = True
     """If set to True, newly created projects will be added to the user's MCP servers config automatically.
     Controlled by LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS env variable."""
+    # MCP Composer
+    mcp_composer_enabled: bool = True
+    """If set to False, Langflow will not start the MCP Composer service."""
 
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
@@ -290,6 +305,18 @@ class Settings(BaseSettings):
     this is intended to be used to skip all startup project logic."""
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def validate_cors_origins(cls, value):
+        """Convert comma-separated string to list if needed."""
+        if isinstance(value, str) and value != "*":
+            if "," in value:
+                # Convert comma-separated string to list
+                return [origin.strip() for origin in value.split(",")]
+            # Convert single origin to list for consistency
+            return [value]
+        return value
 
     @field_validator("use_noop_database", mode="before")
     @classmethod
@@ -503,6 +530,16 @@ class Settings(BaseSettings):
                 setattr(self, key, value)
                 logger.debug(f"Updated {key}")
             logger.debug(f"{key}: {getattr(self, key)}")
+
+    @property
+    def voice_mode_available(self) -> bool:
+        """Check if voice mode is available by testing webrtcvad import."""
+        try:
+            import webrtcvad  # noqa: F401
+        except ImportError:
+            return False
+        else:
+            return True
 
     @classmethod
     @override

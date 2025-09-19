@@ -10,6 +10,7 @@ class HierarchicalCrewComponent(BaseCrewComponent):
     documentation: str = "https://docs.crewai.com/how-to/Hierarchical/"
     icon = "CrewAI"
     legacy = True
+    replacement = "agents.Agent"
 
     inputs = [
         *BaseCrewComponent.get_base_inputs(),
