@@ -3,6 +3,7 @@ from collections import Counter
 from pathlib import Path
 from uuid import UUID
 
+from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import session_scope
 
 
@@ -123,11 +124,6 @@ async def get_knowledge_bases(kb_root: Path, user_id: UUID | str) -> list[str]:
             msg = "User ID is required for fetching knowledge bases."
             raise ValueError(msg)
         user_id = UUID(user_id) if isinstance(user_id, str) else user_id
-        try:
-            from langflow.services.database.models.user.crud import get_user_by_id
-        except ImportError as e:
-            msg = "Knowledge bases are not available."
-            raise ImportError(msg) from e
         current_user = await get_user_by_id(db, user_id)
         if not current_user:
             msg = f"User with ID {user_id} not found."

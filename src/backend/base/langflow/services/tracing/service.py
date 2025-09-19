@@ -17,10 +17,10 @@ if TYPE_CHECKING:
     from langchain.callbacks.base import BaseCallbackHandler
     from lfx.custom.custom_component.component import Component
     from lfx.graph.vertex.base import Vertex
+    from lfx.schema.log import Log
     from lfx.services.settings.service import SettingsService
 
     from langflow.services.tracing.base import BaseTracer
-    from langflow.services.tracing.schema import Log
 
 
 def _get_langsmith_tracer():

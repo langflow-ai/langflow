@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
+from uuid import UUID
 
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.edge.base import CycleEdge, Edge
@@ -30,7 +31,6 @@ from lfx.graph.graph.utils import (
     should_continue,
 )
 from lfx.graph.schema import InterfaceComponentTypes, RunOutputs
-from lfx.graph.utils import log_vertex_build
 from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
@@ -127,6 +127,7 @@ class Graph:
         self._call_order: list[str] = []
         self._snapshots: list[dict[str, Any]] = []
         self._end_trace_tasks: set[asyncio.Task] = set()
+        self._transaction_queue: list[tuple[str | UUID, Vertex, str, Vertex | None, Any]] = []
 
         if context and not isinstance(context, dict):
             msg = "Context must be a dictionary"
@@ -465,6 +466,11 @@ class Graph:
                     # Create a future to gather all pending tasks
                     cleanup_future = asyncio.gather(*pending, return_exceptions=True)
                     loop.run_until_complete(cleanup_future)
+                # Best-effort flush of any remaining queued transactions
+                try:
+                    loop.run_until_complete(self.flush_transaction_logs())
+                except Exception as e:  # noqa: BLE001
+                    logger.debug(f"flush_transaction_logs failed during start() shutdown: {e!s}")
 
                 # Close the loop
                 loop.close()
@@ -792,10 +798,12 @@ class Graph:
             self.increment_run_count()
         except Exception as exc:
             self._end_all_traces_async(error=exc)
+
             msg = f"Error running graph: {exc}"
             raise ValueError(msg) from exc
 
         self._end_all_traces_async()
+
         # Get the outputs
         vertex_outputs = []
         for vertex in self.vertices:
@@ -1040,6 +1048,52 @@ class Graph:
 
     def increment_update_count(self) -> None:
         self._updates += 1
+
+    def queue_transaction(
+        self,
+        flow_id: str | UUID,
+        source: Vertex,
+        status: str,
+        target: Vertex | None = None,
+        error: Any = None,
+    ) -> None:
+        """Queue a transaction to be logged later in batch.
+
+        This avoids database contention during parallel vertex execution.
+        """
+        self._transaction_queue.append((flow_id, source, status, target, error))
+
+    def get_transaction_queue_for_background_flush(self) -> list[tuple[str | UUID, Vertex, str, Vertex | None, Any]]:
+        """Get queued transactions for background processing and clear the queue.
+
+        This method returns a copy of the transaction queue and clears it immediately,
+        allowing the flow execution to complete without waiting for database operations.
+        The returned queue can be processed as a FastAPI background task.
+
+        Returns:
+            List of transaction tuples ready for background flushing
+        """
+        if not self._transaction_queue:
+            return []
+
+        transactions_to_flush = self._transaction_queue.copy()
+        self._transaction_queue.clear()
+        return transactions_to_flush
+
+    async def flush_transaction_logs(self) -> None:
+        """Flush all queued transactions to the database in a single batch.
+
+        This method should be called after flow execution completes.
+        """
+        if not self._transaction_queue:
+            return
+
+        from langflow.graph.utils import flush_transaction_queue
+
+        try:
+            await flush_transaction_queue(self._transaction_queue)
+        finally:
+            self._transaction_queue.clear()
 
     def __getstate__(self):
         # Get all attributes that are useful in runs.
@@ -1404,6 +1458,8 @@ class Graph:
             raise ValueError(msg)
         if not self._run_queue:
             self._end_all_traces_async()
+            # Ensure queued transactions are persisted for generator/step flows
+            await self.flush_transaction_logs()
             return Finish()
         vertex_id = self.get_next_in_queue()
         if not vertex_id:
@@ -1761,14 +1817,20 @@ class Graph:
             "used_frozen_result": False,
         }
 
-        await log_vertex_build(
-            flow_id=self.flow_id or "",
-            vertex_id=vertex_id or "errors",
-            valid=False,
-            params=params,
-            data=result_data_response,
-            artifacts={},
-        )
+        try:
+            from langflow.graph.utils import log_vertex_build
+
+            await log_vertex_build(
+                flow_id=self.flow_id or "",
+                vertex_id=vertex_id or "errors",
+                valid=False,
+                params=params,
+                data=result_data_response,
+                artifacts={},
+            )
+        except ImportError:
+            # langflow not available, skip logging
+            pass
 
     async def _execute_tasks(
         self, tasks: list[asyncio.Task], lock: asyncio.Lock, *, has_webhook_component: bool = False
@@ -1799,14 +1861,20 @@ class Graph:
                 raise result
             if isinstance(result, VertexBuildResult):
                 if self.flow_id is not None:
-                    await log_vertex_build(
-                        flow_id=self.flow_id,
-                        vertex_id=result.vertex.id,
-                        valid=result.valid,
-                        params=result.params,
-                        data=result.result_dict,
-                        artifacts=result.artifacts,
-                    )
+                    try:
+                        from langflow.graph.utils import log_vertex_build
+
+                        await log_vertex_build(
+                            flow_id=self.flow_id,
+                            vertex_id=result.vertex.id,
+                            valid=result.valid,
+                            params=result.params,
+                            data=result.result_dict,
+                            artifacts=result.artifacts,
+                        )
+                    except ImportError:
+                        # langflow not available, skip logging
+                        pass
 
                 vertices.append(result.vertex)
             else:

@@ -1,10 +1,13 @@
 from collections.abc import Generator
 from enum import Enum
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pandas import Series
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_serializer
 from typing_extensions import TypedDict
+
+from lfx.schema.log import Log
+from lfx.serialization.serialization import get_max_items_length, get_max_text_length, serialize
 
 if TYPE_CHECKING:
     from lfx.custom.custom_component.component import Component
@@ -173,3 +176,44 @@ class InputValueRequest(BaseModel):
         },
         extra="forbid",
     )
+
+
+class ResultDataResponse(BaseModel):
+    results: Any | None = Field(default_factory=dict)
+    outputs: dict[str, OutputValue] = Field(default_factory=dict)
+    logs: dict[str, list[Log]] = Field(default_factory=dict)
+    message: Any | None = Field(default_factory=dict)
+    artifacts: Any | None = Field(default_factory=dict)
+    timedelta: float | None = None
+    duration: str | None = None
+    used_frozen_result: bool | None = False
+
+    @field_serializer("results")
+    @classmethod
+    def serialize_results(cls, v):
+        """Serializes the results value with custom handling for special types and applies truncation limits.
+
+        Returns:
+            The serialized representation of the input value, truncated according to configured
+            maximum text length and item count.
+        """
+        return serialize(v, max_length=get_max_text_length(), max_items=get_max_items_length())
+
+    @model_serializer(mode="plain")
+    def serialize_model(self) -> dict:
+        """Serialize the entire model into a dictionary with truncation applied to large fields.
+
+        Returns:
+            dict: A dictionary representation of the model with serialized and truncated
+            results, outputs, logs, message, and artifacts.
+        """
+        return {
+            "results": self.serialize_results(self.results),
+            "outputs": serialize(self.outputs, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "logs": serialize(self.logs, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "message": serialize(self.message, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "artifacts": serialize(self.artifacts, max_length=get_max_text_length(), max_items=get_max_items_length()),
+            "timedelta": self.timedelta,
+            "duration": self.duration,
+            "used_frozen_result": self.used_frozen_result,
+        }

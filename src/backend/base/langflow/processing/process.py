@@ -32,7 +32,7 @@ async def run_graph_internal(
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
     event_manager: EventManager | None = None,
-) -> tuple[list[RunOutputs], str]:
+) -> tuple[list[RunOutputs], str, list]:
     """Run the graph and generate the result."""
     inputs = inputs or []
     effective_session_id = session_id or flow_id
@@ -59,7 +59,11 @@ async def run_graph_internal(
         fallback_to_env_vars=fallback_to_env_vars,
         event_manager=event_manager,
     )
-    return run_outputs, effective_session_id
+
+    # Get transaction queue for background processing without blocking the response
+    transaction_queue = graph.get_transaction_queue_for_background_flush()
+
+    return run_outputs, effective_session_id, transaction_queue
 
 
 async def run_graph(
