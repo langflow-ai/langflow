@@ -75,12 +75,19 @@ class ChatInput(ChatComponent):
     ]
 
     async def message_response(self) -> Message:
+        # Ensure files is a list and filter out empty/None values
+        files = self.files if self.files else []
+        if files and not isinstance(files, list):
+            files = [files]
+        # Filter out None/empty values
+        files = [f for f in files if f is not None and f != ""]
+
         message = await Message.create(
             text=self.input_value,
             sender=self.sender,
             sender_name=self.sender_name,
             session_id=self.session_id,
-            files=self.files,
+            files=files,
         )
         if self.session_id and isinstance(message, Message) and self.should_store_message:
             stored_message = await self.send_message(
