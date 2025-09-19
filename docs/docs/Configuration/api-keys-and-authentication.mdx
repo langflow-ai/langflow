@@ -271,32 +271,41 @@ LANGFLOW_NEW_USER_IS_ACTIVE=False
 Only superusers can manage user accounts for a Langflow server, but user management only matters if your server has authentication enabled.
 For more information, see [Start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled).
 
-### LANGFLOW_CORS_ORIGINS and LANGFLOW_CORS_ALLOW_CREDENTIALS {#cors-configuration-for-authentication}
+### LANGFLOW_CORS_* {#cors-configuration-for-authentication}
 
 Cross-Origin Resource Sharing (CORS) configuration controls how authentication credentials are handled when your Langflow frontend and backend are served from different origins.
+The following `LANGFLOW_CORS_*` environment variables are available:
 
-The current default configuration allows all origins (`*`) with credentials enabled, which can be a security risk in production environments.
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_CORS_ALLOW_CREDENTIALS` | Boolean | True | Whether to allow credentials, such as cookies and authorization headers, in CORS requests. |
+| `LANGFLOW_CORS_ALLOW_HEADERS` | List[String] or String | `*` | The allowed headers for CORS requests. Provide a comma-separated list of headers or use `*` to allow all headers. |
+| `LANGFLOW_CORS_ALLOW_METHODS` | List[String] or String | `*` | The allowed HTTP methods for CORS requests. Provide a comma-separated list of methods or use `*` to allow all methods. |
+| `LANGFLOW_CORS_ORIGINS` | String | `*` | The allowed CORS origins. Provide a comma-separated list of origins or use `*` for all origins. |
+
+The default configuration enables CORS credentials and uses wildcards (`*`) to allow all origins, headers, and methods:
 
 ```text
 LANGFLOW_CORS_ORIGINS=*
 LANGFLOW_CORS_ALLOW_CREDENTIALS=True
+LANGFLOW_CORS_ALLOW_HEADERS=*
+LANGFLOW_CORS_ALLOW_METHODS=*
 ```
 
-The default settings enable the following:
-- Any website can make requests to your Langflow API.
-- Any website can include credentials in cross-origin requests, including authentication cookies and authorization headers.
+:::danger
+Langflow's default CORS settings can be a security risk in production environments because any website can make requests to your Langflow API, and any website can include credentials in cross-origin requests, including authentication cookies and authorization headers.
 
-Production deployments should specify exact origins in `LANGFLOW_CORS_ORIGINS`.
+In production deployments, specify exact origins in `LANGFLOW_CORS_ORIGINS`.
+You can also specify allowed headers and methods, if needed.
+For example:
 
 ```text
 LANGFLOW_CORS_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
 LANGFLOW_CORS_ALLOW_CREDENTIALS=True
+LANGFLOW_CORS_ALLOW_HEADERS=Content-Type,Authorization
+LANGFLOW_CORS_ALLOW_METHODS=GET,POST,PUT
 ```
-
-In a future release, if you configure CORS with a wildcard origin using `LANGFLOW_CORS_ORIGINS=*`, the Langflow server will automatically disable credentialed requests such as cookies, authorization headers, and TLS client certificates.
-This change prevents insecure configurations where credentials could be exposed to all origins.
-
-For more information about all Langflow environment variables, see [Environment variables](/environment-variables#supported-variables).
+:::
 
 ## Start a Langflow server with authentication enabled
 
