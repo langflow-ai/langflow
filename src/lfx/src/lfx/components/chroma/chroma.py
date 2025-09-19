@@ -121,7 +121,8 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         )
 
         self._add_documents_to_vector_store(chroma)
-        self.status = chroma_collection_to_data(chroma.get(limit=self.limit))
+        limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None
+        self.status = chroma_collection_to_data(chroma.get(limit=limit))
         return chroma
 
     def _add_documents_to_vector_store(self, vector_store: "Chroma") -> None:
@@ -138,7 +139,8 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         if self.allow_duplicates:
             stored_data = []
         else:
-            stored_data = chroma_collection_to_data(vector_store.get(limit=self.limit))
+            limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None
+            stored_data = chroma_collection_to_data(vector_store.get(limit=limit))
             for value in deepcopy(stored_data):
                 del value.id
                 stored_documents_without_id.append(value)

@@ -3,7 +3,7 @@ import importlib
 from langchain_experimental.utilities import PythonREPL
 
 from lfx.custom.custom_component.component import Component
-from lfx.io import CodeInput, Output, StrInput
+from lfx.io import MultilineInput, Output, StrInput
 from lfx.schema.data import Data
 
 
@@ -21,7 +21,7 @@ class PythonREPLComponent(Component):
             value="math,pandas",
             required=True,
         ),
-        CodeInput(
+        MultilineInput(
             name="python_code",
             display_name="Python Code",
             info="The Python code to execute. Only modules specified in Global Imports can be used.",

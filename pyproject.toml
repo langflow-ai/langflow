@@ -53,7 +53,7 @@ dependencies = [
     "datasets>2.14.7",
     "assemblyai==0.35.1",
     "litellm>=1.60.2,<2.0.0",
-    "chromadb==0.5.23",
+    "chromadb>=0.5.6,<0.6.0",
     "zep-python==2.0.2",
     "youtube-transcript-api==0.6.3",
     "Markdown==3.7",
@@ -85,7 +85,7 @@ dependencies = [
     "langchain-groq==0.2.1",
     "langchain-pinecone>=0.2.8",
     "langchain-mistralai==0.2.3",
-    "langchain-chroma==0.1.4",
+    "langchain-chroma>=0.1.4,<0.2.0",
     "langchain-aws==0.2.7",
     "langchain-unstructured==0.1.5",
     "langchain-milvus==0.1.7",
@@ -122,7 +122,7 @@ dependencies = [
     "cleanlab-tlm>=1.1.2",
     'gassist>=0.0.1; sys_platform == "win32"',
     "twelvelabs>=0.4.7",
-    "docling_core>=2.36.1",
+    "docling>=2.36.1",
     "filelock>=3.18.0",
     "jigsawstack==0.2.7",
     "structlog>=25.4.0",
@@ -181,7 +181,6 @@ dev = [
     "pytest-timeout>=2.3.1",
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
-    "docling>=2.36.1"
 ]
 
 [tool.uv.sources]
@@ -205,7 +204,6 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 docling = [
-    "docling>=2.36.1",
     "langchain-docling>=1.1.0",
     "tesserocr>=2.8.0",
     "rapidocr-onnxruntime>=1.4.4",
