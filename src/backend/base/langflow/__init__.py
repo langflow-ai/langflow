@@ -105,6 +105,7 @@ def _setup_compatibility_modules():
         "langflow.base.models.novita_constants": "lfx.base.models.novita_constants",
         "langflow.base.models.ollama_constants": "lfx.base.models.ollama_constants",
         "langflow.base.models.sambanova_constants": "lfx.base.models.sambanova_constants",
+        "langflow.base.models.cometapi_constants": "lfx.base.models.cometapi_constants",
         "langflow.base.prompts": "lfx.base.prompts",
         "langflow.base.prompts.api_utils": "lfx.base.prompts.api_utils",
         "langflow.base.prompts.utils": "lfx.base.prompts.utils",
