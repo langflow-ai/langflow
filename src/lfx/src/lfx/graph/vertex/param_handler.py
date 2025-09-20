@@ -161,7 +161,7 @@ class ParameterHandler:
         elif field.get("required"):
             field_display_name = field.get("display_name")
             logger.warning(
-                "File path not found for {} in component {}. Setting to None.",
+                "File path not found for %s in component %s. Setting to None.",
                 field_display_name,
                 self.vertex.display_name,
             )
@@ -206,7 +206,7 @@ class ParameterHandler:
             else:
                 params[field_name] = ast.literal_eval(val) if val else None
         except Exception:  # noqa: BLE001
-            logger.debug("Error evaluating code for {}", field_name)
+            logger.debug("Error evaluating code for %s", field_name)
             params[field_name] = val
         return params
 
