@@ -95,7 +95,13 @@ export default function AddMcpServerModal({
 
   useEffect(() => {
     if (open) {
-      setType(initialData ? (initialData.command ? "STDIO" : "SSE") : "JSON");
+      setType(
+        initialData
+          ? initialData.command
+            ? "STDIO"
+            : "SSE"
+          : type
+      );
       setError(null);
       setJsonValue("");
       setStdioName(initialData?.name || "");
