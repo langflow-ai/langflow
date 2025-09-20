@@ -18,12 +18,14 @@
     "noImplicitAny": false,
     "paths": {
       "@/*": ["*"],
+      "@langflow/ui-components": ["ui-components/src/index.ts"],
       "@queries/*": ["controllers/API/queries/*"]
     },
     "baseUrl": "src"
   },
   "include": [
     "src",
+    "ui-components/src",
     "tests/core/saveComponents.spec.ts",
     "tests/extended/actionsMainPage-shard-1.spec.ts",
     "tests/core/auto_login.spec.ts",
