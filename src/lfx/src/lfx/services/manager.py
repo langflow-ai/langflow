@@ -111,10 +111,37 @@ class ServiceManager:
             raise NoFactoryRegisteredError(msg)
 
     def update(self, service_name: ServiceType) -> None:
-        """Update a service by its name."""
+        """Update a service by its name.
+
+        This fixes the service leak where old services were removed from cache
+        without proper cleanup, causing connection pools to be orphaned.
+        """
         if service_name in self.services:
             logger.debug(f"Update service {service_name}")
-            self.services.pop(service_name, None)
+            # CRITICAL FIX: Properly teardown old service before replacing
+            old_service = self.services.pop(service_name, None)
+            if old_service and hasattr(old_service, "teardown"):
+                try:
+                    # Try to teardown the old service
+                    teardown_result = old_service.teardown()
+                    if asyncio.iscoroutine(teardown_result):
+                        # If it's a coroutine, schedule it for execution
+                        try:
+                            loop = asyncio.get_event_loop()
+                            if loop.is_running():
+                                # Store reference to prevent garbage collection
+                                task = asyncio.create_task(teardown_result)
+                                # Log task for debugging but don't wait
+                                logger.debug(f"Scheduled teardown task for {service_name}: {task}")
+                            else:
+                                asyncio.run(teardown_result)
+                        except RuntimeError:
+                            # No event loop, run synchronously
+                            asyncio.run(teardown_result)
+                except Exception as exc:  # noqa: BLE001
+                    # Broad exception handling is needed here as teardown can fail in many ways
+                    logger.debug(f"Error in teardown of old service {service_name}", exc_info=exc)
+
             self.get(service_name)
 
     async def teardown(self) -> None:
