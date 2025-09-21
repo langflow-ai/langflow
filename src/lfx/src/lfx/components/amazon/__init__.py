@@ -8,14 +8,16 @@ if TYPE_CHECKING:
     from lfx.components.amazon.amazon_bedrock_embedding import AmazonBedrockEmbeddingsComponent
     from lfx.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
     from lfx.components.amazon.s3_bucket_uploader import S3BucketUploaderComponent
+    from lfx.components.amazon.aws_api_call import AWSAPICallComponent
 
 _dynamic_imports = {
     "AmazonBedrockEmbeddingsComponent": "amazon_bedrock_embedding",
     "AmazonBedrockComponent": "amazon_bedrock_model",
     "S3BucketUploaderComponent": "s3_bucket_uploader",
+    "AWSAPICallComponent": "aws_api_call",
 }
 
-__all__ = ["AmazonBedrockComponent", "AmazonBedrockEmbeddingsComponent", "S3BucketUploaderComponent"]
+__all__ = ["AmazonBedrockComponent", "AmazonBedrockEmbeddingsComponent", "S3BucketUploaderComponent", "AWSAPICallComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:
