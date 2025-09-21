@@ -137,7 +137,7 @@ class AWSAPICallComponent(Component):
         if field_name == "aws_method":
             # dynamically add top-level parameters
             for key in list(build_config.keys()):
-                if key.startswith(("method_field_","method_filefield_")):
+                if key.startswith(("method_field_", "method_filefield_")):
                     del build_config[key]
 
             params = []
