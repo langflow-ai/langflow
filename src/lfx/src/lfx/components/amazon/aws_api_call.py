@@ -1,5 +1,5 @@
 import re
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import aiofiles
 
@@ -21,9 +21,11 @@ from lfx.schema.data import Data
 
 MAX_DOC_LENGTH = 1000  # Maximum length for documentation strings
 
+
 class AWSAPICallComponent(Component):
     """A component that can dynamically determine fields for a specific service method
-    and execute the AWS API call within a flow."""
+    and execute the AWS API call within a flow.
+    """
 
     display_name: str = "AWS API Call"
     description: str = "Makes an API call to an AWS service."
@@ -260,6 +262,7 @@ class AWSAPICallComponent(Component):
 
         try:
             from botocore import xform_name  # this_type_of_casing function
+
             if TYPE_CHECKING:
                 from botocore.model import Shape
         except ImportError as e:
