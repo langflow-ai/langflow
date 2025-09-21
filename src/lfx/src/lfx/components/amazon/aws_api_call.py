@@ -331,7 +331,18 @@ class AWSAPICallComponent(Component):
             elif hasattr(self, "method_timefield_" + param_name):
                 field_value = getattr(self, "method_timefield_" + param_name)
                 if field_value is not None and hasattr(field_value, "text"):
-                    returns[param_name] = parser.parse(field_value.text)
+                    val = field_value.text.strip()
+                    from datetime import datetime, timezone
+                    if val.isdigit():
+                        returns[param_name] = datetime.fromtimestamp(int(val), tz=timezone.utc)
+                    else:
+                        try:
+                            from dateutil import parser as _dateparser
+                        except ImportError as e:
+                            raise ImportError(
+                                "python-dateutil is required to parse timestamps. Install with `pip install python-dateutil`."
+                            ) from e
+                        returns[param_name] = _dateparser.parse(val)
 
         import asyncio
         result = await asyncio.to_thread(method, **returns)
