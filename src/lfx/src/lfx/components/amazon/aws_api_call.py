@@ -158,8 +158,7 @@ class AWSAPICallComponent(Component):
                     raise ImportError(msg) from e
 
                 client = self._get_client(session)
-                operation_model = client._service_model.operation_model(self.aws_method)
-
+                operation_model = client.meta.service_model.operation_model(self.aws_method)
                 input_shape: Shape = operation_model.input_shape
                 if input_shape is not None:
                     members = input_shape.members
