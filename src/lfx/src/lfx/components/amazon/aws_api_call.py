@@ -248,7 +248,7 @@ class AWSAPICallComponent(Component):
                             required=param["required"],
                             advanced=not param["required"],
                         )
-                        build_config["method_field_" + param["name"]] = field.to_dict()
+                        build_config["method_timefield_" + param["name"]] = field.to_dict()
                     elif param["type"] == "structure" or param["type"] == "map" or param["type"] == "list":
                         field = DataInput(
                             display_name=param["name"],
