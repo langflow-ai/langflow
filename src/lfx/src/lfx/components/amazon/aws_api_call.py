@@ -2,8 +2,8 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import aiofiles
-
 from dateutil import parser
+
 from lfx.base.models.aws_constants import AWS_REGIONS
 from lfx.custom.custom_component.component import Component
 from lfx.io import (
@@ -331,7 +331,7 @@ class AWSAPICallComponent(Component):
             elif hasattr(self, "method_timefield_" + param_name):
                 field_value = getattr(self, "method_timefield_" + param_name)
                 if field_value is not None and hasattr(field_value, "text"):
-                        returns[param_name] = parser.parse(field_value.text)
+                    returns[param_name] = parser.parse(field_value.text)
 
         result = method(**returns)
 
