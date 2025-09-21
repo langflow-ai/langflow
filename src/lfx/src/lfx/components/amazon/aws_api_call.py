@@ -130,127 +130,131 @@ class AWSAPICallComponent(Component):
         session = self._get_session()
         build_config["aws_service"]["options"] = session.get_available_services()
 
-        if self.aws_service and self.aws_service != "":
+        if (
+            self.aws_service and self.aws_service != "" and
+            self.aws_access_key_id and self.aws_access_key_id != "" and
+            self.aws_secret_access_key and self.aws_secret_access_key != ""
+        ):
             client = self._get_client(session)
             build_config["aws_method"]["options"] = list(client._service_model.operation_names)
 
-        if field_name == "aws_method":
-            # dynamically add top-level parameters
-            for key in list(build_config.keys()):
-                if key.startswith(("method_field_", "method_filefield_")):
-                    del build_config[key]
+            if field_name == "aws_method":
+                # dynamically add top-level parameters
+                for key in list(build_config.keys()):
+                    if key.startswith(("method_field_", "method_filefield_")):
+                        del build_config[key]
 
-            params = []
+                params = []
 
-            try:
-                if TYPE_CHECKING:
-                    from botocore.model import Shape
-            except ImportError as e:
-                msg = "boto3 or botocore is not installed. Please install it with `pip install boto3`."
-                raise ImportError(msg) from e
+                try:
+                    if TYPE_CHECKING:
+                        from botocore.model import Shape
+                except ImportError as e:
+                    msg = "boto3 or botocore is not installed. Please install it with `pip install boto3`."
+                    raise ImportError(msg) from e
 
-            client = self._get_client(session)
-            operation_model = client._service_model.operation_model(self.aws_method)
+                client = self._get_client(session)
+                operation_model = client._service_model.operation_model(self.aws_method)
 
-            input_shape: Shape = operation_model.input_shape
-            if input_shape is not None:
-                members = input_shape.members
-                required = set(input_shape.required_members)
+                input_shape: Shape = operation_model.input_shape
+                if input_shape is not None:
+                    members = input_shape.members
+                    required = set(input_shape.required_members)
 
-                for name, shape in members.items():
-                    doc = re.sub(r"<.*?>", "", shape.documentation) if hasattr(shape, "documentation") else ""
-                    if len(doc) > MAX_DOC_LENGTH:
-                        doc = doc[:MAX_DOC_LENGTH] + "..."
+                    for name, shape in members.items():
+                        doc = re.sub(r"<.*?>", "", shape.documentation) if hasattr(shape, "documentation") else ""
+                        if len(doc) > MAX_DOC_LENGTH:
+                            doc = doc[:MAX_DOC_LENGTH] + "..."
 
-                    params.append(
-                        {
-                            "name": name,
-                            "type": shape.type_name,
-                            "required": name in required,
-                            "sensitive": shape.sensitive if hasattr(shape, "sensitive") else False,
-                            "description": doc,
-                        }
-                    )
+                        params.append(
+                            {
+                                "name": name,
+                                "type": shape.type_name,
+                                "required": name in required,
+                                "sensitive": shape.sensitive if hasattr(shape, "sensitive") else False,
+                                "description": doc,
+                            }
+                        )
 
-            for param in params:
-                if param["type"] == "string":
-                    field = MessageInput(
-                        display_name=param["name"],
-                        name="method_field_" + param["name"],
-                        info=param["description"],
-                        required=param["required"],
-                        advanced=not param["required"],
-                    )
-                    if param["sensitive"]:
-                        field = SecretStrInput(
+                for param in params:
+                    if param["type"] == "string":
+                        field = MessageInput(
                             display_name=param["name"],
                             name="method_field_" + param["name"],
                             info=param["description"],
                             required=param["required"],
                             advanced=not param["required"],
                         )
-                    build_config["method_field_" + param["name"]] = field.to_dict()
-                elif param["type"] == "boolean":
-                    field = BoolInput(
-                        display_name=param["name"],
-                        name="method_field_" + param["name"],
-                        info=param["description"],
-                        required=param["required"],
-                        advanced=not param["required"],
-                    )
-                    build_config["method_field_" + param["name"]] = field.to_dict()
-                elif param["type"] == "blob":
-                    field = FileInput(
-                        display_name=param["name"],
-                        name="method_filefield_" + param["name"],
-                        info=param["description"],
-                        required=param["required"],
-                        advanced=not param["required"],
-                        file_types=[
-                            "txt",
-                            "json",
-                            "jpg",
-                            "png",
-                        ],  # TODO: fix me to support all types - https://github.com/langflow-ai/langflow/issues/9933
-                    )
-                    build_config["method_filefield_" + param["name"]] = field.to_dict()
-                elif param["type"] == "integer" or param["type"] == "long":
-                    field = IntInput(
-                        display_name=param["name"],
-                        name="method_field_" + param["name"],
-                        info=param["description"],
-                        required=param["required"],
-                        advanced=not param["required"],
-                    )
-                    build_config["method_field_" + param["name"]] = field.to_dict()
-                elif param["type"] == "double":
-                    field = FloatInput(
-                        display_name=param["name"],
-                        name="method_field_" + param["name"],
-                        info=param["description"],
-                        required=param["required"],
-                        advanced=not param["required"],
-                    )
-                    build_config["method_field_" + param["name"]] = field.to_dict()
-                elif param["type"] == "timestamp":
-                    field = FloatInput(
-                        display_name=param["name"],
-                        name="method_field_" + param["name"],
-                        info=param["description"] + "\n\nThis accepts a timestamp as epoch.",
-                        required=param["required"],
-                        advanced=not param["required"],
-                    )
-                    build_config["method_field_" + param["name"]] = field.to_dict()
-                elif param["type"] == "structure" or param["type"] == "map" or param["type"] == "list":
-                    field = DataInput(
-                        display_name=param["name"],
-                        name="method_field_" + param["name"],
-                        info=param["description"]
-                        + "\n\nAccepts JSON Data as parameters input. Uses boto3-conformant parameters.",
-                        required=param["required"],
-                        advanced=not param["required"],
-                    )
-                    build_config["method_field_" + param["name"]] = field.to_dict()
+                        if param["sensitive"]:
+                            field = SecretStrInput(
+                                display_name=param["name"],
+                                name="method_field_" + param["name"],
+                                info=param["description"],
+                                required=param["required"],
+                                advanced=not param["required"],
+                            )
+                        build_config["method_field_" + param["name"]] = field.to_dict()
+                    elif param["type"] == "boolean":
+                        field = BoolInput(
+                            display_name=param["name"],
+                            name="method_field_" + param["name"],
+                            info=param["description"],
+                            required=param["required"],
+                            advanced=not param["required"],
+                        )
+                        build_config["method_field_" + param["name"]] = field.to_dict()
+                    elif param["type"] == "blob":
+                        field = FileInput(
+                            display_name=param["name"],
+                            name="method_filefield_" + param["name"],
+                            info=param["description"],
+                            required=param["required"],
+                            advanced=not param["required"],
+                            file_types=[
+                                "txt",
+                                "json",
+                                "jpg",
+                                "png",
+                            ],  # TODO: fix me to support all types - https://github.com/langflow-ai/langflow/issues/9933
+                        )
+                        build_config["method_filefield_" + param["name"]] = field.to_dict()
+                    elif param["type"] == "integer" or param["type"] == "long":
+                        field = IntInput(
+                            display_name=param["name"],
+                            name="method_field_" + param["name"],
+                            info=param["description"],
+                            required=param["required"],
+                            advanced=not param["required"],
+                        )
+                        build_config["method_field_" + param["name"]] = field.to_dict()
+                    elif param["type"] == "double":
+                        field = FloatInput(
+                            display_name=param["name"],
+                            name="method_field_" + param["name"],
+                            info=param["description"],
+                            required=param["required"],
+                            advanced=not param["required"],
+                        )
+                        build_config["method_field_" + param["name"]] = field.to_dict()
+                    elif param["type"] == "timestamp":
+                        field = FloatInput(
+                            display_name=param["name"],
+                            name="method_field_" + param["name"],
+                            info=param["description"] + "\n\nThis accepts a timestamp as epoch.",
+                            required=param["required"],
+                            advanced=not param["required"],
+                        )
+                        build_config["method_field_" + param["name"]] = field.to_dict()
+                    elif param["type"] == "structure" or param["type"] == "map" or param["type"] == "list":
+                        field = DataInput(
+                            display_name=param["name"],
+                            name="method_field_" + param["name"],
+                            info=param["description"]
+                            + "\n\nAccepts JSON Data as parameters input. Uses boto3-conformant parameters.",
+                            required=param["required"],
+                            advanced=not param["required"],
+                        )
+                        build_config["method_field_" + param["name"]] = field.to_dict()
 
         return build_config
 
