@@ -131,9 +131,12 @@ class AWSAPICallComponent(Component):
         build_config["aws_service"]["options"] = session.get_available_services()
 
         if (
-            self.aws_service and self.aws_service != "" and
-            self.aws_access_key_id and self.aws_access_key_id != "" and
-            self.aws_secret_access_key and self.aws_secret_access_key != ""
+            self.aws_service
+            and self.aws_service != ""
+            and self.aws_access_key_id
+            and self.aws_access_key_id != ""
+            and self.aws_secret_access_key
+            and self.aws_secret_access_key != ""
         ):
             client = self._get_client(session)
             build_config["aws_method"]["options"] = list(client._service_model.operation_names)
