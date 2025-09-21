@@ -333,6 +333,7 @@ class AWSAPICallComponent(Component):
                 if field_value is not None and hasattr(field_value, "text"):
                     returns[param_name] = parser.parse(field_value.text)
 
-        result = method(**returns)
+        import asyncio
+        result = await asyncio.to_thread(method, **returns)
 
         return Data(text=str(result), data=result)
