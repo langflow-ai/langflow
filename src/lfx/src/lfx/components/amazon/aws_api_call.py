@@ -338,9 +338,8 @@ class AWSAPICallComponent(Component):
                         try:
                             from dateutil import parser as _dateparser
                         except ImportError as e:
-                            raise ImportError(
-                                "python-dateutil is required to parse timestamps. Install with `pip install python-dateutil`."
-                            ) from e
+                            msg = "python-dateutil is required. Install with `pip install python-dateutil`."
+                            raise ImportError(msg) from e
                         returns[param_name] = _dateparser.parse(val)
 
         import asyncio
