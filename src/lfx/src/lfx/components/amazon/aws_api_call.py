@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Any
 
 import aiofiles
 
+from dateutil import parser
 from lfx.base.models.aws_constants import AWS_REGIONS
 from lfx.custom.custom_component.component import Component
 from lfx.io import (
@@ -144,7 +145,7 @@ class AWSAPICallComponent(Component):
             if field_name == "aws_method":
                 # dynamically add top-level parameters
                 for key in list(build_config.keys()):
-                    if key.startswith(("method_field_", "method_filefield_")):
+                    if key.startswith(("method_field_", "method_filefield_", "method_timefield_")):
                         del build_config[key]
 
                 params = []
@@ -240,9 +241,9 @@ class AWSAPICallComponent(Component):
                         )
                         build_config["method_field_" + param["name"]] = field.to_dict()
                     elif param["type"] == "timestamp":
-                        field = FloatInput(
+                        field = MessageInput(
                             display_name=param["name"],
-                            name="method_field_" + param["name"],
+                            name="method_timefield_" + param["name"],
                             info=param["description"] + "\n\nThis accepts a timestamp as epoch.",
                             required=param["required"],
                             advanced=not param["required"],
@@ -327,6 +328,10 @@ class AWSAPICallComponent(Component):
                 if field_value is not None and field_value != "":
                     async with aiofiles.open(str(field_value), "rb") as f:
                         returns[param_name] = await f.read()
+            elif hasattr(self, "method_timefield_" + param_name):
+                field_value = getattr(self, "method_timefield_" + param_name)
+                if field_value is not None and hasattr(field_value, "text"):
+                        returns[param_name] = parser.parse(field_value.text)
 
         result = method(**returns)
 
