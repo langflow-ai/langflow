@@ -23,9 +23,7 @@ MAX_DOC_LENGTH = 1000  # Maximum length for documentation strings
 
 
 class AWSAPICallComponent(Component):
-    """A component that can dynamically determine fields for a specific service method
-    and execute the AWS API call within a flow.
-    """
+    """A component that executes an AWS API call."""
 
     display_name: str = "AWS API Call"
     description: str = "Makes an API call to an AWS service."
@@ -139,7 +137,7 @@ class AWSAPICallComponent(Component):
         if field_name == "aws_method":
             # dynamically add top-level parameters
             for key in list(build_config.keys()):
-                if key.startswith("method_field_") or key.startswith("method_filefield_"):
+                if key.startswith(("method_field_","method_filefield_")):
                     del build_config[key]
 
             params = []
