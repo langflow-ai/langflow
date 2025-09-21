@@ -1,5 +1,5 @@
 import re
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import aiofiles
 
@@ -19,9 +19,11 @@ from lfx.io import (
 )
 from lfx.schema.data import Data
 
+MAX_DOC_LENGTH = 1000  # Maximum length for documentation strings
 
 class AWSAPICallComponent(Component):
-    """A component that can dynamically determine fields for a specific service method, and execute the AWS API call within a flow."""
+    """A component that can dynamically determine fields for a specific service method
+    and execute the AWS API call within a flow."""
 
     display_name: str = "AWS API Call"
     description: str = "Makes an API call to an AWS service."
@@ -124,7 +126,7 @@ class AWSAPICallComponent(Component):
 
         return session.client(self.aws_service, **client_params)
 
-    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
+    def update_build_config(self, build_config: dict, _: str, field_name: str | None = None) -> dict:
         session = self._get_session()
         build_config["aws_service"]["options"] = session.get_available_services()
 
@@ -141,8 +143,8 @@ class AWSAPICallComponent(Component):
             params = []
 
             try:
-                import boto3
-                from botocore.model import Shape
+                if TYPE_CHECKING:
+                    from botocore.model import Shape
             except ImportError as e:
                 msg = "boto3 or botocore is not installed. Please install it with `pip install boto3`."
                 raise ImportError(msg) from e
@@ -157,8 +159,8 @@ class AWSAPICallComponent(Component):
 
                 for name, shape in members.items():
                     doc = re.sub(r"<.*?>", "", shape.documentation) if hasattr(shape, "documentation") else ""
-                    if len(doc) > 1000:
-                        doc = doc[:1000] + "..."
+                    if len(doc) > MAX_DOC_LENGTH:
+                        doc = doc[:MAX_DOC_LENGTH] + "..."
 
                     params.append(
                         {
@@ -258,7 +260,8 @@ class AWSAPICallComponent(Component):
 
         try:
             from botocore import xform_name  # this_type_of_casing function
-            from botocore.model import Shape
+            if TYPE_CHECKING:
+                from botocore.model import Shape
         except ImportError as e:
             msg = "botocore is not installed. Please install it with `pip install botocore`."
             raise ImportError(msg) from e
@@ -277,8 +280,8 @@ class AWSAPICallComponent(Component):
 
             for name, shape in members.items():
                 doc = re.sub(r"<.*?>", "", shape.documentation) if hasattr(shape, "documentation") else ""
-                if len(doc) > 1000:
-                    doc = doc[:1000] + "..."
+                if len(doc) > MAX_DOC_LENGTH:
+                    doc = doc[:MAX_DOC_LENGTH] + "..."
 
                 params.append(
                     {
@@ -297,7 +300,7 @@ class AWSAPICallComponent(Component):
                 field_value = getattr(self, "method_field_" + param_name)
                 if field_value is not None:
                     if isinstance(field_value, bool):
-                        if field_value == True:
+                        if field_value:
                             returns[param_name] = True
                     elif isinstance(field_value, (int, float)):
                         returns[param_name] = field_value
