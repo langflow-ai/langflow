@@ -2,7 +2,6 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import aiofiles
-from dateutil import parser
 
 from lfx.base.models.aws_constants import AWS_REGIONS
 from lfx.custom.custom_component.component import Component
@@ -332,6 +331,7 @@ class AWSAPICallComponent(Component):
                 if field_value is not None and hasattr(field_value, "text"):
                     val = field_value.text.strip()
                     from datetime import datetime, timezone
+
                     if val.isdigit():
                         returns[param_name] = datetime.fromtimestamp(int(val), tz=timezone.utc)
                     else:
@@ -344,6 +344,7 @@ class AWSAPICallComponent(Component):
                         returns[param_name] = _dateparser.parse(val)
 
         import asyncio
+
         result = await asyncio.to_thread(method, **returns)
 
         return Data(text=str(result), data=result)
