@@ -15,7 +15,7 @@ class MetalRetrieverComponent(CustomComponent):
     inputs = [
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
+            display_name="Metal Retriever API Key",
             required=True,
         ),
         SecretStrInput(

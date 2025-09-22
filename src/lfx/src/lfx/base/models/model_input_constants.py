@@ -213,7 +213,7 @@ try:
         "prefix": "",
         "component_class": GroqModel(),
         "icon": GroqModel.icon,
-        "is_active": True,
+        "is_active": False,
     }
 except ImportError:
     pass
