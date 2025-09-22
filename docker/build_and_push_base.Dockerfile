@@ -36,6 +36,9 @@ ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
 
+# Set RUSTFLAGS for Python packages with Rust dependencies
+ENV RUSTFLAGS='--cfg reqwest_unstable'
+
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \
