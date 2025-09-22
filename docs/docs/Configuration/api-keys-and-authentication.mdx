@@ -147,15 +147,14 @@ You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/ma
 
 ### LANGFLOW_AUTO_LOGIN {#langflow-auto-login}
 
-This variable controls whether authentication is required to access your Langflow server, including the visual editor and Langflow CLI:
+This variable controls whether authentication is required to access your Langflow server, including the visual editor, API, and Langflow CLI:
 
 * If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. Users must sign in to the visual editor, authenticate as a superuser to run certain Langflow CLI commands, and use a Langflow API key for Langflow API requests.
-If false, the Langflow team recommends that you also set [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser) to avoid using the insecure default values.
+If false, the Langflow team recommends that you also explicitly set [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser) to avoid using the insecure default values.
 
-* If `LANGFLOW_AUTO_LOGIN=True` (default), Langflow bypasses authentication for the visual editor and the Langflow CLI, but not for Langflow API requests.
-If you don't have user management enabled, all users are effectively superusers in the visual editor and Langflow CLI.
-All users access the same visual editor environment without password protection.
-If you also want to bypass authentication for Langflow API requests, see [`LANGFLOW_SKIP_AUTH_AUTO_LOGIN`](/api-keys-and-authentication#langflow-skip-auth-auto-login).
+* If `LANGFLOW_AUTO_LOGIN=True` (default), all API requests require authentication with a Langflow API key, but the visual editor automatically signs in all users as superusers, and Langflow uses _only_ the default [superuser credentials](/api-keys-and-authentication#langflow-superuser).
+All users access the same visual editor environment without password protection, they can run all Langflow CLI commands as superusers, and Langflow automatically authenticates internal requests between the backend and frontend based on the users' superuser privileges.
+If you also want to bypass authentication for Langflow API requests in addition to other bypassed authentication, see [`LANGFLOW_SKIP_AUTH_AUTO_LOGIN`](/api-keys-and-authentication#langflow-skip-auth-auto-login).
 
 Langflow doesn't allow users to simultaneously edit the same flow in real time.
 If two users edit the same flow, Langflow saves only the work of the most recent editor based on the state of that user's [workspace](/concepts-overview#workspace). Any changes made by the other user in the interim are overwritten.
@@ -163,21 +162,21 @@ If two users edit the same flow, Langflow saves only the work of the most recent
 #### Default authentication enforcement and LANGFLOW_SKIP_AUTH_AUTO_LOGIN {#langflow-skip-auth-auto-login}
 
 In Langflow version 1.6, the default settings are `LANGFLOW_AUTO_LOGIN=True` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False`.
-This enforces authentication for Langflow API requests, the Langflow CLI, and the visual editor.
+This enforces authentication for API requests only, as explained in the preceding section.
 
 For temporary backwards compatibility, you can revert to the fully unauthenticated behavior from earlier versions by setting both variables to true.
 However, a future release will set `LANGFLOW_AUTO_LOGIN=False` and remove `LANGFLOW_SKIP_AUTH_AUTO_LOGIN`.
-At that point, Langflow will strictly enforce API key authentication for API requests, and you can manually disable authentication for the CLI and visual editor by setting `LANGFLOW_AUTO_LOGIN=True`.
+At that point, Langflow will strictly enforce API key authentication for API requests, and you can manually disable authentication for some features, like the visual editor, by setting `LANGFLOW_AUTO_LOGIN=True`.
 
 <details>
 <summary>Authentication enforcement in earlier versions</summary>
 
-Langflow version 1.5 was the first version that could enforce Langflow API key authentication for Langflow API requests, even if `LANGFLOW_AUTO_LOGIN=True`.
-As a temporary bypass for backwards compatibility, this version also added the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` environment variable.
-Setting both `LANGFLOW_AUTO_LOGIN` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` to true reverted to the fully unauthenticated, all-superuser behavior from earlier versions.
+Langflow version 1.5 was the first version that could enforce authentication for Langflow API requests, regardless of the value of `LANGFLOW_AUTO_LOGIN`.
+As a temporary bypass for backwards compatibility, this version added the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` environment variable and set both variables to true by default to preserve the fully unauthenticated behavior from earlier versions.
+This allowed users to upgrade to version 1.5 with no change in the authentication behavior.
 
 In Langflow versions earlier than 1.5, Langflow API requests didn't require authentication.
-Additionally, the default setting of `LANGFLOW_AUTO_LOGIN=True` bypassed authentication for the Langflow CLI and visual editor, automatically granting all users superuser privileges.
+Additionally, the default setting of `LANGFLOW_AUTO_LOGIN=True` automatically granted all users superuser privileges in the visual editor, and it allowed all users to run all Langflow CLI commands as superusers.
 </details>
 
 ### LANGFLOW_ENABLE_SUPERUSER_CLI {#langflow-enable-superuser-cli}
