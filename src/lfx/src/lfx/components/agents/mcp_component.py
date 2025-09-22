@@ -73,8 +73,8 @@ class MCPToolsComponent(ComponentWithCache):
             name="use_cache",
             display_name="Use Cached Server",
             info=(
-                "Enable caching of MCP Server and tools to improve performance. ",
-                "Disable to always fetch fresh tools and server updates.",
+                "Enable caching of MCP Server and tools to improve performance. "
+                "Disable to always fetch fresh tools and server updates."
             ),
             value=False,
             advanced=True,
