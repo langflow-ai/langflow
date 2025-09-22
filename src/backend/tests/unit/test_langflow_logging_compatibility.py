@@ -158,6 +158,7 @@ def test_importing_langflow_logging_in_langflow():
     # Test that langflow.logging can be used in component code created via create_class
     code = dedent("""
 from langflow.logging import logger, configure
+from langflow.logging.logger import logger
 from langflow.custom import Component
 
 class TestLangflowLoggingComponent(Component):

@@ -532,7 +532,7 @@ class AgentComponent(ToolCallingAgentComponent):
                     refresh_button=False,
                     input_types=["LanguageModel"],
                     placeholder="Awaiting model input.",
-                    options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST],
+                    options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA],
                     external_options={
                         "fields": {
                             "data": {
