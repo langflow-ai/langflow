@@ -122,7 +122,8 @@ dependencies = [
     "cleanlab-tlm>=1.1.2",
     'gassist>=0.0.1; sys_platform == "win32"',
     "twelvelabs>=0.4.7",
-    "docling>=2.36.1",
+    "docling>=2.36.1; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    "torch>=2.6.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     "transformers~=4.56.1",
     "filelock>=3.18.0",
     "jigsawstack==0.2.7",
@@ -243,8 +244,6 @@ postgresql = [
 override-dependencies = [
     # temporary force a newer python-pptx
     "python-pptx>=1.0.2",
-    # Skip docling on Intel Mac to avoid torch compatibility issues
-    "docling>=2.36.1; sys_platform != 'darwin' or platform_machine != 'x86_64'",
 ]
 
 [project.scripts]
