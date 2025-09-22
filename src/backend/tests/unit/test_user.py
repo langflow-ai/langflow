@@ -9,6 +9,8 @@ from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service
 from sqlmodel import select
 
+from lfx.services.settings.constants import DEFAULT_SUPERUSER
+
 
 @pytest.fixture
 async def super_user(client):  # noqa: ARG001
@@ -18,7 +20,11 @@ async def super_user(client):  # noqa: ARG001
         return await create_super_user(
             db=db,
             username=auth_settings.SUPERUSER,
-            password=auth_settings.SUPERUSER_PASSWORD,
+            password=(
+                auth_settings.SUPERUSER_PASSWORD.get_secret_value()
+                if hasattr(auth_settings.SUPERUSER_PASSWORD, "get_secret_value")
+                else auth_settings.SUPERUSER_PASSWORD
+            ),
         )
 
 
@@ -30,8 +36,13 @@ async def super_user_headers(
     settings_service = get_settings_service()
     auth_settings = settings_service.auth_settings
     login_data = {
-        "username": auth_settings.SUPERUSER,
-        "password": auth_settings.SUPERUSER_PASSWORD,
+        # SUPERUSER may be reset to default depending on AUTO_LOGIN; use constant for stability in tests
+        "username": DEFAULT_SUPERUSER if auth_settings.AUTO_LOGIN else auth_settings.SUPERUSER,
+        "password": (
+            auth_settings.SUPERUSER_PASSWORD.get_secret_value()
+            if hasattr(auth_settings.SUPERUSER_PASSWORD, "get_secret_value")
+            else auth_settings.SUPERUSER_PASSWORD
+        ),
     }
     response = await client.post("api/v1/login", data=login_data)
     assert response.status_code == 200

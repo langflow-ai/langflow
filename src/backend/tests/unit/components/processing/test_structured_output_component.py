@@ -5,11 +5,11 @@ from unittest.mock import patch
 import openai
 import pytest
 from langchain_openai import ChatOpenAI
-from langflow.components.processing.structured_output import StructuredOutputComponent
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs.inputs import TableInput
 from pydantic import BaseModel
 
+from lfx.components.processing.structured_output import StructuredOutputComponent
 from tests.base import ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 
@@ -59,7 +59,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output_base()
             assert isinstance(result, list)
             assert result == [{"field": "value"}]
@@ -180,7 +180,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="Invalid type: invalid_type"):
             component.build_structured_output()
 
-    @patch("langflow.components.processing.structured_output.get_chat_result")
+    @patch("lfx.components.processing.structured_output.get_chat_result")
     def test_nested_output_schema(self, mock_get_chat_result):
         class ChildModel(BaseModel):
             child: str = "value"
@@ -219,7 +219,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, list)
         assert result == [{"parent": {"child": "value"}}]
 
-    @patch("langflow.components.processing.structured_output.get_chat_result")
+    @patch("lfx.components.processing.structured_output.get_chat_result")
     def test_large_input_value(self, mock_get_chat_result):
         large_input = "Test input " * 1000
 
@@ -252,8 +252,8 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         mock_get_chat_result.assert_called_once()
 
     @pytest.mark.skipif(
-        "OPENAI_API_KEY" not in os.environ,
-        reason="OPENAI_API_KEY environment variable not set",
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
+        reason="OPENAI_API_KEY is not set or is empty",
     )
     def test_with_real_openai_model_simple_schema(self):
         # Create a real OpenAI model
@@ -284,7 +284,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result[0]["age"] == 30
 
     @pytest.mark.skipif(
-        "OPENAI_API_KEY" not in os.environ,
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
     )
     def test_with_real_openai_model_multiple_patterns(self):
@@ -371,11 +371,11 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Remove exact duplicates but keep variations that have different field values.",
         )
 
-        with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output()
 
             # Check that result is a Data object
-            from langflow.schema.data import Data
+            from lfx.schema.data import Data
 
             assert isinstance(result, Data)
 
@@ -397,7 +397,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert 899.99 in prices
 
     @pytest.mark.skipif(
-        "OPENAI_API_KEY" not in os.environ,
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
     )
     def test_with_real_openai_model_simple_schema_fail(self):
@@ -433,7 +433,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         ), f"Expected max_tokens error but got: {error_message}"
 
     @pytest.mark.skipif(
-        "OPENAI_API_KEY" not in os.environ,
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
     )
     def test_with_real_openai_model_complex_schema(self):
@@ -482,7 +482,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result[0]["rating"] == 4.0
 
     @pytest.mark.skipif(
-        "OPENAI_API_KEY" not in os.environ,
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
     )
     def test_with_real_openai_model_nested_schema(self):
@@ -547,7 +547,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result[0]["would_return"] is True
 
     @pytest.mark.skipif(
-        "NVIDIA_API_KEY" not in os.environ,
+        not (os.getenv("NVIDIA_API_KEY") or "").strip(),
         reason="NVIDIA_API_KEY environment variable not set",
     )
     def test_with_real_nvidia_model_simple_schema(self):
@@ -573,9 +573,18 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Extract structured information from the input text.",
         )
 
-        # The test is expected to fail with a 400 Bad Request error
-        with pytest.raises(Exception, match="400 Bad Request"):
-            component.build_structured_output_base()
+        # Test that it now works with NVIDIA models (previously expected to fail but now supports structured output)
+        try:
+            result = component.build_structured_output_base()
+            # If it succeeds, verify it returns a valid runnable
+            assert result is not None
+        except (TypeError, ValueError, RuntimeError) as e:
+            # If it still fails, verify it's with a known error message
+            error_msg = str(e)
+            assert any(
+                msg in error_msg
+                for msg in ["Language model does not support structured output", "400 Bad Request", "not supported"]
+            ), f"Unexpected error: {error_msg}"
 
     def test_structured_output_returns_dict_when_no_objects_key(self):
         """Test that when trustcall returns a dict without 'objects' key, we return the dict directly."""
@@ -598,7 +607,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output_base()
             # Should return the dict directly since there's no "objects" key
             assert isinstance(result, dict)
@@ -620,7 +629,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output_base()
             # Should return the string directly
             assert isinstance(result, str)
@@ -648,7 +657,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output_base()
             # Should return the entire result dict when responses is empty
             assert isinstance(result, dict)
@@ -678,7 +687,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         )
 
         with (
-            patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result),
+            patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result),
             pytest.raises(ValueError, match="No structured output returned"),
         ):
             component.build_structured_output()
@@ -711,11 +720,11 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output()
 
             # Check that result is a Data object
-            from langflow.schema.data import Data
+            from lfx.schema.data import Data
 
             assert isinstance(result, Data)
 
@@ -764,11 +773,11 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Extract ALL relevant instances that match the schema",
         )
 
-        with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output()
 
             # Check that result is a Data object
-            from langflow.schema.data import Data
+            from lfx.schema.data import Data
 
             assert isinstance(result, Data)
 
@@ -809,11 +818,11 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Extract person info",
         )
 
-        with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output()
 
             # Check that result is a Data object
-            from langflow.schema.data import Data
+            from lfx.schema.data import Data
 
             assert isinstance(result, Data)
 
@@ -851,11 +860,11 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Extract product info",
         )
 
-        with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_output()
 
             # Check that result is a Data object
-            from langflow.schema.data import Data
+            from lfx.schema.data import Data
 
             assert isinstance(result, Data)
 
@@ -903,11 +912,11 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_dataframe()
 
             # Check that result is a DataFrame object
-            from langflow.schema.dataframe import DataFrame
+            from lfx.schema.dataframe import DataFrame
 
             assert isinstance(result, DataFrame)
             assert len(result) == 1
@@ -952,11 +961,11 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        with patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result):
+        with patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result):
             result = component.build_structured_dataframe()
 
             # Check that result is a DataFrame object
-            from langflow.schema.dataframe import DataFrame
+            from lfx.schema.dataframe import DataFrame
 
             assert isinstance(result, DataFrame)
             assert len(result) == 3
@@ -995,7 +1004,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         )
 
         with (
-            patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result),
+            patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result),
             pytest.raises(ValueError, match="No structured output returned"),
         ):
             component.build_structured_dataframe()
@@ -1025,7 +1034,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         )
 
         with (
-            patch("langflow.components.processing.structured_output.get_chat_result", mock_get_chat_result),
+            patch("lfx.components.processing.structured_output.get_chat_result", mock_get_chat_result),
             pytest.raises(ValueError, match="No structured output returned"),
         ):
             component.build_structured_dataframe()

@@ -19,6 +19,11 @@ on:
         required: false
         type: boolean
         default: false
+      build_lfx:
+        description: "Build and release LFX package"
+        required: false
+        type: boolean
+        default: false
       nightly_tag_main:
         description: "Tag for the nightly main build"
         required: true
@@ -26,6 +31,10 @@ on:
       nightly_tag_base:
         description: "Tag for the nightly base build"
         required: true
+        type: string
+      nightly_tag_lfx:
+        description: "Tag for the nightly LFX build"
+        required: false
         type: string
   workflow_call:
     inputs:
@@ -44,6 +53,11 @@ on:
         required: false
         type: boolean
         default: false
+      build_lfx:
+        description: "Build and release LFX package"
+        required: false
+        type: boolean
+        default: false
       nightly_tag_main:
         description: "Tag for the nightly main build"
         required: true
@@ -52,14 +66,84 @@ on:
         description: "Tag for the nightly base build"
         required: true
         type: string
+      nightly_tag_lfx:
+        description: "Tag for the nightly LFX build"
+        required: false
+        type: string
 
 env:
   POETRY_VERSION: "1.8.3"
   PYTHON_VERSION: "3.13"
 
 jobs:
+  build-nightly-lfx:
+    name: Build LFX Nightly
+    if: ${{ inputs.build_lfx == true }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.verify.outputs.version }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out the code at a specific ref
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.nightly_tag_main }}
+          persist-credentials: true
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+      - name: Install LFX dependencies
+        run: cd src/lfx && uv sync
+
+      - name: Verify Nightly Name and Version
+        id: verify
+        run: |
+          cd src/lfx
+          name=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $1}')
+          version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}')
+          if [ "$name" != "lfx-nightly" ]; then
+            echo "Name $name does not match lfx-nightly. Exiting the workflow."
+            exit 1
+          fi
+          if [ "$version" != "${{ inputs.nightly_tag_lfx }}" ]; then
+            echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_lfx }}. Exiting the workflow."
+            exit 1
+          fi
+          # Strip the leading `v` from the version
+          version=$(echo $version | sed 's/^v//')
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Build LFX for distribution
+        run: |
+          cd src/lfx
+          rm -rf dist/
+          uv build --wheel --out-dir dist
+
+      - name: Test LFX CLI
+        run: |
+          cd src/lfx
+          uv pip install dist/*.whl --force-reinstall
+          uv run lfx --help
+          echo "LFX CLI test completed successfully"
+
+      # PyPI publishing moved to after cross-platform testing
+
+      - name: Upload LFX Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-nightly-lfx
+          path: src/lfx/dist
+
   build-nightly-base:
     name: Build Langflow Nightly Base
+    needs: [build-nightly-lfx]
+    if: always() && (needs.build-nightly-lfx.result == 'success' || inputs.build_lfx == false)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -69,7 +153,7 @@ jobs:
       skipped: ${{ steps.verify.outputs.skipped }}
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.nightly_tag_main }}
           persist-credentials: true
@@ -82,6 +166,10 @@ jobs:
           prune-cache: false
       - name: Install the project
         run: uv sync
+
+      - name: Wait for PyPI Propagation
+        if: ${{ inputs.build_lfx == true }}
+        run: sleep 300 # wait for 5 minutes to ensure PyPI propagation of LFX
 
       - name: Verify Nightly Name and Version
         id: verify
@@ -100,13 +188,13 @@ jobs:
           version=$(echo $version | sed 's/^v//')
           echo "version=$version" >> $GITHUB_OUTPUT
 
-      - name: Build project for distribution
+      - name: Build Langflow Base for distribution
         run: |
           rm -rf src/backend/base/dist
           rm -rf dist
           make build base=true args="--wheel"
 
-      - name: Test CLI
+      - name: Test Langflow Base CLI
         run: |
           # TODO: Unsure why the whl is not built in src/backend/base/dist
           mkdir src/backend/base/dist
@@ -146,7 +234,7 @@ jobs:
         shell: bash
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.nightly_tag_main}}
           persist-credentials: true
@@ -180,9 +268,9 @@ jobs:
         if: needs.build-nightly-base.outputs.skipped == 'false'
         run: sleep 300 # wait for 5 minutes to ensure PyPI propagation of base
 
-      - name: Build project for distribution
+      - name: Build Langflow Main for distribution
         run: make build main=true args="--no-sources --wheel"
-      - name: Test CLI
+      - name: Test Langflow Main CLI
         run: |
           uv pip install dist/*.whl
           uv run python -m langflow run --host localhost --port 7860 --backend-only &
@@ -210,19 +298,46 @@ jobs:
 
   test-cross-platform:
     name: Test Cross-Platform Installation
-    needs: [build-nightly-base, build-nightly-main]
+    needs: [build-nightly-lfx, build-nightly-base, build-nightly-main]
     uses: ./.github/workflows/cross-platform-test.yml
     with:
       base-artifact-name: "dist-nightly-base"
       main-artifact-name: "dist-nightly-main"
+      lfx-artifact-name: "dist-nightly-lfx"
+
+  publish-nightly-lfx:
+    name: Publish LFX Nightly to PyPI
+    needs: [build-nightly-lfx, test-cross-platform]
+    if: ${{ inputs.build_lfx == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v5
+      - name: Download LFX artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-nightly-lfx
+          path: src/lfx/dist
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+          python-version: "3.13"
+      - name: Publish LFX to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          make lfx_publish
 
   publish-nightly-base:
     name: Publish Langflow Base Nightly to PyPI
-    needs: [build-nightly-base, test-cross-platform]
+    needs: [build-nightly-base, test-cross-platform, publish-nightly-lfx]
+    if: always() && needs.build-nightly-base.result == 'success' && needs.test-cross-platform.result == 'success' && (needs.publish-nightly-lfx.result == 'success' || inputs.build_lfx == false)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Download base artifact
         uses: actions/download-artifact@v4
         with:
@@ -247,7 +362,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Download main artifact
         uses: actions/download-artifact@v4
         with:

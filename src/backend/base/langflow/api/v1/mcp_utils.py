@@ -12,15 +12,15 @@ from typing import Any, ParamSpec, TypeVar
 from urllib.parse import quote, unquote, urlparse
 from uuid import uuid4
 
+from lfx.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
+from lfx.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
+from lfx.log.logger import logger
 from mcp import types
 from sqlmodel import select
 
 from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
-from langflow.base.mcp.constants import MAX_MCP_TOOL_NAME_LENGTH
-from langflow.base.mcp.util import get_flow_snake_case, get_unique_name, sanitize_mcp_name
 from langflow.helpers.flow import json_schema_from_flow
-from langflow.logging.logger import logger
 from langflow.schema.message import Message
 from langflow.services.database.models import Flow
 from langflow.services.database.models.user.model import User
@@ -32,6 +32,10 @@ P = ParamSpec("P")
 
 # Create context variables
 current_user_ctx: ContextVar[User] = ContextVar("current_user_ctx")
+# Carries per-request variables injected via HTTP headers (e.g., X-Langflow-Global-Var-*)
+current_request_variables_ctx: ContextVar[dict[str, str] | None] = ContextVar(
+    "current_request_variables_ctx", default=None
+)
 
 
 def handle_mcp_errors(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
@@ -172,6 +176,9 @@ async def handle_call_tool(
         mcp_config.enable_progress_notifications = settings_service.settings.mcp_server_enable_progress_notifications
 
     current_user = current_user_ctx.get()
+    # Build execution context with request-level variables if present
+    request_variables = current_request_variables_ctx.get()
+    exec_context = {"request_variables": request_variables} if request_variables else None
 
     async def execute_tool(session):
         # Get flow id from name
@@ -228,6 +235,7 @@ async def handle_call_tool(
                         input_request=input_request,
                         stream=False,
                         api_key_user=current_user,
+                        context=exec_context,
                     )
                     # Process all outputs and messages, ensuring no duplicates
                     processed_texts = set()

@@ -2,20 +2,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
+from lfx.graph.vertex.base import Vertex
+from lfx.log.logger import logger
+from lfx.processing.utils import validate_and_repair_json
 from pydantic import BaseModel
 
-from langflow.graph.vertex.base import Vertex
-from langflow.logging.logger import logger
-from langflow.processing.utils import validate_and_repair_json
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import InputValueRequest
-    from langflow.events.event_manager import EventManager
-    from langflow.graph.graph.base import Graph
-    from langflow.graph.schema import RunOutputs
+    from lfx.events.event_manager import EventManager
+    from lfx.graph.graph.base import Graph
+    from lfx.graph.schema import RunOutputs
+    from lfx.schema.schema import InputValueRequest
 
 
 class Result(BaseModel):
@@ -146,6 +146,9 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
 
     for tweak_name, tweak_value in node_tweaks.items():
         if tweak_name not in template_data:
+            continue
+        if tweak_name == "code":
+            logger.warning("Security: Code field cannot be overridden via tweaks.")
             continue
         if tweak_name in template_data:
             if template_data[tweak_name]["type"] == "NestedDict":

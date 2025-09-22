@@ -6,10 +6,10 @@ import httpx
 import pytest
 import respx
 from httpx import Response
-from langflow.components.data import APIRequestComponent
-from langflow.schema import Data
-from langflow.schema.dotdict import dotdict
 
+from lfx.components.data import APIRequestComponent
+from lfx.schema import Data
+from lfx.schema.dotdict import dotdict
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -79,9 +79,9 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
             url=url,
         )
 
-        assert isinstance(result, Data)
+        assert isinstance(result, Data), result
         assert result.data["source"] == url
-        assert "result" in result.data
+        assert "result" in result.data, result.data
         assert result.data["result"]["key"] == "value"
 
     @respx.mock
@@ -218,6 +218,14 @@ class TestAPIRequestComponent(ComponentTestBaseWithoutClient):
         # Test list body
         list_body = [{"key": "key1", "value": "value1"}, {"key": "key2", "value": "value2"}]
         assert component._process_body(list_body) == {"key1": "value1", "key2": "value2"}
+
+        # Test Data object body
+        data_body = Data(data={"id": 123, "name": "John Doe"})
+        assert component._process_body(data_body) == {"id": 123, "name": "John Doe"}
+
+        # Test nested Data object (Data containing dict)
+        nested_data_body = Data(data={"user": {"id": 456, "email": "test@example.com"}})
+        assert component._process_body(nested_data_body) == {"user": {"id": 456, "email": "test@example.com"}}
 
         # Test invalid body
         assert component._process_body(None) == {}

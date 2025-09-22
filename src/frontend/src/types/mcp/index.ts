@@ -1,10 +1,5 @@
 export type AuthSettingsType = {
   auth_type: string;
-  api_key?: string;
-  username?: string;
-  password?: string;
-  bearer_token?: string;
-  iam_endpoint?: string;
   oauth_host?: string;
   oauth_port?: string;
   oauth_server_url?: string;

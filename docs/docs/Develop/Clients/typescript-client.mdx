@@ -60,7 +60,7 @@ pnpm add @datastax/langflow-client
     The default Langflow base URL is `http://localhost:7860`.
     To create an API key, see [API keys and authentication](/api-keys-and-authentication).
 
-## Langflow TypeScript client quickstart
+## Connect to your server and get responses
 
 1. With your Langflow client initialized, test the connection by calling your Langflow server.
 
@@ -86,9 +86,10 @@ pnpm add @datastax/langflow-client
 
     Replace the following:
 
-    * `baseUrl`: The URL of your Langflow server
-    * `flowId`: The ID of the flow you want to run
-    * `input`: The chat input message you want to send to trigger the flow
+    * `baseUrl`: The URL of your Langflow server.
+    * `flowId`: The ID of the flow you want to run.
+    * `input`: The chat input message you want to send to trigger the flow.
+    This is only valid for flows with a **Chat Input** component.
 
 
 2. Review the result to confirm that the client connected to your Langflow server.
@@ -104,7 +105,7 @@ pnpm add @datastax/langflow-client
 
     In this case, the response includes a [`sessionID`](/session-id) that is a unique identifier for the client-server session and an `outputs` array that contains information about the flow run.
 
-3. If you want to get full response objects from the server, change `console.log` to stringify the returned JSON object:
+3. Optional: If you want to get full response objects from the server, change `console.log` to stringify the returned JSON object:
 
     ```tsx
     console.log(JSON.stringify(response, null, 2));
@@ -112,7 +113,7 @@ pnpm add @datastax/langflow-client
 
     The exact structure of the returned `inputs` and `outputs` objects depends on the components and configuration of your flow.
 
-4. If you want the response to include only the chat message from the **Chat Output** component, change `console.log` to use the `chatOutputText` convenience function:
+4. Optional: If you want the response to include only the chat message from the **Chat Output** component, change `console.log` to use the `chatOutputText` convenience function:
 
     ```tsx
     console.log(response.chatOutputText());
@@ -122,13 +123,12 @@ pnpm add @datastax/langflow-client
 
 The TypeScript client can do more than just connect to your server and run a flow.
 
-This example builds on the quickstart with additional features for interacting with Langflow.
+This example builds on the quickstart with additional features for interacting with Langflow:
 
-1. Pass tweaks to your code as an object with the request.
+1. Pass [tweaks](/concepts-publish#input-schema) as an object with the request.
+Tweaks are programmatic run-time overrides for component settings.
 
-    Tweaks change values within components for all calls to your flow.
-
-    This example tweaks the **OpenAI** component to enforce using the `gpt-4o-mini` model:
+    This example changes the LLM used by a language model component in a flow::
 
     ```tsx
     const tweaks = { model_name: "gpt-4o-mini" };
@@ -140,7 +140,7 @@ This example builds on the quickstart with additional features for interacting w
     const session_id = "aa5a238b-02c0-4f03-bc5c-cc3a83335cdf";
     ```
 
-3. Instead of calling `run` on the Flow object, call `stream` with the same arguments:
+3. Instead of calling `run` on the Flow object, call `stream` with the same arguments to get a streaming response:
 
     ```tsx
     const response = await client.flow(flowId).stream(input);
@@ -153,9 +153,7 @@ This example builds on the quickstart with additional features for interacting w
     The response is a [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) of objects.
     For more information on streaming Langflow responses, see the [`/run` endpoint](/api-flows-run#run-flow).
 
-4. Run the modified TypeScript application to run the flow with `tweaks` and `session_id`, and then stream the response back.
-
-Replace `baseUrl` and `flowId` with values from your deployment.
+4. Run the modified TypeScript application to run the flow with `tweaks`, `session_id`, and streaming:
 
     ```tsx
     import { LangflowClient } from "@datastax/langflow-client";
@@ -182,7 +180,15 @@ Replace `baseUrl` and `flowId` with values from your deployment.
     runFlow().catch(console.error);
     ```
 
-    Replace `baseUrl` and `flowId` with your server URL and flow ID, as you did in the previous run.
+    Replace the following:
+
+    * `baseUrl`: The URL of your Langflow server.
+    * `flowId`: The ID of the flow you want to run.
+    * `input`: The chat input message you want to send to trigger the flow, assuming the flow has a **Chat Input** component.
+    * `tweaks`: Any tweak modifiers to apply to the flow run.
+    This example changes the LLM used by a component in the flow.
+    * `session_id`: Pass a custom session ID.
+    If omitted or empty, the flow ID is the default session ID.
 
     <details>
     <summary>Result</summary>
@@ -265,7 +271,7 @@ Replace `baseUrl` and `flowId` with values from your deployment.
 
 ## Retrieve Langflow logs with the TypeScript client
 
-To retrieve [Langflow logs](/logging), you must enable log retrieval on your Langflow server by including the following values in your server's `.env` file:
+To retrieve [Langflow logs](/logging), you must enable log retrieval on your Langflow server by including the following values in your Langflow `.env` file:
 
 ```text
 LANGFLOW_ENABLE_LOG_RETRIEVAL=True
@@ -304,16 +310,20 @@ async function main() {
 main().catch(console.error);
 ```
 
-Replace `baseUrl` and `flowId` with your server URL and flow ID, as you did in the previous run.
+Replace the following:
+
+* `baseUrl`: The URL of your Langflow server.
+* `flowId`: The ID of the flow you want to run.
+* `input`: The chat input message you want to send to trigger the flow, assuming the flow has a **Chat Input** component.
 
 Logs begin streaming indefinitely, and the flow runs once.
+
+<details>
+<summary>Result</summary>
 
 The following example result is truncated for readability, but you can follow the messages to see how the flow instantiates its components, configures its model, and processes the outputs.
 
 The `FlowResponse` object, at the end of the stream, is returned to the client with the flow result in the `outputs` array.
-
-<details>
-<summary>Result</summary>
 
 ```text
 Starting log stream...

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -14,7 +14,7 @@ test(
 
     await page.getByTestId("blank-flow").click();
 
-    await page.waitForSelector('[data-testid="zoom_out"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 3000,
     });
 

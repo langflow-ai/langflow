@@ -18,6 +18,10 @@ on:
         description: "Name of the main package artifact"
         required: true
         type: string
+      lfx-artifact-name:
+        description: "Name of the LFX package artifact"
+        required: false
+        type: string
 
 jobs:
   build-if-needed:
@@ -29,7 +33,7 @@ jobs:
       main-artifact-name: ${{ steps.set-names.outputs.main-artifact-name }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -142,6 +146,13 @@ jobs:
           ignore-empty-workdir: true
 
       # Download artifacts for wheel installation
+      - name: Download LFX package artifact
+        if: steps.install-method.outputs.method == 'wheel' && inputs.lfx-artifact-name != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.lfx-artifact-name }}
+          path: ./lfx-dist
+
       - name: Download base package artifact
         if: steps.install-method.outputs.method == 'wheel'
         uses: actions/download-artifact@v4
@@ -162,6 +173,20 @@ jobs:
         shell: bash
 
       # Wheel installation steps
+      - name: Install LFX package from wheel (Windows)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && inputs.lfx-artifact-name != ''
+        run: |
+          ls -la ./lfx-dist/
+          find ./lfx-dist -name "*.whl" -type f
+          WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+          if [ -n "$WHEEL_FILE" ]; then
+            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+          else
+            echo "No wheel file found in ./lfx-dist/"
+            exit 1
+          fi
+        shell: bash
+
       - name: Install base package from wheel (Windows)
         if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows'
         run: |
@@ -186,6 +211,20 @@ jobs:
             uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./main-dist/"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Install LFX package from wheel (Unix)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && inputs.lfx-artifact-name != ''
+        run: |
+          ls -la ./lfx-dist/
+          find ./lfx-dist -name "*.whl" -type f
+          WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+          if [ -n "$WHEEL_FILE" ]; then
+            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
+          else
+            echo "No wheel file found in ./lfx-dist/"
             exit 1
           fi
         shell: bash
@@ -256,7 +295,8 @@ jobs:
       - name: Test CLI help command (Windows)
         if: matrix.os == 'windows'
         run: |
-          test-env\Scripts\python.exe -m langflow --help
+          call test-env\Scripts\activate.bat
+          python -m langflow --help
         shell: cmd
 
       - name: Test CLI help command (Unix)
@@ -394,6 +434,13 @@ jobs:
           ignore-empty-workdir: true
 
       # Download artifacts for wheel installation
+      - name: Download LFX package artifact
+        if: steps.install-method.outputs.method == 'wheel' && inputs.lfx-artifact-name != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.lfx-artifact-name }}
+          path: ./lfx-dist
+
       - name: Download base package artifact
         if: steps.install-method.outputs.method == 'wheel'
         uses: actions/download-artifact@v4
@@ -414,6 +461,20 @@ jobs:
         shell: bash
 
       # Wheel installation steps
+      - name: Install LFX package from wheel (Windows)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && inputs.lfx-artifact-name != ''
+        run: |
+          ls -la ./lfx-dist/
+          find ./lfx-dist -name "*.whl" -type f
+          WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+          if [ -n "$WHEEL_FILE" ]; then
+            uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+          else
+            echo "No wheel file found in ./lfx-dist/"
+            exit 1
+          fi
+        shell: bash
+
       - name: Install base package from wheel (Windows)
         if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows'
         run: |
@@ -438,6 +499,20 @@ jobs:
             uv pip install --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./main-dist/"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Install LFX package from wheel (Unix)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && inputs.lfx-artifact-name != ''
+        run: |
+          ls -la ./lfx-dist/
+          find ./lfx-dist -name "*.whl" -type f
+          WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+          if [ -n "$WHEEL_FILE" ]; then
+            uv pip install --python ./test-env/bin/python "$WHEEL_FILE"
+          else
+            echo "No wheel file found in ./lfx-dist/"
             exit 1
           fi
         shell: bash
@@ -508,7 +583,8 @@ jobs:
       - name: Test CLI help command (Windows)
         if: matrix.os == 'windows'
         run: |
-          test-env\Scripts\python.exe -m langflow --help
+          call test-env\Scripts\activate.bat
+          python -m langflow --help
         shell: cmd
 
       - name: Test CLI help command (Unix)
