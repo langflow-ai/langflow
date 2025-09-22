@@ -56,13 +56,13 @@ def str_to_timestamp(timestamp: str | datetime) -> datetime:
         datetime: Datetime object with UTC timezone
 
     Raises:
-        ValueError: If string timestamp is not in 'YYYY-MM-DD HH:MM:SS UTC' format
+        ValueError: If string timestamp is not in 'YYYY-MM-DD HH:MM:SS.ffffff UTC' format
     """
     if isinstance(timestamp, str):
         try:
             return datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
         except ValueError as e:
-            msg = f"Invalid timestamp format: {timestamp}. Expected format: YYYY-MM-DD HH:MM:SS UTC"
+            msg = f"Invalid timestamp format: {timestamp}. Expected format: YYYY-MM-DD HH:MM:SS.ffffff UTC"
             raise ValueError(msg) from e
     return timestamp
 
