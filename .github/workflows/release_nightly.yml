@@ -389,6 +389,7 @@ jobs:
       release_type: nightly-base
       base_version: ${{ inputs.nightly_tag_base }}
       main_version: ${{ inputs.nightly_tag_main }}
+      ref: fix-docker-cache
     secrets: inherit
 
   call_docker_build_main:
@@ -399,6 +400,7 @@ jobs:
     with:
       release_type: nightly-main
       main_version: ${{ inputs.nightly_tag_main }}
+      ref: fix-docker-cache
     secrets: inherit
 
   # TODO: Uncomment this when our runner can fit the builds that contain pytorch (and other large dependencies)

@@ -202,6 +202,9 @@ jobs:
         run: |
           if [[ "${{ inputs.release_type }}" == "base" || "${{ inputs.release_type }}" == "nightly-base" ]]; then
             uv sync --directory src/backend/base --no-dev --no-sources
+          elif [[ "${{ inputs.main_version }}" != "" ]]; then
+            # Skip install when version is provided explicitly
+            echo "Skipping install - version provided explicitly: ${{ inputs.main_version }}"
           else
             uv sync --no-dev --no-sources
           fi
