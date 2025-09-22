@@ -105,7 +105,7 @@ class Message(Data):
 
         for time_format in formats:
             try:
-                return datetime.strptime(value.strip(), time_format).replace(tzinfo=timezone.utc).strftime(time_format)
+                return datetime.strptime(value.strip(), time_format).replace(tzinfo=timezone.utc)
             except ValueError:
                 continue
 

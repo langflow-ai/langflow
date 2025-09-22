@@ -164,7 +164,7 @@ def test_message_serialization():
     # Create a timestamp with timezone
     message = Message(text="Test message", sender=MESSAGE_SENDER_USER)
     timestamp_str = message.timestamp
-    timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+    timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
     serialized = message.model_dump()
 
     assert serialized["text"] == "Test message"
