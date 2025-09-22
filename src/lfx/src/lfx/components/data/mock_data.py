@@ -8,7 +8,7 @@ from lfx.schema.message import Message
 
 
 class MockDataGeneratorComponent(Component):
-    """Mock Data Generator Component
+    """Mock Data Generator Component.
 
     Generates sample data for testing and development purposes. Supports three main
     Langflow output types: Message (text), Data (JSON), and DataFrame (tabular data).
@@ -34,7 +34,7 @@ class MockDataGeneratorComponent(Component):
     ]
 
     def build(self) -> DataFrame:
-        """Default build method - returns DataFrame when component is standalone"""
+        """Default build method - returns DataFrame when component is standalone."""
         return self.generate_dataframe_output()
 
     def generate_message_output(self) -> Message:
