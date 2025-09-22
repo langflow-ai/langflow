@@ -41,7 +41,7 @@ class Message(Data):
     files: list[str | Image] | None = Field(default=[])
     session_id: str | UUID | None = Field(default="")
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
-        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f %Z")
     )
     flow_id: str | UUID | None = None
     error: bool = Field(default=False)
@@ -89,12 +89,28 @@ class Message(Data):
 
     @field_serializer("timestamp")
     def serialize_timestamp(self, value):
-        try:
-            # Try parsing with timezone
-            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
-        except ValueError:
-            # Try parsing without timezone
-            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        # TODO: this array is directly copied from validators package, would be nice to hold somewhere a list of
+        #  supported formats as a constant and use it as a reference here and in validators.py
+
+        formats = [
+            "%Y-%m-%d %H:%M:%S.%f %Z",  # Standard with timezone
+            "%Y-%m-%d %H:%M:%S.%f",  # Without timezone
+            "%Y-%m-%dT%H:%M:%S.%f",  # ISO format
+            "%Y-%m-%dT%H:%M:%S.%f%z",  # ISO with numeric timezone
+            # Also try without fractional seconds
+            "%Y-%m-%d %H:%M:%S %Z",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%dT%H:%M:%S",
+        ]
+
+        for time_format in formats:
+            try:
+                return datetime.strptime(value.strip(), time_format).replace(tzinfo=timezone.utc).strftime(time_format)
+            except ValueError:
+                continue
+
+        error_message = f"Invalid timestamp format: {value}"
+        raise ValueError(error_message)
 
     @field_validator("files", mode="before")
     @classmethod

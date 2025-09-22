@@ -36,11 +36,11 @@ class MessageBase(SQLModel):
         if isinstance(value, datetime):
             if value.tzinfo is None:
                 value = value.replace(tzinfo=timezone.utc)
-            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
+            return value.strftime("%Y-%m-%d %H:%M:%S.%f %Z")
         if isinstance(value, str):
             # Make sure the timestamp is in UTC
             value = datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
-            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
+            return value.strftime("%Y-%m-%d %H:%M:%S.%f %Z")
         return value
 
     @field_validator("files", mode="before")
@@ -71,7 +71,7 @@ class MessageBase(SQLModel):
         if isinstance(message.timestamp, str):
             # Convert timestamp string in format "YYYY-MM-DD HH:MM:SS UTC" to datetime
             try:
-                timestamp = datetime.strptime(message.timestamp, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+                timestamp = datetime.strptime(message.timestamp, "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
             except ValueError:
                 # Fallback for ISO format if the above fails
                 timestamp = datetime.fromisoformat(message.timestamp).replace(tzinfo=timezone.utc)
