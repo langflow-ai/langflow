@@ -265,7 +265,7 @@ class TestSetFieldDisplay:
         """Test setting display for existing field with show property."""
         build_config = dotdict({"field1": {"show": True, "other": "value"}})
 
-        result = set_field_display(build_config, "field1", show=False)
+        result = set_field_display(build_config, "field1", value=False)
 
         assert result["field1"]["show"] is False
         assert result["field1"]["other"] == "value"
@@ -274,7 +274,7 @@ class TestSetFieldDisplay:
         """Test setting display for non-existing field does nothing."""
         build_config = dotdict({"field1": {"show": True}})
 
-        result = set_field_display(build_config, "non_existing", show=False)
+        result = set_field_display(build_config, "non_existing", value=False)
 
         assert result["field1"]["show"] is True  # Unchanged
 
@@ -282,7 +282,7 @@ class TestSetFieldDisplay:
         """Test setting display for field without show property does nothing."""
         build_config = dotdict({"field1": {"other": "value"}})
 
-        result = set_field_display(build_config, "field1", show=False)
+        result = set_field_display(build_config, "field1", value=False)
 
         assert "show" not in result["field1"]
 
@@ -336,7 +336,7 @@ class TestSetFieldAdvanced:
         """Test setting advanced for existing field."""
         build_config = dotdict({"field1": {"advanced": False, "other": "value"}})
 
-        result = set_field_advanced(build_config, "field1", advanced=True)
+        result = set_field_advanced(build_config, "field1", value=True)
 
         assert result["field1"]["advanced"] is True
         assert result["field1"]["other"] == "value"
@@ -353,7 +353,7 @@ class TestSetFieldAdvanced:
         """Test setting advanced for non-dict field does nothing."""
         build_config = dotdict({"field1": "string_value"})
 
-        result = set_field_advanced(build_config, "field1", advanced=True)
+        result = set_field_advanced(build_config, "field1", value=True)
 
         assert result["field1"] == "string_value"  # Unchanged
 
@@ -361,7 +361,7 @@ class TestSetFieldAdvanced:
         """Test that advanced property is created if it doesn't exist."""
         build_config = dotdict({"field1": {"other": "value"}})
 
-        result = set_field_advanced(build_config, "field1", advanced=True)
+        result = set_field_advanced(build_config, "field1", value=True)
 
         assert result["field1"]["advanced"] is True
 

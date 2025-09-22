@@ -91,7 +91,7 @@ class TestS3StorageService:
         file_name = "test_file.txt"
         data = b"test content"
 
-        with pytest.raises(ClientError):
+        with pytest.raises(NoCredentialsError):
             await s3_service.save_file(folder, file_name, data)
 
     def test_inheritance(self, s3_service):
@@ -135,5 +135,5 @@ class TestS3StorageService:
         file_name = "test_file.txt"
         data = b"test content"
 
-        with pytest.raises(ClientError):
+        with pytest.raises(Exception, match="Test error"):
             await s3_service.save_file(folder, file_name, data)
