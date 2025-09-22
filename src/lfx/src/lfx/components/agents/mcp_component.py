@@ -71,8 +71,11 @@ class MCPToolsComponent(ComponentWithCache):
         ),
         BoolInput(
             name="use_cache",
-            display_name="Use Cache",
-            info="Enable caching of MCP tools to improve performance. Disable to always fetch fresh tools.",
+            display_name="Use Cached Server",
+            info=(
+                "Enable caching of MCP Server and tools to improve performance. ",
+                "Disable to always fetch fresh tools and server updates.",
+            ),
             value=False,
             advanced=True,
         ),
