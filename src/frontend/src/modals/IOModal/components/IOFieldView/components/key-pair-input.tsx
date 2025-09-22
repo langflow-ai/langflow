@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import IconComponent from "../../../../../components/common/genericIconComponent";
 import { Input } from "../../../../../components/ui/input";
 import { classNames } from "../../../../../utils/utils";
@@ -29,28 +29,43 @@ const IOKeyPairInput = ({
     return !value || value?.length === 0 ? [{ "": "" }] : checkValueType(value);
   });
 
-  // Update internal state when external value changes
+  // Track if we're currently editing to prevent interference
+  const isEditingRef = useRef(false);
+
+  // Update internal state when external value changes, but only if we're not currently editing
   useEffect(() => {
-    const newData =
-      !value || value?.length === 0 ? [{ "": "" }] : checkValueType(value);
-    setCurrentData(newData);
+    if (!isEditingRef.current) {
+      const newData =
+        !value || value?.length === 0 ? [{ "": "" }] : checkValueType(value);
+      setCurrentData(newData);
+    }
   }, [value, checkValueType]);
 
   const handleChangeKey = (event, objIndex) => {
+    isEditingRef.current = true;
     const oldKey = Object.keys(currentData[objIndex])[0];
     const updatedObj = { [event.target.value]: currentData[objIndex][oldKey] };
     const newData = [...currentData];
     newData[objIndex] = updatedObj;
     setCurrentData(newData);
     onChange(newData);
+    // Reset editing flag after a short delay to allow for rapid typing
+    setTimeout(() => {
+      isEditingRef.current = false;
+    }, 100);
   };
 
   const handleChangeValue = (newValue, objIndex) => {
+    isEditingRef.current = true;
     const key = Object.keys(currentData[objIndex])[0];
     const newData = [...currentData];
     newData[objIndex] = { ...newData[objIndex], [key]: newValue };
     setCurrentData(newData);
     onChange(newData);
+    // Reset editing flag after a short delay to allow for rapid typing
+    setTimeout(() => {
+      isEditingRef.current = false;
+    }, 100);
   };
 
   // Create flat array with additional metadata for rendering
@@ -60,7 +75,7 @@ const IOKeyPairInput = ({
         key,
         value: obj[key],
         objIndex,
-        uniqueId: `${objIndex}-${key}`, // Create unique identifier for React key
+        uniqueId: `${objIndex}`, // Use only objIndex for stable React key
       }));
     }) || [];
 
