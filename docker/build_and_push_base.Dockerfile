@@ -12,10 +12,16 @@
 # Frontend builder stage - use native platform to avoid QEMU issues with esbuild
 FROM --platform=$BUILDPLATFORM node:18-slim AS frontend-builder
 
+# Install build dependencies that may be needed for native modules
+RUN apt-get update \
+    && apt-get install -y build-essential python3 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
 # Increase memory and disable concurrent builds to avoid esbuild crashes on emulated architectures
-RUN npm install \
+RUN RUSTFLAGS='--cfg reqwest_unstable' npm install \
     && NODE_OPTIONS="--max-old-space-size=8192" JOBS=1 npm run build
 
 # Use a Python image with uv pre-installed
