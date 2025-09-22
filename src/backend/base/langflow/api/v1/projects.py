@@ -85,6 +85,7 @@ async def create_project(
         settings_service = get_settings_service()
 
         # If AUTO_LOGIN is false, automatically enable API key authentication
+        default_auth = {"auth_type": "none"}
         if not settings_service.auth_settings.AUTO_LOGIN and not new_project.auth_settings:
             default_auth = {"auth_type": "apikey"}
             new_project.auth_settings = encrypt_auth_settings(default_auth)
@@ -100,26 +101,11 @@ async def create_project(
         # Auto-register MCP server for this project with configured default auth
         if get_settings_service().settings.add_projects_to_mcp_servers:
             try:
-                # Get default MCP auth type from settings
-                default_auth_type = settings_service.settings.default_mcp_auth_type
-
-                # Check if OAuth is selected and raise NotImplementedError
-                if default_auth_type == "oauth":
-                    msg = "OAuth as default MCP authentication type is not yet implemented"
-                    await logger.aerror(msg)
-                    raise NotImplementedError(msg)
-
-                # Set folder auth to configured default mode (encrypted at rest)
-                new_project.auth_settings = encrypt_auth_settings({"auth_type": default_auth_type})
-                session.add(new_project)
-                await session.commit()
-                await session.refresh(new_project)
-
                 # Build SSE URL
                 sse_url = await get_project_sse_url(new_project.id)
 
-                # Prepare server config based on auth type
-                if default_auth_type == "apikey":
+                # Prepare server config based on auth type same as new project
+                if default_auth.get("auth_type", "none") == "apikey":
                     # Create API key for API key authentication
                     api_key_name = f"MCP Project {new_project.name} - default"
                     unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), current_user.id)
