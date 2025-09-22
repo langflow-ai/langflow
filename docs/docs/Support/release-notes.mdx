@@ -80,6 +80,12 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
   The **File** component supports [advanced parsing with the Docling library](/components-data#advanced-parsing).
   Additionally, the Docling dependency is now included with Langflow, making it easier to use the **Docling** components and the **File** component's new advanced parsing feature.
 
+  :::note macOS x86_64 limitation
+  The Docling dependency is not automatically installed on macOS systems with x86_64 architecture.
+  Users on macOS with x86_64 architecture who want to use Docling features must manually install the Docling dependency.
+  For more information, see [Docling prerequisites](/integrations-docling#prerequisites).
+  :::
+
 - Reorganized component menus and visual editor controls
 
   - The [workspace](/concepts-overview#workspace) sidebar is divided into separate sections for <Icon name="Search" aria-hidden="true" /> **Search**, <Icon name="Component" aria-hidden="true" /> **Core components**, <McpIcon /> [**MCP servers**](/mcp-server), <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components), and <Icon name="StickyNote" aria-hidden="true"/> **Add Note**.
