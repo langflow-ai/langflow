@@ -10,7 +10,7 @@ from lfx.log import logger
 from lfx.services.deps import get_settings_service
 from sqlmodel import select
 
-from langflow.api.v2.mcp import update_server
+from langflow.api.v2.mcp import get_server_list, update_server
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import create_api_key
@@ -151,6 +151,22 @@ async def auto_configure_starter_projects_mcp(session):
                 if flows_configured > 0:
                     await logger.adebug(f"Enabled MCP for {flows_configured} starter flows for user {user.username}")
 
+                # Create unique server name for starter projects (check this first)
+                server_name = f"lf-{sanitize_mcp_name(DEFAULT_FOLDER_NAME)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+
+                # Check if the MCP server already exists to avoid duplicates - do this BEFORE expensive operations
+                try:
+                    existing_servers = await get_server_list(user, session, get_storage_service(), settings_service)
+                    if server_name in existing_servers.get("mcpServers", {}):
+                        await logger.adebug(
+                            f"MCP server '{server_name}' already exists for user {user.username}, skipping"
+                        )
+                        continue  # Skip this user since server already exists
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(f"Could not check existing MCP servers for user {user.username}: {e}")
+                    # Continue anyway to try adding the server
+
+                # Only do expensive operations if server doesn't exist
                 # Set up THIS USER'S starter folder authentication (same as new projects)
                 if not user_starter_folder.auth_settings:
                     user_starter_folder.auth_settings = encrypt_auth_settings({"auth_type": "apikey"})
@@ -174,9 +190,6 @@ async def auto_configure_starter_projects_mcp(session):
                     sse_url,
                 ]
                 server_config = {"command": command, "args": args}
-
-                # Create unique server name for starter projects
-                server_name = f"lf-{sanitize_mcp_name(DEFAULT_FOLDER_NAME)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
 
                 # Add to user's MCP servers configuration
                 await logger.adebug(f"Adding MCP server '{server_name}' for user {user.username}")
