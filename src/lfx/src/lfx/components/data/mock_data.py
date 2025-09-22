@@ -1,5 +1,5 @@
-import random
-from datetime import datetime, timedelta
+import secrets
+from datetime import datetime, timedelta, timezone
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import Output
@@ -21,7 +21,10 @@ class MockDataGeneratorComponent(Component):
     """
 
     display_name = "Mock Data Generator"
-    description = "Generate sample data for testing and development. Choose from text messages, JSON data, or tabular data formats."
+    description = (
+        "Generate sample data for testing and development. "
+        "Choose from text messages, JSON data, or tabular data formats."
+    )
     icon = "database"
     name = "MockDataGenerator"
 
@@ -47,12 +50,13 @@ class MockDataGeneratorComponent(Component):
             self.log("Generating Message mock data")
             message = self._generate_message()
             self.status = f"Generated Lorem Ipsum message ({len(message.text)} characters)"
-            return message
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             error_msg = f"Error generating Message data: {e!s}"
             self.log(error_msg)
             self.status = f"Error: {error_msg}"
             return Message(text=f"Error: {error_msg}")
+        else:
+            return message
 
     def generate_data_output(self) -> Data:
         """Generate Data output specifically.
@@ -65,12 +69,13 @@ class MockDataGeneratorComponent(Component):
             self.log(f"Generating Data mock data with {record_count} record")
             data = self._generate_data(record_count)
             self.status = f"Generated JSON data with {len(data.data.get('records', []))} record(s)"
-            return data
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             error_msg = f"Error generating Data: {e!s}"
             self.log(error_msg)
             self.status = f"Error: {error_msg}"
             return Data(data={"error": error_msg, "success": False})
+        else:
+            return data
 
     def generate_dataframe_output(self) -> DataFrame:
         """Generate DataFrame output specifically.
@@ -82,7 +87,7 @@ class MockDataGeneratorComponent(Component):
             record_count = 50  # Fixed to 50 records for DataFrame output
             self.log(f"Generating DataFrame mock data with {record_count} records")
             return self._generate_dataframe(record_count)
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             error_msg = f"Error generating DataFrame: {e!s}"
             self.log(error_msg)
 
@@ -102,14 +107,35 @@ class MockDataGeneratorComponent(Component):
             Message: A Message object containing Lorem Ipsum text
         """
         lorem_ipsum_texts = [
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-            "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-            "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.",
-            "Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.",
-            "Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.",
+            (
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor "
+                "incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud "
+                "exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
+            ),
+            (
+                "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla "
+                "pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt "
+                "mollit anim id est laborum."
+            ),
+            (
+                "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, "
+                (
+                    "totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto "
+                    "beatae vitae dicta sunt explicabo."
+                )
+            ),
+            (
+                "Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, "
+                "sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt."
+            ),
+            (
+                "Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, "
+                "adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore "
+                "magnam aliquam quaerat voluptatem."
+            ),
         ]
 
-        selected_text = random.choice(lorem_ipsum_texts)
+        selected_text = secrets.choice(lorem_ipsum_texts)
         return Message(text=selected_text)
 
     def _generate_data(self, record_count: int) -> Data:
@@ -138,24 +164,34 @@ class MockDataGeneratorComponent(Component):
 
         # Generate sample records
         records = []
-        base_date = datetime.now() - timedelta(days=365)
+        base_date = datetime.now(tz=timezone.utc) - timedelta(days=365)
 
         for i in range(record_count):
             record = {
                 "id": f"REC-{1000 + i}",
                 "name": f"Sample Record {i + 1}",
-                "company": random.choice(companies),
-                "department": random.choice(departments),
-                "status": random.choice(statuses),
-                "category": random.choice(categories),
-                "value": round(random.uniform(100, 10000), 2),
-                "quantity": random.randint(1, 100),
-                "rating": round(random.uniform(1, 5), 1),
-                "is_active": random.choice([True, False]),
-                "created_date": (base_date + timedelta(days=random.randint(0, 365))).isoformat(),
-                "tags": random.sample(
-                    ["important", "urgent", "review", "approved", "draft", "final"], k=random.randint(1, 3)
-                ),
+                "company": secrets.choice(companies),
+                "department": secrets.choice(departments),
+                "status": secrets.choice(statuses),
+                "category": secrets.choice(categories),
+                "value": round(secrets.randbelow(9901) + 100 + secrets.randbelow(100)/100, 2),
+                "quantity": secrets.randbelow(100) + 1,
+                "rating": round(secrets.randbelow(41)/10 + 1, 1),
+                "is_active": secrets.choice([True, False]),
+                "created_date": (base_date + timedelta(days=secrets.randbelow(366))).isoformat(),
+                "tags": [
+                    secrets.choice(
+                        [
+                            "important",
+                            "urgent",
+                            "review",
+                            "approved",
+                            "draft",
+                            "final",
+                        ]
+                    )
+                    for _ in range(secrets.randbelow(3) + 1)
+                ],
             }
             records.append(record)
 
@@ -167,8 +203,8 @@ class MockDataGeneratorComponent(Component):
                 "active_count": sum(1 for r in records if r["is_active"]),
                 "total_value": sum(r["value"] for r in records),
                 "average_rating": round(sum(r["rating"] for r in records) / record_count, 2),
-                "categories": list(set(r["category"] for r in records)),
-                "companies": list(set(r["company"] for r in records)),
+                "categories": list({r["category"] for r in records}),
+                "companies": list({r["company"] for r in records}),
             },
         }
 
@@ -210,7 +246,7 @@ class MockDataGeneratorComponent(Component):
 
                 # Return as DataFrame wrapper (Langflow will handle the display)
                 return DataFrame(simple_df_data)
-            except Exception:
+            except (ValueError, TypeError):
                 # Ultimate fallback - return the Data as DataFrame
                 return DataFrame({"data": [str(data_result.data)]})
 
@@ -268,31 +304,28 @@ class MockDataGeneratorComponent(Component):
 
             # Generate DataFrame data
             data = []
-            base_date = datetime.now() - timedelta(days=365)
+            base_date = datetime.now(tz=timezone.utc) - timedelta(days=365)
 
             self.log("Generating row data...")
             for i in range(record_count):
                 row = {
                     "customer_id": f"CUST-{10000 + i}",
-                    "first_name": random.choice(first_names),
-                    "last_name": random.choice(last_names),
+                    "first_name": secrets.choice(first_names),
+                    "last_name": secrets.choice(last_names),
                     "email": f"user{i + 1}@example.com",
-                    "age": random.randint(18, 80),
-                    "city": random.choice(cities),
-                    "country": random.choice(countries),
-                    "product": random.choice(products),
-                    "order_date": (base_date + timedelta(days=random.randint(0, 365))).strftime("%Y-%m-%d"),
-                    "order_value": round(random.uniform(10, 1000), 2),
-                    "quantity": random.randint(1, 10),
-                    "discount": round(random.uniform(0, 0.3), 2),
-                    "is_premium": random.choice([True, False]),
-                    "satisfaction_score": random.randint(1, 10),
-                    "last_contact": (base_date + timedelta(days=random.randint(0, 365))).strftime("%Y-%m-%d"),
+                    "age": secrets.randbelow(63) + 18,
+                    "city": secrets.choice(cities),
+                    "country": secrets.choice(countries),
+                    "product": secrets.choice(products),
+                    "order_date": (base_date + timedelta(days=secrets.randbelow(366))).strftime("%Y-%m-%d"),
+                    "order_value": round(secrets.randbelow(991) + 10 + secrets.randbelow(100)/100, 2),
+                    "quantity": secrets.randbelow(10) + 1,
+                    "discount": round(secrets.randbelow(31)/100, 2),
+                    "is_premium": secrets.choice([True, False]),
+                    "satisfaction_score": secrets.randbelow(10) + 1,
+                    "last_contact": (base_date + timedelta(days=secrets.randbelow(366))).strftime("%Y-%m-%d"),
                 }
                 data.append(row)
-
-            self.log(f"Generated {len(data)} rows of data")
-
             # Create DataFrame
             self.log("Creating pandas DataFrame...")
             df = pd.DataFrame(data)
@@ -304,22 +337,43 @@ class MockDataGeneratorComponent(Component):
             df["discounted_value"] = df["order_value"] * (1 - df["discount"])
             df["total_value"] = df["discounted_value"] * df["quantity"]
 
+            # Age group boundaries as constants
+            age_group_18_25 = 25
+            age_group_26_35 = 35
+            age_group_36_50 = 50
+            age_group_51_65 = 65
+
             # Create age groups with better error handling
             try:
                 df["age_group"] = pd.cut(
-                    df["age"], bins=[0, 25, 35, 50, 65, 100], labels=["18-25", "26-35", "36-50", "51-65", "65+"]
+                    df["age"],
+                    bins=[
+                        0,
+                        age_group_18_25,
+                        age_group_26_35,
+                        age_group_36_50,
+                        age_group_51_65,
+                        100,
+                    ],
+                    labels=[
+                        "18-25",
+                        "26-35",
+                        "36-50",
+                        "51-65",
+                        "65+",
+                    ],
                 )
-            except Exception as e:
+            except (ValueError, TypeError) as e:
                 self.log(f"Error creating age groups with pd.cut: {e!s}, using simple categorization")
                 df["age_group"] = df["age"].apply(
                     lambda x: "18-25"
-                    if x <= 25
+                    if x <= age_group_18_25
                     else "26-35"
-                    if x <= 35
+                    if x <= age_group_26_35
                     else "36-50"
-                    if x <= 50
+                    if x <= age_group_36_50
                     else "51-65"
-                    if x <= 65
+                    if x <= age_group_51_65
                     else "65+"
                 )
 
@@ -328,7 +382,7 @@ class MockDataGeneratorComponent(Component):
             # DO NOT set self.status when returning DataFrames - it interferes with display
             return DataFrame(df)
 
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             error_msg = f"Error generating DataFrame: {e!s}"
             self.log(error_msg)
             # DO NOT set self.status when returning DataFrames - it interferes with display
@@ -337,12 +391,12 @@ class MockDataGeneratorComponent(Component):
                 error_df = pd.DataFrame(
                     {
                         "error": [error_msg],
-                        "timestamp": [datetime.now().isoformat()],
+                        "timestamp": [datetime.now(tz=timezone.utc).isoformat()],
                         "attempted_records": [record_count],
                     }
                 )
                 return DataFrame(error_df)
-            except Exception as fallback_error:
+            except (ValueError, TypeError) as fallback_error:
                 # Last resort: return simple error DataFrame
                 self.log(f"Fallback also failed: {fallback_error!s}")
                 simple_error_df = pd.DataFrame({"error": [error_msg]})
