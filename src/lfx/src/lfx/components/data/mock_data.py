@@ -118,8 +118,7 @@ class MockDataGeneratorComponent(Component):
                 "mollit anim id est laborum."
             ),
             (
-                "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, "
-                (
+                "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, "(
                     "totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto "
                     "beatae vitae dicta sunt explicabo."
                 )
@@ -174,9 +173,9 @@ class MockDataGeneratorComponent(Component):
                 "department": secrets.choice(departments),
                 "status": secrets.choice(statuses),
                 "category": secrets.choice(categories),
-                "value": round(secrets.randbelow(9901) + 100 + secrets.randbelow(100)/100, 2),
+                "value": round(secrets.randbelow(9901) + 100 + secrets.randbelow(100) / 100, 2),
                 "quantity": secrets.randbelow(100) + 1,
-                "rating": round(secrets.randbelow(41)/10 + 1, 1),
+                "rating": round(secrets.randbelow(41) / 10 + 1, 1),
                 "is_active": secrets.choice([True, False]),
                 "created_date": (base_date + timedelta(days=secrets.randbelow(366))).isoformat(),
                 "tags": [
@@ -318,9 +317,9 @@ class MockDataGeneratorComponent(Component):
                     "country": secrets.choice(countries),
                     "product": secrets.choice(products),
                     "order_date": (base_date + timedelta(days=secrets.randbelow(366))).strftime("%Y-%m-%d"),
-                    "order_value": round(secrets.randbelow(991) + 10 + secrets.randbelow(100)/100, 2),
+                    "order_value": round(secrets.randbelow(991) + 10 + secrets.randbelow(100) / 100, 2),
                     "quantity": secrets.randbelow(10) + 1,
-                    "discount": round(secrets.randbelow(31)/100, 2),
+                    "discount": round(secrets.randbelow(31) / 100, 2),
                     "is_premium": secrets.choice([True, False]),
                     "satisfaction_score": secrets.randbelow(10) + 1,
                     "last_contact": (base_date + timedelta(days=secrets.randbelow(366))).strftime("%Y-%m-%d"),
