@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatOutput",
-            "id": "ChatOutput-vSJ6N",
+            "id": "ChatOutput-PGrAy",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input",
-            "id": "SaveToFile-Jknwv",
+            "id": "SaveToFile-zVwqh",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,48 +24,19 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ChatOutput-vSJ6N{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-vSJ6Nœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SaveToFile-Jknwv{œfieldNameœ:œinputœ,œidœ:œSaveToFile-Jknwvœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-ChatOutput-PGrAy{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-PGrAyœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SaveToFile-zVwqh{œfieldNameœ:œinputœ,œidœ:œSaveToFile-zVwqhœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "ChatOutput-vSJ6N",
-        "sourceHandle": "{œdataTypeœ: œChatOutputœ, œidœ: œChatOutput-vSJ6Nœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "SaveToFile-Jknwv",
-        "targetHandle": "{œfieldNameœ: œinputœ, œidœ: œSaveToFile-Jknwvœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "ChatOutput-PGrAy",
+        "sourceHandle": "{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-PGrAyœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "SaveToFile-zVwqh",
+        "targetHandle": "{œfieldNameœ:œinputœ,œidœ:œSaveToFile-zVwqhœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
       },
       {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "AgentQL",
-            "id": "AgentQL-tQP4B",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-9FjKL",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-AgentQL-tQP4B{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-tQP4Bœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-9FjKL{œfieldNameœ:œtoolsœ,œidœ:œAgent-9FjKLœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "AgentQL-tQP4B",
-        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-tQP4Bœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-9FjKL",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-9FjKLœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-ltBH6",
+            "id": "ChatInput-mRb1l",
             "name": "message",
             "output_types": [
               "Message"
@@ -73,27 +44,51 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-9FjKL",
+            "id": "Agent-dNbW5",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-ltBH6{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ltBH6œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-9FjKL{œfieldNameœ:œinput_valueœ,œidœ:œAgent-9FjKLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-ltBH6",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-ltBH6œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-9FjKL",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-9FjKLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__ChatInput-mRb1l{œdataTypeœ:œChatInputœ,œidœ:œChatInput-mRb1lœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-dNbW5{œfieldNameœ:œinput_valueœ,œidœ:œAgent-dNbW5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-mRb1l",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-mRb1lœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-dNbW5",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-dNbW5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
-        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "AgentQL",
+            "id": "AgentQL-G5UjC",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-dNbW5",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__AgentQL-G5UjC{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-G5UjCœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-dNbW5{œfieldNameœ:œtoolsœ,œidœ:œAgent-dNbW5œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "AgentQL-G5UjC",
+        "sourceHandle": "{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-G5UjCœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-dNbW5",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-dNbW5œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+      },
+      {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-9FjKL",
+            "id": "Agent-dNbW5",
             "name": "response",
             "output_types": [
               "Message"
@@ -101,7 +96,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-vSJ6N",
+            "id": "ChatOutput-PGrAy",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -110,18 +105,17 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Agent-9FjKL{œdataTypeœ:œAgentœ,œidœ:œAgent-9FjKLœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-vSJ6N{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-vSJ6Nœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "Agent-9FjKL",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-9FjKLœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-vSJ6N",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-vSJ6Nœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__Agent-dNbW5{œdataTypeœ:œAgentœ,œidœ:œAgent-dNbW5œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-PGrAy{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-PGrAyœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "source": "Agent-dNbW5",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-dNbW5œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-PGrAy",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-PGrAyœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "note-xj91O",
+          "id": "note-Dh7TT",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -133,7 +127,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-xj91O",
+        "id": "note-Dh7TT",
         "measured": {
           "height": 324,
           "width": 324
@@ -147,7 +141,7 @@
       },
       {
         "data": {
-          "id": "note-iTnRZ",
+          "id": "note-xwCyd",
           "node": {
             "description": "### 💡 Add your AgentQL API key here",
             "display_name": "",
@@ -160,7 +154,7 @@
         },
         "dragging": false,
         "height": 346,
-        "id": "note-iTnRZ",
+        "id": "note-xwCyd",
         "measured": {
           "height": 346,
           "width": 324
@@ -176,7 +170,7 @@
         "data": {
           "description": "Uses AgentQL API to extract structured data from a given URL.",
           "display_name": "AgentQL Query Data",
-          "id": "AgentQL-tQP4B",
+          "id": "AgentQL-G5UjC",
           "node": {
             "base_classes": [
               "Data"
@@ -202,6 +196,7 @@
             ],
             "frozen": false,
             "icon": "AgentQL",
+            "last_updated": "2025-09-22T17:54:00.426Z",
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
@@ -530,7 +525,7 @@
           "type": "AgentQL"
         },
         "dragging": false,
-        "id": "AgentQL-tQP4B",
+        "id": "AgentQL-G5UjC",
         "measured": {
           "height": 316,
           "width": 320
@@ -544,7 +539,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-ltBH6",
+          "id": "ChatInput-mRb1l",
           "node": {
             "base_classes": [
               "Message"
@@ -787,7 +782,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-ltBH6",
+        "id": "ChatInput-mRb1l",
         "measured": {
           "height": 48,
           "width": 192
@@ -801,7 +796,7 @@
       },
       {
         "data": {
-          "id": "note-KwYd0",
+          "id": "note-HgsBJ",
           "node": {
             "description": "# News Aggregator\n\nThis flow extracts structured data from a URL and saves it into a JSON file.\n\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Click **Playground** and enter a question.\n\nThe **Agent** component populates the **AgentQL** component's **URL** and **Query** fields, and returns a structured response to your question. Then the extracted data is saved into a JSON file `news-aggregated.json`, which can be found in your current project directory.",
             "display_name": "",
@@ -813,7 +808,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-KwYd0",
+        "id": "note-HgsBJ",
         "measured": {
           "height": 696,
           "width": 575
@@ -822,12 +817,12 @@
           "x": 135.77506751324216,
           "y": 54.23110716380944
         },
-        "selected": true,
+        "selected": false,
         "type": "noteNode"
       },
       {
         "data": {
-          "id": "ChatOutput-vSJ6N",
+          "id": "ChatOutput-PGrAy",
           "node": {
             "base_classes": [
               "Message"
@@ -1073,7 +1068,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-vSJ6N",
+        "id": "ChatOutput-PGrAy",
         "measured": {
           "height": 48,
           "width": 192
@@ -1087,7 +1082,7 @@
       },
       {
         "data": {
-          "id": "SaveToFile-Jknwv",
+          "id": "SaveToFile-zVwqh",
           "node": {
             "base_classes": [
               "Message"
@@ -1138,7 +1133,7 @@
                   },
                   {
                     "name": "google",
-                    "version": "2.40.3"
+                    "version": "0.8.5"
                   },
                   {
                     "name": "googleapiclient",
@@ -1177,7 +1172,7 @@
                 "dynamic": false,
                 "info": "AWS Access key ID.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "aws_access_key_id",
                 "password": true,
                 "placeholder": "",
@@ -1248,7 +1243,7 @@
                 "dynamic": false,
                 "info": "AWS Secret Key.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "aws_secret_access_key",
                 "password": true,
                 "placeholder": "",
@@ -1438,7 +1433,7 @@
                 "dynamic": false,
                 "info": "Your Google Cloud Platform service account JSON key as a secret string (complete JSON content).",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "service_account_key",
                 "password": true,
                 "placeholder": "",
@@ -1488,9 +1483,9 @@
           "type": "SaveToFile"
         },
         "dragging": false,
-        "id": "SaveToFile-Jknwv",
+        "id": "SaveToFile-zVwqh",
         "measured": {
-          "height": 248,
+          "height": 347,
           "width": 320
         },
         "position": {
@@ -1502,24 +1497,22 @@
       },
       {
         "data": {
-          "id": "Agent-9FjKL",
+          "id": "Agent-dNbW5",
           "node": {
             "base_classes": [
               "Message"
             ],
             "beta": false,
-            "category": "agents",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",
             "display_name": "Agent",
-            "documentation": "",
+            "documentation": "https://docs.langflow.org/agents",
             "edited": false,
             "field_order": [
               "agent_llm",
               "max_tokens",
               "model_kwargs",
-              "json_mode",
               "model_name",
               "openai_api_base",
               "api_key",
@@ -1529,6 +1522,8 @@
               "timeout",
               "system_prompt",
               "n_messages",
+              "format_instructions",
+              "output_schema",
               "tools",
               "input_value",
               "handle_parsing_errors",
@@ -1539,7 +1534,7 @@
             ],
             "frozen": false,
             "icon": "bot",
-            "key": "Agent",
+            "last_updated": "2025-09-22T17:54:22.748Z",
             "legacy": false,
             "metadata": {
               "code_hash": "d61b1f3d692a",
@@ -1583,7 +1578,6 @@
               }
             ],
             "pinned": false,
-            "score": 1.1732828199964098e-19,
             "template": {
               "_type": "Component",
               "add_current_date_tool": {
@@ -1636,6 +1630,17 @@
                 "dialog_inputs": {},
                 "display_name": "Model Provider",
                 "dynamic": false,
+                "external_options": {
+                  "fields": {
+                    "data": {
+                      "node": {
+                        "display_name": "Connect other models",
+                        "icon": "CornerDownLeft",
+                        "name": "connect_other_models"
+                      }
+                    }
+                  }
+                },
                 "info": "The provider of the language model that the agent will use to generate responses.",
                 "input_types": [],
                 "name": "agent_llm",
@@ -1652,9 +1657,6 @@
                     "icon": "GoogleGenerativeAI"
                   },
                   {
-                    "icon": "Groq"
-                  },
-                  {
                     "icon": "OpenAI"
                   },
                   {
@@ -1663,6 +1665,7 @@
                 ],
                 "placeholder": "",
                 "real_time_refresh": true,
+                "refresh_button": false,
                 "required": false,
                 "show": true,
                 "title_case": false,
@@ -1679,7 +1682,7 @@
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1688,7 +1691,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1752,7 +1755,7 @@
                 "value": true
               },
               "input_value": {
-                "_input_type": "MessageTextInput",
+                "_input_type": "MessageInput",
                 "advanced": false,
                 "display_name": "Input",
                 "dynamic": false,
@@ -1859,6 +1862,7 @@
                 "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
+                "external_options": {},
                 "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
                 "name": "model_name",
                 "options": [
@@ -1892,7 +1896,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4o"
+                "value": "gpt-4o-mini"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -2034,7 +2038,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "You are a helpful content writer researching news and social posts for our company.\n\nCreate a new JSON file and insert the extracted data into that file.\n\nYou will use the AgentQL tool when getting content from URLs. Be sure to get the URL, author, content, and publish date. Here's how to write an AgentQL query:\n\nThe AgentQL query serves as the building block of your script. This guide shows you how AgentQL's query structure works and how to write a valid query.\n\n### Single term query\n\nA **single term query** enables you to retrieve a single element on the webpage. Here is an example of how you can write a single term query to retrieve a search box.\n\n```AgentQL\n{\n    search_box\n}\n```\n\n### List term query\n\nA **list term query** enables you to retrieve a list of similar elements on the webpage. Here is an example of how you can write a list term query to retrieve a list of prices of apples.\n\n```AgentQL\n{\n    apple_price[]\n}\n```\n\nYou can also specify the exact field you want to return in the list. Here is an example of how you can specify that you want the name and price from the list of products.\n\n```AgentQL\n{\n    products[] {\n        name\n        price(integer)\n    }\n}\n```\n\n### Combining single term queries and list term queries\n\nYou can query for both **single terms** and **list terms** by combining the preceding formats.\n\n```AgentQL\n{\n    author\n    date_of_birth\n    book_titles[]\n}\n```\n\n### Giving context to queries\n\nThere two main ways you can provide additional context to your queries.\n\n#### Structural context\n\nYou can nest queries within parent containers to indicate that your target web element is in a particular section of the webpage.\n\n```AgentQL\n{\n    footer {\n        social_media_links[]\n    }\n}\n```\n\n#### Semantic context\n\nYou can also provide a short description within parentheses to guide AgentQL in locating the right element(s).\n\n```AgentQL\n{\n    footer {\n        social_media_links(The icons that lead to Facebook, Snapchat, etc.)[]\n    }\n}\n```\n\n### Syntax guidelines\n\nEnclose all AgentQL query terms within curly braces `{}`. The following query structure isn't valid because the term \"social_media_links\" is wrongly enclosed within parenthesis`()`.\n\n```AgentQL\n( # Should be {\n    social_media_links(The icons that lead to Facebook, Snapchat, etc.)[]\n) # Should be }\n```\n\nYou can't include new lines in your semantic context. The following query structure isn't valid because the semantic context isn't contained within one line.\n\n```AgentQL\n{\n    social_media_links(The icons that lead\n        to Facebook, Snapchat, etc.)[]\n}\n```"
+                "value": "You are a helpful assistant that can use tools to answer questions and perform tasks."
               },
               "temperature": {
                 "_input_type": "SliderInput",
@@ -2127,30 +2131,30 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-9FjKL",
+        "id": "Agent-dNbW5",
         "measured": {
           "height": 594,
           "width": 320
         },
         "position": {
-          "x": 1151.0943181682178,
-          "y": 225.0272050437212
+          "x": 1180.7653153073943,
+          "y": 221.60669630396745
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 113.63345948765732,
-      "y": 252.40508015514627,
-      "zoom": 0.5137207349611489
+      "x": -311.25136534737635,
+      "y": -32.93656916599684,
+      "zoom": 0.6540261263910284
     }
   },
   "description": "Extracts data and information from webpages.",
   "endpoint_name": null,
-  "id": "d333c92f-5fe1-4791-9095-82441b0a9cb9",
+  "id": "b1dd66b0-505c-4000-a397-22a141024419",
   "is_component": false,
-  "last_tested_version": "1.4.3",
+  "last_tested_version": "1.6.0",
   "name": "News Aggregator",
   "tags": [
     "web-scraping",
