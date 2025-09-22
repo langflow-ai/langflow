@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 
 from pydantic import BeforeValidator
 
+TF_WITH_TZ_AND_MICROSECONDS = "%Y-%m-%d %H:%M:%S.%f %Z"
+
 
 def timestamp_to_str(timestamp: datetime | str) -> str:
     """Convert timestamp to standardized string format.
@@ -22,7 +24,7 @@ def timestamp_to_str(timestamp: datetime | str) -> str:
         formats = [
             "%Y-%m-%dT%H:%M:%S",  # ISO format
             "%Y-%m-%d %H:%M:%S %Z",  # Standard with timezone
-            "%Y-%m-%d %H:%M:%S.%f %Z",  # Standard with timezone and microseconds
+            TF_WITH_TZ_AND_MICROSECONDS,  # Standard with timezone and microseconds
             "%Y-%m-%d %H:%M:%S",  # Without timezone
             "%Y-%m-%dT%H:%M:%S.%f",  # ISO with microseconds
             "%Y-%m-%dT%H:%M:%S%z",  # ISO with numeric timezone
@@ -31,7 +33,7 @@ def timestamp_to_str(timestamp: datetime | str) -> str:
         for fmt in formats:
             try:
                 parsed = datetime.strptime(timestamp.strip(), fmt).replace(tzinfo=timezone.utc)
-                return parsed.strftime("%Y-%m-%d %H:%M:%S.%f %Z")
+                return parsed.strftime(TF_WITH_TZ_AND_MICROSECONDS)
             except ValueError:
                 continue
 
@@ -60,7 +62,7 @@ def str_to_timestamp(timestamp: str | datetime) -> datetime:
     """
     if isinstance(timestamp, str):
         try:
-            return datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+            return datetime.strptime(timestamp, TF_WITH_TZ_AND_MICROSECONDS).replace(tzinfo=timezone.utc)
         except ValueError as e:
             msg = f"Invalid timestamp format: {timestamp}. Expected format: YYYY-MM-DD HH:MM:SS.%f UTC"
             raise ValueError(msg) from e
@@ -84,7 +86,7 @@ def timestamp_with_fractional_seconds(timestamp: datetime | str) -> str:
     if isinstance(timestamp, str):
         # Try parsing with different formats
         formats = [
-            "%Y-%m-%d %H:%M:%S.%f %Z",  # Standard with timezone
+            TF_WITH_TZ_AND_MICROSECONDS,  # Standard with timezone
             "%Y-%m-%d %H:%M:%S.%f",  # Without timezone
             "%Y-%m-%dT%H:%M:%S.%f",  # ISO format
             "%Y-%m-%dT%H:%M:%S.%f%z",  # ISO with numeric timezone
@@ -97,7 +99,7 @@ def timestamp_with_fractional_seconds(timestamp: datetime | str) -> str:
         for fmt in formats:
             try:
                 parsed = datetime.strptime(timestamp.strip(), fmt).replace(tzinfo=timezone.utc)
-                return parsed.strftime("%Y-%m-%d %H:%M:%S.%f %Z")
+                return parsed.strftime(TF_WITH_TZ_AND_MICROSECONDS)
             except ValueError:
                 continue
 
@@ -107,7 +109,7 @@ def timestamp_with_fractional_seconds(timestamp: datetime | str) -> str:
     # Handle datetime object
     if timestamp.tzinfo is None:
         timestamp = timestamp.replace(tzinfo=timezone.utc)
-    return timestamp.strftime("%Y-%m-%d %H:%M:%S.%f %Z")
+    return timestamp.strftime(TF_WITH_TZ_AND_MICROSECONDS)
 
 
 timestamp_to_str_validator = BeforeValidator(timestamp_to_str)
