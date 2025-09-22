@@ -7,6 +7,7 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
 
 Data components bring data into your flows from various sources like files, API endpoints, and URLs.
 For example:
@@ -174,23 +175,24 @@ For videos, see the **Twelve Labs** and **YouTube** <Icon name="Blocks" aria-hid
 
 ### Advanced parsing
 
-In Langflow version 1.6 and later, the **File** component supports advanced document parsing using the [Docling](https://docling-project.github.io/docling/) library for supported file types.
-
-<details>
-<summary>Enable Developer Mode for Windows</summary>
-
-If you are running Langflow Desktop on Windows, you must [enable Developer Mode](https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development#activate-developer-mode) to use the Docling components.
-
-The location of this setting depends on your Windows OS version.
-Find **For developers** in your Windows Settings, or search for "Developer" in the Windows search bar.
-Then, enable **Developer mode**.
-You might need to restart your computer or Langflow to apply the change.
-
-</details>
+Starting in Langflow version 1.6, the **File** component supports advanced document parsing using the [Docling](https://docling-project.github.io/docling/) library for supported file types.
 
 To use advanced parsing, do the following:
 
-1. Add one valid file to the **File** component.
+1. Complete the following prerequisites, if applicable:
+
+    * **Install Langflow version 1.6 or later**: Earlier versions don't support advanced parsing with the **File** component. For upgrade guidance, see the [Release notes](/release-notes).
+
+    * **Install Docling dependency on macOS Intel (x86_64)**: The Docling dependency isn't installed by default for macOS Intel (x86_64). Use the [Docling installation guide](https://docling-project.github.io/docling/installation/) to install the Docling dependency.
+
+        For all other operating systems, the Docling dependency is installed by default.
+
+    * **Enable Developer Mode for Windows**:
+    <PartialDevModeWindows />
+
+        Developer Mode isn't required for Langflow OSS on Windows.
+
+2. Add one valid file to the **File** component.
 
     :::info Advanced parsing limitations
     * Advanced parsing processes only one file.
@@ -201,9 +203,9 @@ To use advanced parsing, do the following:
     For structured data analysis, use the [**Parser** component](/components-processing#parser).
     :::
 
-2. Enable **Advanced Parsing**.
+3. Enable **Advanced Parsing**.
 
-3. Click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus) to configure advanced parsing parameters, which are hidden by default:
+4. Click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus) to configure advanced parsing parameters, which are hidden by default:
 
     | Name | Display Name | Info |
     |------|--------------|------|

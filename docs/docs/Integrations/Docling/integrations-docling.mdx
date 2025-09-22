@@ -6,44 +6,26 @@ slug: /integrations-docling
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
 
 Langflow integrates with [Docling](https://docling-project.github.io/docling/) through a bundle of components for parsing documents.
 
 ## Prerequisites
 
-* **Developer Mode for Windows**:
-If you are running Langflow Desktop on Windows, you must [enable Developer Mode](https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development#activate-developer-mode) to use the Docling components.
+* **Enable Developer Mode for Windows**:
+<PartialDevModeWindows />
 
-    The location of this setting depends on your Windows OS version.
-    Find **For developers** in your Windows Settings, or search for "Developer" in the Windows search bar.
-    Then, enable **Developer mode**.
-    You might need to restart your computer or Langflow to apply the change.
+* **Install Docling dependency**:
+The Docling dependency is required to use the Docling components in Langflow.
 
-* **Install Docling dependency in earlier versions of Langflow**:
-In Langflow version 1.6 and later, the Docling dependency is included by default.
-No installation is required.
+    * **Langflow version 1.6 and later**: The Docling dependency is included by default for all operating systems except macOS Intel (x86_64).
 
-    In Langflow versions earlier than 1.6, you must install the Docling dependency to use the Docling components in Langflow.
+        For macOS Intel (x86_64), use the [Docling installation guide](https://docling-project.github.io/docling/installation/) to install the Docling dependency.
 
-    <details>
-    <summary>Install Docling dependency in earlier versions</summary>
-
-    <Tabs>
-    <TabItem value="oss" label="Langflow OSS" default>
-
-    Install the Docling extra in Langflow OSS with `uv pip install 'langflow[docling]'`.
-
-    </TabItem>
-
-    <TabItem value="desktop" label="Langflow Desktop">
-
-    To add a dependency to Langflow Desktop, add an entry for Docling to the application's `requirements.txt` file.
-    For more information, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
-
-    </TabItem>
-    </Tabs>
-
-    </details>
+    * **Earlier versions**: Langflow versions earlier than 1.6 don't include the Docling dependency.
+    For Langflow OSS, install the Docling extra with `uv pip install 'langflow[docling]'`.
+    For Langflow Desktop, add the Docling dependency to Langflow Desktop's `requirements.txt`.
+    For more information, see [Install custom dependencies](/install-custom-dependencies).
 
 ## Use Docling components in a flow
 
