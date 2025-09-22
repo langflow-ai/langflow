@@ -14,7 +14,7 @@ def timestamp_to_str(timestamp: datetime | str) -> str:
         timestamp (datetime | str): Input timestamp either as datetime object or string
 
     Returns:
-        str: Formatted timestamp string in 'YYYY-MM-DD HH:MM:SS UTC' format
+        str: Formatted timestamp string in 'YYYY-MM-DD HH:MM:SS.ffffff UTC' format
 
     Raises:
         ValueError: If string timestamp is in invalid format
@@ -43,7 +43,7 @@ def timestamp_to_str(timestamp: datetime | str) -> str:
     # Handle datetime object
     if timestamp.tzinfo is None:
         timestamp = timestamp.replace(tzinfo=timezone.utc)
-    return timestamp.strftime("%Y-%m-%d %H:%M:%S %Z")
+    return timestamp.strftime(TF_WITH_TZ_AND_MICROSECONDS)
 
 
 def str_to_timestamp(timestamp: str | datetime) -> datetime:

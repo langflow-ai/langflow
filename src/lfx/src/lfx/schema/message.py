@@ -91,7 +91,6 @@ class Message(Data):
     def serialize_timestamp(self, value):
         # TODO: this array is directly copied from validators package, would be nice to hold somewhere a list of
         #  supported formats as a constant and use it as a reference here and in validators.py
-
         formats = [
             "%Y-%m-%d %H:%M:%S.%f %Z",  # Standard with timezone
             "%Y-%m-%d %H:%M:%S.%f",  # Without timezone
@@ -105,7 +104,11 @@ class Message(Data):
 
         for time_format in formats:
             try:
-                return datetime.strptime(value.strip(), time_format).replace(tzinfo=timezone.utc)
+                return (
+                    datetime.strptime(value.strip(), time_format)
+                    .replace(tzinfo=timezone.utc)
+                    .strftime("%Y-%m-%d %H:%M:%S.%f %Z")
+                )
             except ValueError:
                 continue
 

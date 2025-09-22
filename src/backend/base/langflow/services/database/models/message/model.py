@@ -9,7 +9,7 @@ from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.properties import Properties
-from langflow.schema.validators import str_to_timestamp_validator
+from langflow.schema.validators import str_to_timestamp, str_to_timestamp_validator
 
 if TYPE_CHECKING:
     from langflow.schema.message import Message
@@ -39,10 +39,11 @@ class MessageBase(SQLModel):
             if value.tzinfo is None:
                 value = value.replace(tzinfo=timezone.utc)
             return value.strftime(TF_WITH_TZ_AND_MICROSECONDS)
+
         if isinstance(value, str):
-            # Make sure the timestamp is in UTC
-            value = datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
-            return value.strftime(TF_WITH_TZ_AND_MICROSECONDS)
+            dt = str_to_timestamp(value)  # unified, UTC-normalized
+            return dt.strftime(TF_WITH_TZ_AND_MICROSECONDS)
+
         return value
 
     @field_validator("files", mode="before")
