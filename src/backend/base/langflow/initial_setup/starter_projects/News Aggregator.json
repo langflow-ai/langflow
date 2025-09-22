@@ -25,9 +25,9 @@
         "id": "xy-edge__ChatInput-mRb1l{œdataTypeœ:œChatInputœ,œidœ:œChatInput-mRb1lœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-dNbW5{œfieldNameœ:œinput_valueœ,œidœ:œAgent-dNbW5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-mRb1l",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-mRb1lœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-mRb1lœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-dNbW5",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-dNbW5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-dNbW5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "xy-edge__AgentQL-G5UjC{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-G5UjCœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-dNbW5{œfieldNameœ:œtoolsœ,œidœ:œAgent-dNbW5œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AgentQL-G5UjC",
-        "sourceHandle": "{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-G5UjCœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-G5UjCœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-dNbW5",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-dNbW5œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-dNbW5œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "xy-edge__Agent-dNbW5{œdataTypeœ:œAgentœ,œidœ:œAgent-dNbW5œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-PGrAy{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-PGrAyœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "Agent-dNbW5",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-dNbW5œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-dNbW5œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-PGrAy",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-PGrAyœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-PGrAyœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "xy-edge__ChatOutput-PGrAy{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-PGrAyœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SaveToFile-46m6y{œfieldNameœ:œinputœ,œidœ:œSaveToFile-46m6yœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ChatOutput-PGrAy",
-        "sourceHandle": "{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-PGrAyœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatOutputœ, œidœ: œChatOutput-PGrAyœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "SaveToFile-46m6y",
-        "targetHandle": "{œfieldNameœ:œinputœ,œidœ:œSaveToFile-46m6yœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinputœ, œidœ: œSaveToFile-46m6yœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -1158,8 +1158,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "response",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1797,7 +1795,7 @@
                   },
                   {
                     "name": "google",
-                    "version": "0.8.5"
+                    "version": "2.40.3"
                   },
                   {
                     "name": "googleapiclient",
@@ -1818,8 +1816,6 @@
                 "group_outputs": false,
                 "method": "save_to_file",
                 "name": "message",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
