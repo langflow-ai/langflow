@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -76,17 +77,8 @@ test("check if tweaks are updating when someothing on the flow changes", async (
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page.getByTestId("canvas_controls_dropdown").click();
+  await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-  await page.waitForSelector('[data-testid="fit_view"]', {
-    timeout: 100000,
-  });
-
-  await page.getByTestId("fit_view").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("canvas_controls_dropdown").click();
   await page.getByTestId("popover-anchor-input-collection_name").click();
   await page
     .getByTestId("popover-anchor-input-collection_name")
@@ -97,7 +89,7 @@ test("check if tweaks are updating when someothing on the flow changes", async (
     .getByTestId("popover-anchor-input-persist_directory")
     .fill("persist_directory_123123123!@#$&*(&%$@");
 
-  const focusElementsOnBoard = async ({ page }) => {
+  const focusElementsOnBoard = async ({ page }: any) => {
     const focusElements = await page.getByTestId("publish-button").first();
     await focusElements.click();
   };

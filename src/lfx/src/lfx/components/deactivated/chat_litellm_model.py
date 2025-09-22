@@ -32,7 +32,7 @@ class ChatLiteLLMModelComponent(LCModelComponent):
         ),
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
+            display_name="Chat LiteLLM API Key",
             advanced=False,
             required=False,
         ),

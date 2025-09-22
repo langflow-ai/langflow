@@ -26,6 +26,7 @@ import {
   ENABLE_CUSTOM_PARAM,
   ENABLE_DATASTAX_LANGFLOW,
   ENABLE_FILE_MANAGEMENT,
+  ENABLE_KNOWLEDGE_BASES,
   ENABLE_MCP_NOTICE,
 } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -478,14 +479,16 @@ const SideBarFoldersButtonsComponent = ({
           <div className="grid w-full items-center gap-2 p-2">
             {/* TODO: Remove this on cleanup */}
             {ENABLE_DATASTAX_LANGFLOW && <CustomStoreButton />}{" "}
-            <SidebarMenuButton
-              onClick={handleKnowledgeNavigation}
-              size="md"
-              className="text-sm"
-            >
-              <ForwardedIconComponent name="Library" className="h-4 w-4" />
-              Knowledge
-            </SidebarMenuButton>
+            {ENABLE_KNOWLEDGE_BASES && (
+              <SidebarMenuButton
+                onClick={handleKnowledgeNavigation}
+                size="md"
+                className="text-sm"
+              >
+                <ForwardedIconComponent name="Library" className="h-4 w-4" />
+                Knowledge
+              </SidebarMenuButton>
+            )}
             <SidebarMenuButton
               onClick={handleFilesNavigation}
               size="md"

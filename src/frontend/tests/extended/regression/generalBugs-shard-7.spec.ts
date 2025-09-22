@@ -1,5 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 import { zoomOut } from "../../utils/zoom-out";
 
 // TODO: This test might not be needed anymore
@@ -15,19 +17,10 @@ test(
 
     await page.getByTestId("blank-flow").click();
 
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 5000,
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 3000,
       state: "visible",
     });
-
-    await page.waitForSelector('[data-testid="zoom_out"]', {
-      timeout: 5000,
-      state: "visible",
-    });
-
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("ollama");
@@ -43,11 +36,7 @@ test(
           .getByTestId("add-component-button-ollama-embeddings")
           .click();
       });
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-    await zoomOut(page, 3);
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     await page.waitForSelector('[data-testid="div-generic-node"]', {
       timeout: 5000,

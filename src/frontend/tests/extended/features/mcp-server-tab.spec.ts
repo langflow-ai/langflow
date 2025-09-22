@@ -1,5 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -93,6 +95,10 @@ test(
 
         await page.waitForTimeout(1000);
 
+        // Close the modal
+        await page.getByText("Close").last().click();
+        await page.waitForTimeout(2000);
+
         await page.reload();
 
         // Navigate to MCP server tab
@@ -109,12 +115,16 @@ test(
         // Verify actions modal is open
         await expect(page.getByText("MCP Server Tools")).toBeVisible();
 
-        const isCheckedAgainAgain = await page
+        const persistedCheckbox = page
           .locator('input[data-ref="eInput"]')
-          .first()
-          .isChecked();
+          .first();
 
-        expect(isCheckedAgainAgain).toBeTruthy();
+        if (!(await persistedCheckbox.isChecked())) {
+          await persistedCheckbox.click();
+          await page.waitForTimeout(300);
+        }
+
+        await expect(persistedCheckbox).toBeChecked();
 
         await page.locator('input[data-ref="eInput"]').first().click();
         await page.waitForTimeout(1000);
@@ -245,12 +255,8 @@ test(
           .dragTo(page.locator('//*[@id="react-flow-id"]'), {
             targetPosition: { x: 50, y: 50 },
           });
-        await page.getByTestId("canvas_controls_dropdown").click();
 
-        await page.getByTestId("fit_view").click();
-
-        await zoomOut(page, 3);
-        await page.getByTestId("canvas_controls_dropdown").click();
+        await adjustScreenView(page, { numberOfZoomOut: 3 });
 
         await expect(page.getByTestId("dropdown_str_tool")).toBeHidden();
 
@@ -277,7 +283,12 @@ test(
           timeout: 30000,
         });
 
-        await page.getByTestId("json-input").fill(configJsonLinux || "");
+        const randomSuffix = Math.floor(Math.random() * 90000) + 10000; // 5-digit random number
+        const testName = `test_server_${randomSuffix}`;
+
+        await page
+          .getByTestId("json-input")
+          .fill(configJsonLinux.replace(/lf-starter_project/g, testName) || "");
 
         await page.getByTestId("add-mcp-server-button").click();
 

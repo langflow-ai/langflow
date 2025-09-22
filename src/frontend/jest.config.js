@@ -5,6 +5,9 @@ module.exports = {
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
     "\\.(css|less|scss|sass)$": "identity-obj-proxy",
+    "^@jsonquerylang/jsonquery$":
+      "<rootDir>/src/__mocks__/@jsonquerylang/jsonquery.js",
+    "^vanilla-jsoneditor$": "<rootDir>/src/__mocks__/vanilla-jsoneditor.js",
   },
   setupFilesAfterEnv: ["<rootDir>/src/setupTests.ts"],
   setupFiles: ["<rootDir>/jest.setup.js"],

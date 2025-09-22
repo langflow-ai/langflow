@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -21,13 +21,6 @@ test(
     );
 
     await page.getByTestId("sidebar-custom-component-button").click();
-
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("div-generic-node").click();
     await page.getByTestId("code-button-modal").click();
