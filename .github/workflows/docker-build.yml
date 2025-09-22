@@ -221,6 +221,7 @@ jobs:
           docker buildx du || true
 
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v3
         with:
           version: latest
@@ -228,6 +229,13 @@ jobs:
           driver-opts: |
             image=moby/buildkit:v0.22.0
             network=host
+
+      - name: Verify Buildx Setup
+        run: |
+          echo "Builder name: ${{ steps.buildx.outputs.name }}"
+          echo "Builder driver: ${{ steps.buildx.outputs.driver }}"
+          docker buildx ls
+          docker buildx inspect ${{ steps.buildx.outputs.name }}
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -245,6 +253,7 @@ jobs:
             file: ${{ needs.setup.outputs.file }}
             tags: ${{ needs.setup.outputs.docker_tags }}
             platforms: linux/amd64,linux/arm64
+            builder: ${{ steps.buildx.outputs.name }}
             cache-from: type=gha
             cache-to: type=gha,mode=max
 
@@ -265,6 +274,7 @@ jobs:
             file: ${{ needs.setup.outputs.file }}
             tags: ${{ needs.setup.outputs.ghcr_tags }}
             platforms: linux/amd64,linux/arm64
+            builder: ${{ steps.buildx.outputs.name }}
             cache-from: type=gha
             cache-to: type=gha,mode=max
 
@@ -315,6 +325,7 @@ jobs:
           docker buildx du || true
 
       - name: Set up Docker Buildx
+        id: buildx-components
         uses: docker/setup-buildx-action@v3
         with:
           version: latest
