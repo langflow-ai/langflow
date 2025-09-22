@@ -6,13 +6,13 @@ import orjson
 import pandas as pd
 from fastapi import UploadFile
 from fastapi.encoders import jsonable_encoder
+from langflow.api.v2.files import upload_user_file
+from langflow.schema import Data, DataFrame, Message
+from langflow.services.database.models.user.crud import get_user_by_id
 
-from lfx.api.v2.files import upload_user_file
 from lfx.custom import Component
 from lfx.inputs import SortableListInput
 from lfx.io import DropdownInput, HandleInput, SecretStrInput, StrInput
-from lfx.schema import Data, DataFrame, Message
-from lfx.services.database.models.user.crud import get_user_by_id
 from lfx.services.deps import get_settings_service, get_storage_service, session_scope
 from lfx.template.field.base import Output
 
@@ -147,7 +147,10 @@ class SaveToFileComponent(Component):
         StrInput(
             name="folder_id",
             display_name="Google Drive Folder ID",
-            info="The Google Drive folder ID where the file will be uploaded. The folder must be shared with the service account email.",
+            info=(
+                "The Google Drive folder ID where the file will be uploaded. "
+                "The folder must be shared with the service account email."
+            ),
             show=False,
             advanced=True,
         ),
@@ -178,9 +181,9 @@ class SaveToFileComponent(Component):
             "folder_id",
         ]
 
-        for field_name in dynamic_fields:
-            if field_name in build_config:
-                build_config[field_name]["show"] = False
+        for f_name in dynamic_fields:
+            if f_name in build_config:
+                build_config[f_name]["show"] = False
 
         # Show fields based on selected storage location
         if len(selected) == 1:
@@ -203,15 +206,15 @@ class SaveToFileComponent(Component):
                     "aws_region",
                     "s3_prefix",
                 ]
-                for field_name in aws_fields:
-                    if field_name in build_config:
-                        build_config[field_name]["show"] = True
+                for f_name in aws_fields:
+                    if f_name in build_config:
+                        build_config[f_name]["show"] = True
 
             elif location == "Google Drive":
                 gdrive_fields = ["gdrive_format", "service_account_key", "folder_id"]
-                for field_name in gdrive_fields:
-                    if field_name in build_config:
-                        build_config[field_name]["show"] = True
+                for f_name in gdrive_fields:
+                    if f_name in build_config:
+                        build_config[f_name]["show"] = True
 
         return build_config
 
@@ -409,16 +412,18 @@ class SaveToFileComponent(Component):
         """Save file to AWS S3 using S3 functionality."""
         # Validate AWS credentials
         if not getattr(self, "aws_access_key_id", None):
-            raise ValueError("AWS Access Key ID is required for S3 storage")
+            msg = "AWS Access Key ID is required for S3 storage"
+            raise ValueError(msg)
         if not getattr(self, "aws_secret_access_key", None):
-            raise ValueError("AWS Secret Key is required for S3 storage")
+            msg = "AWS Secret Key is required for S3 storage"
+            raise ValueError(msg)
         if not getattr(self, "bucket_name", None):
-            raise ValueError("S3 Bucket Name is required for S3 storage")
+            msg = "S3 Bucket Name is required for S3 storage"
+            raise ValueError(msg)
 
         # Use S3 upload functionality
         try:
             import boto3
-            from botocore.exceptions import ClientError, NoCredentialsError
         except ImportError as e:
             msg = "boto3 is not installed. Please install it using `uv pip install boto3`."
             raise ImportError(msg) from e
@@ -444,7 +449,6 @@ class SaveToFileComponent(Component):
             file_path = f"{self.s3_prefix.rstrip('/')}/{file_path}"
 
         # Create temporary file
-        import os
         import tempfile
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=f".{file_format}", delete=False) as temp_file:
@@ -458,21 +462,22 @@ class SaveToFileComponent(Component):
             return Message(text=f"File successfully uploaded to {s3_url}")
         finally:
             # Clean up temp file
-            if os.path.exists(temp_file_path):
-                os.remove(temp_file_path)
+            if Path(temp_file_path).exists():
+                Path(temp_file_path).unlink()
 
     async def _save_to_google_drive(self) -> Message:
         """Save file to Google Drive using Google Drive functionality."""
         # Validate Google Drive credentials
         if not getattr(self, "service_account_key", None):
-            raise ValueError("GCP Credentials Secret Key is required for Google Drive storage")
+            msg = "GCP Credentials Secret Key is required for Google Drive storage"
+            raise ValueError(msg)
         if not getattr(self, "folder_id", None):
-            raise ValueError("Google Drive Folder ID is required for Google Drive storage")
+            msg = "Google Drive Folder ID is required for Google Drive storage"
+            raise ValueError(msg)
 
         # Use Google Drive upload functionality
         try:
             import json
-            import os
             import tempfile
 
             from google.oauth2 import service_account
@@ -486,7 +491,8 @@ class SaveToFileComponent(Component):
         try:
             credentials_dict = json.loads(self.service_account_key)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in service account key: {e!s}")
+            msg = f"Invalid JSON in service account key: {e!s}"
+            raise ValueError(msg) from e
 
         # Create Google Drive service
         credentials = service_account.Credentials.from_service_account_info(
@@ -520,8 +526,8 @@ class SaveToFileComponent(Component):
             return Message(text=f"File successfully uploaded to Google Drive: {file_url}")
         finally:
             # Clean up temp file
-            if os.path.exists(temp_file_path):
-                os.remove(temp_file_path)
+            if Path(temp_file_path).exists():
+                Path(temp_file_path).unlink()
 
     async def _save_to_google_apps(self, drive_service, content: str, app_type: str) -> Message:
         """Save content to Google Apps (Slides or Docs)."""
@@ -541,7 +547,7 @@ class SaveToFileComponent(Component):
             created_file = drive_service.files().create(body=file_metadata, fields="id").execute()
             presentation_id = created_file["id"]
 
-            time.sleep(2)  # Wait for file to be available
+            time.sleep(2)  # Wait for file to be available  # noqa: ASYNC251
 
             presentation = slides_service.presentations().get(presentationId=presentation_id).execute()
             slide_id = presentation["slides"][0]["objectId"]
@@ -590,7 +596,7 @@ class SaveToFileComponent(Component):
             created_file = drive_service.files().create(body=file_metadata, fields="id").execute()
             document_id = created_file["id"]
 
-            time.sleep(2)  # Wait for file to be available
+            time.sleep(2)  # Wait for file to be available  # noqa: ASYNC251
 
             # Add content to document
             requests = [{"insertText": {"location": {"index": 1}, "text": content}}]
