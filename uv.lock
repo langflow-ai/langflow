@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin'",
@@ -5057,7 +5057,7 @@ dependencies = [
     { name = "composio" },
     { name = "composio-langchain" },
     { name = "datasets" },
-    { name = "docling" },
+    { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "dspy-ai" },
     { name = "duckduckgo-search" },
     { name = "easyocr" },
@@ -5264,7 +5264,7 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "datasets", specifier = ">2.14.7" },
-    { name = "docling", specifier = ">=2.36.1" },
+    { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'", specifier = ">=2.36.1" },
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.36.1" },
     { name = "dspy-ai", specifier = "==2.5.41" },
     { name = "duckduckgo-search", specifier = "==7.2.1" },
