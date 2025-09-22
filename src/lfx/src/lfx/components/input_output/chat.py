@@ -69,45 +69,18 @@ class ChatInput(ChatComponent):
             is_list=True,
             temp_file=True,
         ),
-        MessageTextInput(
-            name="background_color",
-            display_name="Background Color",
-            info="The background color of the icon.",
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="chat_icon",
-            display_name="Icon",
-            info="The icon of the message.",
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="text_color",
-            display_name="Text Color",
-            info="The text color of the name",
-            advanced=True,
-        ),
     ]
     outputs = [
         Output(display_name="Chat Message", name="message", method="message_response"),
     ]
 
     async def message_response(self) -> Message:
-        background_color = self.background_color
-        text_color = self.text_color
-        icon = self.chat_icon
-
         message = await Message.create(
             text=self.input_value,
             sender=self.sender,
             sender_name=self.sender_name,
             session_id=self.session_id,
             files=self.files,
-            properties={
-                "background_color": background_color,
-                "text_color": text_color,
-                "icon": icon,
-            },
         )
         if self.session_id and isinstance(message, Message) and self.should_store_message:
             stored_message = await self.send_message(

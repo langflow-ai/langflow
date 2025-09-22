@@ -892,7 +892,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4o"
+                "value": "gpt-4.1"
               },
               "openai_api_base": {
                 "_input_type": "StrInput",
@@ -1200,7 +1200,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4o-mini"
+                "value": "gpt-4.1"
               },
               "prompt": {
                 "_input_type": "MessageTextInput",
