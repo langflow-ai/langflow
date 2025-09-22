@@ -89,31 +89,7 @@ class Message(Data):
 
     @field_serializer("timestamp")
     def serialize_timestamp(self, value):
-        # TODO: this array is directly copied from validators package, would be nice to hold somewhere a list of
-        #  supported formats as a constant and use it as a reference here and in validators.py
-        formats = [
-            "%Y-%m-%d %H:%M:%S.%f %Z",  # Standard with timezone
-            "%Y-%m-%d %H:%M:%S.%f",  # Without timezone
-            "%Y-%m-%dT%H:%M:%S.%f",  # ISO format
-            "%Y-%m-%dT%H:%M:%S.%f%z",  # ISO with numeric timezone
-            # Also try without fractional seconds
-            "%Y-%m-%d %H:%M:%S %Z",
-            "%Y-%m-%d %H:%M:%S",
-            "%Y-%m-%dT%H:%M:%S",
-        ]
-
-        for time_format in formats:
-            try:
-                return (
-                    datetime.strptime(value.strip(), time_format)
-                    .replace(tzinfo=timezone.utc)
-                    .strftime("%Y-%m-%d %H:%M:%S.%f %Z")
-                )
-            except ValueError:
-                continue
-
-        error_message = f"Invalid timestamp format: {value}"
-        raise ValueError(error_message)
+        return timestamp_to_str(value)
 
     @field_validator("files", mode="before")
     @classmethod
