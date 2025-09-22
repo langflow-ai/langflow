@@ -123,16 +123,15 @@ dependencies = [
     'gassist>=0.0.1; sys_platform == "win32"',
     "twelvelabs>=0.4.7",
     "docling>=2.36.1; sys_platform != 'darwin' or platform_machine != 'x86_64'",
-    "torch>=2.6.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
-    "transformers~=4.56.1",
+    "easyocr>=1.7.2; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    "opencv-python>=4.11; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    "transformers~=4.56.1; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     "filelock>=3.18.0",
     "jigsawstack==0.2.7",
     "structlog>=25.4.0",
     "aiosqlite==0.21.0",
     "fastparquet>=2024.11.0",
     "traceloop-sdk>=0.43.1",
-    "easyocr>=1.7.2",
-    "opencv-python>=4.11",
 ]
 
 [dependency-groups]
