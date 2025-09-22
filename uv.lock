@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin'",
@@ -5147,7 +5147,7 @@ dependencies = [
     { name = "structlog" },
     { name = "supabase" },
     { name = "traceloop-sdk" },
-    { name = "transformers", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "transformers" },
     { name = "twelvelabs" },
     { name = "types-cachetools" },
     { name = "upstash-vector" },
@@ -5361,7 +5361,7 @@ requires-dist = [
     { name = "supabase", specifier = ">=2.6.0,<3.0.0" },
     { name = "tesserocr", marker = "extra == 'docling'", specifier = ">=2.8.0" },
     { name = "traceloop-sdk", specifier = ">=0.43.1" },
-    { name = "transformers", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'", specifier = "~=4.56.1" },
+    { name = "transformers", specifier = "~=4.56.1" },
     { name = "twelvelabs", specifier = ">=0.4.7" },
     { name = "types-cachetools", specifier = "==5.5.0.20240820" },
     { name = "upstash-vector", specifier = "==0.6.0" },

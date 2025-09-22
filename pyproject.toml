@@ -125,7 +125,7 @@ dependencies = [
     "docling>=2.36.1; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     "easyocr>=1.7.2; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     "opencv-python>=4.11; sys_platform != 'darwin' or platform_machine != 'x86_64'",
-    "transformers~=4.56.1; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    "transformers~=4.56.1",
     "filelock>=3.18.0",
     "jigsawstack==0.2.7",
     "structlog>=25.4.0",
