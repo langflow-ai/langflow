@@ -9,6 +9,15 @@
 
 # 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
 # 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
+# Frontend builder stage - use native platform to avoid QEMU issues with esbuild
+FROM --platform=$BUILDPLATFORM node:18-slim AS frontend-builder
+
+COPY src/frontend /tmp/src/frontend
+WORKDIR /tmp/src/frontend
+# Increase memory and disable concurrent builds to avoid esbuild crashes on emulated architectures
+RUN npm install \
+    && NODE_OPTIONS="--max-old-space-size=8192" JOBS=1 npm run build
+
 # Use a Python image with uv pre-installed
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
 
@@ -53,13 +62,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 COPY ./src /app/src
 
-COPY src/frontend /tmp/src/frontend
-WORKDIR /tmp/src/frontend
-# Increase memory and disable concurrent builds to avoid esbuild crashes on emulated architectures
-RUN npm install \
-    && NODE_OPTIONS="--max-old-space-size=8192" JOBS=1 npm run build \
-    && cp -r build /app/src/backend/base/langflow/frontend \
-    && rm -rf /tmp/src/frontend
+# Copy the pre-built frontend from the native platform stage
+COPY --from=frontend-builder /tmp/src/frontend/build /app/src/backend/base/langflow/frontend
 
 WORKDIR /app/src/backend/base
 RUN --mount=type=cache,target=/root/.cache/uv \
