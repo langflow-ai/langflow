@@ -47,7 +47,9 @@ class Mem0PlatformChatMemoryComponent(LCChatMemoryComponent):
             name="user_id", display_name="User ID", info="Identifier for the user associated with the messages."
         ),
         MessageTextInput(
-            name="search_query", display_name="Search Query", info="Input text for searching related memories in Mem0 Platform."
+            name="search_query",
+            display_name="Search Query",
+            info="Input text for searching related memories in Mem0 Platform.",
         ),
         DictInput(
             name="metadata",
