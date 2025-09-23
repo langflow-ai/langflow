@@ -1791,7 +1791,7 @@
                   },
                   {
                     "name": "boto3",
-                    "version": "1.34.162"
+                    "version": "1.40.35"
                   },
                   {
                     "name": "google",
