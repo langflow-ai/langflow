@@ -44,6 +44,7 @@ export const usePostTemplateValue: useMutationFunctionType<
         field: parameterId,
         field_value: payload.value,
         tool_mode: payload.tool_mode,
+        edited: true,
       },
     );
     const newTemplate = response.data;

@@ -31,7 +31,7 @@ export const usePostValidatePrompt: useMutationFunctionType<
       {
         name: payload.name,
         template: payload.template,
-        frontend_node: payload.frontend_node,
+        frontend_node: { ...payload.frontend_node, edited: true },
       },
     );
 

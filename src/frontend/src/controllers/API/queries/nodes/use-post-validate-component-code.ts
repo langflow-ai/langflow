@@ -29,7 +29,7 @@ export const usePostValidateComponentCode: useMutationFunctionType<
       getURL("CUSTOM_COMPONENT"),
       {
         code: payload.code,
-        frontend_node: payload.frontend_node,
+        frontend_node: { ...payload.frontend_node, edited: true },
       },
     );
 
