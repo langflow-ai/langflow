@@ -125,5 +125,29 @@ test(
     await copyOption.click();
     await page.waitForTimeout(500);
     await expect(selectedDropdown).not.toBeVisible();
+
+    // Test 8: Verify stale state cleanup on node deletion
+    const promptComponentDelete = page.getByText("Prompt").first();
+
+    // Right-click on Prompt component
+    await promptComponentDelete.click({ button: "right" });
+    await page.waitForSelector('[data-testid="more-options-modal"]', {
+      timeout: 2000,
+    });
+
+    const promptDropdown = page
+      .locator('[data-testid="more-options-modal"]')
+      .first();
+    await expect(promptDropdown).toBeVisible();
+
+    // Delete the right-clicked node
+    await promptDropdown.getByText("Delete").click();
+
+    // The dropdown should disappear after deletion (stale state cleanup)
+    await page.waitForTimeout(1000);
+    await expect(promptDropdown).not.toBeVisible();
+
+    // Verify the node is actually deleted from the canvas
+    await expect(promptComponentDelete).not.toBeVisible();
   },
 );
