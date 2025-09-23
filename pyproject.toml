@@ -99,7 +99,7 @@ dependencies = [
     "langchain-community~=0.3.21",
     "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
     "atlassian-python-api==3.41.16",
-    "mem0ai==0.1.34",
+    "mem0ai>=0.1.115",
     "needle-python>=0.4.0",
     "aiofile>=3.9.0,<4.0.0",
     "sseclient-py==1.8.0",
