@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from lfx.utils.helpers import get_mime_type
 
@@ -56,12 +57,13 @@ def create_data_url(image_path: str | Path, mime_type: str | None = None) -> str
 
 
 @lru_cache(maxsize=50)
-def create_image_content_dict(image_path: str | Path, mime_type: str | None = None) -> dict:
+def create_image_content_dict(image_path: str | Path, mime_type: str | None = None, model: Any = None) -> dict:
     """Create a content dictionary for multimodal inputs from an image file.
 
     Args:
         image_path: Path to the image file
         mime_type: MIME type of the image. If None, will be auto-detected
+        model: Optional model parameter to determine content dict structure
 
     Returns:
         Content dictionary with type and image_url fields
@@ -70,4 +72,7 @@ def create_image_content_dict(image_path: str | Path, mime_type: str | None = No
         FileNotFoundError: If the image file doesn't exist
     """
     data_url = create_data_url(image_path, mime_type)
+
+    if model and model.model_type == "ollama":
+        return {"type": "image_url", "source_type": "url", "image_url": data_url}
     return {"type": "image", "source_type": "url", "url": data_url}

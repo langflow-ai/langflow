@@ -121,8 +121,12 @@ class Message(Data):
 
     def to_lc_message(
         self,
+        model: Any = None,
     ) -> BaseMessage:
         """Converts the Data to a BaseMessage.
+
+        Args:
+            model: The model to use for conversion. Optional.
 
         Returns:
             BaseMessage: The converted BaseMessage.
@@ -139,7 +143,7 @@ class Message(Data):
         if self.sender == MESSAGE_SENDER_USER or not self.sender:
             if self.files:
                 contents = [{"type": "text", "text": text}]
-                contents.extend(self.get_file_content_dicts())
+                contents.extend(self.get_file_content_dicts(model))
                 human_message = HumanMessage(content=contents)
             else:
                 human_message = HumanMessage(content=text)
@@ -196,7 +200,7 @@ class Message(Data):
         return value
 
     # Keep this async method for backwards compatibility
-    def get_file_content_dicts(self):
+    def get_file_content_dicts(self, model):
         content_dicts = []
         files = get_file_paths(self.files)
 
@@ -204,7 +208,7 @@ class Message(Data):
             if isinstance(file, Image):
                 content_dicts.append(file.to_content_dict())
             else:
-                content_dicts.append(create_image_content_dict(file))
+                content_dicts.append(create_image_content_dict(file, model))
         return content_dicts
 
     def load_lc_prompt(self):
