@@ -4,13 +4,13 @@ on:
   workflow_call:
     inputs:
       main_version:
-        required: false
+        required: true
         type: string
-        description: "Main version to tag images with. If not provided, will be extracted from code."
+        description: "Main version to tag images with. Required for both main and base releases."
       base_version:
         required: false
         type: string
-        description: "Base version to tag images with. If not provided, will be extracted from code."
+        description: "Base version to tag images with. Required for base release type."
       release_type:
         required: true
         type: string
@@ -20,18 +20,18 @@ on:
         type: boolean
         default: false
       ref:
-        required: true
+        required: false
         type: string
-        description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located."
+        description: "Ref to check out. If not specified, will default to the main version or current branch."
 
   workflow_dispatch:
     inputs:
       main_version:
-        description: "Main version to tag images with. If not provided, will be extracted from code."
+        description: "Main version to tag images with. Required for both main and base releases."
         required: false
         type: string
       base_version:
-        description: "Base version to tag images with. If not provided, will be extracted from code."
+        description: "Base version to tag images with. Required for base release type."
         required: false
         type: string
       release_type:
@@ -44,9 +44,9 @@ on:
         type: boolean
         default: false
       ref:
-        required: true
+        required: false
         type: string
-        description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located."
+        description: "Ref to check out. If not specified, will default to the main version or current branch."
 
 
 env:
@@ -54,135 +54,90 @@ env:
   TEST_TAG: "langflowai/langflow:test"
 
 jobs:
-  get-base-version:
-    name: Get Base Version
-    if: ${{ inputs.release_type == 'base' || inputs.release_type == 'nightly-base' }}
+  get-version:
+    name: Get Version
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.version }}
+      version: ${{ steps.get-version-input.outputs.version || steps.get-version-base.outputs.version || steps.get-version-main.outputs.version }}
     steps:
-      - name: Check out the code
+      - name: Verify a main version exists
+        if: ${{ inputs.main_version == '' }}
+        run: |
+          # due to our how we split packages, we need to have a main version to check out.
+          echo "Must specify a main version to check out."
+          exit 1
+
+      - name: Check out the code at a specific ref
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.ref }}
-      - name: Get version
-        id: version
+          ref: ${{ inputs.ref || inputs.main_version || github.ref }}
+          persist-credentials: true
+
+      - name: Get Version to Tag
+        if: ${{ inputs.main_version != '' }}
+        id: get-version-input
         run: |
-          if [ -n "${{ inputs.base_version }}" ]; then
-            echo "Using provided base version: ${{ inputs.base_version }}"
-            echo version=${{ inputs.base_version }} >> $GITHUB_OUTPUT
-          else
-            echo "Extracting base version from code"
-            version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
-            echo "Extracted base version: $version"
+          # Produces the versions we will use to tag the docker images with.
+
+          if [[ "${{ inputs.release_type }}" == "base" && "${{ inputs.base_version }}" == '' ]]; then
+            echo "Must specify a base version for base release type."
+            exit 1
+          fi
+
+          if [[ "${{ inputs.release_type }}" == "nightly-base" && "${{ inputs.base_version }}" == '' ]]; then
+            echo "Must specify a base version for nightly-base release type."
+            exit 1
+          fi
+
+          if [[ ("${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "main-all") && "${{ inputs.main_version }}" == '' ]]; then
+            echo "Must specify a main version for main release type."
+            exit 1
+          fi
+
+          if [[ "${{ inputs.release_type }}" == "main-ep" && "${{ inputs.main_version }}" == '' ]]; then
+            echo "Must specify a main version for main-ep release type."
+            exit 1
+          fi
+
+          if [[ ("${{ inputs.release_type }}" == "nightly-main" || "${{ inputs.release_type }}" == "nightly-main-all") && "${{ inputs.main_version }}" == '' ]]; then
+            echo "Must specify a main version for nightly-main release type."
+            exit 1
+          fi
+
+          if [[ "${{ inputs.release_type }}" == "base" || "${{ inputs.release_type }}" == "nightly-base" ]]; then
+            version=${{ inputs.base_version }}
+            echo "base version=${{ inputs.base_version }}"
+            echo version=$version
             echo version=$version >> $GITHUB_OUTPUT
-          fi
-
-  get-main-version:
-    name: Get Main Version
-    if: ${{ inputs.release_type == 'main' || inputs.release_type == 'main-ep' || inputs.release_type == 'nightly-main' || inputs.release_type == 'main-all' || inputs.release_type == 'nightly-main-all' }}
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-    steps:
-      - name: Check out the code
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ inputs.ref }}
-      - name: Get version
-        id: version
-        run: |
-          if [ -n "${{ inputs.main_version }}" ]; then
-            echo "Using provided main version: ${{ inputs.main_version }}"
-            echo version=${{ inputs.main_version }} >> $GITHUB_OUTPUT
-          else
-            echo "Extracting main version from code"
-            version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
-            echo "Extracted main version: $version"
+          elif [[ "${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "main-ep"  || "${{ inputs.release_type }}" == "nightly-main" || "${{ inputs.release_type }}" == "nightly-main-all" ]]; then
+            version=${{ inputs.main_version }}
+            echo version=$version
             echo version=$version >> $GITHUB_OUTPUT
-          fi
-  setup-base:
-    name: Setup Base Build
-    if: ${{ inputs.release_type == 'base' || inputs.release_type == 'nightly-base' }}
-    runs-on: ubuntu-latest
-    needs: get-base-version
-    outputs:
-      docker_tags: ${{ steps.set-vars.outputs.docker_tags }}
-      ghcr_tags: ${{ steps.set-vars.outputs.ghcr_tags }}
-      file: ${{ steps.set-vars.outputs.file }}
-    steps:
-      - name: Set Base Tags and Dockerfile
-        id: set-vars
-        run: |
-          nightly_suffix=""
-          if [[ "${{ inputs.release_type }}" == "nightly-base" ]]; then
-            nightly_suffix="-nightly"
-          fi
-          echo "docker_tags=langflowai/langflow${nightly_suffix}:base-${{ needs.get-base-version.outputs.version }},langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
-          echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:base-${{ needs.get-base-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
-          echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
-
-  setup-main:
-    name: Setup Main Build
-    if: ${{ inputs.release_type == 'main' }}
-    runs-on: ubuntu-latest
-    needs: get-main-version
-    outputs:
-      docker_tags: ${{ steps.set-vars.outputs.docker_tags }}
-      ghcr_tags: ${{ steps.set-vars.outputs.ghcr_tags }}
-      file: ${{ steps.set-vars.outputs.file }}
-    steps:
-      - name: Set Main Tags and Dockerfile
-        id: set-vars
-        run: |
-          if [[ "${{ inputs.pre_release }}" == "true" ]]; then
-            echo "docker_tags=langflowai/langflow:${{ needs.get-main-version.outputs.version }}" >> $GITHUB_OUTPUT
-            echo "ghcr_tags=ghcr.io/langflow-ai/langflow:${{ needs.get-main-version.outputs.version }}" >> $GITHUB_OUTPUT
           else
-            echo "docker_tags=langflowai/langflow:${{ needs.get-main-version.outputs.version }},langflowai/langflow:latest" >> $GITHUB_OUTPUT
-            echo "ghcr_tags=ghcr.io/langflow-ai/langflow:${{ needs.get-main-version.outputs.version }},ghcr.io/langflow-ai/langflow:latest" >> $GITHUB_OUTPUT
+            echo "No version or ref specified. Exiting the workflow."
+            exit 1
           fi
-          echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
-
-  setup-main-ep:
-    name: Setup Main EP Build
-    if: ${{ inputs.release_type == 'main-ep' }}
-    runs-on: ubuntu-latest
-    needs: get-main-version
-    outputs:
-      docker_tags: ${{ steps.set-vars.outputs.docker_tags }}
-      ghcr_tags: ${{ steps.set-vars.outputs.ghcr_tags }}
-      file: ${{ steps.set-vars.outputs.file }}
-    steps:
-      - name: Set Main EP Tags and Dockerfile
-        id: set-vars
+      - name: Get Version Base
+        if: ${{ inputs.base_version == '' && (inputs.release_type == 'base' || inputs.release_type == 'nightly-base') }}
+        id: get-version-base
         run: |
-          echo "docker_tags=langflowai/langflow-ep:${{ needs.get-main-version.outputs.version }},langflowai/langflow-ep:latest" >> $GITHUB_OUTPUT
-          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-ep:${{ needs.get-main-version.outputs.version }},ghcr.io/langflow-ai/langflow-ep:latest" >> $GITHUB_OUTPUT
-          echo "file=./docker/build_and_push_ep.Dockerfile" >> $GITHUB_OUTPUT
-
-  setup-main-all:
-    name: Setup Main All Build
-    if: ${{ inputs.release_type == 'main-all' }}
-    runs-on: ubuntu-latest
-    needs: get-main-version
-    outputs:
-      docker_tags: ${{ steps.set-vars.outputs.docker_tags }}
-      ghcr_tags: ${{ steps.set-vars.outputs.ghcr_tags }}
-      file: ${{ steps.set-vars.outputs.file }}
-    steps:
-      - name: Set Main All Tags and Dockerfile
-        id: set-vars
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
+          if [ -z "$version" ]; then
+            echo "Failed to extract version from uv tree output"
+            exit 1
+          fi
+          echo version=$version
+          echo version=$version >> $GITHUB_OUTPUT
+      - name: Get Version Main
+        if: ${{ inputs.main_version == '' && (inputs.release_type == 'main' || inputs.release_type == 'main-ep' || inputs.release_type == 'nightly-main' || inputs.release_type == 'main-all' || inputs.release_type == 'nightly-main-all') }}
+        id: get-version-main
         run: |
-          echo "docker_tags=langflowai/langflow-all:${{ needs.get-main-version.outputs.version }},langflowai/langflow-all:latest" >> $GITHUB_OUTPUT
-          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-all:${{ needs.get-main-version.outputs.version }},ghcr.io/langflow-ai/langflow-all:latest" >> $GITHUB_OUTPUT
-          echo "file=./docker/build_and_push_with_extras.Dockerfile" >> $GITHUB_OUTPUT
-
-  setup-nightly-main:
-    name: Setup Nightly Main Build
-    if: ${{ inputs.release_type == 'nightly-main' || inputs.release_type == 'nightly-main-all' }}
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+          echo version=$version
+          echo version=$version >> $GITHUB_OUTPUT
+  setup:
     runs-on: ubuntu-latest
-    needs: get-main-version
+    needs: get-version
     outputs:
       docker_tags: ${{ steps.set-vars.outputs.docker_tags }}
       ghcr_tags: ${{ steps.set-vars.outputs.ghcr_tags }}
@@ -234,7 +189,7 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || inputs.main_version || github.ref }}
           persist-credentials: true
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
@@ -243,14 +198,13 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
-
-      # - name: Install the project
-        # run: |
-        #   if [[ "${{ inputs.release_type }}" == "base" || "${{ inputs.release_type }}" == "nightly-base" ]]; then
-        #     uv sync --directory src/backend/base --no-dev --no-sources
-        #   else
-        #     uv sync --no-dev --no-sources
-        #   fi
+      - name: Install the project
+        run: |
+          if [[ "${{ inputs.release_type }}" == "base" || "${{ inputs.release_type }}" == "nightly-base" ]]; then
+            uv sync --directory src/backend/base --no-dev --no-sources
+          else
+            uv sync --no-dev --no-sources
+          fi
 
       - name: Docker System Info and Cleanup
         run: |
@@ -291,6 +245,8 @@ jobs:
             file: ${{ needs.setup.outputs.file }}
             tags: ${{ needs.setup.outputs.docker_tags }}
             platforms: linux/amd64,linux/arm64
+            cache-from: type=gha
+            cache-to: type=gha,mode=max
 
       - name: Login to Github Container Registry
         uses: docker/login-action@v3
@@ -309,6 +265,8 @@ jobs:
             file: ${{ needs.setup.outputs.file }}
             tags: ${{ needs.setup.outputs.ghcr_tags }}
             platforms: linux/amd64,linux/arm64
+            cache-from: type=gha
+            cache-to: type=gha,mode=max
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
@@ -340,7 +298,7 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || inputs.main_version || github.ref }}
 
       - name: Docker System Info and Cleanup
         run: |
@@ -411,7 +369,7 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || inputs.main_version || github.ref }}
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
