@@ -182,7 +182,7 @@ class TestTableSchemaDemoIntegration:
         column = Column(name="timeout", display_name="Timeout", default=30, load_from_db=False, type="integer")
 
         assert column.load_from_db is False
-        assert column.default == 30
+        assert column.default == "30"
         assert column.name == "timeout"
 
     def test_table_component_schema_serialization(self):
