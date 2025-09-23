@@ -11,9 +11,10 @@ from lfx.schema.data import Data
 
 class Mem0OSSChatMemoryComponent(LCChatMemoryComponent):
     display_name = "Mem0 OSS Chat Memory"
-    description = """Retrieves and stores chat messages using Mem0 OSS (open source) memory storage. 
-            Self-hosted solution with full control over configuration.
-            This component is only available in the Mem0 OSS bundle."""
+    description = (
+        "Retrieves and stores chat messages using Mem0 OSS (open source) memory storage. "
+        "Self-hosted solution with full control over configuration."
+    )
     name = "mem0_oss_chat_memory"
     icon: str = "Mem0"
     inputs = [
