@@ -247,7 +247,7 @@ jobs:
             push: true
             file: ${{ needs.setup.outputs.file }}
             tags: ${{ needs.setup.outputs.docker_tags }}
-            platforms: linux/amd64,linux/arm64
+            platforms: linux/arm64
             cache-from: type=gha
             cache-to: type=gha,mode=max
 
@@ -267,7 +267,7 @@ jobs:
             push: true
             file: ${{ needs.setup.outputs.file }}
             tags: ${{ needs.setup.outputs.ghcr_tags }}
-            platforms: linux/amd64,linux/arm64
+            platforms: linux/arm64
             cache-from: type=gha
             cache-to: type=gha,mode=max
 
