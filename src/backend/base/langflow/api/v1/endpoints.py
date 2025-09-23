@@ -7,6 +7,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
+import orjson
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
@@ -57,6 +58,29 @@ if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
 
 router = APIRouter(tags=["Base"])
+
+
+async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIRequest:
+    """Parse SimplifiedAPIRequest from HTTP request body.
+
+    This function handles the case where FastAPI can't automatically parse the request body
+    due to the presence of a Request parameter in the endpoint signature.
+
+    Args:
+        http_request: The FastAPI Request object
+
+    Returns:
+        SimplifiedAPIRequest: Parsed request or default instance if parsing fails
+    """
+    try:
+        body = await http_request.body()
+        if body:
+            body_data = orjson.loads(body)
+            return SimplifiedAPIRequest(**body_data)
+        return SimplifiedAPIRequest()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Failed to parse request body: {exc}")
+        return SimplifiedAPIRequest()
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
@@ -284,7 +308,7 @@ async def simplified_run_flow(
     stream: bool = False,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
     context: dict | None = None,
-    request: Request,
+    http_request: Request,
 ):
     """Executes a specified flow by ID with support for streaming and telemetry.
 
@@ -298,7 +322,7 @@ async def simplified_run_flow(
         stream (bool): Whether to stream the response
         api_key_user (UserRead): Authenticated user from API key
         context (dict | None): Optional context to pass to the flow
-        request (Request): The incoming HTTP request for extracting global variables
+        http_request (Request): The incoming HTTP request for extracting global variables
 
     Returns:
         Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results
@@ -321,12 +345,17 @@ async def simplified_run_flow(
             - "end": Final execution result
     """
     telemetry_service = get_telemetry_service()
-    input_request = input_request if input_request is not None else SimplifiedAPIRequest()
+
+    # If input_request is None, manually parse the request body
+    # This happens when FastAPI can't automatically parse it due to the Request parameter
+    if input_request is None:
+        input_request = await parse_input_request_from_body(http_request)
+
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
     # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
-    request_variables = extract_global_variables_from_headers(request.headers)
+    request_variables = extract_global_variables_from_headers(http_request.headers)
 
     # Merge request variables with existing context
     if request_variables:
