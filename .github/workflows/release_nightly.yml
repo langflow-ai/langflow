@@ -36,6 +36,11 @@ on:
         description: "Tag for the nightly LFX build"
         required: false
         type: string
+      push_to_registry:
+        description: "Whether to push images to registries. Set to false for testing builds without publishing."
+        required: true
+        type: boolean
+        default: false
 
 env:
   POETRY_VERSION: "1.8.3"
@@ -363,7 +368,7 @@ jobs:
     with:
       ref: ${{ inputs.nightly_tag_main }}
       release_type: nightly-base
-      push_to_registry: true
+      push_to_registry: ${{ inputs.push_to_registry }}
     secrets: inherit
 
   call_docker_build_main:
@@ -374,7 +379,7 @@ jobs:
     with:
       ref: ${{ inputs.nightly_tag_main }}
       release_type: nightly-main
-      push_to_registry: true
+      push_to_registry: ${{ inputs.push_to_registry }}
     secrets: inherit
 
   # TODO: Uncomment this when our runner can fit the builds that contain pytorch (and other large dependencies)
@@ -397,4 +402,5 @@ jobs:
     with:
       ref: ${{ inputs.nightly_tag_main }}
       release_type: main-ep
+      push_to_registry: ${{ inputs.push_to_registry }}
     secrets: inherit

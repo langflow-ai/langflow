@@ -22,6 +22,11 @@ on:
         required: false
         type: boolean
         default: false
+      push_to_registry:
+        description: "Whether to push images to registries. Set to false for testing builds without publishing."
+        required: false
+        type: boolean
+        default: true
   schedule:
     # Run job at 00:00 UTC (4:00 PM PST / 5:00 PM PDT)
     - cron: "0 0 * * *"
@@ -207,6 +212,7 @@ jobs:
       nightly_tag_main: ${{ needs.create-nightly-tag.outputs.main_tag }}
       nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}
       nightly_tag_lfx: ${{ needs.create-nightly-tag.outputs.lfx_tag }}
+      push_to_registry: ${{ inputs.push_to_registry != false }}
     secrets: inherit
 
   # slack-notification:
