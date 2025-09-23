@@ -1,0 +1,271 @@
+name: Docker Nightly Build and Push
+run-name: Docker Nightly Build @${{ inputs.release_type }} by @${{ github.actor }}
+
+on:
+  workflow_call:
+    inputs:
+      release_type:
+        required: true
+        type: string
+        description: "Nightly release type. One of 'nightly-main', 'nightly-base', 'nightly-main-all'."
+      ref:
+        required: true
+        type: string
+        description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located."
+      main_version:
+        required: false
+        type: string
+        description: "Override main version for tagging. If not provided, will be extracted from code."
+      base_version:
+        required: false
+        type: string
+        description: "Override base version for tagging. If not provided, will be extracted from code."
+
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Nightly release type. One of 'nightly-main', 'nightly-base', 'nightly-main-all'."
+        required: true
+        type: choice
+        options:
+          - nightly-main
+          - nightly-base
+          - nightly-main-all
+      ref:
+        required: true
+        type: string
+        description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located."
+      main_version:
+        description: "Override main version for tagging. If not provided, will be extracted from code."
+        required: false
+        type: string
+      base_version:
+        description: "Override base version for tagging. If not provided, will be extracted from code."
+        required: false
+        type: string
+
+env:
+  PYTHON_VERSION: "3.13"
+
+jobs:
+  # Nightly Base package builds
+  build-nightly-base:
+    name: Build Nightly Base Package
+    if: ${{ inputs.release_type == 'nightly-base' }}
+    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Get version for tagging
+        id: version
+        run: |
+          if [ -n "${{ inputs.base_version }}" ]; then
+            echo "Using provided base version: ${{ inputs.base_version }}"
+            echo version=${{ inputs.base_version }} >> $GITHUB_OUTPUT
+          else
+            echo "Extracting base version from code for nightly build"
+            # For nightly, we might want to add a timestamp or commit hash
+            base_version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
+            timestamp=$(date +%Y%m%d)
+            commit_hash=$(git rev-parse --short HEAD)
+            version="${base_version}-nightly-${timestamp}-${commit_hash}"
+            echo "Generated nightly version: $version"
+            echo version=$version >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set nightly tags
+        id: tags
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          echo "docker_tags=langflowai/langflow-nightly:base-${version},langflowai/langflow-nightly:base-latest" >> $GITHUB_OUTPUT
+          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-nightly:base-${version},ghcr.io/langflow-ai/langflow-nightly:base-latest" >> $GITHUB_OUTPUT
+
+      - name: Docker cleanup
+        run: |
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN}}
+
+      - name: Build and push nightly base to Docker Hub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: ./docker/build_and_push_base.Dockerfile
+          tags: ${{ steps.tags.outputs.docker_tags }}
+          platforms: linux/amd64,linux/arm64
+
+      - name: Build and push nightly base to GitHub Container Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: ./docker/build_and_push_base.Dockerfile
+          tags: ${{ steps.tags.outputs.ghcr_tags }}
+          platforms: linux/amd64,linux/arm64
+
+  # Nightly Main package builds
+  build-nightly-main:
+    name: Build Nightly Main Package
+    if: ${{ inputs.release_type == 'nightly-main' }}
+    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Get version for tagging
+        id: version
+        run: |
+          if [ -n "${{ inputs.main_version }}" ]; then
+            echo "Using provided main version: ${{ inputs.main_version }}"
+            echo version=${{ inputs.main_version }} >> $GITHUB_OUTPUT
+          else
+            echo "Extracting main version from code for nightly build"
+            # For nightly, we might want to add a timestamp or commit hash
+            main_version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+            timestamp=$(date +%Y%m%d)
+            commit_hash=$(git rev-parse --short HEAD)
+            version="${main_version}-nightly-${timestamp}-${commit_hash}"
+            echo "Generated nightly version: $version"
+            echo version=$version >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set nightly tags
+        id: tags
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          echo "docker_tags=langflowai/langflow-nightly:${version},langflowai/langflow-nightly:latest" >> $GITHUB_OUTPUT
+          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-nightly:${version},ghcr.io/langflow-ai/langflow-nightly:latest" >> $GITHUB_OUTPUT
+
+      - name: Docker cleanup
+        run: |
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN}}
+
+      - name: Build and push nightly main to Docker Hub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: ./docker/build_and_push.Dockerfile
+          tags: ${{ steps.tags.outputs.docker_tags }}
+          platforms: linux/amd64,linux/arm64
+
+      - name: Build and push nightly main to GitHub Container Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: ./docker/build_and_push.Dockerfile
+          tags: ${{ steps.tags.outputs.ghcr_tags }}
+          platforms: linux/amd64,linux/arm64
+
+  # Nightly Main All package builds
+  build-nightly-main-all:
+    name: Build Nightly Main All Package
+    if: ${{ inputs.release_type == 'nightly-main-all' }}
+    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Get version for tagging
+        id: version
+        run: |
+          if [ -n "${{ inputs.main_version }}" ]; then
+            echo "Using provided main version: ${{ inputs.main_version }}"
+            echo version=${{ inputs.main_version }} >> $GITHUB_OUTPUT
+          else
+            echo "Extracting main version from code for nightly build"
+            # For nightly, we might want to add a timestamp or commit hash
+            main_version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+            timestamp=$(date +%Y%m%d)
+            commit_hash=$(git rev-parse --short HEAD)
+            version="${main_version}-nightly-${timestamp}-${commit_hash}"
+            echo "Generated nightly version: $version"
+            echo version=$version >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set nightly all tags
+        id: tags
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          echo "docker_tags=langflowai/langflow-all-nightly:${version},langflowai/langflow-all-nightly:latest" >> $GITHUB_OUTPUT
+          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-all-nightly:${version},ghcr.io/langflow-ai/langflow-all-nightly:latest" >> $GITHUB_OUTPUT
+
+      - name: Docker cleanup
+        run: |
+          docker system prune -af --volumes || true
+          docker buildx prune -af || true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TEMP_GHCR_TOKEN}}
+
+      - name: Build and push nightly main-all to Docker Hub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: ./docker/build_and_push_with_extras.Dockerfile
+          tags: ${{ steps.tags.outputs.docker_tags }}
+          platforms: linux/amd64,linux/arm64
+
+      - name: Build and push nightly main-all to GitHub Container Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: ./docker/build_and_push_with_extras.Dockerfile
+          tags: ${{ steps.tags.outputs.ghcr_tags }}
+          platforms: linux/amd64,linux/arm64

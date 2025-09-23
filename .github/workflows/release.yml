@@ -299,8 +299,9 @@ jobs:
     name: Call Docker Build Workflow for Langflow Base
     if: inputs.build_docker_base == true
     needs: [publish-base, publish-main]
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-build-v2.yml
     with:
+      ref: ${{ github.ref }}
       base_version: ${{ needs.publish-base.needs.build-base.outputs.version }}
       main_version: ${{ needs.publish-main.needs.build-main.outputs.version }}
       release_type: base
@@ -311,8 +312,9 @@ jobs:
     name: Call Docker Build Workflow for Langflow with Entrypoint
     if: inputs.build_docker_ep == true
     needs: [publish-main, call_docker_build_base]
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-build-v2.yml
     with:
+      ref: ${{ github.ref }}
       main_version: ${{ needs.publish-main.needs.build-main.outputs.version }}
       release_type: main-ep
       pre_release: False
@@ -322,8 +324,9 @@ jobs:
     name: Call Docker Build Workflow for Langflow
     if: inputs.build_docker_main == true
     needs: [publish-main, call_docker_build_main_ep]
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-build-v2.yml
     with:
+      ref: ${{ github.ref }}
       main_version: ${{ needs.publish-main.needs.build-main.outputs.version }}
       release_type: main
       pre_release: ${{ inputs.pre_release }}
@@ -333,8 +336,9 @@ jobs:
     name: Call Docker Build Workflow for langflow-all
     if: inputs.build_docker_main == true
     needs: [publish-main]
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-build-v2.yml
     with:
+      ref: ${{ github.ref }}
       main_version: ${{ needs.publish-main.needs.build-main.outputs.version }}
       release_type: main-all
       pre_release: ${{ inputs.pre_release }}

@@ -384,19 +384,20 @@ jobs:
     name: Call Docker Build Workflow for Langflow Base
     if: always() && ${{ inputs.build_docker_base == 'true' }}
     needs: [build-nightly-base, build-nightly-main]
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-nightly-build.yml
     with:
+      ref: ${{ github.ref }}
       release_type: nightly-base
       base_version: ${{ inputs.nightly_tag_base }}
-      main_version: ${{ inputs.nightly_tag_main }}
     secrets: inherit
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
     if: always() && ${{ inputs.build_docker_main == 'true' }}
     needs: [build-nightly-main, call_docker_build_base]
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-nightly-build.yml
     with:
+      ref: ${{ github.ref }}
       release_type: nightly-main
       main_version: ${{ inputs.nightly_tag_main }}
     secrets: inherit
@@ -406,8 +407,9 @@ jobs:
   #   name: Call Docker Build Workflow for langflow-all
   #   if: always() && ${{ inputs.build_docker_main == 'true' }}
   #   needs: [build-nightly-main]
-  #   uses: ./.github/workflows/docker-build.yml
+  #   uses: ./.github/workflows/docker-nightly-build.yml
   #   with:
+  #     ref: ${{ github.ref }}
   #     release_type: nightly-main-all
   #     main_version: ${{ inputs.nightly_tag_main }}
   #   secrets: inherit
@@ -416,8 +418,9 @@ jobs:
     name: Call Docker Build Workflow for Langflow with Entrypoint
     if: always() && ${{ inputs.build_docker_ep == 'true' }}
     needs: [build-nightly-main, call_docker_build_main]
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-build-v2.yml
     with:
+      ref: ${{ github.ref }}
       release_type: main-ep
       main_version: ${{ inputs.nightly_tag_main }}
     secrets: inherit
