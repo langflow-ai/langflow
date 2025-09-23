@@ -7,13 +7,15 @@ from lfx.components._importing import import_mod
 if TYPE_CHECKING:
     from lfx.components.ibm.watsonx import WatsonxAIComponent
     from lfx.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
+    from lfx.components.ibm.watsonx_governance import WatsonxGovernanceComponent
 
 _dynamic_imports = {
     "WatsonxAIComponent": "watsonx",
     "WatsonxEmbeddingsComponent": "watsonx_embeddings",
+    "WatsonxGovernanceComponent": "watsonx_governance",
 }
 
-__all__ = ["WatsonxAIComponent", "WatsonxEmbeddingsComponent"]
+__all__ = ["WatsonxAIComponent", "WatsonxEmbeddingsComponent", "WatsonxGovernanceComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:
