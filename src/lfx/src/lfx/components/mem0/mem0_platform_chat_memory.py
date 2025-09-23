@@ -9,7 +9,9 @@ from lfx.schema.data import Data
 
 class Mem0PlatformChatMemoryComponent(LCChatMemoryComponent):
     display_name = "Mem0 Platform Chat Memory"
-    description = "Retrieves and stores chat messages using Mem0 Platform (hosted) memory storage. Managed solution with enterprise features."
+    description = """Retrieves and stores chat messages using Mem0 Platform (hosted) memory storage. 
+                Managed solution with enterprise features.
+                This component is only available in the Mem0 Platform bundle."""
     name = "mem0_platform_chat_memory"
     icon: str = "Mem0"
     inputs = [
