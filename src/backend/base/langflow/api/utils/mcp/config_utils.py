@@ -29,6 +29,7 @@ class MCPServerValidationResult:
 
     def __init__(
         self,
+        *,
         server_exists: bool = False,
         project_id_matches: bool = False,
         server_name: str = "",

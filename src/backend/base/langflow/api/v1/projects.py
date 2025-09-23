@@ -145,9 +145,11 @@ async def create_project(
 
                 # Log if updating existing server
                 if validation_result.should_skip:
-                    await logger.adebug(
-                        f"MCP server '{validation_result.server_name}' already exists for project {new_project.id}, updating"
+                    msg = (
+                        f"MCP server '{validation_result.server_name}' ",
+                        f"already exists for project {new_project.id}, updating",
                     )
+                    await logger.adebug(msg)
 
                 server_name = validation_result.server_name
 
@@ -164,7 +166,8 @@ async def create_project(
                 await logger.aerror(msg)
                 raise
             except Exception as e:  # noqa: BLE001
-                await logger.aexception(f"Failed to auto-register MCP server for project {new_project.id}: {e}")
+                msg = f"Failed to auto-register MCP server for project {new_project.id}: {e}"
+                await logger.aexception(msg)
 
         if project.components_list:
             update_statement_components = (
