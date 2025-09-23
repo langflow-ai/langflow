@@ -208,7 +208,7 @@ class Message(Data):
             if isinstance(file, Image):
                 content_dicts.append(file.to_content_dict())
             else:
-                content_dicts.append(create_image_content_dict(file, model))
+                content_dicts.append(create_image_content_dict(file, None, model))
         return content_dicts
 
     def load_lc_prompt(self):
