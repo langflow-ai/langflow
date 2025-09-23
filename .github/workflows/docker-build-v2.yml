@@ -4,14 +4,6 @@ run-name: Docker Build and Push @${{ inputs.release_type }} by @${{ github.actor
 on:
   workflow_call:
     inputs:
-      main_version:
-        required: false
-        type: string
-        description: "Main version to tag images with. If not provided, will be extracted from pyproject.toml."
-      base_version:
-        required: false
-        type: string
-        description: "Base version to tag images with. If not provided, will be extracted from pyproject.toml."
       release_type:
         required: true
         type: string
@@ -32,14 +24,6 @@ on:
 
   workflow_dispatch:
     inputs:
-      main_version:
-        description: "Main version to tag images with. If not provided, will be extracted from pyproject.toml."
-        required: false
-        type: string
-      base_version:
-        description: "Base version to tag images with. If not provided, will be extracted from pyproject.toml."
-        required: false
-        type: string
       release_type:
         description: "Type of release. One of 'main', 'main-ep', 'base', 'main-all'."
         required: true
@@ -81,15 +65,10 @@ jobs:
       - name: Get version
         id: version
         run: |
-          if [ -n "${{ inputs.base_version }}" ]; then
-            echo "Using provided base version: ${{ inputs.base_version }}"
-            echo version=${{ inputs.base_version }} >> $GITHUB_OUTPUT
-          else
-            echo "Extracting base version from pyproject.toml"
-            version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
-            echo "Extracted base version: $version"
-            echo version=$version >> $GITHUB_OUTPUT
-          fi
+          echo "Extracting base version from pyproject.toml"
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
+          echo "Using version: $version"
+          echo version=$version >> $GITHUB_OUTPUT
 
       - name: Set tags
         id: tags
@@ -150,15 +129,10 @@ jobs:
       - name: Get version
         id: version
         run: |
-          if [ -n "${{ inputs.main_version }}" ]; then
-            echo "Using provided main version: ${{ inputs.main_version }}"
-            echo version=${{ inputs.main_version }} >> $GITHUB_OUTPUT
-          else
-            echo "Extracting main version from pyproject.toml"
-            version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
-            echo "Extracted main version: $version"
-            echo version=$version >> $GITHUB_OUTPUT
-          fi
+          echo "Extracting main version from pyproject.toml"
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+          echo "Using version: $version"
+          echo version=$version >> $GITHUB_OUTPUT
 
       - name: Set tags
         id: tags
@@ -225,15 +199,10 @@ jobs:
       - name: Get version
         id: version
         run: |
-          if [ -n "${{ inputs.main_version }}" ]; then
-            echo "Using provided main version: ${{ inputs.main_version }}"
-            echo version=${{ inputs.main_version }} >> $GITHUB_OUTPUT
-          else
-            echo "Extracting main version from pyproject.toml"
-            version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
-            echo "Extracted main version: $version"
-            echo version=$version >> $GITHUB_OUTPUT
-          fi
+          echo "Extracting main version from pyproject.toml"
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+          echo "Using version: $version"
+          echo version=$version >> $GITHUB_OUTPUT
 
       - name: Set tags
         id: tags
@@ -295,15 +264,10 @@ jobs:
       - name: Get version
         id: version
         run: |
-          if [ -n "${{ inputs.main_version }}" ]; then
-            echo "Using provided main version: ${{ inputs.main_version }}"
-            echo version=${{ inputs.main_version }} >> $GITHUB_OUTPUT
-          else
-            echo "Extracting main version from pyproject.toml"
-            version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
-            echo "Extracted main version: $version"
-            echo version=$version >> $GITHUB_OUTPUT
-          fi
+          echo "Extracting main version from pyproject.toml"
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+          echo "Using version: $version"
+          echo version=$version >> $GITHUB_OUTPUT
 
       - name: Set tags
         id: tags

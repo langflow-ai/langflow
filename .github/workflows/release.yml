@@ -4,6 +4,10 @@ run-name: Langflow Release by @${{ github.actor }}
 on:
   workflow_dispatch:
     inputs:
+      release_branch:
+        description: "Branch to release from. This is the branch that contains the source code for the release."
+        required: true
+        type: string
       release_package_base:
         description: "Release Langflow Base"
         required: true
@@ -62,6 +66,7 @@ jobs:
     name: CI
     uses: ./.github/workflows/ci.yml
     with:
+      branch: ${{ inputs.release_branch }}
       python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
       release: true
@@ -80,6 +85,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_branch }}
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -148,6 +155,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_branch }}
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -301,9 +310,7 @@ jobs:
     needs: [publish-base, publish-main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ github.ref }}
-      base_version: ${{ needs.publish-base.needs.build-base.outputs.version }}
-      main_version: ${{ needs.publish-main.needs.build-main.outputs.version }}
+      ref: ${{ inputs.release_branch }}
       release_type: base
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
@@ -314,8 +321,7 @@ jobs:
     needs: [publish-main, call_docker_build_base]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ github.ref }}
-      main_version: ${{ needs.publish-main.needs.build-main.outputs.version }}
+      ref: ${{ inputs.release_branch }}
       release_type: main-ep
       pre_release: False
     secrets: inherit
@@ -326,8 +332,7 @@ jobs:
     needs: [publish-main, call_docker_build_main_ep]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ github.ref }}
-      main_version: ${{ needs.publish-main.needs.build-main.outputs.version }}
+      ref: ${{ inputs.release_branch }}
       release_type: main
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
@@ -338,8 +343,7 @@ jobs:
     needs: [publish-main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ github.ref }}
-      main_version: ${{ needs.publish-main.needs.build-main.outputs.version }}
+      ref: ${{ inputs.release_branch }}
       release_type: main-all
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
@@ -355,6 +359,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_branch }}
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -417,7 +423,7 @@ jobs:
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [publish-main, publish-lfx]
+    needs: [build-main, build-lfx, publish-main, publish-lfx]
     if: always() && inputs.create_release == 'true' && (needs.publish-main.result == 'success' || needs.publish-lfx.result == 'success')
     steps:
       - uses: actions/download-artifact@v4
@@ -440,5 +446,5 @@ jobs:
           draft: false
           generateReleaseNotes: true
           prerelease: ${{ inputs.pre_release }}
-          tag: ${{ needs.publish-main.needs.build-main.outputs.version || needs.publish-lfx.needs.build-lfx.outputs.version }}
-          commit: ${{ github.ref }}
+          tag: ${{ needs.build-main.outputs.version || needs.build-lfx.outputs.version }}
+          commit: ${{ inputs.release_branch }}

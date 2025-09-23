@@ -279,6 +279,9 @@ jobs:
     steps:
       - name: Check out the code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.nightly_tag_main }}
+          persist-credentials: true
       - name: Download LFX artifact
         uses: actions/download-artifact@v4
         with:
@@ -304,6 +307,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.nightly_tag_main }}
+          persist-credentials: true
       - name: Download base artifact
         uses: actions/download-artifact@v4
         with:
@@ -329,6 +335,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.nightly_tag_main }}
+          persist-credentials: true
       - name: Download main artifact
         uses: actions/download-artifact@v4
         with:
@@ -352,9 +361,9 @@ jobs:
     needs: [build-nightly-base, build-nightly-main]
     uses: ./.github/workflows/docker-nightly-build.yml
     with:
-      ref: ${{ github.ref }}
+      ref: ${{ inputs.nightly_tag_main }}
       release_type: nightly-base
-      base_version: ${{ inputs.nightly_tag_base }}
+      push_to_registry: true
     secrets: inherit
 
   call_docker_build_main:
@@ -363,9 +372,9 @@ jobs:
     needs: [build-nightly-main, call_docker_build_base]
     uses: ./.github/workflows/docker-nightly-build.yml
     with:
-      ref: ${{ github.ref }}
+      ref: ${{ inputs.nightly_tag_main }}
       release_type: nightly-main
-      main_version: ${{ inputs.nightly_tag_main }}
+      push_to_registry: true
     secrets: inherit
 
   # TODO: Uncomment this when our runner can fit the builds that contain pytorch (and other large dependencies)
@@ -375,7 +384,7 @@ jobs:
   #   needs: [build-nightly-main]
   #   uses: ./.github/workflows/docker-nightly-build.yml
   #   with:
-  #     ref: ${{ github.ref }}
+  #     ref: ${{ inputs.nightly_tag_main }}
   #     release_type: nightly-main-all
   #     main_version: ${{ inputs.nightly_tag_main }}
   #   secrets: inherit
@@ -386,7 +395,7 @@ jobs:
     needs: [build-nightly-main, call_docker_build_main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ github.ref }}
+      ref: ${{ inputs.nightly_tag_main }}
       release_type: main-ep
       main_version: ${{ inputs.nightly_tag_main }}
     secrets: inherit

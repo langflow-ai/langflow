@@ -12,14 +12,6 @@ on:
         required: true
         type: string
         description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located."
-      main_version:
-        required: false
-        type: string
-        description: "Override main version for tagging. If not provided, will be extracted from pyproject.toml."
-      base_version:
-        required: false
-        type: string
-        description: "Override base version for tagging. If not provided, will be extracted from pyproject.toml."
       push_to_registry:
         required: false
         type: boolean
@@ -39,15 +31,7 @@ on:
       ref:
         required: true
         type: string
-        description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located."
-      main_version:
-        description: "Override main version for tagging. If not provided, will be extracted from pyproject.toml."
-        required: false
-        type: string
-      base_version:
-        description: "Override base version for tagging. If not provided, will be extracted from pyproject.toml."
-        required: false
-        type: string
+        description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located. Note that if running via Github Actions, this tag (formatted as, e.g., v1.5.1.dev36) must be manually created and pushed to a branch prior to running the workflow."
       push_to_registry:
         description: "Whether to push images to registries. Set to false for testing builds without publishing."
         required: false
@@ -58,7 +42,6 @@ env:
   PYTHON_VERSION: "3.13"
 
 jobs:
-  # Nightly Base package builds
   build-nightly-base:
     name: Build Nightly Base Package
     if: ${{ inputs.release_type == 'nightly-base' }}
@@ -72,20 +55,19 @@ jobs:
       - name: Get version for tagging
         id: version
         run: |
-          if [ -n "${{ inputs.base_version }}" ]; then
-            echo "Using provided base version: ${{ inputs.base_version }}"
-            echo version=${{ inputs.base_version }} >> $GITHUB_OUTPUT
-          else
-            echo "Extracting base version from code for nightly build"
-            # For nightly, we might want to add a timestamp or commit hash
-            base_version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
-            timestamp=$(date +%Y%m%d)
-            commit_hash=$(git rev-parse --short HEAD)
-            version="${base_version}-nightly-${timestamp}-${commit_hash}"
-            echo "Generated nightly version: $version"
-            echo version=$version >> $GITHUB_OUTPUT
+          echo "Extracting base version from pyproject.toml"
+
+          # Use the exact version from pyproject.toml (must already be formatted correctly)
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
+
+          # Verify nightly tag format
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+$ ]]; then
+            echo "Base version format is incorrect. Must be in the format (e.g.) v1.5.1.dev36"
+            exit 1
           fi
 
+          echo "Using version: $version"
+          echo version=$version >> $GITHUB_OUTPUT
       - name: Set nightly tags
         id: tags
         run: |
@@ -132,7 +114,6 @@ jobs:
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/amd64,linux/arm64
 
-  # Nightly Main package builds
   build-nightly-main:
     name: Build Nightly Main Package
     if: ${{ inputs.release_type == 'nightly-main' }}
@@ -146,19 +127,18 @@ jobs:
       - name: Get version for tagging
         id: version
         run: |
-          if [ -n "${{ inputs.main_version }}" ]; then
-            echo "Using provided main version: ${{ inputs.main_version }}"
-            echo version=${{ inputs.main_version }} >> $GITHUB_OUTPUT
-          else
-            echo "Extracting main version from code for nightly build"
-            # For nightly, we might want to add a timestamp or commit hash
-            main_version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
-            timestamp=$(date +%Y%m%d)
-            commit_hash=$(git rev-parse --short HEAD)
-            version="${main_version}-nightly-${timestamp}-${commit_hash}"
-            echo "Generated nightly version: $version"
-            echo version=$version >> $GITHUB_OUTPUT
+          echo "Extracting main version from pyproject.toml"
+
+          # Use the exact version from pyproject.toml (must already be formatted correctly)
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+
+          # Verify nightly tag format
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+$ ]]; then
+            echo "Main version format is incorrect. Must be in the format (e.g.) v1.5.1.dev36"
+            exit 1
           fi
+          echo "Using version: $version"
+          echo version=$version >> $GITHUB_OUTPUT
 
       - name: Set nightly tags
         id: tags
@@ -206,7 +186,7 @@ jobs:
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/amd64,linux/arm64
 
-  # Nightly Main All package builds
+  # nightly-main-all includes all the extras
   build-nightly-main-all:
     name: Build Nightly Main All Package
     if: ${{ inputs.release_type == 'nightly-main-all' }}
@@ -220,19 +200,18 @@ jobs:
       - name: Get version for tagging
         id: version
         run: |
-          if [ -n "${{ inputs.main_version }}" ]; then
-            echo "Using provided main version: ${{ inputs.main_version }}"
-            echo version=${{ inputs.main_version }} >> $GITHUB_OUTPUT
-          else
-            echo "Extracting main version from code for nightly build"
-            # For nightly, we might want to add a timestamp or commit hash
-            main_version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
-            timestamp=$(date +%Y%m%d)
-            commit_hash=$(git rev-parse --short HEAD)
-            version="${main_version}-nightly-${timestamp}-${commit_hash}"
-            echo "Generated nightly version: $version"
-            echo version=$version >> $GITHUB_OUTPUT
+          echo "Extracting main version from pyproject.toml"
+
+          # Use the exact version from pyproject.toml (must already be formatted correctly)
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+
+          # Verify nightly tag format
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+$ ]]; then
+            echo "Main version format is incorrect. Must be in the format (e.g.) v1.5.1.dev36"
+            exit 1
           fi
+          echo "Using version: $version"
+          echo version=$version >> $GITHUB_OUTPUT
 
       - name: Set nightly all tags
         id: tags
