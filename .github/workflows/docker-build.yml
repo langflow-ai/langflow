@@ -245,8 +245,6 @@ jobs:
             file: ${{ needs.setup.outputs.file }}
             tags: ${{ needs.setup.outputs.docker_tags }}
             platforms: linux/amd64,linux/arm64
-            cache-from: type=gha
-            cache-to: type=gha,mode=max
 
       - name: Login to Github Container Registry
         uses: docker/login-action@v3
@@ -265,8 +263,6 @@ jobs:
             file: ${{ needs.setup.outputs.file }}
             tags: ${{ needs.setup.outputs.ghcr_tags }}
             platforms: linux/amd64,linux/arm64
-            cache-from: type=gha
-            cache-to: type=gha,mode=max
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
