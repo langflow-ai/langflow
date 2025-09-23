@@ -7,11 +7,11 @@ on:
       main_version:
         required: false
         type: string
-        description: "Main version to tag images with. If not provided, will be extracted from code."
+        description: "Main version to tag images with. If not provided, will be extracted from pyproject.toml."
       base_version:
         required: false
         type: string
-        description: "Base version to tag images with. If not provided, will be extracted from code."
+        description: "Base version to tag images with. If not provided, will be extracted from pyproject.toml."
       release_type:
         required: true
         type: string
@@ -24,12 +24,50 @@ on:
         required: true
         type: string
         description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located."
+      push_to_registry:
+        required: false
+        type: boolean
+        default: true
+        description: "Whether to push images to registries. Set to false for testing builds without publishing."
+
+  workflow_dispatch:
+    inputs:
+      main_version:
+        description: "Main version to tag images with. If not provided, will be extracted from pyproject.toml."
+        required: false
+        type: string
+      base_version:
+        description: "Base version to tag images with. If not provided, will be extracted from pyproject.toml."
+        required: false
+        type: string
+      release_type:
+        description: "Type of release. One of 'main', 'main-ep', 'base', 'main-all'."
+        required: true
+        type: choice
+        options:
+          - main
+          - main-ep
+          - base
+          - main-all
+      pre_release:
+        description: "Whether this is a pre-release."
+        required: false
+        type: boolean
+        default: false
+      ref:
+        required: true
+        type: string
+        description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located."
+      push_to_registry:
+        description: "Whether to push images to registries. Set to false for testing builds without publishing."
+        required: false
+        type: boolean
+        default: false
 
 env:
   PYTHON_VERSION: "3.13"
 
 jobs:
-  # Base package builds
   build-base:
     name: Build Base Package
     if: ${{ inputs.release_type == 'base' }}
@@ -47,7 +85,7 @@ jobs:
             echo "Using provided base version: ${{ inputs.base_version }}"
             echo version=${{ inputs.base_version }} >> $GITHUB_OUTPUT
           else
-            echo "Extracting base version from code"
+            echo "Extracting base version from pyproject.toml"
             version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
             echo "Extracted base version: $version"
             echo version=$version >> $GITHUB_OUTPUT
@@ -85,7 +123,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ inputs.push_to_registry }}
           file: ./docker/build_and_push_base.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/amd64,linux/arm64
@@ -94,12 +132,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ inputs.push_to_registry }}
           file: ./docker/build_and_push_base.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/amd64,linux/arm64
 
-  # Main package builds
   build-main:
     name: Build Main Package
     if: ${{ inputs.release_type == 'main' }}
@@ -117,7 +154,7 @@ jobs:
             echo "Using provided main version: ${{ inputs.main_version }}"
             echo version=${{ inputs.main_version }} >> $GITHUB_OUTPUT
           else
-            echo "Extracting main version from code"
+            echo "Extracting main version from pyproject.toml"
             version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
             echo "Extracted main version: $version"
             echo version=$version >> $GITHUB_OUTPUT
@@ -160,7 +197,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ inputs.push_to_registry }}
           file: ./docker/build_and_push.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/amd64,linux/arm64
@@ -169,12 +206,12 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ inputs.push_to_registry }}
           file: ./docker/build_and_push.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/amd64,linux/arm64
 
-  # Main EP builds
+  # main-ep builds used for cloud image builds
   build-main-ep:
     name: Build Main EP Package
     if: ${{ inputs.release_type == 'main-ep' }}
@@ -192,7 +229,7 @@ jobs:
             echo "Using provided main version: ${{ inputs.main_version }}"
             echo version=${{ inputs.main_version }} >> $GITHUB_OUTPUT
           else
-            echo "Extracting main version from code"
+            echo "Extracting main version from pyproject.toml"
             version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
             echo "Extracted main version: $version"
             echo version=$version >> $GITHUB_OUTPUT
@@ -230,7 +267,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ inputs.push_to_registry }}
           file: ./docker/build_and_push_ep.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/amd64,linux/arm64
@@ -239,12 +276,12 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ inputs.push_to_registry }}
           file: ./docker/build_and_push_ep.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/amd64,linux/arm64
 
-  # Main All builds
+  # main-all includes all the extras
   build-main-all:
     name: Build Main All Package
     if: ${{ inputs.release_type == 'main-all' }}
@@ -262,7 +299,7 @@ jobs:
             echo "Using provided main version: ${{ inputs.main_version }}"
             echo version=${{ inputs.main_version }} >> $GITHUB_OUTPUT
           else
-            echo "Extracting main version from code"
+            echo "Extracting main version from pyproject.toml"
             version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
             echo "Extracted main version: $version"
             echo version=$version >> $GITHUB_OUTPUT
@@ -300,7 +337,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ inputs.push_to_registry }}
           file: ./docker/build_and_push_with_extras.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/amd64,linux/arm64
@@ -309,7 +346,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ inputs.push_to_registry }}
           file: ./docker/build_and_push_with_extras.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/amd64,linux/arm64

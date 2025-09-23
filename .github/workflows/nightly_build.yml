@@ -12,6 +12,16 @@ on:
           - self-hosted
           - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
         default: ubuntu-latest
+      skip_frontend_tests:
+        description: "Skip frontend tests. Only do this for testing purposes."
+        required: false
+        type: boolean
+        default: false
+      skip_backend_tests:
+        description: "Skip backend tests. Only do this for testing purposes."
+        required: false
+        type: boolean
+        default: false
   schedule:
     # Run job at 00:00 UTC (4:00 PM PST / 5:00 PM PDT)
     - cron: "0 0 * * *"
@@ -148,7 +158,7 @@ jobs:
           fi
 
   frontend-tests:
-    if: github.repository == 'langflow-ai/langflow'
+    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_frontend_tests
     name: Run Frontend Tests
     needs: create-nightly-tag
     uses: ./.github/workflows/typescript_test.yml
@@ -163,7 +173,7 @@ jobs:
       TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
   backend-unit-tests:
-    if: github.repository == 'langflow-ai/langflow'
+    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_backend_tests
     name: Run Backend Unit Tests
     needs: create-nightly-tag
     uses: ./.github/workflows/python_test.yml
@@ -186,9 +196,9 @@ jobs:
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
-    if: github.repository == 'langflow-ai/langflow'
+    if: always() && github.repository == 'langflow-ai/langflow' && (needs.frontend-tests.result == 'success' || needs.frontend-tests.result == 'skipped') && (needs.backend-unit-tests.result == 'success' || needs.backend-unit-tests.result == 'skipped')
     name: Run Nightly Langflow Build
-    needs: [frontend-tests, backend-unit-tests, create-nightly-tag]
+    needs: [create-nightly-tag, frontend-tests, backend-unit-tests]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: true

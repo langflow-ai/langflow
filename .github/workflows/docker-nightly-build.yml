@@ -15,11 +15,44 @@ on:
       main_version:
         required: false
         type: string
-        description: "Override main version for tagging. If not provided, will be extracted from code."
+        description: "Override main version for tagging. If not provided, will be extracted from pyproject.toml."
       base_version:
         required: false
         type: string
-        description: "Override base version for tagging. If not provided, will be extracted from code."
+        description: "Override base version for tagging. If not provided, will be extracted from pyproject.toml."
+      push_to_registry:
+        required: false
+        type: boolean
+        default: true
+        description: "Whether to push images to registries. Set to false for testing builds without publishing."
+
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Nightly release type. One of 'nightly-main', 'nightly-base', 'nightly-main-all'."
+        required: true
+        type: choice
+        options:
+          - nightly-main
+          - nightly-base
+          - nightly-main-all
+      ref:
+        required: true
+        type: string
+        description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located."
+      main_version:
+        description: "Override main version for tagging. If not provided, will be extracted from pyproject.toml."
+        required: false
+        type: string
+      base_version:
+        description: "Override base version for tagging. If not provided, will be extracted from pyproject.toml."
+        required: false
+        type: string
+      push_to_registry:
+        description: "Whether to push images to registries. Set to false for testing builds without publishing."
+        required: false
+        type: boolean
+        default: false
 
 env:
   PYTHON_VERSION: "3.13"
@@ -85,7 +118,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ inputs.push_to_registry }}
           file: ./docker/build_and_push_base.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/amd64,linux/arm64
@@ -94,7 +127,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ inputs.push_to_registry }}
           file: ./docker/build_and_push_base.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/amd64,linux/arm64
@@ -159,7 +192,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ inputs.push_to_registry }}
           file: ./docker/build_and_push.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/amd64,linux/arm64
@@ -168,7 +201,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ inputs.push_to_registry }}
           file: ./docker/build_and_push.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/amd64,linux/arm64
@@ -233,7 +266,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ inputs.push_to_registry }}
           file: ./docker/build_and_push_with_extras.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/amd64,linux/arm64
@@ -242,7 +275,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ inputs.push_to_registry }}
           file: ./docker/build_and_push_with_extras.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/amd64,linux/arm64
