@@ -200,7 +200,7 @@ class Message(Data):
         return value
 
     # Keep this async method for backwards compatibility
-    def get_file_content_dicts(self, model):
+    def get_file_content_dicts(self, model: Any = None):
         content_dicts = []
         files = get_file_paths(self.files)
 
