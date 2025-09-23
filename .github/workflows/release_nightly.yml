@@ -2,40 +2,6 @@ name: Langflow Nightly Build
 run-name: Langflow Nightly Release by @${{ github.actor }}
 
 on:
-  workflow_dispatch:
-    inputs:
-      build_docker_base:
-        description: "Build Docker Image for Langflow Nightly Base"
-        required: true
-        type: boolean
-        default: false
-      build_docker_main:
-        description: "Build Docker Image for Langflow Nightly"
-        required: true
-        type: boolean
-        default: false
-      build_docker_ep:
-        description: "Build Docker Image for Langflow Nightly with Entrypoint"
-        required: false
-        type: boolean
-        default: false
-      build_lfx:
-        description: "Build and release LFX package"
-        required: false
-        type: boolean
-        default: false
-      nightly_tag_main:
-        description: "Tag for the nightly main build"
-        required: true
-        type: string
-      nightly_tag_base:
-        description: "Tag for the nightly base build"
-        required: true
-        type: string
-      nightly_tag_lfx:
-        description: "Tag for the nightly LFX build"
-        required: false
-        type: string
   workflow_call:
     inputs:
       build_docker_base:

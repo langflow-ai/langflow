@@ -21,29 +21,6 @@ on:
         type: string
         description: "Override base version for tagging. If not provided, will be extracted from code."
 
-  workflow_dispatch:
-    inputs:
-      release_type:
-        description: "Nightly release type. One of 'nightly-main', 'nightly-base', 'nightly-main-all'."
-        required: true
-        type: choice
-        options:
-          - nightly-main
-          - nightly-base
-          - nightly-main-all
-      ref:
-        required: true
-        type: string
-        description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located."
-      main_version:
-        description: "Override main version for tagging. If not provided, will be extracted from code."
-        required: false
-        type: string
-      base_version:
-        description: "Override base version for tagging. If not provided, will be extracted from code."
-        required: false
-        type: string
-
 env:
   PYTHON_VERSION: "3.13"
 

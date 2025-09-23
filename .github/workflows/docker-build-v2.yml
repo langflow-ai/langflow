@@ -25,30 +25,6 @@ on:
         type: string
         description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located."
 
-  workflow_dispatch:
-    inputs:
-      main_version:
-        description: "Main version to tag images with. If not provided, will be extracted from code."
-        required: false
-        type: string
-      base_version:
-        description: "Base version to tag images with. If not provided, will be extracted from code."
-        required: false
-        type: string
-      release_type:
-        description: "Type of release. One of 'main', 'main-ep', 'base', 'main-all'."
-        required: true
-        type: string
-      pre_release:
-        description: "Whether this is a pre-release."
-        required: false
-        type: boolean
-        default: false
-      ref:
-        required: true
-        type: string
-        description: "Ref to check out (branch, tag, or commit). This is required -- it specifies where the source code for the release is located."
-
 env:
   PYTHON_VERSION: "3.13"
 
