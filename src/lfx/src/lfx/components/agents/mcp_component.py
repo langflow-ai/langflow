@@ -143,8 +143,8 @@ class MCPToolsComponent(ComponentWithCache):
             self.tools = []
             return [], {"name": server_name, "config": server_config_from_value}
 
-        # Check if caching is enabled
-        use_cache = getattr(self, "use_cache", True)
+        # Check if caching is enabled, default to False
+        use_cache = getattr(self, "use_cache", False)
 
         # Use shared cache if available and caching is enabled
         cached = None
@@ -160,7 +160,8 @@ class MCPToolsComponent(ComponentWithCache):
                 server_config_from_value = cached["config"]
             except (TypeError, KeyError, AttributeError) as e:
                 # Handle corrupted cache data by clearing it and continuing to fetch fresh tools
-                await logger.awarning(f"Corrupted cache data for server {server_name}: {e}")
+                msg = f"Unable to use cached data for MCP Server{server_name}: {e}"
+                await logger.awarning(msg)
                 # Clear the corrupted cache entry
                 current_servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
                 if isinstance(current_servers_cache, dict) and server_name in current_servers_cache:
@@ -335,7 +336,8 @@ class MCPToolsComponent(ComponentWithCache):
                                     self._tool_cache = cached["tool_cache"]
                                 except (TypeError, KeyError, AttributeError) as e:
                                     # Handle corrupted cache data by ignoring it
-                                    await logger.awarning(f"Corrupted cache data for server {current_server_name}: {e}")
+                                    msg = f"Unable to use cached data for MCP Server,{current_server_name}: {e}"
+                                    await logger.awarning(msg)
                                     cached_tools = None
 
                 # Only clear tools if we don't have cached tools for the current server
