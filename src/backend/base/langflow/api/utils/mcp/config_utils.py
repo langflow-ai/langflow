@@ -23,6 +23,124 @@ from langflow.services.deps import get_storage_service
 ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
 
 
+# MCP Server Validation Results
+class MCPServerValidationResult:
+    """Result of MCP server validation check."""
+
+    def __init__(
+        self,
+        server_exists: bool = False,
+        project_id_matches: bool = False,
+        server_name: str = "",
+        existing_config: dict | None = None,
+        conflict_message: str = "",
+    ):
+        self.server_exists = server_exists
+        self.project_id_matches = project_id_matches
+        self.server_name = server_name
+        self.existing_config = existing_config
+        self.conflict_message = conflict_message
+
+    @property
+    def has_conflict(self) -> bool:
+        """True if server exists but project ID doesn't match."""
+        return self.server_exists and not self.project_id_matches
+
+    @property
+    def should_skip(self) -> bool:
+        """True if server exists and project ID matches (no action needed)."""
+        return self.server_exists and self.project_id_matches
+
+    @property
+    def should_proceed(self) -> bool:
+        """True if no server exists or project ID matches (can create/update)."""
+        return not self.server_exists or self.project_id_matches
+
+
+async def validate_mcp_server_for_project(
+    project_id: UUID,
+    project_name: str,
+    user,
+    session,
+    storage_service,
+    settings_service,
+    operation: str = "create",
+) -> MCPServerValidationResult:
+    """Validate MCP server for a project operation.
+
+    Args:
+        project_id: The project UUID
+        project_name: The project name
+        user: The user performing the operation
+        session: Database session
+        storage_service: Storage service
+        settings_service: Settings service
+        operation: Operation type ("create", "update", "delete")
+
+    Returns:
+        MCPServerValidationResult with validation details
+    """
+    # Generate server name that would be used for this project
+    server_name = f"lf-{sanitize_mcp_name(project_name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+
+    try:
+        existing_servers = await get_server_list(user, session, storage_service, settings_service)
+
+        if server_name not in existing_servers.get("mcpServers", {}):
+            # Server doesn't exist
+            return MCPServerValidationResult(
+                server_exists=False,
+                server_name=server_name,
+            )
+
+        # Server exists - check if project ID matches
+        existing_server_config = existing_servers["mcpServers"][server_name]
+        existing_args = existing_server_config.get("args", [])
+        project_id_matches = False
+
+        if existing_args:
+            # SSE URL is typically the last argument
+            existing_sse_url = existing_args[-1] if existing_args else ""
+            if str(project_id) in existing_sse_url:
+                project_id_matches = True
+
+        # Generate appropriate conflict message based on operation
+        conflict_message = ""
+        if not project_id_matches:
+            if operation == "create":
+                conflict_message = (
+                    f"MCP server name conflict: '{server_name}' already exists "
+                    f"for a different project. Cannot create MCP server for project "
+                    f"'{project_name}' (ID: {project_id})"
+                )
+            elif operation == "update":
+                conflict_message = (
+                    f"MCP server name conflict: '{server_name}' exists for a different project. "
+                    f"Cannot update MCP server for project '{project_name}' (ID: {project_id})"
+                )
+            elif operation == "delete":
+                conflict_message = (
+                    f"MCP server '{server_name}' exists for a different project. "
+                    f"Cannot delete MCP server for project '{project_name}' (ID: {project_id})"
+                )
+
+        return MCPServerValidationResult(
+            server_exists=True,
+            project_id_matches=project_id_matches,
+            server_name=server_name,
+            existing_config=existing_server_config,
+            conflict_message=conflict_message,
+        )
+
+    except Exception as e:  # noqa: BLE001
+        await logger.awarning(f"Could not validate MCP server for project {project_id}: {e}")
+        # Return result allowing operation to proceed on validation failure
+        return MCPServerValidationResult(
+            server_exists=False,
+            server_name=server_name,
+        )
+
+
 async def get_url_by_os(host: str, port: int, url: str) -> str:
     """Get the URL by operating system."""
     os_type = platform.system()
@@ -151,20 +269,33 @@ async def auto_configure_starter_projects_mcp(session):
                 if flows_configured > 0:
                     await logger.adebug(f"Enabled MCP for {flows_configured} starter flows for user {user.username}")
 
-                # Create unique server name for starter projects (check this first)
-                server_name = f"lf-{sanitize_mcp_name(DEFAULT_FOLDER_NAME)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+                # Validate MCP server for this starter projects folder
+                validation_result = await validate_mcp_server_for_project(
+                    user_starter_folder.id,
+                    DEFAULT_FOLDER_NAME,
+                    user,
+                    session,
+                    get_storage_service(),
+                    settings_service,
+                    operation="create",
+                )
 
-                # Check if the MCP server already exists to avoid duplicates - do this BEFORE expensive operations
-                try:
-                    existing_servers = await get_server_list(user, session, get_storage_service(), settings_service)
-                    if server_name in existing_servers.get("mcpServers", {}):
-                        await logger.adebug(
-                            f"MCP server '{server_name}' already exists for user {user.username}, skipping"
-                        )
-                        continue  # Skip this user since server already exists
-                except Exception as e:  # noqa: BLE001
-                    await logger.awarning(f"Could not check existing MCP servers for user {user.username}: {e}")
-                    # Continue anyway to try adding the server
+                # Skip if server already exists for this starter projects folder
+                if validation_result.should_skip:
+                    await logger.adebug(
+                        f"MCP server '{validation_result.server_name}' already exists for user "
+                        f"{user.username}'s starter projects (project ID: "
+                        f"{user_starter_folder.id}), skipping"
+                    )
+                    continue  # Skip this user since server already exists for the same project
+
+                if validation_result.server_exists and not validation_result.project_id_matches:
+                    await logger.adebug(
+                        f"MCP server '{validation_result.server_name}' exists but for different project, "
+                        f"will update for user {user.username}'s starter projects"
+                    )
+
+                server_name = validation_result.server_name
 
                 # Only do expensive operations if server doesn't exist
                 # Set up THIS USER'S starter folder authentication (same as new projects)

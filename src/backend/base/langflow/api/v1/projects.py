@@ -12,8 +12,6 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
-from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from lfx.base.mcp.util import sanitize_mcp_name
 from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
 from sqlalchemy import or_, update
@@ -21,6 +19,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params, remove_api_keys
+from langflow.api.utils.mcp.config_utils import validate_mcp_server_for_project
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.mcp_projects import get_project_sse_url, register_project_with_composer
@@ -128,8 +127,30 @@ async def create_project(
 
                 server_config = {"command": command, "args": args}
 
-                # Determine server name and register in user's _mcp_servers.json
-                server_name = f"lf-{sanitize_mcp_name(new_project.name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+                # Validate MCP server for this project
+                validation_result = await validate_mcp_server_for_project(
+                    new_project.id,
+                    new_project.name,
+                    current_user,
+                    session,
+                    get_storage_service(),
+                    get_settings_service(),
+                    operation="create",
+                )
+
+                # Handle conflicts
+                if validation_result.has_conflict:
+                    await logger.aerror(validation_result.conflict_message)
+                    raise ValueError(validation_result.conflict_message)
+
+                # Log if updating existing server
+                if validation_result.should_skip:
+                    await logger.adebug(
+                        f"MCP server '{validation_result.server_name}' already exists for project {new_project.id}, updating"
+                    )
+
+                server_name = validation_result.server_name
+
                 await update_server(
                     server_name,
                     server_config,
@@ -291,52 +312,77 @@ async def update_project(
             # Update corresponding MCP server name if auto-add is enabled
             if get_settings_service().settings.add_projects_to_mcp_servers:
                 try:
-                    # Generate old and new server names
-                    old_server_name = f"lf-{sanitize_mcp_name(old_project_name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
-                    new_server_name = f"lf-{sanitize_mcp_name(project.name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+                    # Validate old server (for this specific project)
+                    old_validation = await validate_mcp_server_for_project(
+                        existing_project.id,
+                        old_project_name,
+                        current_user,
+                        session,
+                        get_storage_service(),
+                        get_settings_service(),
+                        operation="update",
+                    )
 
-                    # Only proceed if the server names would be different
-                    if old_server_name != new_server_name:
-                        from langflow.api.v2.mcp import get_server_list
+                    # Validate new server name (check for conflicts)
+                    new_validation = await validate_mcp_server_for_project(
+                        existing_project.id,
+                        project.name,
+                        current_user,
+                        session,
+                        get_storage_service(),
+                        get_settings_service(),
+                        operation="update",
+                    )
 
-                        # Check if the old MCP server exists
-                        try:
-                            server_list = await get_server_list(
-                                current_user, session, get_storage_service(), get_settings_service()
+                    # Only proceed if server names would be different
+                    if old_validation.server_name != new_validation.server_name:
+                        # Check if new server name would conflict with different project
+                        if new_validation.has_conflict:
+                            await logger.aerror(new_validation.conflict_message)
+                            raise ValueError(new_validation.conflict_message)
+
+                        # If old server exists and matches this project, proceed with rename
+                        if old_validation.server_exists and old_validation.project_id_matches:
+                            # Remove the old server
+                            await update_server(
+                                old_validation.server_name,
+                                {},  # Empty config for deletion
+                                current_user,
+                                session,
+                                get_storage_service(),
+                                get_settings_service(),
+                                delete=True,
                             )
-                            if old_server_name in server_list.get("mcpServers", {}):
-                                # Get the existing server config
-                                existing_server_config = server_list["mcpServers"][old_server_name]
 
-                                # Remove the old server and add with new name
-                                await update_server(
-                                    old_server_name,
-                                    {},  # Empty config for deletion
-                                    current_user,
-                                    session,
-                                    get_storage_service(),
-                                    get_settings_service(),
-                                    delete=True,
-                                )
+                            # Add server with new name and existing config
+                            await update_server(
+                                new_validation.server_name,
+                                old_validation.existing_config,
+                                current_user,
+                                session,
+                                get_storage_service(),
+                                get_settings_service(),
+                            )
 
-                                # Add server with new name and existing config
-                                await update_server(
-                                    new_server_name,
-                                    existing_server_config,
-                                    current_user,
-                                    session,
-                                    get_storage_service(),
-                                    get_settings_service(),
-                                )
-                                msg = f"Updated MCP server name from {old_server_name} to {new_server_name}"
-                                await logger.adebug(msg)
-                        except Exception as e:  # noqa: BLE001
-                            # Log but don't fail the project update if MCP server update fails
-                            await logger.awarning(f"Failed to update MCP server name for project rename: {e}")
+                            msg = (
+                                f"Updated MCP server name from {old_validation.server_name} "
+                                f"to {new_validation.server_name}"
+                            )
+                            await logger.adebug(msg)
+                        else:
+                            msg = (
+                                f"Old MCP server '{old_validation.server_name}' "
+                                "not found for this project, skipping rename"
+                            )
+                            await logger.adebug(msg)
 
+                except ValueError:
+                    # Re-raise validation errors
+                    raise
                 except Exception as e:  # noqa: BLE001
                     # Log but don't fail the project update if MCP server handling fails
-                    await logger.awarning(f"Failed to handle MCP server name update for project rename: {e}")
+                    msg = f"Failed to handle MCP server name update for project rename: {e}"
+                    await logger.awarning(msg)
 
         if project.description is not None:
             existing_project.description = project.description
@@ -350,18 +396,20 @@ async def update_project(
 
         # Start MCP Composer if auth changed to OAuth
         if should_start_mcp_composer:
-            await logger.adebug(
+            msg = (
                 f"Auth settings changed to OAuth for project {existing_project.name} ({existing_project.id}), "
                 "starting MCP Composer"
             )
+            await logger.adebug(msg)
             background_tasks.add_task(register_project_with_composer, existing_project)
 
         # Stop MCP Composer if auth changed FROM OAuth to something else
         elif should_stop_mcp_composer:
-            await logger.ainfo(
+            msg = (
                 f"Auth settings changed from OAuth for project {existing_project.name} ({existing_project.id}), "
                 "stopping MCP Composer"
             )
+            await logger.ainfo(msg)
 
             # Get the MCP Composer service and stop the project's composer
             mcp_composer_service: MCPComposerService = cast(
@@ -435,33 +483,42 @@ async def delete_project(
     # Delete corresponding MCP server if auto-add was enabled
     if get_settings_service().settings.add_projects_to_mcp_servers:
         try:
-            # Generate server name that would have been used for this project
-            server_name = f"lf-{sanitize_mcp_name(project.name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+            # Validate MCP server for this specific project
+            validation_result = await validate_mcp_server_for_project(
+                project_id,
+                project.name,
+                current_user,
+                session,
+                get_storage_service(),
+                get_settings_service(),
+                operation="delete",
+            )
 
-            from langflow.api.v2.mcp import get_server_list
-
-            # Check if the MCP server exists
-            try:
-                server_list = await get_server_list(
-                    current_user, session, get_storage_service(), get_settings_service()
+            # Only delete if server exists and matches this project ID
+            if validation_result.server_exists and validation_result.project_id_matches:
+                await update_server(
+                    validation_result.server_name,
+                    {},  # Empty config for deletion
+                    current_user,
+                    session,
+                    get_storage_service(),
+                    get_settings_service(),
+                    delete=True,
                 )
-                if server_name in server_list.get("mcpServers", {}):
-                    # Delete the MCP server
-                    await update_server(
-                        server_name,
-                        {},  # Empty config for deletion
-                        current_user,
-                        session,
-                        get_storage_service(),
-                        get_settings_service(),
-                        delete=True,
-                    )
-                    await logger.adebug(
-                        f"Deleted MCP server {server_name} for deleted project {project.name} ({project_id})"
-                    )
-            except Exception as e:  # noqa: BLE001
-                # Log but don't fail the deletion if MCP server cleanup fails
-                await logger.awarning(f"Failed to delete MCP server for deleted project {project_id}: {e}")
+                msg = (
+                    f"Deleted MCP server {validation_result.server_name} for "
+                    f"deleted project {project.name} ({project_id})"
+                )
+                await logger.adebug(msg)
+            elif validation_result.server_exists and not validation_result.project_id_matches:
+                msg = (
+                    f"MCP server '{validation_result.server_name}' exists but belongs to different project, "
+                    "skipping deletion"
+                )
+                await logger.adebug(msg)
+            else:
+                msg = f"No MCP server found for deleted project {project.name} ({project_id})"
+                await logger.adebug(msg)
 
         except Exception as e:  # noqa: BLE001
             # Log but don't fail the project deletion if MCP server handling fails
