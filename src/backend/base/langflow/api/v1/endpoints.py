@@ -25,7 +25,7 @@ from lfx.schema.schema import InputValueRequest
 from lfx.services.settings.service import SettingsService
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
+from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -284,6 +284,7 @@ async def simplified_run_flow(
     stream: bool = False,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
     context: dict | None = None,
+    request: Request,
 ):
     """Executes a specified flow by ID with support for streaming and telemetry.
 
@@ -296,8 +297,8 @@ async def simplified_run_flow(
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
         api_key_user (UserRead): Authenticated user from API key
-        request (Request): The incoming HTTP request
         context (dict | None): Optional context to pass to the flow
+        request (Request): The incoming HTTP request for extracting global variables
 
     Returns:
         Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results
@@ -312,6 +313,8 @@ async def simplified_run_flow(
         - Tracks execution time and success/failure via telemetry
         - Handles graceful client disconnection in streaming mode
         - Provides detailed error handling with appropriate HTTP status codes
+        - Extracts global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+        - Merges extracted variables with the context parameter as "request_variables"
         - In streaming mode, uses EventManager to handle events:
             - "add_message": New messages during execution
             - "token": Individual tokens during streaming
@@ -321,6 +324,18 @@ async def simplified_run_flow(
     input_request = input_request if input_request is not None else SimplifiedAPIRequest()
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
+
+    # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+    request_variables = extract_global_variables_from_headers(request.headers)
+
+    # Merge request variables with existing context
+    if request_variables:
+        if context is None:
+            context = {"request_variables": request_variables}
+        else:
+            context = context.copy()  # Don't modify the original context
+            context["request_variables"] = request_variables
+
     start_time = time.perf_counter()
 
     if stream:
