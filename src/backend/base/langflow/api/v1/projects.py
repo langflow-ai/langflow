@@ -141,7 +141,10 @@ async def create_project(
                 # Handle conflicts
                 if validation_result.has_conflict:
                     await logger.aerror(validation_result.conflict_message)
-                    raise ValueError(validation_result.conflict_message)
+                    raise HTTPException(
+                        status_code=409,  # Conflict - semantically correct for name conflicts
+                        detail=validation_result.conflict_message
+                    )
 
                 # Log if updating existing server
                 if validation_result.should_skip:
@@ -342,7 +345,10 @@ async def update_project(
                         # Check if new server name would conflict with different project
                         if new_validation.has_conflict:
                             await logger.aerror(new_validation.conflict_message)
-                            raise ValueError(new_validation.conflict_message)
+                            raise HTTPException(
+                                status_code=409,  # Conflict - semantically correct for name conflicts
+                                detail=new_validation.conflict_message
+                            )
 
                         # If old server exists and matches this project, proceed with rename
                         if old_validation.server_exists and old_validation.project_id_matches:
@@ -379,8 +385,8 @@ async def update_project(
                             )
                             await logger.adebug(msg)
 
-                except ValueError:
-                    # Re-raise validation errors
+                except HTTPException:
+                    # Re-raise HTTP validation errors (conflicts, etc.)
                     raise
                 except Exception as e:  # noqa: BLE001
                     # Log but don't fail the project update if MCP server handling fails
