@@ -65,6 +65,7 @@ class TestTableSchemaDemoComponent:
         # Verify schema exists and has expected columns
         assert table_input.table_schema is not None
         assert len(table_input.table_schema) == 4
+        assert table_input.table_schema == expected_schema
 
         # Check each column's load_from_db setting
         schema_columns = table_input.table_schema
@@ -157,7 +158,7 @@ class TestTableSchemaDemoComponent:
         component = TableSchemaDemoComponent()
 
         # Mock the table_schema attribute access
-        table_input = component.inputs[0]
+        _ = component.inputs[0]
 
         # The get_schema_info method should return information about the schema
         result = component.get_schema_info()
