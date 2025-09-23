@@ -373,9 +373,7 @@ function GenericNode({
 
   const memoizedNodeToolbarComponent = useMemo(() => {
     const isRightClicked = rightClickedNodeId === data.id;
-
     const isSelectedSingle = selected && selectedNodesCount === 1;
-
     const shouldShowToolbar = isSelectedSingle || isRightClicked;
 
     return shouldShowToolbar ? (
