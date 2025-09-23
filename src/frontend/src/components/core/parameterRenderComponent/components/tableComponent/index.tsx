@@ -363,6 +363,7 @@ const TableComponent = forwardRef<
         </div>
       );
     }
+
     return (
       <div
         className={cn(
