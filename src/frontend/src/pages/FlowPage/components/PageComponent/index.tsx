@@ -587,8 +587,7 @@ export default function Page({
   const onSelectionChange = useCallback(
     (flow: OnSelectionChangeParams): void => {
       setLastSelection(flow);
-      // Hide right-click dropdown when selection changes
-      if (flow.nodes && flow.nodes.length > 0) {
+      if (flow.nodes && (flow.nodes.length === 0 || flow.nodes.length > 1)) {
         setRightClickedNodeId(null);
       }
     },
@@ -602,8 +601,16 @@ export default function Page({
 
       // Set the right-clicked node ID to show its dropdown menu
       setRightClickedNodeId(node.id);
+
+      // Focus/select the right-clicked node (same as left-click behavior)
+      setNodes((currentNodes) => {
+        return currentNodes.map((n) => ({
+          ...n,
+          selected: n.id === node.id,
+        }));
+      });
     },
-    [isLocked, setRightClickedNodeId],
+    [isLocked, setRightClickedNodeId, setNodes],
   );
 
   const onPaneClick = useCallback(

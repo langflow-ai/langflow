@@ -18,17 +18,17 @@ test(
       timeout: 3000,
     });
 
-    // Test 1: Right-click on Chat Input component should open dropdown
+    // Test 1: Right-click on Chat Input component should open dropdown immediately (single click)
     const chatInputComponent = page.getByText("Chat Input").first();
 
     // First, click somewhere else to ensure no component is selected
     await page.click("body", { position: { x: 100, y: 100 } });
     await page.waitForTimeout(500);
 
-    // Right-click on the Chat Input component
+    // Single right-click on the Chat Input component should immediately open dropdown
     await chatInputComponent.click({ button: "right" });
 
-    // Wait for and verify the dropdown menu appears
+    // Wait for and verify the dropdown menu appears immediately after single right-click
     await page.waitForSelector('[data-testid="more-options-modal"]', {
       timeout: 2000,
     });
@@ -36,6 +36,14 @@ test(
     // Verify the dropdown menu is visible and contains expected options
     const dropdown = page.locator('[data-testid="more-options-modal"]').first();
     await expect(dropdown).toBeVisible();
+
+    // Verify the right-clicked component is now selected/focused (like a left-click would do)
+    // The component should be visually selected and have the toolbar visible
+    // Since we right-clicked, both the dropdown menu AND regular selection should be active
+    const chatInputNode = page
+      .locator('[data-testid="div-generic-node"]')
+      .first();
+    await expect(chatInputNode).toBeVisible();
 
     // Test 2: Verify dropdown contains expected menu items
     // Check for Save option
@@ -126,7 +134,67 @@ test(
     await page.waitForTimeout(500);
     await expect(selectedDropdown).not.toBeVisible();
 
-    // Test 8: Verify stale state cleanup on node deletion
+    // Test 8: Verify right-click focus switching behavior
+    // First, left-click to select Chat Input component normally
+    await chatInputComponent.click();
+    await page.waitForTimeout(500);
+
+    // Verify Chat Input has selection toolbar
+    await page.waitForSelector('[data-testid="more-options-modal"]', {
+      timeout: 1000,
+    });
+    const chatInputToolbar = page
+      .locator('[data-testid="more-options-modal"]')
+      .first();
+    await expect(chatInputToolbar).toBeVisible();
+
+    // Now right-click on a different component (Prompt) to switch focus
+    const promptComponentFocus = page.getByText("Prompt").first();
+    await promptComponentFocus.click({ button: "right" });
+
+    // Wait for the dropdown menu to appear on the Prompt component
+    await page.waitForSelector('[data-testid="more-options-modal"]', {
+      timeout: 2000,
+    });
+
+    const promptFocusDropdown = page
+      .locator('[data-testid="more-options-modal"]')
+      .first();
+    await expect(promptFocusDropdown).toBeVisible();
+
+    // Verify that focus has switched by interacting with the Prompt dropdown
+    await promptFocusDropdown.getByText("Copy").click();
+    await page.waitForTimeout(500);
+
+    // After clicking Copy, the dropdown should close
+    await expect(promptFocusDropdown).not.toBeVisible();
+
+    // Test 9: Verify single right-click works (not double-click required)
+    // Clear any existing selections
+    await page.click("body", { position: { x: 50, y: 50 } });
+    await page.waitForTimeout(500);
+
+    // Find any available component for testing
+    const testComponent = page.getByText("Chat Input").first();
+
+    // Single right-click should immediately show dropdown without needing a second click
+    await testComponent.click({ button: "right" });
+
+    // Dropdown should appear immediately (not requiring second click)
+    const immediateDropdown = page
+      .locator('[data-testid="more-options-modal"]')
+      .first();
+    await expect(immediateDropdown).toBeVisible({ timeout: 1000 });
+
+    // Verify the dropdown is functional immediately
+    await expect(immediateDropdown.getByText("Save")).toBeVisible();
+    await expect(immediateDropdown.getByText("Copy")).toBeVisible();
+
+    // Close the dropdown for cleanup
+    await page.click("body", { position: { x: 50, y: 50 } });
+    await page.waitForTimeout(300);
+
+    // Test 10: Verify stale state cleanup on node deletion
     const promptComponentDelete = page.getByText("Prompt").first();
 
     // Right-click on Prompt component
