@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version < '3.11' and platform_python_implementation == 'PyPy' and sys_platform == 'darwin'",
@@ -5057,10 +5057,11 @@ dependencies = [
     { name = "composio" },
     { name = "composio-langchain" },
     { name = "datasets" },
-    { name = "docling" },
+    { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "docling-core" },
     { name = "dspy-ai" },
     { name = "duckduckgo-search" },
-    { name = "easyocr" },
+    { name = "easyocr", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "elasticsearch" },
     { name = "faiss-cpu" },
     { name = "fake-useragent" },
@@ -5124,7 +5125,7 @@ dependencies = [
     { name = "numexpr" },
     { name = "openai", version = "1.82.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "openai", version = "1.102.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "opencv-python" },
+    { name = "opencv-python", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "openinference-instrumentation-langchain" },
     { name = "opensearch-py" },
     { name = "opik" },
@@ -5264,11 +5265,12 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "datasets", specifier = ">2.14.7" },
-    { name = "docling", specifier = ">=2.36.1" },
+    { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'", specifier = ">=2.36.1" },
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.36.1" },
+    { name = "docling-core", specifier = ">=2.36.1" },
     { name = "dspy-ai", specifier = "==2.5.41" },
     { name = "duckduckgo-search", specifier = "==7.2.1" },
-    { name = "easyocr", specifier = ">=1.7.2" },
+    { name = "easyocr", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'", specifier = ">=1.7.2" },
     { name = "elasticsearch", specifier = "==8.16.0" },
     { name = "faiss-cpu", specifier = "==1.9.0.post1" },
     { name = "fake-useragent", specifier = "==1.5.1" },
@@ -5333,7 +5335,7 @@ requires-dist = [
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = "==25.6.3,<26.0.0" },
     { name = "ocrmac", marker = "sys_platform == 'darwin' and extra == 'docling'", specifier = ">=1.0.0" },
     { name = "openai", specifier = ">=1.68.2" },
-    { name = "opencv-python", specifier = ">=4.11" },
+    { name = "opencv-python", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'", specifier = ">=4.11" },
     { name = "openinference-instrumentation-langchain", specifier = ">=0.1.29" },
     { name = "opensearch-py", specifier = "==2.8.0" },
     { name = "opik", specifier = ">=1.6.3" },
