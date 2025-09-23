@@ -10,7 +10,7 @@ from lfx.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cac
 from lfx.base.mcp.util import MCPSseClient, MCPStdioClient, create_input_schema_from_json_schema, update_tools
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from lfx.inputs.inputs import InputTypes  # noqa: TC001
-from lfx.io import DropdownInput, McpInput, MessageTextInput, Output
+from lfx.io import BoolInput, DropdownInput, McpInput, MessageTextInput, Output
 from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
@@ -53,6 +53,7 @@ class MCPToolsComponent(ComponentWithCache):
         "tool_placeholder",
         "mcp_server",
         "tool",
+        "use_cache",
     ]
 
     display_name = "MCP Tools"
@@ -67,6 +68,16 @@ class MCPToolsComponent(ComponentWithCache):
             display_name="MCP Server",
             info="Select the MCP Server that will be used by this component",
             real_time_refresh=True,
+        ),
+        BoolInput(
+            name="use_cache",
+            display_name="Use Cached Server",
+            info=(
+                "Enable caching of MCP Server and tools to improve performance. "
+                "Disable to always fetch fresh tools and server updates."
+            ),
+            value=False,
+            advanced=True,
         ),
         DropdownInput(
             name="tool",
@@ -132,16 +143,32 @@ class MCPToolsComponent(ComponentWithCache):
             self.tools = []
             return [], {"name": server_name, "config": server_config_from_value}
 
-        # Use shared cache if available
-        servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
-        cached = servers_cache.get(server_name) if isinstance(servers_cache, dict) else None
+        # Check if caching is enabled, default to False
+        use_cache = getattr(self, "use_cache", False)
+
+        # Use shared cache if available and caching is enabled
+        cached = None
+        if use_cache:
+            servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+            cached = servers_cache.get(server_name) if isinstance(servers_cache, dict) else None
 
         if cached is not None:
-            self.tools = cached["tools"]
-            self.tool_names = cached["tool_names"]
-            self._tool_cache = cached["tool_cache"]
-            server_config_from_value = cached["config"]
-            return self.tools, {"name": server_name, "config": server_config_from_value}
+            try:
+                self.tools = cached["tools"]
+                self.tool_names = cached["tool_names"]
+                self._tool_cache = cached["tool_cache"]
+                server_config_from_value = cached["config"]
+            except (TypeError, KeyError, AttributeError) as e:
+                # Handle corrupted cache data by clearing it and continuing to fetch fresh tools
+                msg = f"Unable to use cached data for MCP Server{server_name}: {e}"
+                await logger.awarning(msg)
+                # Clear the corrupted cache entry
+                current_servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+                if isinstance(current_servers_cache, dict) and server_name in current_servers_cache:
+                    current_servers_cache.pop(server_name)
+                    safe_cache_set(self._shared_component_cache, "servers", current_servers_cache)
+            else:
+                return self.tools, {"name": server_name, "config": server_config_from_value}
 
         try:
             try:
@@ -186,19 +213,21 @@ class MCPToolsComponent(ComponentWithCache):
             self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
             self._tool_cache = tool_cache
             self.tools = tool_list
-            # Cache the result using shared cache
-            cache_data = {
-                "tools": tool_list,
-                "tool_names": self.tool_names,
-                "tool_cache": tool_cache,
-                "config": server_config,
-            }
 
-            # Safely update the servers cache
-            current_servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
-            if isinstance(current_servers_cache, dict):
-                current_servers_cache[server_name] = cache_data
-                safe_cache_set(self._shared_component_cache, "servers", current_servers_cache)
+            # Cache the result only if caching is enabled
+            if use_cache:
+                cache_data = {
+                    "tools": tool_list,
+                    "tool_names": self.tool_names,
+                    "tool_cache": tool_cache,
+                    "config": server_config,
+                }
+
+                # Safely update the servers cache
+                current_servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+                if isinstance(current_servers_cache, dict):
+                    current_servers_cache[server_name] = cache_data
+                    safe_cache_set(self._shared_component_cache, "servers", current_servers_cache)
 
         except (TimeoutError, asyncio.TimeoutError) as e:
             msg = f"Timeout updating tool list: {e!s}"
@@ -294,14 +323,22 @@ class MCPToolsComponent(ComponentWithCache):
                 # Check if tools are already cached for this server before clearing
                 cached_tools = None
                 if current_server_name:
-                    servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
-                    if isinstance(servers_cache, dict):
-                        cached = servers_cache.get(current_server_name)
-                        if cached is not None:
-                            cached_tools = cached["tools"]
-                            self.tools = cached_tools
-                            self.tool_names = cached["tool_names"]
-                            self._tool_cache = cached["tool_cache"]
+                    use_cache = getattr(self, "use_cache", True)
+                    if use_cache:
+                        servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
+                        if isinstance(servers_cache, dict):
+                            cached = servers_cache.get(current_server_name)
+                            if cached is not None:
+                                try:
+                                    cached_tools = cached["tools"]
+                                    self.tools = cached_tools
+                                    self.tool_names = cached["tool_names"]
+                                    self._tool_cache = cached["tool_cache"]
+                                except (TypeError, KeyError, AttributeError) as e:
+                                    # Handle corrupted cache data by ignoring it
+                                    msg = f"Unable to use cached data for MCP Server,{current_server_name}: {e}"
+                                    await logger.awarning(msg)
+                                    cached_tools = None
 
                 # Only clear tools if we don't have cached tools for the current server
                 if not cached_tools:
