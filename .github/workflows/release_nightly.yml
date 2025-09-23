@@ -397,5 +397,4 @@ jobs:
     with:
       ref: ${{ inputs.nightly_tag_main }}
       release_type: main-ep
-      main_version: ${{ inputs.nightly_tag_main }}
     secrets: inherit
