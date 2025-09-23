@@ -143,7 +143,7 @@ async def create_project(
                     await logger.aerror(validation_result.conflict_message)
                     raise HTTPException(
                         status_code=409,  # Conflict - semantically correct for name conflicts
-                        detail=validation_result.conflict_message
+                        detail=validation_result.conflict_message,
                     )
 
                 # Log if updating existing server
@@ -347,7 +347,7 @@ async def update_project(
                             await logger.aerror(new_validation.conflict_message)
                             raise HTTPException(
                                 status_code=409,  # Conflict - semantically correct for name conflicts
-                                detail=new_validation.conflict_message
+                                detail=new_validation.conflict_message,
                             )
 
                         # If old server exists and matches this project, proceed with rename
