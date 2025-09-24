@@ -219,9 +219,9 @@ export default function ChatView({
 
     const isStreamingUpdate =
       !lastMessage.isSend &&
+      currentMessageContent &&
       currentMessageContent !== lastMessageContent &&
-      currentMessageContent && lastMessageContent &&
-      currentMessageContent.length > lastMessageContent.length;
+      (currentMessageContent.length > (lastMessageContent?.length || 0));
 
     if (isStreamingUpdate) {
       if (!isLlmResponding) {
