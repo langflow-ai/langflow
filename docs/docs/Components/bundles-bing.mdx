@@ -22,10 +22,10 @@ It returns a list of search results as a [`DataFrame`](/data-types#dataframe).
 
 | Name | Type | Description |
 |------|------|-------------|
-| bing_subscription_key | SecretString | Input parameter. A Bing API subscription key. |
-| input_value | String | Input parameter. The search query input. |
-| bing_search_url | String | Input parameter. A custom Bing Search URL. |
-| k | Integer | Input parameter. The number of search results to return. |
+| bing_subscription_key | SecretString | Input parameter. A Bing API subscription key. This key is required for authentication with Microsoft's Bing Search API and should be obtained from the Azure portal. |
+| input_value | String | Input parameter. The search query input. This is the text that will be used to search the web using Bing's search algorithms. Required for the search to execute. |
+| bing_search_url | String | Input parameter. A custom Bing Search URL. This parameter is optional and allows you to specify a custom endpoint for the Bing Search API if you have a specific configuration or regional requirement. |
+| k | Integer | Input parameter. The number of search results to return. This parameter is optional and controls how many search results are included in the output DataFrame. If not specified, a default number of results will be returned. |
 
 ## See also
 

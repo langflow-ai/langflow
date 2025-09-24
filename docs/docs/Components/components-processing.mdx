@@ -388,8 +388,7 @@ The **Chat Input** and **Chat Output** components create a seamless chat interac
 | `input_value` | **Input** | Input parameter. The incoming query to be routed to the model selected by the judge LLM. |
 | `judge_llm` | **Judge LLM** | Input parameter. Connect `LanguageModel` output from _one_ **Language Model** component to serve as the judge LLM for request routing. |
 | `optimization` | **Optimization** | Input parameter. Set a preferred characteristic for model selection by the judge LLM. The options are `quality` (highest response quality), `speed` (fastest response time), `cost` (most cost-effective model), or `balanced` (equal weight for quality, speed, and cost). Default: `balanced` |
-| `use_openrouter_specs` | **Use OpenRouter Specs** | Input parameter. Whether to fetch model specifications from the OpenRouter API.
-If false, only the model name is provided to the judge LLM. Default: Enabled (true) |
+| `use_openrouter_specs` | **Use OpenRouter Specs** | Input parameter. Whether to fetch model specifications from the OpenRouter API. If false, only the model name is provided to the judge LLM. Default: Enabled (true) |
 | `timeout` | **API Timeout** | Input parameter. Set a timeout duration in seconds for API requests made by the router. Default: `10` |
 | `fallback_to_first` | **Fallback to First Model** | Input parameter. Whether to use the first LLM in `models` as a backup if routing fails to reach the selected model. Default: Enabled (true) |
 
@@ -1239,9 +1238,9 @@ It accepts the following parameters:
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data_list | Data List | Input parameter. List of data to select from |
-| data_index | Data Index | Input parameter. Index of the data to select |
-| selected_data | Selected Data | Output parameter. The selected `Data` object. |
+| data_list | Data List | Input parameter. List of data to select from. This should be a collection of `Data` objects from which you want to extract a specific item. The list can contain multiple data items that were previously processed or collected from other components in your flow. |
+| data_index | Data Index | Input parameter. Index of the data to select. This is a zero-based index that specifies which item from the data list should be selected. For example, index 0 selects the first item, index 1 selects the second item, and so on. |
+| selected_data | Selected Data | Output parameter. The selected `Data` object. This contains the specific data item that was chosen from the input list based on the provided index, allowing you to work with individual data items in subsequent components. |
 
 </details>
 
@@ -1256,10 +1255,10 @@ It accepts the following parameters:
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| old_data | Data | Input parameter. The records to update. |
-| number_of_fields | Number of Fields | Input parameter. The number of fields to add. The maximum is 15. |
-| text_key | Text Key | Input parameter. The key for text content. |
-| text_key_validator | Text Key Validator | Input parameter. Validates the text key presence. |
-| data | Data | Output parameter. The updated Data objects. |
+| old_data | Data | Input parameter. The records to update. This should be the existing `Data` object that you want to modify by adding new fields or updating existing ones. The component will preserve the original data structure while incorporating the new information. |
+| number_of_fields | Number of Fields | Input parameter. The number of fields to add. The maximum is 15. This parameter controls how many new key-value pairs will be added to the existing data object. Each field will be dynamically created based on the component's configuration. |
+| text_key | Text Key | Input parameter. The key for text content. This specifies which field in the data object should be used as the primary text content. This is important for components that expect a specific text field for processing or display purposes. |
+| text_key_validator | Text Key Validator | Input parameter. Validates the text key presence. When enabled, this parameter ensures that the specified text key exists in the data object before processing. This helps prevent errors by validating the data structure before attempting to update it. |
+| data | Data | Output parameter. The updated Data objects. This contains the modified data object with all the new fields added and any existing data preserved. The output maintains the original data structure while incorporating the newly added information. |
 
 </details>

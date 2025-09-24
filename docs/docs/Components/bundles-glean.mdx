@@ -22,11 +22,11 @@ It returns a list of search results as a [`DataFrame`](/data-types#dataframe).
 
 | Name | Type | Description |
 |------|------|-------------|
-| glean_api_url | String | Input parameter. The URL of the Glean API. |
-| glean_access_token | SecretString | Input parameter. An access token for Glean API authentication. |
-| query | String | Input parameter. The search query input. |
-| page_size | Integer | Input parameter. The number of results per page. Default: 10. |
-| request_options | Dict | Input parameter. Additional options for the API request. |
+| glean_api_url | String | Input parameter. The URL of the Glean API. This should be the base URL for your Glean instance, typically in the format `https://your-domain.glean.com/api/v1`. |
+| glean_access_token | SecretString | Input parameter. An access token for Glean API authentication. This token is required to authenticate with the Glean API and should be obtained from your Glean admin settings. |
+| query | String | Input parameter. The search query input. This is the text that will be used to search your Glean knowledge base for relevant information and documents. |
+| page_size | Integer | Input parameter. The number of results per page. Default: 10. Controls how many search results are returned in each API call, allowing you to balance between comprehensive results and API rate limits. |
+| request_options | Dict | Input parameter. Additional options for the API request. This dictionary can contain various configuration parameters such as filters, sorting options, and other advanced search criteria to customize the search behavior. |
 
 ## See also
 

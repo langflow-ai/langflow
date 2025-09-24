@@ -24,13 +24,13 @@ For more information about using external chat memory in flows, see the [**Messa
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| host | hostname | Input parameter. The IP address or hostname. |
-| port | port | Input parameter. The Redis Port Number. |
-| database | database | Input parameter. The Redis database. |
-| username | Username | Input parameter. The Redis username. |
-| password | Password | Input parameter. The password for the username. |
-| key_prefix | Key prefix | Input parameter. The key prefix. |
-| session_id | Session ID | Input parameter. The unique session identifier for the message. |
+| host | hostname | Input parameter. The IP address or hostname. This should be the network address of your Redis server, such as "localhost" for local development or a specific IP address for remote servers. |
+| port | port | Input parameter. The Redis Port Number. The default Redis port is 6379, but you can specify a different port if your Redis instance is configured to use a non-standard port. |
+| database | database | Input parameter. The Redis database. Redis supports multiple databases (0-15 by default), allowing you to separate different applications or data types within the same Redis instance. |
+| username | Username | Input parameter. The Redis username. This is required for Redis 6.0+ authentication. If your Redis instance doesn't require authentication, this field can be left empty. |
+| password | Password | Input parameter. The password for the username. This is required for Redis authentication. If your Redis instance doesn't require authentication, this field can be left empty. |
+| key_prefix | Key prefix | Input parameter. The key prefix. This prefix will be added to all Redis keys to help organize and identify your chat memory data, preventing conflicts with other applications using the same Redis instance. |
+| session_id | Session ID | Input parameter. The unique session identifier for the message. This identifier groups related chat messages together, allowing you to maintain separate conversation threads or user sessions within your Redis storage. |
 
 ## Redis vector store
 

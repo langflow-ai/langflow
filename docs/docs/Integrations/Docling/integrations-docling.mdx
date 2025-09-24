@@ -70,9 +70,9 @@ For more information, see the [Docling IBM models project repository](https://gi
 
 | Name | Type | Description |
 |------|------|-------------|
-| files | File | The files to process. |
-| pipeline | String | Docling pipeline to use (standard, vlm). |
-| ocr_engine | String | OCR engine to use (easyocr, tesserocr, rapidocr, ocrmac). |
+| files | File | The files to process. This parameter accepts various file formats including PDF, DOCX, images, and other document types that Docling supports for processing and analysis. |
+| pipeline | String | The Docling pipeline to use (standard, vlm). The standard pipeline is recommended for most use cases, while the vlm pipeline provides enhanced visual language model capabilities for documents with complex layouts and images. |
+| ocr_engine | String | OCR engine to use (easyocr, tesserocr, rapidocr, ocrmac). Choose the OCR engine based on your performance requirements and accuracy needs. |
 
 ### Docling Serve
 

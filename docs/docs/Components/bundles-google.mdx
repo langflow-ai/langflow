@@ -21,14 +21,14 @@ This component generates text using [Google Generative AI models](https://cloud.
 
 | Name | Type | Description |
 |------|------|-------------|
-| Google API Key | SecretString | Input parameter. Your Google API key to use for the Google Generative AI. |
-| Model | String | Input parameter. The name of the model to use, such as `"gemini-pro"`. |
-| Max Output Tokens | Integer | Input parameter. The maximum number of tokens to generate. |
-| Temperature | Float | Input parameter. Run inference with this temperature. |
-| Top K | Integer | Input parameter. Consider the set of top K most probable tokens. |
-| Top P | Float | Input parameter. The maximum cumulative probability of tokens to consider when sampling. |
-| N | Integer | Input parameter. Number of chat completions to generate for each prompt. |
-| model | LanguageModel | Output parameter. An instance of ChatGoogleGenerativeAI configured with the specified parameters. |
+| Google API Key | SecretString | Input parameter. Your Google API key to use for the Google Generative AI. This key is required for authentication with Google's generative AI services and should be kept secure. |
+| Model | String | Input parameter. The name of the model to use, such as `"gemini-pro"`. Choose from available Google Generative AI models based on your specific use case and performance requirements. |
+| Max Output Tokens | Integer | Input parameter. The maximum number of tokens to generate in the response. This parameter helps control the length of the generated text and manage API costs. |
+| Temperature | Float | Input parameter. Run inference with this temperature. Controls the randomness of the output, where lower values produce more focused responses and higher values create more creative outputs. |
+| Top K | Integer | Input parameter. Consider the set of top K most probable tokens. This parameter limits the model's choices to the K most likely next tokens, helping to focus the generation process. |
+| Top P | Float | Input parameter. The maximum cumulative probability of tokens to consider when sampling. This nucleus sampling technique helps maintain quality while allowing for controlled randomness in text generation. |
+| N | Integer | Input parameter. Number of chat completions to generate for each prompt. Useful for generating multiple variations of responses or for comparison purposes. |
+| model | LanguageModel | Output parameter. An instance of ChatGoogleGenerativeAI configured with the specified parameters. This object can be connected to other components in your flow for text generation tasks. |
 
 ## Google Generative AI Embeddings
 
@@ -52,12 +52,12 @@ This component allows you to call the Google Search API.
 
 | Name | Type | Description |
 |------|------|-------------|
-| google_api_key | SecretString | Input parameter. A Google API key for authentication. |
-| google_cse_id | SecretString | Input parameter. A Google Custom Search Engine ID. |
-| input_value | String | Input parameter. The search query input. |
-| k | Integer | Input parameter. The number of search results to return. |
-| results | List[Data] | Output parameter. A list of search results. |
-| tool | Tool | Output parameter. A Google Search tool for use in LangChain. |
+| google_api_key | SecretString | Input parameter. A Google API key for authentication. This key is required to access Google's Custom Search API and should be obtained from the Google Cloud Console. |
+| google_cse_id | SecretString | Input parameter. A Google Custom Search Engine ID. This ID identifies your specific search engine configuration and determines which websites and content sources will be searched. |
+| input_value | String | Input parameter. The search query input. This is the text that will be used to search the web using Google's search algorithms. |
+| k | Integer | Input parameter. The number of search results to return. Controls how many search results are included in the output, allowing you to balance between comprehensive results and processing efficiency. |
+| results | List[Data] | Output parameter. A list of search results. Contains the retrieved web pages, titles, snippets, and URLs from the Google search, formatted as Data objects for use in your flow. |
+| tool | Tool | Output parameter. A Google Search tool for use in LangChain. This tool can be integrated with LangChain agents and other components that require web search capabilities. |
 
 ## Serper Google Search API
 
@@ -67,11 +67,11 @@ This component allows you to call the Serper.dev Google Search API.
 
 | Name | Type | Description |
 |------|------|-------------|
-| serper_api_key | SecretString | Input parameter. An API key for Serper.dev authentication. |
-| input_value | String | Input parameter. The search query input. |
-| k | Integer | Input parameter. The number of search results to return. |
-| results | List[Data] | Output parameter. A list of search results. |
-| tool | Tool | Output parameter. A Serper Google Search tool for use in LangChain. |
+| serper_api_key | SecretString | Input parameter. An API key for Serper.dev authentication. This key is required to access the Serper.dev Google Search API service and should be obtained from your Serper.dev account dashboard. |
+| input_value | String | Input parameter. The search query input. This is the text that will be used to search the web using Serper.dev's Google search integration. |
+| k | Integer | Input parameter. The number of search results to return. Controls how many search results are included in the output, allowing you to balance between comprehensive results and processing efficiency. |
+| results | List[Data] | Output parameter. A list of search results. Contains the retrieved web pages, titles, snippets, and URLs from the Google search via Serper.dev, formatted as Data objects for use in your flow. |
+| tool | Tool | Output parameter. A Serper Google Search tool for use in LangChain. This tool can be integrated with LangChain agents and other components that require web search capabilities through the Serper.dev service. |
 
 ## Google Vertex AI
 
