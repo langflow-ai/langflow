@@ -35,6 +35,7 @@ from langflow.utils.image import create_image_content_dict
 if TYPE_CHECKING:
     from langflow.schema.dataframe import DataFrame
 
+
 class Message(Data):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
@@ -414,7 +415,7 @@ class ErrorMessage(Message):
         if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
             reason = f"{exception.body.get('message')}\n"
         elif hasattr(exception, "_message"):
-            reason = f"{exception._message()}\n" if callable(exception._message) else f"{exception._message}\n"  # noqa: SLF001
+            reason = f"{exception._message()}\n" if callable(exception._message) else f"{exception._message}\n"
         elif hasattr(exception, "code"):
             reason = f"Code: {exception.code}\n"
         elif hasattr(exception, "args") and exception.args:

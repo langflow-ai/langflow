@@ -269,7 +269,7 @@ class BaseFileComponent(Component, ABC):
                 else:
                     parts.append(str(d))
             except Exception:
-                # Final fallback - just try to convert to string. 
+                # Final fallback - just try to convert to string.
                 # TODO: Consider downstream error case more. Should this raise an error?
                 parts.append(str(d))
 
@@ -696,4 +696,3 @@ class BaseFileComponent(Component, ABC):
             self.log(f"Ignored files: {ignored_files}")
 
         return final_files
-
