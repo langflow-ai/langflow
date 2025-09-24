@@ -53,7 +53,11 @@ def _calculate_duration(start_time: float) -> int:
 
 
 async def handle_on_chain_start(
-    event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType, start_time: float, had_streaming: bool = False
+    event: dict[str, Any],
+    agent_message: Message,
+    send_message_method: SendMessageFunctionType,
+    start_time: float,
+    had_streaming: bool = False,
 ) -> tuple[Message, float]:
     # Create content blocks if they don't exist
     if not agent_message.content_blocks:
@@ -122,7 +126,11 @@ def _extract_output_text(output: str | list) -> str:
 
 
 async def handle_on_chain_end(
-    event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType, start_time: float, had_streaming: bool = False
+    event: dict[str, Any],
+    agent_message: Message,
+    send_message_method: SendMessageFunctionType,
+    start_time: float,
+    had_streaming: bool = False,
 ) -> tuple[Message, float]:
     data_output = event["data"].get("output")
     if data_output and isinstance(data_output, AgentFinish) and data_output.return_values.get("output"):
@@ -352,9 +360,13 @@ async def process_agent_events(
                     had_streaming = True
                 # Pass had_streaming parameter for chain_end events
                 if event["event"] == "on_chain_end":
-                    agent_message, start_time = await chain_handler(event, agent_message, send_message_method, start_time, had_streaming)
+                    agent_message, start_time = await chain_handler(
+                        event, agent_message, send_message_method, start_time, had_streaming
+                    )
                 else:
-                    agent_message, start_time = await chain_handler(event, agent_message, send_message_method, start_time)
+                    agent_message, start_time = await chain_handler(
+                        event, agent_message, send_message_method, start_time
+                    )
         agent_message.properties.state = "complete"
     except Exception as e:
         raise ExceptionWithMessageError(agent_message, str(e)) from e
