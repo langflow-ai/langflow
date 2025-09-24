@@ -292,6 +292,7 @@ class PythonCodeStructuredTool(LCToolComponent):
                     if isinstance(default, ast.Name):
                         func_arg["default"] = default.id
                     elif isinstance(default, ast.Constant):
+                        # Convert constant value to string for consistent handling
                         func_arg["default"] = str(default.value) if default.value is not None else None
 
                 if arg.annotation:

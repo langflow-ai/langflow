@@ -30,12 +30,13 @@ def register_tracing_service() -> bool:
         bool: True if registration was successful, False otherwise.
     """
     try:
-        from langflow.services.deps import get_service
-        from lfx.services.manager import get_service_manager
+        from langflow.services.manager import ServiceManager
 
-        # Register our custom tracing service factory
-        get_service_manager().register_factory(TracingServiceFactory())
+        # Get the service manager and register our custom tracing service factory
+        service_manager = ServiceManager()
+        service_manager.register_factory(TracingServiceFactory())
 
+        print("✅ Genesis TracingService registered successfully")
         return True
     except Exception as e:
         print(f"⚠️  Failed to register tracing service: {e}")
