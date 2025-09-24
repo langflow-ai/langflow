@@ -73,7 +73,7 @@ class TestLoadFilesMessage:
         assert isinstance(result, Message)
         # When no files are provided, load_files_core returns [Data()] which has data={}
         # When get_text() returns None/empty, the method falls back to orjson.dumps({})
-        assert result.text == "{}" or result.text == ""
+        assert result.text in {"{}", ""}
 
     def test_load_files_message_with_simple_text_file(self):
         """Test load_files_message with a simple text file."""
@@ -174,7 +174,7 @@ class TestLoadFilesMessage:
         assert "author" in result.text
 
     def test_load_files_message_with_none_separator(self):
-        """Test load_files_message when separator is None (should default to \\n\\n)."""
+        r"""Test load_files_message when separator is None (should default to \\n\\n)."""
         self.component.separator = None
 
         file1 = self.temp_path / "first.txt"
