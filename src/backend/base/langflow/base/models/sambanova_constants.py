@@ -5,6 +5,12 @@ SAMBANOVA_MODELS_DETAILED = [
     create_model_metadata(  # Meta
         provider="SambaNova", name="Meta-Llama-3.3-70B-Instruct", icon="SambaNova", tool_calling=True
     ),
+    create_model_metadata(  # Tokyotech
+        provider="SambaNova",
+        name="Llama-3.3-Swallow-70B-Instruct-v0.4",
+        icon="SambaNova",
+        preview=True,
+    ),
     create_model_metadata(  # Meta
         provider="SambaNova",
         name="Llama-4-Maverick-17B-128E-Instruct",
@@ -13,7 +19,7 @@ SAMBANOVA_MODELS_DETAILED = [
         preview=True,
     ),
     create_model_metadata(  # Meta
-        provider="SambaNova", name="Meta-Llama-3.1-8B-Instruct", icon="SambaNova"
+        provider="SambaNova", name="Meta-Llama-3.1-8B-Instruct", icon="SambaNova", tool_calling=True
     ),
     create_model_metadata(  # Alibaba Cloud
         provider="SambaNova",
@@ -26,7 +32,16 @@ SAMBANOVA_MODELS_DETAILED = [
         provider="SambaNova", name="DeepSeek-V3-0324", icon="SambaNova", tool_calling=True
     ),
     create_model_metadata(  # DeepSeek
+        provider="SambaNova", name="DeepSeek-V3.1", icon="SambaNova", tool_calling=True
+    ),
+    create_model_metadata(  # DeepSeek
         provider="SambaNova", name="DeepSeek-R1", icon="SambaNova"
+    ),
+    create_model_metadata(  # DeepSeek
+        provider="SambaNova", name="DeepSeek-R1-Distill-Llama-70B", icon="SambaNova"
+    ),
+    create_model_metadata(  # OpenAI
+        provider="SambaNova", name="gpt-oss-120b", icon="SambaNova", tool_calling=True
     ),
 ]
 
