@@ -21,20 +21,25 @@ export const lazyIconsMapping = {
     import("@/icons/Bitbucket").then((mod) => ({ default: mod.BitbucketIcon })),
   Canva: () =>
     import("@/icons/Canva").then((mod) => ({ default: mod.CanvaIcon })),
-  Coda: () =>
-    import("@/icons/Coda").then((mod) => ({ default: mod.CodaIcon })),
+  Coda: () => import("@/icons/Coda").then((mod) => ({ default: mod.CodaIcon })),
   AssemblyAI: () =>
     import("@/icons/AssemblyAI").then((mod) => ({
       default: mod.AssemblyAIIcon,
     })),
   Elevenlabs: () =>
-    import("@/icons/Elevenlabs").then((mod) => ({ default: mod.ElevenlabsIcon })),
+    import("@/icons/Elevenlabs").then((mod) => ({
+      default: mod.ElevenlabsIcon,
+    })),
   Googlebigquery: () =>
-    import("@/icons/Googlebigquery").then((mod) => ({ default: mod.GooglebigqueryIcon })),
+    import("@/icons/Googlebigquery").then((mod) => ({
+      default: mod.GooglebigqueryIcon,
+    })),
   Heygen: () =>
     import("@/icons/Heygen").then((mod) => ({ default: mod.HeygenIcon })),
   Peopledatalabs: () =>
-    import("@/icons/Peopledatalabs").then((mod) => ({ default: mod.PeopledatalabsIcon })),
+    import("@/icons/Peopledatalabs").then((mod) => ({
+      default: mod.PeopledatalabsIcon,
+    })),
   Snowflake: () =>
     import("@/icons/Snowflake").then((mod) => ({ default: mod.SnowflakeIcon })),
   Googledocs: () =>
@@ -138,8 +143,11 @@ export const lazyIconsMapping = {
     import("@/icons/Evernote").then((mod) => ({ default: mod.EvernoteIcon })),
   Exa: () => import("@/icons/Exa").then((mod) => ({ default: mod.ExaIcon })),
   ExaComposio: () =>
-    import("@/icons/ExaComposio").then((mod) => ({ default: mod.ExaIconComposio })),
-  Fireflies: () => import("@/icons/Fireflies").then((mod) => ({ default: mod.FirefliesIcon })),
+    import("@/icons/ExaComposio").then((mod) => ({
+      default: mod.ExaIconComposio,
+    })),
+  Fireflies: () =>
+    import("@/icons/Fireflies").then((mod) => ({ default: mod.FirefliesIcon })),
   FacebookMessenger: () =>
     import("@/icons/FacebookMessenger").then((mod) => ({
       default: mod.FBIcon,
@@ -249,7 +257,9 @@ export const lazyIconsMapping = {
   Mcp: () => import("@/icons/MCP").then((mod) => ({ default: mod.McpIcon })),
   Mem0: () => import("@/icons/Mem0").then((mod) => ({ default: mod.Mem0 })),
   Mem0Composio: () =>
-    import("@/icons/Mem0Composio").then((mod) => ({ default: mod.Mem0IconComposio })),
+    import("@/icons/Mem0Composio").then((mod) => ({
+      default: mod.Mem0IconComposio,
+    })),
   Meta: () => import("@/icons/Meta").then((mod) => ({ default: mod.MetaIcon })),
   Midjourney: () =>
     import("@/icons/Midjorney").then((mod) => ({
@@ -290,7 +300,9 @@ export const lazyIconsMapping = {
       default: mod.PerplexityIcon,
     })),
   PerplexityComposio: () =>
-    import("@/icons/PerplexityComposio").then((mod) => ({ default: mod.PerplexityIconComposio })),
+    import("@/icons/PerplexityComposio").then((mod) => ({
+      default: mod.PerplexityIconComposio,
+    })),
   Pinecone: () =>
     import("@/icons/Pinecone").then((mod) => ({ default: mod.PineconeIcon })),
   Postgres: () =>
@@ -346,7 +358,9 @@ export const lazyIconsMapping = {
   Slack: () =>
     import("@/icons/Slack/SlackIcon").then((mod) => ({ default: mod.default })),
   SlackComposio: () =>
-    import("@/icons/slackComposio").then((mod) => ({ default: mod.SlackIcons })),
+    import("@/icons/slackComposio").then((mod) => ({
+      default: mod.SlackIcons,
+    })),
   Spider: () =>
     import("@/icons/Spider").then((mod) => ({ default: mod.SpiderIcon })),
   Streamlit: () =>

@@ -1,5 +1,11 @@
 export const SvgExa = (props) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="16" height="16" {...props}>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 400 400"
+    width="16"
+    height="16"
+    {...props}
+  >
     <path
       fill="none"
       fillOpacity="0"

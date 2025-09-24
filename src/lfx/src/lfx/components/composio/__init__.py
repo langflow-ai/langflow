@@ -5,22 +5,22 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from .apollo_composio import ComposioApolloAPIComponent
     from .airtable_composio import ComposioAirtableAPIComponent
-    from .bitbucket_composio import ComposioBitbucketAPIComponent
+    from .apollo_composio import ComposioApolloAPIComponent
     from .asana_composio import ComposioAsanaAPIComponent
     from .attio_composio import ComposioAttioAPIComponent
-    from .canva_composio import ComposioCanvaAPIComponent
+    from .bitbucket_composio import ComposioBitbucketAPIComponent
     from .calendly_composio import ComposioCalendlyAPIComponent
+    from .canva_composio import ComposioCanvaAPIComponent
+    from .coda_composio import ComposioCodaAPIComponent
     from .composio_api import ComposioAPIComponent
     from .contentful_composio import ComposioContentfulAPIComponent
-    from .coda_composio import ComposioCodaAPIComponent
     from .discord_composio import ComposioDiscordAPIComponent
     from .elevenlabs_composio import ComposioElevenLabsAPIComponent
     from .exa_composio import ComposioExaAPIComponent
+    from .figma_composio import ComposioFigmaAPIComponent
     from .firecrawl_composio import ComposioFirecrawlAPIComponent
     from .fireflies_composio import ComposioFirefliesAPIComponent
-    from .figma_composio import ComposioFigmaAPIComponent
     from .github_composio import ComposioGitHubAPIComponent
     from .gmail_composio import ComposioGmailAPIComponent
     from .googlebigquery_composio import ComposioGoogleBigQueryAPIComponent
@@ -101,21 +101,21 @@ _dynamic_imports = {
 # Always expose all components - individual failures will be handled on import
 __all__ = [
     "ComposioAPIComponent",
-    "ComposioApolloAPIComponent",
     "ComposioAirtableAPIComponent",
-    "ComposioBitbucketAPIComponent",
+    "ComposioApolloAPIComponent",
     "ComposioAsanaAPIComponent",
     "ComposioAttioAPIComponent",
-    "ComposioCanvaAPIComponent",
+    "ComposioBitbucketAPIComponent",
     "ComposioCalendlyAPIComponent",
-    "ComposioContentfulAPIComponent",
+    "ComposioCanvaAPIComponent",
     "ComposioCodaAPIComponent",
+    "ComposioContentfulAPIComponent",
     "ComposioDiscordAPIComponent",
     "ComposioElevenLabsAPIComponent",
     "ComposioExaAPIComponent",
+    "ComposioFigmaAPIComponent",
     "ComposioFirecrawlAPIComponent",
     "ComposioFirefliesAPIComponent",
-    "ComposioFigmaAPIComponent",
     "ComposioGitHubAPIComponent",
     "ComposioGmailAPIComponent",
     "ComposioGoogleBigQueryAPIComponent",

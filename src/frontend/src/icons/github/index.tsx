@@ -7,7 +7,15 @@ export const GithubIcon = forwardRef<
   React.PropsWithChildren<{}>
 >((props, ref) => {
   return (
-    <span style={{ display: "inline-grid", width: 24, height: 24, placeItems: "center", flexShrink: 0 }}>
+    <span
+      style={{
+        display: "inline-grid",
+        width: 24,
+        height: 24,
+        placeItems: "center",
+        flexShrink: 0,
+      }}
+    >
       <GithubIconSVG ref={ref} {...props} style={{ width: 22, height: 22 }} />
     </span>
   );
