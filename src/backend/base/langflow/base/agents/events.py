@@ -53,7 +53,7 @@ def _calculate_duration(start_time: float) -> int:
 
 
 async def handle_on_chain_start(
-    event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType, start_time: float
+    event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType, start_time: float, had_streaming: bool = False
 ) -> tuple[Message, float]:
     # Create content blocks if they don't exist
     if not agent_message.content_blocks:
@@ -98,30 +98,31 @@ def _extract_output_text(output: str | list) -> str:
     if isinstance(item, str):
         return item
     if isinstance(item, dict):
+        # Check for text content first
         if "text" in item:
             return item["text"]
-        # If the item's type is "tool_use", return an empty string.
-        # This likely indicates that "tool_use" outputs are not meant to be displayed as text.
+        # Check for alternative text fields
+        if "content" in item:
+            return str(item["content"])
+        if "message" in item:
+            return str(item["message"])
+        # Handle special cases that should return empty string
         if item.get("type") == "tool_use":
             return ""
-    if isinstance(item, dict):
-        if "text" in item:
-            return item["text"]
-        # If the item's type is "tool_use", return an empty string.
-        # This likely indicates that "tool_use" outputs are not meant to be displayed as text.
-        if item.get("type") == "tool_use":
-            return ""
-        # This is a workaround to deal with function calling by Anthropic
-        # since the same data comes in the tool_output we don't need to stream it here
-        # although it would be nice to
         if "partial_json" in item:
+            return ""
+        # Handle streaming metadata chunks that only contain index or other non-text fields
+        if "index" in item and "text" not in item:
+            return ""
+        # Handle other metadata-only chunks that don't contain meaningful text
+        if not any(key in item for key in ["text", "content", "message"]):
             return ""
     msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
     raise TypeError(msg)
 
 
 async def handle_on_chain_end(
-    event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType, start_time: float
+    event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType, start_time: float, had_streaming: bool = False
 ) -> tuple[Message, float]:
     data_output = event["data"].get("output")
     if data_output and isinstance(data_output, AgentFinish) and data_output.return_values.get("output"):
@@ -139,7 +140,11 @@ async def handle_on_chain_end(
                 header={"title": "Output", "icon": "MessageSquare"},
             )
             agent_message.content_blocks[0].contents.append(text_content)
-        agent_message = await send_message_method(message=agent_message)
+
+        # Only send final message if we didn't have streaming chunks
+        # If we had streaming, frontend already accumulated the chunks
+        if not had_streaming:
+            agent_message = await send_message_method(message=agent_message)
         start_time = perf_counter()
     return agent_message, start_time
 
@@ -256,6 +261,7 @@ async def handle_on_chain_stream(
     agent_message: Message,
     send_message_method: SendMessageFunctionType,
     start_time: float,
+    had_streaming: bool = False,
 ) -> tuple[Message, float]:
     data_chunk = event["data"].get("chunk", {})
     if isinstance(data_chunk, dict) and data_chunk.get("output"):
@@ -267,12 +273,14 @@ async def handle_on_chain_stream(
         start_time = perf_counter()
     elif isinstance(data_chunk, AIMessageChunk):
         output_text = _extract_output_text(data_chunk.content)
-        if output_text and isinstance(agent_message.text, str):
-            agent_message.text += output_text
+        if output_text and output_text.strip():
+            # For streaming, send only the chunk (not accumulated text)
+            agent_message.text = output_text
             agent_message.properties.state = "partial"
             agent_message = await send_message_method(message=agent_message)
-        if not agent_message.text:
+            # No need to restore - handle_on_chain_end will set final text from AgentFinish
             start_time = perf_counter()
+        # Don't update start_time for empty chunks to avoid timing issues
     return agent_message, start_time
 
 
@@ -330,6 +338,8 @@ async def process_agent_events(
     try:
         # Create a mapping of run_ids to tool contents
         tool_blocks_map: dict[str, ToolContent] = {}
+        # Track if we had streaming events
+        had_streaming = False
         start_time = perf_counter()
         async for event in agent_executor:
             if event["event"] in TOOL_EVENT_HANDLERS:
@@ -339,7 +349,14 @@ async def process_agent_events(
                 )
             elif event["event"] in CHAIN_EVENT_HANDLERS:
                 chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
-                agent_message, start_time = await chain_handler(event, agent_message, send_message_method, start_time)
+                # Check if this is a streaming event
+                if event["event"] in ("on_chain_stream", "on_chat_model_stream"):
+                    had_streaming = True
+                # Pass had_streaming parameter for chain_end events
+                if event["event"] == "on_chain_end":
+                    agent_message, start_time = await chain_handler(event, agent_message, send_message_method, start_time, had_streaming)
+                else:
+                    agent_message, start_time = await chain_handler(event, agent_message, send_message_method, start_time)
         agent_message.properties.state = "complete"
     except Exception as e:
         raise ExceptionWithMessageError(agent_message, str(e)) from e
