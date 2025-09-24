@@ -36,9 +36,11 @@ def build_valid_menu(valid_components):
     """Build the valid menu."""
     valid_menu = {}
     logger.debug("------------------- VALID COMPONENTS -------------------")
+
     for menu_item in valid_components["menu"]:
         menu_name = menu_item["name"]
         valid_menu[menu_name] = build_menu_items(menu_item)
+
     return valid_menu
 
 

@@ -1,0 +1,39 @@
+parameters:
+  - name: CONTAINER_NAME
+  - name: AZURE_CONTAINER_REGISTRY
+
+jobs:
+- job: BuildAndPush
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - checkout: self
+    submodules: true
+    persistCredentials: true
+  - task: Docker@2
+    displayName: Build image
+    inputs:
+      command: build
+      repository: '${{ parameters.CONTAINER_NAME }}'
+      containerRegistry: '${{ parameters.AZURE_CONTAINER_REGISTRY }}'
+      dockerfile: './Dockerfile'
+      tags: |
+        $(Build.BuildNumber)
+        $(Build.SourceBranchName)
+    condition: and(succeeded(), in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI'))
+  - script: docker images
+  - task: Docker@2
+    displayName: Push image
+    inputs:
+      command: push
+      repository: '${{ parameters.CONTAINER_NAME }}'
+      containerRegistry: '${{ parameters.AZURE_CONTAINER_REGISTRY }}'
+      tags: |
+        $(Build.BuildNumber)
+        $(Build.SourceBranchName)
+    condition: and(succeeded(), in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI'))
+  - script: |
+      git tag $(Build.BuildNumber)
+      git push origin $(Build.BuildNumber)
+    displayName: Git Tag
+    condition: and(succeeded(), in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI'))

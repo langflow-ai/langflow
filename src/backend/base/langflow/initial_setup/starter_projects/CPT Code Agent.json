@@ -1,0 +1,1275 @@
+{
+  "data": {
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ParseData",
+            "id": "ParseData-aNGFz",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "search_query",
+            "id": "CPTCode-9u6BH",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ParseData-aNGFz{œdataTypeœ:œParseDataœ,œidœ:œParseData-aNGFzœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-CPTCode-9u6BH{œfieldNameœ:œsearch_queryœ,œidœ:œCPTCode-9u6BHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ParseData-aNGFz",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-aNGFzœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CPTCode-9u6BH",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œCPTCode-9u6BHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "CPTCode",
+            "id": "CPTCode-9u6BH",
+            "name": "prediction",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "ParseData-FJc5T",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-CPTCode-9u6BH{œdataTypeœ:œCPTCodeœ,œidœ:œCPTCode-9u6BHœ,œnameœ:œpredictionœ,œoutput_typesœ:[œDataœ]}-ParseData-FJc5T{œfieldNameœ:œdataœ,œidœ:œParseData-FJc5Tœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "CPTCode-9u6BH",
+        "sourceHandle": "{œdataTypeœ: œCPTCodeœ, œidœ: œCPTCode-9u6BHœ, œnameœ: œpredictionœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-FJc5T",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-FJc5Tœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "BlobStorage",
+            "id": "BlobStorage-x6Wd4",
+            "name": "file_path",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "url",
+            "id": "azure_ocr-kDLMl",
+            "inputTypes": [
+              "str",
+              "Data",
+              "Message",
+              "list"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__BlobStorage-x6Wd4{œdataTypeœ:œBlobStorageœ,œidœ:œBlobStorage-x6Wd4œ,œnameœ:œfile_pathœ,œoutput_typesœ:[œDataœ]}-azure_ocr-kDLMl{œfieldNameœ:œurlœ,œidœ:œazure_ocr-kDLMlœ,œinputTypesœ:[œstrœ,œDataœ,œMessageœ,œlistœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "BlobStorage-x6Wd4",
+        "sourceHandle": "{œdataTypeœ: œBlobStorageœ, œidœ: œBlobStorage-x6Wd4œ, œnameœ: œfile_pathœ, œoutput_typesœ: [œDataœ]}",
+        "target": "azure_ocr-kDLMl",
+        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œazure_ocr-kDLMlœ, œinputTypesœ: [œstrœ, œDataœ, œMessageœ, œlistœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "azure_ocr",
+            "id": "azure_ocr-kDLMl",
+            "name": "structured_data",
+            "output_types": [
+              "DataFrame"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "ParseData-aNGFz",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__azure_ocr-kDLMl{œdataTypeœ:œazure_ocrœ,œidœ:œazure_ocr-kDLMlœ,œnameœ:œstructured_dataœ,œoutput_typesœ:[œDataœ]}-ParseData-aNGFz{œfieldNameœ:œdataœ,œidœ:œParseData-aNGFzœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "azure_ocr-kDLMl",
+        "sourceHandle": "{œdataTypeœ: œazure_ocrœ, œidœ: œazure_ocr-kDLMlœ, œnameœ: œstructured_dataœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "ParseData-aNGFz",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-aNGFzœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ParseData",
+            "id": "ParseData-FJc5T",
+            "name": "data_object_list",
+            "output_types": []
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "JSONOutput-cOQuo",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__ParseData-FJc5T{œdataTypeœ:œParseDataœ,œidœ:œParseData-FJc5Tœ,œnameœ:œdata_object_listœ,œoutput_typesœ:[œDataœ]}-JSONOutput-cOQuo{œfieldNameœ:œdataœ,œidœ:œJSONOutput-cOQuoœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "ParseData-FJc5T",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-FJc5Tœ, œnameœ: œdata_object_listœ, œoutput_typesœ: []}",
+        "target": "JSONOutput-cOQuo",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œJSONOutput-cOQuoœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+      }
+    ],
+    "nodes": [
+      {
+        "data": {
+          "id": "ParseData-aNGFz",
+          "node": {
+            "base_classes": [
+              "Data",
+              "Dict",
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Convert Data objects into Messages using any {field_name} from input data.",
+            "display_name": "Parse Data",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "data",
+              "template",
+              "sep"
+            ],
+            "frozen": false,
+            "icon": "message-square",
+            "legacy": true,
+            "lf_version": "1.4.3",
+            "metadata": {
+              "code_hash": "3fac44a9bb37",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
+              },
+              "legacy_name": "Parse Data",
+              "module": "lfx.components.processing.parse_data.ParseDataComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Message",
+                "group_outputs": false,
+                "method": "parse_data",
+                "name": "text",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Data List",
+                "group_outputs": false,
+                "method": "parse_data_as_list",
+                "name": "data_list",
+                "selected": "Dict",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.custom.custom_component.component import Component\nfrom lfx.helpers.data import data_to_text, data_to_text_list\nfrom lfx.io import DataInput, MultilineInput, Output, StrInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Data to Message\"\n    description = \"Convert Data objects into Messages using any {field_name} from input data.\"\n    icon = \"message-square\"\n    name = \"ParseData\"\n    legacy = True\n    replacement = [\"processing.DataOperations\", \"processing.TypeConverterComponent\"]\n    metadata = {\n        \"legacy_name\": \"Parse Data\",\n    }\n\n    inputs = [\n        DataInput(\n            name=\"data\",\n            display_name=\"Data\",\n            info=\"The data to convert to text.\",\n            is_list=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n            required=True,\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"text\",\n            info=\"Data as a single Message, with each input Data separated by Separator\",\n            method=\"parse_data\",\n        ),\n        Output(\n            display_name=\"Data List\",\n            name=\"data_list\",\n            info=\"Data as a list of new Data, each having `text` formatted by Template\",\n            method=\"parse_data_as_list\",\n        ),\n    ]\n\n    def _clean_args(self) -> tuple[list[Data], str, str]:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n        sep = self.sep\n        return data, template, sep\n\n    def parse_data(self) -> Message:\n        data, template, sep = self._clean_args()\n        result_string = data_to_text(template, data, sep)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def parse_data_as_list(self) -> list[Data]:\n        data, template, _ = self._clean_args()\n        text_list, data_list = data_to_text_list(template, data)\n        for item, text in zip(data_list, text_list, strict=True):\n            item.set_text(text)\n        self.status = data_list\n        return data_list\n"
+              },
+              "data": {
+                "_input_type": "DataInput",
+                "advanced": false,
+                "display_name": "Data",
+                "dynamic": false,
+                "info": "The data to convert to text.",
+                "input_types": [
+                  "Data"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "data",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "sep": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Separator",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sep",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "\n"
+              },
+              "template": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "copy_field": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "template",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "{text}"
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "ParseData"
+        },
+        "id": "ParseData-aNGFz",
+        "measured": {
+          "height": 397,
+          "width": 320
+        },
+        "position": {
+          "x": -2493.2708490034456,
+          "y": -2051.654234234234
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ParseData-FJc5T",
+          "node": {
+            "base_classes": [
+              "Data",
+              "Dict",
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Convert Data objects into Messages using any {field_name} from input data.",
+            "display_name": "Parse Data",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "data",
+              "template",
+              "sep"
+            ],
+            "frozen": false,
+            "icon": "message-square",
+            "legacy": true,
+            "metadata": {
+              "code_hash": "3fac44a9bb37",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
+              },
+              "legacy_name": "Parse Data",
+              "module": "lfx.components.processing.parse_data.ParseDataComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Message",
+                "group_outputs": false,
+                "method": "parse_data",
+                "name": "text",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Data List",
+                "group_outputs": false,
+                "method": "parse_data_as_list",
+                "name": "data_list",
+                "selected": "Dict",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.custom.custom_component.component import Component\nfrom lfx.helpers.data import data_to_text, data_to_text_list\nfrom lfx.io import DataInput, MultilineInput, Output, StrInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Data to Message\"\n    description = \"Convert Data objects into Messages using any {field_name} from input data.\"\n    icon = \"message-square\"\n    name = \"ParseData\"\n    legacy = True\n    replacement = [\"processing.DataOperations\", \"processing.TypeConverterComponent\"]\n    metadata = {\n        \"legacy_name\": \"Parse Data\",\n    }\n\n    inputs = [\n        DataInput(\n            name=\"data\",\n            display_name=\"Data\",\n            info=\"The data to convert to text.\",\n            is_list=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n            required=True,\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"text\",\n            info=\"Data as a single Message, with each input Data separated by Separator\",\n            method=\"parse_data\",\n        ),\n        Output(\n            display_name=\"Data List\",\n            name=\"data_list\",\n            info=\"Data as a list of new Data, each having `text` formatted by Template\",\n            method=\"parse_data_as_list\",\n        ),\n    ]\n\n    def _clean_args(self) -> tuple[list[Data], str, str]:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n        sep = self.sep\n        return data, template, sep\n\n    def parse_data(self) -> Message:\n        data, template, sep = self._clean_args()\n        result_string = data_to_text(template, data, sep)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def parse_data_as_list(self) -> list[Data]:\n        data, template, _ = self._clean_args()\n        text_list, data_list = data_to_text_list(template, data)\n        for item, text in zip(data_list, text_list, strict=True):\n            item.set_text(text)\n        self.status = data_list\n        return data_list\n"
+              },
+              "data": {
+                "_input_type": "DataInput",
+                "advanced": false,
+                "display_name": "Data",
+                "dynamic": false,
+                "info": "The data to convert to text.",
+                "input_types": [
+                  "Data"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "data",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "sep": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Separator",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sep",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "\n"
+              },
+              "template": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "copy_field": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "template",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "{value}"
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "ParseData"
+        },
+        "id": "ParseData-FJc5T",
+        "measured": {
+          "height": 397,
+          "width": 320
+        },
+        "position": {
+          "x": -1716.2494158341083,
+          "y": -1974.3632430266846
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "JSONOutput-cOQuo",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Display input data as JSON in the Playground.",
+            "display_name": "JSON Output",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "data",
+              "pretty_print"
+            ],
+            "frozen": false,
+            "icon": "Braces",
+            "legacy": false,
+            "lf_version": "1.4.3",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "JSON",
+                "hidden": null,
+                "method": "json_response",
+                "name": "json",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import json\n\nfrom langflow.base.io.text import TextComponent\nfrom langflow.inputs import DataInput\nfrom langflow.io import BoolInput, Output\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass JSONOutputComponent(TextComponent):\n    display_name = \"JSON Output\"\n    description = \"Display input data as JSON in the Playground.\"\n    icon = \"Braces\"\n    name = \"JSONOutput\"\n\n    inputs = [\n        DataInput(\n            name=\"data\",\n            display_name=\"Data\",\n            info=\"The data to convert to JSON.\",\n            is_list=True,\n        ),\n        BoolInput(\n            name=\"pretty_print\",\n            display_name=\"Pretty Print\",\n            info=\"Format JSON with proper indentation\",\n            value=True,\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"JSON\", name=\"json\", method=\"json_response\"),\n    ]\n\n    def _process_data(self, data: Data | list[Data]) -> dict | list:\n        \"\"\"Convert Data object(s) to dictionary/list format.\"\"\"\n        if isinstance(data, list):\n            return [item.dict() for item in data]\n        return data.dict()\n\n    def json_response(self) -> Message:\n        try:\n            # Process the Data input\n            processed_data = self._process_data(self.data)\n\n            # Convert to JSON string with optional pretty printing\n            if self.pretty_print:\n                formatted_json = json.dumps(\n                    processed_data, indent=2, ensure_ascii=False\n                )\n            else:\n                formatted_json = json.dumps(processed_data, ensure_ascii=False)\n\n            message = Message(text=formatted_json)\n            self.status = formatted_json\n            return message\n\n        except Exception as e:\n            error_message = f\"Error processing data to JSON: {e!s}\"\n            message = Message(text=error_message)\n            self.status = error_message\n            return message\n"
+              },
+              "data": {
+                "_input_type": "DataInput",
+                "advanced": false,
+                "display_name": "Data",
+                "dynamic": false,
+                "info": "The data to convert to JSON.",
+                "input_types": [
+                  "Data"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "data",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "pretty_print": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Pretty Print",
+                "dynamic": false,
+                "info": "Format JSON with proper indentation",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "pretty_print",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "JSONOutput"
+        },
+        "id": "JSONOutput-cOQuo",
+        "measured": {
+          "height": 195,
+          "width": 320
+        },
+        "position": {
+          "x": -1328.8114799884947,
+          "y": -1915.9673899997772
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "CPTCode-9u6BH",
+          "node": {
+            "base_classes": [
+              "Data"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Model for CPT Code",
+            "display_name": "CPT Code",
+            "documentation": "https://docs.example.com/clinical-llm",
+            "edited": false,
+            "field_order": [
+              "search_query"
+            ],
+            "frozen": false,
+            "icon": "Autonomize",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "e804aa967dbc",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  },
+                  {
+                    "name": "pydantic",
+                    "version": "2.10.6"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 3
+              },
+              "module": "lfx.components.models.cpt_code.CPTCodeComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "CPT Code",
+                "group_outputs": false,
+                "method": "build_output",
+                "name": "prediction",
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.inputs.inputs import FieldTypes\nfrom lfx.io import MultilineInput, Output\nfrom lfx.schema.data import Data\nfrom pydantic import BaseModel\n\nfrom lfx.base.modelhub import ATModelComponent\nfrom langflow.custom.genesis.services.modelhub.model_endpoint import ModelEndpoint\n\n\nclass Entity(BaseModel):\n    Description: str\n    Score: float\n    Code: str\n\n\nclass CPTDescription(BaseModel):\n    data: list[Entity]\n    Text: str\n\n\nclass CPTCodeComponent(ATModelComponent):\n    \"\"\"Component for the CPT Code model\"\"\"\n\n    display_name: str = \"CPT Code\"\n    category: str = \"models\"\n    description: str = \"Model for CPT Code\"\n    documentation: str = \"https://docs.example.com/clinical-llm\"\n    icon: str = \"Autonomize\"\n    name: str = \"CPTCode\"\n    _model_name = ModelEndpoint.CPT_CODE\n\n    inputs = [\n        MultilineInput(\n            name=\"search_query\",\n            display_name=\"Search query\",\n            field_type=FieldTypes.TEXT,\n            multiline=True,\n        )\n    ]\n\n    outputs = [\n        Output(name=\"prediction\", display_name=\"CPT Code\", method=\"build_output\"),\n    ]\n\n    async def extract_entities(self, text) -> CPTDescription:\n        \"\"\"Extract clinical entities from the input text\"\"\"\n        # Handle the case where input is a JSON string\n        if isinstance(text, str) and text.strip().startswith(\"{\"):\n            try:\n                import json\n\n                text_dict = json.loads(text)\n                text = text_dict\n            except json.JSONDecodeError as e:\n                # If JSON parsing fails, use the original text\n                pass\n\n        # Handle the case where input is a dictionary with result structure\n        if isinstance(text, dict) and \"result\" in text:\n            result = text[\"result\"]\n            if isinstance(result, list) and len(result) > 0:\n                # Extract text from the first result item\n                first_result = result[0]\n                if isinstance(first_result, dict) and \"text\" in first_result:\n                    text = first_result[\"text\"]\n                else:\n                    raise ValueError(\"Expected 'text' field in result[0]\")\n            else:\n                raise ValueError(\"Expected non-empty 'result' list\")\n        elif isinstance(text, dict) and \"text\" in text:\n            # Handle case where text is directly in the dict\n            text = text[\"text\"]\n\n        try:\n            response = await self.predict(text=text)\n            return CPTDescription(**response[\"data\"])\n        except Exception as e:\n            msg = f\"Error extracting clinical entities: {e!s}\"\n            raise ValueError(msg) from e\n\n    async def build_output(self) -> Data:\n        \"\"\"Generate the output based on selected knowledgehub hubs.\"\"\"\n        query_results = await self.extract_entities(self.search_query)\n        data = Data(value=query_results.data)\n        self.status = data\n        return data\n"
+              },
+              "search_query": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "copy_field": false,
+                "display_name": "Search query",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "search_query",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "CPTCode"
+        },
+        "id": "CPTCode-9u6BH",
+        "measured": {
+          "height": 233,
+          "width": 320
+        },
+        "position": {
+          "x": -2104.5837757988065,
+          "y": -2009.3920071806008
+        },
+        "selected": true,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "BlobStorage-x6Wd4",
+          "node": {
+            "base_classes": [
+              "Data"
+            ],
+            "beta": false,
+            "category": "inputs",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Load files from Azure Blob Storage",
+            "display_name": "Blob Storage",
+            "documentation": "http://docs.langflow.org/components/storage",
+            "edited": false,
+            "field_order": [
+              "storage_account",
+              "container_name",
+              "file_name",
+              "return_all_files"
+            ],
+            "frozen": false,
+            "icon": "Autonomize",
+            "key": "BlobStorage",
+            "legacy": false,
+            "lf_version": "1.4.3",
+            "metadata": {
+              "code_hash": "c0b124e117a5",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  },
+                  {
+                    "name": "loguru",
+                    "version": "0.7.3"
+                  }
+                ],
+                "total_dependencies": 2
+              },
+              "module": "lfx.components.input_output.blob_storage.BlobStorageComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "File Path",
+                "group_outputs": false,
+                "method": "get_file_paths",
+                "name": "file_path",
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.007568328950209746,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "\"\"\"Blob Storage Component for loading files from Azure Blob Storage.\"\"\"\n\nfrom __future__ import annotations\n\nfrom typing import Any\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import BoolInput, DropdownInput, Output, StrInput\nfrom lfx.schema.data import Data\nfrom lfx.services.manager import get_service_manager\nfrom loguru import logger\n\n\nclass BlobStorageComponent(Component):\n    display_name = \"Blob Storage\"\n    category: str = \"input_output\"\n    description = \"Load files from Azure Blob Storage\"\n    documentation = \"http://docs.langflow.org/components/storage\"\n    icon = \"Autonomize\"\n    name = \"BlobStorage\"\n\n    # Match the property name expected by FileComponent\n    FILE_PATH_FIELD = \"file_path\"\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n        self._container_list: list[str] = []\n        self._file_list: list[str] = []\n\n    inputs = [\n        StrInput(\n            name=\"storage_account\",\n            display_name=\"Storage Account\",\n            required=False,\n            info=\"Storage Account name\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"container_name\",\n            display_name=\"Container\",\n            info=\"Select a container from the storage account\",\n            required=True,\n            refresh_button=True,\n        ),\n        DropdownInput(\n            name=\"file_name\",\n            display_name=\"File\",\n            info=\"Select a file from the container\",\n            required=True,\n            refresh_button=True,\n        ),\n        BoolInput(\n            name=\"return_all_files\",\n            display_name=\"Return All Files\",\n            info=\"If true and no specific file is selected, returns all files in the container\",\n            value=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"file_path\",  # Match the property name expected by FileComponent\n            display_name=\"File Path\",\n            method=\"get_file_paths\",\n        ),\n    ]\n\n    async def update_build_config(\n        self, build_config: dict, field_value: Any, field_name: str | None = None\n    ):\n        \"\"\"Update the build configuration based on field changes.\"\"\"\n        logger.info(f\"update_build_config called with field_name: {field_name}\")\n\n        storage_account = getattr(self, \"storage_account\", None)\n        container_name = getattr(self, \"container_name\", None)\n\n        if field_name == \"container_name\":\n            try:\n                # Load the container options when the field is refreshed\n                service = get_service_manager().get(\"flexstore_service\")\n                self._container_list = await service.get_containers(storage_account)\n\n                build_config[\"container_name\"][\"options\"] = self._container_list\n                return build_config\n\n            except Exception as e:\n                logger.exception(f\"Error updating container list: {e!s}\")\n                raise\n\n        elif field_name == \"file_name\" and container_name:\n            try:\n                # Load the file options when the field is refreshed\n                service = get_service_manager().get(\"flexstore_service\")\n                self._file_list = await service.get_files(\n                    storage_account, container_name\n                )\n\n                build_config[\"file_name\"][\"options\"] = self._file_list\n                return build_config\n\n            except Exception as e:\n                logger.exception(f\"Error updating file list: {e!s}\")\n                raise\n\n        return build_config\n\n    async def get_file_paths(self) -> list[Data]:\n        \"\"\"Get file paths for the FileComponent to process.\"\"\"\n        try:\n            if not self.container_name:\n                logger.warning(\"Container name is required.\")\n                return []\n\n            service = get_service_manager().get(\"flexstore_service\")\n            file_paths = []\n\n            # If a specific file is selected\n            if self.file_name:\n                signed_url = await service.get_signed_url(\n                    self.storage_account, self.container_name, self.file_name\n                )\n                if signed_url:\n                    file_paths = [Data(data={self.FILE_PATH_FIELD: signed_url})]\n            # If no specific file is selected and return_all_files is True\n            elif self.return_all_files:\n                files = await service.get_files(\n                    self.storage_account, self.container_name\n                )\n                for file in files:\n                    signed_url = await service.get_signed_url(\n                        self.storage_account, self.container_name, file\n                    )\n                    if signed_url:\n                        file_paths.append(Data(data={self.FILE_PATH_FIELD: signed_url}))\n\n            if file_paths:\n                self.status = file_paths\n                logger.info(f\"Generated {len(file_paths)} file paths\")\n                for path in file_paths:\n                    logger.debug(f\"File path: {path.data.get(self.FILE_PATH_FIELD)}\")\n            else:\n                logger.warning(\"No file paths generated\")\n\n            return file_paths\n\n        except Exception as e:\n            logger.error(f\"Error in get_file_paths: {e!s}\")\n            return []\n"
+              },
+              "container_name": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Container",
+                "dynamic": false,
+                "info": "Select a container from the storage account",
+                "name": "container_name",
+                "options": [],
+                "options_metadata": [],
+                "placeholder": "",
+                "refresh_button": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "genesis-container"
+              },
+              "file_name": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "File",
+                "dynamic": false,
+                "info": "Select a file from the container",
+                "name": "file_name",
+                "options": [],
+                "options_metadata": [],
+                "placeholder": "",
+                "refresh_button": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "0108_Subject199.pdf"
+              },
+              "return_all_files": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Return All Files",
+                "dynamic": false,
+                "info": "If true and no specific file is selected, returns all files in the container",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "return_all_files",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "storage_account": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Storage Account",
+                "dynamic": false,
+                "info": "Storage Account name",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "storage_account",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "BlobStorage"
+        },
+        "dragging": false,
+        "id": "BlobStorage-x6Wd4",
+        "measured": {
+          "height": 365,
+          "width": 320
+        },
+        "position": {
+          "x": -3436.5858201807296,
+          "y": -2023.7433132972817
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "azure_ocr-kDLMl",
+          "node": {
+            "base_classes": [
+              "Data"
+            ],
+            "beta": false,
+            "category": "models",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Process documents using Azure Form Recognizer OCR capabilities",
+            "display_name": "Form Recognizer",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "url",
+              "file_path",
+              "silent_errors",
+              "delete_server_file_after_processing",
+              "ignore_unsupported_extensions",
+              "ignore_unspecified_files",
+              "model_type",
+              "extract_tables",
+              "include_confidence",
+              "use_multithreading",
+              "concurrency_multithreading"
+            ],
+            "frozen": false,
+            "icon": "Azure",
+            "key": "azure_ocr",
+            "legacy": false,
+            "lf_version": "1.4.3",
+            "metadata": {
+              "code_hash": "519b0e41de20",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "aiohttp",
+                    "version": "3.12.15"
+                  },
+                  {
+                    "name": "requests",
+                    "version": "2.32.5"
+                  },
+                  {
+                    "name": "langflow",
+                    "version": null
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  },
+                  {
+                    "name": "loguru",
+                    "version": "0.7.3"
+                  }
+                ],
+                "total_dependencies": 5
+              },
+              "module": "lfx.components.models.form_recognizer.FormRecognizerComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Structured Data",
+                "group_outputs": false,
+                "method": "load_files",
+                "name": "structured_data",
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.007568328950209746,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "\"\"\"Form Recognizer Component for processing and analyzing form data.\"\"\"\n\nimport asyncio\nimport concurrent.futures\nimport mimetypes\nimport os\nimport tempfile\nfrom pathlib import Path\nfrom urllib.parse import unquote, urlparse\n\nimport aiohttp\nimport requests\nfrom langflow.base.data import BaseFileComponent\nfrom lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, Output\nfrom lfx.schema.data import Data\nfrom loguru import logger\n\n\nclass FormRecognizerComponent(BaseFileComponent):\n    \"\"\"Component for recognizing and processing form data.\"\"\"\n\n    display_name = \"Form Recognizer\"\n    category: str = \"models\"\n    description = \"Process documents using Azure Form Recognizer OCR capabilities\"\n    icon = \"Azure\"\n    name = \"azure_ocr\"\n    # legacy = True\n\n    VALID_EXTENSIONS = [\"pdf\", \"jpg\", \"jpeg\", \"png\", \"bmp\", \"tiff\", \"tif\"]\n\n    inputs = [\n        HandleInput(\n            name=\"url\",\n            display_name=\"URL\",\n            info=\"URL to the document to process\",\n            input_types=[\"str\", \"Data\", \"Message\", \"list\"],\n            required=False,\n        ),\n        # Include only the HandleInput and BoolInputs from base_inputs\n        next(\n            input\n            for input in BaseFileComponent._base_inputs\n            if input.name == \"file_path\"\n        ),\n        next(\n            input\n            for input in BaseFileComponent._base_inputs\n            if input.name == \"silent_errors\"\n        ),\n        next(\n            input\n            for input in BaseFileComponent._base_inputs\n            if input.name == \"delete_server_file_after_processing\"\n        ),\n        next(\n            input\n            for input in BaseFileComponent._base_inputs\n            if input.name == \"ignore_unsupported_extensions\"\n        ),\n        next(\n            input\n            for input in BaseFileComponent._base_inputs\n            if input.name == \"ignore_unspecified_files\"\n        ),\n        DropdownInput(\n            name=\"model_type\",\n            display_name=\"Model Type\",\n            options=[\"prebuilt-document\", \"prebuilt-read\", \"prebuilt-layout\"],\n            value=\"prebuilt-document\",\n            info=\"Choose the Form Recognizer model to use\",\n        ),\n        BoolInput(\n            name=\"extract_tables\",\n            display_name=\"Extract Tables\",\n            value=True,\n            info=\"Extract and format tables from the document\",\n        ),\n        BoolInput(\n            name=\"include_confidence\",\n            display_name=\"Include Confidence Scores\",\n            value=False,\n            advanced=True,\n            info=\"Include confidence scores in the extracted text\",\n        ),\n        BoolInput(\n            name=\"use_multithreading\",\n            display_name=\"Use Concurrent Processing\",\n            value=True,\n            info=\"Enable concurrent processing of multiple files\",\n        ),\n        IntInput(\n            name=\"concurrency_multithreading\",\n            display_name=\"Processing Concurrency\",\n            advanced=True,\n            info=\"Number of files to process concurrently\",\n            value=2,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Structured Data\", name=\"structured_data\", method=\"load_files\"\n        ),\n    ]\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n        self.temp_dir = tempfile.mkdtemp()\n        self._downloaded_files = {}\n        self._text_content = \"\"\n\n    def get_text_content(self) -> str:\n        \"\"\"Return the concatenated text content from all processed pages.\"\"\"\n        return self._text_content\n\n    def _extract_filename_from_url(self, url: str) -> str:\n        \"\"\"Extract filename from URL or generate a default one.\"\"\"\n        try:\n            logger.debug(f\"Extracting filename from URL: {url}\")\n            parsed_url = urlparse(url)\n            path = unquote(parsed_url.path)\n            filename = os.path.basename(path)\n\n            if filename and \".\" in filename:\n                logger.debug(f\"Found filename in URL path: {filename}\")\n                return filename\n\n            response = requests.head(url, allow_redirects=True)\n            if \"content-disposition\" in response.headers:\n                content_disp = response.headers[\"content-disposition\"]\n                if \"filename=\" in content_disp:\n                    filename = content_disp.split(\"filename=\")[1].strip(\"\\\"'\")\n                    logger.debug(f\"Found filename in content-disposition: {filename}\")\n                    return filename\n\n            if \"content-type\" in response.headers:\n                ext = mimetypes.guess_extension(response.headers[\"content-type\"])\n                if ext:\n                    filename = f\"downloaded{ext}\"\n                    logger.debug(f\"Generated filename from content-type: {filename}\")\n                    return filename\n\n            logger.debug(\"Using default filename: downloaded.pdf\")\n            return \"downloaded.pdf\"\n        except Exception as e:\n            logger.error(f\"Error extracting filename from URL: {e!s}\")\n            return \"downloaded.pdf\"\n\n    async def _download_file_from_url(self, url: str) -> str | None:\n        \"\"\"Download a file from a URL.\"\"\"\n        try:\n            logger.debug(f\"Attempting to download file from URL: {url}\")\n            filename = self._extract_filename_from_url(url)\n            local_path = os.path.join(self.temp_dir, filename)\n            logger.debug(f\"Local path for download: {local_path}\")\n\n            async with aiohttp.ClientSession() as session:\n                async with session.get(url) as response:\n                    response.raise_for_status()\n                    with open(local_path, \"wb\") as f:\n                        while True:\n                            chunk = await response.content.read(8192)\n                            if not chunk:\n                                break\n                            f.write(chunk)\n\n            self._downloaded_files[url] = local_path\n            logger.info(f\"Successfully downloaded file to {local_path}\")\n            return local_path\n\n        except Exception as e:\n            logger.error(f\"Error downloading file from URL: {e!s}\")\n            if not self.silent_errors:\n                raise\n            return None\n\n    def _extract_url_from_input(self, input_data) -> str | None:\n        \"\"\"Extract URL string from various input types.\"\"\"\n        logger.debug(f\"Extracting URL from input data type: {type(input_data)}\")\n\n        # Handle list of Data objects (from blob storage)\n        if isinstance(input_data, list):\n            logger.debug(f\"Processing list input with {len(input_data)} items\")\n            if input_data and isinstance(input_data[0], Data):\n                url = input_data[0].data.get(\"file_path\")\n                logger.debug(f\"Extracted URL from first Data object in list: {url}\")\n                return url\n            return None\n\n        if isinstance(input_data, str):\n            logger.debug(f\"Input is string: {input_data}\")\n            return input_data\n        elif isinstance(input_data, Data):\n            url = (\n                input_data.data.get(\"file_path\")\n                or input_data.data.get(\"url\")\n                or input_data.text\n            )\n            logger.debug(f\"Extracted URL from Data object: {url}\")\n            return url\n        elif hasattr(input_data, \"text\"):\n            logger.debug(f\"Extracted URL from text attribute: {input_data.text}\")\n            return input_data.text\n        elif hasattr(input_data, \"data\"):\n            url = (\n                input_data.data.get(\"file_path\")\n                or input_data.data.get(\"url\")\n                or input_data.text\n            )\n            logger.debug(f\"Extracted URL from data attribute: {url}\")\n            return url\n        logger.debug(\"No URL found in input data\")\n        return None\n\n    def _validate_and_resolve_paths(self) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Handle URLs and local paths.\"\"\"\n        resolved_files = []\n        logger.debug(\"Starting path validation and resolution\")\n\n        # Handle URL input if provided\n        if hasattr(self, \"url\") and self.url:\n            try:\n                logger.debug(f\"Processing URL input: {self.url}\")\n                # Extract URL from different input types\n                url = self._extract_url_from_input(self.url)\n                if not url:\n                    logger.warning(\"No valid URL found in input\")\n                    return resolved_files\n\n                # Create event loop for async download\n                loop = asyncio.new_event_loop()\n                asyncio.set_event_loop(loop)\n                try:\n                    local_path = loop.run_until_complete(\n                        self._download_file_from_url(url)\n                    )\n                finally:\n                    loop.close()\n\n                if local_path:\n                    # Create a new Data object with both the original URL and local path\n                    new_data = Data(\n                        data={\n                            self.SERVER_FILE_PATH_FIELDNAME: local_path,\n                            \"original_url\": url,\n                        }\n                    )\n                    logger.debug(\n                        f\"Created new Data object with local path: {local_path}\"\n                    )\n\n                    resolved_files.append(\n                        BaseFileComponent.BaseFile(\n                            new_data,\n                            Path(local_path),\n                            delete_after_processing=self.delete_server_file_after_processing,\n                        )\n                    )\n            except Exception as e:\n                logger.error(f\"Error processing URL {url}: {e!s}\")\n                if not self.silent_errors:\n                    raise\n\n        # Handle file_path input\n        file_path = self._file_path_as_list()\n        logger.debug(f\"Processing file_path input: {file_path}\")\n        for obj in file_path:\n            server_file_path = obj.data.get(self.SERVER_FILE_PATH_FIELDNAME)\n            logger.debug(f\"Processing server file path: {server_file_path}\")\n\n            if not server_file_path:\n                if not self.ignore_unspecified_files:\n                    msg = f\"Data object missing '{self.SERVER_FILE_PATH_FIELDNAME}' property.\"\n                    if not self.silent_errors:\n                        raise ValueError(msg)\n                continue\n\n            try:\n                # Check if it's a URL\n                if isinstance(server_file_path, str) and server_file_path.startswith(\n                    (\"http://\", \"https://\")\n                ):\n                    logger.debug(f\"Processing URL from file_path: {server_file_path}\")\n                    # Create event loop for async download\n                    loop = asyncio.new_event_loop()\n                    asyncio.set_event_loop(loop)\n                    try:\n                        local_path = loop.run_until_complete(\n                            self._download_file_from_url(server_file_path)\n                        )\n                    finally:\n                        loop.close()\n\n                    if not local_path:\n                        continue\n\n                    # Create a new Data object with both the original URL and local path\n                    new_data = Data(\n                        data={\n                            self.SERVER_FILE_PATH_FIELDNAME: local_path,\n                            \"original_url\": server_file_path,\n                        }\n                    )\n                    logger.debug(\n                        f\"Created new Data object with local path: {local_path}\"\n                    )\n\n                    resolved_files.append(\n                        BaseFileComponent.BaseFile(\n                            new_data,\n                            Path(local_path),\n                            delete_after_processing=self.delete_server_file_after_processing,\n                        )\n                    )\n                else:\n                    # Handle local files\n                    resolved_path = Path(self.resolve_path(str(server_file_path)))\n                    logger.debug(f\"Resolved local file path: {resolved_path}\")\n                    if not resolved_path.exists():\n                        msg = f\"File not found: {server_file_path}\"\n                        if not self.silent_errors:\n                            raise ValueError(msg)\n                        continue\n\n                    resolved_files.append(\n                        BaseFileComponent.BaseFile(\n                            obj,\n                            resolved_path,\n                            delete_after_processing=self.delete_server_file_after_processing,\n                        )\n                    )\n\n            except Exception as e:\n                logger.error(f\"Error processing path {server_file_path}: {e!s}\")\n                if not self.silent_errors:\n                    raise\n                continue\n\n        logger.debug(f\"Resolved {len(resolved_files)} files\")\n        return resolved_files\n\n    async def process_file(\n        self, file_path: str, *, silent_errors: bool = False\n    ) -> tuple[Data, str]:\n        \"\"\"Process a single file using the OCR service.\"\"\"\n        try:\n            from lfx.services.manager import get_service_manager\n\n            ocr_service = get_service_manager().get(\"ocr_service\")\n\n            with open(file_path, \"rb\") as file:\n                file_content = file.read()\n\n            extracted_content, plain_text = await ocr_service.process_document(\n                file_content=file_content,\n                model_type=self.model_type,\n                include_confidence=self.include_confidence,\n                extract_tables=self.extract_tables,\n            )\n\n            structured_data = Data(\n                text=plain_text,\n                data={\n                    self.SERVER_FILE_PATH_FIELDNAME: str(file_path),\n                    \"result\": extracted_content,\n                },\n            )\n\n            return structured_data, plain_text\n\n        except Exception as e:\n            logger.error(f\"Error processing file {file_path}: {e!s}\")\n            if not silent_errors:\n                raise\n            return None, \"\"\n\n    def process_files(\n        self, file_list: list[BaseFileComponent.BaseFile]\n    ) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Process multiple files with concurrent processing.\"\"\"\n        if not file_list:\n            msg = \"No files to process.\"\n            raise ValueError(msg)\n\n        concurrency = (\n            1\n            if not self.use_multithreading\n            else max(1, self.concurrency_multithreading)\n        )\n        file_count = len(file_list)\n\n        logger.info(f\"Processing {file_count} files with concurrency: {concurrency}\")\n\n        all_plain_text = []\n        processed_data = []\n\n        if concurrency > 1 and file_count > 1:\n            loop = asyncio.new_event_loop()\n            asyncio.set_event_loop(loop)\n            try:\n                with concurrent.futures.ThreadPoolExecutor(\n                    max_workers=concurrency\n                ) as executor:\n                    future_to_file = {\n                        executor.submit(\n                            lambda path: loop.run_until_complete(\n                                self.process_file(\n                                    str(path), silent_errors=self.silent_errors\n                                )\n                            ),\n                            file.path,\n                        ): file\n                        for file in file_list\n                    }\n                    for future in concurrent.futures.as_completed(future_to_file):\n                        try:\n                            structured_data, plain_text = future.result()\n                            processed_data.append(structured_data)\n                            all_plain_text.append(plain_text)\n                        except Exception as e:\n                            logger.error(f\"Error in concurrent processing: {e!s}\")\n                            if not self.silent_errors:\n                                raise\n                            processed_data.append(None)\n                            all_plain_text.append(\"\")\n            finally:\n                loop.close()\n        else:\n            loop = asyncio.new_event_loop()\n            asyncio.set_event_loop(loop)\n            try:\n                for file in file_list:\n                    try:\n                        structured_data, plain_text = loop.run_until_complete(\n                            self.process_file(\n                                str(file.path), silent_errors=self.silent_errors\n                            )\n                        )\n                        processed_data.append(structured_data)\n                        all_plain_text.append(plain_text)\n                    except Exception as e:\n                        logger.error(f\"Error processing file {file.path}: {e!s}\")\n                        if not self.silent_errors:\n                            raise\n                        processed_data.append(None)\n                        all_plain_text.append(\"\")\n            finally:\n                loop.close()\n\n        # Store concatenated text content\n        self._text_content = \"\\n\\n=== NEW DOCUMENT ===\\n\\n\".join(all_plain_text)\n\n        return self.rollup_data(file_list, processed_data)\n\n    def __del__(self):\n        \"\"\"Cleanup temporary files and directory.\"\"\"\n        try:\n            if hasattr(self, \"temp_dir\") and os.path.exists(self.temp_dir):\n                # Remove downloaded files\n                for file_path in self._downloaded_files.values():\n                    if os.path.exists(file_path):\n                        os.unlink(file_path)\n                # Remove the temporary directory\n                os.rmdir(self.temp_dir)\n        except Exception as e:\n            logger.error(f\"Error cleaning up temporary files: {e!s}\")\n"
+              },
+              "concurrency_multithreading": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Processing Concurrency",
+                "dynamic": false,
+                "info": "Number of files to process concurrently",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "concurrency_multithreading",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 2
+              },
+              "delete_server_file_after_processing": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Delete Server File After Processing",
+                "dynamic": false,
+                "info": "If true, the Server File Path will be deleted after processing.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "delete_server_file_after_processing",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "extract_tables": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Extract Tables",
+                "dynamic": false,
+                "info": "Extract and format tables from the document",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "extract_tables",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "file_path": {
+                "_input_type": "HandleInput",
+                "advanced": true,
+                "display_name": "Server File Path",
+                "dynamic": false,
+                "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
+                "input_types": [
+                  "Data",
+                  "Message"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "file_path",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "ignore_unspecified_files": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Ignore Unspecified Files",
+                "dynamic": false,
+                "info": "If true, Data with no 'file_path' property will be ignored.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "ignore_unspecified_files",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "ignore_unsupported_extensions": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Ignore Unsupported Extensions",
+                "dynamic": false,
+                "info": "If true, files with unsupported extensions will not be processed.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "ignore_unsupported_extensions",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "include_confidence": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Include Confidence Scores",
+                "dynamic": false,
+                "info": "Include confidence scores in the extracted text",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "include_confidence",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "model_type": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Model Type",
+                "dynamic": false,
+                "info": "Choose the Form Recognizer model to use",
+                "name": "model_type",
+                "options": [
+                  "prebuilt-document",
+                  "prebuilt-read",
+                  "prebuilt-layout"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "prebuilt-document"
+              },
+              "silent_errors": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Silent Errors",
+                "dynamic": false,
+                "info": "If true, errors will not raise an exception.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "silent_errors",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "url": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "URL",
+                "dynamic": false,
+                "info": "URL to the document to process",
+                "input_types": [
+                  "str",
+                  "Data",
+                  "Message",
+                  "list"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "url",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "use_multithreading": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Use Concurrent Processing",
+                "dynamic": false,
+                "info": "Enable concurrent processing of multiple files",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_multithreading",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "azure_ocr"
+        },
+        "dragging": false,
+        "id": "azure_ocr-kDLMl",
+        "measured": {
+          "height": 393,
+          "width": 320
+        },
+        "position": {
+          "x": -2904.0228579728882,
+          "y": -1999.068581457536
+        },
+        "selected": false,
+        "type": "genericNode"
+      }
+    ],
+    "viewport": {
+      "x": 1700.7999158936611,
+      "y": 1557.4478342145535,
+      "zoom": 0.5358602617405928
+    }
+  },
+  "description": "\nThe CPT Code Lookup Agent provides a description of a medical procedure based on a given CPT code, aiding in billing and clinical reference.\n\n\n",
+  "endpoint_name": null,
+  "is_component": false,
+  "last_tested_version": "1.4.3",
+  "name": "CPT Code Agent",
+  "tags": [
+    "chart-review"
+  ]
+}

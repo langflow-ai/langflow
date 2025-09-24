@@ -485,6 +485,7 @@ def build_custom_component_template_from_inputs(
     else:
         frontend_node = ComponentFrontendNode.from_inputs(**custom_component.template_config)
         cc_instance = custom_component
+
     frontend_node = add_code_field(frontend_node, custom_component._code)
     # But we now need to calculate the return_type of the methods in the outputs
     for output in frontend_node.outputs:

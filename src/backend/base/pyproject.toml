@@ -2,7 +2,7 @@
 name = "langflow-base"
 version = "0.6.0"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.12,<3.13"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -91,6 +91,11 @@ dependencies = [
     "langchain-ibm>=0.3.8",
     "trustcall>=0.0.38",
     "langchain-chroma>=0.1.4",
+    "autonomize-model-sdk>=1.0.3",
+    "mlflow>=3.1.4",
+    "nanoid>=2.0.0",
+    "azure-storage-blob>=12.24.0",
+    "azure-ai-formrecognizer>=3.3.3"
 ]
 
 [dependency-groups]

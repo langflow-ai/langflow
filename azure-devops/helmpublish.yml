@@ -1,0 +1,42 @@
+parameters:
+  - name: SERVICE_CONNECTION_NAME
+  - name: HELM_ACR_NAME
+  - name: CHART_PATH
+
+jobs:
+- job: PackageAndPublish
+  displayName: Package and Publish Helm Chart
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - checkout: self
+    submodules: true
+    persistCredentials: true
+  - task: HelmInstaller@1
+    displayName: Install Helm
+    inputs:
+      helmVersionToInstall: 'latest'
+
+  - task: AzureCLI@2
+    displayName: 'Login to Azure using Service Connection'
+    inputs:
+      azureSubscription: '${{ parameters.SERVICE_CONNECTION_NAME }}'
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        echo "Logging in to ACR using service connection..."
+        az acr login --name $(HELM_ACR_NAME)
+        export ACR_PASSWORD=$(az acr credential show --name $(HELM_ACR_NAME) --query 'passwords[0].value' -o tsv)
+        echo $ACR_PASSWORD
+        echo "##vso[task.setvariable variable=ACR_PASSWORD;issecret=true]$ACR_PASSWORD"
+
+  - script: |
+      echo "Packaging Helm chart..."
+      helm package $(CHART_PATH)/$(Build.DefinitionName) --version $(Build.BuildNumber)
+      ls -lart
+    displayName: 'Package Helm Chart'
+
+  - script: |
+      echo "Pushing Helm chart to OCI registry..."
+      helm push $(Build.DefinitionName)-$(Build.BuildNumber).tgz oci://$(HELM_ACR_NAME).azurecr.io/helm
+    displayName: 'Push Helm Chart to OCI Registry'

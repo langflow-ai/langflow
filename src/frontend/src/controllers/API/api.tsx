@@ -47,13 +47,11 @@ function ApiInterceptor() {
   useEffect(() => {
     const unregister = fetchIntercept.register({
       request: (url, config) => {
-        const accessToken = customGetAccessToken();
+        // Use the same token source as Axios APIs (which use withAuthHeaders)
+        const headers = withAuthHeaders(config.headers || {});
+        config.headers = headers;
 
         if (!isExternalURL(url)) {
-          if (accessToken && !isAuthorizedURL(config?.url)) {
-            config.headers["Authorization"] = `Bearer ${accessToken}`;
-          }
-
           for (const [key, value] of Object.entries(customHeaders)) {
             config.headers[key] = value;
           }
