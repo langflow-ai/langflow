@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useEffect, useState } from "react";
 import { Cookies } from "react-cookie";
 import {
@@ -31,6 +32,7 @@ export const AuthContext = createContext<AuthContextType>(initialValue);
 
 export function AuthProvider({ children }): React.ReactElement {
   const cookies = new Cookies();
+  const queryClient = useQueryClient();
   const [accessToken, setAccessToken] = useState<string | null>(
     getAuthCookie(cookies, LANGFLOW_ACCESS_TOKEN) ?? null,
   );
@@ -83,6 +85,9 @@ export function AuthProvider({ children }): React.ReactElement {
     autoLogin: string,
     refreshToken?: string,
   ) {
+    // Clear all cache to prevent data leakage from previous user
+    queryClient.clear();
+
     setAuthCookie(cookies, LANGFLOW_ACCESS_TOKEN, newAccessToken);
     setAuthCookie(cookies, LANGFLOW_AUTO_LOGIN_OPTION, autoLogin);
     setLocalStorage(LANGFLOW_ACCESS_TOKEN, newAccessToken);
