@@ -1,8 +1,8 @@
-from genesis_studio.components.inputs import ChatInput
-from genesis_studio.components.models import OpenAIModelComponent
-from genesis_studio.components.outputs import ChatOutput
-from genesis_studio.components.prompts import PromptComponent
-from genesis_studio.graph import Graph
+from langflow.base.io.chat import ChatInput
+from langflow.components.llm.openai import OpenAIModelComponent
+from langflow.base.io.chat import ChatOutput
+from langflow.custom.custom_component.component import Component as PromptComponent
+from langflow.graph.graph import Graph
 
 
 def basic_prompting_graph(template: str | None = None):
