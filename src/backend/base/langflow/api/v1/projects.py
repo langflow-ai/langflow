@@ -164,6 +164,9 @@ async def create_project(
                     get_storage_service(),
                     get_settings_service(),
                 )
+            except HTTPException:
+                # Re-raise HTTP validation errors (conflicts, etc.)
+                raise
             except NotImplementedError:
                 msg = "OAuth as default MCP authentication type is not yet implemented"
                 await logger.aerror(msg)

@@ -457,6 +457,7 @@ class TestProjectMCPIntegration:
     ):
         """Test successful project creation with MCP server auto-add."""
         with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
             patch("langflow.api.v1.projects.get_project_sse_url") as mock_sse_url,
             patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate,
             patch("langflow.api.v1.projects.update_server") as mock_update_server,
@@ -466,6 +467,12 @@ class TestProjectMCPIntegration:
             # Setup mocks
             mock_sse_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/sse"
             mock_storage.return_value = MagicMock()
+
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
 
             # Mock API key creation
             mock_api_key_response = MagicMock()
@@ -500,6 +507,7 @@ class TestProjectMCPIntegration:
     ):
         """Test project creation failure due to MCP server name conflict."""
         with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
             patch("langflow.api.v1.projects.get_project_sse_url") as mock_sse_url,
             patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate,
             patch("langflow.api.v1.projects.get_storage_service") as mock_storage,
@@ -508,16 +516,32 @@ class TestProjectMCPIntegration:
             mock_sse_url.return_value = "http://localhost:7860/api/v1/mcp/project/test-id/sse"
             mock_storage.return_value = MagicMock()
 
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+
             # Mock validation - has conflict
             mock_validation_result = MagicMock()
             mock_validation_result.has_conflict = True
-            mock_validation_result.conflict_message = "MCP server name conflict: 'lf-new-project' already exists"
+            mock_validation_result.conflict_message = (
+                "MCP server name conflict: 'lf-new-project' already exists "
+                "for a different project. Cannot create MCP server for project "
+                "'New Project' (ID: test-project-id)"
+            )
             mock_validate.return_value = mock_validation_result
 
+            # The validation function should raise the HTTPException during project creation
             response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
 
             assert response.status_code == status.HTTP_409_CONFLICT
-            assert "conflict" in response.json()["detail"].lower()
+            response_data = response.json()
+            assert "detail" in response_data
+            assert mock_validation_result.conflict_message == response_data["detail"]
+
+            # Verify validation was called with correct parameters
+            mock_validate.assert_called_once()
 
     async def test_create_project_oauth_not_implemented(
         self,
@@ -561,15 +585,23 @@ class TestProjectMCPIntegration:
         """Test project rename with MCP server name update."""
         # First create a project
         with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
             patch("langflow.api.v1.projects.get_project_sse_url"),
             patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate_create,
             patch("langflow.api.v1.projects.update_server"),
             patch("langflow.api.v1.projects.create_api_key"),
             patch("langflow.api.v1.projects.get_storage_service"),
         ):
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+
             mock_validation_create = MagicMock()
             mock_validation_create.has_conflict = False
             mock_validation_create.should_skip = False
+            mock_validation_create.server_name = "lf-new-project"
             mock_validate_create.return_value = mock_validation_create
 
             create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
@@ -579,10 +611,16 @@ class TestProjectMCPIntegration:
         update_case = {"name": "Updated Project Name", "description": "Updated description"}
 
         with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
             patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate,
             patch("langflow.api.v1.projects.update_server") as mock_update_server,
             patch("langflow.api.v1.projects.get_storage_service") as mock_storage,
         ):
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
             mock_storage.return_value = MagicMock()
 
             # Mock old server validation
@@ -620,15 +658,23 @@ class TestProjectMCPIntegration:
         """Test project rename with MCP server name conflict."""
         # Create project first
         with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
             patch("langflow.api.v1.projects.get_project_sse_url"),
             patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate_create,
             patch("langflow.api.v1.projects.update_server"),
             patch("langflow.api.v1.projects.create_api_key"),
             patch("langflow.api.v1.projects.get_storage_service"),
         ):
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+
             mock_validation_create = MagicMock()
             mock_validation_create.has_conflict = False
             mock_validation_create.should_skip = False
+            mock_validation_create.server_name = "lf-new-project"
             mock_validate_create.return_value = mock_validation_create
 
             create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
@@ -638,9 +684,15 @@ class TestProjectMCPIntegration:
         update_case = {"name": "Conflicting Project"}
 
         with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
             patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate,
             patch("langflow.api.v1.projects.get_storage_service") as mock_storage,
         ):
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
             mock_storage.return_value = MagicMock()
 
             # Mock old server validation - exists and matches
@@ -672,15 +724,23 @@ class TestProjectMCPIntegration:
         """Test project deletion with MCP server cleanup."""
         # Create project first
         with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
             patch("langflow.api.v1.projects.get_project_sse_url"),
             patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate_create,
             patch("langflow.api.v1.projects.update_server"),
             patch("langflow.api.v1.projects.create_api_key"),
             patch("langflow.api.v1.projects.get_storage_service"),
         ):
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+
             mock_validation_create = MagicMock()
             mock_validation_create.has_conflict = False
             mock_validation_create.should_skip = False
+            mock_validation_create.server_name = "lf-new-project"
             mock_validate_create.return_value = mock_validation_create
 
             create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
@@ -688,10 +748,16 @@ class TestProjectMCPIntegration:
 
         # Delete the project
         with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
             patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate,
             patch("langflow.api.v1.projects.update_server") as mock_update_server,
             patch("langflow.api.v1.projects.get_storage_service") as mock_storage,
         ):
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
             mock_storage.return_value = MagicMock()
 
             # Mock validation - server exists and matches this project
@@ -722,15 +788,23 @@ class TestProjectMCPIntegration:
         """Test project deletion when MCP server belongs to different project."""
         # Create project first
         with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
             patch("langflow.api.v1.projects.get_project_sse_url"),
             patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate_create,
             patch("langflow.api.v1.projects.update_server"),
             patch("langflow.api.v1.projects.create_api_key"),
             patch("langflow.api.v1.projects.get_storage_service"),
         ):
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+
             mock_validation_create = MagicMock()
             mock_validation_create.has_conflict = False
             mock_validation_create.should_skip = False
+            mock_validation_create.server_name = "lf-new-project"
             mock_validate_create.return_value = mock_validation_create
 
             create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
@@ -738,10 +812,16 @@ class TestProjectMCPIntegration:
 
         # Delete the project
         with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
             patch("langflow.api.v1.projects.validate_mcp_server_for_project") as mock_validate,
             patch("langflow.api.v1.projects.update_server") as mock_update_server,
             patch("langflow.api.v1.projects.get_storage_service") as mock_storage,
         ):
+            # Mock settings to enable MCP auto-add
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
             mock_storage.return_value = MagicMock()
 
             # Mock validation - server exists but belongs to different project
