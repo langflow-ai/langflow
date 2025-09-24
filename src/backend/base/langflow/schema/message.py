@@ -297,17 +297,14 @@ class Message(Data):
 
         return DataFrame(data=[self])
 
-
 class DefaultModel(BaseModel):
-    model_config = ConfigDict(
+    class Config:
         from_attributes=True,
         populate_by_name=True,
         json_encoders={
             datetime: lambda v: v.isoformat(),
-            UUID: lambda v: str(v),
-        },
-    )
-
+        }
+    
     def json(self, **kwargs):
         # Usa a função de serialização personalizada
         return super().model_dump_json(**kwargs, encoder=self.custom_encoder)
@@ -483,6 +480,3 @@ class ErrorMessage(Message):
             ],
             flow_id=flow_id,
         )
-
-
-__all__ = ["ContentBlock", "DefaultModel", "ErrorMessage", "Message", "MessageResponse"]
