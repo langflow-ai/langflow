@@ -544,24 +544,17 @@ async def test_handle_on_chain_stream_no_output():
     assert isinstance(start_time, float)
 
 async def test_agent_streaming_no_text_accumulation():
-    """Test that agent streaming sends individual token events without accumulating text."""
+    """Test that agent streaming sends individual chunks without accumulating text."""
     sent_messages = []
-    token_events = []
 
     async def mock_send_message(message):
         # Capture each message sent for verification
-        sent_messages.append(
-            {"text": message.text, "state": message.properties.state, "id": getattr(message, "id", None)}
-        )
+        sent_messages.append({
+            'text': message.text,
+            'state': message.properties.state,
+            'id': getattr(message, 'id', None)
+        })
         return message
-
-    # Mock event manager to capture token events
-    class MockEventManager:
-        def on_token(self, data):
-            # Capture token events
-            token_events.append(data)
-
-    event_manager = MockEventManager()
 
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
@@ -615,7 +608,6 @@ async def test_agent_streaming_no_text_accumulation():
     # Final result should have complete message with full text
     assert result.properties.state == "complete"
     assert result.text == "Hello world!"
-
 
 async def test_agent_streaming_without_event_manager():
     """Test that agent streaming works without event_manager (backward compatibility)."""
