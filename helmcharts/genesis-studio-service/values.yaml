@@ -1,0 +1,312 @@
+# Default values for genesis-studio-service.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: "{{ .Values.global.image.repository }}"
+  name: genesis-studio-service
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: "genesis-studio-service"
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "genesis-platform-sa"
+  enabled: true
+
+podAnnotations:
+  reloader.stakater.com/auto: "true"
+podLabels: {}
+extraLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 7860
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources:
+  limits:
+    cpu: 2
+    memory: 10Gi
+  requests:
+    cpu: 1
+    memory: 5Gi
+
+# livenessProbe:
+#   httpGet:
+#     path: /
+#     port: http
+# readinessProbe:
+#   httpGet:
+#     path: /
+#     port: http
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+storage:
+  s3:
+    enabled: true
+    secretName: "" # Secret for S3 credentials
+  azureBlob:
+    enabled: false
+    secretName: "" # Secret for Azure Blob credentials
+  gcs:
+    enabled: false
+    secretName: "" # Secret for GCS credentials
+
+queue:
+  kafka:
+    enabled: true
+    config:
+      brokers: ""
+    secretName: "" # Secret for Kafka credentials
+  sqs:
+    enabled: false
+    config:
+      region: ""
+    secretName: "" # Secret for SQS credentials
+  rabbitmq:
+    enabled: false
+    config:
+      host: ""
+      port: ""
+    secretName: "" # Secret for RabbitMQ credentials
+
+global:
+  env:
+    # FlexStore Configuration
+    FLEXSTORE_STORAGE_ACCOUNT: ""
+    FLEXSTORE_CONTAINER_NAME: ""
+
+    # Authentication & ModelHub
+    OPENAI_BASE_URL: ""
+    MODELHUB_URI: ""
+    MODELHUB_BASE_URL: ""
+
+    k8sSecretName: genesis-platform-secrets
+
+  image:
+    repository: "sprintregistry.azurecr.io"
+
+env:
+  # ✅ Server Configuration (used in app/core/config.py)
+  HOST: "0.0.0.0"
+  PORT: "7860"
+  DEBUG: "false"
+  LOG_LEVEL: "info"
+  RELOAD: "false"
+
+  # ✅ Core Application Variables (used in app/core/config.py + auth middleware)
+  GENESIS_CLIENT_ID: "1"
+  GENESIS_SERVICE_AUTH_URL: "http://genesis-service-auth:3000"
+
+  # ✅ Azure PostgreSQL Configuration (used in app/services/database/settings.py)
+  # Note: AZURE_POSTGRES_USERNAME is auto-managed by managed identity in cluster
+  AZURE_POSTGRES_MANAGED_IDENTITY_ENABLED: "true"
+  AZURE_POSTGRES_SERVER_NAME: ""
+  AZURE_POSTGRES_DATABASE_NAME: "langflow"
+  AZURE_POSTGRES_PORT: "5432"
+
+  # ✅ Langflow Configuration (used in app/core/config.py)
+  LANGFLOW_CONFIG_DIR: ./config
+  LANGFLOW_LOG_LEVEL: "ERROR"
+  LANGFLOW_STORE_ENVIRONMENT_VARIABLES: "true"
+  LANGFLOW_REMOVE_API_KEYS: "true"
+  LANGFLOW_WORKERS: "2"
+  DO_NOT_TRACK: "true"
+
+  # ✅ Tracing Configuration (used in app/core/config.py)
+  AUTONOMIZE_TRACING_ENABLED: "true"
+  AUTONOMIZE_EXPERIMENT_NAME: "Genesis_Langflow_Production"
+
+  # ✅ Autonomize Tracing Infrastructure (used in app/core/config.py)
+  AUTONOMIZE_KAFKA_BROKERS: "{{ .Values.global.env.KAFKA_BROKERS }}"
+  # AUTONOMIZE_KAFKA_USERNAME: ""
+  # AUTONOMIZE_KAFKA_PASSWORD: ""
+  AUTONOMIZE_KAFKA_MECHANISM: "PLAIN"
+  AUTONOMIZE_KAFKA_TOPIC: "genesis-traces"
+  AUTONOMIZE_KAFKA_SECURITY_PROTOCOL: "SASL_SSL"
+  AUTONOMIZE_KAFKA_CONSUMER_GROUP: "genesis-traces-workers"
+
+  # ✅ Streaming Tracing Configuration
+  AUTONOMIZE_STREAMING_ENABLED: "true"  # Force streaming mode
+  AUTONOMIZE_KAFKA_STREAMING_TOPIC: "genesis-traces-streaming"
+
+  # ✅ ModelHub Configuration (used in app/core/config.py)
+  MODELHUB_URI: "https://{{ .Values.global.env.BASE_URL }}/genesis-platform/modelhub-bff"
+  MODELHUB_BASE_URL: "https://{{ .Values.global.env.BASE_URL }}/genesis-platform/modelhub-bff"
+  MODELHUB_GENESIS_COPILOT_ID: "67b5ac04079d8a5a5c0671ad"
+  MODELHUB_GENESIS_CLIENT_ID: "1"
+  GENESIS_COPILOT_ID: "67b5ac04079d8a5a5c0671ad"
+
+  # ✅ ModelHub Model Names (used in app/core/config.py)
+  MODELHUB_CLLM_MODEL: "clinical-extraction"
+  MODELHUB_CLINICAL_NOTE_CLASSIFIER_MODEL: "clinical-notes-classifier"
+  MODELHUB_COMBINED_ENTITY_LINKING_MODEL: "combined-entity-linking"
+  MODELHUB_CPT_CODE_MODEL: "cpt-code-extractor"
+  MODELHUB_ICD_10_MODEL: "icd-code-extractor"
+  MODELHUB_RXNORM_MODEL: "rxnorm-code-extractor"
+  MODELHUB_SRF_EXTRACTION_MODEL: "tolstoy-model"
+  MODELHUB_SRF_IDENTIFICATION_MODEL: "tolstoy-identification"
+
+  # ✅ Service Settings - FlexStore (FLEXSTORE_ prefix - used in app/services/flexstore/settings.py)
+  FLEXSTORE_ENDPOINT_URL: "http://genesis-service-flexstore:3000"
+  FLEXSTORE_USER_AGENT: "genesis_studio"
+  FLEXSTORE_TIMEOUT: "60"
+  FLEXSTORE_UPLOAD_TIMEOUT: "300"
+  FLEXSTORE_CONNECT_TIMEOUT: "10"
+  FLEXSTORE_READ_TIMEOUT: "60"
+
+  # ✅ Service Settings - KnowledgeHub (KNOWLEDGEHUB_ prefix - used in app/services/knowledge/settings.py)
+  KNOWLEDGEHUB_ENDPOINT_URL: "http://genesis-service-knowledge-hub:3000"
+  KNOWLEDGEHUB_CLIENT_ID: "1"
+  KNOWLEDGEHUB_USER_AGENT: "genesis_studio"
+  KNOWLEDGEHUB_TIMEOUT: "300"
+
+  # ✅ Service Settings - Prompt (PROMPT_ prefix - used in app/services/prompt/settings.py)
+  PROMPT_ENDPOINT_URL: "http://genesis-studio-service:7860"
+  PROMPT_TIMEOUT: "30"
+
+  # ✅ Service Settings - Azure OCR (AZURE_OCR_ prefix - used in app/services/ocr/settings.py)
+  AZURE_OCR_DEFAULT_ENDPOINT: "https://genesis-studio.cognitiveservices.azure.com/"
+  AZURE_OCR_DEFAULT_API_KEY: "D00Zo7aNsCezAdHHRiHGtXgiiPbQUTsoU1pdNnlrNxwynH7F4HoMJQQJ99BAACYeBjFXJ3w3AAALACOG6on8"
+  AZURE_OCR_DEFAULT_MODEL_TYPE: "prebuilt-document"
+  AZURE_OCR_TIMEOUT: "300"
+  AZURE_OPENAI_ENDPOINT: "https://cog-54p2emd7pu2vu.openai.azure.com/"
+  AZURE_OPENAI_API_KEY: "930450a867a144d8810f365ad719eba3"
+  AZURE_OPENAI_DEPLOYMENT: "GPT316k"
+  
+
+  # ✅ Service Settings - RAG (RAG_ prefix - used in app/services/rag/settings.py)
+  RAG_DEFAULT_EMBEDDING_MODEL: "bge_base"
+  RAG_DEFAULT_TOP_K: "20"
+
+  # ✅ FlexStore Configuration (used in app/core/config.py)
+  FLEXSTORE_DEFAULT_STORAGE_ACCOUNT: "{{ .Values.global.env.FLEXSTORE_STORAGE_ACCOUNT }}"
+  FLEXSTORE_DEFAULT_TEMPORARY_STORAGE_ACCOUNT: "{{ .Values.global.env.FLEXSTORE_STORAGE_ACCOUNT }}"
+  FLEXSTORE_DEFAULT_TEMPORARY_STORAGE_CONTAINER: "{{ .Values.global.env.FLEXSTORE_CONTAINER_NAME }}"
+
+  # ✅ Modelhub Configuration (used in app/core/config.py)
+  # MODELHUB_AUTH_CLIENT_ID: modelhub-client
+  # MODELHUB_AUTH_CLIENT_SECRET: ovxVHvFthCngB70owZO8dmcQBm9gPtkQ
+
+  # ✅ External Integration (used in app/services/external_integration/factory.py)
+  # GENESIS_API_URL: ""
+  # NOTIFICATION_API_URL: ""
+  ACTIVITY_LOG_URL: "http://localhost:8002"
+  # MODELHUB_SERVICE_URL: "http://genesis-service-modelhub:3000/modelhub/api"
+
+  # ✅ Component Filtering Configuration (used in app/core/component_filter.py + app/startup_extensions.py)
+  GENESIS_DISABLED_COMPONENTS: ""
+  GENESIS_DISABLED_CATEGORIES: ""
+  GENESIS_ENABLE_CUSTOM_STARTER_PROJECTS: "true"
+
+
+  # ✅ Genesis MCP Server Configuration (used in app/services/mcp/settings.py)
+  GENESIS_MCP_SERVICE_URL: http://genesis-service-mcp:3000
+  GENESIS_MCP_SSE_URL: http://genesis-service-mcp:3000/sse
+  GENESIS_MCP_REST_URL: http://genesis-service-mcp:3000/tools
+  GENESIS_MCP_HEALTH_URL: http://genesis-service-mcp:3000/health
+  GENESIS_MCP_AUTH_TOKEN: ""
+  GENESIS_MCP_TIMEOUT: 60
+  GENESIS_MCP_ENABLED: "true"
+  MCP_ENDPOINT_URL: http://genesis-service-mcp:3000
+  MCP_AUTH_TOKEN: ""
+
+  API_PREFIX: "/genesis-platform/studio/api/v1"
+
+
+  k8sSecretName: "{{ .Values.global.env.k8sSecretName }}"
+  MODELHUB_SERVICE_URL: http://genesis-service-modelhub:8000/modelhub/api
+  RAG_V2_BASE_URL: http://genesis-service-rag:3000/v2
+
+secretEnv:
+  # ✅ Database Secrets (used in app/core/config.py)
+  LANGFLOW_DATABASE_URL:
+    key: LANGFLOW_DATABASE_URL
+
+  # ✅ Autonomize Tracing Secrets (used in app/core/config.py)
+  AUTONOMIZE_KAFKA_USERNAME:
+    key: KAFKA_USERNAME
+  AUTONOMIZE_KAFKA_PASSWORD:
+    key: KAFKA_PASSWORD
+
+
+  # ✅ Azure OCR Secrets (used in app/services/ocr/settings.py)
+  # AZURE_OCR_DEFAULT_API_KEY:
+  #   key: AZURE_FORM_RECOGNIZER_API_KEY
+
+  # ✅ ModelHub Secrets (used in app/core/config.py)
+  MODELHUB_AUTH_CLIENT_ID:
+    key: MODELHUB_AUTH_CLIENT_ID
+  MODELHUB_AUTH_CLIENT_SECRET:
+    key: MODELHUB_AUTH_CLIENT_SECRET
+  MODELHUB_CLIENT_SECRET:
+    key: MODELHUB_CLIENT_SECRET
+
+  # 🔒 NOTE: Azure Identity Secrets (AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID)
+  # are NOT included here as they should be auto-managed by Azure Managed Identity in cluster.
+  # For local development, set these in your .env file as shown in local-testing-config.example
