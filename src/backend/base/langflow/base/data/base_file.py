@@ -268,7 +268,7 @@ class BaseFileComponent(Component, ABC):
                     parts.append(orjson.dumps(d.data, indent=2, default=str))
                 else:
                     parts.append(str(d))
-            except Exception:
+            except Exception: # noqa: BLE001
                 # Final fallback - just try to convert to string.
                 # TODO: Consider downstream error case more. Should this raise an error?
                 parts.append(str(d))
