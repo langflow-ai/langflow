@@ -1,0 +1,81 @@
+variables:
+  major: 1
+  minor: 1
+  patch: $[counter(variables['Build.SourceBranchName'], 0)]
+  globalPatch: $[counter('globalPatch', 0)]
+  ACR_RESOURCE_GROUP: sprintRG
+  AZURE_CONTAINER_REGISTRY: sprintregistry
+  CONTAINER_NAME: $(Build.DefinitionName)
+  HELM_SERVICE_CONNECTION_NAME: platform-dev-1007
+  HELM_ACR_NAME: platformhelm
+  CHART_PATH: "helmcharts"
+resources:
+  repositories:
+  - repository: genesis-platform-helm
+    type: github
+    endpoint: autonomize-ai
+    name: autonomize-ai/genesis-platform-helm
+    ref: main
+trigger:
+  branches:
+    include:
+    - main
+    - develop
+    - feature-*
+    - demo
+    - epic/*
+
+pr: none
+
+stages:
+- stage: Version
+  displayName: Versioning
+  jobs:
+  - template: version.yml
+# - stage: UT_Sonar_Scan
+#   dependsOn: Version
+#   condition: succeeded()
+#   jobs:
+#   - template: sonar.yml
+- stage: buildImage
+  dependsOn: Version
+  condition: succeeded()
+  jobs:
+  - template: build-template.yml
+    parameters:
+      CONTAINER_NAME: $(CONTAINER_NAME)
+      AZURE_CONTAINER_REGISTRY: $(AZURE_CONTAINER_REGISTRY)
+- stage: Helm_Package_and_Publish
+  dependsOn: buildImage
+  condition: succeeded()
+  jobs:
+  - template: helmpublish.yml
+    parameters:
+      SERVICE_CONNECTION_NAME: $(HELM_SERVICE_CONNECTION_NAME)
+      HELM_ACR_NAME: $(HELM_ACR_NAME)
+      CHART_PATH: $(CHART_PATH)
+- stage: ImageTagUpdate
+  dependsOn: Helm_Package_and_Publish
+  condition: and(succeeded(), in(variables['Build.SourceBranchName'], 'develop', 'demo'))
+  jobs:
+  - template: release-template.yml
+- stage: Deploy_To_Integration
+  displayName: Deploy to Dev Integration Environment
+  dependsOn: Helm_Package_and_Publish
+  condition: and(succeeded(), in(variables['Build.SourceBranchName'], 'integration'))
+  jobs:
+  - job: Deploy
+    displayName: Deploy to Dev Integration Environment
+    pool:
+      vmImage: 'windows-latest'
+    steps:
+    - task: TriggerPipeline@2
+      inputs:
+        serviceConnection: 'autonomize-sprint-ado'
+        project: '01e6d078-59e7-4a7c-8af6-3b116c89bfa6'
+        Pipeline: 'Release'
+        releaseDefinition: '3'
+        Description: "$(Build.DefinitionName):$(Build.BuildNumber)"
+        buildapiversion: '6.0'
+        releaseapiversion: '6.0'
+        VariableInput: '{''componentName'': "$(Build.DefinitionName)", ''componentVersion'': "$(Build.BuildNumber)", ''componentBranch'': "$(Build.SourceBranchName)"}'

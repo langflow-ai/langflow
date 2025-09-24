@@ -1,3 +1,21 @@
+# License Notice for Autonomize AI’s Modified Langflow
+
+This software repository contains proprietary components developed by Autonomize AI, as well as third-party components originally licensed under open source licenses.
+
+## Proprietary Components
+
+Copyright (C) 2025 Autonomize AI - All Rights Reserved
+
+The proprietary components of this software (including but not limited to: custom UI components, authentication modules, private workflows, integrations, and internal logic not derived from Langflow) are confidential and proprietary to Autonomize AI.
+
+These components may not be copied, modified, published, distributed, sublicensed, or used in any form without explicit written permission from Autonomize AI.
+
+## Third-Party Components
+
+This project builds upon the Langflow open source project, which is licensed under the MIT License:
+
+---
+
 MIT License
 
 Copyright (c) 2024 Langflow
@@ -19,3 +37,16 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+## Attribution
+
+This project includes derivative works based on the Langflow project (https://github.com/logspace-ai/langflow), which is licensed under the MIT License. We acknowledge the original authors and contributors of Langflow.
+
+---
+
+## Summary
+
+- You may not reuse, redistribute, or modify the proprietary components without permission.
+- You may freely use and modify the portions of the code originally licensed under the MIT License, provided you retain the original license and attribution.

@@ -131,6 +131,12 @@ dependencies = [
     "traceloop-sdk>=0.43.1",
     "easyocr>=1.7.2",
     "opencv-python>=4.11",
+    "autonomize-model-sdk>=1.0.3",
+    "mlflow>=3.1.4",
+    "nanoid>=2.0.0",
+    "azure-storage-blob>=12.24.0",
+    "azure-ai-formrecognizer>=3.3.3",
+    "azure-identity>=1.25.0",
 ]
 
 [dependency-groups]

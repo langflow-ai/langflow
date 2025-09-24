@@ -478,6 +478,15 @@ def create_app():
 
     add_pagination(app)
 
+    # Initialize Genesis Studio Extensions
+    try:
+        from langflow.custom.genesis.integration import initialize_genesis_extensions, is_genesis_extensions_enabled
+
+        if is_genesis_extensions_enabled():
+            initialize_genesis_extensions(app)
+    except Exception as e:
+        logger.warning(f"Failed to initialize Genesis extensions: {e}")
+
     return app
 
 

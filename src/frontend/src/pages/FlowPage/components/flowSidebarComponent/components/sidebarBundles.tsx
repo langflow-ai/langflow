@@ -35,8 +35,8 @@ export const MemoizedSidebarGroup = memo(
         );
       }).filter(
         (item: { name: string | number }) =>
-          dataFilter[item.name] &&
-          Object.keys(dataFilter[item.name]).length > 0,
+          // Show bundles even if they don't have components yet
+          true,
       );
     }, [BUNDLES, search, sortedCategories, dataFilter]);
 

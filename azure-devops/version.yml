@@ -1,0 +1,17 @@
+jobs:
+- job: Create_version
+  steps:
+    - bash: |
+        raw_branchname="$(Build.SourceBranch)"
+        cleaned_string="${raw_branchname#refs/heads/}"
+        branchname="${cleaned_string//\//-}"
+        commit_hash="${BUILD_SOURCEVERSION:0:8}"
+
+        if [[ "$branchname" == "develop" || "$branchname" == "integration" ]]
+        then
+          echo "##vso[build.updatebuildnumber]$(major).$(minor).$(globalPatch)"
+        else
+          echo "##vso[build.updatebuildnumber]$(major).$(minor)-$branchname.$(patch)-${commit_hash}"
+        fi
+      condition: ne(variables['Build.Reason'], 'PullRequest')
+      name: SetBranchBuildName

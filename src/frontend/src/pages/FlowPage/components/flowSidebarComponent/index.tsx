@@ -534,7 +534,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     (hasSearchInput && hasCoreComponents && ENABLE_NEW_SIDEBAR) ||
     !ENABLE_NEW_SIDEBAR;
   const showBundles =
-    (hasBundleItems && ENABLE_NEW_SIDEBAR && activeSection === "bundles") ||
+    (ENABLE_NEW_SIDEBAR && activeSection === "bundles") ||
     (hasSearchInput && hasBundleItems && ENABLE_NEW_SIDEBAR) ||
     !ENABLE_NEW_SIDEBAR;
   const showMcp =
