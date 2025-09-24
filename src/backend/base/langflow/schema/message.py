@@ -297,14 +297,15 @@ class Message(Data):
 
         return DataFrame(data=[self])
 
+
 class DefaultModel(BaseModel):
     class Config:
-        from_attributes = True  
+        from_attributes = True
         populate_by_name = True
         json_encoders = {
             datetime: lambda v: v.isoformat(),
         }
-    
+
     def json(self, **kwargs):
         # Usa a função de serialização personalizada
         return super().model_dump_json(**kwargs, encoder=self.custom_encoder)

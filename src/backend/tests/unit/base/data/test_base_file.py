@@ -249,4 +249,3 @@ class TestLoadFilesMessage:
         assert "Field extraction" in result_text
         # JSON content should be present in some form
         assert "parsed" in result_text or "Dict content" in result_text
-
