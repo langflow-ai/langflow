@@ -160,6 +160,89 @@ export default function ChatView({
     (state) => state.isVoiceAssistantActive,
   );
 
+<<<<<<< HEAD
+=======
+  const [customElement, setCustomElement] = useState<HTMLDivElement>();
+
+  useEffect(() => {
+    if (messagesRef.current) {
+      setCustomElement(messagesRef.current);
+    }
+  }, [messagesRef]);
+
+  const { scrollDir } = useDetectScroll({
+    target: customElement,
+    axis: Axis.Y,
+    thr: 0,
+  });
+
+  const [canScroll, setCanScroll] = useState<boolean>(false);
+  const [scrolledUp, setScrolledUp] = useState<boolean>(false);
+  const [isLlmResponding, setIsLlmResponding] = useState<boolean>(false);
+  const [lastMessageContent, setLastMessageContent] = useState<string>("");
+
+  const handleScroll = () => {
+    if (!messagesRef.current) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = messagesRef.current;
+    const atBottom = scrollHeight - clientHeight <= scrollTop + 30;
+
+    if (scrollDir === Direction.Up) {
+      setCanScroll(false);
+      setScrolledUp(true);
+    } else {
+      if (atBottom && !scrolledUp) {
+        setCanScroll(true);
+      }
+      setScrolledUp(false);
+    }
+  };
+  const setPlaygroundScrollBehaves = useUtilityStore(
+    (state) => state.setPlaygroundScrollBehaves,
+  );
+
+  useEffect(() => {
+    setPlaygroundScrollBehaves("smooth");
+
+    if (!chatHistory || chatHistory.length === 0) {
+      setCanScroll(true);
+      return;
+    }
+
+    const lastMessage = chatHistory[chatHistory.length - 1];
+    const currentMessageContent =
+      typeof lastMessage.message === "string"
+        ? lastMessage.message
+        : JSON.stringify(lastMessage.message);
+
+    const isNewMessage = lastMessage.isSend;
+
+    const isStreamingUpdate =
+      !lastMessage.isSend &&
+      currentMessageContent !== lastMessageContent &&
+      currentMessageContent && lastMessageContent &&
+      currentMessageContent.length > lastMessageContent.length;
+
+    if (isStreamingUpdate) {
+      if (!isLlmResponding) {
+        setIsLlmResponding(true);
+        setCanScroll(true);
+
+        setTimeout(() => {
+          setCanScroll(false);
+        }, TIME_TO_DISABLE_SCROLL);
+      }
+    } else if (isNewMessage || lastMessage.isSend) {
+      setCanScroll(true);
+      if (isLlmResponding) {
+        setIsLlmResponding(false);
+      }
+    }
+
+    setLastMessageContent(currentMessageContent);
+  }, [chatHistory, isLlmResponding, lastMessageContent]);
+
+>>>>>>> e2ebbcc6e1 (Fix agents; only stream the current chunk back)
   return (
     <StickToBottom
       className={cn(

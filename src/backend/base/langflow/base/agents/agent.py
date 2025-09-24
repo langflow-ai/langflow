@@ -172,6 +172,14 @@ class LCAgentComponent(Component):
 
             image_dicts = [item for item in lc_message.content if item.get("type") == "image"]
             lc_message.content = [item for item in lc_message.content if item.get("type") != "image"]
+            text_content = [item for item in input_dict["input"].content if item.get("type") != "image"]
+
+            # Ensure we don't create an empty content list
+            if text_content:
+                input_dict["input"].content = text_content
+            else:
+                # If no text content, convert to empty string to avoid empty message
+                input_dict["input"] = ""
 
             if "chat_history" not in input_dict:
                 input_dict["chat_history"] = []
