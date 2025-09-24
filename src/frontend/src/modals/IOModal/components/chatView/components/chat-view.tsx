@@ -227,7 +227,7 @@ export default function ChatView({
       !lastMessage.isSend &&
       currentMessageContent &&
       currentMessageContent !== lastMessageContent &&
-      (currentMessageContent.length > (lastMessageContent?.length || 0));
+      currentMessageContent.length > (lastMessageContent?.length || 0);
 
     if (isStreamingUpdate) {
       if (!isLlmResponding) {
