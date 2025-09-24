@@ -23,20 +23,25 @@ export const lazyIconsMapping = {
     import("@/icons/Bitbucket").then((mod) => ({ default: mod.BitbucketIcon })),
   Canva: () =>
     import("@/icons/Canva").then((mod) => ({ default: mod.CanvaIcon })),
-  Coda: () =>
-    import("@/icons/Coda").then((mod) => ({ default: mod.CodaIcon })),
+  Coda: () => import("@/icons/Coda").then((mod) => ({ default: mod.CodaIcon })),
   AssemblyAI: () =>
     import("@/icons/AssemblyAI").then((mod) => ({
       default: mod.AssemblyAIIcon,
     })),
   Elevenlabs: () =>
-    import("@/icons/Elevenlabs").then((mod) => ({ default: mod.ElevenlabsIcon })),
+    import("@/icons/Elevenlabs").then((mod) => ({
+      default: mod.ElevenlabsIcon,
+    })),
   Googlebigquery: () =>
-    import("@/icons/Googlebigquery").then((mod) => ({ default: mod.GooglebigqueryIcon })),
+    import("@/icons/Googlebigquery").then((mod) => ({
+      default: mod.GooglebigqueryIcon,
+    })),
   Heygen: () =>
     import("@/icons/Heygen").then((mod) => ({ default: mod.HeygenIcon })),
   Peopledatalabs: () =>
-    import("@/icons/Peopledatalabs").then((mod) => ({ default: mod.PeopledatalabsIcon })),
+    import("@/icons/Peopledatalabs").then((mod) => ({
+      default: mod.PeopledatalabsIcon,
+    })),
   Snowflake: () =>
     import("@/icons/Snowflake").then((mod) => ({ default: mod.SnowflakeIcon })),
   Googledocs: () =>
@@ -164,7 +169,9 @@ export const lazyIconsMapping = {
     import("@/icons/Evernote").then((mod) => ({ default: mod.EvernoteIcon })),
   Exa: () => import("@/icons/Exa").then((mod) => ({ default: mod.ExaIcon })),
   ExaComposio: () =>
-    import("@/icons/ExaComposio").then((mod) => ({ default: mod.ExaIconComposio })),
+    import("@/icons/ExaComposio").then((mod) => ({
+      default: mod.ExaIconComposio,
+    })),
   Excel: () =>
     import("@/icons/Excel").then((mod) => ({ default: mod.ExcelIcon })),
   FacebookMessenger: () =>
@@ -173,7 +180,8 @@ export const lazyIconsMapping = {
     })),
   Firecrawl: () =>
     import("@/icons/Firecrawl").then((mod) => ({ default: mod.FirecrawlIcon })),
-  Fireflies: () => import("@/icons/Fireflies").then((mod) => ({ default: mod.FirefliesIcon })),
+  Fireflies: () =>
+    import("@/icons/Fireflies").then((mod) => ({ default: mod.FirefliesIcon })),
   Finage: () =>
     import("@/icons/Finage").then((mod) => ({ default: mod.FinageIcon })),
   Fixer: () =>
@@ -296,7 +304,9 @@ export const lazyIconsMapping = {
   Mcp: () => import("@/icons/MCP").then((mod) => ({ default: mod.McpIcon })),
   Mem0: () => import("@/icons/Mem0").then((mod) => ({ default: mod.Mem0 })),
   Mem0Composio: () =>
-    import("@/icons/Mem0Composio").then((mod) => ({ default: mod.Mem0IconComposio })),
+    import("@/icons/Mem0Composio").then((mod) => ({
+      default: mod.Mem0IconComposio,
+    })),
   Meta: () => import("@/icons/Meta").then((mod) => ({ default: mod.MetaIcon })),
   Midjourney: () =>
     import("@/icons/Midjorney").then((mod) => ({
@@ -344,7 +354,9 @@ export const lazyIconsMapping = {
       default: mod.PerplexityIcon,
     })),
   PerplexityComposio: () =>
-    import("@/icons/PerplexityComposio").then((mod) => ({ default: mod.PerplexityIconComposio })),
+    import("@/icons/PerplexityComposio").then((mod) => ({
+      default: mod.PerplexityIconComposio,
+    })),
   Pinecone: () =>
     import("@/icons/Pinecone").then((mod) => ({ default: mod.PineconeIcon })),
   Postgres: () =>
@@ -399,13 +411,12 @@ export const lazyIconsMapping = {
     import("@/icons/Share2").then((mod) => ({ default: mod.Share2Icon })),
   Slack: () =>
     import("@/icons/Slack/SlackIcon").then((mod) => ({ default: mod.default })),
-<<<<<<< HEAD
+  SlackComposio: () =>
+    import("@/icons/slackComposio").then((mod) => ({
+      default: mod.SlackIcons,
+    })),
   Slides: () =>
     import("@/icons/Slides").then((mod) => ({ default: mod.SlidesIcon })),
-=======
-  SlackComposio: () =>
-    import("@/icons/slackComposio").then((mod) => ({ default: mod.SlackIcons })),
->>>>>>> 237fede0b (feat: add Composio Components & logos tweak)
   Spider: () =>
     import("@/icons/Spider").then((mod) => ({ default: mod.SpiderIcon })),
   Streamlit: () =>

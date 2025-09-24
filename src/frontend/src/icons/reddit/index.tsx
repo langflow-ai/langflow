@@ -6,7 +6,15 @@ export const RedditIcon = forwardRef<
   React.PropsWithChildren<{}>
 >((props, ref) => {
   return (
-    <span style={{ display: "inline-grid", width: 22, height: 22, placeItems: "center", flexShrink: 0 }}>
+    <span
+      style={{
+        display: "inline-grid",
+        width: 22,
+        height: 22,
+        placeItems: "center",
+        flexShrink: 0,
+      }}
+    >
       <RedditIconSVG ref={ref} {...props} />
     </span>
   );
