@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from lfx.components.processing.data_operations import DataOperationsComponent
     from lfx.components.processing.data_to_dataframe import DataToDataFrameComponent
     from lfx.components.processing.dataframe_operations import DataFrameOperationsComponent
+    from lfx.components.processing.dataframe_to_toolset import DataFrameToToolsetComponent
     from lfx.components.processing.extract_key import ExtractDataKeyComponent
     from lfx.components.processing.filter_data import FilterDataComponent
     from lfx.components.processing.filter_data_values import DataFilterComponent
@@ -45,6 +46,7 @@ _dynamic_imports = {
     "DataOperationsComponent": "data_operations",
     "DataToDataFrameComponent": "data_to_dataframe",
     "DataFrameOperationsComponent": "dataframe_operations",
+    "DataFrameToToolsetComponent": "dataframe_to_toolset",
     "ExtractDataKeyComponent": "extract_key",
     "FilterDataComponent": "filter_data",
     "DataFilterComponent": "filter_data_values",
@@ -74,6 +76,7 @@ __all__ = [
     "CreateDataComponent",
     "DataFilterComponent",
     "DataFrameOperationsComponent",
+    "DataFrameToToolsetComponent",
     "DataOperationsComponent",
     "DataToDataFrameComponent",
     "ExtractDataKeyComponent",
