@@ -278,9 +278,7 @@ async def handle_on_chain_stream(
             agent_message.text = output_text
             agent_message.properties.state = "partial"
             agent_message = await send_message_method(message=agent_message)
-            # No need to restore - handle_on_chain_end will set final text from AgentFinish
             start_time = perf_counter()
-        # Don't update start_time for empty chunks to avoid timing issues
     return agent_message, start_time
 
 
