@@ -8,8 +8,9 @@ def register_genesis_services():
     """Register custom services with Langflow."""
     try:
         # Import the service manager
-        from lfx.services.manager import get_service_manager
+        from langflow.services.manager import ServiceManager
 
+        service_manager = ServiceManager()
         registered_services = []
         failed_services = []
 
@@ -18,7 +19,7 @@ def register_genesis_services():
             from .external_integration.factory import ExternalIntegrationServiceFactory
 
             factory = ExternalIntegrationServiceFactory()
-            get_service_manager().register_factory(factory)
+            service_manager.register_factory(factory)
             registered_services.append(factory.service_class.__name__)
         except Exception as e:
             failed_services.append(f"ExternalIntegrationService: {e}")
@@ -28,7 +29,7 @@ def register_genesis_services():
             from .flexstore.factory import FlexStoreServiceFactory
 
             factory = FlexStoreServiceFactory()
-            get_service_manager().register_factory(factory)
+            service_manager.register_factory(factory)
             registered_services.append(factory.service_class.__name__)
         except Exception as e:
             failed_services.append(f"FlexStoreService: {e}")
@@ -38,7 +39,7 @@ def register_genesis_services():
             from .modelhub.factory import ModelHubServiceFactory
 
             factory = ModelHubServiceFactory()
-            get_service_manager().register_factory(factory)
+            service_manager.register_factory(factory)
             registered_services.append(factory.service_class.__name__)
         except Exception as e:
             failed_services.append(f"ModelHubService (legacy): {e}")
@@ -49,7 +50,7 @@ def register_genesis_services():
             from .ocr.factory import OCRServiceFactory
 
             factory = OCRServiceFactory()
-            get_service_manager().register_factory(factory)
+            service_manager.register_factory(factory)
             registered_services.append(factory.service_class.__name__)
         except Exception as e:
             failed_services.append(f"OCRService: {e}")
@@ -59,7 +60,7 @@ def register_genesis_services():
             from .knowledge.factory import KnowledgeServiceFactory
 
             factory = KnowledgeServiceFactory()
-            get_service_manager().register_factory(factory)
+            service_manager.register_factory(factory)
             registered_services.append(factory.service_class.__name__)
         except Exception as e:
             failed_services.append(f"KnowledgeService: {e}")
@@ -69,7 +70,7 @@ def register_genesis_services():
             from .rag.factory import RAGServiceFactory
 
             factory = RAGServiceFactory()
-            get_service_manager().register_factory(factory)
+            service_manager.register_factory(factory)
             registered_services.append(factory.service_class.__name__)
         except Exception as e:
             failed_services.append(f"RAGService: {e}")
@@ -79,7 +80,7 @@ def register_genesis_services():
             from .tracing.factory import TracingServiceFactory
 
             factory = TracingServiceFactory()
-            get_service_manager().register_factory(factory)
+            service_manager.register_factory(factory)
             registered_services.append(factory.service_class.__name__)
         except Exception as e:
             failed_services.append(f"TracingService: {e}")
