@@ -22,7 +22,7 @@ For more information, see the [LangChain CSV agent documentation](https://python
 |------|------|-------------|
 | llm | LanguageModel | Input parameter. The language model to use for the agent. This should be a configured language model component that will power the CSV agent's reasoning and response generation capabilities. |
 | path | File | Input parameter. The path to the CSV file. This file should contain the data that the agent will analyze and query. The CSV should have a header row with column names that the agent can reference in its operations. |
-| agent_type | String | Input parameter. The type of agent to create. This parameter allows you to specify different agent configurations or behaviors, such as "pandas" for pandas-based operations or "openai" for OpenAI-specific implementations. |
+| agent_type | String | Input parameter. The agent type to create (see LangChain docs for supported values, for example `zero-shot-react-description`, `openai-functions`, `openai-tools`). |
 | agent | AgentExecutor | Output parameter. The CSV agent instance. This is the configured agent that can be connected to other components in your flow to perform data analysis and query operations on the CSV data. |
 
 ## OpenAI Tools Agent
