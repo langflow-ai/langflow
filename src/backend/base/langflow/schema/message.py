@@ -35,7 +35,6 @@ from langflow.utils.image import create_image_content_dict
 if TYPE_CHECKING:
     from langflow.schema.dataframe import DataFrame
 
-
 class Message(Data):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
@@ -144,7 +143,8 @@ class Message(Data):
         if self.sender == MESSAGE_SENDER_USER or not self.sender:
             if self.files:
                 contents = [{"type": "text", "text": text}]
-                contents.extend(self.get_file_content_dicts())
+                file_contents = self.get_file_content_dicts()
+                contents.extend(file_contents)
                 human_message = HumanMessage(content=contents)
             else:
                 human_message = HumanMessage(content=text)
@@ -203,7 +203,11 @@ class Message(Data):
     # Keep this async method for backwards compatibility
     def get_file_content_dicts(self):
         content_dicts = []
-        files = get_file_paths(self.files)
+        try:
+            files = get_file_paths(self.files)
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error getting file paths: {e}")
+            return content_dicts
 
         for file in files:
             if isinstance(file, Image):
@@ -294,12 +298,14 @@ class Message(Data):
 
 
 class DefaultModel(BaseModel):
-    class Config:
-        from_attributes = True
-        populate_by_name = True
-        json_encoders = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
-        }
+            UUID: lambda v: str(v),
+        },
+    )
 
     def json(self, **kwargs):
         # Usa a função de serialização personalizada
@@ -408,7 +414,7 @@ class ErrorMessage(Message):
         if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
             reason = f"{exception.body.get('message')}\n"
         elif hasattr(exception, "_message"):
-            reason = f"{exception._message()}\n" if callable(exception._message) else f"{exception._message}\n"
+            reason = f"{exception._message()}\n" if callable(exception._message) else f"{exception._message}\n"  # noqa: SLF001
         elif hasattr(exception, "code"):
             reason = f"Code: {exception.code}\n"
         elif hasattr(exception, "args") and exception.args:
@@ -476,3 +482,6 @@ class ErrorMessage(Message):
             ],
             flow_id=flow_id,
         )
+
+
+__all__ = ["ContentBlock", "DefaultModel", "ErrorMessage", "Message", "MessageResponse"]
