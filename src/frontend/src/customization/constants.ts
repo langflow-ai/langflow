@@ -1,6 +1,7 @@
 //Langflow Desktop Base URL
 export const baseURL = "";
 
+<<<<<<< HEAD
 export const customDefaultShotrcuts = [
   {
     display_name: "Controls",
@@ -138,3 +139,10 @@ export const customDefaultShotrcuts = [
     shortcut: "mod+b",
   },
 ];
+=======
+export const customCodeTabsClass = {
+  step: "w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll",
+  default:
+    "!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll",
+};
+>>>>>>> 65362ebf4f (refactor: Improve modal management and UI consistency (#9957))
