@@ -985,7 +985,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_text_splitters",
-                    "version": "0.3.9"
+                    "version": "0.3.11"
                   },
                   {
                     "name": "lfx",
@@ -1218,7 +1218,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.116.1"
+                    "version": "0.117.1"
                   },
                   {
                     "name": "lfx",
