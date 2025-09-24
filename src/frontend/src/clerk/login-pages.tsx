@@ -4,6 +4,17 @@ import { useLogout } from "./auth";
 import { IS_CLERK_AUTH } from "@/clerk/auth";
 // Clerk login page component
 export function ClerkLoginPage() {
+  const { isSignedIn } = useAuth();
+  const navigate = useCustomNavigate();
+  const [processed, setProcessed] = useState(false);
+
+  useEffect(() => {
+    if (isSignedIn && !processed) {
+      setProcessed(true);
+      navigate("/organization");
+    }
+  }, [isSignedIn, navigate, processed]);
+
   return (
     <SignedOut>
       <div style={centeredStyle}>
