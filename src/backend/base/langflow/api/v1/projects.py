@@ -188,6 +188,9 @@ async def create_project(
             )
             await session.exec(update_statement_flows)
             await session.commit()
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 409 conflicts) without modification
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -450,6 +453,9 @@ async def update_project(
             await session.exec(update_statement_components)
             await session.commit()
 
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 409 conflicts) without modification
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
