@@ -3,6 +3,7 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 from langchain_core.agents import AgentFinish
+from langchain_core.messages import AIMessageChunk
 from langflow.base.agents.agent import process_agent_events
 from langflow.base.agents.events import (
     handle_on_chain_end,
@@ -541,3 +542,64 @@ async def test_handle_on_chain_stream_no_output():
     assert updated_message.text == ""
     assert updated_message.properties.state == "partial"
     assert isinstance(start_time, float)
+
+
+async def test_agent_streaming_no_text_accumulation():
+    """Test that agent streaming sends individual chunks without accumulating text."""
+    sent_messages = []
+
+    async def mock_send_message(message):
+        # Capture each message sent for verification
+        sent_messages.append({
+            'text': message.text,
+            'state': message.properties.state,
+            'id': getattr(message, 'id', None)
+        })
+        return message
+
+    agent_message = Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name="Agent",
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        session_id="test_session_id",
+    )
+
+    # Simulate streaming events with individual chunks
+    events = [
+        {
+            "event": "on_chain_stream",
+            "data": {"chunk": AIMessageChunk(content="Hello")},
+        },
+        {
+            "event": "on_chain_stream",
+            "data": {"chunk": AIMessageChunk(content=" world")},
+        },
+        {
+            "event": "on_chain_stream",
+            "data": {"chunk": AIMessageChunk(content="!")},
+        },
+        {
+            "event": "on_chain_end",
+            "data": {"output": AgentFinish(return_values={"output": "Hello world!"}, log="complete")},
+        },
+    ]
+
+    result = await process_agent_events(create_event_iterator(events), agent_message, mock_send_message)
+
+    # Verify individual chunks were sent (not accumulated)
+    streaming_messages = [msg for msg in sent_messages if msg['state'] == 'partial']
+    assert len(streaming_messages) == 3, f"Expected 3 streaming messages, got {len(streaming_messages)}"
+
+    # Each streaming message should contain only its chunk, not accumulated text
+    assert streaming_messages[0]['text'] == "Hello"
+    assert streaming_messages[1]['text'] == " world"
+    assert streaming_messages[2]['text'] == "!"
+
+    # Verify no streaming message contains accumulated text
+    for msg in streaming_messages:
+        assert "Hello world!" not in msg['text'], f"Found accumulated text in chunk: {msg['text']}"
+
+    # Final result should have complete message
+    assert result.properties.state == "complete"
+    assert result.text == "Hello world!"

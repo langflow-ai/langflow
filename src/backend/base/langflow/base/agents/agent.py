@@ -118,6 +118,21 @@ class LCAgentComponent(Component):
         # might be overridden in subclasses
         return None
 
+    def _data_to_messages_skip_empty(self, data: list[Data]):
+        """Convert data to messages, filtering only empty text while preserving non-text content."""
+        messages = []
+        for value in data:
+            # Only skip if the message has a text attribute that is empty/whitespace
+            text = getattr(value, "text", None)
+            if isinstance(text, str) and not text.strip():
+                # Skip only messages with empty/whitespace-only text strings
+                continue
+
+            lc_message = value.to_lc_message()
+            messages.append(lc_message)
+
+        return messages
+
     async def run_agent(
         self,
         agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
@@ -143,9 +158,9 @@ class LCAgentComponent(Component):
             input_dict["system_prompt"] = self.system_prompt
         if hasattr(self, "chat_history") and self.chat_history:
             if isinstance(self.chat_history, Data):
-                input_dict["chat_history"] = data_to_messages(self.chat_history)
+                input_dict["chat_history"] = self._data_to_messages_skip_empty(self.chat_history)
             if all(isinstance(m, Message) for m in self.chat_history):
-                input_dict["chat_history"] = data_to_messages([m.to_data() for m in self.chat_history])
+                input_dict["chat_history"] = self._data_to_messages_skip_empty([m.to_data() for m in self.chat_history])
         if hasattr(input_dict["input"], "content") and isinstance(input_dict["input"].content, list):
             # ! Because the input has to be a string, we must pass the images in the chat_history
 

@@ -48,12 +48,7 @@ def data_to_messages(data: list[Data]) -> list[BaseMessage]:
     Returns:
         List[Message]: The data as messages.
     """
-    messages = []
-    for value in data:
-        # Skip messages with empty or None text to avoid errors with some model providers
-        if hasattr(value, "text") and value.text and str(value.text).strip():
-            messages.append(value.to_lc_message())
-    return messages
+    return [value.to_lc_message() for value in data]
 
 
 def validate_and_create_xml_agent(
