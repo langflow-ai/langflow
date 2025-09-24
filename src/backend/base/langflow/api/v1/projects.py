@@ -149,8 +149,8 @@ async def create_project(
                 # Log if updating existing server
                 if validation_result.should_skip:
                     msg = (
-                        f"MCP server '{validation_result.server_name}' ",
-                        f"already exists for project {new_project.id}, updating",
+                        f"MCP server '{validation_result.server_name}' "
+                        f"already exists for project {new_project.id}, updating"
                     )
                     await logger.adebug(msg)
 
@@ -366,7 +366,7 @@ async def update_project(
                             # Add server with new name and existing config
                             await update_server(
                                 new_validation.server_name,
-                                old_validation.existing_config,
+                                old_validation.existing_config or {},
                                 current_user,
                                 session,
                                 get_storage_service(),
