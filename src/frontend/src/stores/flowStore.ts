@@ -226,6 +226,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       dismissedNodes: JSON.parse(
         localStorage.getItem(`dismiss_${flow?.id}`) ?? "[]",
       ) as string[],
+      dismissedNodesLegacy: JSON.parse(
+        localStorage.getItem(`dismiss_legacy_${flow?.id}`) ?? "[]",
+      ) as string[],
     });
     unselectAllNodesEdges(nodes, newEdges);
     if (flow?.id) {
@@ -388,6 +391,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     track("Component Connection Deleted", { edgeId });
   },
   paste: (selection, position) => {
+    if (get().currentFlow?.locked) return;
     // Collect IDs of nodes in the selection
     const selectedNodeIds = new Set(selection.nodes.map((node) => node.id));
     // Find existing edges in the flow that connect nodes within the selection
@@ -567,6 +571,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ getFilterEdge: newState });
   },
   getFilterEdge: [],
+  setFilterComponent: (newState) => {
+    set({ getFilterComponent: newState });
+  },
+  getFilterComponent: "",
   onConnect: (connection) => {
     const _dark = useDarkStore.getState().dark;
     // const commonMarkerProps = {
@@ -679,6 +687,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodesToValidate = downstream.nodes;
       edgesToValidate = downstream.edges;
     } else if (stopNodeId) {
+      get().setStopNodeId(stopNodeId);
       const upstream = getConnectedSubgraph(
         stopNodeId,
         get().nodes,
@@ -687,6 +696,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
       nodesToValidate = upstream.nodes;
       edgesToValidate = upstream.edges;
+    }
+    if (!stopNodeId) {
+      get().setStopNodeId(undefined);
     }
 
     for (const edge of edgesToValidate) {
@@ -812,6 +824,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().updateBuildStatus([vertexBuildData.id], status);
       }
     }
+
     await buildFlowVerticesWithFallback({
       session,
       input_value,
@@ -821,7 +834,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       stopNodeId,
       onGetOrderSuccess: () => {},
       onBuildComplete: (allNodesValid) => {
-        const _nodeId = startNodeId || stopNodeId;
         if (!silent) {
           if (allNodesValid) {
             get().setBuildInfo({ success: true });
@@ -903,10 +915,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateEdgesRunningByNodes: (ids: string[], running: boolean) => {
     const edges = get().edges;
+
     const newEdges = edges.map((edge) => {
       if (
         edge.data?.sourceHandle &&
-        ids.includes(edge.data.sourceHandle.id ?? "")
+        ids.includes(edge.data.sourceHandle.id ?? "") &&
+        edge.data.sourceHandle.id !== get().stopNodeId
       ) {
         edge.animated = running;
         edge.className = running ? "running" : "";
@@ -930,7 +944,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       resolve();
     });
   },
-
   updateVerticesBuild: (
     vertices: {
       verticesIds: string[];
@@ -1068,6 +1081,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
     set({ dismissedNodes: newDismissedNodes });
   },
+  dismissedNodesLegacy: [],
+  addDismissedNodesLegacy: (dismissedNodes: string[]) => {
+    const newDismissedNodes = Array.from(
+      new Set([...get().dismissedNodesLegacy, ...dismissedNodes]),
+    );
+    localStorage.setItem(
+      `dismiss_legacy_${get().currentFlow?.id}`,
+      JSON.stringify(newDismissedNodes),
+    );
+    set({ dismissedNodesLegacy: newDismissedNodes });
+  },
   helperLineEnabled: false,
   setHelperLineEnabled: (helperLineEnabled: boolean) => {
     set({ helperLineEnabled });
@@ -1076,6 +1100,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ newChatOnPlayground: newChat });
   },
   newChatOnPlayground: false,
+  stopNodeId: undefined,
+  setStopNodeId: (nodeId: string | undefined) => {
+    set({ stopNodeId: nodeId });
+  },
 }));
 
 export default useFlowStore;

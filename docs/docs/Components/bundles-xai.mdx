@@ -4,6 +4,7 @@ slug: /bundles-xai
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 [Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
@@ -17,14 +18,13 @@ The **xAI** component generates text using xAI models like [Grok](https://x.ai/g
 
 It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
 
-Use the **Language Model** output when you want to use an xAI model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+Use the **Language Model** output when you want to use an xAI model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
 
 For more information, see [**Language Model** components](/components-models).
 
 ### xAI text generation parameters
 
-Many **xAI** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Type | Description |
 |------|------|-------------|

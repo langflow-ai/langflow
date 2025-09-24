@@ -133,17 +133,17 @@ This component can be used as a standalone component to list all previously gene
 3. Select an audio or video file for the **Start Transcript** component.
 
     Optional: After adding a file to the **Start Transcript** component, run and [freeze the component](/concepts-components#freeze-a-component) so you only submit the file once, no matter how many times you run the flow.
-    To do this, click <Icon name="Play" aria-hidden="True" /> **Run component** to preload the file, and then click <Icon name="Ellipsis" aria-hidden="true" /> **Show More** and select **Freeze** to lock the result.
+    To do this, click <Icon name="Play" aria-hidden="true" /> **Run component** to preload the file, and then click <Icon name="Ellipsis" aria-hidden="true" /> **Show More** and select **Freeze** to lock the result.
     Subsequent flow runs use the frozen component's cached output.
 
-4. Test the transcription by clicking <Icon name="Play" aria-hidden="True" /> **Run component** on the **Parser** component. Make sure that the specified template is `{text}`.
+4. Test the transcription by clicking <Icon name="Play" aria-hidden="true" /> **Run component** on the **Parser** component. Make sure that the specified template is `{text}`.
 
     Running one component runs all upstream components as well as the selected component and then stops the flow run.
     In this case, the **Start Transcript** and **Poll Transcript** components are upstream from the **Parser** component.
     If you froze the **Start Transcript** component, the flow sends the cached output from **Start Transcript**, runs the **Poll Transcript** component, to get the transcription result.
     Check the flow logs or inspect the output of the **Parser** component to see the transcribed text result.
 
-5. To generate subtitles and run the full flow, click <Icon name="Play" aria-hidden="True" /> **Run component** on the **List Transcript** component.
+5. To generate subtitles and run the full flow, click <Icon name="Play" aria-hidden="true" /> **Run component** on the **List Transcript** component.
 
 ## Customization
 

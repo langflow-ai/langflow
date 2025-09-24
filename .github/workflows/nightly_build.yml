@@ -2,6 +2,16 @@ name: Nightly Build
 
 on:
   workflow_dispatch:
+    inputs:
+      runs_on:
+        description: "Runner to use for tests (use self-hosted for safe/release code)"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+        default: ubuntu-latest
   schedule:
     # Run job at 00:00 UTC (4:00 PM PST / 5:00 PM PDT)
     - cron: "0 0 * * *"
@@ -26,7 +36,7 @@ jobs:
       lfx_tag: ${{ steps.generate_lfx_tag.outputs.lfx_tag }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           persist-credentials: true
       - name: "Setup Environment"
@@ -108,7 +118,7 @@ jobs:
           # TODO: notify on failure
 
       - name: Checkout main nightly tag
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ steps.generate_main_tag.outputs.main_tag }}
 
@@ -145,6 +155,7 @@ jobs:
     with:
       tests_folder: "tests"
       release: true
+      runs-on: ${{ (inputs['runs_on'] && startsWith(format('{0}', inputs['runs_on']), '[') && fromJSON(inputs['runs_on'])) || inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
@@ -158,6 +169,7 @@ jobs:
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13"]'
+      runs-on: ${{ (inputs['runs_on'] && startsWith(format('{0}', inputs['runs_on']), '[') && fromJSON(inputs['runs_on'])) || inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
