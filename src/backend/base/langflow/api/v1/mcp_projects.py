@@ -27,7 +27,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils import CurrentActiveMCPUser
+from langflow.api.utils import CurrentActiveMCPUser, extract_global_variables_from_headers
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.mcp_utils import (
     current_request_variables_ctx,
@@ -303,16 +303,7 @@ async def handle_project_sse(
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
     # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
-    variables: dict[str, str] = {}
-    header_prefix = "x-langflow-global-var-"
-    try:
-        for header_name, header_value in request.headers.items():
-            header_lower = header_name.lower()
-            if header_lower.startswith(header_prefix):
-                var_name = header_lower[len(header_prefix) :].upper()
-                variables[var_name] = header_value
-    except Exception:  # noqa: BLE001
-        await logger.aexception("Failed to parse request variables from headers for project %s", project_id)
+    variables = extract_global_variables_from_headers(request.headers)
     req_vars_token = current_request_variables_ctx.set(variables or None)
 
     try:
@@ -356,16 +347,7 @@ async def handle_project_messages(
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
     # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
-    variables: dict[str, str] = {}
-    header_prefix = "x-langflow-global-var-"
-    try:
-        for header_name, header_value in request.headers.items():
-            header_lower = header_name.lower()
-            if header_lower.startswith(header_prefix):
-                var_name = header_lower[len(header_prefix) :].upper()
-                variables[var_name] = header_value
-    except Exception:  # noqa: BLE001
-        await logger.aexception("Failed to parse request variables from headers for project %s", project_id)
+    variables = extract_global_variables_from_headers(request.headers)
     req_vars_token = current_request_variables_ctx.set(variables or None)
 
     try:
@@ -501,7 +483,7 @@ async def update_project_mcp_settings(
                         "stopping MCP Composer"
                     )
                     mcp_composer_service: MCPComposerService = cast(
-                        MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+                        "MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE)
                     )
                     await mcp_composer_service.stop_project_composer(str(project_id))
 
@@ -1118,7 +1100,7 @@ async def register_project_with_composer(project: Folder):
     """Register a project with MCP Composer by starting a dedicated composer instance."""
     try:
         mcp_composer_service: MCPComposerService = cast(
-            MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+            "MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE)
         )
 
         settings = get_settings_service().settings
@@ -1250,7 +1232,7 @@ async def get_or_start_mcp_composer(auth_config: dict, project_name: str, projec
     """
     from lfx.services.mcp_composer.service import MCPComposerConfigError
 
-    mcp_composer_service: MCPComposerService = cast(MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE))
+    mcp_composer_service: MCPComposerService = cast("MCPComposerService", get_service(ServiceType.MCP_COMPOSER_SERVICE))
 
     # Prepare current auth config for comparison
     settings = get_settings_service().settings

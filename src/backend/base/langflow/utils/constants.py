@@ -13,11 +13,15 @@ from lfx.utils.constants import (
     REASONING_OPENAI_MODELS,
 )
 
+# Langflow-specific constants
+LANGFLOW_GLOBAL_VAR_HEADER_PREFIX = "x-langflow-global-var-"
+
 __all__ = [
     "ANTHROPIC_MODELS",
     "CHAT_OPENAI_MODELS",
     "DEFAULT_PYTHON_FUNCTION",
     "DIRECT_TYPES",
+    "LANGFLOW_GLOBAL_VAR_HEADER_PREFIX",
     "LOADERS_INFO",
     "MESSAGE_SENDER_AI",
     "MESSAGE_SENDER_NAME_AI",

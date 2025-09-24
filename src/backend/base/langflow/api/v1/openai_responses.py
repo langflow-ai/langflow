@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
 from lfx.schema.openai_responses_schemas import create_openai_error
 
+from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.v1.endpoints import consume_and_yield, run_flow_generator, simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.events.event_manager import create_stream_tokens_event_manager
@@ -453,26 +454,9 @@ async def create_response(
     start_time = time.perf_counter()
 
     # Extract global variables from X-LANGFLOW-GLOBAL-VAR-* headers
-    variables = {}
-    header_prefix = "x-langflow-global-var-"
+    variables = extract_global_variables_from_headers(http_request.headers)
 
     logger.debug(f"All headers received: {list(http_request.headers.keys())}")
-    logger.debug(f"Looking for headers starting with: {header_prefix}")
-
-    for header_name, header_value in http_request.headers.items():
-        header_lower = header_name.lower()
-        logger.debug(f"Checking header: '{header_lower}' (original: '{header_name}')")
-        if header_lower.startswith(header_prefix):
-            # Extract variable name from header (remove prefix) and convert to uppercase
-            var_name_lower = header_lower[len(header_prefix) :]
-            var_name = var_name_lower.upper()  # Default to uppercase
-
-            variables[var_name] = header_value
-            logger.debug(
-                f"Found global variable: {var_name} = {header_value} "
-                f"(converted to uppercase from header: {header_name})"
-            )
-
     logger.debug(f"Extracted global variables from headers: {list(variables.keys())}")
     logger.debug(f"Variables dict: {variables}")
 

@@ -21,6 +21,7 @@ from langflow.services.database.models.user.model import User
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import get_session, session_scope
 from langflow.services.store.utils import get_lf_version_from_pypi
+from langflow.utils.constants import LANGFLOW_GLOBAL_VAR_HEADER_PREFIX
 
 if TYPE_CHECKING:
     from langflow.services.chat.service import ChatService
@@ -379,3 +380,32 @@ async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | N
         raise HTTPException(status_code=403, detail=msg)
 
     return user, new_flow_id
+
+
+def extract_global_variables_from_headers(headers) -> dict[str, str]:
+    """Extract global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*.
+
+    Args:
+        headers: HTTP headers object (e.g., from FastAPI Request.headers)
+
+    Returns:
+        Dictionary mapping variable names (uppercase) to their values
+
+    Example:
+        headers = {"X-LANGFLOW-GLOBAL-VAR-API-KEY": "secret", "Content-Type": "application/json"}
+        result = extract_global_variables_from_headers(headers)
+        # Returns: {"API_KEY": "secret"}
+    """
+    variables: dict[str, str] = {}
+
+    try:
+        for header_name, header_value in headers.items():
+            header_lower = header_name.lower()
+            if header_lower.startswith(LANGFLOW_GLOBAL_VAR_HEADER_PREFIX):
+                var_name = header_lower[len(LANGFLOW_GLOBAL_VAR_HEADER_PREFIX) :].upper()
+                variables[var_name] = header_value
+    except Exception as exc:  # noqa: BLE001
+        # Log the error but don't raise - we want to continue execution
+        logger.exception("Failed to extract global variables from headers: %s", exc)
+
+    return variables
