@@ -195,7 +195,9 @@ export function ParameterRenderComponent({
           <TableNodeComponent
             {...baseInputProps}
             description={templateData.info || "Add or edit data"}
-            columns={templateData?.table_schema?.columns}
+            columns={
+              templateData?.table_schema?.columns ?? templateData?.table_schema
+            }
             tableTitle={templateData?.display_name ?? "Table"}
             table_options={templateData?.table_options}
             trigger_icon={templateData?.trigger_icon}
