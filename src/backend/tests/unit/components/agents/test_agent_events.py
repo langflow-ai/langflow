@@ -549,11 +549,9 @@ async def test_agent_streaming_no_text_accumulation():
 
     async def mock_send_message(message):
         # Capture each message sent for verification
-        sent_messages.append({
-            'text': message.text,
-            'state': message.properties.state,
-            'id': getattr(message, 'id', None)
-        })
+        sent_messages.append(
+            {"text": message.text, "state": message.properties.state, "id": getattr(message, "id", None)}
+        )
         return message
 
     agent_message = Message(
@@ -646,8 +644,20 @@ async def test_agent_streaming_without_event_manager():
     # Call without event_manager parameter
     result = await process_agent_events(create_event_iterator(events), agent_message, mock_send_message)
 
-    # Without event_manager, streaming chunks should not trigger send_message
-    # Only initial message and final message should be sent
+    # Verify individual chunks were sent (not accumulated)
+    streaming_messages = [msg for msg in sent_messages if msg["state"] == "partial"]
+    assert len(streaming_messages) == 3, f"Expected 3 streaming messages, got {len(streaming_messages)}"
+
+    # Each streaming message should contain only its chunk, not accumulated text
+    assert streaming_messages[0]["text"] == "Hello"
+    assert streaming_messages[1]["text"] == " world"
+    assert streaming_messages[2]["text"] == "!"
+
+    # Verify no streaming message contains accumulated text
+    for msg in streaming_messages:
+        assert "Hello world!" not in msg["text"], f"Found accumulated text in chunk: {msg['text']}"
+
+    # Final result should have complete message
     assert result.properties.state == "complete"
     assert result.text == "Hello world!"
 
