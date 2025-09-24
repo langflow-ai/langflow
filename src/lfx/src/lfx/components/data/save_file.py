@@ -6,9 +6,9 @@ import orjson
 import pandas as pd
 from fastapi import UploadFile
 from fastapi.encoders import jsonable_encoder
-from langflow.api.v2.files import upload_user_file
-from langflow.schema import Data, DataFrame, Message
-from langflow.services.database.models.user.crud import get_user_by_id
+from lfx.api.v2.files import upload_user_file
+from lfx.schema import Data, DataFrame, Message
+from lfx.services.database.models.user.crud import get_user_by_id
 
 from lfx.custom import Component
 from lfx.inputs import SortableListInput
