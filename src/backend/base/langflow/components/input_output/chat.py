@@ -86,7 +86,7 @@ class ChatInput(ChatComponent):
             sender=self.sender,
             sender_name=self.sender_name,
             session_id=self.session_id,
-            files=self.files,
+            files=files,
         )
         if self.session_id and isinstance(message, Message) and self.should_store_message:
             stored_message = await self.send_message(
