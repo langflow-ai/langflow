@@ -229,6 +229,7 @@ class LCAgentComponent(Component):
                 ),
                 agent_message,
                 cast("SendMessageFunctionType", self.send_message),
+                self._event_manager,
             )
         except ExceptionWithMessageError as e:
             if hasattr(e, "agent_message") and hasattr(e.agent_message, "id"):

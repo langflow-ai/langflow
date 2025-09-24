@@ -1,4 +1,5 @@
 # Add helper functions for each event type
+import asyncio
 from collections.abc import AsyncIterator
 from time import perf_counter
 from typing import Any, Protocol
@@ -270,6 +271,7 @@ async def handle_on_chain_stream(
     send_message_method: SendMessageFunctionType,
     start_time: float,
     had_streaming: bool = False,
+    event_manager=None,
 ) -> tuple[Message, float]:
     data_chunk = event["data"].get("chunk", {})
     if isinstance(data_chunk, dict) and data_chunk.get("output"):
@@ -282,12 +284,18 @@ async def handle_on_chain_stream(
     elif isinstance(data_chunk, AIMessageChunk):
         output_text = _extract_output_text(data_chunk.content)
         if output_text and output_text.strip():
-            # For streaming, send only the chunk (not accumulated text)
-            agent_message.text = output_text
-            agent_message.properties.state = "partial"
-            agent_message = await send_message_method(message=agent_message)
+            # For streaming, send token event instead of add_message
+            if event_manager:
+                await asyncio.to_thread(
+                    event_manager.on_token,
+                    data={
+                        "chunk": output_text,
+                        "id": str(agent_message.id),
+                    },
+                )
             start_time = perf_counter()
     return agent_message, start_time
+
 
 
 class ToolEventHandler(Protocol):
@@ -332,6 +340,7 @@ async def process_agent_events(
     agent_executor: AsyncIterator[dict[str, Any]],
     agent_message: Message,
     send_message_method: SendMessageFunctionType,
+    event_manager=None,
 ) -> Message:
     """Process agent events and return the final output."""
     if isinstance(agent_message.properties, dict):
@@ -358,8 +367,12 @@ async def process_agent_events(
                 # Check if this is a streaming event
                 if event["event"] in ("on_chain_stream", "on_chat_model_stream"):
                     had_streaming = True
-                # Pass had_streaming parameter for chain_end events
-                if event["event"] == "on_chain_end":
+                    # For streaming events, pass event_manager
+                    agent_message, start_time = await chain_handler(
+                        event, agent_message, send_message_method, start_time, had_streaming, event_manager
+                    )
+                elif event["event"] == "on_chain_end":
+                    # Pass had_streaming parameter for chain_end events
                     agent_message, start_time = await chain_handler(
                         event, agent_message, send_message_method, start_time, had_streaming
                     )
