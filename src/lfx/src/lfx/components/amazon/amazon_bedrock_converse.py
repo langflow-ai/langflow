@@ -8,9 +8,7 @@ from langflow.io import DictInput, DropdownInput
 class AmazonBedrockConverseComponent(LCModelComponent):
     display_name: str = "Amazon Bedrock Converse"
     description: str = (
-        "Generate text using Amazon Bedrock LLMs with the modern Converse API "
-        "for improved conversation handling. We recommend the Converse API for users "
-        "who do not need to use custom models. It can be accessed using ChatBedrockConverse."
+        "Generate text using Amazon Bedrock LLMs with the modern Converse API for improved conversation handling."
     )
     icon = "Amazon"
     name = "AmazonBedrockConverseModel"
