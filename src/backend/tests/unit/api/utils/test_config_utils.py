@@ -8,12 +8,17 @@ from langflow.api.utils.mcp.config_utils import (
     auto_configure_starter_projects_mcp,
     validate_mcp_server_for_project,
 )
+from langflow.services.auth.utils import get_password_hash
+from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
+from langflow.services.database.utils import session_getter
 from langflow.services.deps import session_scope
 from sqlmodel import select
+
+from lfx.services.deps import get_db_service
 
 
 class TestMCPServerValidationResult:
@@ -109,18 +114,6 @@ class TestValidateMcpServerForProject:
             await session.delete(project)
             await session.commit()
 
-    @pytest.fixture
-    async def test_api_key(self, client: AsyncClient, logged_in_headers):
-        """Create a test API key for testing."""
-        # Create API key via API
-        response = await client.post("/api/v1/api-key/", json={"name": "test-api-key"}, headers=logged_in_headers)
-        assert response.status_code == 200
-        api_key_data = response.json()
-        yield api_key_data["api_key"]
-
-        # Cleanup - delete API key
-        await client.delete(f"/api/v1/api-key/{api_key_data['id']}", headers=logged_in_headers)
-
     @pytest.mark.asyncio
     async def test_validate_server_not_exists(self, active_user, test_project, client: AsyncClient):  # noqa: ARG002
         """Test validation when server doesn't exist."""
@@ -141,9 +134,8 @@ class TestValidateMcpServerForProject:
             assert result.conflict_message == ""
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Better way to find the base url")
     async def test_validate_server_exists_project_matches(
-        self, active_user, test_project, test_api_key, client: AsyncClient
+        self, active_user, test_project, created_api_key, client: AsyncClient
     ):
         """Test validation when server exists and project ID matches."""
         sse_url = f"{client.base_url}/api/v1/mcp/project/{test_project.id}/sse"
@@ -154,7 +146,7 @@ class TestValidateMcpServerForProject:
 
         # Create MCP server via API
         response = await client.post(
-            "/api/v2/mcp/servers/lf-test_project", json=server_config, headers={"x-api-key": test_api_key}
+            "/api/v2/mcp/servers/lf-test_project", json=server_config, headers={"x-api-key": created_api_key.api_key}
         )
         assert response.status_code == 200
 
@@ -175,12 +167,12 @@ class TestValidateMcpServerForProject:
             assert result.conflict_message == ""
 
         # Cleanup - delete the server
-        await client.delete("/api/v2/mcp/servers/lf-test_project", headers={"x-api-key": test_api_key})
+        await client.delete("/api/v2/mcp/servers/lf-test_project", headers={"x-api-key": created_api_key.api_key})
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="404 when trying to create the server using client")
+    # @pytest.mark.skip(reason="404 when trying to create the server using client")
     async def test_validate_server_exists_project_doesnt_match(
-        self, active_user, test_project, test_api_key, client: AsyncClient
+        self, active_user, test_project, created_api_key, client: AsyncClient
     ):
         """Test validation when server exists but project ID doesn't match."""
         other_project_id = uuid4()
@@ -194,7 +186,7 @@ class TestValidateMcpServerForProject:
 
         # Create MCP server with different project ID via API
         response = await client.post(
-            f"/api/v2/mcp/servers/{server_name}", json=server_config, headers={"x-api-key": test_api_key}
+            f"/api/v2/mcp/servers/{server_name}", json=server_config, headers={"x-api-key": created_api_key.api_key}
         )
         assert response.status_code == 200
 
@@ -216,12 +208,11 @@ class TestValidateMcpServerForProject:
             assert str(test_project.id) in result.conflict_message
 
         # Cleanup - delete the server
-        await client.delete(f"/api/v2/mcp/servers/{server_name}", headers={"x-api-key": test_api_key})
+        await client.delete(f"/api/v2/mcp/servers/{server_name}", headers={"x-api-key": created_api_key.api_key})
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="404 during Client operations")
     async def test_validate_server_different_operations_messages(
-        self, active_user, test_project, test_api_key, client: AsyncClient
+        self, active_user, test_project, created_api_key, client: AsyncClient
     ):
         """Test different conflict messages for different operations."""
         other_project_id = uuid4()
@@ -235,7 +226,7 @@ class TestValidateMcpServerForProject:
 
         # Create MCP server with different project ID via API
         response = await client.post(
-            f"/api/v2/mcp/servers/{server_name}", json=server_config, headers={"x-api-key": test_api_key}
+            f"/api/v2/mcp/servers/{server_name}", json=server_config, headers={"x-api-key": created_api_key.api_key}
         )
         assert response.status_code == 200
 
@@ -264,7 +255,7 @@ class TestValidateMcpServerForProject:
             assert "Cannot delete MCP server" in result.conflict_message
 
         # Cleanup - delete the server
-        await client.delete(f"/api/v2/mcp/servers/{server_name}", headers={"x-api-key": test_api_key})
+        await client.delete(f"/api/v2/mcp/servers/{server_name}", headers={"x-api-key": created_api_key.api_key})
 
     @pytest.mark.asyncio
     async def test_validate_server_exception_handling(self, active_user, test_project, client: AsyncClient):  # noqa: ARG002
