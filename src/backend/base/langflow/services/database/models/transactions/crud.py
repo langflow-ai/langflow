@@ -63,7 +63,7 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
             ),
         )
 
-        # Add new entry and execute delete - let caller manage transaction
+        # Add new entry and execute delete
         db.add(table)
         await db.exec(delete_older)
 

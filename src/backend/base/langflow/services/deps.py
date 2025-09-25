@@ -149,8 +149,10 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 async def session_scope() -> AsyncGenerator[AsyncSession, None]:
     """Context manager for managing an async session scope.
 
-    This context manager delegates to DatabaseService.with_session() which already
-    handles proper session lifecycle management including commits and rollbacks.
+    This context manager provides complete transaction management:
+    - Auto-commits on successful completion
+    - Auto-rollbacks on exceptions
+    - Proper session cleanup
 
     Yields:
         AsyncSession: The async session object.
@@ -161,7 +163,12 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
     """
     db_service = get_db_service()
     async with db_service.with_session() as session:
-        yield session
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
 
 
 def get_cache_service() -> CacheService | AsyncBaseCacheService:
