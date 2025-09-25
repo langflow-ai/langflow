@@ -9,7 +9,6 @@ from lfx.base.agents.events import ExceptionWithMessageError
 from lfx.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
     MODEL_DYNAMIC_UPDATE_FIELDS,
-    MODEL_OPTIONS_METADATA,
     MODEL_PROVIDERS_DICT,
     MODEL_PROVIDERS_LIST,
     MODELS_METADATA,
@@ -65,7 +64,7 @@ class AgentComponent(ToolCallingAgentComponent):
             real_time_refresh=True,
             refresh_button=False,
             input_types=[],
-            options_metadata=[*MODEL_OPTIONS_METADATA, {"icon": "brain"}],
+            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA],
             external_options={
                 "fields": {
                     "data": {
