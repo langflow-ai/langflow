@@ -17,6 +17,19 @@ export const IS_CLERK_AUTH =
 export const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || "";
 export const CLERK_DUMMY_PASSWORD = "clerk_dummy_password";
 
+export function getClerkHealthResponse(
+  setHealthCheckTimeout: (timeout: string | null) => void,
+) {
+  setHealthCheckTimeout(null);
+  return {
+    status: "ok",
+    chat: "ok",
+    db: "ok",
+    folder: "ok",
+    variables: "ok",
+  } as const;
+}
+
 export enum HttpStatusCode {
   UNAUTHORIZED = 401,
   FORBIDDEN = 403,
