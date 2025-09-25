@@ -61,6 +61,23 @@ on:
 
 
 jobs:
+  echo-inputs:
+    name: Echo Workflow Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo workflow inputs
+        run: |
+          echo "release_tag: ${{ inputs.release_tag }}"
+          echo "release_package_base: ${{ inputs.release_package_base }}"
+          echo "release_package_main: ${{ inputs.release_package_main }}"
+          echo "release_lfx: ${{ inputs.release_lfx }}"
+          echo "build_docker_base: ${{ inputs.build_docker_base }}"
+          echo "build_docker_main: ${{ inputs.build_docker_main }}"
+          echo "build_docker_ep: ${{ inputs.build_docker_ep }}"
+          echo "pre_release: ${{ inputs.pre_release }}"
+          echo "create_release: ${{ inputs.create_release }}"
+          echo "runs_on: ${{ inputs.runs_on }}"
+
   validate-tag:
     name: Validate Tag Input
     runs-on: ubuntu-latest
