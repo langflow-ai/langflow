@@ -3,8 +3,9 @@ from collections import defaultdict
 from threading import RLock
 from typing import Any
 
-from langflow.services.base import Service
 from lfx.serialization.normalizer import normalize_for_cache
+
+from langflow.services.base import Service
 from langflow.services.cache.base import AsyncBaseCacheService, CacheService
 from langflow.services.deps import get_cache_service
 
