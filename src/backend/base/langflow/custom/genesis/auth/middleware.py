@@ -1,15 +1,18 @@
 """Custom authentication middleware for Langflow service."""
 
 import asyncio
+import logging
 import os
 from functools import partial
-from typing import Any, Dict
+from typing import Any
 
 import requests
 from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
+
+logger = logging.getLogger(__name__)
 
 
 class LangflowUser:
@@ -20,7 +23,7 @@ class LangflowUser:
         genesis_user_id: str,
         client_id: str,
         access_token: str,
-        user_data: Dict[str, Any],
+        user_data: dict[str, Any],
     ) -> None:
         self.genesis_user_id = genesis_user_id
         self.client_id = client_id
@@ -32,7 +35,7 @@ class LangflowUser:
         # Store original data for compatibility
         self._user_data = user_data
 
-    def dict(self) -> Dict[str, Any]:
+    def dict(self) -> dict[str, Any]:
         """Return user data as dictionary for compatibility."""
         return {
             "id": self.genesis_user_id,
@@ -56,20 +59,23 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/docs",
             "/redoc",
             "/openapi.json",
-            "/api/v1/auto_login",  # Langflow's auto-login if needed
+            "/api/v1/auto_login",
+            "/api/v1/config",  # Langflow's auto-login if needed
             # Add other public endpoints as needed
         ]
         self.client_id = os.getenv("GENESIS_CLIENT_ID")
         auth_base_url = os.getenv("GENESIS_SERVICE_AUTH_URL")
 
         if not auth_base_url:
-            raise ValueError("GENESIS_SERVICE_AUTH_URL environment variable is not set")
+            error_msg = "GENESIS_SERVICE_AUTH_URL environment variable is not set"
+            raise ValueError(error_msg)
         if not self.client_id:
-            raise ValueError("GENESIS_CLIENT_ID environment variable is not set")
+            error_msg = "GENESIS_CLIENT_ID environment variable is not set"
+            raise ValueError(error_msg)
 
         self.auth_service_url = f"{auth_base_url}/auth/api/v1"
 
-    def _make_request(self, access_token: str) -> Dict[str, Any]:
+    def _make_request(self, access_token: str) -> dict[str, Any]:
         """Make synchronous request to validate token."""
         try:
             response = requests.get(
@@ -82,7 +88,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             response_data = response.json()
 
             # If the request was not successful, raise an exception with the error details
-            if response.status_code != 200:
+            if response.status_code != status.HTTP_200_OK:
                 raise HTTPException(
                     status_code=response.status_code,
                     detail=response_data.get("message", "Authentication failed"),
@@ -92,46 +98,40 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         except requests.exceptions.RequestException as e:
             # Handle network/timeout errors - log but don't crash the whole service
-            print(f"⚠️ Genesis auth service unavailable: {e}")
+            logger.warning("Genesis auth service unavailable: %s", e)
             # In development, you might want to allow access when auth service is down
             # In production, this should be strict
             if os.getenv("GENESIS_AUTH_FAIL_OPEN", "false").lower() == "true":
-                print("ℹ️ Allowing access due to GENESIS_AUTH_FAIL_OPEN=true")
+                logger.info("Allowing access due to GENESIS_AUTH_FAIL_OPEN=true")
                 return {"id": "dev-user", "username": "dev-user", "email": "dev@genesis.local", "is_active": True}
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="User service unavailable",
-                )
-        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="User service unavailable",
+            ) from e
+        except ValueError as e:
             # Handle JSON decode errors
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Invalid response from authentication service",
-            )
+            ) from e
 
-    async def _validate_user(self, access_token: str) -> Dict[str, Any]:
+    async def _validate_user(self, access_token: str) -> dict[str, Any]:
         """Validate the access token with the user management service."""
         try:
             # Run the synchronous request in a thread pool
             loop = asyncio.get_running_loop()
-            user_data = await loop.run_in_executor(
-                None, partial(self._make_request, access_token)
-            )
-            return user_data
+            return await loop.run_in_executor(None, partial(self._make_request, access_token))
 
         except HTTPException:
             # Re-raise HTTP exceptions as they contain the correct status code
             raise
-        except Exception as e:
+        except (ValueError, RuntimeError, ConnectionError) as e:
             # Handle any unexpected errors
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-            )
+            ) from e
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         """Main middleware dispatch method."""
         try:
             # Allow OPTIONS requests for CORS preflight
@@ -173,7 +173,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                     content={"message": auth_error.detail},
                 )
 
-        except Exception as e:
+        except (ValueError, RuntimeError, ConnectionError) as e:
             # Handle any unexpected errors
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

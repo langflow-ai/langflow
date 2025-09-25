@@ -3,6 +3,12 @@
 This module registers all Genesis Studio custom services with Langflow.
 """
 
+import logging
+
+from . import deps
+
+logger = logging.getLogger(__name__)
+
 
 def register_genesis_services():
     """Register custom services with Langflow."""
@@ -21,7 +27,7 @@ def register_genesis_services():
             factory = ExternalIntegrationServiceFactory()
             service_manager.register_factory(factory)
             registered_services.append(factory.service_class.__name__)
-        except Exception as e:
+        except (ImportError, ValueError, AttributeError) as e:
             failed_services.append(f"ExternalIntegrationService: {e}")
 
         # Try to register FlexStore Service
@@ -31,7 +37,7 @@ def register_genesis_services():
             factory = FlexStoreServiceFactory()
             service_manager.register_factory(factory)
             registered_services.append(factory.service_class.__name__)
-        except Exception as e:
+        except (ImportError, ValueError, AttributeError) as e:
             failed_services.append(f"FlexStoreService: {e}")
 
         # Try to register ModelHub Service (legacy)
@@ -41,9 +47,8 @@ def register_genesis_services():
             factory = ModelHubServiceFactory()
             service_manager.register_factory(factory)
             registered_services.append(factory.service_class.__name__)
-        except Exception as e:
+        except (ImportError, ValueError, AttributeError) as e:
             failed_services.append(f"ModelHubService (legacy): {e}")
-
 
         # Try to register OCR Service (might fail if Azure SDK not installed)
         try:
@@ -52,7 +57,7 @@ def register_genesis_services():
             factory = OCRServiceFactory()
             service_manager.register_factory(factory)
             registered_services.append(factory.service_class.__name__)
-        except Exception as e:
+        except (ImportError, ValueError, AttributeError) as e:
             failed_services.append(f"OCRService: {e}")
 
         # Try to register Knowledge Service
@@ -62,7 +67,7 @@ def register_genesis_services():
             factory = KnowledgeServiceFactory()
             service_manager.register_factory(factory)
             registered_services.append(factory.service_class.__name__)
-        except Exception as e:
+        except (ImportError, ValueError, AttributeError) as e:
             failed_services.append(f"KnowledgeService: {e}")
 
         # Try to register RAG Service
@@ -72,7 +77,7 @@ def register_genesis_services():
             factory = RAGServiceFactory()
             service_manager.register_factory(factory)
             registered_services.append(factory.service_class.__name__)
-        except Exception as e:
+        except (ImportError, ValueError, AttributeError) as e:
             failed_services.append(f"RAGService: {e}")
 
         # Try to register Tracing Service (might fail if autonomize_observer not installed)
@@ -82,35 +87,39 @@ def register_genesis_services():
             factory = TracingServiceFactory()
             service_manager.register_factory(factory)
             registered_services.append(factory.service_class.__name__)
-        except Exception as e:
+        except (ImportError, ValueError, AttributeError) as e:
             failed_services.append(f"TracingService: {e}")
 
+        # Try to register AI Gateway Service
+        try:
+            from .ai_gateway.factory import AIGatewayServiceFactory
+
+            factory = AIGatewayServiceFactory()
+            service_manager.register_factory(factory)
+            registered_services.append(factory.service_class.__name__)
+        except (ImportError, ValueError, AttributeError) as e:
+            failed_services.append(f"AIGatewayService: {e}")
 
         # Report results
         if registered_services:
-            print("✅ Custom services registered successfully:")
+            logger.info("✅ Custom services registered successfully:")
             for service in registered_services:
-                print(f"  - {service}")
+                logger.info("  - %s", service)
 
         if failed_services:
-            print(
-                "⚠️  Some services failed to register (optional dependencies missing):"
-            )
+            logger.warning("⚠️  Some services failed to register (optional dependencies missing):")
             for service in failed_services:
-                print(f"  - {service}")
+                logger.warning("  - %s", service)
 
         # Return True if at least one service was registered
         return len(registered_services) > 0
 
-    except ImportError as e:
-        print(f"❌ Import error while registering custom services: {e}")
+    except ImportError:
+        logger.exception("❌ Import error while registering custom services")
         return False
-    except Exception as e:
-        print(f"❌ Failed to register custom services: {e}")
+    except (ValueError, AttributeError, RuntimeError):
+        logger.exception("❌ Failed to register custom services")
         return False
 
 
-__all__ = ["register_genesis_services", "deps"]
-
-# Import deps module for easy access to dependency injection functions
-from . import deps
+__all__ = ["deps", "register_genesis_services"]

@@ -1,5 +1,4 @@
-"""
-Dependency injection utilities for Genesis Studio Backend services.
+"""Dependency injection utilities for Genesis Studio Backend services.
 
 This module provides clean access to custom services through getter functions,
 following the same pattern as langflow's deps.py for consistency.
@@ -10,11 +9,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from src.backend.base.langflow.custom.genesis.services.external_integration.service import ExternalIntegrationService
+    from src.backend.base.langflow.custom.genesis.services.ai_gateway.service import AIGatewayService
+    from src.backend.base.langflow.custom.genesis.services.claim_auth_history.service import ClaimAuthHistoryService
+    from src.backend.base.langflow.custom.genesis.services.encoder_pro.service import EncoderProService
+    from src.backend.base.langflow.custom.genesis.services.external_integration.service import (
+        ExternalIntegrationService,
+    )
     from src.backend.base.langflow.custom.genesis.services.flexstore.service import FlexStoreService
     from src.backend.base.langflow.custom.genesis.services.knowledge.service import KnowledgeService
     from src.backend.base.langflow.custom.genesis.services.modelhub.service import ModelHubService
     from src.backend.base.langflow.custom.genesis.services.ocr.service import OCRService
+    from src.backend.base.langflow.custom.genesis.services.pa_lookup.service import PALookupService
     from src.backend.base.langflow.custom.genesis.services.prompt.service import PromptService
     from src.backend.base.langflow.custom.genesis.services.rag.service import RAGService
     from src.backend.base.langflow.custom.genesis.services.tracing.service import TracingService
@@ -39,6 +44,7 @@ def get_service(service_name: str, default=None):
         # Ensure that the service manager is initialized
         try:
             from loguru import logger
+
             logger.debug("Initializing service manager and registering LFX factories...")
             service_manager.register_factories()
 
@@ -51,17 +57,20 @@ def get_service(service_name: str, default=None):
                 logger.debug("✅ Genesis services registration completed successfully")
             else:
                 logger.warning("⚠️ Genesis services registration completed with some failures")
-        except Exception as e:
+        except (ImportError, ValueError, RuntimeError, AttributeError) as e:
             from loguru import logger
-            logger.error(f"❌ Failed to register Genesis services: {e}")
+
+            logger.error("❌ Failed to register Genesis services: %s", e)
             import traceback
-            logger.debug(f"Error details: {traceback.format_exc()}")
+
+            logger.debug("Error details: %s", traceback.format_exc())
 
     try:
         return service_manager.get(service_name, default)
-    except Exception as e:
+    except (KeyError, AttributeError, RuntimeError) as e:
         from loguru import logger
-        logger.error(f"❌ Failed to get service '{service_name}': {e}")
+
+        logger.error("❌ Failed to get service '%s': %s", service_name, e)
         raise
 
 
@@ -75,9 +84,7 @@ def get_external_integration_service() -> ExternalIntegrationService:
         ExternalIntegrationServiceFactory,
     )
 
-    return get_service(
-        "external_integration_service", ExternalIntegrationServiceFactory()
-    )
+    return get_service("external_integration_service", ExternalIntegrationServiceFactory())
 
 
 def get_flexstore_service() -> FlexStoreService:
@@ -159,22 +166,34 @@ def get_genesis_tracing_service() -> TracingService:
     return get_service("genesis_tracing_service", TracingServiceFactory())
 
 
-def get_pa_lookup_service() -> "PALookupService":
+def get_pa_lookup_service() -> PALookupService:
     """Retrieves the PALookupService instance from the service manager."""
     from src.backend.base.langflow.custom.genesis.services.pa_lookup.factory import PALookupServiceFactory
+
     return get_service("pa_lookup_service", PALookupServiceFactory())
 
 
-def get_encoder_pro_service() -> "EncoderProService":
+def get_encoder_pro_service() -> EncoderProService:
     """Retrieves the EncoderProService instance from the service manager."""
     from src.backend.base.langflow.custom.genesis.services.encoder_pro.factory import EncoderProServiceFactory
+
     return get_service("encoder_pro_service", EncoderProServiceFactory())
 
 
-def get_claim_auth_history_service() -> "ClaimAuthHistoryService":
+def get_claim_auth_history_service() -> ClaimAuthHistoryService:
     """Retrieves the ClaimAuthHistoryService instance from the service manager."""
-    from src.backend.base.langflow.custom.genesis.services.claim_auth_history.factory import ClaimAuthHistoryServiceFactory
+    from src.backend.base.langflow.custom.genesis.services.claim_auth_history.factory import (
+        ClaimAuthHistoryServiceFactory,
+    )
+
     return get_service("claim_auth_history_service", ClaimAuthHistoryServiceFactory())
+
+
+def get_ai_gateway_service() -> AIGatewayService:
+    """Retrieves the AIGatewayService instance from the service manager."""
+    from .ai_gateway.factory import AIGatewayServiceFactory
+
+    return get_service("ai_gateway_service", AIGatewayServiceFactory())
 
 
 # Convenience function for common service combinations
@@ -191,9 +210,7 @@ def get_ai_services() -> tuple[ModelHubService, PromptService, RAGService]:
     )
 
 
-def get_data_services() -> (
-    tuple[FlexStoreService, KnowledgeService, ExternalIntegrationService]
-):
+def get_data_services() -> tuple[FlexStoreService, KnowledgeService, ExternalIntegrationService]:
     """Get commonly used data-related services together.
 
     Returns:
