@@ -10,8 +10,7 @@ from langflow.initial_setup.setup import load_starter_projects
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.folder.model import FolderCreate
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from langflow.services.deps import get_db_service, session_scope
 from sqlalchemy import text
 
 from lfx.graph.utils import log_transaction, log_vertex_build
@@ -539,8 +538,7 @@ async def test_download_file(
             FlowCreate(name=flow_2_unique_name, description="description", data=data),
         ]
     )
-    db_manager = get_db_service()
-    async with session_getter(db_manager) as _session:
+    async with session_scope() as _session:
         saved_flows = []
         for flow in flow_list.flows:
             flow.user_id = active_user.id
