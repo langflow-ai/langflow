@@ -80,6 +80,8 @@ test(
 
     await page.getByTestId("button_open_prompt_modal").click();
 
+    await page.waitForTimeout(500);
+
     await page.getByTestId("edit-prompt-sanitized").last().click();
 
     await page
@@ -88,11 +90,15 @@ test(
 
     await page.getByText("Check & Save").click();
 
+    await page.waitForTimeout(500);
+
     await page.getByTestId("button_run_chat output").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     await page.getByTestId("playground-btn-flow-io").click();
+
+    await page.waitForTimeout(500);
 
     const textContents2 = await page
       .getByTestId("div-chat-message")

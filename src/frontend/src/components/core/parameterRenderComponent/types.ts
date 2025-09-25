@@ -112,6 +112,7 @@ export type DropDownComponentType = {
   options: string[];
   name: string;
   dialogInputs?: any;
+  externalOptions?: any;
   optionsMetaData?: any[];
   nodeId: string;
   nodeClass: APIClassType;

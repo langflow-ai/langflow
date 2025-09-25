@@ -28,13 +28,12 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
   handleInputFocus,
   handleInputBlur,
   handleInputChange,
-  filterType,
-  setFilterEdge,
-  setFilterData,
-  data,
+  filterName,
+  filterDescription,
+  resetFilters,
 }: SidebarHeaderComponentProps) {
   return (
-    <SidebarHeader className="flex w-full flex-col gap-2 p-4 pb-1 group-data-[collapsible=icon]:hidden">
+    <SidebarHeader className="flex w-full flex-col gap-2 group-data-[collapsible=icon]:hidden border-b">
       {!ENABLE_NEW_SIDEBAR && (
         <Disclosure open={showConfig} onOpenChange={setShowConfig}>
           <div className="flex w-full items-center gap-2">
@@ -79,15 +78,11 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
         handleInputBlur={handleInputBlur}
         handleInputChange={handleInputChange}
       />
-      {filterType && (
+      {filterName !== "" && filterDescription !== "" && (
         <SidebarFilterComponent
-          isInput={!!filterType.source}
-          type={filterType.type}
-          color={filterType.color}
-          resetFilters={() => {
-            setFilterEdge([]);
-            setFilterData(data);
-          }}
+          name={filterName}
+          description={filterDescription}
+          resetFilters={resetFilters}
         />
       )}
       {ENABLE_NEW_SIDEBAR && (

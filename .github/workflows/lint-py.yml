@@ -25,7 +25,7 @@ jobs:
           - "3.10"
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.branch || github.ref }}
           persist-credentials: true
