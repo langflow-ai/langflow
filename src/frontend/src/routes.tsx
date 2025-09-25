@@ -1,4 +1,4 @@
-import { lazy } from "react";
+import { Suspense, lazy } from "react";
 import {
   createBrowserRouter,
   createRoutesFromElements,
@@ -10,7 +10,6 @@ import { ProtectedRoute } from "./components/authorization/authGuard";
 import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
 import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
 import ContextWrapper from "./contexts";
-import CustomDashboardWrapperPage from "./customization/components/custom-DashboardWrapperPage";
 import { CustomNavigate } from "./customization/components/custom-navigate";
 import { BASENAME } from "./customization/config-constants";
 import {
@@ -19,23 +18,62 @@ import {
 } from "./customization/feature-flags";
 import { CustomRoutesStore } from "./customization/utils/custom-routes-store";
 import { CustomRoutesStorePages } from "./customization/utils/custom-routes-store-pages";
-import { AppAuthenticatedPage } from "./pages/AppAuthenticatedPage";
-import { AppInitPage } from "./pages/AppInitPage";
-import { AppWrapperPage } from "./pages/AppWrapperPage";
-import FlowPage from "./pages/FlowPage";
-import FilesPage from "./pages/MainPage/pages/filesPage";
-import HomePage from "./pages/MainPage/pages/homePage";
-import CollectionPage from "./pages/MainPage/pages/main-page";
-import SettingsPage from "./pages/SettingsPage";
-import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
-import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
-import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
-import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
-import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
-import ViewPage from "./pages/ViewPage";
-import { LoginPage, SignUp, LoginAdminPage } from "./clerk/login-pages";
-import OrganizationPage from "./clerk/OrganizationPage";
 import { IS_CLERK_AUTH } from "./clerk/auth";
+import { LoadingPage } from "./pages/LoadingPage";
+
+const AppWrapperPage = lazy(() =>
+  import("./pages/AppWrapperPage").then((module) => ({
+    default: module.AppWrapperPage,
+  })),
+);
+const AppInitPage = lazy(() =>
+  import("./pages/AppInitPage").then((module) => ({
+    default: module.AppInitPage,
+  })),
+);
+const AppAuthenticatedPage = lazy(() =>
+  import("./pages/AppAuthenticatedPage").then((module) => ({
+    default: module.AppAuthenticatedPage,
+  })),
+);
+const CustomDashboardWrapperPage = lazy(
+  () => import("./customization/components/custom-DashboardWrapperPage"),
+);
+const CollectionPage = lazy(() => import("./pages/MainPage/pages/main-page"));
+const HomePage = lazy(() => import("./pages/MainPage/pages/homePage"));
+const FilesPage = lazy(() => import("./pages/MainPage/pages/filesPage"));
+const FlowPage = lazy(() => import("./pages/FlowPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const GlobalVariablesPage = lazy(
+  () => import("./pages/SettingsPage/pages/GlobalVariablesPage"),
+);
+const ApiKeysPage = lazy(() => import("./pages/SettingsPage/pages/ApiKeysPage"));
+const GeneralPage = lazy(
+  () => import("./pages/SettingsPage/pages/GeneralPage"),
+);
+const ShortcutsPage = lazy(
+  () => import("./pages/SettingsPage/pages/ShortcutsPage"),
+);
+const MessagesPage = lazy(
+  () => import("./pages/SettingsPage/pages/messagesPage"),
+);
+const ViewPage = lazy(() => import("./pages/ViewPage"));
+const OrganizationPage = lazy(() => import("./clerk/OrganizationPage"));
+const LoginPage = lazy(() =>
+  import("./clerk/login-pages").then((module) => ({
+    default: module.LoginPage,
+  })),
+);
+const SignUp = lazy(() =>
+  import("./clerk/login-pages").then((module) => ({
+    default: module.SignUp,
+  })),
+);
+const LoginAdminPage = lazy(() =>
+  import("./clerk/login-pages").then((module) => ({
+    default: module.LoginAdminPage,
+  })),
+);
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
@@ -46,26 +84,65 @@ const router = createBrowserRouter(
     <Route path="/playground/:id/">
       <Route
         path=""
-        element={(() => (
+        element={
           <ContextWrapper key={1}>
-            <PlaygroundPage />
+            <Suspense fallback={<LoadingPage />}>
+              <PlaygroundPage />
+            </Suspense>
           </ContextWrapper>
-        ))()}
+        }
       />
     </Route>,
     <Route
       path={ENABLE_CUSTOM_PARAM ? "/:customParam?" : "/"}
-      element={(() => (
+      element={
         <ContextWrapper key={2}>
           <Outlet />
         </ContextWrapper>
-      ))()}
+      }
     >
-      <Route path="" element={(() => <AppWrapperPage />)()}>
-        <Route path="" element={(() => <ProtectedRoute><AppInitPage /></ProtectedRoute>)()}>
-          <Route path="" element={(() => <AppAuthenticatedPage />)()}>
-            <Route path="" element={(() => <CustomDashboardWrapperPage />)()}>
-              <Route path="" element={(() => <CollectionPage />)()}>
+      <Route
+        path=""
+        element={
+          <Suspense fallback={<LoadingPage />}>
+            <AppWrapperPage />
+          </Suspense>
+        }
+      >
+        <Route
+          path=""
+          element={
+            <Suspense fallback={<LoadingPage />}>
+              <ProtectedRoute>
+                <AppInitPage />
+              </ProtectedRoute>
+            </Suspense>
+          }
+        >
+          <Route
+            path=""
+            element={
+              <Suspense fallback={<LoadingPage />}>
+                <AppAuthenticatedPage />
+              </Suspense>
+            }
+          >
+            <Route
+              path=""
+              element={
+                <Suspense fallback={<LoadingPage />}>
+                  <CustomDashboardWrapperPage />
+                </Suspense>
+              }
+            >
+              <Route
+                path=""
+                element={
+                  <Suspense fallback={<LoadingPage />}>
+                    <CollectionPage />
+                  </Suspense>
+                }
+              >
                 <Route
                   index
                   element={
@@ -77,61 +154,227 @@ const router = createBrowserRouter(
                   }
                 />
                 {ENABLE_FILE_MANAGEMENT && (
-                  <Route path="files" element={<FilesPage />} />
+                  <Route
+                    path="files"
+                    element={
+                      <Suspense fallback={<LoadingPage />}>
+                        <FilesPage />
+                      </Suspense>
+                    }
+                  />
                 )}
-                <Route path="flows/" element={<HomePage key="flows" type="flows" />} />
-                <Route path="components/" element={<HomePage key="components" type="components" />}>
-                  <Route path="folder/:folderId" element={<HomePage key="components" type="components" />} />
+                <Route
+                  path="flows/"
+                  element={
+                    <Suspense fallback={<LoadingPage />}>
+                      <HomePage key="flows" type="flows" />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="components/"
+                  element={
+                    <Suspense fallback={<LoadingPage />}>
+                      <HomePage key="components" type="components" />
+                    </Suspense>
+                  }
+                >
+                  <Route
+                    path="folder/:folderId"
+                    element={
+                      <Suspense fallback={<LoadingPage />}>
+                        <HomePage key="components" type="components" />
+                      </Suspense>
+                    }
+                  />
                 </Route>
-                <Route path="all/" element={<HomePage key="flows" type="flows" />}>
-                  <Route path="folder/:folderId" element={<HomePage key="flows" type="flows" />} />
+                <Route
+                  path="all/"
+                  element={
+                    <Suspense fallback={<LoadingPage />}>
+                      <HomePage key="flows" type="flows" />
+                    </Suspense>
+                  }
+                >
+                  <Route
+                    path="folder/:folderId"
+                    element={
+                      <Suspense fallback={<LoadingPage />}>
+                        <HomePage key="flows" type="flows" />
+                      </Suspense>
+                    }
+                  />
                 </Route>
-                <Route path="mcp/" element={<HomePage key="mcp" type="mcp" />}>
-                  <Route path="folder/:folderId" element={<HomePage key="mcp" type="mcp" />} />
+                <Route
+                  path="mcp/"
+                  element={
+                    <Suspense fallback={<LoadingPage />}>
+                      <HomePage key="mcp" type="mcp" />
+                    </Suspense>
+                  }
+                >
+                  <Route
+                    path="folder/:folderId"
+                    element={
+                      <Suspense fallback={<LoadingPage />}>
+                        <HomePage key="mcp" type="mcp" />
+                      </Suspense>
+                    }
+                  />
                 </Route>
               </Route>
-              <Route path="settings" element={<SettingsPage />}>
+              <Route
+                path="settings"
+                element={
+                  <Suspense fallback={<LoadingPage />}>
+                    <SettingsPage />
+                  </Suspense>
+                }
+              >
                 <Route index element={<CustomNavigate replace to="general" />} />
-                <Route path="global-variables" element={<GlobalVariablesPage />} />
-                <Route path="api-keys" element={<ApiKeysPage />} />
+                <Route
+                  path="global-variables"
+                  element={
+                    <Suspense fallback={<LoadingPage />}>
+                      <GlobalVariablesPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="api-keys"
+                  element={
+                    <Suspense fallback={<LoadingPage />}>
+                      <ApiKeysPage />
+                    </Suspense>
+                  }
+                />
                 <Route
                   path="general/:scrollId?"
                   element={
-                    <AuthSettingsGuard>
-                      <GeneralPage />
-                    </AuthSettingsGuard>
+                    <Suspense fallback={<LoadingPage />}>
+                      <AuthSettingsGuard>
+                        <GeneralPage />
+                      </AuthSettingsGuard>
+                    </Suspense>
                   }
                 />
-                <Route path="shortcuts" element={<ShortcutsPage />} />
-                <Route path="messages" element={<MessagesPage />} />
+                <Route
+                  path="shortcuts"
+                  element={
+                    <Suspense fallback={<LoadingPage />}>
+                      <ShortcutsPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="messages"
+                  element={
+                    <Suspense fallback={<LoadingPage />}>
+                      <MessagesPage />
+                    </Suspense>
+                  }
+                />
                 {CustomRoutesStore()}
               </Route>
               {CustomRoutesStorePages()}
               <Route path="account">
-                <Route path="delete" element={<DeleteAccountPage />} />
+                <Route
+                  path="delete"
+                  element={
+                    <Suspense fallback={<LoadingPage />}>
+                      <DeleteAccountPage />
+                    </Suspense>
+                  }
+                />
               </Route>
               <Route
                 path="admin"
                 element={
-                  <ProtectedAdminRoute>
-                    <AdminPage />
-                  </ProtectedAdminRoute>
+                  <Suspense fallback={<LoadingPage />}>
+                    <ProtectedAdminRoute>
+                      <AdminPage />
+                    </ProtectedAdminRoute>
+                  </Suspense>
                 }
               />
             </Route>
             <Route path="flow/:id/">
-              <Route path="" element={<CustomDashboardWrapperPage />}>
-                <Route path="folder/:folderId/" element={<FlowPage />} />
-                <Route path="" element={<FlowPage />} />
+              <Route
+                path=""
+                element={
+                  <Suspense fallback={<LoadingPage />}>
+                    <CustomDashboardWrapperPage />
+                  </Suspense>
+                }
+              >
+                <Route
+                  path="folder/:folderId/"
+                  element={
+                    <Suspense fallback={<LoadingPage />}>
+                      <FlowPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path=""
+                  element={
+                    <Suspense fallback={<LoadingPage />}>
+                      <FlowPage />
+                    </Suspense>
+                  }
+                />
               </Route>
-              <Route path="view" element={<ViewPage />} />
+              <Route
+                path="view"
+                element={
+                  <Suspense fallback={<LoadingPage />}>
+                    <ViewPage />
+                  </Suspense>
+                }
+              />
             </Route>
           </Route>
         </Route>
-        <Route path="login" element={<ProtectedLoginRoute><LoginPage /></ProtectedLoginRoute>} />
-        <Route path="organization" element={<ProtectedLoginRoute><OrganizationPage /></ProtectedLoginRoute>} />
-        <Route path="signup" element={<ProtectedLoginRoute><SignUp /></ProtectedLoginRoute>} />
-        <Route path="login/admin" element={<ProtectedLoginRoute><LoginAdminPage /></ProtectedLoginRoute>} />
+        <Route
+          path="login"
+          element={
+            <Suspense fallback={<LoadingPage />}>
+              <ProtectedLoginRoute>
+                <LoginPage />
+              </ProtectedLoginRoute>
+            </Suspense>
+          }
+        />
+        <Route
+          path="organization"
+          element={
+            <Suspense fallback={<LoadingPage />}>
+              <ProtectedLoginRoute>
+                <OrganizationPage />
+              </ProtectedLoginRoute>
+            </Suspense>
+          }
+        />
+        <Route
+          path="signup"
+          element={
+            <Suspense fallback={<LoadingPage />}>
+              <ProtectedLoginRoute>
+                <SignUp />
+              </ProtectedLoginRoute>
+            </Suspense>
+          }
+        />
+        <Route
+          path="login/admin"
+          element={
+            <Suspense fallback={<LoadingPage />}>
+              <ProtectedLoginRoute>
+                <LoginAdminPage />
+              </ProtectedLoginRoute>
+            </Suspense>
+          }
+        />
       </Route>
       <Route path="*" element={<CustomNavigate replace to="/" />} />
     </Route>,
