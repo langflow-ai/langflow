@@ -43,7 +43,7 @@ class CacheServiceFactory(ServiceFactory):
 
         # Debug: Log the cache type being used
         cache_type = settings_service.settings.cache_type
-        logger.info(f"Cache factory creating cache with type: {cache_type}")
+        logger.info("Cache factory creating cache with type: %s", cache_type)
 
         if settings_service.settings.cache_type == "redis":
             logger.debug("Creating Redis cache")

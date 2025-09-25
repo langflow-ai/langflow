@@ -242,9 +242,11 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         Falls back to identity for everything else.
         """
         try:
-            from pydantic import BaseModel  # type: ignore
-        except Exception:  # noqa: BLE001
-            BaseModel = None  # type: ignore
+            from pydantic import BaseModel  # type: ignore[import-untyped]
+
+            base_model = BaseModel
+        except ImportError:  # Failed to import pydantic
+            base_model = None  # type: ignore[assignment]
 
         visited: set[int] = set()
 
@@ -265,7 +267,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
                 return {"__class_path__": f"{mod}.{name}"}
 
             # Replace InputSchema instances with plain data
-            if BaseModel is not None and isinstance(value, BaseModel):  # type: ignore[arg-type]
+            if base_model is not None and isinstance(value, base_model):  # type: ignore[arg-type]
                 cls = value.__class__
                 mod = getattr(cls, "__module__", "")
                 name = getattr(cls, "__name__", "")
@@ -283,8 +285,8 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
                     mod = getattr(value, "__module__", "")
                     name = getattr(value, "__qualname__", getattr(value, "__name__", ""))
                     return {"__callable_path__": f"{mod}.{name}"}
-            except Exception:
-                pass
+            except (AttributeError, TypeError, ValueError):  # Some callables may not have introspectable attributes
+                logger.debug("Failed to introspect callable for cache serialization")
 
             # Replace instances of dynamically created or custom component classes
             # that commonly resist pickling.
@@ -296,11 +298,11 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             if cls is not None:
                 mod = getattr(cls, "__module__", "")
                 qual = getattr(cls, "__qualname__", getattr(cls, "__name__", ""))
-                if mod.startswith("lfx.custom") or "<locals>" in qual or mod == "__main__" or mod == "builtins":
+                if mod.startswith("lfx.custom") or "<locals>" in qual or mod in {"__main__", "builtins"}:
                     # Best-effort shallow representation
                     try:
                         return {"__repr__": repr(value)}
-                    except Exception:
+                    except (AttributeError, TypeError, ValueError, RecursionError):  # repr() can fail
                         return {"__class__": f"{mod}.{qual}"}
 
             # Containers
@@ -333,23 +335,24 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
                 warnings.simplefilter("ignore", category=UserWarning)
                 # Try ignoring dill's own PicklingWarning if available
                 try:
-                    from dill._dill import PicklingWarning as _DillPicklingWarning  # type: ignore
+                    from dill._dill import PicklingWarning as _DillPicklingWarning  # type: ignore[import-untyped]
 
                     warnings.simplefilter("ignore", category=_DillPicklingWarning)
-                except Exception:
-                    pass
+                except ImportError:  # dill._dill may not be available
+                    logger.debug("Could not import dill PicklingWarning")
                 pickled = dill.dumps(value, recurse=False, byref=True)
-        except Exception:
+        except (AttributeError, TypeError, ValueError, RecursionError) as e:
             # Fallback: sanitize value to strip problematic dynamic schemas
+            logger.debug("Initial pickle attempt failed: %s, trying sanitized version", e)
             sanitized = self._sanitize_for_pickle(value)
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=UserWarning)
                 try:
-                    from dill._dill import PicklingWarning as _DillPicklingWarning  # type: ignore
+                    from dill._dill import PicklingWarning as _DillPicklingWarning  # type: ignore[import-untyped]
 
                     warnings.simplefilter("ignore", category=_DillPicklingWarning)
-                except Exception:
-                    pass
+                except ImportError:
+                    logger.debug("Could not import dill PicklingWarning for sanitized pickle")
                 pickled = dill.dumps(sanitized, recurse=False, byref=True)
 
         if pickled:

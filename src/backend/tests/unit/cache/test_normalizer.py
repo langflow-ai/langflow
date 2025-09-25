@@ -5,14 +5,14 @@ from lfx.serialization.normalizer import normalize_for_cache
 
 def test_normalize_dynamic_class_and_function():
     # Dynamic class
-    Dynamic = type("Dynamic", (), {"x": 1})
+    dynamic_class = type("Dynamic", (), {"x": 1})
 
     # Dynamic function
     def dyn_func():
         return 42
 
     obj = {
-        "cls": Dynamic,
+        "cls": dynamic_class,
         "func": dyn_func,
         "value": 123,
     }
@@ -24,8 +24,8 @@ def test_normalize_dynamic_class_and_function():
 
 
 def test_normalize_pydantic_model():
-    Model = create_model("X", a=(int, ...))
-    m = Model(a=3)
+    model = create_model("X", a=(int, ...))
+    m = model(a=3)
     out = normalize_for_cache(m)
     assert out == {"a": 3}
 

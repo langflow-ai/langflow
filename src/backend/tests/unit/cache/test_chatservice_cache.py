@@ -21,7 +21,7 @@ async def test_chatservice_set_cache_normalizes_payload():
     cs = ChatService()
     # Inject fake async cache
     fake = _FakeSyncCache()
-    cs.cache_service = fake  # type: ignore
+    cs.cache_service = fake  # type: ignore[assignment]
 
     dynamic_cls = type("C", (), {})
     value = {
