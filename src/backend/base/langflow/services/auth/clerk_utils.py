@@ -152,14 +152,24 @@ async def clerk_token_middleware(request: Request, call_next):
     token = auth_header[len("Bearer ") :]
     try:
         payload = await verify_clerk_token(token)
-        ctx_token = auth_header_ctx.set(payload)
-        response = await call_next(request)
-    except Exception as exc:  # noqa: BLE001
+    except ValueError as exc:
+        # Treat invalid Clerk tokens as unauthenticated so public endpoints
+        # such as the health check keep working. Endpoints that depend on a
+        # verified Clerk payload will still return an authorization error.
         logger.warning(f"Failed to verify Clerk token: {exc}")
+        payload = None
+    except Exception:  # noqa: BLE001
+        logger.exception("Unexpected error while verifying Clerk token")
         return JSONResponse(
             status_code=HTTP_401_UNAUTHORIZED,
             content={"detail": "Invalid Clerk token"},
         )
+
+    if payload is not None:
+        ctx_token = auth_header_ctx.set(payload)
+
+    try:
+        response = await call_next(request)
     finally:
         if ctx_token is not None:
             auth_header_ctx.reset(ctx_token)
