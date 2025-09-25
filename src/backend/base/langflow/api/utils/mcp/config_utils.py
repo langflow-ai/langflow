@@ -130,9 +130,13 @@ async def validate_mcp_server_for_project(
 
         if existing_args:
             # SSE URL is typically the last argument
-            existing_sse_url = existing_args[-1] if existing_args else ""
-            if str(project_id) in existing_sse_url:
-                project_id_matches = True
+            existing_sse_urls = await extract_urls_from_strings(existing_args)
+            for existing_sse_url in existing_sse_urls:
+                if str(project_id) in existing_sse_url:
+                    project_id_matches = True
+                    break
+        else:
+            project_id_matches = False
 
         # Generate appropriate conflict message based on operation
         conflict_message = ""
@@ -381,3 +385,26 @@ async def auto_configure_starter_projects_mcp(session):
 
     except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Failed to auto-configure starter projects MCP servers: {e}")
+
+
+async def extract_urls_from_strings(strings: list[str]) -> list[str]:
+    """Extract URLs from a list of strings.
+
+    Args:
+        strings: List of strings to search for URLs
+
+    Returns:
+        List of URLs found in the input strings
+    """
+    import re
+
+    # URL pattern to match http/https URLs
+    url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+[^\s<>"{}|\\^`\[\].,;:!?]'
+
+    urls = []
+    for string in strings:
+        if isinstance(string, str):
+            found_urls = re.findall(url_pattern, string)
+            urls.extend(found_urls)
+
+    return urls
