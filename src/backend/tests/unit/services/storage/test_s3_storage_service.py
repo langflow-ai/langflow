@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 from botocore.exceptions import ClientError, NoCredentialsError
-from langflow.services.storage.s3 import S3StorageService
+from lfx.services.storage.s3 import S3StorageService
 
 
 class TestS3StorageService:
@@ -40,7 +40,7 @@ class TestS3StorageService:
             mock_s3_client = MagicMock()
             mock_boto_client.return_value = mock_s3_client
 
-            service = S3StorageService(mock_session_service, mock_settings_service)
+            service = S3StorageService(settings_service=mock_settings_service)
             service.s3_client = mock_s3_client
             return service
 
@@ -73,7 +73,7 @@ class TestS3StorageService:
             mock_s3_client = MagicMock()
             mock_boto_client.return_value = mock_s3_client
 
-            service = S3StorageService(mock_session_service, mock_settings_service)
+            service = S3StorageService(settings_service=mock_settings_service)
 
             assert service.bucket == "test-bucket"
             assert service.path == "tenants"
@@ -144,7 +144,7 @@ class TestS3StorageService:
             "boto3.client",
             side_effect=ClientError({"Error": {"Code": "AccessDenied", "Message": "Access Denied"}}, "AssumeRole"),
         ):
-            service = S3StorageService(mock_session_service, mock_settings_service)
+            service = S3StorageService(settings_service=mock_settings_service)
 
             assert service.bucket == "test-bucket"
             assert service.path == "tenants"
