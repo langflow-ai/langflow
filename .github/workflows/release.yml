@@ -210,7 +210,7 @@ jobs:
       # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post"] is in the version string
       # if the version string is incorrect, we need to exit the workflow
       - name: Check if pre-release
-        if: inputs.pre_release == 'true'
+        if: inputs.pre_release == true
         run: |
           version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
           if [[ "${version}" =~ ^([0-9]+\.)?([0-9]+\.)?[0-9]+((a|b|rc|dev|post)([0-9]+))$ ]]; then
@@ -367,7 +367,7 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [build-main, publish-main]
-    if: always() && inputs.create_release == 'true' && needs.publish-main.result == 'success'
+    if: inputs.create_release == true && needs.publish-main.result == 'success'
     steps:
       - uses: actions/download-artifact@v4
         if: needs.publish-main.result == 'success'
