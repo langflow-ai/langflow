@@ -127,13 +127,27 @@ class DatabaseService(Service):
 
         poolclass_key = kwargs.get("poolclass")
         if poolclass_key is not None:
-            pool_class = getattr(sa, poolclass_key, None)
-            if pool_class and issubclass(pool_class, sa.pool.Pool):
-                logger.debug(f"Using poolclass: {poolclass_key}.")
+            # Accept either a class object or a string name/path
+            pool_class = None
+            if isinstance(poolclass_key, type):
+                pool_class = poolclass_key
+            elif isinstance(poolclass_key, str):
+                # Try sqlalchemy namespace first (where pool classes are available)
+                pool_class = getattr(sa, poolclass_key, None)
+                if pool_class is None and "." in poolclass_key:
+                    try:
+                        import importlib
+
+                        module_path, class_name = poolclass_key.rsplit(".", 1)
+                        module = importlib.import_module(module_path)
+                        pool_class = getattr(module, class_name, None)
+                    except Exception:  # noqa: BLE001
+                        pool_class = None
+            if isinstance(pool_class, type) and issubclass(pool_class, sa.pool.Pool):
+                logger.debug(f"Using poolclass: {getattr(pool_class, '__name__', poolclass_key)}.")
                 kwargs["poolclass"] = pool_class
             else:
                 logger.error(f"Invalid poolclass '{poolclass_key}' specified. Using default pool class.")
-                # Remove invalid poolclass from kwargs to use default
                 kwargs.pop("poolclass", None)
 
         return create_async_engine(
