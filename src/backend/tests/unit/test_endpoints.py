@@ -427,7 +427,13 @@ async def test_successful_run_with_input_type_text(client, simple_api_test, crea
     assert len(outputs_dict) == 2
     assert "inputs" in outputs_dict
     assert "outputs" in outputs_dict
-    assert outputs_dict.get("inputs") == {"input_value": "value1"}
+    actual_inputs = outputs_dict.get("inputs")
+    expected_inputs = {"input_value": "value1"}
+    assert actual_inputs == expected_inputs, (
+        f"Expected inputs to be {expected_inputs}, but got {actual_inputs}. "
+        f"Full outputs_dict keys: {list(outputs_dict.keys())}, "
+        f"Full response: {json_response}"
+    )
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 3
     # Now we get all components that contain TextInput in the component_id
@@ -462,7 +468,13 @@ async def test_successful_run_with_input_type_chat(client: AsyncClient, simple_a
     assert len(outputs_dict) == 2
     assert "inputs" in outputs_dict
     assert "outputs" in outputs_dict
-    assert outputs_dict.get("inputs") == {"input_value": "value1"}
+    actual_inputs = outputs_dict.get("inputs")
+    expected_inputs = {"input_value": "value1"}
+    assert actual_inputs == expected_inputs, (
+        f"Expected inputs to be {expected_inputs}, but got {actual_inputs}. "
+        f"Full outputs_dict keys: {list(outputs_dict.keys())}, "
+        f"Full response: {json_response}"
+    )
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 3
     # Now we get all components that contain TextInput in the component_id
@@ -510,7 +522,13 @@ async def test_successful_run_with_input_type_any(client, simple_api_test, creat
     assert len(outputs_dict) == 2
     assert "inputs" in outputs_dict
     assert "outputs" in outputs_dict
-    assert outputs_dict.get("inputs") == {"input_value": "value1"}
+    actual_inputs = outputs_dict.get("inputs")
+    expected_inputs = {"input_value": "value1"}
+    assert actual_inputs == expected_inputs, (
+        f"Expected inputs to be {expected_inputs}, but got {actual_inputs}. "
+        f"Full outputs_dict keys: {list(outputs_dict.keys())}, "
+        f"Full response: {json_response}"
+    )
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 3
     # Now we get all components that contain TextInput or ChatInput in the component_id
