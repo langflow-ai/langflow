@@ -1,11 +1,19 @@
 import uuid
 
 from fastapi import APIRouter, HTTPException, status
-from lfx.log.logger import logger
+
+# Try to import from lfx, fallback to standard logging if lfx not available
+try:
+    from lfx.log.logger import logger
+except ImportError:
+    import logging
+
+    logger = logging.getLogger(__name__)
 from pydantic import BaseModel
 from sqlmodel import select
 
 from langflow.api.utils import DbSession
+from langflow.services.cache.utils import is_rich_pickle_enabled, validate_rich_pickle_support
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_chat_service
 
@@ -16,6 +24,7 @@ class HealthResponse(BaseModel):
     status: str = "nok"
     chat: str = "error check the server logs"
     db: str = "error check the server logs"
+    rich_pickle: str = "not_checked"
     """
     Do not send exceptions and detailed error messages to the client because it might contain credentials and other
     sensitive server information.
@@ -58,6 +67,19 @@ async def health_check(
         response.chat = "ok"
     except Exception:  # noqa: BLE001
         await logger.aexception("Error checking chat service")
+
+    # Check Rich pickle support status
+    try:
+        if is_rich_pickle_enabled():
+            if validate_rich_pickle_support():
+                response.rich_pickle = "ok"
+            else:
+                response.rich_pickle = "enabled_but_validation_failed"
+        else:
+            response.rich_pickle = "not_enabled"
+    except Exception:  # noqa: BLE001
+        await logger.aexception("Error checking Rich pickle support")
+        response.rich_pickle = "error check the server logs"
 
     if response.has_error():
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response.model_dump())
