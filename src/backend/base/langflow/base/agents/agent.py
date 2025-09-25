@@ -9,7 +9,6 @@ from langchain_core.runnables import Runnable
 
 from langflow.base.agents.callback import AgentAsyncHandler
 from langflow.base.agents.events import ExceptionWithMessageError, process_agent_events
-from langflow.base.agents.utils import data_to_messages
 from langflow.custom.custom_component.component import Component, _get_component_toolkit
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import InputTypes, MultilineInput
@@ -118,6 +117,21 @@ class LCAgentComponent(Component):
         # might be overridden in subclasses
         return None
 
+    def _data_to_messages_skip_empty(self, data: list[Data]):
+        """Convert data to messages, filtering only empty text while preserving non-text content."""
+        messages = []
+        for value in data:
+            # Only skip if the message has a text attribute that is empty/whitespace
+            text = getattr(value, "text", None)
+            if isinstance(text, str) and not text.strip():
+                # Skip only messages with empty/whitespace-only text strings
+                continue
+
+            lc_message = value.to_lc_message()
+            messages.append(lc_message)
+
+        return messages
+
     async def run_agent(
         self,
         agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
@@ -143,14 +157,21 @@ class LCAgentComponent(Component):
             input_dict["system_prompt"] = self.system_prompt
         if hasattr(self, "chat_history") and self.chat_history:
             if isinstance(self.chat_history, Data):
-                input_dict["chat_history"] = data_to_messages(self.chat_history)
-            if all(isinstance(m, Message) for m in self.chat_history):
-                input_dict["chat_history"] = data_to_messages([m.to_data() for m in self.chat_history])
+                input_dict["chat_history"] = self._data_to_messages_skip_empty([self.chat_history])
+            elif all(isinstance(m, Message) for m in self.chat_history):
+                input_dict["chat_history"] = self._data_to_messages_skip_empty([m.to_data() for m in self.chat_history])
         if hasattr(input_dict["input"], "content") and isinstance(input_dict["input"].content, list):
             # ! Because the input has to be a string, we must pass the images in the chat_history
 
             image_dicts = [item for item in input_dict["input"].content if item.get("type") == "image"]
-            input_dict["input"].content = [item for item in input_dict["input"].content if item.get("type") != "image"]
+            text_content = [item for item in input_dict["input"].content if item.get("type") != "image"]
+
+            # Ensure we don't create an empty content list
+            if text_content:
+                input_dict["input"].content = text_content
+            else:
+                # If no text content, convert to empty string to avoid empty message
+                input_dict["input"] = ""
 
             if "chat_history" not in input_dict:
                 input_dict["chat_history"] = []

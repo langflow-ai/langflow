@@ -34,7 +34,7 @@ class InputDict(TypedDict):
 
 def _build_agent_input_text_content(agent_input_dict: InputDict) -> str:
     final_input = agent_input_dict.get("input", "")
-    return f"**Input**: {final_input}"
+    return f"{final_input}"
 
 
 def _calculate_duration(start_time: float) -> int:
@@ -90,34 +90,46 @@ def _extract_output_text(output: str | list) -> str:
         return output
     if isinstance(output, list) and len(output) == 0:
         return ""
-    if not isinstance(output, list) or len(output) != 1:
-        msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
-        raise TypeError(msg)
 
-    item = output[0]
-    if isinstance(item, str):
-        return item
-    if isinstance(item, dict):
-        if "text" in item:
-            return item["text"]
-        # If the item's type is "tool_use", return an empty string.
-        # This likely indicates that "tool_use" outputs are not meant to be displayed as text.
-        if item.get("type") == "tool_use":
+    # Handle lists of various lengths and formats
+    if isinstance(output, list):
+        # Handle single item lists
+        if len(output) == 1:
+            item = output[0]
+            if isinstance(item, str):
+                return item
+            if isinstance(item, dict):
+                if "text" in item:
+                    return item["text"] or ""
+                # If the item's type is "tool_use", return an empty string.
+                if item.get("type") == "tool_use":
+                    return ""
+                # Handle items with only 'index' key (from ChatBedrockConverse)
+                if "index" in item and len(item) == 1:
+                    return ""
+                # This is a workaround to deal with function calling by Anthropic
+                if "partial_json" in item:
+                    return ""
+                # For any other dict format, return empty string
+                return ""
+            # For any other single item type (not str or dict), return empty string
             return ""
-    if isinstance(item, dict):
-        if "text" in item:
-            return item["text"]
-        # If the item's type is "tool_use", return an empty string.
-        # This likely indicates that "tool_use" outputs are not meant to be displayed as text.
-        if item.get("type") == "tool_use":
-            return ""
-        # This is a workaround to deal with function calling by Anthropic
-        # since the same data comes in the tool_output we don't need to stream it here
-        # although it would be nice to
-        if "partial_json" in item:
-            return ""
-    msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
-    raise TypeError(msg)
+
+        # Handle multiple items - extract text from all text-type items
+        text_parts = []
+        for item in output:
+            if isinstance(item, str):
+                text_parts.append(item)
+            elif isinstance(item, dict):
+                if "text" in item and item["text"] is not None:
+                    text_parts.append(item["text"])
+                # Skip tool_use, index-only, and partial_json items
+                elif item.get("type") == "tool_use" or "partial_json" in item or ("index" in item and len(item) == 1):
+                    continue
+        return "".join(text_parts)
+
+    # If we get here, the format is unexpected but try to be graceful
+    return ""
 
 
 async def handle_on_chain_end(
@@ -267,8 +279,9 @@ async def handle_on_chain_stream(
         start_time = perf_counter()
     elif isinstance(data_chunk, AIMessageChunk):
         output_text = _extract_output_text(data_chunk.content)
-        if output_text and isinstance(agent_message.text, str):
-            agent_message.text += output_text
+        if output_text and output_text.strip():
+            # For streaming, send only the current chunk (not accumulated text)
+            agent_message.text = output_text
             agent_message.properties.state = "partial"
             agent_message = await send_message_method(message=agent_message)
         if not agent_message.text:
