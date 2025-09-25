@@ -21,7 +21,7 @@ class TestMCPServerValidationResult:
 
     def test_init_defaults(self):
         """Test initialization with default values."""
-        result = MCPServerValidationResult()
+        result = MCPServerValidationResult(server_exists=False, project_id_matches=False)
         assert result.server_exists is False
         assert result.project_id_matches is False
         assert result.server_name == ""
