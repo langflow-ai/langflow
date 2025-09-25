@@ -261,15 +261,6 @@
             "lf_version": "1.2.0",
             "metadata": {
               "code_hash": "46a90558cb44",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
             "output_types": [],
@@ -681,19 +672,6 @@
             "lf_version": "1.1.1",
             "metadata": {
               "code_hash": "f2867efda61f",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_text_splitters",
-                    "version": "0.3.9"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
-              },
               "module": "lfx.components.processing.split_text.SplitTextComponent"
             },
             "output_types": [],
@@ -983,23 +961,6 @@
             "lf_version": "1.1.1",
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "output_types": [],
@@ -1251,19 +1212,6 @@
             "lf_version": "1.2.0",
             "metadata": {
               "code_hash": "8a658ed6d4c9",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_openai",
-                    "version": "0.3.23"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
-              },
               "module": "lfx.components.openai.openai.OpenAIEmbeddingsComponent"
             },
             "output_types": [],
@@ -1800,19 +1748,6 @@
             "lf_version": "1.1.1",
             "metadata": {
               "code_hash": "8a658ed6d4c9",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_openai",
-                    "version": "0.3.23"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
-              },
               "module": "lfx.components.openai.openai.OpenAIEmbeddingsComponent"
             },
             "output_types": [],
@@ -2572,15 +2507,6 @@
             "legacy": false,
             "metadata": {
               "code_hash": "9a1d497f4f91",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
               "module": "lfx.components.data.file.FileComponent"
             },
             "minimized": false,
@@ -3371,27 +3297,6 @@
             "legacy": false,
             "metadata": {
               "code_hash": "0e26d8c1384d",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "astrapy",
-                    "version": "2.0.1"
-                  },
-                  {
-                    "name": "langchain_astradb",
-                    "version": "0.6.1"
-                  },
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.76"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 4
-              },
               "module": "lfx.components.vectorstores.astradb.AstraDBVectorStoreComponent"
             },
             "minimized": false,
@@ -4177,27 +4082,6 @@
             "legacy": false,
             "metadata": {
               "code_hash": "0e26d8c1384d",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "astrapy",
-                    "version": "2.0.1"
-                  },
-                  {
-                    "name": "langchain_astradb",
-                    "version": "0.6.1"
-                  },
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.76"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 4
-              },
               "module": "lfx.components.vectorstores.astradb.AstraDBVectorStoreComponent"
             },
             "minimized": false,

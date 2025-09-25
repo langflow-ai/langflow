@@ -107,15 +107,6 @@
             "lf_version": "1.5.0.post1",
             "metadata": {
               "code_hash": "3dd28ea591b9",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
               "module": "lfx.components.input_output.text.TextInputComponent"
             },
             "minimized": false,
@@ -233,23 +224,6 @@
             "lf_version": "1.5.0.post1",
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -489,43 +463,6 @@
             "legacy": false,
             "metadata": {
               "code_hash": "bf96902ddcc7",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "cryptography",
-                    "version": "43.0.3"
-                  },
-                  {
-                    "name": "langchain_chroma",
-                    "version": "0.2.6"
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  },
-                  {
-                    "name": "pydantic",
-                    "version": "2.10.6"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  },
-                  {
-                    "name": "langchain_openai",
-                    "version": "0.3.23"
-                  },
-                  {
-                    "name": "langchain_huggingface",
-                    "version": "0.3.1"
-                  },
-                  {
-                    "name": "langchain_cohere",
-                    "version": "0.3.3"
-                  }
-                ],
-                "total_dependencies": 8
-              },
               "module": "lfx.components.knowledge_bases.retrieval.KnowledgeRetrievalComponent"
             },
             "minimized": false,

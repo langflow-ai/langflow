@@ -193,15 +193,6 @@
             "lf_version": "1.2.0",
             "metadata": {
               "code_hash": "3dd28ea591b9",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
               "module": "lfx.components.input_output.text.TextInputComponent"
             },
             "minimized": false,
@@ -321,23 +312,6 @@
             "lf_version": "1.2.0",
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -724,23 +698,6 @@
             "lf_version": "1.2.0",
             "metadata": {
               "code_hash": "a5b1b04d9fcc",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "pydantic",
-                    "version": "2.10.6"
-                  },
-                  {
-                    "name": "trustcall",
-                    "version": "0.0.39"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
               "module": "lfx.components.processing.structured_output.StructuredOutputComponent"
             },
             "minimized": false,
@@ -1272,15 +1229,6 @@
             "legacy": false,
             "metadata": {
               "code_hash": "9a1d497f4f91",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
               "module": "lfx.components.data.file.FileComponent"
             },
             "minimized": false,

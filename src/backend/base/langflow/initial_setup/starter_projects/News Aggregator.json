@@ -206,19 +206,6 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "37de3210aed9",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "httpx",
-                    "version": "0.28.1"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
-              },
               "module": "lfx.components.agentql.agentql_api.AgentQL"
             },
             "minimized": false,
@@ -575,15 +562,6 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "46a90558cb44",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
             "minimized": true,
@@ -857,23 +835,6 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -1110,31 +1071,6 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "519b261b6693",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "pandas",
-                    "version": "2.2.3"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 5
-              },
               "module": "lfx.components.processing.save_file.SaveToFileComponent"
             },
             "minimized": false,
@@ -1306,23 +1242,6 @@
             "legacy": false,
             "metadata": {
               "code_hash": "d61b1f3d692a",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.76"
-                  },
-                  {
-                    "name": "pydantic",
-                    "version": "2.10.6"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
               "module": "lfx.components.agents.agent.AgentComponent"
             },
             "minimized": false,
