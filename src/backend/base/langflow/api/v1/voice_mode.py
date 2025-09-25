@@ -700,14 +700,12 @@ async def flow_as_tool_websocket_no_session(
     client_websocket: WebSocket,
     flow_id: str,
     background_tasks: BackgroundTasks,
-    session: DbSession,
 ):
     session_id = str(uuid4())
     await flow_as_tool_websocket(
         client_websocket=client_websocket,
         flow_id=flow_id,
         background_tasks=background_tasks,
-        session=session,
         session_id=session_id,
     )
 
@@ -717,7 +715,6 @@ async def flow_as_tool_websocket(
     client_websocket: WebSocket,
     flow_id: str,
     background_tasks: BackgroundTasks,
-    session: DbSession,
     session_id: str,
 ):
     """WebSocket endpoint registering the flow as a tool for real-time interaction."""
@@ -728,8 +725,11 @@ async def flow_as_tool_websocket(
 
         vad_task: asyncio.Task | None = None
         voice_config = get_voice_config(session_id)
-        current_user: User = await get_current_user_for_websocket(client_websocket, session)
-        current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
+
+        # Use single short-lived session for authentication
+        async with session_scope() as session:
+            current_user: User = await get_current_user_for_websocket(client_websocket, session)
+            current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
         if current_user is None or openai_key is None:
             return
         try:
@@ -1128,14 +1128,12 @@ async def flow_tts_websocket_no_session(
     client_websocket: WebSocket,
     flow_id: str,
     background_tasks: BackgroundTasks,
-    session: DbSession,
 ):
     session_id = str(uuid4())
     await flow_tts_websocket(
         client_websocket=client_websocket,
         flow_id=flow_id,
         background_tasks=background_tasks,
-        session=session,
         session_id=session_id,
     )
 
@@ -1145,7 +1143,6 @@ async def flow_tts_websocket(
     client_websocket: WebSocket,
     flow_id: str,
     background_tasks: BackgroundTasks,
-    session: DbSession,
     session_id: str,
 ):
     """WebSocket endpoint for direct flow text-to-speech interaction."""
@@ -1197,8 +1194,10 @@ async def flow_tts_websocket(
             await client_websocket.close()
             await openai_ws.close()
 
-        current_user: User = await get_current_user_for_websocket(client_websocket, session)
-        current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_send)
+        # Use single short-lived session for authentication
+        async with session_scope() as session:
+            current_user: User = await get_current_user_for_websocket(client_websocket, session)
+            current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_send)
         url = "wss://api.openai.com/v1/realtime?intent=transcription"
         headers = {
             "Authorization": f"Bearer {openai_key}",
