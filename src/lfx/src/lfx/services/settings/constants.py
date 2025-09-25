@@ -3,9 +3,6 @@ from pydantic import SecretStr
 DEFAULT_SUPERUSER = "langflow"
 DEFAULT_SUPERUSER_PASSWORD = SecretStr("langflow")
 
-DEFAULT_S3_BUCKET_NAME = "langflow-tenant-files"
-DEFAULT_S3_REGION_NAME = "us-east-2"
-
 VARIABLES_TO_GET_FROM_ENVIRONMENT = [
     "COMPOSIO_API_KEY",
     "OPENAI_API_KEY",
