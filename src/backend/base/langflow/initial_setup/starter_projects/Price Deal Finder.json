@@ -1505,7 +1505,7 @@
             "key": "Agent",
             "legacy": false,
             "metadata": {
-              "code_hash": "d61b1f3d692a",
+              "code_hash": "ccf23ef1345b",
               "module": "lfx.components.agents.agent.AgentComponent"
             },
             "minimized": false,

@@ -1869,7 +1869,7 @@
             "last_updated": "2025-07-18T17:42:31.005Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "d61b1f3d692a",
+              "code_hash": "ccf23ef1345b",
               "module": "lfx.components.agents.agent.AgentComponent"
             },
             "minimized": false,
