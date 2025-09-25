@@ -39,14 +39,15 @@ The **Current Date** component returns the current date and time in a selected t
 The **Message History** component provides combined chat history and message storage functionality.
 It can store and retrieve chat messages from either [Langflow storage](/memory) _or_ a dedicated chat memory database like Mem0 or Redis.
 
-It replaces the legacy **Chat History** and **Message Store** components.
-
 :::important
-The **Language Model** and **Agent** components have built-in chat memory that is enabled by default and uses Langflow storage.
-
+The **Agent** component has built-in chat memory that is enabled by default and uses Langflow storage.
 This built-in chat memory functionality is sufficient for most use cases.
 
-Use the **Message History** component only if you need to access chat memories outside the chat context, such as sentiment analysis flow that retrieves and analyzes recently stored memories, or you want to store memories in a specific database, separate from Langflow storage.
+Use the **Message History** component for the following use cases:
+
+* You need to store and retrieve chat memory for a language model component (not an agent).
+* You need to retrieve chat memories outside the chat context, such as a sentiment analysis flow that retrieves and analyzes recently stored memories.
+* You want to store memories in a specific database that is separate from Langflow storage.
 
 For more information, see [Store chat memory](/memory#store-chat-memory).
 :::
@@ -92,9 +93,9 @@ The following steps explain how to create a chat-based flow that uses **Message 
 
 4. Connect the **Prompt Template** component's output to a **Language Model** component's **System Message** input.
 
-    This example uses a **Language Model** component as the central chat driver, but you can also use an **Agent** component.
+    This example uses the **Language Model** core component as the central chat driver, but you can also use another language model component or the **Agent** component.
 
-5. Add a **Chat Input** component, and then connect it to the **Language Model** component's **Input** input.
+5. Add a **Chat Input** component, and then connect it to the **Language Model** component's **Input** field.
 
 6. Connect the **Language Model** component's output to a **Chat Output** component.
 
@@ -111,14 +112,12 @@ The following steps explain how to create a chat-based flow that uses **Message 
 
 To store and retrieve chat memory from a dedicated, external chat memory database, use the **Message History** component _and_ a provider-specific chat memory component.
 
-Available provider-specific chat memory components include [**Cassandra Chat Memory** component](/bundles-datastax#cassandra-chat-memory), [**Mem0 Chat Memory** component](/bundles-mem0), and [**Redis Chat Memory** component](/bundles-redis).
-For all provider-specific chat memory components, see [Bundles](/components-bundle-components).
-
-The following steps explain how to create a flow that stores and retrieves chat memory from Redis chat memory:
+The following steps explain how to create a flow that stores and retrieves chat memory with a [**Redis Chat Memory** component](/bundles-redis).
+Other options include the [**Mem0 Chat Memory** component](/bundles-mem0) and [**Cassandra Chat Memory** component](/bundles-datastax#cassandra-chat-memory).
 
 1. Create or edit a flow where you want to use chat memory.
 
-2. At the beginning of the flow, add **Message History** and **Redis Chat Memory** components:
+2. At the beginning of the flow, add a **Message History** component and a **Redis Chat Memory** component:
 
    1. Configure the **Redis Chat Memory** component to connect to your Redis database. For more information, see the [Redis documentation](https://redis.io/docs/latest/).
    2. Set the **Message History** component to **Retrieve** mode.

@@ -4,7 +4,7 @@ import os
 from typing import TYPE_CHECKING, Any, cast
 
 import nanoid
-from loguru import logger
+from lfx.log.logger import logger
 from typing_extensions import override
 
 from langflow.schema.data import Data
@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
     from langchain.callbacks.base import BaseCallbackHandler
     from langwatch.tracer import ContextSpan
+    from lfx.graph.vertex.base import Vertex
 
-    from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
 
 
@@ -138,7 +138,7 @@ class LangWatchTracer(BaseTracer):
         if metadata and "flow_name" in metadata:
             self.trace.update(metadata=(self.trace.metadata or {}) | {"labels": [f"Flow: {metadata['flow_name']}"]})
 
-        if self.trace.api_key or self._client.api_key:
+        if self.trace.api_key or self._client._api_key:
             try:
                 self.trace.__exit__(None, None, None)
             except ValueError:  # ignoring token was created in a different Context errors
@@ -155,9 +155,9 @@ class LangWatchTracer(BaseTracer):
         return autoconvert_typed_values(converted)
 
     def _convert_to_langwatch_type(self, value):
+        from langchain_core.messages import BaseMessage
         from langwatch.langchain import langchain_message_to_chat_message, langchain_messages_to_chat_messages
-
-        from langflow.schema.message import BaseMessage, Message
+        from lfx.schema.message import Message
 
         if isinstance(value, dict):
             value = {key: self._convert_to_langwatch_type(val) for key, val in value.items()}

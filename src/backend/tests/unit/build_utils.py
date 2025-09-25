@@ -4,7 +4,8 @@ from typing import Any
 from uuid import UUID
 
 from httpx import AsyncClient, codes
-from loguru import logger
+
+from lfx.log.logger import logger
 
 
 async def create_flow(client: AsyncClient, flow_data: str, headers: dict[str, str]) -> UUID:

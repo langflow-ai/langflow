@@ -1,6 +1,8 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 import { uploadFile } from "../../utils/upload-file";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -111,9 +113,7 @@ test(
         targetPosition: { x: 940, y: 100 },
       });
 
-    await page.getByTestId("fit_view").click();
-
-    await zoomOut(page, 2);
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     // Loop Item -> Update Data
 
@@ -157,25 +157,14 @@ test(
       .first()
       .click();
 
-    await zoomOut(page, 3);
+    await page.getByTestId("canvas_controls_dropdown").click();
+
+    await zoomOut(page, 2);
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("div-generic-node").nth(5).click();
 
     await page.waitForTimeout(1000);
-
-    await page.waitForSelector('[data-testid="more-options-modal"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("more-options-modal").click();
-
-    await page.waitForTimeout(1000);
-
-    await page.waitForSelector('[data-testid="expand-button-modal"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("expand-button-modal").click();
 
     await page.getByTestId("input-list-plus-btn_urls-0").click();
 
@@ -223,6 +212,8 @@ test(
       .click();
 
     // Build and run
+    await page.getByTestId("title-Chat Output").click();
+    await page.keyboard.press(`ControlOrMeta+.`);
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 

@@ -4,6 +4,7 @@ slug: /integrations-cleanlab
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 [Cleanlab](https://www.cleanlab.ai/) adds automation and trust to every data point going in and every prediction coming out of AI and RAG solutions.
 
@@ -19,8 +20,7 @@ The **Cleanlab Evaluator** component evaluates and explains the trustworthiness 
 
 ### Cleanlab Evaluator parameters
 
-Some **Cleanlab Evaluator** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name                    | Type       | Description                        |
 |-------------------------|------------|------------------------------------|
@@ -69,8 +69,7 @@ You can pair this component with the [**Cleanlab Remediator** component](#cleanl
 
 ### Cleanlab RAG Evaluator parameters
 
-Some **Cleanlab RAG Evaluator** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name                        | Type       | Description |
 |-----------------------------|------------|------------|
@@ -103,18 +102,15 @@ The following example flows show how to use the **Cleanlab Evaluator** and **Cle
 
 ### Evaluate and remediate responses from an LLM
 
-:::tip
-You can to follow along.
-:::
-
 This flow evaluates and remediates the trustworthiness of a response from any LLM using the **Cleanlab Evaluator** and **Cleanlab Remediator** components.
 
 You can [download the Evaluate and Remediate flow](./eval_and_remediate_cleanlab.json), and then [import the flow](/concepts-flows-import) to your Langflow instance.
 Or, you can build the flow from scratch by connecting the following components:
 
 * Connect the `Message` output from any **Language Model** or **Agent** component to the **Response** input of the **Cleanlab Evaluator** component.
-* Connect a **Prompt Template** component to **Cleanlab Evaluator** component's **Prompt** input.
-<!-- Components missing -->
+* Connect a **Prompt Template** component to the **Cleanlab Evaluator** component's **Prompt** input.
+
+<!-- Components missing per image -->
 
 ![Evaluate response trustworthiness](./eval_response.png)
 

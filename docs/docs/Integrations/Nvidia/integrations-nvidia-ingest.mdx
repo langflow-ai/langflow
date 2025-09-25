@@ -4,6 +4,7 @@ slug: /integrations-nvidia-ingest
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 The **NVIDIA Retriever Extraction** component integrates with the [NVIDIA nv-ingest](https://github.com/NVIDIA/nv-ingest) microservice for data ingestion, processing, and extraction of text files.
 
@@ -49,9 +50,9 @@ You can also store the URL as a [global variable](/configuration-global-variable
 5. Optional: For PDF files, enable **High Resolution Mode** for better quality extraction from scanned documents.
 6. Select whether to split the text into chunks.
 
-    You can modify the splitting parameters and other hidden settings through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+    <PartialParams />
 
-7. Click **Run component** to ingest the file, and then open the **Logs** pane to confirm the component ingested the file.
+7. Click <Icon name="Play" aria-hidden="true" /> **Run component** to ingest the file, and then click **Logs** or <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to confirm the component ingested the file.
 8. To store the processed data in a vector database, add a **Vector Store** component to your flow, and then connect the **NVIDIA Retriever Extraction** component's `Data` output to the **Vector Store** component's input.
 
     When you run the flow with a **Vector Store** component, the processed data is stored in the vector database.
@@ -78,7 +79,7 @@ For more information, see the [NV-Ingest documentation](https://nvidia.github.io
 | extract_infographics | Extract Infographics | Extract infographics from document. Default: false. |
 | text_depth | Text Depth | The level at which text is extracted. Options: 'document', 'page', 'block', 'line', 'span'. Default: `page`. |
 | split_text | Split Text | Split text into smaller chunks. Default: true. |
-| chunk_size | Chunk Size | The number of tokens per chunk. Default: `500`. |
+| chunk_size | Chunk Size | The number of tokens per chunk. Default: `500`. Make sure the chunk size is compatible with your embedding model. For more information, see [Tokenization errors due to chunk size](/components-processing#chunk-size). |
 | chunk_overlap | Chunk Overlap | Number of tokens to overlap from previous chunk. Default: `150`. |
 | filter_images | Filter Images | Filter images (see advanced options for filtering criteria). Default: false. |
 | min_image_size | Minimum Image Size Filter | Minimum image width/length in pixels. Default: `128`. |

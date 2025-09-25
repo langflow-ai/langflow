@@ -2,6 +2,16 @@ name: Nightly Build
 
 on:
   workflow_dispatch:
+    inputs:
+      runs_on:
+        description: "Runner to use for tests (use self-hosted for safe/release code)"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+        default: ubuntu-latest
   schedule:
     # Run job at 00:00 UTC (4:00 PM PST / 5:00 PM PDT)
     - cron: "0 0 * * *"
@@ -23,9 +33,10 @@ jobs:
     outputs:
       main_tag: ${{ steps.generate_main_tag.outputs.main_tag }}
       base_tag: ${{ steps.set_base_tag.outputs.base_tag }}
+      lfx_tag: ${{ steps.generate_lfx_tag.outputs.lfx_tag }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           persist-credentials: true
       - name: "Setup Environment"
@@ -62,6 +73,14 @@ jobs:
           echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
           echo "base_tag=$BASE_TAG"
 
+      - name: Generate LFX nightly tag
+        id: generate_lfx_tag
+        run: |
+          # NOTE: This outputs the tag with the `v` prefix.
+          LFX_TAG="$(uv run ./scripts/ci/lfx_nightly_tag.py)"
+          echo "lfx_tag=$LFX_TAG" >> $GITHUB_OUTPUT
+          echo "lfx_tag=$LFX_TAG"
+
       - name: Commit tag
         id: commit_tag
         run: |
@@ -72,13 +91,17 @@ jobs:
 
           MAIN_TAG="${{ steps.generate_main_tag.outputs.main_tag }}"
           BASE_TAG="${{ steps.generate_base_tag.outputs.base_tag }}"
+          LFX_TAG="${{ steps.generate_lfx_tag.outputs.lfx_tag }}"
+          echo "Updating LFX project version to $LFX_TAG"
+          uv run ./scripts/ci/update_lfx_version.py $LFX_TAG
           echo "Updating base project version to $BASE_TAG and updating main project version to $MAIN_TAG"
-          uv run ./scripts/ci/update_pyproject_combined.py main $MAIN_TAG $BASE_TAG
+          uv run ./scripts/ci/update_pyproject_combined.py main $MAIN_TAG $BASE_TAG $LFX_TAG
 
           uv lock
           cd src/backend/base && uv lock && cd ../../..
+          cd src/lfx && uv lock && cd ../..
 
-          git add pyproject.toml src/backend/base/pyproject.toml uv.lock src/backend/base/uv.lock
+          git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml uv.lock src/backend/base/uv.lock
           git commit -m "Update version and project name"
 
           echo "Tagging main with $MAIN_TAG"
@@ -95,7 +118,7 @@ jobs:
           # TODO: notify on failure
 
       - name: Checkout main nightly tag
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ steps.generate_main_tag.outputs.main_tag }}
 
@@ -132,6 +155,7 @@ jobs:
     with:
       tests_folder: "tests"
       release: true
+      runs-on: ${{ (inputs['runs_on'] && startsWith(format('{0}', inputs['runs_on']), '[') && fromJSON(inputs['runs_on'])) || inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
@@ -145,6 +169,7 @@ jobs:
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13"]'
+      runs-on: ${{ (inputs['runs_on'] && startsWith(format('{0}', inputs['runs_on']), '[') && fromJSON(inputs['runs_on'])) || inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -168,8 +193,10 @@ jobs:
     with:
       build_docker_base: true
       build_docker_main: true
+      build_lfx: true
       nightly_tag_main: ${{ needs.create-nightly-tag.outputs.main_tag }}
       nightly_tag_base: ${{ needs.create-nightly-tag.outputs.base_tag }}
+      nightly_tag_lfx: ${{ needs.create-nightly-tag.outputs.lfx_tag }}
     secrets: inherit
 
   # slack-notification:

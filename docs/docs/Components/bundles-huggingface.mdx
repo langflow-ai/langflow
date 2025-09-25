@@ -4,6 +4,7 @@ slug: /bundles-huggingface
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 [Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
@@ -19,14 +20,13 @@ Authentication is required.
 This component can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
 Specifically, the **Language Model** output is an instance of [`HuggingFaceHub`](https://python.langchain.com/docs/integrations/providers/huggingface/) configured according to the component's parameters.
 
-Use the **Language Model** output when you want to use a Hugging Face model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+Use the **Language Model** output when you want to use a Hugging Face model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
 
 For more information, see [**Language Model** components](/components-models).
 
 ### Hugging Face text generation parameters
 
-Many **Hugging Face** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -51,9 +51,9 @@ For more information about using embedding model components in flows, see [**Emb
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| API Key | API Key | Input parameter. Your [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) for accessing the Hugging Face Inference API, if required. Local inference models don't require an API key. |
-| API URL | API URL | Input parameter. The URL of the Hugging Face Inference API. |
-| Model Name | Model Name | Input parameter. The name of the model to use for embeddings. |
+| api_key | API Key | Input parameter. Your [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) for accessing the Hugging Face Inference API, if required. Local inference models don't require an API key. |
+| api_url | API URL | Input parameter. The URL of the Hugging Face Inference API. |
+| model_name | Model Name | Input parameter. The name of the model to use for embeddings. |
 
 ### Use a local Hugging Face embeddings model {#local-hugging-face-model}
 

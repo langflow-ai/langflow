@@ -4,6 +4,9 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
+from lfx.graph.schema import RunOutputs
+from lfx.services.settings.base import Settings
+from lfx.services.settings.feature_flags import FEATURE_FLAGS, FeatureFlags
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -14,7 +17,6 @@ from pydantic import (
     model_serializer,
 )
 
-from langflow.graph.schema import RunOutputs
 from langflow.schema.dotdict import dotdict
 from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType, OutputValue
@@ -23,8 +25,6 @@ from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow.model import FlowCreate, FlowRead
 from langflow.services.database.models.user.model import UserRead
-from langflow.services.settings.base import Settings
-from langflow.services.settings.feature_flags import FEATURE_FLAGS, FeatureFlags
 from langflow.services.tracing.schema import Log
 
 
@@ -335,41 +335,6 @@ class VerticesBuiltResponse(BaseModel):
     vertices: list[VertexBuildResponse]
 
 
-class InputValueRequest(BaseModel):
-    components: list[str] | None = []
-    input_value: str | None = None
-    session: str | None = None
-    type: InputType | None = Field(
-        "any",
-        description="Defines on which components the input value should be applied. "
-        "'any' applies to all input components.",
-    )
-
-    # add an example
-    model_config = ConfigDict(
-        json_schema_extra={
-            "examples": [
-                {
-                    "components": ["components_id", "Component Name"],
-                    "input_value": "input_value",
-                    "session": "session_id",
-                },
-                {"components": ["Component Name"], "input_value": "input_value"},
-                {"input_value": "input_value"},
-                {
-                    "components": ["Component Name"],
-                    "input_value": "input_value",
-                    "session": "session_id",
-                },
-                {"input_value": "input_value", "session": "session_id"},
-                {"type": "chat", "input_value": "input_value"},
-                {"type": "json", "input_value": '{"key": "value"}'},
-            ]
-        },
-        extra="forbid",
-    )
-
-
 class SimplifiedAPIRequest(BaseModel):
     input_value: str | None = Field(default=None, description="The input value")
     input_type: InputType | None = Field(default="chat", description="The input type")
@@ -407,13 +372,16 @@ class ConfigResponse(BaseModel):
     public_flow_cleanup_interval: int
     public_flow_expiration: int
     event_delivery: Literal["polling", "streaming", "direct"]
+    webhook_auth_enable: bool
+    voice_mode_available: bool
 
     @classmethod
-    def from_settings(cls, settings: Settings) -> "ConfigResponse":
-        """Create a ConfigResponse instance using values from a Settings object and global feature flags.
+    def from_settings(cls, settings: Settings, auth_settings) -> "ConfigResponse":
+        """Create a ConfigResponse instance using values from a Settings object and AuthSettings.
 
         Parameters:
             settings (Settings): The Settings object containing configuration values.
+            auth_settings: The AuthSettings object containing authentication configuration values.
 
         Returns:
             ConfigResponse: An instance populated with configuration and feature flag values.
@@ -431,6 +399,8 @@ class ConfigResponse(BaseModel):
             public_flow_cleanup_interval=settings.public_flow_cleanup_interval,
             public_flow_expiration=settings.public_flow_expiration,
             event_delivery=settings.event_delivery,
+            voice_mode_available=settings.voice_mode_available,
+            webhook_auth_enable=auth_settings.WEBHOOK_AUTH_ENABLE,
         )
 
 
@@ -444,18 +414,13 @@ class CancelFlowResponse(BaseModel):
 class AuthSettings(BaseModel):
     """Model representing authentication settings for MCP."""
 
-    auth_type: Literal["none", "apikey", "basic", "bearer", "iam", "oauth"] = "none"
-    api_key: SecretStr | None = None
-    username: str | None = None
-    password: SecretStr | None = None
-    bearer_token: SecretStr | None = None
-    iam_endpoint: str | None = None
+    auth_type: Literal["none", "apikey", "oauth"] = "none"
     oauth_host: str | None = None
     oauth_port: str | None = None
     oauth_server_url: str | None = None
     oauth_callback_path: str | None = None
     oauth_client_id: str | None = None
-    oauth_client_secret: str | None = None
+    oauth_client_secret: SecretStr | None = None
     oauth_auth_url: str | None = None
     oauth_token_url: str | None = None
     oauth_mcp_scope: str | None = None

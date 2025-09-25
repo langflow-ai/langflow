@@ -10,14 +10,14 @@ from typing import TYPE_CHECKING, Any
 
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from loguru import logger
+from lfx.log.logger import logger
+from lfx.schema.data import Data
 from openinference.semconv.trace import OpenInferenceMimeTypeValues, SpanAttributes
 from opentelemetry.semconv.trace import SpanAttributes as OTELSpanAttributes
 from opentelemetry.trace import Span, Status, StatusCode, use_span
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from typing_extensions import override
 
-from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.services.tracing.base import BaseTracer
 
@@ -26,10 +26,10 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
+    from lfx.graph.vertex.base import Vertex
     from opentelemetry.propagators.textmap import CarrierT
     from opentelemetry.util.types import AttributeValue
 
-    from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
 
 
@@ -78,7 +78,7 @@ class ArizePhoenixTracer(BaseTracer):
             self.child_spans: dict[str, Span] = {}
 
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error setting up Arize/Phoenix tracer")
+            logger.debug("Error setting up Arize/Phoenix tracer", exc_info=True)
             self._ready = False
 
     @property

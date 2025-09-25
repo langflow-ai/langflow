@@ -1,23 +1,23 @@
 import { render, screen } from "@testing-library/react";
-import mockAPIData from "@/utils/testUtils/mockData/mockAPIData";
-import { SidebarHeaderComponentProps } from "../../types";
+import type { SidebarHeaderComponentProps } from "../../types";
 import { SidebarHeaderComponent } from "../sidebarHeader";
 
 // Mock the UI components
-jest.mock("@/components/common/genericIconComponent", () => ({
-  ForwardedIconComponent: ({ name, className }: any) => (
-    <span data-testid={`forwarded-icon-${name}`} className={className}>
-      {name}
-    </span>
-  ),
-}));
-
-jest.mock("@/components/common/shadTooltipComponent", () => ({
-  __esModule: true,
-  default: ({ children, content, styleClasses }: any) => (
-    <div data-testid="tooltip" data-content={content} className={styleClasses}>
+jest.mock("@/components/ui/disclosure", () => ({
+  Disclosure: ({ children, open, onOpenChange }: any) => (
+    <div
+      data-testid="disclosure"
+      data-open={open}
+      data-on-open-change={onOpenChange?.toString()}
+    >
       {children}
     </div>
+  ),
+  DisclosureContent: ({ children }: any) => (
+    <div data-testid="disclosure-content">{children}</div>
+  ),
+  DisclosureTrigger: ({ children }: any) => (
+    <div data-testid="disclosure-trigger">{children}</div>
   ),
 }));
 
@@ -35,21 +35,20 @@ jest.mock("@/components/ui/button", () => ({
   ),
 }));
 
-jest.mock("@/components/ui/disclosure", () => ({
-  Disclosure: ({ children, open, onOpenChange }: any) => (
-    <div
-      data-testid="disclosure"
-      data-open={open}
-      data-on-open-change={onOpenChange?.toString()}
-    >
-      {children}
+jest.mock("@/components/common/genericIconComponent", () => ({
+  ForwardedIconComponent: ({ name, className }: any) => (
+    <div data-testid={`icon-${name}`} className={className}>
+      {name}
     </div>
   ),
-  DisclosureContent: ({ children }: any) => (
-    <div data-testid="disclosure-content">{children}</div>
-  ),
-  DisclosureTrigger: ({ children }: any) => (
-    <div data-testid="disclosure-trigger">{children}</div>
+}));
+
+jest.mock("@/components/common/shadTooltipComponent", () => ({
+  __esModule: true,
+  default: ({ children, content, styleClasses }: any) => (
+    <div data-testid="tooltip" data-content={content} className={styleClasses}>
+      {children}
+    </div>
   ),
 }));
 
@@ -104,17 +103,21 @@ jest.mock("../searchInput", () => ({
 }));
 
 jest.mock("../sidebarFilterComponent", () => ({
-  SidebarFilterComponent: ({ isInput, type, color, resetFilters }: any) => (
+  SidebarFilterComponent: ({ name, description, resetFilters }: any) => (
     <div
       data-testid="sidebar-filter"
-      data-is-input={isInput}
-      data-type={type}
-      data-color={color}
+      data-name={name}
+      data-description={description}
       data-reset-filters={resetFilters?.toString()}
     >
-      Filter Component
+      Sidebar Filter
     </div>
   ),
+}));
+
+// Mock feature flags
+jest.mock("@/customization/feature-flags", () => ({
+  ENABLE_NEW_SIDEBAR: false, // Default to old sidebar for most tests
 }));
 
 describe("SidebarHeaderComponent", () => {
@@ -124,9 +127,7 @@ describe("SidebarHeaderComponent", () => {
   const mockHandleInputFocus = jest.fn();
   const mockHandleInputBlur = jest.fn();
   const mockHandleInputChange = jest.fn();
-  const mockSetFilterEdge = jest.fn();
-  const mockSetFilterData = jest.fn();
-  const mockSearchInputRef = { current: null };
+  const mockResetFilters = jest.fn();
 
   const defaultProps: SidebarHeaderComponentProps = {
     showConfig: false,
@@ -135,16 +136,15 @@ describe("SidebarHeaderComponent", () => {
     setShowBeta: mockSetShowBeta,
     showLegacy: false,
     setShowLegacy: mockSetShowLegacy,
-    searchInputRef: mockSearchInputRef,
+    searchInputRef: { current: null },
     isInputFocused: false,
     search: "",
     handleInputFocus: mockHandleInputFocus,
     handleInputBlur: mockHandleInputBlur,
     handleInputChange: mockHandleInputChange,
-    filterType: undefined,
-    setFilterEdge: mockSetFilterEdge,
-    setFilterData: mockSetFilterData,
-    data: {},
+    filterName: "",
+    filterDescription: "",
+    resetFilters: mockResetFilters,
   };
 
   beforeEach(() => {
@@ -152,75 +152,110 @@ describe("SidebarHeaderComponent", () => {
   });
 
   describe("Basic Rendering", () => {
-    it("should render sidebar header with correct structure", () => {
-      render(<SidebarHeaderComponent {...defaultProps} />);
+    describe("Legacy Sidebar (!ENABLE_NEW_SIDEBAR)", () => {
+      it("should render sidebar header with legacy structure", () => {
+        render(<SidebarHeaderComponent {...defaultProps} />);
 
-      expect(screen.getByTestId("sidebar-header")).toBeInTheDocument();
-      expect(screen.getByTestId("disclosure")).toBeInTheDocument();
-      expect(screen.getByTestId("sidebar-trigger")).toBeInTheDocument();
-      expect(screen.getByText("Components")).toBeInTheDocument();
-      expect(screen.getByTestId("search-input")).toBeInTheDocument();
+        expect(screen.getByTestId("sidebar-header")).toBeInTheDocument();
+        expect(screen.getByTestId("sidebar-trigger")).toBeInTheDocument();
+        expect(screen.getByText("Components")).toBeInTheDocument();
+        expect(
+          screen.getByTestId("sidebar-options-trigger"),
+        ).toBeInTheDocument();
+        expect(screen.getByTestId("disclosure-trigger")).toBeInTheDocument();
+        expect(screen.getByTestId("search-input")).toBeInTheDocument();
+        expect(screen.getByTestId("disclosure")).toBeInTheDocument();
+        expect(screen.getByTestId("disclosure-content")).toBeInTheDocument();
+        expect(screen.getByTestId("feature-toggles")).toBeInTheDocument();
+      });
+
+      it("should render sidebar trigger with correct icon", () => {
+        render(<SidebarHeaderComponent {...defaultProps} />);
+
+        expect(screen.getByTestId("sidebar-trigger")).toBeInTheDocument();
+        expect(screen.getByTestId("icon-PanelLeftClose")).toBeInTheDocument();
+      });
+
+      it("should render settings button with correct props", () => {
+        render(<SidebarHeaderComponent {...defaultProps} />);
+
+        const settingsButton = screen.getByTestId("sidebar-options-trigger");
+        expect(settingsButton).toHaveAttribute("data-variant", "ghost");
+        expect(settingsButton).toHaveAttribute("data-size", "iconMd");
+        expect(
+          screen.getByTestId("icon-SlidersHorizontal"),
+        ).toBeInTheDocument();
+      });
+
+      it("should show ghostActive variant when config is open", () => {
+        const propsWithOpenConfig = { ...defaultProps, showConfig: true };
+        render(<SidebarHeaderComponent {...propsWithOpenConfig} />);
+
+        const settingsButton = screen.getByTestId("sidebar-options-trigger");
+        expect(settingsButton).toHaveAttribute("data-variant", "ghostActive");
+      });
+
+      it("should render tooltip with correct content", () => {
+        render(<SidebarHeaderComponent {...defaultProps} />);
+
+        expect(screen.getByTestId("tooltip")).toHaveAttribute(
+          "data-content",
+          "Component settings",
+        );
+        expect(screen.getByTestId("tooltip")).toHaveClass("z-50");
+      });
     });
 
-    it("should display correct title", () => {
+    it("should apply correct CSS classes to header", () => {
       render(<SidebarHeaderComponent {...defaultProps} />);
 
-      expect(screen.getByText("Components")).toBeInTheDocument();
-    });
-
-    it("should render sidebar trigger with icon", () => {
-      render(<SidebarHeaderComponent {...defaultProps} />);
-
-      expect(screen.getByTestId("sidebar-trigger")).toBeInTheDocument();
-      expect(
-        screen.getByTestId("forwarded-icon-PanelLeftClose"),
-      ).toBeInTheDocument();
-    });
-
-    it("should render settings button", () => {
-      render(<SidebarHeaderComponent {...defaultProps} />);
-
-      expect(screen.getByTestId("sidebar-options-trigger")).toBeInTheDocument();
-      expect(
-        screen.getByTestId("forwarded-icon-SlidersHorizontal"),
-      ).toBeInTheDocument();
-    });
-
-    it("should render tooltip with correct content", () => {
-      render(<SidebarHeaderComponent {...defaultProps} />);
-
-      expect(screen.getByTestId("tooltip")).toHaveAttribute(
-        "data-content",
-        "Component settings",
+      const header = screen.getByTestId("sidebar-header");
+      expect(header).toHaveClass(
+        "flex",
+        "w-full",
+        "flex-col",
+        "gap-2",
+        "group-data-[collapsible=icon]:hidden",
+        "border-b",
       );
-      expect(screen.getByTestId("tooltip")).toHaveClass("z-50");
+    });
+
+    it("should render search input component with correct props", () => {
+      render(<SidebarHeaderComponent {...defaultProps} />);
+
+      const searchInput = screen.getByTestId("search-input");
+      expect(searchInput).toBeInTheDocument();
+      expect(searchInput).toHaveAttribute("data-search", "");
+      expect(searchInput).toHaveAttribute("data-is-focused", "false");
     });
   });
 
   describe("Disclosure Functionality", () => {
-    it("should render disclosure with correct open state", () => {
+    it("should render disclosure with correct closed state", () => {
       render(<SidebarHeaderComponent {...defaultProps} />);
 
-      expect(screen.getByTestId("disclosure")).toHaveAttribute(
-        "data-open",
-        "false",
-      );
+      const disclosure = screen.getByTestId("disclosure");
+      expect(disclosure).toBeInTheDocument();
+      expect(disclosure).toHaveAttribute("data-open", "false");
     });
 
     it("should render disclosure as open when showConfig is true", () => {
-      const propsWithOpenConfig = { ...defaultProps, showConfig: true };
+      const propsWithOpenConfig = {
+        ...defaultProps,
+        showConfig: true,
+      };
+
       render(<SidebarHeaderComponent {...propsWithOpenConfig} />);
 
-      expect(screen.getByTestId("disclosure")).toHaveAttribute(
-        "data-open",
-        "true",
-      );
+      const disclosure = screen.getByTestId("disclosure");
+      expect(disclosure).toHaveAttribute("data-open", "true");
     });
 
     it("should pass setShowConfig to disclosure", () => {
       render(<SidebarHeaderComponent {...defaultProps} />);
 
-      expect(screen.getByTestId("disclosure")).toHaveAttribute(
+      const disclosure = screen.getByTestId("disclosure");
+      expect(disclosure).toHaveAttribute(
         "data-on-open-change",
         mockSetShowConfig.toString(),
       );
@@ -232,34 +267,13 @@ describe("SidebarHeaderComponent", () => {
       expect(screen.getByTestId("disclosure-content")).toBeInTheDocument();
     });
 
-    it("should render disclosure trigger", () => {
+    it("should contain feature toggles within disclosure content", () => {
       render(<SidebarHeaderComponent {...defaultProps} />);
 
-      expect(screen.getByTestId("disclosure-trigger")).toBeInTheDocument();
-    });
-  });
+      const disclosureContent = screen.getByTestId("disclosure-content");
+      const featureToggles = screen.getByTestId("feature-toggles");
 
-  describe("Settings Button Variants", () => {
-    it("should show ghost variant when config is closed", () => {
-      render(<SidebarHeaderComponent {...defaultProps} />);
-
-      const settingsButton = screen.getByTestId("sidebar-options-trigger");
-      expect(settingsButton).toHaveAttribute("data-variant", "ghost");
-    });
-
-    it("should show ghostActive variant when config is open", () => {
-      const propsWithOpenConfig = { ...defaultProps, showConfig: true };
-      render(<SidebarHeaderComponent {...propsWithOpenConfig} />);
-
-      const settingsButton = screen.getByTestId("sidebar-options-trigger");
-      expect(settingsButton).toHaveAttribute("data-variant", "ghostActive");
-    });
-
-    it("should have correct size", () => {
-      render(<SidebarHeaderComponent {...defaultProps} />);
-
-      const settingsButton = screen.getByTestId("sidebar-options-trigger");
-      expect(settingsButton).toHaveAttribute("data-size", "iconMd");
+      expect(disclosureContent).toContainElement(featureToggles);
     });
   });
 
@@ -299,15 +313,21 @@ describe("SidebarHeaderComponent", () => {
     it("should render search input with correct props", () => {
       const propsWithSearch = {
         ...defaultProps,
-        isInputFocused: true,
         search: "test search",
+        isInputFocused: true,
       };
 
       render(<SidebarHeaderComponent {...propsWithSearch} />);
 
       const searchInput = screen.getByTestId("search-input");
-      expect(searchInput).toHaveAttribute("data-is-focused", "true");
       expect(searchInput).toHaveAttribute("data-search", "test search");
+      expect(searchInput).toHaveAttribute("data-is-focused", "true");
+    });
+
+    it("should pass search input ref and callbacks", () => {
+      render(<SidebarHeaderComponent {...defaultProps} />);
+
+      const searchInput = screen.getByTestId("search-input");
       expect(searchInput).toHaveAttribute(
         "data-handle-focus",
         mockHandleInputFocus.toString(),
@@ -321,101 +341,92 @@ describe("SidebarHeaderComponent", () => {
         mockHandleInputChange.toString(),
       );
     });
-
-    it("should pass search input ref", () => {
-      render(<SidebarHeaderComponent {...defaultProps} />);
-
-      expect(screen.getByTestId("search-input")).toBeInTheDocument();
-    });
   });
 
   describe("Filter Component Conditional Rendering", () => {
-    it("should not render filter component when filterType is null", () => {
+    it("should not render filter component when filterName and filterDescription are empty", () => {
       render(<SidebarHeaderComponent {...defaultProps} />);
 
       expect(screen.queryByTestId("sidebar-filter")).not.toBeInTheDocument();
     });
 
-    it("should render filter component when filterType is provided", () => {
+    it("should not render filter component when only filterName is provided", () => {
+      const propsWithOnlyName = {
+        ...defaultProps,
+        filterName: "Test Filter",
+        filterDescription: "",
+      };
+
+      render(<SidebarHeaderComponent {...propsWithOnlyName} />);
+
+      expect(screen.queryByTestId("sidebar-filter")).not.toBeInTheDocument();
+    });
+
+    it("should not render filter component when only filterDescription is provided", () => {
+      const propsWithOnlyDescription = {
+        ...defaultProps,
+        filterName: "",
+        filterDescription: "Test Description",
+      };
+
+      render(<SidebarHeaderComponent {...propsWithOnlyDescription} />);
+
+      expect(screen.queryByTestId("sidebar-filter")).not.toBeInTheDocument();
+    });
+
+    it("should render filter component when both filterName and filterDescription are provided", () => {
       const propsWithFilter = {
         ...defaultProps,
-        filterType: {
-          source: "test_source",
-          sourceHandle: undefined,
-          target: undefined,
-          targetHandle: undefined,
-          type: "string",
-          color: "blue",
-        },
+        filterName: "Input Filter",
+        filterDescription: "Showing input components",
       };
 
       render(<SidebarHeaderComponent {...propsWithFilter} />);
 
-      expect(screen.getByTestId("sidebar-filter")).toBeInTheDocument();
-    });
-
-    it("should pass correct props to filter component for input", () => {
-      const propsWithInputFilter = {
-        ...defaultProps,
-        filterType: {
-          source: "test_source",
-          sourceHandle: undefined,
-          target: undefined,
-          targetHandle: undefined,
-          type: "string",
-          color: "blue",
-        },
-      };
-
-      render(<SidebarHeaderComponent {...propsWithInputFilter} />);
-
       const filterComponent = screen.getByTestId("sidebar-filter");
-      expect(filterComponent).toHaveAttribute("data-is-input", "true");
-      expect(filterComponent).toHaveAttribute("data-type", "string");
-      expect(filterComponent).toHaveAttribute("data-color", "blue");
+      expect(filterComponent).toBeInTheDocument();
+      expect(filterComponent).toHaveAttribute("data-name", "Input Filter");
+      expect(filterComponent).toHaveAttribute(
+        "data-description",
+        "Showing input components",
+      );
     });
 
-    it("should pass correct props to filter component for output", () => {
-      const propsWithOutputFilter = {
-        ...defaultProps,
-        filterType: {
-          source: undefined,
-          sourceHandle: undefined,
-          target: "test_target",
-          targetHandle: undefined,
-          type: "number",
-          color: "red",
-        },
-      };
-
-      render(<SidebarHeaderComponent {...propsWithOutputFilter} />);
-
-      const filterComponent = screen.getByTestId("sidebar-filter");
-      expect(filterComponent).toHaveAttribute("data-is-input", "false");
-      expect(filterComponent).toHaveAttribute("data-type", "number");
-      expect(filterComponent).toHaveAttribute("data-color", "red");
-    });
-
-    it("should handle filter reset correctly", async () => {
+    it("should pass correct props to filter component", () => {
       const propsWithFilter = {
         ...defaultProps,
-        filterType: {
-          source: "test_source",
-          sourceHandle: undefined,
-          target: undefined,
-          targetHandle: undefined,
-          type: "string",
-          color: "blue",
-        },
-        data: mockAPIData,
+        filterName: "Output Filter",
+        filterDescription: "Showing output components",
       };
 
       render(<SidebarHeaderComponent {...propsWithFilter} />);
 
-      // Since resetFilters is passed as a function, we can't directly test it
-      // but we can verify the filter component receives the function
       const filterComponent = screen.getByTestId("sidebar-filter");
-      expect(filterComponent).toHaveAttribute("data-reset-filters");
+      expect(filterComponent).toHaveAttribute("data-name", "Output Filter");
+      expect(filterComponent).toHaveAttribute(
+        "data-description",
+        "Showing output components",
+      );
+      expect(filterComponent).toHaveAttribute(
+        "data-reset-filters",
+        expect.stringContaining("function"),
+      );
+    });
+
+    it("should handle filter reset correctly", () => {
+      const propsWithFilter = {
+        ...defaultProps,
+        filterName: "Test Filter",
+        filterDescription: "Test Description",
+      };
+
+      render(<SidebarHeaderComponent {...propsWithFilter} />);
+
+      const filterComponent = screen.getByTestId("sidebar-filter");
+      expect(filterComponent).toHaveAttribute(
+        "data-reset-filters",
+        mockResetFilters.toString(),
+      );
     });
   });
 
@@ -423,137 +434,76 @@ describe("SidebarHeaderComponent", () => {
     it("should have correct DOM hierarchy", () => {
       render(<SidebarHeaderComponent {...defaultProps} />);
 
-      const sidebarHeader = screen.getByTestId("sidebar-header");
-      const disclosure = screen.getByTestId("disclosure");
+      const header = screen.getByTestId("sidebar-header");
       const searchInput = screen.getByTestId("search-input");
+      const disclosure = screen.getByTestId("disclosure");
+      const disclosureContent = screen.getByTestId("disclosure-content");
+      const featureToggles = screen.getByTestId("feature-toggles");
 
-      expect(sidebarHeader).toContainElement(disclosure);
-      expect(sidebarHeader).toContainElement(searchInput);
+      expect(header).toContainElement(searchInput);
+      expect(header).toContainElement(disclosure);
+      expect(disclosure).toContainElement(disclosureContent);
+      expect(disclosureContent).toContainElement(featureToggles);
     });
 
-    it("should apply correct CSS classes", () => {
-      render(<SidebarHeaderComponent {...defaultProps} />);
+    it("should maintain structure with filter component", () => {
+      const propsWithFilter = {
+        ...defaultProps,
+        filterName: "Test Filter",
+        filterDescription: "Test Description",
+      };
 
-      const sidebarHeader = screen.getByTestId("sidebar-header");
-      expect(sidebarHeader).toHaveClass(
-        "flex",
-        "w-full",
-        "flex-col",
-        "gap-4",
-        "p-4",
-        "pb-1",
-      );
-    });
+      render(<SidebarHeaderComponent {...propsWithFilter} />);
 
-    it("should contain all expected child elements", () => {
-      render(<SidebarHeaderComponent {...defaultProps} />);
+      const header = screen.getByTestId("sidebar-header");
+      const searchInput = screen.getByTestId("search-input");
+      const filterComponent = screen.getByTestId("sidebar-filter");
+      const disclosure = screen.getByTestId("disclosure");
 
-      expect(screen.getByTestId("sidebar-trigger")).toBeInTheDocument();
-      expect(screen.getByText("Components")).toBeInTheDocument();
-      expect(screen.getByTestId("sidebar-options-trigger")).toBeInTheDocument();
-      expect(screen.getByTestId("feature-toggles")).toBeInTheDocument();
-      expect(screen.getByTestId("search-input")).toBeInTheDocument();
-    });
-  });
-
-  describe("CSS Classes", () => {
-    it("should apply correct classes to sidebar trigger", () => {
-      render(<SidebarHeaderComponent {...defaultProps} />);
-
-      const sidebarTrigger = screen.getByTestId("sidebar-trigger");
-      expect(sidebarTrigger).toHaveClass("text-muted-foreground");
-    });
-
-    it("should apply correct classes to title", () => {
-      render(<SidebarHeaderComponent {...defaultProps} />);
-
-      const title = screen.getByText("Components");
-      expect(title).toHaveClass(
-        "flex-1",
-        "cursor-default",
-        "text-sm",
-        "font-semibold",
-      );
-    });
-
-    it("should apply correct classes to settings icon", () => {
-      render(<SidebarHeaderComponent {...defaultProps} />);
-
-      const settingsIcon = screen.getByTestId(
-        "forwarded-icon-SlidersHorizontal",
-      );
-      expect(settingsIcon).toHaveClass("h-4", "w-4");
+      expect(header).toContainElement(searchInput);
+      expect(header).toContainElement(filterComponent);
+      expect(header).toContainElement(disclosure);
     });
   });
 
   describe("Props Handling", () => {
     it("should handle different showConfig values", () => {
-      const { rerender } = render(
-        <SidebarHeaderComponent {...defaultProps} showConfig={false} />,
-      );
-      expect(screen.getByTestId("disclosure")).toHaveAttribute(
-        "data-open",
-        "false",
-      );
-      expect(screen.getByTestId("sidebar-options-trigger")).toHaveAttribute(
-        "data-variant",
-        "ghost",
-      );
+      const { rerender } = render(<SidebarHeaderComponent {...defaultProps} />);
+
+      let disclosure = screen.getByTestId("disclosure");
+      expect(disclosure).toHaveAttribute("data-open", "false");
 
       rerender(<SidebarHeaderComponent {...defaultProps} showConfig={true} />);
-      expect(screen.getByTestId("disclosure")).toHaveAttribute(
-        "data-open",
-        "true",
-      );
-      expect(screen.getByTestId("sidebar-options-trigger")).toHaveAttribute(
-        "data-variant",
-        "ghostActive",
-      );
+      disclosure = screen.getByTestId("disclosure");
+      expect(disclosure).toHaveAttribute("data-open", "true");
     });
 
     it("should handle different search values", () => {
-      const { rerender } = render(
-        <SidebarHeaderComponent
-          {...defaultProps}
-          search=""
-          isInputFocused={false}
-        />,
-      );
+      const { rerender } = render(<SidebarHeaderComponent {...defaultProps} />);
+
       let searchInput = screen.getByTestId("search-input");
       expect(searchInput).toHaveAttribute("data-search", "");
-      expect(searchInput).toHaveAttribute("data-is-focused", "false");
 
       rerender(
-        <SidebarHeaderComponent
-          {...defaultProps}
-          search="test"
-          isInputFocused={true}
-        />,
+        <SidebarHeaderComponent {...defaultProps} search="new search" />,
       );
       searchInput = screen.getByTestId("search-input");
-      expect(searchInput).toHaveAttribute("data-search", "test");
-      expect(searchInput).toHaveAttribute("data-is-focused", "true");
+      expect(searchInput).toHaveAttribute("data-search", "new search");
     });
 
     it("should handle different callback functions", () => {
       const alternativeSetShowConfig = jest.fn();
-      const alternativeHandleInputChange = jest.fn();
+      const alternativeProps = {
+        ...defaultProps,
+        setShowConfig: alternativeSetShowConfig,
+      };
 
-      render(
-        <SidebarHeaderComponent
-          {...defaultProps}
-          setShowConfig={alternativeSetShowConfig}
-          handleInputChange={alternativeHandleInputChange}
-        />,
-      );
+      render(<SidebarHeaderComponent {...alternativeProps} />);
 
-      expect(screen.getByTestId("disclosure")).toHaveAttribute(
+      const disclosure = screen.getByTestId("disclosure");
+      expect(disclosure).toHaveAttribute(
         "data-on-open-change",
         alternativeSetShowConfig.toString(),
-      );
-      expect(screen.getByTestId("search-input")).toHaveAttribute(
-        "data-handle-change",
-        alternativeHandleInputChange.toString(),
       );
     });
   });
@@ -563,9 +513,12 @@ describe("SidebarHeaderComponent", () => {
       const propsWithoutCallbacks = {
         ...defaultProps,
         setShowConfig: undefined as any,
+        setShowBeta: undefined as any,
+        setShowLegacy: undefined as any,
         handleInputFocus: undefined as any,
         handleInputBlur: undefined as any,
         handleInputChange: undefined as any,
+        resetFilters: undefined as any,
       };
 
       expect(() => {
@@ -573,116 +526,97 @@ describe("SidebarHeaderComponent", () => {
       }).not.toThrow();
     });
 
-    it("should handle null filterType gracefully", () => {
-      render(
-        <SidebarHeaderComponent {...defaultProps} filterType={undefined} />,
-      );
+    it("should handle empty filter strings gracefully", () => {
+      const propsWithEmptyFilters = {
+        ...defaultProps,
+        filterName: "",
+        filterDescription: "",
+      };
 
+      render(<SidebarHeaderComponent {...propsWithEmptyFilters} />);
       expect(screen.queryByTestId("sidebar-filter")).not.toBeInTheDocument();
     });
 
-    it("should handle undefined filterType gracefully", () => {
-      const propsWithUndefinedFilter = {
+    it("should handle long filter names and descriptions", () => {
+      const propsWithLongFilters = {
         ...defaultProps,
-        filterType: undefined as any,
+        filterName: "Very Long Filter Name That Might Cause Issues",
+        filterDescription:
+          "This is a very long description that might contain multiple lines and special characters @#$%",
       };
 
-      render(<SidebarHeaderComponent {...propsWithUndefinedFilter} />);
-
-      expect(screen.queryByTestId("sidebar-filter")).not.toBeInTheDocument();
-    });
-
-    it("should handle complex filterType objects", () => {
-      const complexFilterType = {
-        source: "test_source",
-        sourceHandle: undefined,
-        target: undefined,
-        targetHandle: undefined,
-        type: "List[str, int]",
-        color: "custom-color",
-        additionalProp: "ignored",
-      };
-
-      const propsWithComplexFilter = {
-        ...defaultProps,
-        filterType: complexFilterType,
-      };
-
-      render(<SidebarHeaderComponent {...propsWithComplexFilter} />);
+      expect(() => {
+        render(<SidebarHeaderComponent {...propsWithLongFilters} />);
+      }).not.toThrow();
 
       const filterComponent = screen.getByTestId("sidebar-filter");
-      expect(filterComponent).toHaveAttribute("data-type", "List[str, int]");
-      expect(filterComponent).toHaveAttribute("data-color", "custom-color");
+      expect(filterComponent).toBeInTheDocument();
+      expect(filterComponent).toHaveAttribute(
+        "data-name",
+        "Very Long Filter Name That Might Cause Issues",
+      );
+      expect(filterComponent).toHaveAttribute(
+        "data-description",
+        "This is a very long description that might contain multiple lines and special characters @#$%",
+      );
     });
   });
 
   describe("Memo Functionality", () => {
     it("should render component name correctly", () => {
-      render(<SidebarHeaderComponent {...defaultProps} />);
-
-      // Component should render without issues
-      expect(screen.getByTestId("sidebar-header")).toBeInTheDocument();
+      expect(SidebarHeaderComponent.displayName).toBe("SidebarHeaderComponent");
     });
 
     it("should handle prop changes correctly", () => {
       const { rerender } = render(<SidebarHeaderComponent {...defaultProps} />);
 
-      expect(screen.getByTestId("disclosure")).toHaveAttribute(
-        "data-open",
-        "false",
-      );
+      expect(screen.getByTestId("sidebar-header")).toBeInTheDocument();
 
-      rerender(<SidebarHeaderComponent {...defaultProps} showConfig={true} />);
+      const newProps = { ...defaultProps, search: "updated search" };
+      rerender(<SidebarHeaderComponent {...newProps} />);
 
-      expect(screen.getByTestId("disclosure")).toHaveAttribute(
-        "data-open",
-        "true",
-      );
-    });
-  });
-
-  describe("Accessibility", () => {
-    it("should have proper heading structure", () => {
-      render(<SidebarHeaderComponent {...defaultProps} />);
-
-      const title = screen.getByText("Components");
-      expect(title.tagName).toBe("H3");
-    });
-
-    it("should render tooltip for settings button", () => {
-      render(<SidebarHeaderComponent {...defaultProps} />);
-
-      expect(screen.getByTestId("tooltip")).toHaveAttribute(
-        "data-content",
-        "Component settings",
-      );
+      const searchInput = screen.getByTestId("search-input");
+      expect(searchInput).toHaveAttribute("data-search", "updated search");
     });
   });
 
   describe("Integration", () => {
     it("should integrate all child components correctly", () => {
-      const propsWithFilter = {
+      const fullProps = {
         ...defaultProps,
+        search: "integration test",
         showConfig: true,
         showBeta: true,
-        showLegacy: true,
+        showLegacy: false,
         isInputFocused: true,
-        search: "test search",
-        filterType: {
-          source: "test_source",
-          sourceHandle: undefined,
-          target: undefined,
-          targetHandle: undefined,
-          type: "string",
-          color: "blue",
-        },
+        filterName: "Integration Filter",
+        filterDescription: "Testing integration",
       };
 
-      render(<SidebarHeaderComponent {...propsWithFilter} />);
+      render(<SidebarHeaderComponent {...fullProps} />);
 
-      expect(screen.getByTestId("feature-toggles")).toBeInTheDocument();
-      expect(screen.getByTestId("search-input")).toBeInTheDocument();
-      expect(screen.getByTestId("sidebar-filter")).toBeInTheDocument();
+      // Verify all components are integrated correctly
+      expect(screen.getByTestId("sidebar-header")).toBeInTheDocument();
+      expect(screen.getByTestId("search-input")).toHaveAttribute(
+        "data-search",
+        "integration test",
+      );
+      expect(screen.getByTestId("sidebar-filter")).toHaveAttribute(
+        "data-name",
+        "Integration Filter",
+      );
+      expect(screen.getByTestId("sidebar-filter")).toHaveAttribute(
+        "data-description",
+        "Testing integration",
+      );
+      expect(screen.getByTestId("disclosure")).toHaveAttribute(
+        "data-open",
+        "true",
+      );
+      expect(screen.getByTestId("feature-toggles")).toHaveAttribute(
+        "data-show-beta",
+        "true",
+      );
     });
   });
 });

@@ -4,6 +4,7 @@ slug: /components-io
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 Langflow's **Input and Output** components define where data enters and exits your flow, but they don't have identical functionality.
 
@@ -31,8 +32,7 @@ Initial input should _not_ be provided as a complete `Message` object because th
 
 #### Chat Input parameters
 
-Most **Chat Input** component input parameters are hidden by default in the visual editor.
-You can enable other parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 For information about the resulting `Message` object, including input parameters that are directly mapped to `Message` attributes, see [`Message` data](/data-types#message).
 
@@ -86,8 +86,7 @@ For an example, see the [Langflow quickstart](/get-started-quickstart).
 
 #### Chat Output parameters
 
-Most **Chat Output** component input parameters are hidden by default in the visual editor.
-You can enable them through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 For information about the resulting `Message` object, including input parameters that are directly mapped to `Message` attributes, see [`Message` data](/data-types#message).
 

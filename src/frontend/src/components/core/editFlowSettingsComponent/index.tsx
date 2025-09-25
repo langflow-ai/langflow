@@ -1,13 +1,19 @@
 import * as Form from "@radix-ui/react-form";
 import type React from "react";
 import { useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Switch } from "@/components/ui/switch";
 import type { InputProps } from "../../../types/components";
 import { cn } from "../../../utils/utils";
 import { Input } from "../../ui/input";
 import { Textarea } from "../../ui/textarea";
 
 export const EditFlowSettings: React.FC<
-  InputProps & { submitForm?: () => void }
+  InputProps & {
+    submitForm?: () => void;
+    locked?: boolean;
+    setLocked?: (v: boolean) => void;
+  }
 > = ({
   name,
   invalidNameList = [],
@@ -18,7 +24,13 @@ export const EditFlowSettings: React.FC<
   setName,
   setDescription,
   submitForm,
-}: InputProps & { submitForm?: () => void }): JSX.Element => {
+  locked = false,
+  setLocked,
+}: InputProps & {
+  submitForm?: () => void;
+  locked?: boolean;
+  setLocked?: (v: boolean) => void;
+}): JSX.Element => {
   const [isMaxLength, setIsMaxLength] = useState(false);
   const [isMaxDescriptionLength, setIsMaxDescriptionLength] = useState(false);
   const [isMinLength, setIsMinLength] = useState(false);
@@ -110,6 +122,7 @@ export const EditFlowSettings: React.FC<
               onDoubleClickCapture={handleFocus}
               data-testid="input-flow-name"
               autoFocus
+              disabled={locked}
             />
           </Form.Control>
         ) : (
@@ -128,7 +141,7 @@ export const EditFlowSettings: React.FC<
         </Form.Message>
       </Form.Field>
       <Form.Field name="description">
-        <div className="edit-flow-arrangement mt-3">
+        <div className="edit-flow-arrangement mt-2">
           <Form.Label className="text-mmd font-medium">
             Description{setDescription ? "" : ":"}
           </Form.Label>
@@ -150,6 +163,7 @@ export const EditFlowSettings: React.FC<
               maxLength={descriptionMaxLength}
               onDoubleClickCapture={handleFocus}
               onKeyDown={handleDescriptionKeyDown}
+              disabled={locked}
             />
           </Form.Control>
         ) : (
@@ -165,6 +179,33 @@ export const EditFlowSettings: React.FC<
         <Form.Message match="valueMissing" className="field-invalid">
           Please enter a description
         </Form.Message>
+        <div className="mt-3">
+          <div className="flex items-center gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <Form.Label className="text-mmd font-medium">
+                  Lock Flow
+                </Form.Label>
+
+                <ForwardedIconComponent
+                  name={locked ? "Lock" : "Unlock"}
+                  className="text-muted-foreground !w-5 !h-5"
+                />
+              </div>
+
+              <p className="text-xs text-muted-foreground/70 mt-1 font-normal">
+                Lock your flow to prevent edits or accidental changes.
+              </p>
+            </div>
+
+            <Switch
+              checked={!!locked}
+              onCheckedChange={(v) => setLocked?.(v)}
+              className="data-[state=checked]:bg-primary ml-auto"
+              data-testid="lock-flow-switch"
+            />
+          </div>
+        </div>
       </Form.Field>
     </>
   );

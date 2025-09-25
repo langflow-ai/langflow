@@ -39,18 +39,33 @@ on:
         required: false
         type: boolean
         default: true
+      release_lfx:
+        description: "Release LFX"
+        required: false
+        type: boolean
+        default: false
+      runs_on:
+        description: "Runner to use for CI tests (use self-hosted for safe/release code)"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+        default: ubuntu-latest
 
 
 
 jobs:
   ci:
-    if: ${{ github.event.inputs.release_package_base == 'true' || github.event.inputs.release_package_main == 'true' }}
+    if: ${{ github.event.inputs.release_package_base == 'true' || github.event.inputs.release_package_main == 'true' || github.event.inputs.release_lfx == 'true' }}
     name: CI
     uses: ./.github/workflows/ci.yml
     with:
       python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
       release: true
+      runs-on: ${{ (inputs['runs_on'] && startsWith(format('{0}', inputs['runs_on']), '[') && fromJSON(inputs['runs_on'])) || inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
     secrets: inherit
 
 
@@ -64,7 +79,7 @@ jobs:
       skipped: ${{ steps.check-version.outputs.skipped }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -132,7 +147,7 @@ jobs:
       version: ${{ steps.check-version.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -203,11 +218,37 @@ jobs:
   test-cross-platform:
     name: Test Cross-Platform Installation
     if: inputs.release_package_base == true || inputs.release_package_main == true
-    needs: [build-base, build-main]
+    needs: [build-base, build-main, build-lfx]
     uses: ./.github/workflows/cross-platform-test.yml
     with:
       base-artifact-name: "dist-base"
       main-artifact-name: "dist-main"
+      lfx-artifact-name: ${{ inputs.release_lfx == true && 'dist-lfx' || '' }}
+
+  test-lfx-cross-platform:
+    name: Test LFX Cross-Platform Installation
+    if: inputs.release_lfx == true
+    needs: [build-lfx]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - name: Download LFX artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-lfx
+          path: dist-lfx
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+          python-version: ${{ matrix.python-version }}
+      - name: Test LFX installation
+        run: |
+          uv pip install dist-lfx/*.whl
+          uv run lfx --help
 
   publish-base:
     name: Publish Langflow Base to PyPI
@@ -300,22 +341,100 @@ jobs:
     secrets: inherit
 
 
+  build-lfx:
+    name: Build LFX
+    needs: [ci]
+    if: inputs.release_lfx == true
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check-version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+      - name: Install LFX dependencies
+        run: uv sync --dev --package lfx
+      - name: Check Version
+        id: check-version
+        run: |
+          cd src/lfx
+          version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}' | sed 's/^v//')
+          last_released_version=$(curl -s "https://pypi.org/pypi/lfx/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
+          if [ "$version" = "$last_released_version" ]; then
+            echo "Version $version is already released. Skipping release."
+            exit 1
+          else
+            echo version=$version >> $GITHUB_OUTPUT
+          fi
+      - name: Build project for distribution
+        run: |
+          cd src/lfx
+          rm -rf dist/
+          uv build --wheel --out-dir dist
+      - name: Test CLI
+        run: |
+          cd src/lfx
+          uv pip install dist/*.whl --force-reinstall
+          uv run lfx --help
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-lfx
+          path: src/lfx/dist
+
+  publish-lfx:
+    name: Publish LFX to PyPI
+    if: inputs.release_lfx == true
+    needs: [build-lfx, test-lfx-cross-platform]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download LFX artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-lfx
+          path: src/lfx/dist
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+          python-version: "3.13"
+      - name: Publish LFX to PyPI
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          cd src/lfx && uv publish dist/*.whl
+
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: publish-main
+    needs: [publish-main, publish-lfx]
+    if: always() && inputs.create_release == 'true' && (needs.publish-main.result == 'success' || needs.publish-lfx.result == 'success')
     steps:
       - uses: actions/download-artifact@v4
+        if: needs.publish-main.result == 'success'
         with:
           name: dist-main
           path: dist
+      - uses: actions/download-artifact@v4
+        if: needs.publish-lfx.result == 'success'
+        with:
+          name: dist-lfx
+          path: dist-lfx
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "dist/*"
+          artifacts: |
+            dist/*
+            dist-lfx/*
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           generateReleaseNotes: true
           prerelease: ${{ inputs.pre_release }}
-          tag: ${{ needs.publish-main.needs.build-main.outputs.version }}
+          tag: ${{ needs.publish-main.needs.build-main.outputs.version || needs.publish-lfx.needs.build-lfx.outputs.version }}
           commit: ${{ github.ref }}

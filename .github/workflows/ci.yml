@@ -18,6 +18,11 @@ on:
         required: false
         type: boolean
         default: false
+      runs-on:
+        description: "Runner to use for the tests"
+        required: false
+        type: string
+        default: "ubuntu-latest"
   workflow_dispatch:
     inputs:
       branch:
@@ -37,8 +42,17 @@ on:
         required: false
         type: string
         default: "['3.10']"
+      runs-on:
+        description: "Runner to use for the tests"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+        default: ubuntu-latest
   pull_request:
-    types: [synchronize, labeled]
+    types: [opened, synchronize, labeled]
   merge_group:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -120,7 +134,7 @@ jobs:
     name: Should Run CI
     runs-on: ubuntu-latest
     outputs:
-      should-run-ci: ${{ (contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group') }}
+      should-run-ci: ${{ (github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group') }}
       should-run-tests: ${{ !contains(github.event.pull_request.labels.*.name, 'fast-track') || github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' }}
     steps:
       #  Do anything just to make the job run
@@ -147,10 +161,23 @@ jobs:
       workspace: ${{ steps.filter.outputs.workspace }}
       api: ${{ steps.filter.outputs.api }}
       database: ${{ steps.filter.outputs.database }}
+      docs-only: ${{
+        steps.filter.outputs.docs == 'true' &&
+        steps.filter.outputs.python != 'true' &&
+        steps.filter.outputs.frontend != 'true' &&
+        steps.filter.outputs['frontend-tests'] != 'true' &&
+        steps.filter.outputs['components-changes'] != 'true' &&
+        steps.filter.outputs['starter-projects-changes'] != 'true' &&
+        steps.filter.outputs['starter-projects'] != 'true' &&
+        steps.filter.outputs.components != 'true' &&
+        steps.filter.outputs.workspace != 'true' &&
+        steps.filter.outputs.api != 'true' &&
+        steps.filter.outputs.database != 'true'
+        }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.branch || github.ref }}
       - name: Filter Paths
@@ -166,6 +193,7 @@ jobs:
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
+      runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
@@ -187,6 +215,7 @@ jobs:
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}
       release: ${{ inputs.release || false }}
+      runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
@@ -208,11 +237,11 @@ jobs:
   test-templates:
     needs: [path-filter, set-ci-condition]
     name: Test Starter Templates
-    if: ${{ needs.path-filter.outputs.starter-projects == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    if: ${{ (needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true') && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.branch || github.ref }}
 
@@ -255,9 +284,11 @@ jobs:
     env:
       JOBS_JSON: ${{ toJSON(needs) }}
       RESULTS_JSON: ${{ toJSON(needs.*.result) }}
+      # Skip nightly build check if only docs files changed
+      DOCS_ONLY: ${{ needs.path-filter.outputs.docs-only }}
       EXIT_CODE: ${{ (contains(needs.*.result, 'failure') ||
                       contains(needs.*.result, 'cancelled') ||
-                      (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch'))
+                      (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch' && needs.path-filter.outputs.docs-only != 'true'))
                       && '1' || '0' }}
     steps:
       - name: "CI Success"
@@ -267,6 +298,10 @@ jobs:
           echo "Should run CI: ${{ needs.set-ci-condition.outputs.should-run-ci }}"
           echo "Nightly build status: ${{ needs.check-nightly-status.outputs.should-proceed }}"
           echo "Event type: ${{ github.event_name }}"
+          echo "Docs only changes: $DOCS_ONLY"
+          echo "Python changes: ${{ needs.path-filter.outputs.python }}"
+          echo "Frontend changes: ${{ needs.path-filter.outputs.frontend }}"
+          echo "Docs changes: ${{ needs.path-filter.outputs.docs }}"
           echo ""
 
           # Check for job failures
@@ -316,7 +351,7 @@ jobs:
             echo "  1. Check if the cancellation was intentional"
             echo "  2. Re-run the workflow if needed"
 
-          elif [[ "${{ needs.check-nightly-status.outputs.should-proceed }}" != "true" && "${{ github.event_name }}" != "workflow_dispatch" ]]; then
+          elif [[ "${{ needs.check-nightly-status.outputs.should-proceed }}" != "true" && "${{ github.event_name }}" != "workflow_dispatch" && "$DOCS_ONLY" != "true" ]]; then
             echo "🚫 CI BLOCKED: Nightly build is broken"
             echo ""
             echo "The nightly PyPI package was not updated today, indicating the nightly build failed."
@@ -326,6 +361,7 @@ jobs:
             echo "  2. Check the nightly build logs for errors"
             echo "  3. Once the nightly build is fixed and publishes successfully, re-run this workflow"
             echo "  4. Alternatively, use 'workflow_dispatch' to manually override this check if needed"
+            echo "  5. Note: PRs with only documentation changes can bypass this check"
 
           else
             echo "✅ CI SUCCESS: All checks passed!"

@@ -5,7 +5,8 @@ import warnings
 from unittest.mock import Mock, patch
 
 import pytest
-from langflow.utils.validate import (
+
+from lfx.custom.validate import (
     _create_langflow_execution_context,
     add_type_ignores,
     build_class_constructor,
@@ -136,17 +137,17 @@ def test_func():
         assert any("nonexistent1" in err for err in result["imports"]["errors"])
         assert any("nonexistent2" in err for err in result["imports"]["errors"])
 
-    @patch("langflow.utils.validate.logger")
+    @patch("lfx.custom.validate.logger")
     def test_logging_on_parse_error(self, mock_logger):
         """Test that parsing errors are logged."""
-        mock_logger.opt.return_value = mock_logger
+        # Structlog doesn't have opt method, so hasattr(logger, "opt") returns False
         mock_logger.debug = Mock()
 
         code = "invalid python syntax +++"
         validate_code(code)
 
-        mock_logger.opt.assert_called_once_with(exception=True)
-        mock_logger.debug.assert_called_with("Error parsing code")
+        # With structlog, we expect logger.debug to be called with exc_info=True
+        mock_logger.debug.assert_called_with("Error parsing code", exc_info=True)
 
 
 class TestCreateLangflowExecutionContext:
@@ -189,17 +190,10 @@ class TestCreateLangflowExecutionContext:
         assert "Optional" in context
         assert "Union" in context
 
-    def test_includes_pandas_when_available(self):
-        """Test that pandas is included when available."""
-        import importlib.util
-
-        if importlib.util.find_spec("pandas"):
-            context = _create_langflow_execution_context()
-            assert "pd" in context
-        else:
-            # If pandas not available, pd shouldn't be in context
-            context = _create_langflow_execution_context()
-            assert "pd" not in context
+    def test_does_not_include_pandas(self):
+        """Test that pandas is not included in the langflow execution context."""
+        context = _create_langflow_execution_context()
+        assert "pd" not in context
 
 
 class TestEvalFunction:
@@ -395,13 +389,13 @@ class MyComponent(CustomComponent):
         return "test"
 """
         # Should not raise an error due to import replacement
-        with patch("langflow.utils.validate.prepare_global_scope") as mock_prepare:
+        with patch("lfx.custom.validate.prepare_global_scope") as mock_prepare:
             mock_prepare.return_value = {"CustomComponent": type("CustomComponent", (), {})}
-            with patch("langflow.utils.validate.extract_class_code") as mock_extract:
+            with patch("lfx.custom.validate.extract_class_code") as mock_extract:
                 mock_extract.return_value = Mock()
-                with patch("langflow.utils.validate.compile_class_code") as mock_compile:
+                with patch("lfx.custom.validate.compile_class_code") as mock_compile:
                     mock_compile.return_value = compile("pass", "<string>", "exec")
-                    with patch("langflow.utils.validate.build_class_constructor") as mock_build:
+                    with patch("lfx.custom.validate.build_class_constructor") as mock_build:
                         mock_build.return_value = lambda: None
                         create_class(code, "MyComponent")
 
@@ -428,7 +422,7 @@ class TestClass:
         validation_error = CoreValidationError.from_exception_data("TestClass", [])
 
         with (
-            patch("langflow.utils.validate.prepare_global_scope", side_effect=validation_error),
+            patch("lfx.custom.validate.prepare_global_scope", side_effect=validation_error),
             pytest.raises(ValueError, match=".*"),
         ):
             create_class(code, "TestClass")
@@ -538,7 +532,7 @@ def test():
     pass
 """
         module = ast.parse(code)
-        with pytest.raises(ModuleNotFoundError, match="Module nonexistent_module not found"):
+        with pytest.raises(ModuleNotFoundError, match="No module named 'nonexistent_module'"):
             prepare_global_scope(module)
 
     def test_handles_langchain_warnings(self):
@@ -628,7 +622,7 @@ class SimpleClass:
 class TestGetDefaultImports:
     """Test cases for get_default_imports function."""
 
-    @patch("langflow.utils.validate.CUSTOM_COMPONENT_SUPPORTED_TYPES", {"TestType": Mock()})
+    @patch("lfx.field_typing.constants.CUSTOM_COMPONENT_SUPPORTED_TYPES", {"TestType": Mock()})
     def test_returns_default_imports(self):
         """Test that default imports are returned."""
         code = "TestType and Optional"
@@ -644,15 +638,15 @@ class TestGetDefaultImports:
             assert "Dict" in imports
             assert "Union" in imports
 
-    @patch("langflow.utils.validate.CUSTOM_COMPONENT_SUPPORTED_TYPES", {"CustomType": Mock()})
     def test_includes_langflow_imports(self):
         """Test that langflow imports are included when found in code."""
-        code = "CustomType is used here"
+        # Use an actual type from CUSTOM_COMPONENT_SUPPORTED_TYPES
+        code = "Chain is used here"
 
-        with patch("importlib.import_module") as mock_import:
+        with patch("lfx.custom.validate.importlib") as mock_importlib:
             mock_module = Mock()
-            mock_module.CustomType = Mock()
-            mock_import.return_value = mock_module
+            mock_module.Chain = Mock()
+            mock_importlib.import_module.return_value = mock_module
 
             imports = get_default_imports(code)
-            assert "CustomType" in imports
+            assert "Chain" in imports
