@@ -3,8 +3,6 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
-from lfx.log.logger import logger
-
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
@@ -151,9 +149,8 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 async def session_scope() -> AsyncGenerator[AsyncSession, None]:
     """Context manager for managing an async session scope.
 
-    This context manager is used to manage an async session scope for database operations.
-    It ensures that the session is properly committed if no exceptions occur,
-    and rolled back if an exception is raised.
+    This context manager delegates to DatabaseService.with_session() which already
+    handles proper session lifecycle management including commits and rollbacks.
 
     Yields:
         AsyncSession: The async session object.
@@ -164,13 +161,7 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
     """
     db_service = get_db_service()
     async with db_service.with_session() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await logger.aexception("An error occurred during the session scope.")
-            await session.rollback()
-            raise
+        yield session
 
 
 def get_cache_service() -> CacheService | AsyncBaseCacheService:

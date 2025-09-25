@@ -63,13 +63,12 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
             ),
         )
 
-        # Add new entry and execute delete in same transaction
+        # Add new entry and execute delete - let caller manage transaction
         db.add(table)
         await db.exec(delete_older)
-        await db.commit()
 
     except Exception:
-        await db.rollback()
+        logger.exception("Error logging transaction")
         raise
     return table
 
