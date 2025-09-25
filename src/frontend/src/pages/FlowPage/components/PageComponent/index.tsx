@@ -42,6 +42,7 @@ import {
   UPLOAD_ERROR_ALERT,
   WRONG_FILE_ERROR_ALERT,
 } from "../../../../constants/alerts_constants";
+import ExportModal from "../../../../modals/exportModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -134,6 +135,7 @@ export default function Page({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const updateCurrentFlow = useFlowStore((state) => state.updateCurrentFlow);
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
+  const [openExportModal, setOpenExportModal] = useState(false);
   const edgeUpdateSuccessful = useRef(true);
 
   const isLocked = useFlowStore(
@@ -327,6 +329,14 @@ export default function Page({
     }
   }
 
+  function handleDownload(e: KeyboardEvent) {
+    if (!isWrappedWithClass(e, "noflow")) {
+      e.preventDefault();
+      (e as unknown as Event).stopImmediatePropagation();
+      setOpenExportModal(true);
+    }
+  }
+
   const undoAction = useShortcutsStore((state) => state.undo);
   const redoAction = useShortcutsStore((state) => state.redo);
   const redoAltAction = useShortcutsStore((state) => state.redoAlt);
@@ -336,6 +346,7 @@ export default function Page({
   const groupAction = useShortcutsStore((state) => state.group);
   const cutAction = useShortcutsStore((state) => state.cut);
   const pasteAction = useShortcutsStore((state) => state.paste);
+  const downloadAction = useShortcutsStore((state) => state.download);
   //@ts-ignore
   useHotkeys(undoAction, handleUndo);
   //@ts-ignore
@@ -354,6 +365,8 @@ export default function Page({
   useHotkeys(pasteAction, handlePaste);
   //@ts-ignore
   useHotkeys(deleteAction, handleDelete);
+  //@ts-ignore
+  useHotkeys(downloadAction, handleDownload);
   //@ts-ignore
   useHotkeys("delete", handleDelete);
 
@@ -784,6 +797,7 @@ export default function Page({
           <CustomLoader remSize={30} />
         </div>
       )}
+      <ExportModal open={openExportModal} setOpen={setOpenExportModal} />
     </div>
   );
 }
