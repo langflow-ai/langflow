@@ -105,7 +105,7 @@ jobs:
           echo "Validated: '${{ inputs.release_tag }}' is a valid tag."
 
   ci:
-    if: ${{ github.event.inputs.release_package_base == 'true' || github.event.inputs.release_package_main == 'true' || github.event.inputs.release_lfx == 'true' }}
+    if: ${{ inputs.release_package_base == 'true' || inputs.release_package_main == 'true' || inputs.release_lfx == 'true' }}
     name: CI
     needs: [validate-tag]
     uses: ./.github/workflows/ci.yml
@@ -114,7 +114,7 @@ jobs:
       python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
       release: true
-      runs-on: ${{ (inputs['runs_on'] && startsWith(format('{0}', inputs['runs_on']), '[') && fromJSON(inputs['runs_on'])) || inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
+      runs-on: ${{ (inputs['runs_on'] && startsWith(format('{0}', inputs['runs_on']), '[') && fromJSON(inputs['runs_on'])) || inputs['runs_on'] || inputs['runs_on'] || 'ubuntu-latest' }}
     secrets: inherit
 
 
