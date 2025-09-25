@@ -2004,9 +2004,13 @@ class ComposioBaseComponent(Component):
             required_fields = set(required_list) if required_list is not None else set()
 
             for field in param_fields:
-                if not hasattr(self, field):
+                # Check if field exists in _attributes (for reserved names) or as regular attribute
+                if hasattr(self, "_attributes") and field in self._attributes:
+                    value = self._attributes[field]
+                elif hasattr(self, field):
+                    value = getattr(self, field)
+                else:
                     continue
-                value = getattr(self, field)
 
                 # Skip None, empty strings, and empty lists
                 if value is None or value == "" or (isinstance(value, list) and len(value) == 0):
