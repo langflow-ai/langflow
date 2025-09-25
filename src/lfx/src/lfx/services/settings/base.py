@@ -180,21 +180,13 @@ class Settings(BaseSettings):
     like_webhook_url: str | None = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
 
     storage_type: str = "local"
-    # s3 storage configuration
-    s3_bucket_name: str | None = None
-    """S3 bucket name for file storage. If not set, uses LANGFLOW_S3_BUCKET_NAME env var."""
-    s3_region_name: str | None = None
-    """S3 region name for file storage. If not set, uses LANGFLOW_S3_REGION_NAME env var."""
-    s3_aws_access_key_id: str | None = None
-    """AWS access key ID for S3. If not set, uses LANGFLOW_S3_AWS_ACCESS_KEY_ID env var."""
-    s3_aws_secret_access_key: str | None = None
-    """AWS secret access key for S3. If not set, uses LANGFLOW_S3_AWS_SECRET_ACCESS_KEY env var."""
-    s3_aws_session_token: str | None = None
-    """AWS session token for S3. If not set, uses LANGFLOW_S3_AWS_SESSION_TOKEN env var."""
-    s3_role_arn: str | None = None
-    """AWS IAM role ARN for S3. If not set, uses LANGFLOW_S3_ROLE_ARN env var."""
-    s3_storage_path: str | None = "tenants"
-    """S3 storage path for file storage. If not set, uses LANGFLOW_S3_STORAGE_PATH env var or defaults to 'tenants'."""
+    """Storage type for file storage. Defaults to 'local'. Supports 'local' and 's3'."""
+    object_storage_bucket_name: str | None = "langflow-bucket"
+    """Object storage bucket name for file storage. Defaults to 'langflow-bucket'."""
+    object_storage_prefix: str | None = "files"
+    """Object storage prefix for file storage. Defaults to 'files'."""
+    object_storage_tags: dict[str, str] | None = None
+    """Object storage tags for file storage. """
 
     celery_enabled: bool = False
 
