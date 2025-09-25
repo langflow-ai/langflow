@@ -206,6 +206,10 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "37de3210aed9",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.agentql.agentql_api.AgentQL"
             },
             "minimized": false,
@@ -562,6 +566,10 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "46a90558cb44",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
             "minimized": true,
@@ -835,6 +843,10 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -1071,6 +1083,10 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "519b261b6693",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.processing.save_file.SaveToFileComponent"
             },
             "minimized": false,
@@ -1242,6 +1258,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "ccf23ef1345b",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.agents.agent.AgentComponent"
             },
             "minimized": false,

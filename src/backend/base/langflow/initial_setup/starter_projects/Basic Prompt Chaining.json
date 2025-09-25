@@ -363,6 +363,10 @@
             "lf_version": "1.5.0",
             "metadata": {
               "code_hash": "46a90558cb44",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
             "output_types": [],
@@ -601,6 +605,10 @@
             "lf_version": "1.5.0",
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "output_types": [],

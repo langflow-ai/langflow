@@ -315,6 +315,10 @@
             "lf_version": "1.1.5",
             "metadata": {
               "code_hash": "935c9296b149",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.assemblyai.assemblyai_poll_transcript.AssemblyAITranscriptionJobPoller"
             },
             "minimized": false,
@@ -627,6 +631,10 @@
             "lf_version": "1.1.5",
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -866,6 +874,10 @@
             "lf_version": "1.1.1",
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -1105,6 +1117,10 @@
             "lf_version": "1.1.5",
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -1521,6 +1537,10 @@
             "lf_version": "1.1.5",
             "metadata": {
               "code_hash": "efd11fac2416",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.helpers.memory.MemoryComponent"
             },
             "minimized": false,
@@ -1851,6 +1871,10 @@
             "lf_version": "1.1.5",
             "metadata": {
               "code_hash": "46a90558cb44",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
             "minimized": true,
@@ -2203,6 +2227,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "7ff7b3f90298",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.assemblyai.assemblyai_start_transcript.AssemblyAITranscriptionJobCreator"
             },
             "minimized": false,

@@ -358,6 +358,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "ccf23ef1345b",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.agents.agent.AgentComponent"
             },
             "minimized": false,
@@ -989,6 +993,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "ccf23ef1345b",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.agents.agent.AgentComponent"
             },
             "minimized": false,
@@ -2071,6 +2079,10 @@
             "lf_version": "1.0.19.post2",
             "metadata": {
               "code_hash": "46a90558cb44",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
             "output_types": [],
@@ -2359,6 +2371,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "ccf23ef1345b",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.agents.agent.AgentComponent"
             },
             "minimized": false,
@@ -2975,6 +2991,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "d6bf628ab821",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.yahoosearch.yahoo.YfinanceComponent"
             },
             "minimized": false,
@@ -3189,6 +3209,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "5fcfa26be77d",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.helpers.calculator_core.CalculatorComponent"
             },
             "minimized": false,
@@ -3346,6 +3370,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "e602eaec8316",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.tavily.tavily_search.TavilySearchComponent"
             },
             "minimized": false,
@@ -3746,6 +3774,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,

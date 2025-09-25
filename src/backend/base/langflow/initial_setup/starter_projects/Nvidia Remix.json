@@ -233,6 +233,10 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "46a90558cb44",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
             "minimized": true,
@@ -480,6 +484,10 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -739,6 +747,10 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "ccf23ef1345b",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.agents.agent.AgentComponent"
             },
             "minimized": false,
@@ -1680,6 +1692,10 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "8607e963fdef",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.models.embedding_model.EmbeddingModelComponent"
             },
             "minimized": false,
@@ -1973,6 +1989,10 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "2bd7a064d724",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.vectorstores.faiss.FaissVectorStoreComponent"
             },
             "minimized": false,
@@ -2309,6 +2329,10 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "756d1e10d0ca",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.agents.mcp_component.MCPToolsComponent"
             },
             "minimized": false,

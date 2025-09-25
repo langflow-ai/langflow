@@ -284,6 +284,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "46a90558cb44",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
             "minimized": true,
@@ -527,6 +531,10 @@
             "lf_version": "1.0.19.post2",
             "metadata": {
               "code_hash": "3dd28ea591b9",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.text.TextInputComponent"
             },
             "output_types": [],
@@ -645,6 +653,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -885,6 +897,10 @@
             "lf_version": "1.0.19.post2",
             "metadata": {
               "code_hash": "3dd28ea591b9",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.text.TextInputComponent"
             },
             "output_types": [],
@@ -993,6 +1009,10 @@
             "lf_version": "1.0.19.post2",
             "metadata": {
               "code_hash": "3dd28ea591b9",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.text.TextInputComponent"
             },
             "output_types": [],
@@ -1101,6 +1121,10 @@
             "lf_version": "1.0.19.post2",
             "metadata": {
               "code_hash": "3dd28ea591b9",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.text.TextInputComponent"
             },
             "output_types": [],
@@ -1209,6 +1233,10 @@
             "lf_version": "1.0.19.post2",
             "metadata": {
               "code_hash": "3dd28ea591b9",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.text.TextInputComponent"
             },
             "output_types": [],
@@ -1317,6 +1345,10 @@
             "lf_version": "1.0.19.post2",
             "metadata": {
               "code_hash": "3dd28ea591b9",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.text.TextInputComponent"
             },
             "output_types": [],

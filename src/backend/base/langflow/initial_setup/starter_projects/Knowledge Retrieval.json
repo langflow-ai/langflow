@@ -107,6 +107,10 @@
             "lf_version": "1.5.0.post1",
             "metadata": {
               "code_hash": "3dd28ea591b9",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.text.TextInputComponent"
             },
             "minimized": false,
@@ -224,6 +228,10 @@
             "lf_version": "1.5.0.post1",
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -463,6 +471,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "bf96902ddcc7",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.knowledge_bases.retrieval.KnowledgeRetrievalComponent"
             },
             "minimized": false,

@@ -192,6 +192,10 @@
             "lf_version": "1.2.0",
             "metadata": {
               "code_hash": "5fcfa26be77d",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.helpers.calculator_core.CalculatorComponent"
             },
             "minimized": false,
@@ -350,6 +354,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "46a90558cb44",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
             "minimized": true,
@@ -599,6 +607,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -850,6 +862,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "ccf23ef1345b",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.agents.agent.AgentComponent"
             },
             "minimized": false,
@@ -1468,6 +1484,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "cdb7d379306e",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.data.url.URLComponent"
             },
             "minimized": false,

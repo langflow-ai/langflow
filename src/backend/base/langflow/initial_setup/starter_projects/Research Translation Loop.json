@@ -229,6 +229,10 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "e4b13ca0e0af",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.arxiv.arxiv.ArXivComponent"
             },
             "minimized": false,
@@ -390,6 +394,10 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -632,6 +640,10 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "46a90558cb44",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
             "minimized": true,
@@ -900,6 +912,10 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "bf19ee6feee3",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.processing.parser.ParserComponent"
             },
             "minimized": false,
@@ -1075,6 +1091,10 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "17dbc66df007",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.logic.loop.LoopComponent"
             },
             "minimized": false,
@@ -1516,6 +1536,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "aac23b807182",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.processing.converter.TypeConverterComponent"
             },
             "minimized": false,

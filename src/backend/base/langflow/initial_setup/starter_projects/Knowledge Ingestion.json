@@ -88,6 +88,10 @@
             "lf_version": "1.5.0.post1",
             "metadata": {
               "code_hash": "f2867efda61f",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.processing.split_text.SplitTextComponent"
             },
             "minimized": false,
@@ -339,6 +343,10 @@
             "lf_version": "1.5.0.post1",
             "metadata": {
               "code_hash": "cdb7d379306e",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.data.url.URLComponent"
             },
             "minimized": false,
@@ -702,6 +710,10 @@
             "legacy": false,
             "metadata": {
               "code_hash": "849094667f6f",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.knowledge_bases.ingestion.KnowledgeIngestionComponent"
             },
             "minimized": false,

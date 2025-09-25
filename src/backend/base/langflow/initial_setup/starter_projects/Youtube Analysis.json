@@ -286,6 +286,10 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "299b4469032e",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.processing.batch_run.BatchRunComponent"
             },
             "minimized": false,
@@ -504,6 +508,10 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "20398e0d18df",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.youtube.comments.YouTubeCommentsComponent"
             },
             "minimized": false,
@@ -726,6 +734,10 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "ccf23ef1345b",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.agents.agent.AgentComponent"
             },
             "minimized": false,
@@ -1520,6 +1532,10 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "minimized": true,
@@ -1762,6 +1778,10 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "c1771da1f21b",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.youtube.youtube_transcripts.YouTubeTranscriptsComponent"
             },
             "minimized": false,
@@ -2544,6 +2564,10 @@
             "lf_version": "1.4.3",
             "metadata": {
               "code_hash": "46a90558cb44",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
             "minimized": true,

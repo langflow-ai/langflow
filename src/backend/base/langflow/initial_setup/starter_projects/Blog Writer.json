@@ -353,6 +353,10 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "3dd28ea591b9",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.text.TextInputComponent"
             },
             "output_types": [],
@@ -469,6 +473,10 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
             "output_types": [],
@@ -729,6 +737,10 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "bf19ee6feee3",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.processing.parser.ParserComponent"
             },
             "minimized": false,
@@ -916,6 +928,10 @@
             "lf_version": "1.4.2",
             "metadata": {
               "code_hash": "cdb7d379306e",
+              "dependencies": {
+                "dependencies": [],
+                "total_dependencies": 0
+              },
               "module": "lfx.components.data.url.URLComponent"
             },
             "minimized": false,
