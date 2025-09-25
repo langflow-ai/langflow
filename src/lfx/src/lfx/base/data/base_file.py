@@ -247,15 +247,10 @@ class BaseFileComponent(Component, ABC):
     async def _extract_file_metadata(self, data_item) -> dict:
         """Extract metadata from a data item with file_path."""
         metadata = {}
-        file_path = None
-        if hasattr(data_item, "file_path"):
-            file_path = data_item.file_path
-        elif isinstance(getattr(data_item, "data", None), dict):
-            file_path = data_item.data.get(self.SERVER_FILE_PATH_FIELDNAME)
-
-        if not file_path:
+        if not hasattr(data_item, "file_path"):
             return metadata
 
+        file_path = data_item.file_path
         file_path_obj = anyio.Path(file_path)
         file_size_stat = await file_path_obj.stat()
         filename = file_path_obj.name
@@ -406,7 +401,7 @@ class BaseFileComponent(Component, ABC):
 
         return Data(data=json_data)
 
-    async def load_files(self) -> DataFrame:
+    def load_files(self) -> DataFrame:
         """Load files and return as DataFrame.
 
         Returns:
@@ -419,9 +414,14 @@ class BaseFileComponent(Component, ABC):
         # Convert Data objects to a list of dictionaries
         all_rows = []
         for data in data_list:
+            file_path = data.data.get(self.SERVER_FILE_PATH_FIELDNAME)
             row = dict(data.data) if data.data else {}
-            metadata = await self._extract_file_metadata(data)
-            row.update(metadata)
+
+            # Add text if available, otherwise use the data's text property
+            if "text" in data.data:
+                row["text"] = data.data["text"]
+            if file_path:
+                row["file_path"] = file_path
             all_rows.append(row)
 
         self.status = DataFrame(all_rows)
