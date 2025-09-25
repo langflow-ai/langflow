@@ -47,7 +47,7 @@ class CacheServiceFactory(ServiceFactory):
 
         if settings_service.settings.cache_type == "redis":
             logger.debug("Creating Redis cache")
-            cache = RedisCache(
+            cache: RedisCache = RedisCache(
                 host=settings_service.settings.redis_host,
                 port=settings_service.settings.redis_port,
                 db=settings_service.settings.redis_db,
