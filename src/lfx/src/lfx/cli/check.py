@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import difflib
 from typing import Any
 
@@ -445,7 +446,7 @@ def generate_code_diff(current_code: str, latest_code: str) -> dict[str, Any] | 
     context_blocks: list[list[str]] = []
 
     current_block: list[str] = []
-    for line in diff_lines[MAX_CONTEXT_BLOCKS:]:  # Skip the file headers
+    for line in diff_lines[2:]:  # Skip the '---' and '+++' headers
         if line.startswith("@@"):
             if current_block:
                 context_blocks.append(current_block)
@@ -630,7 +631,7 @@ async def apply_component_update(flow_data: dict, component: dict, all_types_dic
                     user_values[field_name] = field_data["value"]
 
             # Update the node with the latest component data
-            node["data"]["node"] = found_component.copy()
+            node["data"]["node"] = copy.deepcopy(found_component)
 
             # Restore user values where possible
             updated_template = node["data"]["node"].get("template", {})
