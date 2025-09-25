@@ -238,6 +238,13 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
     # Create and return the InputSchema model
     model = create_model("InputSchema", **fields)
     model.model_rebuild()
+
+    # Register class on module to improve importability for serializers
+    import sys
+    current_module = sys.modules[__name__]
+    model.__module__ = __name__
+    setattr(current_module, "InputSchema", model)
+
     return model
 
 
@@ -286,4 +293,11 @@ def create_input_schema_from_dict(inputs: list[dotdict], param_key: str | None =
         model = create_model("InputSchema", **fields)
 
     model.model_rebuild()
+
+    # Register class on module to improve importability for serializers
+    import sys
+    current_module = sys.modules[__name__]
+    model.__module__ = __name__
+    setattr(current_module, "InputSchema", model)
+
     return model
