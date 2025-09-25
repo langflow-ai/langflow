@@ -39,6 +39,8 @@ dependencies = [
     "loguru>=0.7.3",
     "langchain~=0.3.23",
     "validators>=0.34.0",
+    "autonomize-model-sdk>=1.1.70",
+    "mlflow>=3.1.4",
 ]
 
 [project.scripts]

@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "genesis-studio-service.fullname" . }}
+  labels:
+    {{- include "genesis-studio-service.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "genesis-studio-service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "genesis-studio-service.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "genesis-studio-service.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ tpl .Values.image.repository $ }}/{{ .Values.image.name }}:{{ .Values.image.tag | default .Chart.Version }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+
+          env:
+            - name: IS_SERVICE_ACCOUNT_ENABLED
+              value: {{ .Values.serviceAccount.enabled | quote }}
+            - name: STORAGE_TYPE
+              value: {{ include "selectedStorageType" . }}
+
+
+            # Queue Configuration
+            - name: QUEUE_TYPE
+              value: {{ include "selectedQueueType" . }}
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+
+            {{- range $key, $value := .Values.env }}
+            {{- if $value }}
+            - name: {{ $key }}
+              value: {{ tpl (toString $value) $ | default "" | quote }}
+            {{- end }}
+            {{- end }}
+
+            {{- range $key, $value := .Values.secretEnv }}
+            {{- if $value }}
+            - name: {{ $key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ tpl $.Values.env.k8sSecretName $ }}
+                  key: {{ $value.key }}
+            {{- end }}
+            {{- end }}
+
+
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

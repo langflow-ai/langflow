@@ -3,11 +3,90 @@
     "edges": [
       {
         "animated": false,
-        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "URL",
+            "id": "URL-eEDon",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-8k2Yj",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__URL-eEDon{œdataTypeœ:œURLœ,œidœ:œURL-eEDonœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-8k2Yj{œfieldNameœ:œtoolsœ,œidœ:œAgent-8k2Yjœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "URL-eEDon",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-eEDonœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-8k2Yj",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-8k2Yjœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "CalculatorComponent",
+            "id": "CalculatorComponent-zU3QI",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-8k2Yj",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__CalculatorComponent-zU3QI{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-zU3QIœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-8k2Yj{œfieldNameœ:œtoolsœ,œidœ:œAgent-8k2Yjœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "CalculatorComponent-zU3QI",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-zU3QIœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-8k2Yj",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-8k2Yjœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-sYodl",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-8k2Yj",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__ChatInput-sYodl{œdataTypeœ:œChatInputœ,œidœ:œChatInput-sYodlœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-8k2Yj{œfieldNameœ:œinput_valueœ,œidœ:œAgent-8k2Yjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-sYodl",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-sYodlœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-8k2Yj",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-8k2Yjœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-D0Kx2",
+            "id": "Agent-8k2Yj",
             "name": "response",
             "output_types": [
               "Message"
@@ -15,7 +94,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-yhCn0",
+            "id": "ChatOutput-IwY9Y",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,101 +103,294 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Agent-D0Kx2{œdataTypeœ:œAgentœ,œidœ:œAgent-D0Kx2œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-yhCn0{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-yhCn0œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "Agent-D0Kx2",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-D0Kx2œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-yhCn0",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-yhCn0œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-hMbFw",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-D0Kx2",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-CalculatorComponent-hMbFw{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-hMbFwœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-D0Kx2{œfieldNameœ:œtoolsœ,œidœ:œAgent-D0Kx2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "CalculatorComponent-hMbFw",
-        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-hMbFwœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-D0Kx2",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-D0Kx2œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-iPUSx",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-D0Kx2",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-iPUSx{œdataTypeœ:œChatInputœ,œidœ:œChatInput-iPUSxœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-D0Kx2{œfieldNameœ:œinput_valueœ,œidœ:œAgent-D0Kx2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-iPUSx",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-iPUSxœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-D0Kx2",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-D0Kx2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "URLComponent",
-            "id": "URLComponent-TpTHB",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-D0Kx2",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__URLComponent-TpTHB{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-TpTHBœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-D0Kx2{œfieldNameœ:œtoolsœ,œidœ:œAgent-D0Kx2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "URLComponent-TpTHB",
-        "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-TpTHBœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-D0Kx2",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-D0Kx2œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__Agent-8k2Yj{œdataTypeœ:œAgentœ,œidœ:œAgent-8k2Yjœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-IwY9Y{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-IwY9Yœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "source": "Agent-8k2Yj",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-8k2Yjœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-IwY9Y",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-IwY9Yœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "note-28UlV",
+          "description": "Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+          "display_name": "URL",
+          "id": "URL-eEDon",
+          "node": {
+            "base_classes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+            "display_name": "URL",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "urls",
+              "format",
+              "separator",
+              "clean_extra_whitespace"
+            ],
+            "frozen": false,
+            "icon": "layout-template",
+            "legacy": false,
+            "lf_version": "1.2.0",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "hidden": null,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "required_inputs": null,
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "clean_extra_whitespace": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Clean Extra Whitespace",
+                "dynamic": false,
+                "info": "Whether to clean excessive blank lines in the text output. Only applies to 'Text' format.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "clean_extra_whitespace",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import asyncio\nimport json\nimport re\n\nimport aiohttp\nfrom langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader\n\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, DropdownInput, MessageTextInput, Output, StrInput\nfrom langflow.schema import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\n\n\nclass URLComponent(Component):\n    display_name = \"URL\"\n    description = (\n        \"Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, \"\n        \"or JSON, with options for cleaning and separating multiple outputs.\"\n    )\n    icon = \"layout-template\"\n    name = \"URL\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            is_list=True,\n            tool_mode=True,\n            placeholder=\"Enter a URL...\",\n            list_add_label=\"Add URL\",\n        ),\n        DropdownInput(\n            name=\"format\",\n            display_name=\"Output Format\",\n            info=(\n                \"Output Format. Use 'Text' to extract text from the HTML, 'Raw HTML' for the raw HTML \"\n                \"content, or 'JSON' to extract JSON from the HTML.\"\n            ),\n            options=[\"Text\", \"Raw HTML\", \"JSON\"],\n            value=\"Text\",\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"separator\",\n            display_name=\"Separator\",\n            value=\"\\n\\n\",\n            show=True,\n            info=(\n                \"Specify the separator to use between multiple outputs. Default for Text is '\\\\n\\\\n'. \"\n                \"Default for Raw HTML is '\\\\n<!-- Separator -->\\\\n'.\"\n            ),\n        ),\n        BoolInput(\n            name=\"clean_extra_whitespace\",\n            display_name=\"Clean Extra Whitespace\",\n            value=True,\n            show=True,\n            info=\"Whether to clean excessive blank lines in the text output. Only applies to 'Text' format.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n        Output(display_name=\"DataFrame\", name=\"dataframe\", method=\"as_dataframe\"),\n    ]\n\n    async def validate_json_content(self, url: str) -> bool:\n        \"\"\"Validates if the URL content is actually JSON.\"\"\"\n        try:\n            async with aiohttp.ClientSession() as session, session.get(url) as response:\n                http_ok = 200\n                if response.status != http_ok:\n                    return False\n\n                content = await response.text()\n                try:\n                    json.loads(content)\n                except json.JSONDecodeError:\n                    return False\n                else:\n                    return True\n        except (aiohttp.ClientError, asyncio.TimeoutError):\n            # Log specific error for debugging if needed\n            return False\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:\n        \"\"\"Dynamically update fields based on selected format.\"\"\"\n        if field_name == \"format\":\n            is_text_mode = field_value == \"Text\"\n            is_json_mode = field_value == \"JSON\"\n            build_config[\"separator\"][\"value\"] = \"\\n\\n\" if is_text_mode else \"\\n<!-- Separator -->\\n\"\n            build_config[\"clean_extra_whitespace\"][\"show\"] = is_text_mode\n            build_config[\"separator\"][\"show\"] = not is_json_mode\n        return build_config\n\n    def ensure_url(self, string: str) -> str:\n        \"\"\"Ensures the given string is a valid URL.\"\"\"\n        if not string.startswith((\"http://\", \"https://\")):\n            string = \"http://\" + string\n\n        url_regex = re.compile(\n            r\"^(https?:\\/\\/)?\"\n            r\"(www\\.)?\"\n            r\"([a-zA-Z0-9.-]+)\"\n            r\"(\\.[a-zA-Z]{2,})?\"\n            r\"(:\\d+)?\"\n            r\"(\\/[^\\s]*)?$\",\n            re.IGNORECASE,\n        )\n\n        error_msg = \"Invalid URL - \" + string\n        if not url_regex.match(string):\n            raise ValueError(error_msg)\n\n        return string\n\n    def fetch_content(self) -> list[Data]:\n        \"\"\"Fetch content based on selected format.\"\"\"\n        urls = list({self.ensure_url(url.strip()) for url in self.urls if url.strip()})\n\n        no_urls_msg = \"No valid URLs provided.\"\n        if not urls:\n            raise ValueError(no_urls_msg)\n\n        # If JSON format is selected, validate JSON content first\n        if self.format == \"JSON\":\n            for url in urls:\n                is_json = asyncio.run(self.validate_json_content(url))\n                if not is_json:\n                    error_msg = \"Invalid JSON content from URL - \" + url\n                    raise ValueError(error_msg)\n\n        if self.format == \"Raw HTML\":\n            loader = AsyncHtmlLoader(web_path=urls, encoding=\"utf-8\")\n        else:\n            loader = WebBaseLoader(web_paths=urls, encoding=\"utf-8\")\n\n        docs = loader.load()\n\n        if self.format == \"JSON\":\n            data = []\n            for doc in docs:\n                try:\n                    json_content = json.loads(doc.page_content)\n                    data_dict = {\"text\": json.dumps(json_content, indent=2), **json_content, **doc.metadata}\n                    data.append(Data(**data_dict))\n                except json.JSONDecodeError as err:\n                    source = doc.metadata.get(\"source\", \"unknown URL\")\n                    error_msg = \"Invalid JSON content from \" + source\n                    raise ValueError(error_msg) from err\n            return data\n\n        return [Data(text=doc.page_content, **doc.metadata) for doc in docs]\n\n    def fetch_content_text(self) -> Message:\n        \"\"\"Fetch content and return as formatted text.\"\"\"\n        data = self.fetch_content()\n\n        if self.format == \"JSON\":\n            text_list = [item.text for item in data]\n            result = \"\\n\".join(text_list)\n        else:\n            text_list = [item.text for item in data]\n            if self.format == \"Text\" and self.clean_extra_whitespace:\n                text_list = [re.sub(r\"\\n{3,}\", \"\\n\\n\", text) for text in text_list]\n            result = self.separator.join(text_list)\n\n        self.status = result\n        return Message(text=result)\n\n    def as_dataframe(self) -> DataFrame:\n        \"\"\"Return fetched content as a DataFrame.\"\"\"\n        return DataFrame(self.fetch_content())\n"
+              },
+              "format": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Output Format",
+                "dynamic": false,
+                "info": "Output Format. Use 'Text' to extract text from the HTML, 'Raw HTML' for the raw HTML content, or 'JSON' to extract JSON from the HTML.",
+                "name": "format",
+                "options": [
+                  "Text",
+                  "Raw HTML",
+                  "JSON"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Text"
+              },
+              "separator": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "Separator",
+                "dynamic": false,
+                "info": "Specify the separator to use between multiple outputs. Default for Text is '\\n\\n'. Default for Raw HTML is '\\n<!-- Separator -->\\n'.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "separator",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "\n\n"
+              },
+              "tools_metadata": {
+                "_input_type": "TableInput",
+                "advanced": false,
+                "display_name": "Edit tools",
+                "dynamic": false,
+                "info": "",
+                "is_list": true,
+                "list_add_label": "Add More",
+                "name": "tools_metadata",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "table_icon": "Hammer",
+                "table_options": {
+                  "block_add": true,
+                  "block_delete": true,
+                  "block_edit": true,
+                  "block_filter": true,
+                  "block_hide": true,
+                  "block_select": true,
+                  "block_sort": true,
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                  "field_parsers": {
+                    "commands": "commands",
+                    "name": [
+                      "snake_case",
+                      "no_blank"
+                    ]
+                  },
+                  "hide_options": true
+                },
+                "table_schema": {
+                  "columns": [
+                    {
+                      "default": "None",
+                      "description": "Specify the name of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Name",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": false,
+                      "name": "name",
+                      "sortable": false,
+                      "type": "str"
+                    },
+                    {
+                      "default": "None",
+                      "description": "Describe the purpose of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Description",
+                      "edit_mode": "popover",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": false,
+                      "name": "description",
+                      "sortable": false,
+                      "type": "str"
+                    },
+                    {
+                      "default": "None",
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "disable_edit": true,
+                      "display_name": "Tool Identifiers",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": true,
+                      "name": "tags",
+                      "sortable": false,
+                      "type": "str"
+                    }
+                  ]
+                },
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "trigger_icon": "Hammer",
+                "trigger_text": "",
+                "type": "table",
+                "value": [
+                  {
+                    "description": "fetch_content() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "name": "URL-fetch_content",
+                    "tags": [
+                      "URL-fetch_content"
+                    ]
+                  },
+                  {
+                    "description": "fetch_content_text() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "name": "URL-fetch_content_text",
+                    "tags": [
+                      "URL-fetch_content_text"
+                    ]
+                  },
+                  {
+                    "description": "as_dataframe() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+                    "name": "URL-as_dataframe",
+                    "tags": [
+                      "URL-as_dataframe"
+                    ]
+                  }
+                ]
+              },
+              "urls": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "URLs",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": true,
+                "list_add_label": "Add URL",
+                "load_from_db": false,
+                "name": "urls",
+                "placeholder": "Enter a URL...",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": true
+          },
+          "type": "URL"
+        },
+        "dragging": false,
+        "id": "URL-eEDon",
+        "measured": {
+          "height": 590,
+          "width": 320
+        },
+        "position": {
+          "x": 1236.8269016193576,
+          "y": -173.8644169438124
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "note-BPPYH",
           "node": {
             "description": "# 📖 README\nRun an Agent with URL and Calculator tools available for its use. \nThe Agent decides which tool to use to solve a problem.\n## Quick start\n\n1. Add your OpenAI API key to the Agent.\n2. Open the Playground and chat with the Agent. Request some information about a recipe, and then ask to add two numbers together. In the responses, the Agent will use different tools to solve different problems.\n\n## Next steps\nConnect more tools to the Agent to create your perfect assistant.\n\nFor more, see the [Langflow docs](https://docs.langflow.org/agents-tool-calling-agent-component).",
             "display_name": "",
@@ -130,21 +402,21 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-28UlV",
+        "id": "note-BPPYH",
         "measured": {
           "height": 630,
-          "width": 575
+          "width": 325
         },
         "position": {
-          "x": 637.5791433882063,
-          "y": 32.76769637325184
+          "x": 775.5268622081468,
+          "y": 27.927425537464444
         },
         "selected": false,
         "type": "noteNode"
       },
       {
         "data": {
-          "id": "note-2JuVK",
+          "id": "note-8AvvZ",
           "node": {
             "description": "### 💡 Add your OpenAI API key here👇",
             "display_name": "",
@@ -155,7 +427,7 @@
           },
           "type": "note"
         },
-        "id": "note-2JuVK",
+        "id": "note-8AvvZ",
         "measured": {
           "height": 324,
           "width": 324
@@ -169,7 +441,7 @@
       },
       {
         "data": {
-          "id": "CalculatorComponent-hMbFw",
+          "id": "CalculatorComponent-zU3QI",
           "node": {
             "base_classes": [
               "Data"
@@ -210,11 +482,9 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
-                "group_outputs": false,
-                "hidden": false,
+                "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
-                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
@@ -270,11 +540,11 @@
                 "value": ""
               },
               "tools_metadata": {
-                "_input_type": "ToolsInput",
+                "_input_type": "TableInput",
                 "advanced": false,
-                "display_name": "Actions",
+                "display_name": "Edit tools",
                 "dynamic": false,
-                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                "info": "",
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "tools_metadata",
@@ -282,27 +552,94 @@
                 "real_time_refresh": true,
                 "required": false,
                 "show": true,
+                "table_icon": "Hammer",
+                "table_options": {
+                  "block_add": true,
+                  "block_delete": true,
+                  "block_edit": true,
+                  "block_filter": true,
+                  "block_hide": true,
+                  "block_select": true,
+                  "block_sort": true,
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                  "field_parsers": {
+                    "commands": "commands",
+                    "name": [
+                      "snake_case",
+                      "no_blank"
+                    ]
+                  },
+                  "hide_options": true
+                },
+                "table_schema": {
+                  "columns": [
+                    {
+                      "default": "None",
+                      "description": "Specify the name of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Name",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": false,
+                      "name": "name",
+                      "sortable": false,
+                      "type": "str"
+                    },
+                    {
+                      "default": "None",
+                      "description": "Describe the purpose of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Description",
+                      "edit_mode": "popover",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": false,
+                      "name": "description",
+                      "sortable": false,
+                      "type": "str"
+                    },
+                    {
+                      "default": "None",
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "disable_edit": true,
+                      "display_name": "Tool Identifiers",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": true,
+                      "name": "tags",
+                      "sortable": false,
+                      "type": "str"
+                    },
+                    {
+                      "default": true,
+                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
+                      "disable_edit": false,
+                      "display_name": "Enable",
+                      "edit_mode": "popover",
+                      "filterable": true,
+                      "formatter": "boolean",
+                      "hidden": false,
+                      "name": "status",
+                      "sortable": true,
+                      "type": "boolean"
+                    }
+                  ]
+                },
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "type": "tools",
+                "trigger_icon": "Hammer",
+                "trigger_text": "",
+                "type": "table",
                 "value": [
                   {
-                    "args": {
-                      "expression": {
-                        "default": "",
-                        "description": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
-                        "title": "Expression",
-                        "type": "string"
-                      }
-                    },
-                    "description": "CalculatorComponent. evaluate_expression() - Perform basic arithmetic operations on a given expression.",
-                    "display_description": "CalculatorComponent. evaluate_expression() - Perform basic arithmetic operations on a given expression.",
-                    "display_name": "evaluate_expression",
-                    "name": "evaluate_expression",
+                    "description": "evaluate_expression() - Perform basic arithmetic operations on a given expression.",
+                    "name": "CalculatorComponent-evaluate_expression",
                     "status": true,
                     "tags": [
-                      "evaluate_expression"
+                      "CalculatorComponent-evaluate_expression"
                     ]
                   }
                 ]
@@ -310,14 +647,13 @@
             },
             "tool_mode": true
           },
-          "selected_output": "component_as_tool",
           "showNode": true,
           "type": "CalculatorComponent"
         },
         "dragging": false,
-        "id": "CalculatorComponent-hMbFw",
+        "id": "CalculatorComponent-zU3QI",
         "measured": {
-          "height": 218,
+          "height": 334,
           "width": 320
         },
         "position": {
@@ -329,529 +665,13 @@
       },
       {
         "data": {
-          "id": "ChatInput-iPUSx",
+          "id": "Agent-8k2Yj",
           "node": {
             "base_classes": [
               "Message"
             ],
             "beta": false,
-            "category": "inputs",
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Get chat inputs from the Playground.",
-            "display_name": "Chat Input",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "input_value",
-              "should_store_message",
-              "sender",
-              "sender_name",
-              "session_id",
-              "files",
-              "background_color",
-              "chat_icon",
-              "text_color"
-            ],
-            "frozen": false,
-            "icon": "MessagesSquare",
-            "key": "ChatInput",
-            "legacy": false,
-            "metadata": {
-              "code_hash": "46a90558cb44",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "lfx.components.input_output.chat.ChatInput"
-            },
-            "minimized": true,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Chat Message",
-                "group_outputs": false,
-                "method": "message_response",
-                "name": "message",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "score": 0.0020353564437605998,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.inputs.inputs import BoolInput\nfrom lfx.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom lfx.schema.message import Message\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    documentation: str = \"https://docs.langflow.org/components-io#chat-input\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
-              },
-              "files": {
-                "_input_type": "FileInput",
-                "advanced": true,
-                "display_name": "Files",
-                "dynamic": false,
-                "fileTypes": [
-                  "csv",
-                  "json",
-                  "pdf",
-                  "txt",
-                  "md",
-                  "mdx",
-                  "yaml",
-                  "yml",
-                  "xml",
-                  "html",
-                  "htm",
-                  "docx",
-                  "py",
-                  "sh",
-                  "sql",
-                  "js",
-                  "ts",
-                  "tsx",
-                  "jpg",
-                  "jpeg",
-                  "png",
-                  "bmp",
-                  "image"
-                ],
-                "file_path": "",
-                "info": "Files to be sent with the message.",
-                "list": true,
-                "list_add_label": "Add More",
-                "name": "files",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "temp_file": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "file",
-                "value": ""
-              },
-              "input_value": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "copy_field": false,
-                "display_name": "Input Text",
-                "dynamic": false,
-                "info": "Message to be passed as input.",
-                "input_types": [],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "input_value",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "sender": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Sender Type",
-                "dynamic": false,
-                "info": "Type of sender.",
-                "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "User"
-              },
-              "sender_name": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Sender Name",
-                "dynamic": false,
-                "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "sender_name",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "User"
-              },
-              "session_id": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Session ID",
-                "dynamic": false,
-                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "session_id",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "should_store_message": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Store Messages",
-                "dynamic": false,
-                "info": "Store the message in the history.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "should_store_message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              }
-            },
-            "tool_mode": false
-          },
-          "selected_output": "message",
-          "showNode": false,
-          "type": "ChatInput"
-        },
-        "dragging": false,
-        "id": "ChatInput-iPUSx",
-        "measured": {
-          "height": 48,
-          "width": 192
-        },
-        "position": {
-          "x": 1235.4222740043401,
-          "y": 897.5992294662233
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "ChatOutput-yhCn0",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "category": "outputs",
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Display a chat message in the Playground.",
-            "display_name": "Chat Output",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "input_value",
-              "should_store_message",
-              "sender",
-              "sender_name",
-              "session_id",
-              "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color",
-              "clean_data"
-            ],
-            "frozen": false,
-            "icon": "MessagesSquare",
-            "key": "ChatOutput",
-            "legacy": false,
-            "metadata": {
-              "code_hash": "ccda4dbe4ae1",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
-              },
-              "module": "lfx.components.input_output.chat_output.ChatOutput"
-            },
-            "minimized": true,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Output Message",
-                "group_outputs": false,
-                "method": "message_response",
-                "name": "message",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "score": 0.003169567463043492,
-            "template": {
-              "_type": "Component",
-              "clean_data": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Basic Clean Data",
-                "dynamic": false,
-                "info": "Whether to clean data before converting to string.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "clean_data",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.helpers.data import safe_convert\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.schema.properties import Source\nfrom lfx.template.field.base import Output\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    documentation: str = \"https://docs.langflow.org/components-io#chat-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Inputs\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            advanced=True,\n            info=\"Whether to clean data before converting to string.\",\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Output Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            clean_data: bool = getattr(self, \"clean_data\", False)\n            return \"\\n\".join([safe_convert(item, clean_data=clean_data) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return safe_convert(self.input_value)\n"
-              },
-              "data_template": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Data Template",
-                "dynamic": false,
-                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "data_template",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "{text}"
-              },
-              "input_value": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Inputs",
-                "dynamic": false,
-                "info": "Message to be passed as output.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "input_value",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "sender": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Sender Type",
-                "dynamic": false,
-                "info": "Type of sender.",
-                "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Machine"
-              },
-              "sender_name": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Sender Name",
-                "dynamic": false,
-                "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "sender_name",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "AI"
-              },
-              "session_id": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Session ID",
-                "dynamic": false,
-                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "session_id",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "should_store_message": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Store Messages",
-                "dynamic": false,
-                "info": "Store the message in the history.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "should_store_message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": false,
-          "type": "ChatOutput"
-        },
-        "id": "ChatOutput-yhCn0",
-        "measured": {
-          "height": 48,
-          "width": 192
-        },
-        "position": {
-          "x": 2145,
-          "y": 660
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "Agent-D0Kx2",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
+            "category": "agents",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",
@@ -871,17 +691,24 @@
               "max_retries",
               "timeout",
               "system_prompt",
-              "n_messages",
               "tools",
               "input_value",
               "handle_parsing_errors",
               "verbose",
               "max_iterations",
               "agent_description",
+              "memory",
+              "sender",
+              "sender_name",
+              "n_messages",
+              "session_id",
+              "order",
+              "template",
               "add_current_date_tool"
             ],
             "frozen": false,
             "icon": "bot",
+            "key": "Agent",
             "legacy": false,
             "metadata": {
               "code_hash": "d61b1f3d692a",
@@ -908,14 +735,11 @@
             "output_types": [],
             "outputs": [
               {
-                "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "group_outputs": false,
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
-                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -923,6 +747,7 @@
               }
             ],
             "pinned": false,
+            "score": 1.1732828199964098e-19,
             "template": {
               "_type": "Component",
               "add_current_date_tool": {
@@ -985,7 +810,13 @@
                 ],
                 "options_metadata": [
                   {
+                    "icon": "Amazon"
+                  },
+                  {
                     "icon": "Anthropic"
+                  },
+                  {
+                    "icon": "Azure"
                   },
                   {
                     "icon": "GoogleGenerativeAI"
@@ -994,7 +825,13 @@
                     "icon": "Groq"
                   },
                   {
+                    "icon": "NVIDIA"
+                  },
+                  {
                     "icon": "OpenAI"
+                  },
+                  {
+                    "icon": "SambaNova"
                   },
                   {
                     "icon": "brain"
@@ -1005,7 +842,6 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1022,7 +858,6 @@
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
-                "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
@@ -1199,7 +1034,6 @@
                 "display_name": "Model Name",
                 "dynamic": false,
                 "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
-                "load_from_db": false,
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -1228,11 +1062,10 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4.1"
+                "value": "gpt-4o"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -1463,115 +1296,248 @@
             },
             "tool_mode": false
           },
-          "selected_output": "response",
           "showNode": true,
           "type": "Agent"
         },
-        "dragging": false,
-        "id": "Agent-D0Kx2",
+        "id": "Agent-8k2Yj",
         "measured": {
-          "height": 594,
+          "height": 624,
           "width": 320
         },
         "position": {
-          "x": 1641.6239626366948,
-          "y": 301.10345101561927
+          "x": 1650,
+          "y": 345
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "URLComponent-TpTHB",
+          "id": "ChatInput-sYodl",
           "node": {
             "base_classes": [
-              "DataFrame",
               "Message"
             ],
             "beta": false,
-            "category": "data",
+            "category": "inputs",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Fetch content from one or more web pages, following links recursively.",
-            "display_name": "URL",
+            "description": "Get chat inputs from the Playground.",
+            "display_name": "Chat Input",
             "documentation": "",
             "edited": false,
             "field_order": [
-              "urls",
-              "max_depth",
-              "prevent_outside",
-              "use_async",
-              "format",
-              "timeout",
-              "headers",
-              "filter_text_html",
-              "continue_on_failure",
-              "check_response_status",
-              "autoset_encoding"
+              "input_value",
+              "should_store_message",
+              "sender",
+              "sender_name",
+              "session_id",
+              "files",
+              "background_color",
+              "chat_icon",
+              "text_color"
             ],
             "frozen": false,
-            "icon": "layout-template",
-            "key": "URLComponent",
+            "icon": "MessagesSquare",
+            "key": "ChatInput",
             "legacy": false,
             "metadata": {
-              "code_hash": "cdb7d379306e",
+              "code_hash": "46a90558cb44",
               "dependencies": {
                 "dependencies": [
-                  {
-                    "name": "requests",
-                    "version": "2.32.5"
-                  },
-                  {
-                    "name": "bs4",
-                    "version": "4.12.3"
-                  },
-                  {
-                    "name": "langchain_community",
-                    "version": "0.3.21"
-                  },
                   {
                     "name": "lfx",
                     "version": null
                   }
                 ],
-                "total_dependencies": 4
+                "total_dependencies": 1
               },
-              "module": "lfx.components.data.url.URLComponent"
+              "module": "lfx.components.input_output.chat.ChatInput"
             },
-            "minimized": false,
+            "minimized": true,
             "output_types": [],
             "outputs": [
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Toolset",
+                "display_name": "Chat Message",
                 "group_outputs": false,
-                "hidden": null,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
-                "options": null,
-                "required_inputs": null,
-                "selected": "Tool",
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
                 "tool_mode": true,
                 "types": [
-                  "Tool"
+                  "Message"
                 ],
                 "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
-            "score": 2.220446049250313e-16,
+            "score": 0.0020353564437605998,
             "template": {
               "_type": "Component",
-              "autoset_encoding": {
-                "_input_type": "BoolInput",
+              "code": {
                 "advanced": true,
-                "display_name": "Autoset Encoding",
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.inputs.inputs import BoolInput\nfrom lfx.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom lfx.schema.message import Message\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    documentation: str = \"https://docs.langflow.org/components-io#chat-input\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+              },
+              "files": {
+                "_input_type": "FileInput",
+                "advanced": true,
+                "display_name": "Files",
                 "dynamic": false,
-                "info": "If enabled, automatically sets the encoding of the request.",
+                "fileTypes": [
+                  "csv",
+                  "json",
+                  "pdf",
+                  "txt",
+                  "md",
+                  "mdx",
+                  "yaml",
+                  "yml",
+                  "xml",
+                  "html",
+                  "htm",
+                  "docx",
+                  "py",
+                  "sh",
+                  "sql",
+                  "js",
+                  "ts",
+                  "tsx",
+                  "jpg",
+                  "jpeg",
+                  "png",
+                  "bmp",
+                  "image"
+                ],
+                "file_path": "",
+                "info": "Files to be sent with the message.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "files",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "file",
+                "value": ""
+              },
+              "input_value": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "copy_field": false,
+                "display_name": "Input Text",
+                "dynamic": false,
+                "info": "Message to be passed as input.",
+                "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
-                "name": "autoset_encoding",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "input_value",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "User"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "User"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1580,16 +1546,109 @@
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": false,
+          "type": "ChatInput"
+        },
+        "dragging": false,
+        "id": "ChatInput-sYodl",
+        "measured": {
+          "height": 66,
+          "width": 192
+        },
+        "position": {
+          "x": 1235.4222740043401,
+          "y": 897.5992294662233
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ChatOutput-IwY9Y",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "category": "outputs",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Display a chat message in the Playground.",
+            "display_name": "Chat Output",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "should_store_message",
+              "sender",
+              "sender_name",
+              "session_id",
+              "data_template",
+              "background_color",
+              "chat_icon",
+              "text_color",
+              "clean_data"
+            ],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "key": "ChatOutput",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "ccda4dbe4ae1",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "orjson",
+                    "version": "3.10.15"
+                  },
+                  {
+                    "name": "fastapi",
+                    "version": "0.117.1"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 3
               },
-              "check_response_status": {
+              "module": "lfx.components.input_output.chat_output.ChatOutput"
+            },
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output Message",
+                "group_outputs": false,
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.003169567463043492,
+            "template": {
+              "_type": "Component",
+              "clean_data": {
                 "_input_type": "BoolInput",
                 "advanced": true,
-                "display_name": "Check Response Status",
+                "display_name": "Basic Clean Data",
                 "dynamic": false,
-                "info": "If enabled, checks the response status of the request.",
+                "info": "Whether to clean data before converting to string.",
                 "list": false,
                 "list_add_label": "Add More",
-                "name": "check_response_status",
+                "name": "clean_data",
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1597,7 +1656,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
-                "value": false
+                "value": true
               },
               "code": {
                 "advanced": true,
@@ -1615,263 +1674,131 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import importlib\nimport re\n\nimport requests\nfrom bs4 import BeautifulSoup\nfrom langchain_community.document_loaders import RecursiveUrlLoader\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.helpers.data import safe_convert\nfrom lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput, TableInput\nfrom lfx.log.logger import logger\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.utils.request_utils import get_user_agent\n\n# Constants\nDEFAULT_TIMEOUT = 30\nDEFAULT_MAX_DEPTH = 1\nDEFAULT_FORMAT = \"Text\"\n\n\nURL_REGEX = re.compile(\n    r\"^(https?:\\/\\/)?\" r\"(www\\.)?\" r\"([a-zA-Z0-9.-]+)\" r\"(\\.[a-zA-Z]{2,})?\" r\"(:\\d+)?\" r\"(\\/[^\\s]*)?$\",\n    re.IGNORECASE,\n)\n\nUSER_AGENT = None\n# Check if langflow is installed using importlib.util.find_spec(name))\nif importlib.util.find_spec(\"langflow\"):\n    langflow_installed = True\n    USER_AGENT = get_user_agent()\nelse:\n    langflow_installed = False\n    USER_AGENT = \"lfx\"\n\n\nclass URLComponent(Component):\n    \"\"\"A component that loads and parses content from web pages recursively.\n\n    This component allows fetching content from one or more URLs, with options to:\n    - Control crawl depth\n    - Prevent crawling outside the root domain\n    - Use async loading for better performance\n    - Extract either raw HTML or clean text\n    - Configure request headers and timeouts\n    \"\"\"\n\n    display_name = \"URL\"\n    description = \"Fetch content from one or more web pages, following links recursively.\"\n    documentation: str = \"https://docs.langflow.org/components-data#url\"\n    icon = \"layout-template\"\n    name = \"URLComponent\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            info=\"Enter one or more URLs to crawl recursively, by clicking the '+' button.\",\n            is_list=True,\n            tool_mode=True,\n            placeholder=\"Enter a URL...\",\n            list_add_label=\"Add URL\",\n            input_types=[],\n        ),\n        SliderInput(\n            name=\"max_depth\",\n            display_name=\"Depth\",\n            info=(\n                \"Controls how many 'clicks' away from the initial page the crawler will go:\\n\"\n                \"- depth 1: only the initial page\\n\"\n                \"- depth 2: initial page + all pages linked directly from it\\n\"\n                \"- depth 3: initial page + direct links + links found on those direct link pages\\n\"\n                \"Note: This is about link traversal, not URL path depth.\"\n            ),\n            value=DEFAULT_MAX_DEPTH,\n            range_spec=RangeSpec(min=1, max=5, step=1),\n            required=False,\n            min_label=\" \",\n            max_label=\" \",\n            min_label_icon=\"None\",\n            max_label_icon=\"None\",\n            # slider_input=True\n        ),\n        BoolInput(\n            name=\"prevent_outside\",\n            display_name=\"Prevent Outside\",\n            info=(\n                \"If enabled, only crawls URLs within the same domain as the root URL. \"\n                \"This helps prevent the crawler from going to external websites.\"\n            ),\n            value=True,\n            required=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"use_async\",\n            display_name=\"Use Async\",\n            info=(\n                \"If enabled, uses asynchronous loading which can be significantly faster \"\n                \"but might use more system resources.\"\n            ),\n            value=True,\n            required=False,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"format\",\n            display_name=\"Output Format\",\n            info=\"Output Format. Use 'Text' to extract the text from the HTML or 'HTML' for the raw HTML content.\",\n            options=[\"Text\", \"HTML\"],\n            value=DEFAULT_FORMAT,\n            advanced=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"Timeout for the request in seconds.\",\n            value=DEFAULT_TIMEOUT,\n            required=False,\n            advanced=True,\n        ),\n        TableInput(\n            name=\"headers\",\n            display_name=\"Headers\",\n            info=\"The headers to send with the request\",\n            table_schema=[\n                {\n                    \"name\": \"key\",\n                    \"display_name\": \"Header\",\n                    \"type\": \"str\",\n                    \"description\": \"Header name\",\n                },\n                {\n                    \"name\": \"value\",\n                    \"display_name\": \"Value\",\n                    \"type\": \"str\",\n                    \"description\": \"Header value\",\n                },\n            ],\n            value=[{\"key\": \"User-Agent\", \"value\": USER_AGENT}],\n            advanced=True,\n            input_types=[\"DataFrame\"],\n        ),\n        BoolInput(\n            name=\"filter_text_html\",\n            display_name=\"Filter Text/HTML\",\n            info=\"If enabled, filters out text/css content type from the results.\",\n            value=True,\n            required=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"continue_on_failure\",\n            display_name=\"Continue on Failure\",\n            info=\"If enabled, continues crawling even if some requests fail.\",\n            value=True,\n            required=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"check_response_status\",\n            display_name=\"Check Response Status\",\n            info=\"If enabled, checks the response status of the request.\",\n            value=False,\n            required=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"autoset_encoding\",\n            display_name=\"Autoset Encoding\",\n            info=\"If enabled, automatically sets the encoding of the request.\",\n            value=True,\n            required=False,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Extracted Pages\", name=\"page_results\", method=\"fetch_content\"),\n        Output(display_name=\"Raw Content\", name=\"raw_results\", method=\"fetch_content_as_message\", tool_mode=False),\n    ]\n\n    @staticmethod\n    def validate_url(url: str) -> bool:\n        \"\"\"Validates if the given string matches URL pattern.\n\n        Args:\n            url: The URL string to validate\n\n        Returns:\n            bool: True if the URL is valid, False otherwise\n        \"\"\"\n        return bool(URL_REGEX.match(url))\n\n    def ensure_url(self, url: str) -> str:\n        \"\"\"Ensures the given string is a valid URL.\n\n        Args:\n            url: The URL string to validate and normalize\n\n        Returns:\n            str: The normalized URL\n\n        Raises:\n            ValueError: If the URL is invalid\n        \"\"\"\n        url = url.strip()\n        if not url.startswith((\"http://\", \"https://\")):\n            url = \"https://\" + url\n\n        if not self.validate_url(url):\n            msg = f\"Invalid URL: {url}\"\n            raise ValueError(msg)\n\n        return url\n\n    def _create_loader(self, url: str) -> RecursiveUrlLoader:\n        \"\"\"Creates a RecursiveUrlLoader instance with the configured settings.\n\n        Args:\n            url: The URL to load\n\n        Returns:\n            RecursiveUrlLoader: Configured loader instance\n        \"\"\"\n        headers_dict = {header[\"key\"]: header[\"value\"] for header in self.headers if header[\"value\"] is not None}\n        extractor = (lambda x: x) if self.format == \"HTML\" else (lambda x: BeautifulSoup(x, \"lxml\").get_text())\n\n        return RecursiveUrlLoader(\n            url=url,\n            max_depth=self.max_depth,\n            prevent_outside=self.prevent_outside,\n            use_async=self.use_async,\n            extractor=extractor,\n            timeout=self.timeout,\n            headers=headers_dict,\n            check_response_status=self.check_response_status,\n            continue_on_failure=self.continue_on_failure,\n            base_url=url,  # Add base_url to ensure consistent domain crawling\n            autoset_encoding=self.autoset_encoding,  # Enable automatic encoding detection\n            exclude_dirs=[],  # Allow customization of excluded directories\n            link_regex=None,  # Allow customization of link filtering\n        )\n\n    def fetch_url_contents(self) -> list[dict]:\n        \"\"\"Load documents from the configured URLs.\n\n        Returns:\n            List[Data]: List of Data objects containing the fetched content\n\n        Raises:\n            ValueError: If no valid URLs are provided or if there's an error loading documents\n        \"\"\"\n        try:\n            urls = list({self.ensure_url(url) for url in self.urls if url.strip()})\n            logger.debug(f\"URLs: {urls}\")\n            if not urls:\n                msg = \"No valid URLs provided.\"\n                raise ValueError(msg)\n\n            all_docs = []\n            for url in urls:\n                logger.debug(f\"Loading documents from {url}\")\n\n                try:\n                    loader = self._create_loader(url)\n                    docs = loader.load()\n\n                    if not docs:\n                        logger.warning(f\"No documents found for {url}\")\n                        continue\n\n                    logger.debug(f\"Found {len(docs)} documents from {url}\")\n                    all_docs.extend(docs)\n\n                except requests.exceptions.RequestException as e:\n                    logger.exception(f\"Error loading documents from {url}: {e}\")\n                    continue\n\n            if not all_docs:\n                msg = \"No documents were successfully loaded from any URL\"\n                raise ValueError(msg)\n\n            # data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]\n            data = [\n                {\n                    \"text\": safe_convert(doc.page_content, clean_data=True),\n                    \"url\": doc.metadata.get(\"source\", \"\"),\n                    \"title\": doc.metadata.get(\"title\", \"\"),\n                    \"description\": doc.metadata.get(\"description\", \"\"),\n                    \"content_type\": doc.metadata.get(\"content_type\", \"\"),\n                    \"language\": doc.metadata.get(\"language\", \"\"),\n                }\n                for doc in all_docs\n            ]\n        except Exception as e:\n            error_msg = e.message if hasattr(e, \"message\") else e\n            msg = f\"Error loading documents: {error_msg!s}\"\n            logger.exception(msg)\n            raise ValueError(msg) from e\n        return data\n\n    def fetch_content(self) -> DataFrame:\n        \"\"\"Convert the documents to a DataFrame.\"\"\"\n        return DataFrame(data=self.fetch_url_contents())\n\n    def fetch_content_as_message(self) -> Message:\n        \"\"\"Convert the documents to a Message.\"\"\"\n        url_contents = self.fetch_url_contents()\n        return Message(text=\"\\n\\n\".join([x[\"text\"] for x in url_contents]), data={\"data\": url_contents})\n"
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.helpers.data import safe_convert\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.schema.properties import Source\nfrom lfx.template.field.base import Output\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    documentation: str = \"https://docs.langflow.org/components-io#chat-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Inputs\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            advanced=True,\n            info=\"Whether to clean data before converting to string.\",\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Output Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            clean_data: bool = getattr(self, \"clean_data\", False)\n            return \"\\n\".join([safe_convert(item, clean_data=clean_data) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return safe_convert(self.input_value)\n"
               },
-              "continue_on_failure": {
-                "_input_type": "BoolInput",
+              "data_template": {
+                "_input_type": "MessageTextInput",
                 "advanced": true,
-                "display_name": "Continue on Failure",
+                "display_name": "Data Template",
                 "dynamic": false,
-                "info": "If enabled, continues crawling even if some requests fail.",
+                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
-                "name": "continue_on_failure",
+                "load_from_db": false,
+                "name": "data_template",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
+                "trace_as_input": true,
                 "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
+                "type": "str",
+                "value": "{text}"
               },
-              "filter_text_html": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Filter Text/HTML",
+              "input_value": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Inputs",
                 "dynamic": false,
-                "info": "If enabled, filters out text/css content type from the results.",
+                "info": "Message to be passed as output.",
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
-                "name": "filter_text_html",
+                "name": "input_value",
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
-                "tool_mode": false,
                 "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
+                "type": "other",
+                "value": ""
               },
-              "format": {
+              "sender": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
                 "dialog_inputs": {},
-                "display_name": "Output Format",
+                "display_name": "Sender Type",
                 "dynamic": false,
-                "info": "Output Format. Use 'Text' to extract the text from the HTML or 'HTML' for the raw HTML content.",
-                "name": "format",
+                "info": "Type of sender.",
+                "name": "sender",
                 "options": [
-                  "Text",
-                  "HTML"
+                  "Machine",
+                  "User"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "Text"
+                "value": "Machine"
               },
-              "headers": {
-                "_input_type": "TableInput",
-                "advanced": true,
-                "display_name": "Headers",
-                "dynamic": false,
-                "info": "The headers to send with the request",
-                "input_types": [
-                  "DataFrame"
-                ],
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "headers",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "table_icon": "Table",
-                "table_schema": {
-                  "columns": [
-                    {
-                      "default": "None",
-                      "description": "Header name",
-                      "disable_edit": false,
-                      "display_name": "Header",
-                      "edit_mode": "popover",
-                      "filterable": true,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "key",
-                      "sortable": true,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "Header value",
-                      "disable_edit": false,
-                      "display_name": "Value",
-                      "edit_mode": "popover",
-                      "filterable": true,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "value",
-                      "sortable": true,
-                      "type": "str"
-                    }
-                  ]
-                },
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "trigger_icon": "Table",
-                "trigger_text": "Open table",
-                "type": "table",
-                "value": [
-                  {
-                    "key": "User-Agent",
-                    "value": "langflow"
-                  }
-                ]
-              },
-              "max_depth": {
-                "_input_type": "SliderInput",
-                "advanced": false,
-                "display_name": "Depth",
-                "dynamic": false,
-                "info": "Controls how many 'clicks' away from the initial page the crawler will go:\n- depth 1: only the initial page\n- depth 2: initial page + all pages linked directly from it\n- depth 3: initial page + direct links + links found on those direct link pages\nNote: This is about link traversal, not URL path depth.",
-                "max_label": " ",
-                "max_label_icon": "None",
-                "min_label": " ",
-                "min_label_icon": "None",
-                "name": "max_depth",
-                "placeholder": "",
-                "range_spec": {
-                  "max": 5,
-                  "min": 1,
-                  "step": 1,
-                  "step_type": "float"
-                },
-                "required": false,
-                "show": true,
-                "slider_buttons": false,
-                "slider_buttons_options": [],
-                "slider_input": false,
-                "title_case": false,
-                "tool_mode": false,
-                "type": "slider",
-                "value": 1
-              },
-              "prevent_outside": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Prevent Outside",
-                "dynamic": false,
-                "info": "If enabled, only crawls URLs within the same domain as the root URL. This helps prevent the crawler from going to external websites.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "prevent_outside",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "timeout": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Timeout",
-                "dynamic": false,
-                "info": "Timeout for the request in seconds.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "timeout",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 30
-              },
-              "tools_metadata": {
-                "_input_type": "ToolsInput",
-                "advanced": false,
-                "display_name": "Actions",
-                "dynamic": false,
-                "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "tools",
-                "value": [
-                  {
-                    "args": {
-                      "urls": {
-                        "default": "",
-                        "description": "Enter one or more URLs to crawl recursively, by clicking the '+' button.",
-                        "items": {
-                          "type": "string"
-                        },
-                        "title": "Urls",
-                        "type": "array"
-                      }
-                    },
-                    "description": "Fetch content from one or more web pages, following links recursively.",
-                    "display_description": "Fetch content from one or more web pages, following links recursively.",
-                    "display_name": "fetch_content",
-                    "name": "fetch_content",
-                    "readonly": false,
-                    "status": true,
-                    "tags": [
-                      "fetch_content"
-                    ]
-                  }
-                ]
-              },
-              "urls": {
+              "sender_name": {
                 "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "URLs",
+                "advanced": true,
+                "display_name": "Sender Name",
                 "dynamic": false,
-                "info": "Enter one or more URLs to crawl recursively, by clicking the '+' button.",
-                "input_types": [],
-                "list": true,
-                "list_add_label": "Add URL",
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
-                "name": "urls",
-                "placeholder": "Enter a URL...",
+                "name": "sender_name",
+                "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "tool_mode": true,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "AI"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
               },
-              "use_async": {
+              "should_store_message": {
                 "_input_type": "BoolInput",
                 "advanced": true,
-                "display_name": "Use Async",
+                "display_name": "Store Messages",
                 "dynamic": false,
-                "info": "If enabled, uses asynchronous loading which can be significantly faster but might use more system resources.",
+                "info": "Store the message in the history.",
                 "list": false,
                 "list_add_label": "Add More",
-                "name": "use_async",
+                "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1882,36 +1809,35 @@
                 "value": true
               }
             },
-            "tool_mode": true
+            "tool_mode": false
           },
-          "showNode": true,
-          "type": "URLComponent"
+          "showNode": false,
+          "type": "ChatOutput"
         },
-        "dragging": false,
-        "id": "URLComponent-TpTHB",
+        "id": "ChatOutput-IwY9Y",
         "measured": {
-          "height": 290,
-          "width": 320
+          "height": 66,
+          "width": 192
         },
         "position": {
-          "x": 1241.645826777893,
-          "y": -34.70663041492506
+          "x": 2145,
+          "y": 660
         },
         "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -562.0961577584201,
-      "y": 188.68156067492384,
-      "zoom": 0.8264000374576776
+      "x": -343.42019144353594,
+      "y": 66.6702275988537,
+      "zoom": 0.5868650751024124
     }
   },
   "description": "A simple but powerful starter agent.",
   "endpoint_name": null,
-  "id": "0209ae03-677e-4315-b80a-0d90b3e12cb5",
+  "id": "1c666167-9a1f-47e2-a377-eacb2cbbc364",
   "is_component": false,
-  "last_tested_version": "1.4.3",
+  "last_tested_version": "1.2.0",
   "name": "Simple Agent",
   "tags": [
     "assistants",

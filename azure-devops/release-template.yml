@@ -1,0 +1,34 @@
+jobs:
+- job: ImageTagUpdate
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - checkout: genesis-platform-helm
+    fetchDepth: 0
+    persistCredentials: true
+  - script: |
+      git config --global user.email "release@autonomize.ai"
+      git config --global user.name "release"
+      git checkout main
+    displayName: 'Setup GIT'
+  - script: |
+      echo $(Build.BuildNumber)
+      wget -q https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_amd64
+      mv yq_linux_amd64 /usr/local/bin/yq
+      if [ "$(Build.SourceBranchName)" = "develop" ]; then
+        valuesFile="$(Build.DefinitionName)/values.azure.dev.yaml"
+      elif [ "$(Build.SourceBranchName)" = "demo" ]; then
+        valuesFile="$(Build.DefinitionName)/values.azure.demo.yaml"
+      fi
+      buildnumber="$(Build.BuildNumber)" yq -i e '.image.tag = env(buildnumber)' $valuesFile
+    displayName: 'Versioning'
+  - script: |
+      if [ "$(Build.SourceBranchName)" = "develop" ]; then
+        valuesFile="$(Build.DefinitionName)/values.azure.dev.yaml"
+      elif [ "$(Build.SourceBranchName)" = "demo" ]; then
+        valuesFile="$(Build.DefinitionName)/values.azure.demo.yaml"
+      fi
+      git add $valuesFile
+      git commit -m "[skip ci] Image tag updated: $(Build.BuildNumber) in Helm repo $(Build.DefinitionName)."
+      git push --set-upstream origin main
+    displayName: 'Push version to git'
