@@ -537,6 +537,12 @@ def build_component_metadata(
     #         "dependencies": [],
     #     }
 
+    # Always set minimal dependency info since analysis is disabled
+    frontend_node.metadata["dependencies"] = {
+        "total_dependencies": 0,
+        "dependencies": [],
+    }
+
     return frontend_node
 
 
