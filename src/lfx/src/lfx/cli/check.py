@@ -52,13 +52,30 @@ async def load_specific_components(component_modules: set[str]) -> dict:
             module_name = ".".join(module_parts[:-1])
             class_name = module_parts[-1]
 
+            # Security: only allow trusted component namespaces
+            allowed_prefixes = ("lfx.components.", "langflow.components.")
+            if not module_name.startswith(allowed_prefixes):
+                await logger.awarning(
+                    f"Skipping untrusted module path '{module_path}'. "
+                    "Only 'lfx.components.*' and 'langflow.components.*' modules are allowed for selective loading."
+                )
+                continue
+
+            if not module_name or not class_name:
+                await logger.awarning(f"Invalid component path '{module_path}'")
+                continue
+
             await logger.adebug(f"Loading component {class_name} from {module_name}")
 
             module = importlib.import_module(module_name)
             component_class = getattr(module, class_name)
 
             # Create component instance and template
-            component_instance = component_class()
+            try:
+                component_instance = component_class()
+            except TypeError as te:
+                await logger.awarning(f"Failed to instantiate component '{class_name}' from '{module_name}': {te}")
+                continue
             comp_template, _ = create_component_template(
                 component_extractor=component_instance, module_name=module_path
             )
