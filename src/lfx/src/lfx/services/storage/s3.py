@@ -6,7 +6,6 @@ import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 
 from lfx.log.logger import logger
-from lfx.services.settings.service import SettingsService
 
 from .service import StorageService
 
@@ -14,7 +13,7 @@ from .service import StorageService
 class S3StorageService(StorageService):
     """A service class for handling operations with AWS S3 storage."""
 
-    def __init__(self, settings_service: SettingsService) -> None:
+    def __init__(self, settings_service) -> None:
         """Initialize the S3 storage service.
 
         Args:
@@ -28,12 +27,12 @@ class S3StorageService(StorageService):
         self.tags = getattr(settings_service.settings, "object_storage_tags", None)
 
         if not self.bucket_name:
-            msg = "Object storage bucket name is required. Set LANGFLOW_OBJECT_STORAGE_BUCKET_NAME."
+            msg = "Object storage bucket name is required. Set LANGFLOW_OBJECT_STORAGE_BUCKET_NAME environment variable."
             logger.error(msg)
             raise ValueError(msg)
 
         if not self.object_prefix:
-            msg = "Object storage prefix cannot be empty. Set LANGFLOW_OBJECT_STORAGE_PREFIX."
+            msg = "Object storage prefix cannot be empty. Set LANGFLOW_OBJECT_STORAGE_PREFIX environment variable."
             logger.error(msg)
             raise ValueError(msg)
 
@@ -46,26 +45,6 @@ class S3StorageService(StorageService):
 
         self.set_ready()
 
-    def _parse_tags(self, tags_str: str) -> dict[str, str]:
-        """Parse comma-separated key=value tags string into dict.
-
-        Args:
-            tags_str: String like "key1=value1,key2=value2"
-
-        Returns:
-            Dictionary of tag key-value pairs
-        """
-        tags = {}
-        if not tags_str:
-            return tags
-
-        for tag in tags_str.split(','):
-            tag = tag.strip()
-            if '=' in tag:
-                key, value = tag.split('=', 1)
-                tags[key.strip()] = value.strip()
-
-        return tags
 
     def _validate_path_component(self, component: str, component_name: str) -> str:
         """Validate and sanitize path components to prevent path traversal attacks.
@@ -177,8 +156,10 @@ class S3StorageService(StorageService):
 
             # Add tags if configured
             if self.tags:
-                tag_set = [{"Key": k, "Value": v} for k, v in self.tags.items()]
-                put_args["Tagging"] = "&".join([f"{k}={v}" for k, v in self.tags.items()])
+                # Use proper URL encoding for tag values
+                from urllib.parse import quote
+                tag_pairs = [f"{quote(str(k))}={quote(str(v))}" for k, v in self.tags.items()]
+                put_args["Tagging"] = "&".join(tag_pairs)
 
             self.s3_client.put_object(**put_args)
             await logger.ainfo(f"File {file_name} saved successfully in flow {flow_id}.")
