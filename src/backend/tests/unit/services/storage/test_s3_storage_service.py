@@ -76,8 +76,8 @@ class TestS3StorageService:
 
             service = S3StorageService(settings_service=mock_settings_service)
 
-            assert service.bucket == "test-bucket"
-            assert service.path == "tenants"
+            assert service.bucket_name == "test-bucket"
+            assert service.object_prefix == "tenants"
             assert service.s3_client == mock_s3_client
             mock_boto_client.assert_called_once_with(
                 "s3",
@@ -110,8 +110,8 @@ class TestS3StorageService:
 
             service = S3StorageService(mock_session_service, mock_service)
 
-            assert service.bucket == "test-bucket"
-            assert service.path == "tenants"
+            assert service.bucket_name == "test-bucket"
+            assert service.object_prefix == "tenants"
             mock_create_role.assert_called_once_with("arn:aws:iam::123456789012:role/test-role", "us-east-1")
 
     def test_init_with_default_credentials(self, mock_session_service):
@@ -134,8 +134,8 @@ class TestS3StorageService:
 
             service = S3StorageService(mock_session_service, mock_service)
 
-            assert service.bucket == "test-bucket"
-            assert service.path == "tenants"
+            assert service.bucket_name == "test-bucket"
+            assert service.object_prefix == "tenants"
             assert service.s3_client == mock_s3_client
             mock_boto_client.assert_called_once_with("s3", region_name="us-east-1")
 
@@ -147,8 +147,8 @@ class TestS3StorageService:
         ):
             service = S3StorageService(settings_service=mock_settings_service)
 
-            assert service.bucket == "test-bucket"
-            assert service.path == "tenants"
+            assert service.bucket_name == "test-bucket"
+            assert service.object_prefix == "tenants"
             assert service.s3_client is None
 
     # Test save_file method

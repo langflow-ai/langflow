@@ -13,6 +13,7 @@ class StorageService(ABC):
         Args:
             data_dir: Directory path for storing data. Defaults to ~/.lfx/data
         """
+        # TODO: FRAZ - prob need to move this to the specific storage service
         if data_dir is None:
             data_dir = Path.home() / ".lfx" / "data"
         self.data_dir = Path(data_dir)
@@ -22,6 +23,7 @@ class StorageService(ABC):
         """Mark the service as ready."""
         self._ready = True
         # Ensure the data directory exists
+        # TODO: FRAZ - prob need to move this to the specific storage service
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
     @property
