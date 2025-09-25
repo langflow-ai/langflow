@@ -381,9 +381,10 @@ class ComposioBaseComponent(Component):
                             if clean_field == "user_id":
                                 clean_field = f"{self.app_name}_user_id"
 
-                            # Handle reserved attribute name conflicts (e.g., 'status') by prefixing with app name
-                            # This prevents clashes with component attributes like self.status
-                            if clean_field in {"status"}:
+                            # Handle reserved attribute name conflicts (e.g., 'status', 'name') by
+                            # prefixing with app name. This prevents clashes with component attributes
+                            # like self.status or self.name
+                            if clean_field in {"status", "name"}:
                                 clean_field = f"{self.app_name}_{clean_field}"
 
                             action_fields.append(clean_field)
@@ -549,6 +550,13 @@ class ComposioBaseComponent(Component):
                     field_schema_copy["description"] = f"Status for {self.app_name.title()}: " + field_schema.get(
                         "description", ""
                     )
+                elif clean_field_name == "name":
+                    clean_field_name = f"{self.app_name}_name"
+                    # Update the field schema description to reflect the name change.
+                    field_schema_copy = field_schema.copy()
+                    field_schema_copy["description"] = f"Name for {self.app_name.title()}: " + field_schema.get(
+                        "description", ""
+                    )
                 else:
                     # Use the original field schema for all other fields
                     field_schema_copy = field_schema
@@ -569,9 +577,19 @@ class ComposioBaseComponent(Component):
             # Update the flat schema with cleaned field names
             flat_schema["properties"] = cleaned_properties
 
-            # Also update required fields to match cleaned names
+            # Also update required fields to match cleaned names and reserved renames
             if flat_schema.get("required"):
-                cleaned_required = [field.replace("[0]", "") for field in flat_schema["required"]]
+                cleaned_required: list[str] = []
+                for field in flat_schema["required"]:
+                    base = field.replace("[0]", "")
+                    if base == "user_id":
+                        cleaned_required.append(f"{self.app_name}_user_id")
+                    elif base == "status":
+                        cleaned_required.append(f"{self.app_name}_status")
+                    elif base == "name":
+                        cleaned_required.append(f"{self.app_name}_name")
+                    else:
+                        cleaned_required.append(base)
                 flat_schema["required"] = cleaned_required
 
             input_schema = create_input_schema_from_json_schema(flat_schema)
@@ -647,6 +665,11 @@ class ComposioBaseComponent(Component):
                             # Ensure proper display_name and info are set for regular fields
                             if not hasattr(inp, "display_name") or not inp.display_name:
                                 inp.display_name = inp.name.replace("_", " ").title()
+
+                            # If this is a reserved renamed 'name' field, show as 'Name' to users.
+                            app = getattr(self, "app_name", None)
+                            if app and inp.name == f"{app}_name":
+                                inp.display_name = "Name"
 
                             # Preserve description from schema if available
                             field_schema = flat_schema.get("properties", {}).get(inp.name, {})
@@ -1999,7 +2022,7 @@ class ComposioBaseComponent(Component):
             schema_dict = self._action_schemas.get(action_key, {})
             parameters_schema = schema_dict.get("input_parameters", {})
             schema_properties = parameters_schema.get("properties", {}) if parameters_schema else {}
-            # Handle case where 'required' field is None (causes "'NoneType' object is not iterable")
+            # Handle required(causes "'NoneType' object is not iterable")
             required_list = parameters_schema.get("required", []) if parameters_schema else []
             required_fields = set(required_list) if required_list is not None else set()
 
@@ -2039,6 +2062,10 @@ class ComposioBaseComponent(Component):
                 final_field_name = field
                 if field.endswith("_user_id") and field.startswith(self.app_name):
                     final_field_name = "user_id"
+                elif field == f"{self.app_name}_status":
+                    final_field_name = "status"
+                elif field == f"{self.app_name}_name":
+                    final_field_name = "name"
 
                 arguments[final_field_name] = value
 
