@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base~=0.5.0",
+    "langflow-base~=0.6.0",
     "beautifulsoup4==4.12.3",
     "google-search-results>=2.4.1,<3.0.0",
     "google-api-python-client==2.154.0",
@@ -53,7 +53,7 @@ dependencies = [
     "datasets>2.14.7",
     "assemblyai==0.35.1",
     "litellm>=1.60.2,<2.0.0",
-    "chromadb>=0.6.0",
+    "chromadb>=0.5.6,<0.6.0",
     "zep-python==2.0.2",
     "youtube-transcript-api==0.6.3",
     "Markdown==3.7",
@@ -85,7 +85,7 @@ dependencies = [
     "langchain-groq==0.2.1",
     "langchain-pinecone>=0.2.8",
     "langchain-mistralai==0.2.3",
-    "langchain-chroma>=0.1.4",
+    "langchain-chroma>=0.1.4,<0.2.0",
     "langchain-aws==0.2.7",
     "langchain-unstructured==0.1.5",
     "langchain-milvus==0.1.7",
@@ -122,16 +122,17 @@ dependencies = [
     "cleanlab-tlm>=1.1.2",
     'gassist>=0.0.1; sys_platform == "win32"',
     "twelvelabs>=0.4.7",
-    "docling>=2.36.1",
-    "transformers>=4.56.1",
+    "docling_core>=2.36.1",
+    "docling>=2.36.1; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    "easyocr>=1.7.2; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    "opencv-python>=4.11; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    "transformers~=4.56.1",
     "filelock>=3.18.0",
     "jigsawstack==0.2.7",
     "structlog>=25.4.0",
     "aiosqlite==0.21.0",
     "fastparquet>=2024.11.0",
     "traceloop-sdk>=0.43.1",
-    "easyocr>=1.7.2",
-    "opencv-python>=4.11",
 ]
 
 [dependency-groups]
@@ -242,7 +243,7 @@ postgresql = [
 [tool.uv]
 override-dependencies = [
     # temporary force a newer python-pptx
-    "python-pptx>=1.0.2"
+    "python-pptx>=1.0.2",
 ]
 
 [project.scripts]
