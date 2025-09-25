@@ -118,6 +118,7 @@ async def validate_mcp_server_for_project(
         if server_name not in existing_servers.get("mcpServers", {}):
             # Server doesn't exist
             return MCPServerValidationResult(
+                project_id_matches=False,
                 server_exists=False,
                 server_name=server_name,
             )
@@ -165,6 +166,7 @@ async def validate_mcp_server_for_project(
         await logger.awarning(f"Could not validate MCP server for project {project_id}: {e}")
         # Return result allowing operation to proceed on validation failure
         return MCPServerValidationResult(
+            project_id_matches=False,
             server_exists=False,
             server_name=server_name,
         )
