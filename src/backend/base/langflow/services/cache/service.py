@@ -6,6 +6,7 @@ from collections import OrderedDict
 from typing import Generic, Union
 
 import dill
+import warnings
 from lfx.log.logger import logger
 from lfx.services.cache.utils import CACHE_MISS
 from typing_extensions import override
@@ -232,6 +233,87 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             return False
         return True
 
+    # -- Internal helpers -------------------------------------------------
+    def _sanitize_for_pickle(self, obj):
+        """Sanitize objects known to cause dill recursion issues.
+
+        Specifically targets dynamically created Pydantic models like
+        lfx.io.schema.InputSchema (both class objects and instances).
+        Falls back to identity for everything else.
+        """
+        try:
+            from pydantic import BaseModel  # type: ignore
+        except Exception:  # noqa: BLE001
+            BaseModel = None  # type: ignore
+
+        visited: set[int] = set()
+
+        def _walk(value):
+            vid = id(value)
+            if vid in visited:
+                return value
+            visited.add(vid)
+
+            # Replace InputSchema classes with a placeholder reference
+            if isinstance(value, type):
+                mod = getattr(value, "__module__", "")
+                name = getattr(value, "__name__", "")
+                # Avoid importing pydantic just to check subclassing; use module+name
+                if mod.startswith("lfx.io.schema") and name == "InputSchema":
+                    return {"__lfx_skipped_class__": f"{mod}.{name}"}
+                # For any class, store a lightweight path to avoid pickling class objects
+                return {"__class_path__": f"{mod}.{name}"}
+
+            # Replace InputSchema instances with plain data
+            if BaseModel is not None and isinstance(value, BaseModel):  # type: ignore[arg-type]
+                cls = value.__class__
+                mod = getattr(cls, "__module__", "")
+                name = getattr(cls, "__name__", "")
+                if mod.startswith("lfx.io.schema") and name == "InputSchema":
+                    try:
+                        return value.model_dump()
+                    except Exception:  # noqa: BLE001
+                        return dict(value.__dict__)
+
+            # Replace callables (functions, methods, lambdas) with path-like hint or repr
+            try:
+                import inspect
+
+                if inspect.isfunction(value) or inspect.ismethod(value) or inspect.isbuiltin(value):
+                    mod = getattr(value, "__module__", "")
+                    name = getattr(value, "__qualname__", getattr(value, "__name__", ""))
+                    return {"__callable_path__": f"{mod}.{name}"}
+            except Exception:
+                pass
+
+            # Replace instances of dynamically created or custom component classes
+            # that commonly resist pickling.
+            cls = value.__class__ if not isinstance(value, (dict, list, tuple, set, bytes, bytearray, str, int, float, bool, type(None))) else None
+            if cls is not None:
+                mod = getattr(cls, "__module__", "")
+                qual = getattr(cls, "__qualname__", getattr(cls, "__name__", ""))
+                if mod.startswith("lfx.custom") or "<locals>" in qual or mod == "__main__" or mod == "builtins":
+                    # Best-effort shallow representation
+                    try:
+                        return {"__repr__": repr(value)}
+                    except Exception:
+                        return {"__class__": f"{mod}.{qual}"}
+
+            # Containers
+            if isinstance(value, dict):
+                return {k: _walk(v) for k, v in value.items()}
+            if isinstance(value, (list, tuple, set)):
+                seq = [_walk(v) for v in value]
+                if isinstance(value, tuple):
+                    return tuple(seq)
+                if isinstance(value, set):
+                    return set(seq)
+                return seq
+
+            return value
+
+        return _walk(obj)
+
     @override
     async def get(self, key, lock=None):
         if key is None:
@@ -242,14 +324,35 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
     @override
     async def set(self, key, value, lock=None) -> None:
         try:
-            if pickled := dill.dumps(value, recurse=True):
-                result = await self._client.setex(str(key), self.expiration_time, pickled)
-                if not result:
-                    msg = "RedisCache could not set the value."
-                    raise ValueError(msg)
-        except pickle.PicklingError as exc:
-            msg = "RedisCache only accepts values that can be pickled. "
-            raise TypeError(msg) from exc
+            # First attempt: try to pickle as-is, suppressing noisy PicklingWarnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=UserWarning)
+                # Try ignoring dill's own PicklingWarning if available
+                try:  # noqa: SIM105
+                    from dill._dill import PicklingWarning as _DillPicklingWarning  # type: ignore
+
+                    warnings.simplefilter("ignore", category=_DillPicklingWarning)
+                except Exception:
+                    pass
+                pickled = dill.dumps(value, recurse=False, byref=True)
+        except Exception:
+            # Fallback: sanitize value to strip problematic dynamic schemas
+            sanitized = self._sanitize_for_pickle(value)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=UserWarning)
+                try:  # noqa: SIM105
+                    from dill._dill import PicklingWarning as _DillPicklingWarning  # type: ignore
+
+                    warnings.simplefilter("ignore", category=_DillPicklingWarning)
+                except Exception:
+                    pass
+                pickled = dill.dumps(sanitized, recurse=False, byref=True)
+
+        if pickled:
+            result = await self._client.setex(str(key), self.expiration_time, pickled)
+            if not result:
+                msg = "RedisCache could not set the value."
+                raise ValueError(msg)
 
     @override
     async def upsert(self, key, value, lock=None) -> None:
