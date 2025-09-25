@@ -1,14 +1,14 @@
 language: en-US
-tone_instructions: ''
+tone_instructions: ""
 early_access: true
 enable_free_tier: true
 reviews:
   profile: chill
   request_changes_workflow: false
   high_level_summary: true
-  high_level_summary_placeholder: '@coderabbitai summary'
+  high_level_summary_placeholder: "@coderabbitai summary"
   high_level_summary_in_walkthrough: false
-  auto_title_placeholder: '@coderabbitai'
+  auto_title_placeholder: "@coderabbitai"
   auto_title_instructions: Use conventional commits structure
   review_status: true
   commit_status: true
@@ -26,7 +26,7 @@ reviews:
   poem: false
   labeling_instructions: []
   path_filters:
-    - '!src/backend/base/langflow/initial_setup/starter_projects'
+    - "!src/backend/base/langflow/initial_setup/starter_projects"
   path_instructions: []
   abort_on_close: true
   disable_cache: false
@@ -42,6 +42,38 @@ reviews:
       enabled: true
     unit_tests:
       enabled: true
+  pre_merge_checks:
+    custom_checks:
+      - name: "Test Coverage for New Implementations"
+        instructions: |
+          Check if the PR includes new or updated test files that correspond to the code changes:
+          1. For new backend components in src/backend/, ensure tests are added in src/backend/tests/
+          2. For new frontend components in src/frontend/, ensure tests are added in src/frontend/tests/
+          3. For bug fixes, verify that regression tests are included
+          4. For new features, ensure both unit and integration tests are present where appropriate
+          5. Check that test files follow the project's naming conventions (test_*.py for backend, *.test.ts for frontend)
+          6. Verify that tests actually test the new functionality, not just placeholder tests
+        mode: "warning"
+      - name: "Test Quality and Coverage"
+        instructions: |
+          Evaluate the quality and comprehensiveness of tests for new implementations:
+          1. Tests should cover the main functionality being implemented
+          2. Tests should include edge cases and error conditions
+          3. For async functions, ensure proper async testing patterns are used (pytest for backend)
+          4. For components, verify tests cover both positive and negative scenarios
+          5. Check that tests are not just smoke tests but actually validate behavior
+          6. Ensure tests follow the project's testing patterns (pytest for backend, Playwright for frontend)
+          7. For API endpoints, verify both success and error response testing
+        mode: "error"
+      - name: "Test File Naming and Structure"
+        instructions: |
+          Verify that test files follow the correct patterns and structure:
+          1. Backend tests: test_*.py in src/backend/tests/ with proper pytest structure
+          2. Frontend tests: *.test.ts or *.test.tsx in src/frontend/tests/ using Playwright
+          3. Integration tests should be clearly marked and in appropriate directories
+          4. Test files should have descriptive test function names that explain what is being tested
+          5. Tests should be organized logically with proper setup and teardown
+        mode: "warning"
   tools:
     ast-grep:
       rule_dirs: []
