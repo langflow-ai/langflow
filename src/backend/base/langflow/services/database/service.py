@@ -191,7 +191,6 @@ class DatabaseService(Service):
             yield NoopSession()
         else:
             async with AsyncSession(self.engine, expire_on_commit=False) as session:
-                # Start of Selection
                 try:
                     yield session
                 except exc.SQLAlchemyError as db_exc:
