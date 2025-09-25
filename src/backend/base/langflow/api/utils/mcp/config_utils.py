@@ -19,11 +19,9 @@ from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NA
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_storage_service
 
-# Constants
 ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
 
 
-# MCP Server Validation Results
 class MCPServerValidationResult:
     """Result of MCP server validation check."""
 
@@ -342,7 +340,6 @@ async def auto_configure_starter_projects_mcp(session):
                 await logger.aerror(f"Could not add starter projects MCP server for user {user.username}: {e}")
                 continue
 
-        # Commit all changes at the end
         await session.commit()
 
         if total_servers_added > 0:
@@ -352,4 +349,3 @@ async def auto_configure_starter_projects_mcp(session):
 
     except Exception as e:  # noqa: BLE001
         await logger.aerror(f"Failed to auto-configure starter projects MCP servers: {e}")
-        # Don't raise the exception to avoid breaking startup
