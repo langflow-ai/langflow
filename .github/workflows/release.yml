@@ -4,8 +4,8 @@ run-name: Langflow Release by @${{ github.actor }}
 on:
   workflow_dispatch:
     inputs:
-      release_branch:
-        description: "Branch to release from. This is the branch that contains the source code for the release."
+      release_tag:
+        description: "Tag to release from. This is the tag that contains the source code for the release."
         required: true
         type: string
       release_package_base:
@@ -61,12 +61,39 @@ on:
 
 
 jobs:
+  validate-tag:
+    name: Validate Tag Input
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # Fetch all history - required for tags (?) 
+      - name: Validate that input is a tag, not a branch
+        run: |
+          # Check if the input exists as a tag
+          if ! git tag -l | grep -q "^${{ inputs.release_tag }}$"; then
+            echo "Error: '${{ inputs.release_tag }}' is not a valid tag."
+            echo "Available tags:"
+            git tag -l | head -20
+            exit 1
+          fi
+
+          # Check if the input also exists as a branch (warn if so, but don't fail)
+          if git branch -r | grep -q "origin/${{ inputs.release_tag }}$"; then
+            echo "Tag '${{ inputs.release_tag }}' also exists as a branch. Exiting out of caution."
+            exit 1
+          fi
+
+          echo "Validated: '${{ inputs.release_tag }}' is a valid tag."
+
   ci:
     if: ${{ github.event.inputs.release_package_base == 'true' || github.event.inputs.release_package_main == 'true' || github.event.inputs.release_lfx == 'true' }}
     name: CI
+    needs: [validate-tag]
     uses: ./.github/workflows/ci.yml
     with:
-      branch: ${{ inputs.release_branch }}
+      branch: ${{ inputs.release_tag }}
       python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
       release: true
@@ -86,7 +113,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.release_branch }}
+          ref: ${{ inputs.release_tag }}
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -156,7 +183,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.release_branch }}
+          ref: ${{ inputs.release_tag }}
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -310,7 +337,7 @@ jobs:
     needs: [publish-base, publish-main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ inputs.release_branch }}
+      ref: ${{ inputs.release_tag }}
       release_type: base
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
@@ -321,7 +348,7 @@ jobs:
     needs: [publish-main, call_docker_build_base]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ inputs.release_branch }}
+      ref: ${{ inputs.release_tag }}
       release_type: main-ep
       pre_release: False
     secrets: inherit
@@ -332,7 +359,7 @@ jobs:
     needs: [publish-main, call_docker_build_main_ep]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ inputs.release_branch }}
+      ref: ${{ inputs.release_tag }}
       release_type: main
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
@@ -343,7 +370,7 @@ jobs:
     needs: [publish-main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ inputs.release_branch }}
+      ref: ${{ inputs.release_tag }}
       release_type: main-all
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
@@ -360,7 +387,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.release_branch }}
+          ref: ${{ inputs.release_tag }}
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -447,4 +474,4 @@ jobs:
           generateReleaseNotes: true
           prerelease: ${{ inputs.pre_release }}
           tag: ${{ needs.build-main.outputs.version || needs.build-lfx.outputs.version }}
-          commit: ${{ inputs.release_branch }}
+          commit: ${{ inputs.release_tag }}
