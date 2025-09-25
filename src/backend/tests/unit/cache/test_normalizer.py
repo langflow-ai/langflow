@@ -1,5 +1,4 @@
-import types
-from pydantic import BaseModel, create_model
+from pydantic import create_model
 
 from lfx.serialization.normalizer import normalize_for_cache
 
@@ -7,6 +6,7 @@ from lfx.serialization.normalizer import normalize_for_cache
 def test_normalize_dynamic_class_and_function():
     # Dynamic class
     Dynamic = type("Dynamic", (), {"x": 1})
+
     # Dynamic function
     def dyn_func():
         return 42
@@ -47,4 +47,3 @@ def test_normalize_vertex_like_dict_replaces_built_object():
     assert out["built_result"] == {"y": 2}
     assert out["full_data"] == {"id": "v1"}
     assert out["built_object"] == {"__cache_placeholder__": "unbuilt"}
-

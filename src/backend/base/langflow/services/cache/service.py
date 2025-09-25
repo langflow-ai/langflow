@@ -2,11 +2,11 @@ import asyncio
 import pickle
 import threading
 import time
+import warnings
 from collections import OrderedDict
 from typing import Generic, Union
 
 import dill
-import warnings
 from lfx.log.logger import logger
 from lfx.services.cache.utils import CACHE_MISS
 from typing_extensions import override
@@ -288,7 +288,11 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
 
             # Replace instances of dynamically created or custom component classes
             # that commonly resist pickling.
-            cls = value.__class__ if not isinstance(value, (dict, list, tuple, set, bytes, bytearray, str, int, float, bool, type(None))) else None
+            cls = (
+                value.__class__
+                if not isinstance(value, (dict, list, tuple, set, bytes, bytearray, str, int, float, bool, type(None)))
+                else None
+            )
             if cls is not None:
                 mod = getattr(cls, "__module__", "")
                 qual = getattr(cls, "__qualname__", getattr(cls, "__name__", ""))
@@ -328,7 +332,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=UserWarning)
                 # Try ignoring dill's own PicklingWarning if available
-                try:  # noqa: SIM105
+                try:
                     from dill._dill import PicklingWarning as _DillPicklingWarning  # type: ignore
 
                     warnings.simplefilter("ignore", category=_DillPicklingWarning)
@@ -340,7 +344,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             sanitized = self._sanitize_for_pickle(value)
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=UserWarning)
-                try:  # noqa: SIM105
+                try:
                     from dill._dill import PicklingWarning as _DillPicklingWarning  # type: ignore
 
                     warnings.simplefilter("ignore", category=_DillPicklingWarning)

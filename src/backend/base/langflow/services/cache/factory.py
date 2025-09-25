@@ -40,7 +40,7 @@ class CacheServiceFactory(ServiceFactory):
     def create(self, settings_service: SettingsService):
         # Here you would have logic to create and configure a CacheService
         # based on the settings_service
-        
+
         # Debug: Log the cache type being used
         cache_type = settings_service.settings.cache_type
         logger.info(f"Cache factory creating cache with type: {cache_type}")
