@@ -105,7 +105,7 @@ jobs:
           echo "Validated: '${{ inputs.release_tag }}' is a valid tag."
 
   ci:
-    if: ${{ inputs.release_package_base == 'true' || inputs.release_package_main == 'true' || inputs.release_lfx == 'true' }}
+    if: ${{ inputs.release_package_base == true || inputs.release_package_main == true || inputs.release_lfx == true }}
     name: CI
     needs: [validate-tag]
     uses: ./.github/workflows/ci.yml
