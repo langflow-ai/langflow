@@ -159,7 +159,7 @@ class TestS3StorageService:
                 Bucket="test-bucket",
                 Key=f"tenants/{test_flow_id}/{test_file_name}",
                 Body=test_data,
-                Tagging="env=test&team=langflow"
+                Tagging="env=test&team=langflow",
             )
 
     @pytest.mark.asyncio
@@ -339,4 +339,3 @@ class TestS3StorageService:
         """Test teardown method."""
         # Should not raise any exceptions
         await s3_service.teardown()
-

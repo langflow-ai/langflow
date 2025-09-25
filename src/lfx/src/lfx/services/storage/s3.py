@@ -1,6 +1,4 @@
-import os
 import re
-from pathlib import Path
 
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
@@ -27,7 +25,9 @@ class S3StorageService(StorageService):
         self.tags = getattr(settings_service.settings, "object_storage_tags", None)
 
         if not self.bucket_name:
-            msg = "Object storage bucket name is required. Set LANGFLOW_OBJECT_STORAGE_BUCKET_NAME environment variable."
+            msg = (
+                "Object storage bucket name is required. Set LANGFLOW_OBJECT_STORAGE_BUCKET_NAME environment variable."
+            )
             logger.error(msg)
             raise ValueError(msg)
 
@@ -39,12 +39,11 @@ class S3StorageService(StorageService):
         try:
             self.s3_client = boto3.client("s3")
             logger.debug("S3 client initialized for object storage")
-        except Exception: # noqa: BLE001
+        except Exception:
             logger.exception("Failed to initialize S3 client")
             raise
 
         self.set_ready()
-
 
     def _validate_path_component(self, component: str, component_name: str) -> str:
         """Validate and sanitize path components to prevent path traversal attacks.
@@ -65,11 +64,11 @@ class S3StorageService(StorageService):
 
         # Check for path traversal patterns
         dangerous_patterns = [
-            "..",      # Parent directory
-            "/",       # Path separator
-            "\\",      # Windows path separator
-            "%2f",     # URL-encoded forward slash
-            "%5c",     # URL-encoded backslash
+            "..",  # Parent directory
+            "/",  # Path separator
+            "\\",  # Windows path separator
+            "%2f",  # URL-encoded forward slash
+            "%5c",  # URL-encoded backslash
             "%2e%2e",  # URL-encoded ..
         ]
 
@@ -80,7 +79,7 @@ class S3StorageService(StorageService):
                 raise ValueError(msg)
 
         # Remove any control characters and excessive whitespace
-        sanitized = re.sub(r'[\x00-\x1f\x7f]', '', component).strip()
+        sanitized = re.sub(r"[\x00-\x1f\x7f]", "", component).strip()
 
         # Ensure it's not empty after sanitization
         if not sanitized:
@@ -124,7 +123,6 @@ class S3StorageService(StorageService):
         key = self._build_s3_key(flow_id, file_name)
         return f"s3://{self.bucket_name}/{key}"
 
-
     async def save_file(self, flow_id: str, file_name: str, data: bytes) -> None:
         """Save a file to the S3 bucket.
 
@@ -148,16 +146,13 @@ class S3StorageService(StorageService):
             key = self._build_s3_key(flow_id, file_name)
 
             # Prepare put_object arguments
-            put_args = {
-                "Bucket": self.bucket_name,
-                "Key": key,
-                "Body": data
-            }
+            put_args = {"Bucket": self.bucket_name, "Key": key, "Body": data}
 
             # Add tags if configured
             if self.tags:
                 # Use proper URL encoding for tag values
                 from urllib.parse import quote
+
                 tag_pairs = [f"{quote(str(k))}={quote(str(v))}" for k, v in self.tags.items()]
                 put_args["Tagging"] = "&".join(tag_pairs)
 
@@ -221,11 +216,7 @@ class S3StorageService(StorageService):
             await logger.aexception(f"Error listing files in flow {flow_id}")
             raise
 
-        files = [
-            item["Key"]
-            for item in response.get("Contents", [])
-            if "/" not in item["Key"][len(prefix) :]
-        ]
+        files = [item["Key"] for item in response.get("Contents", []) if "/" not in item["Key"][len(prefix) :]]
         await logger.ainfo(f"{len(files)} files listed in flow {flow_id}.")
         return files
 
