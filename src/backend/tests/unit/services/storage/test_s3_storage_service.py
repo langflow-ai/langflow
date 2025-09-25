@@ -19,16 +19,12 @@ class TestS3StorageService:
 
     @pytest.fixture
     def mock_settings_service(self):
-        """Create a mock settings service with S3 configuration."""
+        """Create a mock settings service with object storage configuration."""
         mock_settings = MagicMock()
         mock_settings.storage_type = "s3"  # Set storage type to S3
-        mock_settings.s3_bucket_name = "test-bucket"
-        mock_settings.s3_region_name = "us-east-1"
-        mock_settings.s3_aws_access_key_id = "test-access-key"
-        mock_settings.s3_aws_secret_access_key = "test-secret-key"  # noqa: S105
-        mock_settings.s3_aws_session_token = None
-        mock_settings.s3_role_arn = None
-        mock_settings.s3_storage_path = "tenants"
+        mock_settings.object_storage_bucket_name = "test-bucket"
+        mock_settings.object_storage_prefix = "tenants"
+        mock_settings.object_storage_tags = None
 
         mock_service = MagicMock()
         mock_service.settings = mock_settings
@@ -46,10 +42,17 @@ class TestS3StorageService:
             return service
 
     @pytest.fixture
-    def s3_service_no_client(self, mock_session_service, mock_settings_service):
+    def s3_service_no_client(self, mock_settings_service):
         """Create an S3StorageService instance with no S3 client (initialization failed)."""
-        service = S3StorageService(mock_session_service, mock_settings_service)
-        service.s3_client = None
+        with patch("boto3.client", side_effect=Exception("Failed to initialize")):
+            try:
+                service = S3StorageService(settings_service=mock_settings_service)
+            except Exception:
+                service = S3StorageService.__new__(S3StorageService)
+                service.bucket_name = "test-bucket"
+                service.object_prefix = "tenants"
+                service.tags = None
+                service.s3_client = None
         return service
 
     @pytest.fixture
@@ -68,8 +71,8 @@ class TestS3StorageService:
         return "test_file.txt"
 
     # Test initialization
-    def test_init_with_credentials(self, mock_session_service, mock_settings_service):
-        """Test S3StorageService initialization with explicit credentials."""
+    def test_init_success(self, mock_settings_service):
+        """Test S3StorageService initialization success."""
         with patch("boto3.client") as mock_boto_client:
             mock_s3_client = MagicMock()
             mock_boto_client.return_value = mock_s3_client
@@ -78,52 +81,16 @@ class TestS3StorageService:
 
             assert service.bucket_name == "test-bucket"
             assert service.object_prefix == "tenants"
+            assert service.tags is None
             assert service.s3_client == mock_s3_client
-            mock_boto_client.assert_called_once_with(
-                "s3",
-                aws_access_key_id="test-access-key",
-                aws_secret_access_key="test-secret-key",  # noqa: S106
-                aws_session_token=None,
-                region_name="us-east-1",
-            )
+            mock_boto_client.assert_called_once_with("s3")
 
-    def test_init_with_role_arn(self, mock_session_service):
-        """Test S3StorageService initialization with role ARN."""
+    def test_init_with_tags(self):
+        """Test S3StorageService initialization with tags."""
         mock_settings = MagicMock()
-        mock_settings.s3_bucket_name = "test-bucket"
-        mock_settings.s3_region_name = "us-east-1"
-        mock_settings.s3_aws_access_key_id = None
-        mock_settings.s3_aws_secret_access_key = None
-        mock_settings.s3_aws_session_token = None
-        mock_settings.s3_role_arn = "arn:aws:iam::123456789012:role/test-role"
-        mock_settings.s3_storage_path = "tenants"
-
-        mock_service = MagicMock()
-        mock_service.settings = mock_settings
-
-        with (
-            patch("boto3.client"),
-            patch.object(S3StorageService, "_create_role_based_client") as mock_create_role,
-        ):
-            mock_s3_client = MagicMock()
-            mock_create_role.return_value = mock_s3_client
-
-            service = S3StorageService(mock_session_service, mock_service)
-
-            assert service.bucket_name == "test-bucket"
-            assert service.object_prefix == "tenants"
-            mock_create_role.assert_called_once_with("arn:aws:iam::123456789012:role/test-role", "us-east-1")
-
-    def test_init_with_default_credentials(self, mock_session_service):
-        """Test S3StorageService initialization with default credential chain."""
-        mock_settings = MagicMock()
-        mock_settings.s3_bucket_name = "test-bucket"
-        mock_settings.s3_region_name = "us-east-1"
-        mock_settings.s3_aws_access_key_id = None
-        mock_settings.s3_aws_secret_access_key = None
-        mock_settings.s3_aws_session_token = None
-        mock_settings.s3_role_arn = None
-        mock_settings.s3_storage_path = "tenants"
+        mock_settings.object_storage_bucket_name = "test-bucket"
+        mock_settings.object_storage_prefix = "tenants"
+        mock_settings.object_storage_tags = {"env": "test", "team": "langflow"}
 
         mock_service = MagicMock()
         mock_service.settings = mock_settings
@@ -132,24 +99,33 @@ class TestS3StorageService:
             mock_s3_client = MagicMock()
             mock_boto_client.return_value = mock_s3_client
 
-            service = S3StorageService(mock_session_service, mock_service)
+            service = S3StorageService(settings_service=mock_service)
 
             assert service.bucket_name == "test-bucket"
             assert service.object_prefix == "tenants"
-            assert service.s3_client == mock_s3_client
-            mock_boto_client.assert_called_once_with("s3", region_name="us-east-1")
+            assert service.tags == {"env": "test", "team": "langflow"}
 
-    def test_init_failure_fallback(self, mock_session_service, mock_settings_service):
-        """Test S3StorageService initialization failure with fallback."""
+    def test_init_missing_bucket(self):
+        """Test S3StorageService initialization with missing bucket name."""
+        mock_settings = MagicMock()
+        mock_settings.object_storage_bucket_name = None
+        mock_settings.object_storage_prefix = "tenants"
+        mock_settings.object_storage_tags = None
+
+        mock_service = MagicMock()
+        mock_service.settings = mock_settings
+
+        with pytest.raises(ValueError, match="Object storage bucket name is required"):
+            S3StorageService(settings_service=mock_service)
+
+    def test_init_failure_raises_exception(self, mock_settings_service):
+        """Test S3StorageService initialization failure raises exception."""
         with patch(
             "boto3.client",
             side_effect=ClientError({"Error": {"Code": "AccessDenied", "Message": "Access Denied"}}, "AssumeRole"),
         ):
-            service = S3StorageService(settings_service=mock_settings_service)
-
-            assert service.bucket_name == "test-bucket"
-            assert service.object_prefix == "tenants"
-            assert service.s3_client is None
+            with pytest.raises(ClientError):
+                S3StorageService(settings_service=mock_settings_service)
 
     # Test save_file method
     @pytest.mark.asyncio
@@ -160,6 +136,31 @@ class TestS3StorageService:
         s3_service.s3_client.put_object.assert_called_once_with(
             Bucket="test-bucket", Key=f"tenants/{test_flow_id}/{test_file_name}", Body=test_data
         )
+
+    @pytest.mark.asyncio
+    async def test_save_file_with_tags(self, test_data, test_flow_id, test_file_name):
+        """Test file save with tags."""
+        mock_settings = MagicMock()
+        mock_settings.object_storage_bucket_name = "test-bucket"
+        mock_settings.object_storage_prefix = "tenants"
+        mock_settings.object_storage_tags = {"env": "test", "team": "langflow"}
+
+        mock_service = MagicMock()
+        mock_service.settings = mock_settings
+
+        with patch("boto3.client") as mock_boto_client:
+            mock_s3_client = MagicMock()
+            mock_boto_client.return_value = mock_s3_client
+
+            service = S3StorageService(settings_service=mock_service)
+            await service.save_file(test_flow_id, test_file_name, test_data)
+
+            mock_s3_client.put_object.assert_called_once_with(
+                Bucket="test-bucket",
+                Key=f"tenants/{test_flow_id}/{test_file_name}",
+                Body=test_data,
+                Tagging="env=test&team=langflow"
+            )
 
     @pytest.mark.asyncio
     async def test_save_file_invalid_data_type(self, s3_service, test_flow_id, test_file_name):
@@ -339,80 +340,3 @@ class TestS3StorageService:
         # Should not raise any exceptions
         await s3_service.teardown()
 
-    # Test role-based client creation
-    def test_create_role_based_client_with_web_identity(self, s3_service):
-        """Test role-based client creation with web identity token."""
-        with (
-            patch("os.getenv", return_value="/var/run/secrets/aws-eks-token/token"),
-            patch("pathlib.Path.exists", return_value=True),
-            patch("pathlib.Path.open", mock_open(read_data="test-token")),
-            patch("boto3.client") as mock_boto_client,
-        ):
-            mock_sts_client = MagicMock()
-            mock_s3_client = MagicMock()
-            mock_boto_client.side_effect = [mock_sts_client, mock_s3_client]
-
-            mock_sts_client.assume_role_with_web_identity.return_value = {
-                "Credentials": {
-                    "AccessKeyId": "temp-access-key",
-                    "SecretAccessKey": "temp-secret-key",
-                    "SessionToken": "temp-session-token",
-                }
-            }
-
-            result = s3_service._create_role_based_client("arn:aws:iam::123456789012:role/test-role", "us-east-1")
-
-            assert result == mock_s3_client
-            mock_sts_client.assume_role_with_web_identity.assert_called_once_with(
-                RoleArn="arn:aws:iam::123456789012:role/test-role",
-                RoleSessionName="langflow-s3-session",
-                WebIdentityToken="test-token",
-                DurationSeconds=3600,
-            )
-
-    def test_create_role_based_client_without_web_identity(self, s3_service):
-        """Test role-based client creation without web identity token."""
-        with patch("os.getenv", return_value=None), patch("boto3.client") as mock_boto_client:
-            mock_sts_client = MagicMock()
-            mock_s3_client = MagicMock()
-            mock_boto_client.side_effect = [mock_sts_client, mock_s3_client]
-
-            mock_sts_client.assume_role.return_value = {
-                "Credentials": {
-                    "AccessKeyId": "temp-access-key",
-                    "SecretAccessKey": "temp-secret-key",
-                    "SessionToken": "temp-session-token",
-                }
-            }
-
-            result = s3_service._create_role_based_client("arn:aws:iam::123456789012:role/test-role", "us-east-1")
-
-            assert result == mock_s3_client
-            mock_sts_client.assume_role.assert_called_once_with(
-                RoleArn="arn:aws:iam::123456789012:role/test-role",
-                RoleSessionName="langflow-s3-session",
-                DurationSeconds=3600,
-            )
-
-    def test_create_role_based_client_failure(self, s3_service):
-        """Test role-based client creation failure with fallback."""
-        with patch("os.getenv", return_value=None), patch("boto3.client") as mock_boto_client:
-            mock_sts_client = MagicMock()
-            mock_s3_client = MagicMock()
-            mock_boto_client.side_effect = [mock_sts_client, mock_s3_client]
-
-            mock_sts_client.assume_role.side_effect = ClientError(
-                {"Error": {"Code": "AccessDenied", "Message": "Access Denied"}}, "AssumeRole"
-            )
-
-            result = s3_service._create_role_based_client("arn:aws:iam::123456789012:role/test-role", "us-east-1")
-
-            assert result == mock_s3_client
-            mock_boto_client.assert_called_with("s3", region_name="us-east-1")
-
-
-def mock_open(read_data):
-    """Helper function to mock file opening."""
-    from unittest.mock import mock_open as _mock_open
-
-    return _mock_open(read_data=read_data)
