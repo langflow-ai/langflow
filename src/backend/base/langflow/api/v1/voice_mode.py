@@ -727,9 +727,12 @@ async def flow_as_tool_websocket(
         voice_config = get_voice_config(session_id)
 
         # Use single short-lived session for authentication
-        async with session_scope() as session:
-            current_user: User = await get_current_user_for_websocket(client_websocket, session)
-            current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_websocket)
+        async with session_scope() as auth_session:
+            current_user: User = await get_current_user_for_websocket(client_websocket, auth_session)
+            current_user, openai_key = await authenticate_and_get_openai_key(
+                auth_session, current_user, client_websocket
+            )
+        current_user_id = current_user.id if current_user else None
         if current_user is None or openai_key is None:
             return
         try:
@@ -868,7 +871,8 @@ async def flow_as_tool_websocket(
                 then run the ElevenLabs TTS call (which expects a sync generator) in a separate thread.
                 """
                 try:
-                    elevenlabs_client = await get_or_create_elevenlabs_client(current_user.id, session)
+                    async with session_scope() as db_session:
+                        elevenlabs_client = await get_or_create_elevenlabs_client(current_user_id, db_session)
                     if elevenlabs_client is None:
                         return
 
@@ -1015,7 +1019,10 @@ async def flow_as_tool_websocket(
 
                                 try:
                                     message_text = event.get("text", "")
-                                    await add_message_to_db(message_text, session, flow_id, session_id, "Machine", "AI")
+                                    async with session_scope() as db_session:
+                                        await add_message_to_db(
+                                            message_text, db_session, flow_id, session_id, "Machine", "AI"
+                                        )
                                 except ValueError as err:
                                     await logger.aerror(f"Error saving message to database (ValueError): {err}")
                                     await logger.aerror(traceback.format_exc())
@@ -1044,7 +1051,10 @@ async def flow_as_tool_websocket(
                             try:
                                 transcript = extract_transcript(event)
                                 if transcript and transcript.strip():
-                                    await add_message_to_db(transcript, session, flow_id, session_id, "Machine", "AI")
+                                    async with session_scope() as db_session:
+                                        await add_message_to_db(
+                                            transcript, db_session, flow_id, session_id, "Machine", "AI"
+                                        )
                             except ValueError as err:
                                 await logger.aerror(f"Error saving message to database (ValueError): {err}")
                                 await logger.aerror(traceback.format_exc())
@@ -1074,7 +1084,10 @@ async def flow_as_tool_websocket(
                             try:
                                 message_text = event.get("transcript", "")
                                 if message_text and message_text.strip():
-                                    await add_message_to_db(message_text, session, flow_id, session_id, "User", "User")
+                                    async with session_scope() as db_session:
+                                        await add_message_to_db(
+                                            message_text, db_session, flow_id, session_id, "User", "User"
+                                        )
                             except ValueError as e:
                                 await logger.aerror(f"Error saving message to database (ValueError): {e}")
                                 await logger.aerror(traceback.format_exc())
@@ -1195,9 +1208,10 @@ async def flow_tts_websocket(
             await openai_ws.close()
 
         # Use single short-lived session for authentication
-        async with session_scope() as session:
-            current_user: User = await get_current_user_for_websocket(client_websocket, session)
-            current_user, openai_key = await authenticate_and_get_openai_key(session, current_user, client_send)
+        async with session_scope() as auth_session:
+            current_user: User = await get_current_user_for_websocket(client_websocket, auth_session)
+            current_user, openai_key = await authenticate_and_get_openai_key(auth_session, current_user, client_send)
+        current_user_id = current_user.id if current_user else None
         url = "wss://api.openai.com/v1/realtime?intent=transcription"
         headers = {
             "Authorization": f"Bearer {openai_key}",
@@ -1275,9 +1289,10 @@ async def flow_tts_websocket(
                                             result = text
                                 if result != "":
                                     if tts_config.use_elevenlabs:
-                                        elevenlabs_client = await get_or_create_elevenlabs_client(
-                                            current_user.id, session
-                                        )
+                                        async with session_scope() as db_session:
+                                            elevenlabs_client = await get_or_create_elevenlabs_client(
+                                                current_user_id, db_session
+                                            )
                                         if elevenlabs_client is None:
                                             return
                                         audio_stream = elevenlabs_client.generate(
