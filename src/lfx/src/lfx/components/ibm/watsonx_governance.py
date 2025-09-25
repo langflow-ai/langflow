@@ -1,5 +1,3 @@
-from typing import Any
-
 from lfx.custom.custom_component.component import Component
 from lfx.schema.data import Data
 
@@ -21,17 +19,6 @@ class WatsonxGovernanceComponent(Component):
         # Example output
         # Output(display_name="Result", name="result", method="execute_call"),
     ]
-
-    def _get_session(self) -> Any:
-        """Get session object."""
-        # TODO: Implement session creation/retrieval
-
-        # return session
-        return None
-
-    def _get_client(self, session: Any) -> Any:
-        """Get client from session."""
-        return session
 
     def update_build_config(self, build_config: dict, field_name: str, field_value: str | None = None) -> dict:
         """Update build configuration.
