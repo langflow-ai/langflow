@@ -10,6 +10,7 @@ from lfx.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
     MODEL_DYNAMIC_UPDATE_FIELDS,
     MODEL_PROVIDERS_DICT,
+    MODEL_PROVIDERS_LIST,
     MODELS_METADATA,
 )
 from lfx.base.models.model_utils import get_model_name
@@ -31,9 +32,6 @@ from lfx.schema.table import EditMode
 def set_advanced_true(component_input):
     component_input.advanced = True
     return component_input
-
-
-MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "OpenAI"]
 
 
 class AgentComponent(ToolCallingAgentComponent):
