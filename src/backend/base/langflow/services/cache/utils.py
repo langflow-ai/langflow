@@ -234,6 +234,8 @@ def setup_rich_pickle_support() -> bool:
         ConsoleThreadLocals._langflow_pickle_enabled = True
         Console._langflow_pickle_enabled = True
 
+        logger.debug("Rich pickle support setup completed - only Rich ConsoleThreadLocals and Console objects patched")
+
     except ImportError:
         logger.debug("Rich library not available, pickle support not enabled")
         return False
