@@ -237,7 +237,9 @@ class WebSearchComponent(Component):
         else:
             self.status = "No search query, topic, or location provided."
             return DataFrame(
-                pd.DataFrame([{"title": "Error", "link": "", "published": "", "summary": "No search parameters provided"}])
+                pd.DataFrame(
+                    [{"title": "Error", "link": "", "published": "", "summary": "No search parameters provided"}]
+                )
             )
 
         try:
@@ -271,7 +273,9 @@ class WebSearchComponent(Component):
         """Read RSS feed."""
         rss_url = getattr(self, "query", "")
         if not rss_url:
-            return DataFrame(pd.DataFrame([{"title": "Error", "link": "", "published": "", "summary": "No RSS URL provided"}]))
+            return DataFrame(
+                pd.DataFrame([{"title": "Error", "link": "", "published": "", "summary": "No RSS URL provided"}])
+            )
 
         try:
             response = requests.get(rss_url, timeout=self.timeout)
