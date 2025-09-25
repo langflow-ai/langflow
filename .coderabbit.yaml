@@ -47,32 +47,40 @@ reviews:
       - name: "Test Coverage for New Implementations"
         instructions: |
           Check if the PR includes new or updated test files that correspond to the code changes:
-          1. For new backend components in src/backend/, ensure tests are added in src/backend/tests/
-          2. For new frontend components in src/frontend/, ensure tests are added in src/frontend/tests/
-          3. For bug fixes, verify that regression tests are included
-          4. For new features, ensure both unit and integration tests are present where appropriate
-          5. Check that test files follow the project's naming conventions (test_*.py for backend, *.test.ts for frontend)
-          6. Verify that tests actually test the new functionality, not just placeholder tests
-        mode: "warning"
+          1. For new components or functionality, ensure corresponding tests are included in the PR
+          2. For bug fixes, verify that regression tests are included
+          3. For new features, ensure both unit and integration tests are present where appropriate
+          4. Check that test files follow the project's naming conventions (test_*.py for backend, *.test.ts for frontend)
+          5. Verify that tests actually test the new functionality, not just placeholder tests
+        mode: "error"
       - name: "Test Quality and Coverage"
         instructions: |
           Evaluate the quality and comprehensiveness of tests for new implementations:
           1. Tests should cover the main functionality being implemented
-          2. Tests should include edge cases and error conditions
-          3. For async functions, ensure proper async testing patterns are used (pytest for backend)
-          4. For components, verify tests cover both positive and negative scenarios
-          5. Check that tests are not just smoke tests but actually validate behavior
-          6. Ensure tests follow the project's testing patterns (pytest for backend, Playwright for frontend)
-          7. For API endpoints, verify both success and error response testing
-        mode: "error"
+          2. For async functions, ensure proper async testing patterns are used (pytest for backend)
+          3. Check that tests are not just smoke tests but actually validate behavior
+          4. Ensure tests follow the project's testing patterns (pytest for backend, Playwright for frontend)
+          5. For API endpoints, verify both success and error response testing
+        mode: "warning"
       - name: "Test File Naming and Structure"
         instructions: |
           Verify that test files follow the correct patterns and structure:
-          1. Backend tests: test_*.py in src/backend/tests/ with proper pytest structure
-          2. Frontend tests: *.test.ts or *.test.tsx in src/frontend/tests/ using Playwright
+          1. Backend tests: test_*.py with proper pytest structure
+          2. Frontend tests: *.test.ts or *.test.tsx using Playwright
           3. Integration tests should be clearly marked and in appropriate directories
           4. Test files should have descriptive test function names that explain what is being tested
           5. Tests should be organized logically with proper setup and teardown
+          6. Consider including edge cases and error conditions for comprehensive coverage
+          7. Verify tests cover both positive and negative scenarios where appropriate
+        mode: "warning"
+      - name: "Excessive Mock Usage Warning"
+        instructions: |
+          Review test files for excessive use of mocks that may indicate poor test design:
+          1. Check if tests have too many mock objects that obscure what's actually being tested
+          2. Warn when mocks are used instead of testing real behavior and interactions
+          3. Suggest using real objects or test doubles when mocks become excessive
+          4. Ensure mocks are used appropriately for external dependencies, not core logic
+          5. Recommend integration tests when unit tests become overly mocked
         mode: "warning"
   tools:
     ast-grep:
