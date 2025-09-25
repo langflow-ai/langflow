@@ -234,15 +234,15 @@ def setup_rich_pickle_support() -> bool:
         ConsoleThreadLocals._langflow_pickle_enabled = True
         Console._langflow_pickle_enabled = True
 
-        logger.info("Rich pickle support enabled for cache serialization")
-        return True
-
     except ImportError:
         logger.debug("Rich library not available, pickle support not enabled")
         return False
     except (AttributeError, TypeError) as e:
         logger.warning("Failed to setup Rich pickle support: %s", e)
         return False
+    else:
+        logger.info("Rich pickle support enabled for cache serialization")
+        return True
 
 
 def validate_rich_pickle_support() -> bool:
@@ -272,14 +272,13 @@ def validate_rich_pickle_support() -> bool:
         validation_passed = "validation_test" in capture.get()
         if validation_passed:
             logger.debug("Rich pickle validation successful")
-            return validation_passed
         else:
             logger.warning("Rich pickle validation failed - console not functional")
-            return False
-
     except (ImportError, AttributeError, TypeError) as e:
         logger.warning("Rich pickle validation failed: %s", e)
         return False
+    else:
+        return validation_passed
 
 
 def is_rich_pickle_enabled() -> bool:
