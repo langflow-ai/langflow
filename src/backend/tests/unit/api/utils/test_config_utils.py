@@ -165,7 +165,6 @@ class TestValidateMcpServerForProject:
         await client.delete("/api/v2/mcp/servers/lf-test_project", headers={"x-api-key": created_api_key.api_key})
 
     @pytest.mark.asyncio
-    # @pytest.mark.skip(reason="404 when trying to create the server using client")
     async def test_validate_server_exists_project_doesnt_match(
         self, active_user, test_project, created_api_key, client: AsyncClient
     ):

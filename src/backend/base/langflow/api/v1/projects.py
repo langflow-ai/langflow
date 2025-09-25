@@ -117,6 +117,10 @@ async def create_project(
                         unmasked_api_key.api_key,
                         sse_url,
                     ]
+                elif default_auth.get("auth_type", "none") == "oauth":
+                    msg = "OAuth authentication is not yet implemented for MCP server creation during project creation."
+                    logger.warning(msg)
+                    raise HTTPException(status_code=501, detail=msg)
                 else:  # default_auth_type == "none"
                     # No authentication - direct connection
                     command = "uvx"
@@ -173,7 +177,7 @@ async def create_project(
                 raise
             except Exception as e:  # noqa: BLE001
                 msg = f"Failed to auto-register MCP server for project {new_project.id}: {e}"
-                await logger.aexception(msg)
+                await logger.aexception(msg, exc_info=True)
 
         if project.components_list:
             update_statement_components = (

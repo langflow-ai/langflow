@@ -23,13 +23,33 @@ ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
 
 
 class MCPServerValidationResult:
-    """Result of MCP server validation check."""
+    """Represents the result of an MCP server validation check.
+
+    This class encapsulates the outcome of checking whether an MCP server
+    configuration can be safely created or updated for a given project. The typical
+    sequence is as follows:
+
+    1. Initiation: An operation requiring an MCP server (e.g., creating a
+        new project with MCP enabled) triggers a validation check.
+    2. Validation: The validate_mcp_server_for_project function is called.
+        It generates the expected server name from the project name and checks
+        if a server with that name already exists.
+    3. Ownership Check: If a server exists, the function verifies if it
+        belongs to the current project by checking for the project's UUID in
+        the server's configuration.
+    4. Result: An instance of this class is returned, summarizing whether
+        the server exists and if the project ID matches.
+    5. Decision: The calling code uses the properties of this result
+        (has_conflict, should_skip, should_proceed) to determine the next
+        action, such as aborting on conflict, skipping if already configured,
+        or proceeding with the setup.
+    """
 
     def __init__(
         self,
         *,
-        server_exists: bool = False,
-        project_id_matches: bool = False,
+        server_exists: bool,
+        project_id_matches: bool,
         server_name: str = "",
         existing_config: dict | None = None,
         conflict_message: str = "",
@@ -42,17 +62,27 @@ class MCPServerValidationResult:
 
     @property
     def has_conflict(self) -> bool:
-        """True if server exists but project ID doesn't match."""
+        """Returns True when an MCP server name collision occurs.
+
+        This indicates that another project is already using the desired server name.
+        """
         return self.server_exists and not self.project_id_matches
 
     @property
     def should_skip(self) -> bool:
-        """True if server exists and project ID matches (no action needed)."""
+        """Returns True when the MCP server configuration is already correct for this project.
+
+        This indicates that the server exists and is properly configured for the current project.
+        """
         return self.server_exists and self.project_id_matches
 
     @property
     def should_proceed(self) -> bool:
-        """True if no server exists or project ID matches (can create/update)."""
+        """Returns True when MCP server setup can proceed safely without conflicts.
+
+        This indicates either no server exists (safe to create) or the existing server
+        belongs to the current project (safe to update).
+        """
         return not self.server_exists or self.project_id_matches
 
 
