@@ -1,6 +1,6 @@
 import os
 
-from mem0 import Memory, MemoryClient
+from mem0 import Memory
 
 from lfx.base.memory.model import LCChatMemoryComponent
 from lfx.inputs.inputs import DictInput, HandleInput, MessageTextInput, NestedDictInput, SecretStrInput
@@ -9,17 +9,20 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 
 
-class Mem0MemoryComponent(LCChatMemoryComponent):
-    display_name = "Mem0 Chat Memory"
-    description = "Retrieves and stores chat messages using Mem0 memory storage."
-    name = "mem0_chat_memory"
+class Mem0OSSChatMemoryComponent(LCChatMemoryComponent):
+    display_name = "Mem0 OSS Chat Memory"
+    description = (
+        "Retrieves and stores chat messages using Mem0 OSS (open source) memory storage. "
+        "Self-hosted solution with full control over configuration."
+    )
+    name = "mem0_oss_chat_memory"
     icon: str = "Mem0"
     inputs = [
         NestedDictInput(
             name="mem0_config",
             display_name="Mem0 Configuration",
-            info="""Configuration dictionary for initializing Mem0 memory instance.
-                    Example:
+            info="""Configuration dictionary for initializing Mem0 OSS instance.
+                    Example for OSS with Neo4j:
                     {
                         "graph_store": {
                             "provider": "neo4j",
@@ -30,7 +33,9 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
                             }
                         },
                         "version": "v1.1"
-                    }""",
+                    }
+                    Leave empty to use default local configuration.
+                    """,
             input_types=["Data"],
         ),
         MessageTextInput(
@@ -42,18 +47,13 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
             name="existing_memory",
             display_name="Existing Memory Instance",
             input_types=["Memory"],
-            info="Optional existing Mem0 memory instance. If not provided, a new instance will be created.",
+            info="Optional existing Mem0 OSS memory instance. If not provided, a new instance will be created.",
         ),
         MessageTextInput(
             name="user_id", display_name="User ID", info="Identifier for the user associated with the messages."
         ),
         MessageTextInput(
             name="search_query", display_name="Search Query", info="Input text for searching related memories in Mem0."
-        ),
-        SecretStrInput(
-            name="mem0_api_key",
-            display_name="Mem0 API Key",
-            info="API key for Mem0 platform. Leave empty to use the local version.",
         ),
         DictInput(
             name="metadata",
@@ -70,7 +70,7 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
     ]
 
     outputs = [
-        Output(name="memory", display_name="Mem0 Memory", method="ingest_data"),
+        Output(name="memory", display_name="Mem0 OSS Memory", method="ingest_data"),
         Output(
             name="search_results",
             display_name="Search Results",
@@ -79,22 +79,22 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
     ]
 
     def build_mem0(self) -> Memory:
-        """Initializes a Mem0 memory instance based on provided configuration and API keys."""
+        """Initializes a Mem0 OSS memory instance."""
         if self.openai_api_key:
             os.environ["OPENAI_API_KEY"] = self.openai_api_key
 
         try:
-            if not self.mem0_api_key:
-                return Memory.from_config(config_dict=dict(self.mem0_config)) if self.mem0_config else Memory()
             if self.mem0_config:
-                return MemoryClient.from_config(api_key=self.mem0_api_key, config_dict=dict(self.mem0_config))
-            return MemoryClient(api_key=self.mem0_api_key)
+                logger.info("Initializing Mem0 OSS with custom configuration")
+                return Memory.from_config(config_dict=dict(self.mem0_config))
+            logger.info("Initializing Mem0 OSS with default configuration")
+            return Memory()
         except ImportError as e:
             msg = "Mem0 is not properly installed. Please install it with 'pip install -U mem0ai'."
             raise ImportError(msg) from e
 
     def ingest_data(self) -> Memory:
-        """Ingests a new message into Mem0 memory and returns the updated memory instance."""
+        """Ingests a new message into Mem0 OSS memory and returns the updated memory instance."""
         mem0_memory = self.existing_memory or self.build_mem0()
 
         if not self.ingest_message or not self.user_id:
@@ -108,13 +108,13 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
         try:
             mem0_memory.add(self.ingest_message, user_id=self.user_id, metadata=metadata)
         except Exception:
-            logger.exception("Failed to add message to Mem0 memory.")
+            logger.exception("Failed to add message to Mem0 OSS memory.")
             raise
 
         return mem0_memory
 
     def build_search_results(self) -> Data:
-        """Searches the Mem0 memory for related messages based on the search query and returns the results."""
+        """Searches the Mem0 OSS memory for related messages based on the search query and returns the results."""
         mem0_memory = self.ingest_data()
         search_query = self.search_query
         user_id = self.user_id
@@ -129,7 +129,7 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
                 logger.info("Retrieving all memories for user_id: %s", user_id)
                 related_memories = mem0_memory.get_all(user_id=user_id)
         except Exception:
-            logger.exception("Failed to retrieve related memories from Mem0.")
+            logger.exception("Failed to retrieve related memories from Mem0 OSS.")
             raise
 
         logger.info("Related memories retrieved: %s", related_memories)

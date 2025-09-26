@@ -10,30 +10,53 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 This page describes the components that are available in the **Mem0** bundle.
 
-## Mem0 Chat Memory
+## Mem0 OSS Chat Memory
 
-The **Mem0 Chat Memory** component retrieves and stores chat messages using Mem0 memory storage.
+The **Mem0 OSS Chat Memory** component retrieves and stores chat messages using Mem0 OSS (open source) memory storage. This is a self-hosted solution that provides full control over configuration and data storage.
 
-### Mem0 Chat Memory parameters
+## Mem0 Platform Chat Memory
+
+The **Mem0 Platform Chat Memory** component retrieves and stores chat messages using Mem0 Platform (hosted) memory storage. This is a managed solution with enterprise features and automatic updates.
+
+### Mem0 OSS Chat Memory parameters
 
 <PartialParams />
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| mem0_config | Mem0 Configuration | Input parameter. The configuration dictionary for initializing the Mem0 memory instance. |
-| ingest_message | Message to Ingest | Input parameter. The message content to be ingested into Mem0 memory. |
-| existing_memory | Existing Memory Instance | Input parameter. An optional existing Mem0 memory instance. |
+| mem0_config | Mem0 Configuration | Input parameter. The configuration dictionary for initializing the Mem0 OSS instance. Supports vector store, graph store, and LLM configurations. |
+| ingest_message | Message to Ingest | Input parameter. The message content to be ingested into Mem0 OSS memory. |
+| existing_memory | Existing Memory Instance | Input parameter. An optional existing Mem0 OSS memory instance. |
 | user_id | User ID | Input parameter. The identifier for the user associated with the messages. |
-| search_query | Search Query | Input parameter. The input text for searching related memories in Mem0. |
-| mem0_api_key | Mem0 API Key | Input parameter. The API key for the Mem0 platform. Leave empty to use the local version. |
+| search_query | Search Query | Input parameter. The input text for searching related memories in Mem0 OSS. |
 | metadata | Metadata | Input parameter. The additional metadata to associate with the ingested message. |
-| openai_api_key | OpenAI API Key | Input parameter. The API key for OpenAI. Required when using OpenAI embeddings without a provided configuration. |
+| openai_api_key | OpenAI API Key | Input parameter. The API key for OpenAI. Required if using OpenAI embeddings without a provided configuration. |
 
-### Mem0 Chat Memory output
+### Mem0 Platform Chat Memory parameters
 
-The **Mem0 Chat Memory** component can output either **Mem0 Memory** ([`Memory`](/data-types#memory)) or **Search Results** ([`Data`](/data-types#data)).
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| mem0_api_key | Mem0 API Key | Input parameter. The API key for the Mem0 Platform. Required for accessing the hosted service. |
+| mem0_config | Mem0 Platform Configuration | Input parameter. Optional configuration dictionary for advanced Mem0 Platform settings. |
+| ingest_message | Message to Ingest | Input parameter. The message content to be ingested into Mem0 Platform memory. |
+| existing_memory | Existing Memory Instance | Input parameter. An optional existing Mem0 Platform memory client. |
+| user_id | User ID | Input parameter. The identifier for the user associated with the messages. |
+| search_query | Search Query | Input parameter. The input text for searching related memories in Mem0 Platform. |
+| metadata | Metadata | Input parameter. The additional metadata to associate with the ingested message. |
+
+### Mem0 Chat Memory outputs
+
+Both **Mem0 OSS Chat Memory** and **Mem0 Platform Chat Memory** components can output either **Mem0 Memory** ([`Memory`](/data-types#memory)) or **Search Results** ([`Data`](/data-types#data)).
 You can select the output type near the component's output port.
 
-Use **Mem0 Chat Memory** for memory storage and retrieval operations with the [**Message History** component](/components-helpers#message-history).
+Use the **Mem0 Memory** output for memory storage and retrieval operations with the [**Message History** component](/components-helpers#message-history).
 
 Use the **Search Results** output to retrieve specific memories based on a search query.
+
+### Choosing between OSS and Platform
+
+- **Mem0 OSS Chat Memory**: Choose this for self-hosted deployments where you need full control over data storage, configuration, and infrastructure. Requires setting up vector stores, databases, and LLM configurations.
+
+- **Mem0 Platform Chat Memory**: Choose this for a managed solution with enterprise features, automatic updates, and SOC 2 & HIPAA compliance. Only requires an API key to get started.
