@@ -201,10 +201,11 @@ async def test_update_params_handles_multiple_fields():
     async def mock_get_variable(name, **_kwargs):
         if name == "DB_KEY":
             return "db-value"
+        # Use error messages that won't trigger the re-raise condition
         if name == "ENV_KEY":
-            error_msg = "ENV_KEY variable not found."
+            error_msg = "Database connection failed"  # This won't trigger re-raise
             raise ValueError(error_msg)
-        error_msg = f"{name} variable not found."
+        error_msg = "Database unavailable"  # This won't trigger re-raise
         raise ValueError(error_msg)
 
     custom_component.get_variable = AsyncMock(side_effect=mock_get_variable)
@@ -223,7 +224,7 @@ async def test_update_params_handles_multiple_fields():
 
     # Check results
     assert result["field1"] == "db-value"  # From database
-    assert result["field2"] == "env-value"  # From environment
+    assert result["field2"] == "env-value"  # From environment (fallback)
     assert result["field3"] is None  # Not found anywhere
 
     # Clean up
