@@ -1,10 +1,16 @@
-import { OrganizationList, useAuth, useOrganization, useUser } from "@clerk/clerk-react";
-import { useContext, useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { ensureLangflowUser, createOrganisation, backendLogin } from "./auth";
-import authStore from "@/stores/authStore";
 import { useLogout } from "@/clerk/auth";
 import { AuthContext } from "@/contexts/authContext";
+import { LoadingPage } from "@/pages/LoadingPage";
+import authStore from "@/stores/authStore";
+import {
+  OrganizationList,
+  useAuth,
+  useOrganization,
+  useUser,
+} from "@clerk/clerk-react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { backendLogin, createOrganisation, ensureLangflowUser } from "./auth";
 
 export default function OrganizationSwitcherPage() {
   const { getToken } = useAuth();
@@ -18,11 +24,14 @@ export default function OrganizationSwitcherPage() {
   const justLoggedIn = useRef(false);
   const searchParams = new URLSearchParams(location.search);
   const isOrgSelectedManually = searchParams.get("selected") === "true";
+  const [isBootstrapping, setIsBootstrapping] = useState(false);
 
-useEffect(() => {
-  if (!organization?.id || !isOrgSelectedManually || bootstrapped.current) return;
+  useEffect(() => {
+    if (!organization?.id || !isOrgSelectedManually || bootstrapped.current)
+      return;
 
     bootstrapped.current = true;
+    setIsBootstrapping(true);
 
     (async () => {
       console.log("[OrgSwitcherPage] Starting bootstrap flow...");
@@ -35,12 +44,12 @@ useEffect(() => {
         user?.primaryEmailAddress?.emailAddress ||
         user?.id ||
         "clerk_user";
-      try{
+      try {
         // Step 1: Create backend organization (DB provisioning or linking)
         console.debug("[OrgSwitcherPage] Calling createOrganisation()");
         await createOrganisation(orgToken);
         console.debug("[OrgSwitcherPage] createOrganisation() completed");
-  
+
         // Step 2: Ensure Langflow user exists via /whoami or /users
         console.debug("[OrgSwitcherPage] Calling ensureLangflowUser()");
         await ensureLangflowUser(orgToken, username);
@@ -48,32 +57,50 @@ useEffect(() => {
         console.debug("[OrgSwitcherPage] Calling backendLogin()");
         const tokens = await backendLogin(username, orgToken);
         console.debug("[OrgSwitcherPage] backendLogin() succeeded");
-  
+
         // Step 4: Save access & refresh tokens into store and cookies
         login(orgToken, "login", tokens.refresh_token);
         justLoggedIn.current = true;
-  
+
         // Step 5: Only now mark org as selected
         authStore.getState().setIsOrgSelected(true);
         sessionStorage.setItem("isOrgSelected", "true");
         console.debug("[OrgSwitcherPage] Org selection state marked");
-  
+
         // Step 6: Navigate to /flows
         console.debug("[OrgSwitcherPage] Redirecting to /flows");
         navigate("/flows", { replace: true });
-      }catch(err){
-        if(!justLoggedIn.current){
+      } catch (err) {
+        if (!justLoggedIn.current) {
           console.error("[OrgSwitcherPage] Error during bootstrap", err);
           await logout();
-        }else{
-          console.warn("[OrgSwitcherPage] Ignoring error after successful login", err);
+        } else {
+          console.warn(
+            "[OrgSwitcherPage] Ignoring error after successful login",
+            err,
+          );
         }
+      } finally {
+        setIsBootstrapping(false);
       }
     })().catch((err) => {
       console.error("[OrgSwitcherPage] Bootstrap failed", err);
       bootstrapped.current = false;
+      setIsBootstrapping(false);
     });
-  }, [organization?.id, isOrgSelectedManually, getToken, user, navigate]);
+  }, [
+    organization?.id,
+    isOrgSelectedManually,
+    getToken,
+    user,
+    navigate,
+    login,
+    logout,
+  ]);
+
+  if (isOrgSelectedManually || isBootstrapping) {
+    return <LoadingPage />;
+  }
 
   return (
     <div

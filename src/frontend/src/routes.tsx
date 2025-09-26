@@ -18,8 +18,8 @@ import {
 } from "./customization/feature-flags";
 import { CustomRoutesStore } from "./customization/utils/custom-routes-store";
 import { CustomRoutesStorePages } from "./customization/utils/custom-routes-store-pages";
-import { IS_CLERK_AUTH } from "./clerk/auth";
 import { LoadingPage } from "./pages/LoadingPage";
+import { CollectionIndexRedirect } from "./routes/CollectionIndexRedirect";
 
 const AppWrapperPage = lazy(() =>
   import("./pages/AppWrapperPage").then((module) => ({
@@ -143,16 +143,7 @@ const router = createBrowserRouter(
                   </Suspense>
                 }
               >
-                <Route
-                  index
-                  element={
-                    IS_CLERK_AUTH ? (
-                      <CustomNavigate replace to="/organization" />
-                    ) : (
-                      <CustomNavigate replace to="flows" />
-                    )
-                  }
-                />
+                <Route index element={<CollectionIndexRedirect />} />
                 {ENABLE_FILE_MANAGEMENT && (
                   <Route
                     path="files"
