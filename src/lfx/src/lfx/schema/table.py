@@ -111,7 +111,7 @@ class FieldValidatorType(str, Enum):
     PHONE = "phone"  # Phone number format
     SLUG = "slug"  # URL slug format (lowercase, hyphens)
     USERNAME = "username"  # Alphanumeric with underscores
-    PASSWORD = "password"  # Minimum security requirements  # noqa: S105
+    PASSWORD = "password"  # Minimum security requirements
 
 
 class FieldParserType(str, Enum):
