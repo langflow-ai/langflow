@@ -11,7 +11,6 @@ from langflow.api.v2.files import (
     MCP_SERVERS_FILE,
     delete_file,
     download_file,
-    edit_file_name,
     get_file_by_name,
     get_mcp_file,
     upload_user_file,
@@ -55,7 +54,7 @@ async def get_server_list(
     mcp_file = await get_mcp_file(current_user)
     old_format_config_file = await get_file_by_name(MCP_SERVERS_FILE, current_user, session)
     if old_format_config_file:
-        await edit_file_name(old_format_config_file.id, mcp_file, current_user, session)
+        await delete_file(old_format_config_file.id, current_user, session, storage_service)
 
     # Read the server configuration from a file using the files api
     server_config_file = await get_file_by_name(mcp_file, current_user, session)
