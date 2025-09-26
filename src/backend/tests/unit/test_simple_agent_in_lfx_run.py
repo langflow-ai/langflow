@@ -143,10 +143,11 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         """Test the agent workflow by executing the graph directly."""
         # Import the components for direct execution
         try:
-            from lfx import components as cp
             from lfx.graph import Graph
             from lfx.log.logger import LogConfig
             from lfx.utils.async_helpers import run_until_complete
+
+            from lfx import components as cp
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 
@@ -212,8 +213,9 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
     async def test_url_component_to_toolkit_functionality(self):
         """Test that URLComponent.to_toolkit() works properly."""
         try:
-            from lfx import components as cp
             from lfx.utils.async_helpers import run_until_complete
+
+            from lfx import components as cp
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 
@@ -257,8 +259,9 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
     def test_chat_output_chaining_pattern(self):
         """Test the chat output chaining pattern."""
         try:
-            from lfx import components as cp
             from lfx.schema.message import Message
+
+            from lfx import components as cp
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 
@@ -313,10 +316,11 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
     def test_complete_workflow_integration(self):
         """Test the complete agent workflow integration."""
         try:
-            from lfx import components as cp
             from lfx.graph import Graph
             from lfx.log.logger import LogConfig
             from lfx.utils.async_helpers import run_until_complete
+
+            from lfx import components as cp
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 

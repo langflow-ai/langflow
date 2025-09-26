@@ -3,7 +3,6 @@ import operator
 from textwrap import dedent
 
 import pytest
-
 from lfx.components.data import FileComponent
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.openai.openai import OpenAIEmbeddingsComponent
