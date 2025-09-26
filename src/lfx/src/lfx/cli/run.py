@@ -32,6 +32,49 @@ def output_error(error_message: str, *, verbose: bool) -> None:
         typer.echo(json.dumps(error_response))
 
 
+async def check_components_before_run(script_path: Path, verbose_print) -> None:
+    """Check for outdated components before running and error out if found.
+
+    Args:
+        script_path: Path to the JSON flow file
+        verbose_print: Function to print verbose messages
+
+    Raises:
+        typer.Exit: If outdated components are found or check fails
+    """
+    verbose_print("Checking for outdated components...")
+    from lfx.cli.check import check_flow_components
+
+    try:
+        check_result = await check_flow_components(str(script_path))
+        outdated_count = check_result.get("outdated_count", 0)
+
+        if outdated_count > 0:
+            error_msg = (
+                f"Found {outdated_count} outdated component(s) in the flow. "
+                f"Please update them before running:\n\n"
+                f'  lfx check "{script_path}" --interactive\n'
+                f"  # or\n"
+                f'  lfx check "{script_path}" --update --force\n\n'
+                f"Outdated components:"
+            )
+            for comp in check_result.get("outdated_components", []):
+                display_name = comp.get("display_name", comp.get("component_type"))
+                node_id = comp.get("node_id")
+                breaking = " (breaking)" if comp.get("breaking_change") else ""
+                error_msg += f"\n  • {display_name} ({node_id}){breaking}"
+
+            raise ValueError(error_msg)
+        verbose_print("✅ All components are up to date")
+
+    except ValueError:
+        # Re-raise ValueError to preserve the error message
+        raise
+    except Exception as e:
+        error_msg = f"Error checking components: {e}"
+        raise ValueError(error_msg) from e
+
+
 @partial(syncify, raise_sync_error=False)
 async def run(
     script_path: Path | None = typer.Argument(  # noqa: B008
@@ -76,6 +119,11 @@ async def run(
         show_default=True,
         help="Include detailed timing information in output",
     ),
+    check: bool = typer.Option(
+        default=False,
+        show_default=True,
+        help="Check for outdated components before running",
+    ),
 ) -> None:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -93,6 +141,7 @@ async def run(
         stdin: Read JSON flow content from stdin
         check_variables: Check global variables for environment compatibility
         timing: Include detailed timing information in output
+        check: Check for outdated components before running
     """
     # Start timing if requested
     import time
@@ -190,6 +239,11 @@ async def run(
             graph = load_graph_from_script(script_path)
         elif file_extension == ".json":
             verbose_print("Valid JSON flow file detected")
+
+            # Check for outdated components if --check flag is used
+            if check:
+                await check_components_before_run(script_path, verbose_print)
+
             verbose_print("\nLoading and executing JSON flow...")
             from lfx.load import aload_flow_from_json
 

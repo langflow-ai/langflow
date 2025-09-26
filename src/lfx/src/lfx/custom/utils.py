@@ -17,7 +17,6 @@ from pydantic import BaseModel
 from lfx.custom import validate
 from lfx.custom.custom_component.component import Component
 from lfx.custom.custom_component.custom_component import CustomComponent
-from lfx.custom.dependency_analyzer import analyze_component_dependencies
 from lfx.custom.directory_reader.utils import (
     abuild_custom_component_list_from_path,
     build_custom_component_list_from_path,
@@ -505,7 +504,10 @@ def build_custom_component_template_from_inputs(
 
 
 def build_component_metadata(
-    frontend_node: CustomComponentFrontendNode, custom_component: CustomComponent, module_name: str, ctype_name: str
+    frontend_node: CustomComponentFrontendNode,
+    custom_component: CustomComponent,
+    module_name: str,
+    ctype_name: str,  # noqa: ARG001
 ):
     """Build the metadata for a custom component."""
     if module_name:
@@ -523,16 +525,23 @@ def build_component_metadata(
         logger.debug(f"Error generating code hash for {custom_component.__class__.__name__}", exc_info=exc)
 
     # Analyze component dependencies
-    try:
-        dependency_info = analyze_component_dependencies(custom_component._code)
-        frontend_node.metadata["dependencies"] = dependency_info
-    except (SyntaxError, TypeError, ValueError, ImportError) as exc:
-        logger.warning(f"Failed to analyze dependencies for component {ctype_name}: {exc}")
-        # Set minimal dependency info on failure
-        frontend_node.metadata["dependencies"] = {
-            "total_dependencies": 0,
-            "dependencies": [],
-        }
+    # TODO: Move this to the place where it is needed
+    # try:
+    #     dependency_info = analyze_component_dependencies(custom_component._code)
+    #     frontend_node.metadata["dependencies"] = dependency_info
+    # except (SyntaxError, TypeError, ValueError, ImportError) as exc:
+    #     logger.warning(f"Failed to analyze dependencies for component {ctype_name}: {exc}")
+    #     # Set minimal dependency info on failure
+    #     frontend_node.metadata["dependencies"] = {
+    #         "total_dependencies": 0,
+    #         "dependencies": [],
+    #     }
+
+    # Always set minimal dependency info since analysis is disabled
+    frontend_node.metadata["dependencies"] = {
+        "total_dependencies": 0,
+        "dependencies": [],
+    }
 
     return frontend_node
 

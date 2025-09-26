@@ -715,21 +715,8 @@
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
@@ -974,21 +961,8 @@
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
@@ -2295,13 +2269,8 @@
             "metadata": {
               "code_hash": "9a1d497f4f91",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.data.file.FileComponent"
             },

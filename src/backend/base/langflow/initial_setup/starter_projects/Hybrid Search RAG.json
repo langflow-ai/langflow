@@ -229,13 +229,8 @@
             "metadata": {
               "code_hash": "46a90558cb44",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
@@ -479,13 +474,8 @@
             "metadata": {
               "code_hash": "bf19ee6feee3",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.processing.parser.ParserComponent"
             },
@@ -670,21 +660,8 @@
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
@@ -923,13 +900,8 @@
             "metadata": {
               "code_hash": "bf19ee6feee3",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.processing.parser.ParserComponent"
             },
@@ -1752,21 +1724,8 @@
             "metadata": {
               "code_hash": "a5b1b04d9fcc",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "pydantic",
-                    "version": "2.10.6"
-                  },
-                  {
-                    "name": "trustcall",
-                    "version": "0.0.39"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.processing.structured_output.StructuredOutputComponent"
             },
@@ -2097,25 +2056,8 @@
             "metadata": {
               "code_hash": "0e26d8c1384d",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "astrapy",
-                    "version": "2.0.1"
-                  },
-                  {
-                    "name": "langchain_astradb",
-                    "version": "0.6.1"
-                  },
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.76"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 4
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.vectorstores.astradb.AstraDBVectorStoreComponent"
             },

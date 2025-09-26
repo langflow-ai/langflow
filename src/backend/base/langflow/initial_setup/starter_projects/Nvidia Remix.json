@@ -234,13 +234,8 @@
             "metadata": {
               "code_hash": "46a90558cb44",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.input_output.chat.ChatInput"
             },
@@ -490,21 +485,8 @@
             "metadata": {
               "code_hash": "ccda4dbe4ae1",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "orjson",
-                    "version": "3.10.15"
-                  },
-                  {
-                    "name": "fastapi",
-                    "version": "0.116.1"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.input_output.chat_output.ChatOutput"
             },
@@ -766,21 +748,8 @@
             "metadata": {
               "code_hash": "ccf23ef1345b",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.76"
-                  },
-                  {
-                    "name": "pydantic",
-                    "version": "2.10.6"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.agents.agent.AgentComponent"
             },
@@ -1724,17 +1693,8 @@
             "metadata": {
               "code_hash": "8607e963fdef",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_openai",
-                    "version": "0.3.23"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.models.embedding_model.EmbeddingModelComponent"
             },
@@ -2030,17 +1990,8 @@
             "metadata": {
               "code_hash": "2bd7a064d724",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_community",
-                    "version": "0.3.21"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.vectorstores.faiss.FaissVectorStoreComponent"
             },
@@ -2379,21 +2330,8 @@
             "metadata": {
               "code_hash": "756d1e10d0ca",
               "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "langchain_core",
-                    "version": "0.3.76"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  },
-                  {
-                    "name": "langflow",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 3
+                "dependencies": [],
+                "total_dependencies": 0
               },
               "module": "lfx.components.agents.mcp_component.MCPToolsComponent"
             },
