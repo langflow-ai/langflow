@@ -227,11 +227,11 @@ async def get_project_sse_url(project_id: UUID) -> str:
 
 async def auto_configure_starter_projects_mcp(session):
     """Auto-configure MCP servers for starter projects for all users at startup."""
-    # Check if auto-add is enabled
+    # Check if auto-configure is enabled
     settings_service = get_settings_service()
     await logger.adebug("Starting auto-configure starter projects MCP")
     if not settings_service.settings.add_projects_to_mcp_servers:
-        await logger.adebug("Auto-add MCP servers disabled, skipping starter project MCP configuration")
+        await logger.adebug("Auto-Configure MCP servers disabled, skipping starter project MCP configuration")
         return
     await logger.adebug(
         f"Auto-configure settings: add_projects_to_mcp_servers="
