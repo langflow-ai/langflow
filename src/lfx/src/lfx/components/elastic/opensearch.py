@@ -82,7 +82,8 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 },
             ],
             value=[],
-            advanced=True,
+            # advanced=True,
+            input_types=["Data"],
         ),
         StrInput(
             name="opensearch_url",
@@ -206,7 +207,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             name="jwt_token",
             display_name="JWT Token",
             value="JWT",
-            load_from_db=True,
+            load_from_db=False,
             show=True,
             info=(
                 "Valid JSON Web Token for authentication. "
@@ -464,10 +465,17 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         # Process docs_metadata table input into a dict
         additional_metadata = {}
         if hasattr(self, "docs_metadata") and self.docs_metadata:
-            for item in self.docs_metadata:
-                if isinstance(item, dict) and "key" in item and "value" in item:
-                    additional_metadata[item["key"]] = item["value"]
-
+            logger.info(f"[LF] Docs metadata {self.docs_metadata}")
+            if isinstance(self.docs_metadata[-1], Data):
+                logger.info(f"[LF] Docs metadata is a Data object {self.docs_metadata}")
+                self.docs_metadata = self.docs_metadata[-1].data
+                logger.info(f"[LF] Docs metadata is a Data object {self.docs_metadata}")
+                additional_metadata.update(self.docs_metadata)
+            else:
+                for item in self.docs_metadata:
+                    if isinstance(item, dict) and "key" in item and "value" in item:
+                        additional_metadata[item["key"]] = item["value"]
+        logger.info(f"[LF] Additional metadata {additional_metadata}")
         for doc_obj in docs:
             data_copy = json.loads(doc_obj.model_dump_json())
             text = data_copy.pop(doc_obj.text_key, doc_obj.default_value)
