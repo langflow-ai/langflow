@@ -424,7 +424,7 @@ jobs:
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
     if: inputs.build_docker_base
-    needs: [publish-base, publish-main]
+    needs: [validate-tag]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -435,7 +435,7 @@ jobs:
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
     if: inputs.build_docker_ep
-    needs: [publish-main, call_docker_build_base]
+    needs: [validate-tag]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -446,7 +446,7 @@ jobs:
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
     if: inputs.build_docker_main
-    needs: [publish-main, call_docker_build_main_ep]
+    needs: [validate-tag]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -457,7 +457,7 @@ jobs:
   call_docker_build_main_all:
     name: Call Docker Build Workflow for langflow-all
     if: inputs.build_docker_main
-    needs: [publish-main]
+    needs: [validate-tag]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
