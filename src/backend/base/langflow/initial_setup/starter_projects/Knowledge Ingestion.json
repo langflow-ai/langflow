@@ -92,7 +92,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_text_splitters",
-                    "version": "0.3.9"
+                    "version": "0.3.11"
                   },
                   {
                     "name": "lfx",
