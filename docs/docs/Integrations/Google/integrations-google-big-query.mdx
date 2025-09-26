@@ -3,8 +3,7 @@ title: Google BigQuery
 slug: /integrations-google-big-query
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
+import Icon from "@site/src/components/icon";
 
 Langflow integrates with [Google BigQuery](https://cloud.google.com/bigquery) through the **BigQuery** component in the [**Google** bundle](/bundles-google), allowing you to execute SQL queries and retrieve data from your BigQuery datasets.
 
@@ -36,7 +35,7 @@ Now that you have a service account and a JSON private key, you need to configur
 With your service account configured and your credentials JSON file created, follow these steps to authenticate the Langflow application.
 
 1. Create a new flow in Langflow.
-2. In the **Components** menu, find the **BigQuery** component, and then add it to your flow.
+2. In <Icon name="Blocks" aria-hidden="true" /> **Bundles**, find the Google **BigQuery** component, and then add it to your flow.
 3. In the **BigQuery** component's **Upload Service Account JSON** field, click **Select file**.
 4. In the **My Files** pane, select **Click or drag files here**.
 Your file browser opens.
