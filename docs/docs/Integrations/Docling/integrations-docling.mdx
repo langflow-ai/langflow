@@ -6,29 +6,26 @@ slug: /integrations-docling
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
+import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
 
 Langflow integrates with [Docling](https://docling-project.github.io/docling/) through a bundle of components for parsing documents.
 
-## Install Docling dependency
+## Prerequisites
 
-:::important
-You must install the Docling dependency to use the Docling components in Langflow.
-:::
+* **Enable Developer Mode for Windows**:
+<PartialDevModeWindows />
 
-<Tabs>
-<TabItem value="oss" label="Langflow OSS" default>
+* **Install Docling dependency**:
+The Docling dependency is required to use the Docling components in Langflow.
 
-Install the Docling extra in Langflow OSS with `uv pip install 'langflow[docling]'`.
+    * **Langflow version 1.6 and later**: The Docling dependency is included by default for all operating systems except macOS Intel (x86_64).
 
-</TabItem>
+        For macOS Intel (x86_64), use the [Docling installation guide](https://docling-project.github.io/docling/installation/) to install the Docling dependency.
 
-<TabItem value="desktop" label="Langflow Desktop">
-
-To add a dependency to Langflow Desktop, add an entry for Docling to the application's `requirements.txt` file.
-For more information, see [Install custom dependencies in Langflow Desktop](/install-custom-dependencies#langflow-desktop).
-
-</TabItem>
-</Tabs>
+    * **Earlier versions**: Langflow versions earlier than 1.6 don't include the Docling dependency.
+    For Langflow OSS, install the Docling extra with `uv pip install 'langflow[docling]'`.
+    For Langflow Desktop, add the Docling dependency to Langflow Desktop's `requirements.txt`.
+    For more information, see [Install custom dependencies](/install-custom-dependencies).
 
 ## Use Docling components in a flow
 
@@ -43,9 +40,9 @@ This example demonstrates how to use Docling components to split a PDF in a flow
     The **Docling** component loads the document, and the **Export DoclingDocument** component converts the `DoclingDocument` into the format you select. This example converts the document to Markdown, with images represented as placeholders.
     The **Split Text** component will split the Markdown into chunks for the vector database to store in the next part of the flow.
 
-2. Connect a [**Chroma DB** vector store component](/components-vector-stores#chroma-db) to the **Split Text** component's **Chunks** output.
-3. Connect an [**Embedding Model** component](/components-embedding-models) to the **Chroma DB** component's **Embedding** port and a **Chat Output** component to view the extracted [`DataFrame`](/data-types#dataframe).
-4. Add your OpenAI API key to the **Embedding Model** component.
+2. Connect a [**Chroma DB** vector store component](/bundles-chroma#chroma-db) to the **Split Text** component's **Chunks** output.
+3. Connect an [embedding model component](/components-embedding-models) to the **Chroma DB** component's **Embedding** port and a **Chat Output** component to view the extracted [`DataFrame`](/data-types#dataframe).
+4. In the embedding model component, select your preferred model, provide credentials, and configure other settings as needed.
 
     ![Docling and ExportDoclingDocument extracting and splitting text to vector database](./integrations-docling-split-text.png)
 
@@ -131,3 +128,7 @@ For more information, see the [Docling core project repository](https://github.c
 | md_image_placeholder | String | Specify the image placeholder for markdown exports. |
 | md_page_break_placeholder | String | Add this placeholder between pages in the markdown output. |
 | doc_key | String | The key to use for the `DoclingDocument` column. |
+
+## See also
+
+* [**File** component](/components-data#file)

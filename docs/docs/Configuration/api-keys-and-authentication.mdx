@@ -25,8 +25,9 @@ There are three types of credentials that you use in Langflow:
 
 You can use Langflow API keys to interact with Langflow programmatically.
 
-In Langflow version 1.5 and later, most API endpoints require a Langflow API key, even when `LANGFLOW_AUTO_LOGIN` is `True`.
-For more information, see [`LANGFLOW_AUTO_LOGIN`](#langflow-auto-login).
+By default, most Langflow API endpoints, such as `/v1/run/$FLOW_ID`, require authentication with a Langflow API key.
+To require API key authentication for flow webhook endpoints, use the [`LANGFLOW_WEBHOOK_AUTH_ENABLE`](/webhook#require-authentication-for-webhooks) environment variable.
+To configure authentication for Langflow MCP servers, see [Use Langflow as an MCP server](/mcp-server).
 
 ### Langflow API key permissions
 
@@ -61,9 +62,8 @@ In this case, you must create API keys with the Langflow CLI.
 
 1. Recommended: [Start your Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled).
 
-    This configuration is recommended for security reasons to prevent unauthorized API key and superuser creation, especially in production environments.
-
-    However, if authentication isn't enabled (`LANGFLOW_AUTO_LOGIN=True`), all users are effectively superusers, and they can create API keys with the Langflow CLI.
+    The Langflow team recommends enabling authentication for security reasons to prevent unauthorized creation of API keys and superusers, especially in production environments.
+    If authentication isn't enabled (`LANGFLOW_AUTO_LOGIN=True`), all users are effectively superusers, and they can create API keys with the Langflow CLI.
 
 2. Create an API key with [`langflow api-key`](/configuration-cli#langflow-api-key):
 
@@ -106,6 +106,13 @@ curl -X POST \
 
 For more information about forming Langflow API requests, see [Get started with the Langflow API](/api-reference-api-examples) and [Trigger flows with the Langflow API](/concepts-publish).
 
+### Track API key usage
+
+By default, Langflow tracks API key usage through `total_uses` and `last_used_at` records in your [Langflow database](/memory).
+
+To disable API key tracking, set `LANGFLOW_DISABLE_TRACK_APIKEY_USAGE=True` in your [Langflow environment variables](/environment-variables).
+This can help avoid database contention during periods of high concurrency.
+
 ### Revoke an API key
 
 To revoke and delete an API key, do the following:
@@ -116,19 +123,21 @@ To revoke and delete an API key, do the following:
 
 This action immediately invalidates the key and prevents it from being used again.
 
-## Component API keys
+## Component API keys {#component-api-keys}
 
 Component API keys authorize access to external services that are called by components in your flows, such as model providers, databases, or third-party APIs.
 These aren't Langflow API keys or general application credentials.
 
-In Langflow, you can store component API keys in global variables in your **Settings** or import them from your Langflow `.env` file.
-When creating global variables, use the **Credential** type for secure handling of sensitive information.
+In Langflow, you can store component API keys in global variables in your **Settings** or import them from your runtime environment.
 For more information, see [Global variables](/configuration-global-variables).
 
 You create and manage component API keys within the service provider's platform.
 Langflow only stores the encrypted key value or a secure reference to a key stored elsewhere; it doesn't manage the actual credentials at the source.
 This means that deleting a global variable from Langflow doesn't delete or invalidate the actual API key in the service provider's system.
 You must delete or rotate component API keys directly using the service provider's interface or API.
+
+For added security, you can set `LANGFLOW_REMOVE_API_KEYS=True` to omit API keys and tokens from flow data in your [Langflow database](/memory).
+Additionally, when [exporting flows](/concepts-flows-import), you can choose to omit API keys from the exported flow JSON.
 
 ## Authentication environment variables
 
@@ -138,33 +147,36 @@ You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/ma
 
 ### LANGFLOW_AUTO_LOGIN {#langflow-auto-login}
 
-This variable controls whether authentication is required to access your Langflow server, including the visual editor and API:
+This variable controls whether authentication is required to access your Langflow server, including the visual editor, API, and Langflow CLI:
 
-* If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. Users must sign in to the visual editor and use a Langflow API key for Langflow API requests.
-If false, you must also set [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser).
+* If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. Users must sign in to the visual editor, authenticate as a superuser to run certain Langflow CLI commands, and use a Langflow API key for Langflow API requests.
+If false, the Langflow team recommends that you also explicitly set [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser) to avoid using the insecure default values.
 
-* If `LANGFLOW_AUTO_LOGIN=True`, Langflow bypasses authentication for the visual editor and API requests.
-All users can access the same environment without password protection.
-If you don't have user management enabled, all users are effectively superusers.
+* If `LANGFLOW_AUTO_LOGIN=True` (default), all API requests require authentication with a Langflow API key, but the visual editor automatically signs in all users as superusers, and Langflow uses _only_ the default [superuser credentials](/api-keys-and-authentication#langflow-superuser).
+All users access the same visual editor environment without password protection, they can run all Langflow CLI commands as superusers, and Langflow automatically authenticates internal requests between the backend and frontend based on the users' superuser privileges.
+If you also want to bypass authentication for Langflow API requests in addition to other bypassed authentication, see [`LANGFLOW_SKIP_AUTH_AUTO_LOGIN`](/api-keys-and-authentication#langflow-skip-auth-auto-login).
 
 Langflow doesn't allow users to simultaneously edit the same flow in real time.
 If two users edit the same flow, Langflow saves only the work of the most recent editor based on the state of that user's [workspace](/concepts-overview#workspace). Any changes made by the other user in the interim are overwritten.
 
-#### AUTO_LOGIN and API authentication in version 1.5 and later
+#### Default authentication enforcement and LANGFLOW_SKIP_AUTH_AUTO_LOGIN {#langflow-skip-auth-auto-login}
 
-In Langflow versions 1.5 and later, most API endpoints require a Langflow API key, even when `AUTO_LOGIN` is true.
-The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
+In Langflow version 1.6, the default settings are `LANGFLOW_AUTO_LOGIN=True` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False`.
+This enforces authentication for API requests only, as explained in the preceding section.
+
+For temporary backwards compatibility, you can revert to the fully unauthenticated behavior from earlier versions by setting both variables to true.
+However, a future release will set `LANGFLOW_AUTO_LOGIN=False` and remove `LANGFLOW_SKIP_AUTH_AUTO_LOGIN`.
+At that point, Langflow will strictly enforce API key authentication for API requests, and you can manually disable authentication for some features, like the visual editor, by setting `LANGFLOW_AUTO_LOGIN=True`.
 
 <details>
-<summary>LANGFLOW_AUTO_LOGIN and LANGFLOW_SKIP_AUTH_AUTO_LOGIN options</summary>
+<summary>Authentication enforcement in earlier versions</summary>
 
-In Langflow versions earlier than 1.5, if `LANGFLOW_AUTO_LOGIN=True`, then Langflow automatically logs users in as a superuser without requiring authentication.
-In this case, API requests don't require a Langflow API key.
+Langflow version 1.5 was the first version that could enforce authentication for Langflow API requests, regardless of the value of `LANGFLOW_AUTO_LOGIN`.
+As a temporary bypass for backwards compatibility, this version added the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` environment variable and set both variables to true by default to preserve the fully unauthenticated behavior from earlier versions.
+This allowed users to upgrade to version 1.5 with no change in the authentication behavior.
 
-In Langflow version 1.5, you can set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=True` _and_ `LANGFLOW_AUTO_LOGIN=True` to skip authentication for API requests _and_ allow automatic login as a superuser for all users.
-This is a temporary bypass for backwards compatibility, and the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` option will be removed in a future release.
-
-If either `LANGFLOW_AUTO_LOGIN` or `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` are false, then authentication is required.
+In Langflow versions earlier than 1.5, Langflow API requests didn't require authentication.
+Additionally, the default setting of `LANGFLOW_AUTO_LOGIN=True` automatically granted all users superuser privileges in the visual editor, and it allowed all users to run all Langflow CLI commands as superusers.
 </details>
 
 ### LANGFLOW_ENABLE_SUPERUSER_CLI {#langflow-enable-superuser-cli}
@@ -270,6 +282,42 @@ LANGFLOW_NEW_USER_IS_ACTIVE=False
 Only superusers can manage user accounts for a Langflow server, but user management only matters if your server has authentication enabled.
 For more information, see [Start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled).
 
+### LANGFLOW_CORS_* {#cors-configuration-for-authentication}
+
+Cross-Origin Resource Sharing (CORS) configuration controls how authentication credentials are handled when your Langflow frontend and backend are served from different origins.
+The following `LANGFLOW_CORS_*` environment variables are available:
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_CORS_ALLOW_CREDENTIALS` | Boolean | True | Whether to allow credentials, such as cookies and authorization headers, in CORS requests. |
+| `LANGFLOW_CORS_ALLOW_HEADERS` | List[String] or String | `*` | The allowed headers for CORS requests. Provide a comma-separated list of headers or use `*` to allow all headers. |
+| `LANGFLOW_CORS_ALLOW_METHODS` | List[String] or String | `*` | The allowed HTTP methods for CORS requests. Provide a comma-separated list of methods or use `*` to allow all methods. |
+| `LANGFLOW_CORS_ORIGINS` | String | `*` | The allowed CORS origins. Provide a comma-separated list of origins or use `*` for all origins. |
+
+The default configuration enables CORS credentials and uses wildcards (`*`) to allow all origins, headers, and methods:
+
+```text
+LANGFLOW_CORS_ORIGINS=*
+LANGFLOW_CORS_ALLOW_CREDENTIALS=True
+LANGFLOW_CORS_ALLOW_HEADERS=*
+LANGFLOW_CORS_ALLOW_METHODS=*
+```
+
+:::danger
+Langflow's default CORS settings can be a security risk in production environments because any website can make requests to your Langflow API, and any website can include credentials in cross-origin requests, including authentication cookies and authorization headers.
+
+In production deployments, specify exact origins in `LANGFLOW_CORS_ORIGINS`.
+You can also specify allowed headers and methods, if needed.
+For example:
+
+```text
+LANGFLOW_CORS_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
+LANGFLOW_CORS_ALLOW_CREDENTIALS=True
+LANGFLOW_CORS_ALLOW_HEADERS=Content-Type,Authorization
+LANGFLOW_CORS_ALLOW_METHODS=GET,POST,PUT
+```
+:::
+
 ## Start a Langflow server with authentication enabled
 
 This section shows you how to use the [authentication environment variables](/api-keys-and-authentication#authentication-environment-variables) to deploy a Langflow server with authentication enabled.
@@ -354,3 +402,7 @@ Next, you can add users to your Langflow server to collaborate with others on fl
 
     Try to access the `/admin` page.
     You are redirected to the `/flows` page if the new user isn't a superuser.
+
+## See also
+
+* [Langflow environment variables](/environment-variables)

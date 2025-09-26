@@ -4,6 +4,7 @@ slug: /mcp-client
 ---
 
 import Icon from "@site/src/components/icon";
+import McpIcon from '@site/static/logos/mcp-icon.svg';
 
 Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) as both an MCP server and an MCP client.
 
@@ -24,23 +25,25 @@ This component has two modes, depending on the type of server you want to access
 
 1. Add an **MCP Tools** component to your flow.
 
-2. In the **MCP Server** field, select the server you want to add, or click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**.
+2. In the **MCP Server** field, select a previously connected server or click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**.
 
-    There are multiple ways to add a new server.
+    There are multiple ways to add a new server:
 
-    * In the **JSON** pane, paste the MCP server's JSON configuration file, and then click **Add Server**.
-    * In the **STDIO** pane, enter the MCP server's **Name**, **Command**, and any **Arguments** or **Environment Variables** the server uses, and then click **Add Server**.
+    * **JSON**: Paste the MCP server's JSON configuration object into the field, including required and optional parameters that you want to use, and then click **Add Server**.
+    * **STDIO**: Enter the MCP server's **Name**, **Command**, and any **Arguments** and **Environment Variables** the server uses, and then click **Add Server**.
     For example, to start a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the **Command** is `uvx mcp-server-fetch`.
-    * In the **SSE** pane, enter your Langflow MCP server's **Name**, **SSE URL**, and any **Headers** or **Environment Variables** the server uses, and then click **Add Server**.
+    * **SSE**: Enter your Langflow MCP server's **Name**, **SSE URL**, and any **Headers** and **Environment Variables** the server uses, and then click **Add Server**.
     The default **SSE URL** is `http://localhost:7860/api/v1/mcp/sse`. For more information, see [Use SSE mode](#mcp-sse-mode).
 
+    :::tip
     `uvx` is included with `uv` in the Langflow package.
     To use `npx` server commands, you must first install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
     For an example of an `npx` MCP server in Langflow, see [Connect an Astra DB MCP server to Langflow](/mcp-component-astra).
+    :::
 
-3. To use environment variables in your server command, enter each variable in the **Env** fields as you would define them in a script, such as `VARIABLE=value`.
+3. To use environment variables in your server command, enter each variable in the **Env** fields as key-value pairs.
 
-    :::important
+    :::tip
     Langflow passes environment variables from the `.env` file to MCP, but it doesn't pass global variables declared in your Langflow **Settings**.
     To define an MCP server environment variable as a global variable, add it to Langflow's `.env` file at startup.
     For more information, see [global variables](/configuration-global-variables).
@@ -96,7 +99,7 @@ In SSE mode, all flows available from the targeted server are treated as tools.
 
 ## Manage connected MCP servers
 
-To manage MCP servers connected to your Langflow client, go to **Settings**, and then click **MCP Servers**.
+To manage all MCP server connections for your Langflow client, click <McpIcon /> **MCP servers** in the visual editor, or click your profile icon, select **Settings**, and then click **MCP Servers**.
 
 To add a new MCP server, click **Add MCP Server**, and then follow the steps in [Use the MCP Tools component](#use-the-mcp-tools-component) to configure the connection and use the server in a flow.
 

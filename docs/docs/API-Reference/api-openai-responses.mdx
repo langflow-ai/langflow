@@ -1,0 +1,599 @@
+---
+title: OpenAI Responses API
+slug: /api-openai-responses
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Langflow includes an endpoint that is compatible with the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses).
+It is available at `POST /api/v1/responses`.
+
+This endpoint allows you to use existing OpenAI client libraries with minimal code changes.
+You only need to replace the `model` name, such as `gpt-4`, with your `flow_id`.
+You can find Flow IDs in the code snippets on the [**API access** pane](/concepts-publish#api-access) or in a flow's URL.
+
+## Prerequisites
+
+To be compatible with Langflow's OpenAI Responses API endpoint, your flow and request must adhere to the following requirements:
+
+- **Chat Input**: Your flow must contain a **Chat Input** component.
+Flows without this component return an error when passed to this endpoint.
+The component types `ChatInput` and `Chat Input` are recognized as chat inputs.
+- **Tools**: The `tools` parameter isn't supported, and returns an error if provided.
+- **Model Names**: In your request, the `model` field must contain a valid flow ID or endpoint name.
+- **Authentication**: All requests require an API key passed in the `x-api-key` header.
+For more information, see [API keys and authentication](/api-keys-and-authentication).
+
+### Additional configuration for OpenAI client libraries
+
+This endpoint is compatible with OpenAI's API, but requires special configuration when using OpenAI client libraries.
+Langflow uses `x-api-key` headers for authentication, while OpenAI uses `Authorization: Bearer` headers.
+When sending requests to Langflow with OpenAI client libraries, you must configure custom headers and include an `api_key` configuration.
+The `api_key` parameter can have any value, such as `"dummy-api-key"` in the client examples, as the actual authentication is handled through the `default_headers` configuration.
+
+In the following examples, replace the values for `LANGFLOW_SERVER_URL`, `LANGFLOW_API_KEY`, and `FLOW_ID` with values from your deployment.
+<Tabs groupId="client">
+<TabItem value="Python" label="OpenAI Python Client" default>
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+  base_url="LANGFLOW_SERVER_URL/api/v1/",
+  default_headers={"x-api-key": "LANGFLOW_API_KEY"},
+  api_key="dummy-api-key" # Required by OpenAI SDK but not used by Langflow
+)
+
+response = client.responses.create(
+  model="FLOW_ID",
+  input="There is an event that happens on the second wednesday of every month. What are the event dates in 2026?",
+)
+
+print(response.output_text)
+```
+
+</TabItem>
+<TabItem value="JavaScript" label="OpenAI TypeScript Client">
+
+```typescript
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "LANGFLOW_SERVER_URL/api/v1/",
+  defaultHeaders: {
+    "x-api-key": "LANGFLOW_API_KEY"
+  },
+  apiKey: "dummy-api-key" // Required by OpenAI SDK but not used by Langflow
+});
+
+const response = await client.responses.create({
+  model: "FLOW_ID",
+  input: "There is an event that happens on the second wednesday of every month. What are the event dates in 2026?"
+});
+
+console.log(response.output_text);
+```
+
+</TabItem>
+</Tabs>
+
+<details closed>
+<summary>Response</summary>
+```text
+Here are the event dates for the second Wednesday of each month in 2026:
+- January 14, 2026
+- February 11, 2026
+- March 11, 2026
+- April 8, 2026
+- May 13, 2026
+- June 10, 2026
+- July 8, 2026
+- August 12, 2026
+- September 9, 2026
+- October 14, 2026
+- November 11, 2026
+- December 9, 2026
+If you need these in a different format or want a downloadable calendar, let me know!
+```
+</details>
+
+## Example request
+
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v1/responses" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "$YOUR_FLOW_ID",
+    "input": "Hello, how are you?",
+    "stream": false
+  }'
+```
+
+### Headers
+
+| Header | Required | Description | Example |
+|--------|----------|-------------|---------|
+| `x-api-key` | Yes | Your Langflow API key for authentication | `"sk-..."` |
+| `Content-Type` | Yes | Specifies the JSON format | `"application/json"` |
+| `X-LANGFLOW-GLOBAL-VAR-*` | No | Global variables for the flow | `"X-LANGFLOW-GLOBAL-VAR-API_KEY: sk-..."` For more, see [Pass global variables to your flows in headers](#global-var). |
+
+### Request body
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `model` | `string` | Yes | - | The flow ID or endpoint name to execute. |
+| `input` | `string` | Yes | - | The input text to process. |
+| `stream` | `boolean` | No | `false` | Whether to stream the response. |
+| `background` | `boolean` | No | `false` | Whether to process in background. |
+| `tools` | `list[Any]` | No | `null` | Tools are not supported yet. |
+| `previous_response_id` | `string` | No | `null` | ID of previous response to continue conversation. For more, see [Continue conversations with response and session IDs](#response-id). |
+| `include` | `list[string]` | No | `null` | Additional response data to include, such as `['tool_call.results']`. For more, see [Retrieve tool call results](#tool-call-results). |
+
+## Example response
+
+```json
+{
+  "id": "e5e8ef8a-7efd-4090-a110-6aca082bceb7",
+  "object": "response",
+  "created_at": 1756837941,
+  "status": "completed",
+  "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
+  "output": [
+    {
+      "type": "message",
+      "id": "msg_e5e8ef8a-7efd-4090-a110-6aca082bceb7",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "Hello! I'm here and ready to help. How can I assist you today?",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "parallel_tool_calls": true,
+  "previous_response_id": null,
+  "reasoning": {"effort": null, "summary": null},
+  "store": true,
+  "temperature": 1.0,
+  "text": {"format": {"type": "text"}},
+  "tool_choice": "auto",
+  "tools": [],
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": null,
+  "user": null,
+  "metadata": {}
+}
+```
+
+### Response body
+
+The response contains fields that Langflow sets dynamically and fields that use OpenAI-compatible defaults.
+
+The OpenAI-compatible default values shown above are currently fixed and cannot be modified via the request.
+They are included to maintain API compatibility and provide a consistent response format.
+
+For your requests, you will only be setting the dynamic fields.
+The default values are documented here for completeness and to show the full response structure.
+
+Fields set dynamically by Langflow:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Unique response identifier. |
+| `created_at` | `int` | Unix timestamp of response creation. |
+| `model` | `string` | The flow ID that was executed. |
+| `output` | `list[dict]` | Array of output items (messages, tool calls, etc.). |
+| `previous_response_id` | `string` | ID of previous response if continuing conversation. |
+
+<details>
+<summary>Fields with OpenAI-compatible default values</summary>
+
+| Field | Type | Default Value | Description |
+|-------|------|---------------|-------------|
+| `object` | `string` | `"response"` | Always `"response"`. |
+| `status` | `string` | `"completed"` | Response status: `"completed"`, `"in_progress"`, or `"failed"`. |
+| `error` | `dict` | `null` | Error details (if any). |
+| `incomplete_details` | `dict` | `null` | Incomplete response details (if any). |
+| `instructions` | `string` | `null` | Response instructions (if any). |
+| `max_output_tokens` | `int` | `null` | Maximum output tokens (if any). |
+| `parallel_tool_calls` | `boolean` | `true` | Whether parallel tool calls are enabled. |
+| `reasoning` | `dict` | `{"effort": null, "summary": null}` | Reasoning information with effort and summary. |
+| `store` | `boolean` | `true` | Whether response is stored. |
+| `temperature` | `float` | `1.0` | Temperature setting. |
+| `text` | `dict` | `{"format": {"type": "text"}}` | Text format configuration. |
+| `tool_choice` | `string` | `"auto"` | Tool choice setting. |
+| `tools` | `list[dict]` | `[]` | Available tools. |
+| `top_p` | `float` | `1.0` | Top-p setting. |
+| `truncation` | `string` | `"disabled"` | Truncation setting. |
+| `usage` | `dict` | `null` | Usage statistics (if any). |
+| `user` | `string` | `null` | User identifier (if any). |
+| `metadata` | `dict` | `{}` | Additional metadata. |
+
+</details>
+
+## Example streaming request
+
+When you set `"stream": true` with your request, the API returns a stream where each chunk contains a small piece of the response as it's generated. This provides a real-time experience where users can see the AI's output appear word by word, similar to ChatGPT's typing effect.
+
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v1/responses" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "$FLOW_ID",
+    "input": "Tell me a story about a robot",
+    "stream": true
+  }'
+```
+
+<details>
+<summary>Result</summary>
+
+```json
+{
+  "id": "f7fcea36-f128-41c4-9ac1-e683137375d5",
+  "object": "response.chunk",
+  "created": 1756838094,
+  "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
+  "delta": {
+    "content": "Once"
+  },
+  "status": null
+}
+```
+
+</details>
+
+### Streaming response body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Unique response identifier. |
+| `object` | `string` | Always `"response.chunk"`. |
+| `created` | `int` | Unix timestamp of chunk creation. |
+| `model` | `string` | The flow ID that was executed. |
+| `delta` | `dict` | The new content chunk. |
+| `status` | `string` | Response status: `"completed"`, `"in_progress"`, or `"failed"` (optional). |
+
+The stream continues until a final chunk with `"status": "completed"` indicates the response is finished.
+
+<details>
+<summary>Final completion chunk</summary>
+
+```
+{
+  "id": "f7fcea36-f128-41c4-9ac1-e683137375d5",
+  "object": "response.chunk",
+  "created": 1756838094,
+  "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
+  "delta": {},
+  "status": "completed"
+}
+```
+</details>
+
+## Continue conversations with response and session IDs {#response-id}
+
+Conversation continuity allows you to maintain context across multiple API calls, enabling multi-turn conversations with your flows. This is essential for building chat applications where users can have ongoing conversations.
+
+When you make a request, the API returns a response with an `id` field. You can use this `id` as the `previous_response_id` in your next request to continue the conversation from where it left off.
+
+First Message:
+
+```bash
+curl -X POST \
+  "http://$LANGFLOW_SERVER_URL/api/v1/responses" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "$FLOW_ID",
+    "input": "Hello, my name is Alice"
+  }'
+```
+
+<details>
+<summary>Result</summary>
+
+```json
+{
+  "id": "c45f4ac8-772b-4675-8551-c560b1afd590",
+  "object": "response",
+  "created_at": 1756839042,
+  "status": "completed",
+  "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
+  "output": [
+    {
+      "type": "message",
+      "id": "msg_c45f4ac8-772b-4675-8551-c560b1afd590",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "Hello, Alice! How can I assist you today?",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "previous_response_id": null
+}
+```
+
+</details>
+
+Follow-up message:
+
+```bash
+curl -X POST \
+  "http://$LANGFLOW_SERVER_URL/api/v1/responses" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
+    "input": "What's my name?",
+    "previous_response_id": "c45f4ac8-772b-4675-8551-c560b1afd590"
+  }'
+```
+
+<details>
+<summary>Result</summary>
+
+```json
+{
+  "id": "c45f4ac8-772b-4675-8551-c560b1afd590",
+  "object": "response",
+  "created_at": 1756839043,
+  "status": "completed",
+  "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
+  "output": [
+    {
+      "type": "message",
+      "id": "msg_c45f4ac8-772b-4675-8551-c560b1afd590",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "Your name is Alice. How can I help you today?",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "previous_response_id": "c45f4ac8-772b-4675-8551-c560b1afd590"
+}
+```
+
+</details>
+
+Optionally, you can use your own session ID values for the `previous_response_id`:
+
+```bash
+curl -X POST \
+  "http://$LANGFLOW_SERVER_URL/api/v1/responses" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
+    "input": "What's my name?",
+    "previous_response_id": "session-alice-1756839048"
+  }'
+```
+
+<details>
+<summary>Result</summary>
+
+This example uses the same flow as the other `previous_response_id` examples, but the LLM had not yet been introduced to Alice in the specified session:
+
+```json
+{
+  "id": "session-alice-1756839048",
+  "object": "response",
+  "created_at": 1756839048,
+  "status": "completed",
+  "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
+  "output": [
+    {
+      "type": "message",
+      "id": "msg_session-alice-1756839048",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "I don't have access to your name unless you tell me. If you'd like, you can share your name, and I'll remember it for this conversation!",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "previous_response_id": "session-alice-1756839048"
+}
+```
+
+</details>
+
+## Retrieve tool call results {#tool-call-results}
+
+When you send a request to the `/api/v1/responses` endpoint to run a flow that includes tools or function calls, you can retrieve the raw tool execution details by adding `"include": ["tool_call.results"]` to the request payload.
+
+Without the `include` parameter, tool calls return basic function call information, but not the raw tool results.
+For example:
+
+```json
+{
+  "id": "fc_1",
+  "type": "function_call",
+  "status": "completed",
+  "name": "evaluate_expression",
+  "arguments": "{\"expression\": \"15*23\"}"
+},
+```
+
+To get the raw `results` of each tool execution, add  `include: ["tool_call.results"]` to the request payload:
+
+```bash
+curl -X POST \
+  "http://$LANGFLOW_SERVER_URL/api/v1/responses" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+    "model": "FLOW_ID",
+    "input": "Calculate 23 * 15 and show me the result",
+    "stream": false,
+    "include": ["tool_call.results"]
+  }'
+```
+
+
+The response now includes the tool call's results.
+For example:
+
+```json
+{
+  "id": "evaluate_expression_1",
+  "type": "tool_call",
+  "tool_name": "evaluate_expression",
+  "queries": ["15*23"],
+  "results": {"result": "345"}
+}
+```
+
+<details>
+<summary>Result</summary>
+
+```json
+{
+  "id": "a6e5511e-71f8-457a-88d2-7d8c6ea34e36",
+  "object": "response",
+  "created_at": 1756835379,
+  "status": "completed",
+  "error": null,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
+  "output": [
+    {
+      "id": "evaluate_expression_1",
+      "queries": [
+        "15*23"
+      ],
+      "status": "completed",
+      "tool_name": "evaluate_expression",
+      "type": "tool_call",
+      "results": {
+        "result": "345"
+      }
+    },
+    {
+      "type": "message",
+      "id": "msg_a6e5511e-71f8-457a-88d2-7d8c6ea34e36",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "The result of 23 * 15 is 345.",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "parallel_tool_calls": true,
+  "previous_response_id": null,
+  "reasoning": {
+    "effort": null,
+    "summary": null
+  },
+  "store": true,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    }
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": null,
+  "user": null,
+  "metadata": {}
+}
+```
+</details>
+
+## Pass global variables to your flows in headers {#global-var}
+
+Global variables allow you to pass dynamic values to your flows that can be used by components within that flow run.
+This is useful for passing API keys, user IDs, or any other configuration that might change between requests.
+
+The `/responses` endpoint accepts global variables as custom HTTP headers with the format `X-LANGFLOW-GLOBAL-VAR-{VARIABLE_NAME}`.
+Variables are only available during this specific request execution and aren't persisted.
+Variable names are automatically converted to uppercase.
+
+This example demonstrates passing an `OPENAI_API_KEY` variable, which is a variable Langflow automatically detects from environment variables, with two custom variables for `USER_ID` and `ENVIRONMENT`. The variables don't have to be created in Langflow's Global Variables section - you can pass any variable name in the `X-LANGFLOW-GLOBAL-VAR-{VARIABLE_NAME}` header format.
+
+```bash
+curl -X POST \
+  "$LANGFLOW_SERVER_URL/api/v1/responses" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "X-LANGFLOW-GLOBAL-VAR-OPENAI_API_KEY: sk-..." \
+  -H "X-LANGFLOW-GLOBAL-VAR-USER_ID: user123" \
+  -H "X-LANGFLOW-GLOBAL-VAR-ENVIRONMENT: production" \
+  -d '{
+    "model": "your-flow-id",
+    "input": "Hello"
+  }'
+```
+
+<details>
+<summary>Result</summary>
+
+```json
+{
+  "id": "4a4d2f24-bb45-4a55-a499-0191305264be",
+  "object": "response",
+  "created_at": 1756839935,
+  "status": "completed",
+  "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
+  "output": [
+    {
+      "type": "message",
+      "id": "msg_4a4d2f24-bb45-4a55-a499-0191305264be",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "Hello! How can I assist you today?",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "previous_response_id": null
+}
+```
+
+</details>
+
+Variables passed with `X-LANGFLOW-GLOBAL-VAR-{VARIABLE_NAME}` are always available to your flow, regardless of whether they exist in the database.
+
+If your flow components reference variables that aren't provided in headers or your Langflow database, the flow fails by default.
+To avoid this, you can set the `FALLBACK_TO_ENV_VARS` environment variable is `true`, which allows the flow to use values from the `.env` file if they aren't otherwise specified.
+
+In the above example, `OPENAI_API_KEY` will fall back to the database variable if not provided in the header.
+`USER_ID` and `ENVIRONMENT` will fall back to environment variables if `FALLBACK_TO_ENV_VARS` is enabled.
+Otherwise, the flow fails.

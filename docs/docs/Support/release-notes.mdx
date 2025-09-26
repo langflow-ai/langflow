@@ -3,6 +3,9 @@ title: Langflow release notes
 slug: /release-notes
 ---
 
+import Icon from "@site/src/components/icon";
+import McpIcon from '@site/static/logos/mcp-icon.svg';
+
 This page summarizes significant changes to Langflow in each release.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
 
@@ -43,6 +46,65 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
     If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
 
+## 1.6.0
+
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### Breaking changes
+
+- Authentication enforced for Langflow API requests by default
+
+    In Langflow version 1.6, `LANGFLOW_AUTO_LOGIN=True` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False` by default.
+    This enforces authentication for Langflow API requests while still automatically authenticating all users as superusers in the visual editor.
+
+    **This is a breaking change from 1.5 where both of these environment variables were true by default, bypassing all authentication.**
+
+    For temporary backwards compatibility, you can revert to the earlier unauthenticated behavior by setting both variables to true.
+    However, a future release will set `LANGFLOW_AUTO_LOGIN=False` and remove `LANGFLOW_SKIP_AUTH_AUTO_LOGIN`.
+    At that point, Langflow will strictly enforce API key authentication for API requests, and you can manually disable authentication for some features, like the visual editor, by setting `LANGFLOW_AUTO_LOGIN=True`.
+
+    For more information, see the documentation for [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login).
+
+### New features and enhancements
+
+- OpenAI Responses API compatibility
+
+  Langflow now includes an endpoint that is compatible with the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses) at `POST /api/v1/responses`.
+  This allows you to use existing OpenAI client libraries with minimal code changes by replacing the `model` name with your `flow_id`.
+  The endpoint supports streaming responses, conversation continuity, tool call results, and global variable passing through headers.
+  For more information, see [OpenAI Responses API](/api-openai-responses).
+
+- Advanced document parsing with built-in Docling support
+
+  The **File** component supports advanced parsing with the Docling library.
+
+  To make it easier to use the [**Docling** components](/integrations-docling) and the **File** component's new advanced parsing feature, the Docling dependency is now included with Langflow for all operating systems except macOS Intel (x86_64).
+
+  For more information, see [Advanced parsing](/components-data#advanced-parsing).
+
+- Reorganized component menus and visual editor controls
+
+  - The [workspace](/concepts-overview#workspace) sidebar is divided into separate sections for <Icon name="Search" aria-hidden="true" /> **Search**, <Icon name="Component" aria-hidden="true" /> **Core components**, <McpIcon /> [**MCP servers**](/mcp-server), <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components), and <Icon name="StickyNote" aria-hidden="true"/> **Add Note**.
+  - Lock/unlock controls moved to flow details in [**Projects**](/concepts-flows#projects).
+  - Zoom and help controls moved to the lower-right corner of the workspace.
+  - Vector store components moved to provider-specific <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components)
+  - **Serper Google Search API** component moved to the **Serper** bundle
+
+- Increased the default maximum file upload size from `100 MB` to `1024 MB`.
+
+- New integrations and bundles:
+
+  - [Traceloop](/integrations-instana-traceloop)
+  - [Cohere Rerank](/bundles-cohere)
+  - [S3 Bucket Uploader](/bundles-amazon)
+  - [Composio single-service components](/integrations-composio)
+
+### Deprecations
+
+- The **Local DB** component is now in legacy status.
+Replace this component with the [**Chroma DB** component](/bundles-chroma).
+
 ## 1.5.0
 
 Highlights of this release include the following changes.
@@ -50,11 +112,14 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
-- Authentication changes
+- Langflow API requests can require authentication
 
-    To enhance security and ensure proper authentication for automatic login features, most API endpoints now require authentication with a Langflow API key, regardless of the `AUTO_LOGIN` setting.
-    The only exceptions are the MCP endpoints `/v1/mcp`, `/v1/mcp-projects`, and `/v2/mcp`, which never require authentication.
-    For more information, see [API keys and authentication](/api-keys-and-authentication).
+    To enhance security and ensure proper authentication for automatic login features, Langflow API endpoints now require authentication with a Langflow API key, even when `LANGFLOW_AUTO_LOGIN=True`.
+    This change will be enforced in a future release.
+    For temporary backwards compatibility, this release adds the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` environment variable.
+    The default value is true, which disables API authentication enforcement.
+    To enforce API authentication, set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False`.
+    For more information, see the documentation for [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login).
 
 - Centralized **Language Model** and **Embedding Model** components
 
@@ -62,7 +127,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     Find them in the visual editor in the **Models** category.
 
     The single-provider components moved to the [**Bundles**](/components-bundle-components) section.
-    You can use them to replace the **Language Model** and **Embedding Model** core components, or connect them to the **Agent** component with the **Custom** provider option.
+    You can use them to replace the **Language Model** and **Embedding Model** core components, or connect them to the **Agent** component with the **Connect other models** provider option.
 
 - MCP server one-click installation
 
@@ -79,15 +144,15 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     The **Input schema** pane replaces the need to manage tweak values in the **API access** pane. When you enable a parameter in the **Input schema** pane, the parameter is automatically added to your flow's code snippets, providing ready-to-use templates for making requests in your preferred programming language.
 
-- **Tools** components are redistributed
+- Tools components are redistributed
 
-    All components in the **Tools** category were moved to other component categories, such as **Helpers** and [bundles](/components-bundle-components), or marked as legacy.
+    All components in the **Tools** category were moved to other component categories, such as **Helpers** and [**Bundles**](/components-bundle-components), or marked as legacy.
 
     The [**MCP Tools** component](/mcp-client) is now under the **Agents** category.
 
     Tools that performed the same function were combined into single components that support multiple providers, such as the [**Web Search** component](/components-data#web-search) and the [**News Search** component](/components-data#news-search).
 
-    For more information, see [**Tools** components](/components-tools).
+    For more information, see [Tools components](/components-tools).
 
 - Stability improvements
 
