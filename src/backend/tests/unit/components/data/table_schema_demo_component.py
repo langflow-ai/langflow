@@ -1,8 +1,7 @@
-from langflow.schema.table import Column
-
 from lfx.custom.custom_component.component import Component
 from lfx.io import Output, TableInput
 from lfx.schema.data import Data
+from lfx.schema.table import Column
 
 
 class TableSchemaDemoComponent(Component):

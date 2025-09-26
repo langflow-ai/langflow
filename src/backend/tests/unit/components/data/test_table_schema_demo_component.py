@@ -1,6 +1,5 @@
-from langflow.schema.table import Column
-
 from lfx.schema.data import Data
+from lfx.schema.table import Column
 
 from .table_schema_demo_component import TableSchemaDemoComponent
 
