@@ -401,3 +401,5 @@ jobs:
           generateReleaseNotes: true
           prerelease: ${{ inputs.pre_release }}
           tag: ${{ inputs.release_tag }}
+          allowUpdates: true
+          updateOnlyUnreleased: false
