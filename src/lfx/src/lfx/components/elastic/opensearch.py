@@ -82,7 +82,6 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 },
             ],
             value=[],
-            # advanced=True,
             input_types=["Data"],
         ),
         StrInput(
