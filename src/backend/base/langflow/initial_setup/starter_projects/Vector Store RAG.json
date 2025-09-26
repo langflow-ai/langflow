@@ -3374,10 +3374,6 @@
               "dependencies": {
                 "dependencies": [
                   {
-                    "name": "astrapy",
-                    "version": "2.1.0"
-                  },
-                  {
                     "name": "langchain_astradb",
                     "version": "0.6.1"
                   },
@@ -4179,10 +4175,6 @@
               "code_hash": "911a0d05661b",
               "dependencies": {
                 "dependencies": [
-                  {
-                    "name": "astrapy",
-                    "version": "2.1.0"
-                  },
                   {
                     "name": "langchain_astradb",
                     "version": "0.6.1"

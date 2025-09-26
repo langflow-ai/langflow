@@ -2099,10 +2099,6 @@
               "dependencies": {
                 "dependencies": [
                   {
-                    "name": "astrapy",
-                    "version": "2.1.0"
-                  },
-                  {
                     "name": "langchain_astradb",
                     "version": "0.6.1"
                   },
