@@ -386,7 +386,7 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [build-main, publish-main]
-    if: inputs.create_release == true && (needs.publish-main.result == 'success' || (inputs.local_rebuild_mode == true && needs.publish-main.result == 'skipped'))
+    if: always() && inputs.create_release == true && (needs.publish-main.result == 'success' || (inputs.local_rebuild_mode == true && needs.publish-main.result == 'skipped'))
     steps:
       - uses: actions/download-artifact@v4
         with:
