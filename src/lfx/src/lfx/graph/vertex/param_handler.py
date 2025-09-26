@@ -192,9 +192,7 @@ class ParameterHandler:
 
         return params, load_from_db_fields
 
-    def _handle_table_field(
-        self, field_name: str, val: Any, params: dict[str, Any], load_from_db_fields: list[str]
-    ) -> dict[str, Any]:
+    def _handle_table_field(self, field_name: str, val: Any, params: dict[str, Any]) -> dict[str, Any]:
         """Handle table field type with load_from_db column support."""
         if val is None:
             params[field_name] = []

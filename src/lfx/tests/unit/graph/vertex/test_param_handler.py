@@ -45,7 +45,7 @@ class TestParameterHandlerTableLoadFromDb:
         params = {}
 
         # Call the method
-        result_params = self.handler._handle_table_field("table_field", table_data, params, [])
+        result_params = self.handler._handle_table_field("table_field", table_data, params)
 
         # Check that table data is preserved
         assert result_params["table_field"] == table_data
@@ -73,7 +73,7 @@ class TestParameterHandlerTableLoadFromDb:
         params = {}
 
         # Call the method
-        result_params = self.handler._handle_table_field("table_field", table_data, params, [])
+        result_params = self.handler._handle_table_field("table_field", table_data, params)
 
         # Check that table data is preserved
         assert result_params["table_field"] == table_data
@@ -97,7 +97,7 @@ class TestParameterHandlerTableLoadFromDb:
         params = {}
 
         # Call the method
-        result_params = self.handler._handle_table_field("table_field", table_data, params, [])
+        result_params = self.handler._handle_table_field("table_field", table_data, params)
 
         # Check that load_from_db columns are identified correctly
         load_from_db_columns = result_params["table_field_load_from_db_columns"]
@@ -109,7 +109,7 @@ class TestParameterHandlerTableLoadFromDb:
         params = {}
 
         # Call the method with None
-        result_params = self.handler._handle_table_field("table_field", None, params, [])
+        result_params = self.handler._handle_table_field("table_field", None, params)
 
         # Should return empty list
         assert result_params["table_field"] == []
@@ -123,12 +123,12 @@ class TestParameterHandlerTableLoadFromDb:
         params = {}
 
         # Test with string (invalid for table)
-        with pytest.raises(ValueError, match="Invalid value type.*for table field"):
-            self.handler._handle_table_field("table_field", "invalid_data", params, [])
+        with pytest.raises(ValueError, match=r"Invalid value type.*for table field"):
+            self.handler._handle_table_field("table_field", "invalid_data", params)
 
         # Test with list of non-dicts (invalid for table)
-        with pytest.raises(ValueError, match="Invalid value type.*for table field"):
-            self.handler._handle_table_field("table_field", ["string1", "string2"], params, [])
+        with pytest.raises(ValueError, match=r"Invalid value type.*for table field"):
+            self.handler._handle_table_field("table_field", ["string1", "string2"], params)
 
     def test_handle_table_field_with_empty_table_schema(self):
         """Test _handle_table_field when table_schema is empty."""
@@ -142,7 +142,7 @@ class TestParameterHandlerTableLoadFromDb:
         params = {}
 
         # Call the method
-        result_params = self.handler._handle_table_field("table_field", table_data, params, [])
+        result_params = self.handler._handle_table_field("table_field", table_data, params)
 
         # Should preserve table data but not add metadata
         assert result_params["table_field"] == table_data
@@ -161,7 +161,7 @@ class TestParameterHandlerTableLoadFromDb:
         params = {}
 
         # Call the method
-        result_params = self.handler._handle_table_field("table_field", table_data, params, [])
+        result_params = self.handler._handle_table_field("table_field", table_data, params)
 
         # Should preserve table data but not add metadata
         assert result_params["table_field"] == table_data
@@ -185,7 +185,7 @@ class TestParameterHandlerTableLoadFromDb:
         params = {}
 
         # Call the method
-        result_params = self.handler._handle_table_field("table_field", table_data, params, ["col1", "col2"])
+        result_params = self.handler._handle_table_field("table_field", table_data, params)
 
         # Should identify both types of load_from_db columns
         load_from_db_columns = result_params["table_field_load_from_db_columns"]
