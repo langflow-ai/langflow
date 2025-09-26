@@ -183,7 +183,7 @@ class ParameterHandler:
         elif field.get("type") in {"dict", "NestedDict"}:
             params = self._handle_dict_field(field_name, val, params)
         elif field.get("type") == "table":
-            params = self._handle_table_field(field_name, val, params)
+            params = self._handle_table_field(field_name, val, params, load_from_db_fields)
         else:
             params = self._handle_other_direct_types(field_name, field, val, params)
 
@@ -192,8 +192,16 @@ class ParameterHandler:
 
         return params, load_from_db_fields
 
-    def _handle_table_field(self, field_name: str, val: Any, params: dict[str, Any]) -> dict[str, Any]:
+    def _handle_table_field(
+        self,
+        field_name: str,
+        val: Any,
+        params: dict[str, Any],
+        load_from_db_fields: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Handle table field type with load_from_db column support."""
+        if load_from_db_fields is None:
+            load_from_db_fields = []
         if val is None:
             params[field_name] = []
             return params
@@ -211,7 +219,7 @@ class ParameterHandler:
         table_schema = field_template.get("table_schema", [])
 
         # Track which columns need database loading
-        load_from_db_columns = []
+        load_from_db_columns = load_from_db_fields
         for column_schema in table_schema:
             if isinstance(column_schema, dict) and column_schema.get("load_from_db"):
                 load_from_db_columns.append(column_schema["name"])
