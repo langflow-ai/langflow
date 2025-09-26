@@ -228,7 +228,7 @@ class ParameterHandler:
 
             # Add to load_from_db_fields so it gets processed
             # We'll use a special naming convention to identify table fields
-            load_from_db_fields.append(f"table:{field_name}")
+            self.load_from_db_fields.append(f"table:{field_name}")
 
         return params
 
