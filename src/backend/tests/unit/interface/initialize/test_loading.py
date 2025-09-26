@@ -6,6 +6,7 @@ from lfx.interface.initialize.loading import (
     update_params_with_load_from_db_fields,
     update_table_params_with_load_from_db_fields,
 )
+from lfx.services.deps import get_settings_service
 
 
 @pytest.mark.asyncio
@@ -214,9 +215,20 @@ async def test_update_params_handles_multiple_fields():
     params = {"field1": "DB_KEY", "field2": "ENV_KEY", "field3": "MISSING_KEY"}
     load_from_db_fields = ["field1", "field2", "field3"]
 
-    # Call the function
-    with patch("langflow.interface.initialize.loading.session_scope") as mock_session_scope:
-        mock_session_scope.return_value.__aenter__.return_value = MagicMock()
+    # Call the function with proper mocking
+    with patch("langflow.interface.initialize.loading.session_scope") as mock_session_scope, \
+         patch("lfx.services.deps.get_settings_service") as mock_get_settings:
+
+        # Create a proper mock session that won't be detected as NoopSession
+        mock_session = MagicMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=None)
+        mock_session_scope.return_value = mock_session
+
+        # Mock settings service to ensure it doesn't use noop database
+        mock_settings_service = MagicMock()
+        mock_settings_service.settings.use_noop_database = False
+        mock_get_settings.return_value = mock_settings_service
 
         result = await update_params_with_load_from_db_fields(
             custom_component, params, load_from_db_fields, fallback_to_env_vars=True
