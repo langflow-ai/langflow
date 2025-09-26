@@ -183,7 +183,7 @@ class ParameterHandler:
         elif field.get("type") in {"dict", "NestedDict"}:
             params = self._handle_dict_field(field_name, val, params)
         elif field.get("type") == "table":
-            params = self._handle_table_field(field_name, val, params, load_from_db_fields)
+            params = self._handle_table_field(field_name, val, params)
         else:
             params = self._handle_other_direct_types(field_name, field, val, params)
 
