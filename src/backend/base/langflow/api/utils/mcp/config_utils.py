@@ -190,7 +190,7 @@ async def get_url_by_os(host: str, port: int, url: str) -> str:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            stdout, stderr = await proc.communicate()
+            stdout, _ = await proc.communicate()
 
             if proc.returncode == 0 and stdout.strip():
                 wsl_ip = stdout.decode().strip().split()[0]  # Get first IP address
@@ -330,8 +330,8 @@ async def auto_configure_starter_projects_mcp(session):
                 # Set up THIS USER'S starter folder authentication (same as new projects)
                 # If AUTO_LOGIN is false, automatically enable API key authentication
                 default_auth = {"auth_type": "none"}
-                logger.warning(f"Settings service auth settings: {settings_service.auth_settings}")
-                logger.warning(f"User starter folder auth settings: {user_starter_folder.auth_settings}")
+                await logger.adebug(f"Settings service auth settings: {settings_service.auth_settings}")
+                await logger.adebug(f"User starter folder auth settings: {user_starter_folder.auth_settings}")
                 if not settings_service.auth_settings.AUTO_LOGIN and not user_starter_folder.auth_settings:
                     default_auth = {"auth_type": "apikey"}
                     user_starter_folder.auth_settings = encrypt_auth_settings(default_auth)
