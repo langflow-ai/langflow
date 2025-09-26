@@ -234,7 +234,7 @@ class TestGraphExecution:
         mock_graph = MagicMock()
         mock_graph.async_start = mock_async_start
 
-        results, logs = await execute_graph_with_capture(mock_graph, "test input")
+        results, _ = await execute_graph_with_capture(mock_graph, "test input")
 
         assert len(results) == 1
         assert results[0].message.text == "Message text"
