@@ -5,7 +5,6 @@ from typing import Any
 
 import pytest
 import requests
-
 from lfx.custom import Component
 from lfx.custom.eval import eval_custom_component_code
 from lfx.field_typing import Embeddings

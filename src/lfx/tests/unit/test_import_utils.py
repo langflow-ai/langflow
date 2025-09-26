@@ -63,7 +63,7 @@ class TestImportAttr:
     def test_import_with_none_package(self):
         """Test behavior when package is None."""
         # This should raise TypeError because relative imports require a package
-        with pytest.raises(TypeError, match="package.*required"):
+        with pytest.raises(TypeError, match=r"package.*required"):
             import_mod("something", "some_module", None)
 
     def test_module_not_found_error_handling(self):
@@ -71,7 +71,7 @@ class TestImportAttr:
         with patch("lfx.components._importing.import_module") as mock_import_module:
             mock_import_module.side_effect = ModuleNotFoundError("No module named 'test.package.test_module'")
 
-            with pytest.raises(ImportError, match="module .* not found"):
+            with pytest.raises(ImportError, match=r"module .* not found"):
                 import_mod("TestComponent", "test_module", "test.package")
 
     def test_getattr_error_handling(self):

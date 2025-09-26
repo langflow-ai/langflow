@@ -1,10 +1,10 @@
 import os
 
 import pytest
-
 from lfx.components.helpers import OutputParserComponent
 from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.processing import PromptComponent
+
 from tests.integration.utils import ComponentInputHandle, run_single_component
 
 

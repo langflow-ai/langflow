@@ -18,10 +18,11 @@ import asyncio
 import os
 from pathlib import Path
 
-# Using the new flattened component access
-from lfx import components as cp
 from lfx.graph import Graph
 from lfx.log.logger import LogConfig
+
+# Using the new flattened component access
+from lfx import components as cp
 
 log_config = LogConfig(
     log_level="INFO",

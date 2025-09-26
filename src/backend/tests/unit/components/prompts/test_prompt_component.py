@@ -1,6 +1,6 @@
 import pytest
-
 from lfx.components.processing import PromptComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 

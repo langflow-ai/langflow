@@ -66,7 +66,6 @@ async def test_create_starter_projects():
     """Benchmark creation of starter projects."""
     from langflow.initial_setup.setup import create_or_update_starter_projects
     from langflow.services.utils import initialize_services
-
     from lfx.interface.components import get_and_cache_all_types_dict
 
     await initialize_services(fix_migration=False)

@@ -3,9 +3,9 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-
 from lfx.components.data import DirectoryComponent
 from lfx.schema import Data, DataFrame
+
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -287,7 +287,7 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             )
 
             with pytest.raises(
-                ValueError, match="Invalid file types specified: \\['exe'\\]. Valid types are:"
+                ValueError, match=r"Invalid file types specified: \['exe'\]\. Valid types are:"
             ) as exc_info:
                 directory_component.load_directory()
 

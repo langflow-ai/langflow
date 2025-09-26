@@ -3,7 +3,6 @@ from collections import deque
 from typing import TYPE_CHECKING
 
 import pytest
-
 from lfx.components.helpers.memory import MemoryComponent
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.openai.openai_chat_model import OpenAIModelComponent

@@ -17,10 +17,10 @@ from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_db_service
+from lfx.services.deps import session_scope
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from lfx.services.deps import session_scope
 from tests.conftest import _delete_transactions_and_vertex_builds
 
 
