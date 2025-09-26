@@ -105,7 +105,7 @@ jobs:
           echo "Validated: '${{ inputs.release_tag }}' is a valid tag."
 
   ci:
-    if: ${{ inputs.release_package_base == true || inputs.release_package_main == true || inputs.release_lfx == true }}
+    if: inputs.release_package_base || inputs.release_package_main || inputs.release_lfx
     name: CI
     needs: [validate-tag]
     uses: ./.github/workflows/ci.yml
@@ -121,7 +121,7 @@ jobs:
   build-base:
     name: Build Langflow Base
     needs: [ci]
-    if: inputs.release_package_base == true
+    if: inputs.release_package_base
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check-version.outputs.version }}
@@ -191,7 +191,7 @@ jobs:
 
   build-main:
     name: Build Langflow Main
-    if: inputs.release_package_main == true
+    if: inputs.release_package_main
     needs: [build-base]
     runs-on: ubuntu-latest
     outputs:
@@ -216,7 +216,7 @@ jobs:
       # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post"] is in the version string
       # if the version string is incorrect, we need to exit the workflow
       - name: Check if pre-release
-        if: inputs.pre_release == true
+        if: inputs.pre_release
         run: |
           version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
           if [[ "${version}" =~ ^([0-9]+\.)?([0-9]+\.)?[0-9]+((a|b|rc|dev|post)([0-9]+))$ ]]; then
@@ -271,18 +271,18 @@ jobs:
 
   test-cross-platform:
     name: Test Cross-Platform Installation
-    if: inputs.release_package_base == true || inputs.release_package_main == true
+    if: inputs.release_package_base || inputs.release_package_main
     needs: [build-base, build-main, build-lfx]
     uses: ./.github/workflows/cross-platform-test.yml
     with:
       base-artifact-name: "dist-base"
       main-artifact-name: "dist-main"
-      lfx-artifact-name: ${{ inputs.release_lfx == true && 'dist-lfx' || '' }}
+      lfx-artifact-name: ${{ inputs.release_lfx && 'dist-lfx' || '' }}
 
 
   publish-base:
     name: Publish Langflow Base to PyPI
-    if: inputs.release_package_base == true
+    if: inputs.release_package_base
     needs: [build-base, test-cross-platform]
     runs-on: ubuntu-latest
     steps:
@@ -305,7 +305,7 @@ jobs:
 
   publish-main:
     name: Publish Langflow Main to PyPI
-    if: inputs.release_package_main == true
+    if: inputs.release_package_main
     needs: [build-main, test-cross-platform, publish-base]
     runs-on: ubuntu-latest
     steps:
@@ -328,7 +328,7 @@ jobs:
   build-lfx:
     name: Build LFX
     needs: [ci]
-    if: inputs.release_lfx == true
+    if: inputs.release_lfx
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check-version.outputs.version }}
@@ -376,7 +376,7 @@ jobs:
 
   test-lfx-cross-platform:
     name: Test LFX Cross-Platform Installation
-    if: inputs.release_lfx == true
+    if: inputs.release_lfx
     needs: [build-lfx]
     runs-on: ${{ matrix.os }}
     strategy:
@@ -401,7 +401,7 @@ jobs:
 
   publish-lfx:
     name: Publish LFX to PyPI
-    if: inputs.release_lfx == true
+    if: inputs.release_lfx
     needs: [build-lfx, test-lfx-cross-platform]
     runs-on: ubuntu-latest
     steps:
@@ -423,7 +423,7 @@ jobs:
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
-    if: inputs.build_docker_base == true
+    if: inputs.build_docker_base
     needs: [publish-base, publish-main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
@@ -434,7 +434,7 @@ jobs:
 
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
-    if: inputs.build_docker_ep == true
+    if: inputs.build_docker_ep
     needs: [publish-main, call_docker_build_base]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
@@ -445,7 +445,7 @@ jobs:
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    if: inputs.build_docker_main == true
+    if: inputs.build_docker_main
     needs: [publish-main, call_docker_build_main_ep]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
@@ -456,7 +456,7 @@ jobs:
 
   call_docker_build_main_all:
     name: Call Docker Build Workflow for langflow-all
-    if: inputs.build_docker_main == true
+    if: inputs.build_docker_main
     needs: [publish-main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
@@ -471,7 +471,7 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [build-main, build-lfx, publish-main, publish-lfx]
-    if: always() && inputs.create_release == true && (needs.publish-main.result == 'success' || needs.publish-lfx.result == 'success')
+    if: always() && inputs.create_release && (needs.publish-main.result == 'success' || needs.publish-lfx.result == 'success')
     steps:
       - uses: actions/download-artifact@v4
         if: needs.publish-main.result == 'success'

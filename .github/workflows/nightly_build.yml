@@ -36,6 +36,15 @@ env:
   PYTHON_VERSION: "3.13"
 
 jobs:
+  validate-inputs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate inputs
+        if: inputs.push_to_registry && (inputs.skip_frontend_tests || inputs.skip_backend_tests)
+        run: |
+          echo "Cannot skip tests while push_to_registry is true."
+          exit 1
+
   create-nightly-tag:
     if: github.repository == 'langflow-ai/langflow'
     runs-on: ubuntu-latest
@@ -201,7 +210,7 @@ jobs:
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
-    if: always() && github.repository == 'langflow-ai/langflow' && (needs.frontend-tests.result == 'success' || needs.frontend-tests.result == 'skipped') && (needs.backend-unit-tests.result == 'success' || needs.backend-unit-tests.result == 'skipped')
+    if: github.repository == 'langflow-ai/langflow' && (needs.frontend-tests.result == 'success' || needs.frontend-tests.result == 'skipped') && (needs.backend-unit-tests.result == 'success' || needs.backend-unit-tests.result == 'skipped')
     name: Run Nightly Langflow Build
     needs: [create-nightly-tag, frontend-tests, backend-unit-tests]
     uses: ./.github/workflows/release_nightly.yml
