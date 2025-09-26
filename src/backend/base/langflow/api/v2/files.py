@@ -27,6 +27,11 @@ MCP_SERVERS_FILE = "_mcp_servers"
 SAMPLE_DATA_DIR = Path(__file__).parent / "sample_data"
 
 
+async def get_mcp_file(current_user: CurrentActiveUser, *, extension: bool = False) -> str:
+    # Create a unique MCP servers file with the user id appended
+    return f"{MCP_SERVERS_FILE}_{current_user.id!s}" + (".json" if extension else "")
+
+
 async def byte_stream_generator(file_input, chunk_size: int = 8192) -> AsyncGenerator[bytes, None]:
     """Convert bytes object or stream into an async generator that yields chunks."""
     if isinstance(file_input, bytes):
@@ -115,9 +120,12 @@ async def upload_user_file(
             root_filename, file_extension = new_filename, ""
 
         # Special handling for the MCP servers config file: always keep the same root filename
-        if root_filename == MCP_SERVERS_FILE:
+        mcp_file = await get_mcp_file(current_user)
+        mcp_file_ext = await get_mcp_file(current_user, extension=True)
+
+        if new_filename == mcp_file_ext:
             # Check if an existing record exists; if so, delete it to replace with the new one
-            existing_mcp_file = await get_file_by_name(root_filename, current_user, session)
+            existing_mcp_file = await get_file_by_name(mcp_file, current_user, session)
             if existing_mcp_file:
                 await delete_file(existing_mcp_file.id, current_user, session, storage_service)
             unique_filename = new_filename
@@ -255,7 +263,9 @@ async def list_files(
         full_list = list(results)
 
         # Filter out the _mcp_servers file
-        return [file for file in full_list if file.name != MCP_SERVERS_FILE]
+        mcp_file = await get_mcp_file(current_user)
+
+        return [file for file in full_list if file.name != mcp_file]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing files: {e}") from e
 

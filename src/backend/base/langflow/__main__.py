@@ -683,7 +683,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
     if settings_service.auth_settings.AUTO_LOGIN:
         # Force default credentials for AUTO_LOGIN mode
         username = DEFAULT_SUPERUSER
-        password = DEFAULT_SUPERUSER_PASSWORD
+        password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
     else:
         # Production mode - prompt for credentials if not provided
         if not username:
@@ -711,7 +711,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
             raise typer.Exit(1)
 
         typer.echo(f"AUTO_LOGIN enabled. Creating default superuser '{username}'...")
-        typer.echo(f"Note: Default credentials are {DEFAULT_SUPERUSER}/{DEFAULT_SUPERUSER_PASSWORD}")
+        # Do not echo the default password to avoid exposing it in logs.
     # AUTO_LOGIN is false - production mode
     elif is_first_setup:
         typer.echo("No superusers found. Creating first superuser...")
