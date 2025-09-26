@@ -1,9 +1,9 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from lfx.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from lfx.components.models.embedding_model import EmbeddingModelComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
