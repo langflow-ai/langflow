@@ -4,6 +4,7 @@ from asyncio.subprocess import create_subprocess_exec
 from datetime import datetime, timezone
 from uuid import UUID
 
+from fastapi import HTTPException
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
 from lfx.log import logger
@@ -324,20 +325,19 @@ async def auto_configure_starter_projects_mcp(session):
                     )
                     continue  # Skip this user since server already exists for the same project
 
-                if validation_result.server_exists and not validation_result.project_id_matches:
-                    await logger.adebug(
-                        f"MCP server '{validation_result.server_name}' exists but for different project, "
-                        f"will update for user {user.username}'s starter projects"
-                    )
-
                 server_name = validation_result.server_name
 
-                # Only do expensive operations if server doesn't exist
                 # Set up THIS USER'S starter folder authentication (same as new projects)
-                if not user_starter_folder.auth_settings:
-                    user_starter_folder.auth_settings = encrypt_auth_settings({"auth_type": "apikey"})
-                    session.add(user_starter_folder)
+                # If AUTO_LOGIN is false, automatically enable API key authentication
+                default_auth = {"auth_type": "none"}
+                logger.warning(f"Settings service auth settings: {settings_service.auth_settings}")
+                logger.warning(f"User starter folder auth settings: {user_starter_folder.auth_settings}")
+                if not settings_service.auth_settings.AUTO_LOGIN and not user_starter_folder.auth_settings:
+                    default_auth = {"auth_type": "apikey"}
+                    user_starter_folder.auth_settings = encrypt_auth_settings(default_auth)
                     await logger.adebug(f"Set up auth settings for user {user.username}'s starter folder")
+                elif user_starter_folder.auth_settings:
+                    default_auth = user_starter_folder.auth_settings
 
                 # Create API key for this user to access their own starter projects
                 api_key_name = f"MCP Project {DEFAULT_FOLDER_NAME} - {user.username}"
@@ -347,14 +347,26 @@ async def auto_configure_starter_projects_mcp(session):
                 sse_url = await get_project_sse_url(user_starter_folder.id)
 
                 # Prepare server config (similar to new project creation)
-                command = "uvx"
-                args = [
-                    "mcp-proxy",
-                    "--headers",
-                    "x-api-key",
-                    unmasked_api_key.api_key,
-                    sse_url,
-                ]
+                if default_auth.get("auth_type", "none") == "apikey":
+                    command = "uvx"
+                    args = [
+                        "mcp-proxy",
+                        "--headers",
+                        "x-api-key",
+                        unmasked_api_key.api_key,
+                        sse_url,
+                    ]
+                elif default_auth.get("auth_type", "none") == "oauth":
+                    msg = "OAuth authentication is not yet implemented for MCP server creation during project creation."
+                    logger.warning(msg)
+                    raise HTTPException(status_code=501, detail=msg)
+                else:  # default_auth_type == "none"
+                    # No authentication - direct connection
+                    command = "uvx"
+                    args = [
+                        "mcp-proxy",
+                        sse_url,
+                    ]
                 server_config = {"command": command, "args": args}
 
                 # Add to user's MCP servers configuration
