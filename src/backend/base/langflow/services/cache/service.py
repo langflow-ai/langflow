@@ -253,7 +253,9 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         def _walk(value):
             vid = id(value)
             if vid in visited:
-                return value
+                # Return a lightweight cycle marker to avoid reintroducing
+                # the original (potentially unpicklable) object.
+                return {"__cycle__": True}
             visited.add(vid)
 
             # Replace InputSchema classes with a placeholder reference
@@ -313,7 +315,8 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
                 if isinstance(value, tuple):
                     return tuple(seq)
                 if isinstance(value, set):
-                    return set(seq)
+                    # Sets cannot contain dicts (unhashable) — encode as a list with a marker
+                    return {"__set__": seq}
                 return seq
 
             return value

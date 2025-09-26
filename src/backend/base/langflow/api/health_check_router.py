@@ -2,13 +2,34 @@ import uuid
 
 from fastapi import APIRouter, HTTPException, status
 
-# Try to import from lfx, fallback to standard logging if lfx not available
+# Try to import from lfx, fallback to async-compatible wrapper if unavailable
 try:
     from lfx.log.logger import logger
 except ImportError:
     import logging
+    from typing import Any
 
-    logger = logging.getLogger(__name__)
+    class _AsyncLogger:
+        """Async-compatible wrapper over standard logging.Logger.
+
+        Provides awaitable methods used in this module (e.g., aexception, ainfo)
+        to avoid attribute errors when lfx logger is not installed.
+        """
+
+        def __init__(self, base: logging.Logger) -> None:
+            self._base = base
+
+        # Pass-through for unknown attributes (sync logging API)
+        def __getattr__(self, name: str) -> Any:  # pragma: no cover - thin shim
+            return getattr(self._base, name)
+
+        async def aexception(self, msg: str, *args: Any, **kwargs: Any) -> None:
+            self._base.exception(msg, *args, **kwargs)
+
+        async def ainfo(self, msg: str, *args: Any, **kwargs: Any) -> None:
+            self._base.info(msg, *args, **kwargs)
+
+    logger = _AsyncLogger(logging.getLogger(__name__))
 from pydantic import BaseModel
 from sqlmodel import select
 

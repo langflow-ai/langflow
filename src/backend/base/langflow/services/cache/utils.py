@@ -212,9 +212,15 @@ def setup_rich_pickle_support() -> bool:
         def _console_getstate(self) -> dict[str, Any]:
             """Serialize Console for caching."""
             state = self.__dict__.copy()
-            # Remove unpickleable locks
-            state.pop("_lock", None)
-            state.pop("_record_buffer_lock", None)
+            # Remove unpickleable locks and file handles / environment
+            for key in (
+                "_lock",
+                "_record_buffer_lock",
+                "_file",
+                "_stderr",
+                "_environ",
+            ):
+                state.pop(key, None)
             return state
 
         def _console_setstate(self, state: dict[str, Any]) -> None:
