@@ -446,7 +446,7 @@ class MCPSessionManager:
             sessions = server_data.get("sessions", {})
             sessions_to_remove = []
 
-            for session_id, session_info in sessions.items():
+            for session_id, session_info in list(sessions.items()):
                 if current_time - session_info["last_used"] > SESSION_IDLE_TIMEOUT:
                     sessions_to_remove.append(session_id)
 
@@ -543,7 +543,7 @@ class MCPSessionManager:
         sessions = server_data["sessions"]
 
         # Try to find a healthy existing session
-        for session_id, session_info in sessions.items():
+        for session_id, session_info in list(sessions.items()):
             session = session_info["session"]
             task = session_info["task"]
 
