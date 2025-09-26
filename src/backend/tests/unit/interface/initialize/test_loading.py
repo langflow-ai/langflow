@@ -214,10 +214,11 @@ async def test_update_params_handles_multiple_fields():
     params = {"field1": "DB_KEY", "field2": "ENV_KEY", "field3": "MISSING_KEY"}
     load_from_db_fields = ["field1", "field2", "field3"]
 
-    # Call the function with proper mocking
-    with patch("langflow.interface.initialize.loading.session_scope") as mock_session_scope, \
-         patch("lfx.services.deps.get_settings_service") as mock_get_settings:
-
+    # Call the function with proper mocking - NOTICE THE CORRECT PATCH PATH
+    with (
+        patch("lfx.interface.initialize.loading.session_scope") as mock_session_scope,
+        patch("lfx.services.deps.get_settings_service") as mock_get_settings,
+    ):
         # Create a proper mock session that won't be detected as NoopSession
         mock_session = MagicMock()
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
