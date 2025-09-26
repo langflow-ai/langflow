@@ -5,12 +5,11 @@ import pytest
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.user.model import User
 from langflow.services.utils import teardown_superuser
-from sqlalchemy.exc import IntegrityError
-
 from lfx.services.settings.constants import (
     DEFAULT_SUPERUSER,
     DEFAULT_SUPERUSER_PASSWORD,
 )
+from sqlalchemy.exc import IntegrityError
 
 # @patch("langflow.services.deps.get_session")
 # @patch("langflow.services.utils.create_super_user")

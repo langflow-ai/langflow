@@ -2,6 +2,7 @@ from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.processing import PromptComponent
 from lfx.graph import Graph
 from lfx.schema.message import Message
+
 from tests.integration.utils import pyleak_marker, run_flow
 
 
