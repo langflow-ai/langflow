@@ -26,7 +26,6 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User, UserCreate, UserRead
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
-from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, session_scope
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import selectinload
@@ -550,7 +549,7 @@ async def flow(
     flow_data = FlowCreate(name="test_flow", data=loaded_json.get("data"), user_id=active_user.id)
 
     flow = Flow.model_validate(flow_data)
-    async with session_getter(get_db_service()) as session:
+    async with session_scope() as session:
         session.add(flow)
         await session.commit()
         await session.refresh(flow)
@@ -658,8 +657,7 @@ async def created_api_key(active_user):
         api_key="random_key",
         hashed_api_key=hashed,
     )
-    db_manager = get_db_service()
-    async with session_getter(db_manager) as session:
+    async with session_scope() as session:
         stmt = select(ApiKey).where(ApiKey.api_key == api_key.api_key)
         if existing_api_key := (await session.exec(stmt)).first():
             yield existing_api_key
