@@ -1,50 +1,27 @@
-import os
-
 import orjson
 
+from lfx.base.datastax.astradb_base import AstraDBBaseComponent
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
 from lfx.inputs.inputs import (
-    BoolInput,
     DictInput,
     DropdownInput,
     FloatInput,
     HandleInput,
     IntInput,
-    SecretStrInput,
     StrInput,
 )
 from lfx.schema.data import Data
 
 
-class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
+class AstraDBGraphVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
     display_name: str = "Astra DB Graph"
     description: str = "Implementation of Graph Vector Store using Astra DB"
     name = "AstraDBGraph"
     icon: str = "AstraDB"
 
     inputs = [
-        SecretStrInput(
-            name="token",
-            display_name="Astra DB Application Token",
-            info="Authentication token for accessing Astra DB.",
-            value="ASTRA_DB_APPLICATION_TOKEN",
-            required=True,
-            advanced=os.getenv("ASTRA_ENHANCED", "false").lower() == "true",
-        ),
-        SecretStrInput(
-            name="api_endpoint",
-            display_name="Database" if os.getenv("ASTRA_ENHANCED", "false").lower() == "true" else "API Endpoint",
-            info="API endpoint URL for the Astra DB service.",
-            value="ASTRA_DB_API_ENDPOINT",
-            required=True,
-        ),
-        StrInput(
-            name="collection_name",
-            display_name="Collection Name",
-            info="The name of the collection within Astra DB where the vectors will be stored.",
-            required=True,
-        ),
+        *AstraDBBaseComponent.inputs,
         StrInput(
             name="metadata_incoming_links_key",
             display_name="Metadata incoming links key",
@@ -52,85 +29,11 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
             advanced=True,
         ),
         *LCVectorStoreComponent.inputs,
-        StrInput(
-            name="keyspace",
-            display_name="Keyspace",
-            info="Optional keyspace within Astra DB to use for the collection.",
-            advanced=True,
-        ),
         HandleInput(
             name="embedding_model",
             display_name="Embedding Model",
             input_types=["Embeddings"],
             info="Allows an embedding model configuration.",
-        ),
-        DropdownInput(
-            name="metric",
-            display_name="Metric",
-            info="Optional distance metric for vector comparisons in the vector store.",
-            options=["cosine", "dot_product", "euclidean"],
-            value="cosine",
-            advanced=True,
-        ),
-        IntInput(
-            name="batch_size",
-            display_name="Batch Size",
-            info="Optional number of data to process in a single batch.",
-            advanced=True,
-        ),
-        IntInput(
-            name="bulk_insert_batch_concurrency",
-            display_name="Bulk Insert Batch Concurrency",
-            info="Optional concurrency level for bulk insert operations.",
-            advanced=True,
-        ),
-        IntInput(
-            name="bulk_insert_overwrite_concurrency",
-            display_name="Bulk Insert Overwrite Concurrency",
-            info="Optional concurrency level for bulk insert operations that overwrite existing data.",
-            advanced=True,
-        ),
-        IntInput(
-            name="bulk_delete_concurrency",
-            display_name="Bulk Delete Concurrency",
-            info="Optional concurrency level for bulk delete operations.",
-            advanced=True,
-        ),
-        DropdownInput(
-            name="setup_mode",
-            display_name="Setup Mode",
-            info="Configuration mode for setting up the vector store, with options like 'Sync', or 'Off'.",
-            options=["Sync", "Off"],
-            advanced=True,
-            value="Sync",
-        ),
-        BoolInput(
-            name="pre_delete_collection",
-            display_name="Pre Delete Collection",
-            info="Boolean flag to determine whether to delete the collection before creating a new one.",
-            advanced=True,
-            value=False,
-        ),
-        StrInput(
-            name="metadata_indexing_include",
-            display_name="Metadata Indexing Include",
-            info="Optional list of metadata fields to include in the indexing.",
-            advanced=True,
-            list=True,
-        ),
-        StrInput(
-            name="metadata_indexing_exclude",
-            display_name="Metadata Indexing Exclude",
-            info="Optional list of metadata fields to exclude from the indexing.",
-            advanced=True,
-            list=True,
-        ),
-        StrInput(
-            name="collection_indexing_policy",
-            display_name="Collection Indexing Policy",
-            info='Optional JSON string for the "indexing" field of the collection. '
-            "See https://docs.datastax.com/en/astra-db-serverless/api-reference/collections.html#the-indexing-option",
-            advanced=True,
         ),
         IntInput(
             name="number_of_results",

@@ -1,44 +1,17 @@
-import os
-
+from lfx.base.datastax.astradb_base import AstraDBBaseComponent
 from lfx.base.memory.model import LCChatMemoryComponent
 from lfx.field_typing.constants import Memory
-from lfx.inputs.inputs import MessageTextInput, SecretStrInput, StrInput
+from lfx.inputs.inputs import MessageTextInput
 
 
-class AstraDBChatMemory(LCChatMemoryComponent):
+class AstraDBChatMemory(AstraDBBaseComponent, LCChatMemoryComponent):
     display_name = "Astra DB Chat Memory"
     description = "Retrieves and store chat messages from Astra DB."
     name = "AstraDBChatMemory"
     icon: str = "AstraDB"
 
     inputs = [
-        SecretStrInput(
-            name="token",
-            display_name="Astra DB Application Token",
-            info="Authentication token for accessing Astra DB.",
-            value="ASTRA_DB_APPLICATION_TOKEN",
-            required=True,
-            advanced=os.getenv("ASTRA_ENHANCED", "false").lower() == "true",
-        ),
-        SecretStrInput(
-            name="api_endpoint",
-            display_name="Astra DB API Endpoint",
-            info="API endpoint URL for the Astra DB service.",
-            value="ASTRA_DB_API_ENDPOINT",
-            required=True,
-        ),
-        StrInput(
-            name="collection_name",
-            display_name="Collection Name",
-            info="The name of the collection within Astra DB where the vectors will be stored.",
-            required=True,
-        ),
-        StrInput(
-            name="namespace",
-            display_name="Namespace",
-            info="Optional namespace within Astra DB to use for the collection.",
-            advanced=True,
-        ),
+        *AstraDBBaseComponent.inputs,
         MessageTextInput(
             name="session_id",
             display_name="Session ID",
