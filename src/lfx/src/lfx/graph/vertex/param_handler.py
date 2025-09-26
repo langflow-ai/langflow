@@ -219,7 +219,7 @@ class ParameterHandler:
         table_schema = field_template.get("table_schema", [])
 
         # Track which columns need database loading
-        load_from_db_columns = load_from_db_fields
+        load_from_db_columns = []
         for column_schema in table_schema:
             if isinstance(column_schema, dict) and column_schema.get("load_from_db"):
                 load_from_db_columns.append(column_schema["name"])
@@ -234,6 +234,7 @@ class ParameterHandler:
 
             # Add to load_from_db_fields so it gets processed
             # We'll use a special naming convention to identify table fields
+            load_from_db_fields.append(f"table:{field_name}")
             self.load_from_db_fields.append(f"table:{field_name}")
 
         return params
