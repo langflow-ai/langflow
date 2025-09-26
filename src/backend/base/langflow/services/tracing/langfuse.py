@@ -58,6 +58,7 @@ class LangFuseTracer(BaseTracer):
                 with LangFuseTracer._lock:
                     if not LangFuseTracer._langfuse:
                         from langfuse import Langfuse
+
                         LangFuseTracer._langfuse = Langfuse(**config)
 
             self._client = LangFuseTracer._langfuse
