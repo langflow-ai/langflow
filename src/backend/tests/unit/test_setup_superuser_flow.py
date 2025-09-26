@@ -132,7 +132,6 @@ async def test_setup_superuser_with_no_configured_credentials(client):  # noqa: 
 async def test_setup_superuser_with_custom_credentials(client):  # noqa: ARG001
     """Test setup_superuser behavior with custom superuser credentials."""
     from langflow.services.deps import session_scope
-
     from pydantic import SecretStr
 
     settings = get_settings_service()
