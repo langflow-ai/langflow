@@ -5575,7 +5575,7 @@ requires-dist = [
     { name = "python-docx", specifier = ">=1.1.0,<2.0.0" },
     { name = "python-jose", specifier = ">=3.3.0,<4.0.0" },
     { name = "python-multipart", specifier = ">=0.0.12,<1.0.0" },
-    { name = "rich", git = "https://github.com/pkusnail/rich.git?rev=feature%2Fpickle-support" },
+    { name = "rich", git = "https://github.com/pkusnail/rich.git?rev=3f2eb2d988fe22e3598542dd1773ae010ea4aacd" },
     { name = "scipy", specifier = ">=1.15.2" },
     { name = "sentence-transformers", marker = "extra == 'all'", specifier = ">=2.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.0.0" },
@@ -10828,7 +10828,7 @@ wheels = [
 [[package]]
 name = "rich"
 version = "14.1.0"
-source = { git = "https://github.com/pkusnail/rich.git?rev=feature%2Fpickle-support#3f2eb2d988fe22e3598542dd1773ae010ea4aacd" }
+source = { git = "https://github.com/pkusnail/rich.git?rev=3f2eb2d988fe22e3598542dd1773ae010ea4aacd#3f2eb2d988fe22e3598542dd1773ae010ea4aacd" }
 dependencies = [
     { name = "markdown-it-py" },
     { name = "pygments" },
