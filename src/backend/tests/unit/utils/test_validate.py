@@ -1,7 +1,6 @@
 """Unit tests for validate.py utilities."""
 
 import ast
-import re
 import warnings
 from unittest.mock import Mock, patch
 
@@ -423,7 +422,7 @@ class TestClass:
 
         with (
             patch("lfx.custom.validate.prepare_global_scope", side_effect=validation_error),
-            pytest.raises(ValueError, match=re.escape(".*")),
+            pytest.raises(ValueError, match=r".*"),
         ):
             create_class(code, "TestClass")
 
