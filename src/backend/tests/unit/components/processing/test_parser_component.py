@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from lfx.components.processing.parser import ParserComponent
 from lfx.schema import Data, DataFrame
@@ -156,7 +158,9 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         component = component_class(**kwargs)
 
         # Act & Assert
-        with pytest.raises(ValueError, match="Unsupported input type: <class 'int'>. Expected DataFrame or Data."):
+        with pytest.raises(
+            ValueError, match=re.escape("Unsupported input type: <class 'int'>. Expected DataFrame or Data.")
+        ):
             component.parse_combined_text()
 
     def test_none_input(self, component_class):
@@ -169,7 +173,9 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         component = component_class(**kwargs)
 
         # Act & Assert
-        with pytest.raises(ValueError, match="Unsupported input type: <class 'NoneType'>. Expected DataFrame or Data."):
+        with pytest.raises(
+            ValueError, match=re.escape("Unsupported input type: <class 'NoneType'>. Expected DataFrame or Data.")
+        ):
             component.parse_combined_text()
 
     def test_invalid_template(self, component_class):
