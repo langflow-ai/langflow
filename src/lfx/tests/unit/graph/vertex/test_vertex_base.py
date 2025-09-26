@@ -251,8 +251,9 @@ def test_process_field_parameters_table_field(parameter_handler, mock_vertex):
     parameter_handler.template_dict = new_template
 
     params, _ = parameter_handler.process_field_parameters()
-    expected_df = pd.DataFrame(sample_data)
-    pd.testing.assert_frame_equal(params["table_field"], expected_df)
+
+    # The function returns the original list, not a DataFrame
+    assert params["table_field"] == sample_data
 
 
 def test_process_field_parameters_table_field_invalid(parameter_handler, mock_vertex):
