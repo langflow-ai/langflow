@@ -400,5 +400,4 @@ jobs:
           draft: false
           generateReleaseNotes: true
           prerelease: ${{ inputs.pre_release }}
-          tag: ${{ needs.build-main.outputs.version }}
-          commit: ${{ inputs.release_tag }}
+          tag: ${{ inputs.release_tag }}
