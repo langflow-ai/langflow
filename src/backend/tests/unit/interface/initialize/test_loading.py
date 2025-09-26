@@ -6,7 +6,6 @@ from lfx.interface.initialize.loading import (
     update_params_with_load_from_db_fields,
     update_table_params_with_load_from_db_fields,
 )
-from lfx.services.deps import get_settings_service
 
 
 @pytest.mark.asyncio
