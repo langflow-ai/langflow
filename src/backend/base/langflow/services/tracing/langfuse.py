@@ -22,6 +22,8 @@ if TYPE_CHECKING:
 
 
 class LangFuseTracer(BaseTracer):
+    _langfuse = None
+    _lock = threading.Lock()
     flow_id: str
 
     def __init__(
@@ -51,9 +53,13 @@ class LangFuseTracer(BaseTracer):
 
     def setup_langfuse(self, config) -> bool:
         try:
-            from langfuse import Langfuse
+            if not LangFuseTracer._langfuse:
+                with LangFuseTracer._lock:
+                    if not LangFuseTracer._langfuse:
+            		from langfuse import Langfuse
+            		LangFuseTracer._langfuse = Langfuse(**config)
 
-            self._client = Langfuse(**config)
+            self._client = LangFuseTracer._langfuse
             try:
                 from langfuse.api.core.request_options import RequestOptions
 
