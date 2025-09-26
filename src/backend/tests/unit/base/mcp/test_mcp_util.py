@@ -11,7 +11,6 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from lfx.base.mcp import util
 from lfx.base.mcp.util import MCPSessionManager, MCPSseClient, MCPStdioClient, _process_headers, validate_headers
 
@@ -281,7 +280,7 @@ class TestMCPUtilityFunctions:
         if shutil.which("node"):
             assert util._validate_node_installation("npx something") == "npx something"
         else:
-            with pytest.raises(ValueError, match="Node.js is not installed"):
+            with pytest.raises(ValueError, match=r"Node\.js is not installed"):
                 util._validate_node_installation("npx something")
         assert util._validate_node_installation("echo test") == "echo test"
 
