@@ -239,12 +239,14 @@ test(
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-nav-mcp").click();
 
-    try {
-      await page.getByTestId("sidebar-add-mcp-server-button").click();
-    } catch (_error) {
-      await page.getByTestId("add-mcp-server-button-sidebar").click();
-    }
+    const sidebarButton = page.getByTestId("sidebar-add-mcp-server-button");
+    const fallbackButton = page.getByTestId("add-mcp-server-button-sidebar");
 
+    if (await sidebarButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await sidebarButton.click();
+    } else {
+      await fallbackButton.click();
+    }
     await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
       state: "visible",
       timeout: 30000,
