@@ -288,7 +288,7 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             )
 
             with pytest.raises(
-                ValueError, match=re.escape("Invalid file types specified: \\['exe'\\]. Valid types are:")
+                ValueError, match=r"Invalid file types specified: \['exe'\]\. Valid types are:"
             ) as exc_info:
                 directory_component.load_directory()
 
