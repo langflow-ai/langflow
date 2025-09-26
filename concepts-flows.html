@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.79069821.css">
-<script src="/assets/js/runtime~main.b2a37277.js" defer="defer"></script>
-<script src="/assets/js/main.f711f3e7.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.39baa8ce.js" defer="defer"></script>
+<script src="/assets/js/main.90f3e6c7.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -76,7 +76,7 @@ In contrast, the <strong>Vector Store RAG</strong> template consists of two sub-
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="add-components">Add components<a href="#add-components" class="hash-link" aria-label="Direct link to Add components" title="Direct link to Add components">​</a></h3>
 <p>Flows consist of <a href="/concepts-components">components</a>, which are nodes that you configure and connect in the <a href="/concepts-overview#workspace">workspace</a>.
 Each component performs a specific task, like serving an AI model or connecting a data source.</p>
-<p>Drag and drop components from the <strong>Components</strong> menu to add them to your flow.
+<p>Drag and drop components from the <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-component" aria-hidden="true"><path d="M15.536 11.293a1 1 0 0 0 0 1.414l2.376 2.377a1 1 0 0 0 1.414 0l2.377-2.377a1 1 0 0 0 0-1.414l-2.377-2.377a1 1 0 0 0-1.414 0z"></path><path d="M2.297 11.293a1 1 0 0 0 0 1.414l2.377 2.377a1 1 0 0 0 1.414 0l2.377-2.377a1 1 0 0 0 0-1.414L6.088 8.916a1 1 0 0 0-1.414 0z"></path><path d="M8.916 17.912a1 1 0 0 0 0 1.415l2.377 2.376a1 1 0 0 0 1.414 0l2.377-2.376a1 1 0 0 0 0-1.415l-2.377-2.376a1 1 0 0 0-1.414 0z"></path><path d="M8.916 4.674a1 1 0 0 0 0 1.414l2.377 2.376a1 1 0 0 0 1.414 0l2.377-2.376a1 1 0 0 0 0-1.414l-2.377-2.377a1 1 0 0 0-1.414 0z"></path></svg> <strong>Core components</strong> and <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-blocks" aria-hidden="true"><rect width="7" height="7" x="14" y="3" rx="1"></rect><path d="M10 21V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H3"></path></svg> <strong>Bundles</strong> menus to add them to your flow.
 Then, configure the component settings and connect the components together.</p>
 <p><img decoding="async" loading="lazy" alt="Chat Input and Output connected to a Language Model component" src="/assets/images/connect-component-d52a14c256f3653e49ce2e2dd311fcef.png" width="3700" height="1880" class="img_ev3q"></p>
 <p>Each component has configuration settings and options. Some of these are common to all components, and some are unique to specific components.</p>
@@ -106,42 +106,36 @@ To create a project, click <svg xmlns="http://www.w3.org/2000/svg" width="24" he
 <li>Click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg> <strong>More</strong>, and then select <strong>Edit details</strong>.</li>
 <li>Edit the <strong>Name</strong> and <strong>Description</strong>, and then click <strong>Save</strong>.</li>
 </ol>
+<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="lock-a-flow">Lock a flow<a href="#lock-a-flow" class="hash-link" aria-label="Direct link to Lock a flow" title="Direct link to Lock a flow">​</a></h3>
+<p>To prevent changes to a flow, you can lock it:</p>
+<ol>
+<li>On the <strong>Projects</strong> page, locate the flow you want to lock.</li>
+<li>Click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg> <strong>More</strong>, and then select <strong>Edit details</strong>.</li>
+<li>Enable <strong>Lock Flow</strong>, and then click <strong>Save</strong>.</li>
+</ol>
+<p>Repeat these steps to unlock the flow by disabling <strong>Lock Flow</strong>.</p>
+<p>When editing a flow, the <strong>Lock Status</strong> indicates whether the flow is <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> <strong>Locked</strong> or <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock-open" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg> <strong>Unlocked</strong>.
+You cannot change the lock status while editing the flow.</p>
+<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="move-a-flow">Move a flow<a href="#move-a-flow" class="hash-link" aria-label="Direct link to Move a flow" title="Direct link to Move a flow">​</a></h3>
+<p>To move a flow from one project to another, do the following:</p>
+<ol>
+<li>On the <strong>Projects</strong> page, locate the flow you want to move.</li>
+<li>Click and drag the flow from the list of flows to the target project name in the list of projects.</li>
+</ol>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="delete-a-flow">Delete a flow<a href="#delete-a-flow" class="hash-link" aria-label="Direct link to Delete a flow" title="Direct link to Delete a flow">​</a></h3>
 <ol>
 <li>On the <strong>Projects</strong> page, locate the flow you want to delete.</li>
 <li>Click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg> <strong>More</strong>, and then select <strong>Delete</strong>.</li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="flow-storage-and-logs">Flow storage and logs<a href="#flow-storage-and-logs" class="hash-link" aria-label="Direct link to Flow storage and logs" title="Direct link to Flow storage and logs">​</a></h2>
-<p>By default, flows and flow execution data are stored in a SQLite database at the following locations.</p>
-<p>The default storage path depends on your operation system and installation method:</p>
-<ul>
-<li><strong>macOS Desktop</strong>: <code>/Users/&lt;username&gt;/.langflow/data/database.db</code></li>
-<li><strong>Windows Desktop</strong>: <code>C:\Users\&lt;name&gt;\AppData\Roaming\com.Langflow\data\langflow.db</code></li>
-<li><strong>OSS macOS/Windows/Linux/WSL (<code>uv pip install</code>)</strong>: <code>&lt;path_to_venv&gt;/lib/python3.12/site-packages/langflow/langflow.db</code> (Python version may vary)</li>
-<li><strong>OSS macOS/Windows/Linux/WSL (<code>git clone</code>)</strong>: <code>&lt;path_to_clone&gt;/src/backend/base/langflow/langflow.db</code></li>
-</ul>
-<p>The database storage location can be customized using the <code>LANGFLOW_CONFIG_DIR</code> and <code>LANGFLOW_SAVE_DB_IN_CONFIG_DIR</code> environment variables. The config directory can be customized with the <code>LANGFLOW_CONFIG_DIR</code> environment variable.</p>
-<p>Langflow logs are stored in the config directory specified in the <code>LANGFLOW_CONFIG_DIR</code> environment variable.</p>
-<p>The default config directory location depends on your operating system and installation method:</p>
-<ul>
-<li><strong>macOS Desktop</strong>:<code>/Users/&lt;username&gt;/Library/Logs/com.Langflow</code></li>
-<li><strong>Windows Desktop</strong>:<code>C:\Users\&lt;username&gt;\AppData\Roaming\com.Langflow\cache</code></li>
-<li><strong>OSS macOS/Windows/Linux/WSL (<code>uv pip install</code>)</strong>:<!-- -->
-<ul>
-<li><strong>macOS</strong>: <code>/Users/&lt;username&gt;/Library/Caches/langflow</code></li>
-<li><strong>Linux</strong>: <code>/home/&lt;username&gt;/.cache/langflow</code></li>
-<li><strong>Windows</strong>: <code>C:\Users\&lt;username&gt;\AppData\Local\langflow\langflow\Cache</code></li>
-</ul>
-</li>
-<li><strong>OSS macOS/Windows/Linux/WSL (<code>git clone</code>)</strong>: <code>&lt;path_to_clone&gt;/src/backend/base/langflow/</code></li>
-</ul>
-<p>For more information, see <a href="/memory">Memory management options</a> and <a href="/logging">Logging</a>.</p>
+<p>By default, flows and flow execution data are stored in the Langflow database, and flow logs are stored with other Langflow logs in the Langflow config directory.
+For more information, see <a href="/memory">Memory management options</a> and <a href="/logging">Logging</a>.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="see-also">See also<a href="#see-also" class="hash-link" aria-label="Direct link to See also" title="Direct link to See also">​</a></h2>
 <ul>
 <li><a href="/concepts-publish">Share and embed flows</a></li>
 <li><a href="/concepts-flows-import">Import and export flows</a></li>
 <li><a href="/environment-variables">Langflow environment variables</a></li>
-</ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/concepts-overview"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Use the visual editor</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/concepts-publish"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Trigger flows with the Langflow API</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#create-a-flow" class="table-of-contents__link toc-highlight">Create a flow</a><ul><li><a href="#add-components" class="table-of-contents__link toc-highlight">Add components</a></li><li><a href="#run-a-flow" class="table-of-contents__link toc-highlight">Run a flow</a></li></ul></li><li><a href="#projects" class="table-of-contents__link toc-highlight">Manage flows in projects</a><ul><li><a href="#edit-flow-details" class="table-of-contents__link toc-highlight">Edit flow details</a></li><li><a href="#delete-a-flow" class="table-of-contents__link toc-highlight">Delete a flow</a></li></ul></li><li><a href="#flow-storage-and-logs" class="table-of-contents__link toc-highlight">Flow storage and logs</a></li><li><a href="#see-also" class="table-of-contents__link toc-highlight">See also</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
+</ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/concepts-overview"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Use the visual editor</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/concepts-publish"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Trigger flows with the Langflow API</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#create-a-flow" class="table-of-contents__link toc-highlight">Create a flow</a><ul><li><a href="#add-components" class="table-of-contents__link toc-highlight">Add components</a></li><li><a href="#run-a-flow" class="table-of-contents__link toc-highlight">Run a flow</a></li></ul></li><li><a href="#projects" class="table-of-contents__link toc-highlight">Manage flows in projects</a><ul><li><a href="#edit-flow-details" class="table-of-contents__link toc-highlight">Edit flow details</a></li><li><a href="#lock-a-flow" class="table-of-contents__link toc-highlight">Lock a flow</a></li><li><a href="#move-a-flow" class="table-of-contents__link toc-highlight">Move a flow</a></li><li><a href="#delete-a-flow" class="table-of-contents__link toc-highlight">Delete a flow</a></li></ul></li><li><a href="#flow-storage-and-logs" class="table-of-contents__link toc-highlight">Flow storage and logs</a></li><li><a href="#see-also" class="table-of-contents__link toc-highlight">See also</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2025 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="https://langflow.org/preferences">Manage Privacy Choices</a></span>
                   </div></li></ul></div></div></div></footer><div style="position:fixed;right:21px;bottom:21px;z-index:100;display:flex;align-items:center;gap:10px;cursor:pointer"><div style="background-color:#f6f6f6;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1)"><img src="/img/langflow-icon-black-transparent.svg" style="width:40px" alt="Search"></div></div></div>

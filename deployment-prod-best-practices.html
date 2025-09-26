@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.79069821.css">
-<script src="/assets/js/runtime~main.b2a37277.js" defer="defer"></script>
-<script src="/assets/js/main.f711f3e7.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.39baa8ce.js" defer="defer"></script>
+<script src="/assets/js/main.90f3e6c7.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -116,11 +116,24 @@ Use persistent volumes instead of ramdisk solutions that result in data loss on 
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="monitoring">Monitoring<a href="#monitoring" class="hash-link" aria-label="Direct link to Monitoring" title="Direct link to Monitoring">​</a></h2>
 <p>Effective monitoring ensures Langflow operates reliably and performs well under varying loads:</p>
 <ul>
-<li><strong>Database monitoring</strong>: See <a href="/enterprise-database-guide">Langflow database guide for enterprise DBAs</a>.</li>
-<li><strong>Application logs</strong>: Collect and analyze logs for errors, warnings, and flow execution issues. Centralize logs using tools like ELK Stack or Fluentd. You can also inspect <a href="/logging">Langflow logs</a>.</li>
-<li><strong>Resource usage</strong>: Track CPU, memory, and disk usage of Langflow instances. Use Prometheus and Grafana for real-time metrics collection and monitoring in Kubernetes.</li>
-<li><strong>API performance</strong>: Monitor response times, error rates, and request throughput. Set alerts for high latency or error spikes.</li>
-<li><strong>Observability tools</strong>: Integrate with <a href="/integrations-langwatch">LangWatch</a> or <a href="/integrations-opik">Opik</a> for detailed flow tracing and metrics. Use these tools to debug flow performance and optimize execution.</li>
+<li>
+<p><strong>Database monitoring</strong>: See <a href="/enterprise-database-guide">Langflow database guide for enterprise DBAs</a>.</p>
+</li>
+<li>
+<p><strong>Application logs</strong>: Collect and analyze logs for errors, warnings, and flow execution issues. Centralize logs using tools like ELK Stack or Fluentd. You can also inspect <a href="/logging">Langflow logs</a>.</p>
+</li>
+<li>
+<p><strong>Resource usage</strong>: Track CPU, memory, and disk usage of Langflow instances. Use Prometheus and Grafana for real-time metrics collection and monitoring in Kubernetes.</p>
+<p>To expose your Langflow server&#x27;s Prometheus metrics, set <code>LANGFLOW_PROMETHEUS_ENABLED=True</code> (the default is false).
+The default port for the Prometheus metrics is 9090.
+To change the port, set <code>LANGFLOW_PROMETHEUS_PORT</code>.</p>
+</li>
+<li>
+<p><strong>API performance</strong>: Monitor response times, error rates, and request throughput. Set alerts for high latency or error spikes.</p>
+</li>
+<li>
+<p><strong>Observability tools</strong>: Integrate with <a href="/integrations-langwatch">LangWatch</a> or <a href="/integrations-opik">Opik</a> for detailed flow tracing and metrics. Use these tools to debug flow performance and optimize execution.</p>
+</li>
 </ul>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="security">Security<a href="#security" class="hash-link" aria-label="Direct link to Security" title="Direct link to Security">​</a></h2>
 <p>Running Langflow in production requires robust security measures to protect the application, data, and users.
@@ -136,6 +149,7 @@ Follow industry best practices and use secure Langflow configurations, such as t
 <ul>
 <li><a href="/deployment-kubernetes-prod">Deploy the Langflow production environment on Kubernetes</a></li>
 <li><a href="https://github.com/langflow-ai/langflow-helm-charts" target="_blank" rel="noopener noreferrer">Langflow Helm Charts repository</a></li>
+<li><a href="/environment-variables">Langflow environment variables</a></li>
 </ul></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/deployment-architecture"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Deployment architecture</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/deployment-kubernetes-dev"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Deploy in development</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#resources-and-scaling" class="table-of-contents__link toc-highlight">Resources and scaling</a><ul><li><a href="#estimate-test-and-adjust" class="table-of-contents__link toc-highlight">Estimate, test, and adjust</a></li><li><a href="#use-an-external-postgresql-database" class="table-of-contents__link toc-highlight">Use an external PostgreSQL database</a></li><li><a href="#use-hpa-for-dynamic-scaling" class="table-of-contents__link toc-highlight">Use HPA for dynamic scaling</a></li></ul></li><li><a href="#failure-points" class="table-of-contents__link toc-highlight">Failure points</a></li><li><a href="#monitoring" class="table-of-contents__link toc-highlight">Monitoring</a></li><li><a href="#security" class="table-of-contents__link toc-highlight">Security</a></li><li><a href="#see-also" class="table-of-contents__link toc-highlight">See also</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2025 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="https://langflow.org/preferences">Manage Privacy Choices</a></span>

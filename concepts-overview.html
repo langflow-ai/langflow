@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.79069821.css">
-<script src="/assets/js/runtime~main.b2a37277.js" defer="defer"></script>
-<script src="/assets/js/main.f711f3e7.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.39baa8ce.js" defer="defer"></script>
+<script src="/assets/js/main.90f3e6c7.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -56,29 +56,27 @@ You can connect different resources, including prompts, large language models (L
 <p>When building a <a href="/concepts-flows">flow</a>, you primarily interact with the workspace.
 This is where you add <a href="/concepts-components">components</a>, configure them, and attach them together.</p>
 <p><img decoding="async" loading="lazy" alt="Empty Langflow workspace" src="/assets/images/workspace-1656f40b783681aea98a8ec3e5dc9a85.png" width="4000" height="2188" class="img_ev3q"></p>
-<p>From the workspace, you can also access the <a href="#playground"><strong>Playground</strong></a>, <a href="#share-menu"><strong>Share</strong> menu</a>, and <a href="/concepts-flows#flow-storage-and-logs"><strong>Logs</strong></a>.</p>
+<p>From the workspace, you can also access the <a href="#playground"><strong>Playground</strong></a>, <a href="#share-menu"><strong>Share</strong> menu</a>, and <a href="/logging"><strong>Logs</strong></a>.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="workspace-gestures-and-interactions">Workspace gestures and interactions<a href="#workspace-gestures-and-interactions" class="hash-link" aria-label="Direct link to Workspace gestures and interactions" title="Direct link to Workspace gestures and interactions">​</a></h3>
+<p>Use these shortcuts, gestures, and functionality to navigate the workspace:</p>
 <ul>
 <li>
-<p>To pan horizontally and vertically, click and drag an empty area of the workspace.</p>
+<p><strong>Pan horizontally and vertically</strong>: Click and drag an empty area of the workspace.</p>
 </li>
 <li>
-<p>To rearrange components visually, click and drag the components.</p>
+<p><strong>Rearrange components</strong>: Click and drag the components anywhere on the workspace.</p>
 <p>To change the programmatic relationship between components, you must manipulate the component <em>edges</em> or <em>ports</em>. For more information, see <a href="/concepts-components">Components overview</a>.</p>
+<p>To enable guide lines, click <!-- --> <strong>Help</strong>, and then toggle <strong>Enable smart guides</strong>.</p>
+<p>If you can&#x27;t edit any components, make sure the flow is <a href="/concepts-flows#lock-a-flow">unlocked</a>.</p>
 </li>
 <li>
-<p>To lock the visual position of the components, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock-open" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg> <strong>Lock</strong>.</p>
+<p><strong>Zoom</strong>: Scroll on the mouse or trackpad, or click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-up" aria-hidden="true"><path d="m18 15-6-6-6 6"></path></svg> <strong>Canvas controls</strong> next to the zoom percentage more zoom options: <strong>Zoom In</strong>, <strong>Zoom Out</strong>, <strong>Zoom To 100%</strong>, and <strong>Zoom To Fit</strong>.</p>
 </li>
 <li>
-<p>To zoom, use any of the following options:</p>
-<ul>
-<li>Scroll up or down on the mouse or trackpad.</li>
-<li>Click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zoom-in" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" x2="16.65" y1="21" y2="16.65"></line><line x1="11" x2="11" y1="8" y2="14"></line><line x1="8" x2="14" y1="11" y2="11"></line></svg> <strong>Zoom In</strong> or <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zoom-out" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" x2="16.65" y1="21" y2="16.65"></line><line x1="8" x2="14" y1="11" y2="11"></line></svg> <strong>Zoom Out</strong>.</li>
-<li>Click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"></path><path d="M21 8V5a2 2 0 0 0-2-2h-3"></path><path d="M3 16v3a2 2 0 0 0 2 2h3"></path><path d="M16 21h3a2 2 0 0 0 2-2v-3"></path></svg> <strong>Fit To Zoom</strong> to scale the zoom level to show the entire flow.</li>
-</ul>
+<p><strong>Add notes and comments</strong>: Click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sticky-note" aria-hidden="true"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"></path><path d="M15 3v4a2 2 0 0 0 2 2h4"></path></svg> <strong>Add Note</strong>.</p>
 </li>
 <li>
-<p>To add a text box for non-functional notes and comments, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sticky-note" aria-hidden="true"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"></path><path d="M15 3v4a2 2 0 0 0 2 2h4"></path></svg> <strong>Add Note</strong>.</p>
+<p><strong>Keyboard shortcuts</strong>: To view available shortcuts, click <!-- --> <strong>Help</strong>, and then select <strong>Shortcuts</strong>.</p>
 </li>
 </ul>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="playground">Playground<a href="#playground" class="hash-link" aria-label="Direct link to Playground" title="Direct link to Playground">​</a></h2>

@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.79069821.css">
-<script src="/assets/js/runtime~main.b2a37277.js" defer="defer"></script>
-<script src="/assets/js/main.f711f3e7.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.39baa8ce.js" defer="defer"></script>
+<script src="/assets/js/main.90f3e6c7.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -59,10 +59,8 @@ For example <strong>Data</strong> ports, represented by <svg xmlns="http://www.w
 <p>When building flows, connect output ports to input ports of the same type (color) to transfer that type of data between two components.</p>
 <div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>tip</div><div class="admonitionContent_BuS1"><ul>
 <li>
-<p>In the <a href="/concepts-overview#workspace">workspace</a>, hover over a port to see connection details for that port.</p>
-</li>
-<li>
-<p>Click a port to filter the <strong>Components</strong> menu by compatible components.</p>
+<p>In the <a href="/concepts-overview#workspace">workspace</a>, hover over a port to see connection details for that port.
+Click a port to <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg> <strong>Search</strong> for compatible components.</p>
 </li>
 <li>
 <p>If two components have incompatible data types, you can use a processing component like the <a href="/components-processing#type-convert"><strong>Type Convert</strong> component</a> to convert the data between components.</p>
@@ -121,14 +119,14 @@ Keys are columns, and each object in the array is a row.</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>| name | age | email |</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>|------|-----|-------|</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>| Charlie Lastname | 28 | charlie.lastname@example.com |</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>| Alexandra Example | 34 | alexandra@example.com |</span></div></div><br></code></div></div>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="embeddings">Embeddings<a href="#embeddings" class="hash-link" aria-label="Direct link to Embeddings" title="Direct link to Embeddings">​</a></h2>
 <p><strong>Embeddings</strong> ports <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle" aria-label="Emerald embeddings port" style="color:#10b981;fill:#10b981"><circle cx="12" cy="12" r="10"></circle></svg> emit or ingest vector embeddings to support functions like similarity search.</p>
-<p>The <code>Embeddings</code> data type is used specifically by components that either produce or consume vector embeddings, such as the <a href="/components-embedding-models"><strong>Embedding Model</strong> components</a> and <a href="/components-vector-stores"><strong>Vector Store</strong> components</a>.</p>
-<p>For example, <strong>Embedding Model</strong> components output <code>Embeddings</code> data that you can connect to an <strong>Embedding</strong> input port on a <strong>Vector Store</strong> component.</p>
+<p>The <code>Embeddings</code> data type is used specifically by components that either produce or consume vector embeddings, such as the <a href="/components-embedding-models">embedding model components</a> and vector store components.</p>
+<p>For example, embedding model components output <code>Embeddings</code> data that you can connect to an <strong>Embedding</strong> input port on a vector store component.</p>
 <p>For information about the underlying Python classes that produce <code>Embeddings</code>, see the <a href="https://python.langchain.com/docs/integrations/text_embedding/" target="_blank" rel="noopener noreferrer">LangChain Embedding models documentation</a>.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="languagemodel">LanguageModel<a href="#languagemodel" class="hash-link" aria-label="Direct link to LanguageModel" title="Direct link to LanguageModel">​</a></h2>
-<p>The <code>LanguageModel</code> type is a specific data type that can be produced by <strong>Language Model</strong> components and accepted by components that use an LLM.</p>
-<p>When you change a <strong>Language Model</strong> component&#x27;s output type from <strong>Model Response</strong> to <strong>Language Model</strong>, the component&#x27;s output port changes from a <strong>Message</strong> port to a <strong>Language Model</strong> port <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle" aria-label="Fuchsia language model port" style="color:#c026d3;fill:#c026d3"><circle cx="12" cy="12" r="10"></circle></svg>.</p>
-<p>Then, you connect the outgoing <strong>Language Model</strong> port to a <strong>Language Model</strong> input port on a compatible component, such as a <strong>Smart Function</strong> component.</p>
-<p>For more information about using these components in flows and toggling <code>LanguageModel</code> output, see <a href="/components-models#language-model-output-types"><strong>Language Model</strong> components</a>.</p>
+<p>The <code>LanguageModel</code> type is a specific data type that can be produced by language model components and accepted by components that use an LLM.</p>
+<p>When you change a language model component&#x27;s output type from <strong>Model Response</strong> to <strong>Language Model</strong>, the component&#x27;s output port changes from a <strong>Message</strong> port to a <strong>Language Model</strong> port <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle" aria-label="Fuchsia language model port" style="color:#c026d3;fill:#c026d3"><circle cx="12" cy="12" r="10"></circle></svg>.
+Then, you connect the outgoing <strong>Language Model</strong> port to a <strong>Language Model</strong> input port on a compatible component, such as a <strong>Smart Function</strong> component.</p>
+<p>For more information about using these components in flows and toggling <code>LanguageModel</code> output, see <a href="/components-models#language-model-output-types">Language model components</a>.</p>
 <details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>LanguageModel is an instance of LangChain ChatModel</summary><div><div class="collapsibleContent_i85q"><p>Because Langflow is built on LangChain, <code>LanguageModel</code> is actually an instance of a <a href="https://python.langchain.com/docs/concepts/chat_models/" target="_blank" rel="noopener noreferrer">LangChain chat model</a> that uses the configuration parameters set in the originating component.</p><p>Often, components produce an instance of an <a href="https://python.langchain.com/docs/integrations/chat/" target="_blank" rel="noopener noreferrer">integrated chat model</a> that is designed to support the specific model provider, such as <a href="https://python.langchain.com/docs/integrations/chat/openai/" target="_blank" rel="noopener noreferrer"><code>ChatOpenAI</code></a> or <a href="https://python.langchain.com/docs/integrations/chat/anthropic/" target="_blank" rel="noopener noreferrer"><code>ChatAnthropic</code></a>.</p><p>You can inspect the <a href="/concepts-components#component-code">component code</a> to see the specific <code>Chat</code> instance it produces.</p></div></div></details>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="memory">Memory<a href="#memory" class="hash-link" aria-label="Direct link to Memory" title="Direct link to Memory">​</a></h2>
 <p><strong>Memory</strong> ports <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle" aria-label="Orange memory port" style="color:#f97316;fill:#f97316"><circle cx="12" cy="12" r="10"></circle></svg> are used to integrate a <strong>Message History</strong> component with external chat memory storage.</p>
@@ -168,7 +166,7 @@ To see all <code>Message</code> attributes, inspect the message logs in the <str
 <p>In flows with <a href="/components-io#text-io"><strong>Text Input and Output</strong> components</a>, <code>Message</code> data is used to pass simple text strings without the chat-related metadata.
 These components handle <code>Message</code> data as independent text strings, not as part of an ongoing conversation.
 For this reason, a flow with only <strong>Text Input and Output</strong> components isn&#x27;t compatible with the <strong>Playground</strong>.
-For more information, see <a href="/components-io"><strong>Input and Output</strong> components</a>.</p>
+For more information, see <a href="/components-io">Input and output components</a>.</p>
 <p>When using the Langflow API, the response includes the <code>Message</code> object along with other response data from the flow run.
 Langflow API responses can be extremely verbose, so your applications must include code to extract relevant data from the response to return to the user.
 For an example, see the <a href="/get-started-quickstart">Langflow quickstart</a>.</p>
@@ -203,7 +201,7 @@ To see the <code>Message</code> data converted to <code>Data</code> or <code>Dat
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="see-also">See also<a href="#see-also" class="hash-link" aria-label="Direct link to See also" title="Direct link to See also">​</a></h2>
 <ul>
-<li><a href="/components-processing"><strong>Processing</strong> components</a></li>
+<li><a href="/components-processing">Processing components</a></li>
 <li><a href="/components-custom-components">Custom components</a></li>
 <li><a href="https://docs.pydantic.dev/latest/api/base_model/" target="_blank" rel="noopener noreferrer">Pydantic Models</a></li>
 <li><a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html" target="_blank" rel="noopener noreferrer">pandas.DataFrame</a></li>
