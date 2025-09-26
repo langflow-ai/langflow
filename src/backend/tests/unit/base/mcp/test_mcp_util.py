@@ -6,6 +6,7 @@ This test suite validates the MCP utility functions including:
 - Utility functions for name sanitization and schema conversion
 """
 
+import re
 import shutil
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -280,7 +281,7 @@ class TestMCPUtilityFunctions:
         if shutil.which("node"):
             assert util._validate_node_installation("npx something") == "npx something"
         else:
-            with pytest.raises(ValueError, match="Node.js is not installed"):
+            with pytest.raises(ValueError, match=re.escape("Node.js is not installed")):
                 util._validate_node_installation("npx something")
         assert util._validate_node_installation("echo test") == "echo test"
 

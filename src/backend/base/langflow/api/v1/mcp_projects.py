@@ -915,7 +915,7 @@ async def get_config_path(client: str) -> Path:
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.PIPE,
                     )
-                    stdout, stderr = await proc.communicate()
+                    stdout, _stderr = await proc.communicate()
 
                     if proc.returncode == 0 and stdout.strip():
                         windows_username = stdout.decode().strip()
