@@ -88,7 +88,7 @@ class OlivyaComponent(Component):
             # Send the POST request with a timeout
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    "https://phone.olivya.io/create_zap_call",
+                    "https://console.olivya.io/create_zap_call",
                     headers=headers,
                     json=payload,
                     timeout=10.0,
