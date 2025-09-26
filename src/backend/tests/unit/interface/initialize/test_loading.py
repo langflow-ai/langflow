@@ -184,9 +184,8 @@ async def test_update_params_skips_empty_fields():
     # get_variable should only be called once for valid_key
     # Use ANY to match any session object instead of the specific mock
     from unittest.mock import ANY
-    custom_component.get_variable.assert_called_once_with(
-        name="VALID_KEY", field="valid_key", session=ANY
-    )
+
+    custom_component.get_variable.assert_called_once_with(name="VALID_KEY", field="valid_key", session=ANY)
 
 
 @pytest.mark.asyncio

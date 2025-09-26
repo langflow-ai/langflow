@@ -6,7 +6,6 @@ which is responsible for processing and managing parameters in vertices.
 
 from unittest.mock import Mock
 
-import pandas as pd
 import pytest
 
 from lfx.graph.edge.base import Edge
