@@ -17,7 +17,7 @@
     "jsx": "react-jsx",
     "noImplicitAny": false,
     "paths": {
-      "@/*": ["*"],
+      "@/*": ["./*"],
       "@queries/*": ["controllers/API/queries/*"]
     },
     "baseUrl": "src"
