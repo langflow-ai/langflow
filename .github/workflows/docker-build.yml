@@ -183,7 +183,14 @@ jobs:
             fi
           fi
   build:
-    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+    strategy:
+      matrix:
+        include:
+          - platform: linux/arm64
+            runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+          - platform: linux/amd64
+            runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runs-on }}
     needs: [get-version, setup]
     steps:
       - name: Check out the code at a specific ref
@@ -202,6 +209,9 @@ jobs:
         run: |
           if [[ "${{ inputs.release_type }}" == "base" || "${{ inputs.release_type }}" == "nightly-base" ]]; then
             uv sync --directory src/backend/base --no-dev --no-sources
+          elif [[ "${{ inputs.main_version }}" != "" ]]; then
+            # Skip install when version is provided explicitly
+            echo "Skipping install - version provided explicitly: ${{ inputs.main_version }}"
           else
             uv sync --no-dev --no-sources
           fi
@@ -244,7 +254,7 @@ jobs:
             push: true
             file: ${{ needs.setup.outputs.file }}
             tags: ${{ needs.setup.outputs.docker_tags }}
-            platforms: linux/amd64,linux/arm64
+            platforms: ${{ matrix.platform }}
             cache-from: type=gha
             cache-to: type=gha,mode=max
 
@@ -264,36 +274,67 @@ jobs:
             push: true
             file: ${{ needs.setup.outputs.file }}
             tags: ${{ needs.setup.outputs.ghcr_tags }}
-            platforms: linux/amd64,linux/arm64
+            platforms: ${{ matrix.platform }}
             cache-from: type=gha
             cache-to: type=gha,mode=max
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
-    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     permissions:
       packages: write
     needs: [build, get-version]
     strategy:
       matrix:
-        component: [docker-backend, docker-frontend, ghcr-backend, ghcr-frontend]
         include:
           - component: docker-backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
             tags: langflowai/langflow-backend:${{ needs.get-version.outputs.version }},langflowai/langflow-backend:latest
             langflow_image: langflowai/langflow:${{ needs.get-version.outputs.version }}
+            platform: linux/arm64
+            runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+          - component: docker-backend
+            dockerfile: ./docker/build_and_push_backend.Dockerfile
+            tags: langflowai/langflow-backend:${{ needs.get-version.outputs.version }},langflowai/langflow-backend:latest
+            langflow_image: langflowai/langflow:${{ needs.get-version.outputs.version }}
+            platform: linux/amd64
+            runs-on: ubuntu-latest
           - component: docker-frontend
             dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
             tags: langflowai/langflow-frontend:${{ needs.get-version.outputs.version }},langflowai/langflow-frontend:latest
             langflow_image: langflowai/langflow:${{ needs.get-version.outputs.version }}
+            platform: linux/arm64
+            runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+          - component: docker-frontend
+            dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
+            tags: langflowai/langflow-frontend:${{ needs.get-version.outputs.version }},langflowai/langflow-frontend:latest
+            langflow_image: langflowai/langflow:${{ needs.get-version.outputs.version }}
+            platform: linux/amd64
+            runs-on: ubuntu-latest
           - component: ghcr-backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
             tags: ghcr.io/langflow-ai/langflow-backend:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-backend:latest
             langflow_image: ghcr.io/langflow-ai/langflow:${{ needs.get-version.outputs.version }}
+            platform: linux/arm64
+            runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+          - component: ghcr-backend
+            dockerfile: ./docker/build_and_push_backend.Dockerfile
+            tags: ghcr.io/langflow-ai/langflow-backend:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-backend:latest
+            langflow_image: ghcr.io/langflow-ai/langflow:${{ needs.get-version.outputs.version }}
+            platform: linux/amd64
+            runs-on: ubuntu-latest
           - component: ghcr-frontend
             dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
             tags: ghcr.io/langflow-ai/langflow-frontend:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-frontend:latest
             langflow_image: ghcr.io/langflow-ai/langflow:${{ needs.get-version.outputs.version }}
+            platform: linux/arm64
+            runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
+          - component: ghcr-frontend
+            dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
+            tags: ghcr.io/langflow-ai/langflow-frontend:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-frontend:latest
+            langflow_image: ghcr.io/langflow-ai/langflow:${{ needs.get-version.outputs.version }}
+            platform: linux/amd64
+            runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runs-on }}
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v5
@@ -325,14 +366,14 @@ jobs:
 
 
       - name: Login to Docker Hub
-        if: ${{ matrix.component == 'docker-backend' }} || ${{ matrix.component == 'docker-frontend' }}
+        if: ${{ contains(matrix.component, 'docker-') }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to Github Container Registry
-        if: ${{ matrix.component == 'ghcr-backend' }} || ${{ matrix.component == 'ghcr-frontend' }}
+        if: ${{ contains(matrix.component, 'ghcr-') }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -353,6 +394,7 @@ jobs:
               LANGFLOW_IMAGE=${{ matrix.langflow_image }}
             file: ${{ matrix.dockerfile }}
             tags: ${{ matrix.tags }}
+            platforms: ${{ matrix.platform }}
             # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
             provenance: false
 
