@@ -14,19 +14,20 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         return OpenAIModelComponent
 
     @pytest.fixture
-    def default_kwargs(self):
-        return {
-            "max_tokens": 1000,
-            "model_kwargs": {},
-            "json_mode": False,
-            "model_name": "gpt-4.1-nano",
-            "openai_api_base": "https://api.openai.com/v1",
-            "api_key": "test-api-key",
-            "temperature": 0.1,
-            "seed": 1,
-            "max_retries": 5,
-            "timeout": 700,
-        }
+    def default_kwargs(self, openai_default_kwargs):
+        # Customize shared kwargs for this specific test
+        kwargs = openai_default_kwargs.copy()
+        kwargs.update(
+            {
+                "model_kwargs": {},
+                "json_mode": False,
+                "model_name": "gpt-4.1-nano",
+                "seed": 1,
+                "max_retries": 5,
+                "timeout": 700,
+            }
+        )
+        return kwargs
 
     @pytest.fixture
     def file_names_mapping(self):
