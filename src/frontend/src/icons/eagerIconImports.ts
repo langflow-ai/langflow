@@ -1,6 +1,7 @@
 import { AgentQLIcon } from "@/icons/AgentQL";
 import { AIMLIcon } from "@/icons/AIML";
 import { AirbyteIcon } from "@/icons/Airbyte";
+import { AliyunIcon } from "@/icons/Aliyun";
 import { AnthropicIcon } from "@/icons/Anthropic";
 import { ApifyIcon, ApifyWhiteIcon } from "@/icons/Apify";
 import { ArizeIcon } from "@/icons/Arize";
@@ -120,6 +121,7 @@ export const eagerIconsMapping = {
   AIML: AIMLIcon,
   AgentQL: AgentQLIcon,
   Airbyte: AirbyteIcon,
+  Aliyun: AliyunIcon,
   Anthropic: AnthropicIcon,
   Apify: ApifyIcon,
   ApifyWhite: ApifyWhiteIcon,
