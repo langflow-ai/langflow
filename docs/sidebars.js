@@ -299,6 +299,7 @@ module.exports = {
             "Integrations/Cleanlab/integrations-cleanlab",
             "Components/bundles-clickhouse",
             "Components/bundles-cloudflare",
+            "Components/bundles-cometapi",
             "Components/bundles-cohere",
             "Integrations/Composio/integrations-composio",
             "Components/bundles-couchbase",
