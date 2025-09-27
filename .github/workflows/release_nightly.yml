@@ -314,7 +314,7 @@ jobs:
       - name: Check out the code
         uses: actions/checkout@v5
       - name: Download LFX artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: dist-nightly-lfx
           path: src/lfx/dist
@@ -339,7 +339,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
       - name: Download base artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: dist-nightly-base
           path: src/backend/base/dist
@@ -364,7 +364,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
       - name: Download main artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: dist-nightly-main
           path: dist
