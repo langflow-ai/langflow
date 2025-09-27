@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
+    from lfx.components.input_output.api_response import APIResponseComponent
     from lfx.components.input_output.chat import ChatInput
     from lfx.components.input_output.chat_output import ChatOutput
-    from lfx.components.input_output.api_response import APIResponseComponent
     from lfx.components.input_output.text import TextInputComponent
 
 _dynamic_imports = {
@@ -17,7 +17,7 @@ _dynamic_imports = {
     "TextInputComponent": "text",
 }
 
-__all__ = ["ChatInput", "ChatOutput", "APIResponseComponent", "TextInputComponent"]
+__all__ = ["APIResponseComponent", "ChatInput", "ChatOutput", "TextInputComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:
