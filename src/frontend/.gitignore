@@ -33,3 +33,12 @@ yarn-error.log*
 /blob-report/
 /playwright/.cache/
 .qodo
+
+
+
+.nx/cache
+.nx/workspace-data
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md
+vite.config.*.timestamp*
+vitest.config.*.timestamp*
