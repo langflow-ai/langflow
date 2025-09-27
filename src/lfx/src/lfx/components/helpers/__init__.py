@@ -9,7 +9,6 @@ if TYPE_CHECKING:
     from lfx.components.helpers.create_list import CreateListComponent
     from lfx.components.helpers.current_date import CurrentDateComponent
     from lfx.components.helpers.id_generator import IDGeneratorComponent
-    from lfx.components.helpers.memory import MemoryComponent
     from lfx.components.helpers.output_parser import OutputParserComponent
     from lfx.components.helpers.store_message import MessageStoreComponent
 
@@ -18,7 +17,6 @@ _dynamic_imports = {
     "CreateListComponent": "create_list",
     "CurrentDateComponent": "current_date",
     "IDGeneratorComponent": "id_generator",
-    "MemoryComponent": "memory",
     "OutputParserComponent": "output_parser",
     "MessageStoreComponent": "store_message",
 }
@@ -28,7 +26,6 @@ __all__ = [
     "CreateListComponent",
     "CurrentDateComponent",
     "IDGeneratorComponent",
-    "MemoryComponent",
     "MessageStoreComponent",
     "OutputParserComponent",
 ]
