@@ -137,8 +137,15 @@ class LCAgentComponent(Component):
                 verbose=verbose,
                 max_iterations=max_iterations,
             )
+        # Convert input_value to proper format for agent
+        if isinstance(self.input_value, Message):
+            lc_message = self.input_value.to_lc_message()
+            input_text = lc_message.content if hasattr(lc_message, 'content') else str(lc_message)
+        else:
+            input_text = self.input_value
+            
         input_dict: dict[str, str | list[BaseMessage]] = {
-            "input": self.input_value.to_lc_message() if isinstance(self.input_value, Message) else self.input_value
+            "input": input_text
         }
         if hasattr(self, "system_prompt"):
             input_dict["system_prompt"] = self.system_prompt
