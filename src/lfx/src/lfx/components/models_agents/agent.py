@@ -15,7 +15,7 @@ from lfx.base.models.model_input_constants import (
 )
 from lfx.base.models.model_utils import get_model_name
 from lfx.components.helpers.current_date import CurrentDateComponent
-from lfx.components.helpers.memory import MemoryComponent
+from lfx.components.models_agents.memory import MemoryComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.custom.custom_component.component import get_component_toolkit
 from lfx.custom.utils import update_component_build_config
