@@ -3,6 +3,10 @@ name: CI
 on:
   workflow_call:
     inputs:
+      branch:
+        description: "(Optional) Branch to checkout"
+        required: false
+        type: string
       python-versions:
         description: "Python Versions"
         required: false
