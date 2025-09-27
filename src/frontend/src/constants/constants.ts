@@ -684,7 +684,8 @@ export const INPUT_TYPES = new Set([
 ]);
 export const OUTPUT_TYPES = new Set([
   "ChatOutput",
-  // "TextOutput",
+  "APIResponse",
+  "TextOutput",
   // "PDFOutput",
   // "ImageOutput",
   // "CSVOutput",

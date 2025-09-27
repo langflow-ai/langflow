@@ -52,6 +52,7 @@ class InterfaceComponentTypes(str, Enum, metaclass=ContainsEnumMeta):
     ChatOutput = "ChatOutput"
     TextInput = "TextInput"
     TextOutput = "TextOutput"
+    APIResponse = "APIResponse"
     DataOutput = "DataOutput"
     WebhookInput = "Webhook"
 
@@ -67,6 +68,7 @@ OUTPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatOutput,
     InterfaceComponentTypes.DataOutput,
     InterfaceComponentTypes.TextOutput,
+    InterfaceComponentTypes.APIResponse,
 ]
 
 
