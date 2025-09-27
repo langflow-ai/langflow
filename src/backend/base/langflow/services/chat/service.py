@@ -3,6 +3,8 @@ from collections import defaultdict
 from threading import RLock
 from typing import Any
 
+from lfx.serialization.normalizer import normalize_for_cache
+
 from langflow.services.base import Service
 from langflow.services.cache.base import AsyncBaseCacheService, CacheService
 from langflow.services.deps import get_cache_service
@@ -29,9 +31,11 @@ class ChatService(Service):
         Returns:
             bool: True if the cache was set successfully, False otherwise.
         """
+        normalized = normalize_for_cache(data)
         result_dict = {
-            "result": data,
-            "type": type(data),
+            "result": normalized,
+            "type": "normalized",
+            "__envelope_version__": 1,
         }
         if isinstance(self.cache_service, AsyncBaseCacheService):
             await self.cache_service.upsert(str(key), result_dict, lock=lock or self.async_cache_locks[key])

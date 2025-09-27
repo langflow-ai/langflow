@@ -1,11 +1,40 @@
 import uuid
 
 from fastapi import APIRouter, HTTPException, status
-from lfx.log.logger import logger
+
+# Try to import from lfx, fallback to async-compatible wrapper if unavailable
+try:
+    from lfx.log.logger import logger
+except ImportError:
+    import logging
+    from typing import Any
+
+    class _AsyncLogger:
+        """Async-compatible wrapper over standard logging.Logger.
+
+        Provides awaitable methods used in this module (e.g., aexception, ainfo)
+        to avoid attribute errors when lfx logger is not installed.
+        """
+
+        def __init__(self, base: logging.Logger) -> None:
+            self._base = base
+
+        # Pass-through for unknown attributes (sync logging API)
+        def __getattr__(self, name: str) -> Any:  # pragma: no cover - thin shim
+            return getattr(self._base, name)
+
+        async def aexception(self, msg: str, *args: Any, **kwargs: Any) -> None:
+            self._base.exception(msg, *args, **kwargs)
+
+        async def ainfo(self, msg: str, *args: Any, **kwargs: Any) -> None:
+            self._base.info(msg, *args, **kwargs)
+
+    logger = _AsyncLogger(logging.getLogger(__name__))
 from pydantic import BaseModel
 from sqlmodel import select
 
 from langflow.api.utils import DbSession
+from langflow.services.cache.utils import is_rich_pickle_enabled, validate_rich_pickle_support
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_chat_service
 
@@ -16,6 +45,7 @@ class HealthResponse(BaseModel):
     status: str = "nok"
     chat: str = "error check the server logs"
     db: str = "error check the server logs"
+    rich_pickle: str = "not_checked"
     """
     Do not send exceptions and detailed error messages to the client because it might contain credentials and other
     sensitive server information.
@@ -58,6 +88,19 @@ async def health_check(
         response.chat = "ok"
     except Exception:  # noqa: BLE001
         await logger.aexception("Error checking chat service")
+
+    # Check Rich pickle support status
+    try:
+        if is_rich_pickle_enabled():
+            if validate_rich_pickle_support():
+                response.rich_pickle = "ok"
+            else:
+                response.rich_pickle = "enabled_but_validation_failed"
+        else:
+            response.rich_pickle = "not_enabled"
+    except Exception:  # noqa: BLE001
+        await logger.aexception("Error checking Rich pickle support")
+        response.rich_pickle = "error check the server logs"
 
     if response.has_error():
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=response.model_dump())
