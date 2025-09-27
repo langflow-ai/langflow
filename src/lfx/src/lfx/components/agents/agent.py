@@ -164,6 +164,14 @@ class AgentComponent(ToolCallingAgentComponent):
             info="If true, will add a tool to the agent that returns the current date.",
             value=True,
         ),
+        DropdownInput(
+            name="memory_order",
+            display_name="Memory Order",
+            advanced=True,
+            options=["Ascending", "Descending"],
+            value="Ascending",
+            info="Order of the chat history messages (Ascending: oldest first, Descending: newest first).",
+        ),
     ]
     outputs = [
         Output(name="response", display_name="Response", method="message_response"),
@@ -407,7 +415,7 @@ class AgentComponent(ToolCallingAgentComponent):
             await MemoryComponent(**self.get_base_args())
             .set(
                 session_id=self.graph.session_id,
-                order="Ascending",
+                order=self.memory_order,
                 n_messages=self.n_messages,
             )
             .retrieve_messages()
@@ -554,6 +562,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 "tools",
                 "input_value",
                 "add_current_date_tool",
+                "memory_order",
                 "system_prompt",
                 "agent_description",
                 "max_iterations",
