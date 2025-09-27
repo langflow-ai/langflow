@@ -281,7 +281,7 @@ def create_class(code, class_name):
         error_message = "\n".join([message[1] if len(message) > 1 else message[0] for message in messages])
         raise ValueError(error_message) from e
     except Exception as e:
-        msg = f"Error creating class: {e!s}"
+        msg = f"Error creating class. {type(e).__name__}({e!s})."
         raise ValueError(msg) from e
 
 
