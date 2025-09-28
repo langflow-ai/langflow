@@ -156,10 +156,7 @@ class S3StorageService(StorageService):
 
             # Add tags if configured
             if self.tags:
-                # Use proper URL encoding for tag values
-                from urllib.parse import quote
-
-                tag_pairs = [f"{quote(str(k))}={quote(str(v))}" for k, v in self.tags.items()]
+                tag_pairs = [f"{str(k)}={str(v)}" for k, v in self.tags.items()]
                 put_args["Tagging"] = "&".join(tag_pairs)
 
             self.s3_client.put_object(**put_args)
