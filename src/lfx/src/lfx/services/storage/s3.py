@@ -10,6 +10,7 @@ from .service import StorageService
 # AWS S3 key length limit is 1024 bytes, so we limit to 1000 bytes to be a bit conservative
 MAX_KEY_LENGTH = 1000
 
+
 class S3StorageService(StorageService):
     """A service class for handling operations with AWS S3 storage."""
 
@@ -86,7 +87,9 @@ class S3StorageService(StorageService):
 
         # Ensure it's not empty after sanitization
         if not sanitized:
-            logger.warning(f"'{component_name}' is empty after sanitization: {component}. Likely includes invalid characters or patterns")
+            logger.warning(
+                f"'{component_name}' is empty after sanitization: {component}. Likely includes invalid characters or patterns"
+            )
             msg = f"Component '{component_name}' contains invalid characters or patterns. Try removing these patterns: [.., /, \\, %2f, %5c, %2e%2e]"
             raise ValueError(msg)
 

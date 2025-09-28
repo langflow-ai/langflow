@@ -5,7 +5,6 @@ from uuid import uuid4
 
 import pytest
 from botocore.exceptions import ClientError, NoCredentialsError
-
 from lfx.services.storage.s3 import S3StorageService
 
 
@@ -120,12 +119,14 @@ class TestS3StorageService:
 
     def test_init_failure_raises_exception(self, mock_settings_service):
         """Test S3StorageService initialization failure raises exception."""
-        with patch(
-            "boto3.client",
-            side_effect=ClientError({"Error": {"Code": "AccessDenied", "Message": "Access Denied"}}, "AssumeRole"),
+        with (
+            patch(
+                "boto3.client",
+                side_effect=ClientError({"Error": {"Code": "AccessDenied", "Message": "Access Denied"}}, "AssumeRole"),
+            ),
+            pytest.raises(ClientError),
         ):
-            with pytest.raises(ClientError):
-                S3StorageService(settings_service=mock_settings_service)
+            S3StorageService(settings_service=mock_settings_service)
 
     # Test save_file method
     @pytest.mark.asyncio
