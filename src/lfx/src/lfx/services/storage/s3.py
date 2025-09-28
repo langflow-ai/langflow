@@ -17,13 +17,18 @@ MAX_TAGS_PER_OBJECT = 10
 class S3StorageService(StorageService):
     """A service class for handling operations with AWS S3 storage."""
 
-    def __init__(self, settings_service) -> None:
+    name = "storage_service"
+
+    def __init__(self, settings_service, session_service=None) -> None:
         """Initialize the S3 storage service.
 
         Args:
             settings_service: Settings service for configuration
+            session_service: Optional session service (for compatibility)
         """
         super().__init__()
+        self.settings_service = settings_service
+        self.session_service = session_service
 
         # Get object storage configuration from settings service
         self.bucket_name = getattr(settings_service.settings, "object_storage_bucket_name", None)
@@ -51,6 +56,7 @@ class S3StorageService(StorageService):
             raise
 
         self.set_ready()
+        logger.debug(f"S3StorageService initialized - bucket: {self.bucket_name}, prefix: {self.object_prefix}, tags: {self.tags}")
 
     def _validate_path_component(self, component: str, component_name: str) -> str:
         """Validate and sanitize path components to prevent path traversal attacks.
@@ -190,12 +196,14 @@ class S3StorageService(StorageService):
 
             self.s3_client.put_object(**put_args)
             await logger.ainfo(f"File {file_name} saved successfully in flow {flow_id}.")
-        except NoCredentialsError:
-            await logger.aexception("Credentials not available for AWS S3.")
-            raise
-        except ClientError:
-            await logger.aexception(f"Error saving file {file_name} in flow {flow_id}")
-            raise
+        except NoCredentialsError as e:
+            await logger.aerror("Credentials not available for AWS S3: %s", e)
+            raise RuntimeError("AWS S3 credentials not configured. Please check your AWS credentials.") from e
+        except ClientError as e:
+            await logger.aerror(f"Error saving file {file_name} in flow {flow_id}")
+            error_code = e.response.get("Error", {}).get("Code", "Unknown")
+            error_message = e.response.get("Error", {}).get("Message", str(e))
+            raise RuntimeError(f"S3 error ({error_code}): {error_message}") from e
 
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """Retrieve a file from the S3 bucket.
@@ -219,9 +227,11 @@ class S3StorageService(StorageService):
             response = self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
             await logger.ainfo(f"File {file_name} retrieved successfully from flow {flow_id}.")
             return response["Body"].read()
-        except ClientError:
+        except ClientError as e:
             await logger.aexception(f"Error retrieving file {file_name} from flow {flow_id}")
-            raise
+            error_code = e.response.get("Error", {}).get("Code", "Unknown")
+            error_message = e.response.get("Error", {}).get("Message", str(e))
+            raise RuntimeError(f"S3 error ({error_code}): {error_message}") from e
 
     async def list_files(self, flow_id: str) -> list[str]:
         """List all files in a specified flow of the S3 bucket.
@@ -301,3 +311,8 @@ class S3StorageService(StorageService):
             raise
         else:
             return file_size
+
+    async def teardown(self) -> None:
+        """Perform any cleanup operations when the service is being torn down."""
+        # No specific teardown actions required for S3 client
+        pass

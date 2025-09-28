@@ -23,7 +23,7 @@ class StorageServiceFactory(ServiceFactory):
         if storage_type.lower() == "s3":
             from lfx.services.storage.s3 import S3StorageService
 
-            return S3StorageService(settings_service=settings_service)
+            return S3StorageService(settings_service=settings_service, session_service=session_service)
         logger.warning(f"Storage type {storage_type} not supported. Using local storage.")
         from .local import LocalStorageService
 

@@ -13,6 +13,7 @@ class LocalStorageService(StorageService):
         """Initialize the local storage service."""
         super().__init__(data_dir)
         self.set_ready()
+        logger.debug(f"LocalStorageService initialized - data_dir: {self.data_dir}")
 
     def build_full_path(self, flow_id: str, file_name: str) -> str:
         """Build the full path of a file in the local storage."""
@@ -34,6 +35,7 @@ class LocalStorageService(StorageService):
         folder_path = self.data_dir / flow_id
         folder_path.mkdir(parents=True, exist_ok=True)
         file_path = folder_path / file_name
+        logger.debug(f"LocalStorageService.save_file called - flow_id: {flow_id}, file_name: {file_name}, path: {file_path}")
 
         try:
             with file_path.open("wb") as f:
@@ -58,6 +60,7 @@ class LocalStorageService(StorageService):
             FileNotFoundError: If the file does not exist.
         """
         file_path = self.data_dir / flow_id / file_name
+        logger.debug(f"LocalStorageService.get_file called - flow_id: {flow_id}, file_name: {file_name}, path: {file_path}")
         if not file_path.exists():
             logger.warning(f"File {file_name} not found in flow {flow_id}.")
             msg = f"File {file_name} not found in flow {flow_id}"
