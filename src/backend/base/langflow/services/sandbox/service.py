@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from langflow.sandbox import SandboxManager
     from langflow.services.settings.service import SettingsService
 
-from loguru import logger
+from lfx.log.logger import logger
 
 
 def is_sandbox_enabled() -> bool:

@@ -10,7 +10,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any
 
-from loguru import logger
+from lfx.log.logger import logger
 from sqlmodel import Session
 
 from .policies import SecurityPolicy

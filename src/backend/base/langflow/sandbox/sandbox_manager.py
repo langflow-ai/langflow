@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from loguru import logger
+from lfx.log.logger import logger
 from sqlmodel import Session
 
 from .policies import SecurityPolicy

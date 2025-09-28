@@ -11,7 +11,7 @@ import os
 import sys
 import traceback
 
-from loguru import logger
+from lfx.log.logger import logger
 
 
 def setup_environment():
