@@ -156,7 +156,7 @@ class S3StorageService(StorageService):
 
             # Add tags if configured
             if self.tags:
-                tag_pairs = [f"{str(k)}={str(v)}" for k, v in self.tags.items()]
+                tag_pairs = [f"{k!s}={v!s}" for k, v in self.tags.items()]
                 put_args["Tagging"] = "&".join(tag_pairs)
 
             self.s3_client.put_object(**put_args)
