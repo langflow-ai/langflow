@@ -7,6 +7,8 @@ from lfx.log.logger import logger
 
 from .service import StorageService
 
+# AWS S3 key length limit is 1024 bytes, so we limit to 1000 bytes to be a bit conservative
+MAX_KEY_LENGTH = 1000
 
 class S3StorageService(StorageService):
     """A service class for handling operations with AWS S3 storage."""
@@ -37,6 +39,7 @@ class S3StorageService(StorageService):
             raise ValueError(msg)
 
         try:
+            # Will use the default us-east-1 region if not specified in the ~/.aws/config file
             self.s3_client = boto3.client("s3")
             logger.debug("S3 client initialized for object storage")
         except Exception:
@@ -83,12 +86,12 @@ class S3StorageService(StorageService):
 
         # Ensure it's not empty after sanitization
         if not sanitized:
-            msg = f"{component_name} is empty after sanitization: {component}"
+            logger.warning(f"'{component_name}' is empty after sanitization: {component}. Likely includes invalid characters or patterns")
+            msg = f"Component '{component_name}' contains invalid characters or patterns. Try removing these patterns: [.., /, \\, %2f, %5c, %2e%2e]"
             raise ValueError(msg)
 
-        # Limit length to prevent extremely long keys
-        if len(sanitized) > 255:
-            msg = f"{component_name} too long (max 255 chars): {len(sanitized)} chars"
+        if len(sanitized) > MAX_KEY_LENGTH:
+            msg = f"Component '{component_name}' length exceeds the maximum allowed length of {MAX_KEY_LENGTH} bytes: {len(sanitized)} bytes"
             raise ValueError(msg)
 
         return sanitized
