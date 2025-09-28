@@ -8,11 +8,11 @@ from lfx.log.logger import logger
 
 from .service import StorageService
 
-
 MAX_KEY_LENGTH = 1024
 MAX_TAG_KEY_LENGTH = 128
 MAX_TAG_VALUE_LENGTH = 256
 MAX_TAGS_PER_OBJECT = 10
+
 
 class S3StorageService(StorageService):
     """A service class for handling operations with AWS S3 storage."""
