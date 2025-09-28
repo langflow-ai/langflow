@@ -56,7 +56,9 @@ class S3StorageService(StorageService):
             raise
 
         self.set_ready()
-        logger.debug(f"S3StorageService initialized - bucket: {self.bucket_name}, prefix: {self.object_prefix}, tags: {self.tags}")
+        logger.debug(
+            f"S3StorageService initialized - bucket: {self.bucket_name}, prefix: {self.object_prefix}, tags: {self.tags}"
+        )
 
     def _validate_path_component(self, component: str, component_name: str) -> str:
         """Validate and sanitize path components to prevent path traversal attacks.
@@ -315,4 +317,3 @@ class S3StorageService(StorageService):
     async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down."""
         # No specific teardown actions required for S3 client
-        pass
