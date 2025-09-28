@@ -21,6 +21,8 @@ export interface ConfigResponse {
   webhook_polling_interval: number;
   serialization_max_items_length: number;
   event_delivery: EventDeliveryType;
+  webhook_auth_enable: boolean;
+  voice_mode_available: boolean;
   sandbox_enabled: boolean;
   sandbox_lock_components: boolean;
 }
@@ -46,6 +48,9 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
     (state) => state.setWebhookPollingInterval,
   );
   const setEventDelivery = useUtilityStore((state) => state.setEventDelivery);
+  const setWebhookAuthEnable = useUtilityStore(
+    (state) => state.setWebhookAuthEnable,
+  );
   const setSandboxEnabled = useUtilityStore((state) => state.setSandboxEnabled);
   const setLockAllComponents = useUtilityStore(
     (state) => state.setLockAllComponents,
@@ -72,6 +77,7 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
         data.webhook_polling_interval ?? DEFAULT_POLLING_INTERVAL,
       );
       setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
+      setWebhookAuthEnable(data.webhook_auth_enable ?? true);
       setSandboxEnabled(data.sandbox_enabled ?? false);
       setLockAllComponents(data.sandbox_lock_components ?? false);
     }

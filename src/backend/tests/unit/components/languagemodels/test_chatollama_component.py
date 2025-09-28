@@ -1,8 +1,9 @@
+import re
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_ollama import ChatOllama
-from langflow.components.ollama.ollama import ChatOllamaComponent
+from lfx.components.ollama.ollama import ChatOllamaComponent
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -40,7 +41,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         # Provide an empty list or the actual mapping if versioned files exist
         return []
 
-    @patch("langflow.components.ollama.ollama.ChatOllama")
+    @patch("lfx.components.ollama.ollama.ChatOllama")
     async def test_build_model(self, mock_chat_ollama, component_class, default_kwargs):
         mock_instance = MagicMock()
         mock_chat_ollama.return_value = mock_instance
@@ -68,18 +69,18 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         )
         assert model == mock_instance
 
-    @patch("langflow.components.ollama.ollama.ChatOllama")
+    @patch("lfx.components.ollama.ollama.ChatOllama")
     async def test_build_model_missing_base_url(self, mock_chat_ollama, component_class, default_kwargs):
         # Make the mock raise an exception to simulate connection failure
         mock_chat_ollama.side_effect = Exception("connection error")
         component = component_class(**default_kwargs)
         component.base_url = None
-        with pytest.raises(ValueError, match="Unable to connect to the Ollama API."):
+        with pytest.raises(ValueError, match=re.escape("Unable to connect to the Ollama API.")):
             component.build_model()
 
     @pytest.mark.asyncio
-    @patch("langflow.components.ollama.ollama.httpx.AsyncClient.post")
-    @patch("langflow.components.ollama.ollama.httpx.AsyncClient.get")
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.post")
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
     async def test_get_models_success(self, mock_get, mock_post):
         component = ChatOllamaComponent()
         mock_get_response = AsyncMock()
@@ -107,14 +108,14 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert mock_post.call_count == 2
 
     @pytest.mark.asyncio
-    @patch("langflow.components.ollama.ollama.httpx.AsyncClient.get")
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
     async def test_get_models_failure(self, mock_get):
         import httpx
 
         component = ChatOllamaComponent()
         mock_get.side_effect = httpx.RequestError("Connection error", request=None)
         base_url = "http://localhost:11434"
-        with pytest.raises(ValueError, match="Could not get model names from Ollama."):
+        with pytest.raises(ValueError, match=re.escape("Could not get model names from Ollama.")):
             await component.get_models(base_url)
 
     @pytest.mark.asyncio
@@ -147,7 +148,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert updated_config["mirostat_eta"]["value"] == 0.2
         assert updated_config["mirostat_tau"]["value"] == 10
 
-    @patch("langflow.components.ollama.ollama.httpx.AsyncClient.get")
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
     @pytest.mark.asyncio
     async def test_update_build_config_model_name(self, mock_get):
         component = ChatOllamaComponent()
@@ -161,7 +162,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         }
         field_value = None
         field_name = "model_name"
-        with pytest.raises(ValueError, match="No valid Ollama URL found"):
+        with pytest.raises(ValueError, match=re.escape("No valid Ollama URL found")):
             await component.update_build_config(build_config, field_value, field_name)
 
     @pytest.mark.asyncio

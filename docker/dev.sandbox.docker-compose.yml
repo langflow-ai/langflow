@@ -20,7 +20,6 @@ services:
     security_opt:
       - apparmor:unconfined
       - seccomp:unconfined
-      - systempaths:unconfined
     environment:
       - PYTHONDONTWRITEBYTECODE=1
       - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow

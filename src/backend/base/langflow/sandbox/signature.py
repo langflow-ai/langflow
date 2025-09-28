@@ -103,13 +103,29 @@ class ComponentSecurityManager:
         self.db_session = db_session
 
         # Use the main Langflow auth secret key for component signing
-        from langflow.services.settings.auth import AuthSettings
-        auth_settings = AuthSettings()
-        self.signing_key = auth_settings.SECRET_KEY.get_secret_value()
+        self.signing_key = self._load_signing_key()
 
         # Generate signatures for built-in components on every startup
         if self.db_session:
             self._initialize_builtin_signatures()
+
+    def _load_signing_key(self) -> str:
+        """Load signing key from the initialized settings service."""
+        try:
+            from langflow.services.deps import get_settings_service
+
+            settings_service = get_settings_service()
+            secret = settings_service.auth_settings.SECRET_KEY
+            if secret:
+                return secret.get_secret_value()
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"Failed to resolve sandbox signing key from settings service: {exc}")
+            raise RuntimeError("Sandbox signing key could not be resolved from settings service") from exc
+
+        msg = "Sandbox signing key missing from settings service configuration"
+        logger.error(msg)
+        raise RuntimeError(msg)
+
     def _initialize_builtin_signatures(self) -> None:
         """Initialize component signatures with database storage:
         1. If LANGFLOW_SANDBOX_DEV_MODE=true, truncate the signatures table

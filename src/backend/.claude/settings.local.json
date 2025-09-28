@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python test_extract_data.py:*)",
+      "Bash(python3:*)",
+      "Bash(rm:*)",
+      "Bash(python:*)",
+      "Bash(mv:*)",
+      "Bash(mkdir:*)"
+    ],
+    "deny": []
+  }
+}

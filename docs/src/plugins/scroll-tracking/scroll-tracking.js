@@ -7,18 +7,18 @@ const propertyHelpers = {
   // Extract language from code elements - try multiple approaches
   codeLanguage: (element) => {
     // Method 1: Look for data-ch-lang attribute
-    const codeElement = element.querySelector('[data-ch-lang]') || 
+    const codeElement = element.querySelector('[data-ch-lang]') ||
                        element.closest('[data-ch-lang]');
     if (codeElement) {
       const lang = codeElement.getAttribute('data-ch-lang');
       if (lang && lang !== 'text') return lang;
     }
-    
+
     // Method 2: Look for active tab in the same container
-    const container = element.closest('.theme-code-block') || 
+    const container = element.closest('.theme-code-block') ||
                      element.parentElement?.closest('[class*="code"]') ||
                      element.parentElement;
-    
+
     if (container) {
       const activeTab = container.querySelector('li[role="tab"][aria-selected="true"]');
       if (activeTab) {
@@ -28,7 +28,7 @@ const propertyHelpers = {
         }
       }
     }
-    
+
     // Method 3: Look for any tab as fallback
     if (container) {
       const anyTab = container.querySelector('li[role="tab"]');
@@ -39,7 +39,7 @@ const propertyHelpers = {
         }
       }
     }
-    
+
     return null;
   }
 };
@@ -71,9 +71,9 @@ function getScrollDepthPercentage() {
   );
   const windowHeight = window.innerHeight;
   const scrollableHeight = documentHeight - windowHeight;
-  
+
   if (scrollableHeight <= 0) return 100;
-  
+
   return Math.min(100, Math.round((scrollTop / scrollableHeight) * 100));
 }
 
@@ -82,11 +82,11 @@ function getScrollDepthPercentage() {
  */
 function getElementProperties(element, baseProperties = {}) {
   const properties = {};
-  
+
   // Process base properties, handling helper function references
   Object.keys(baseProperties).forEach(key => {
     const value = baseProperties[key];
-    
+
     if (typeof value === 'function') {
       // Direct function (for programmatic config)
       try {
@@ -116,32 +116,32 @@ function getElementProperties(element, baseProperties = {}) {
       properties[key] = value;
     }
   });
-  
+
   // Add common properties
   properties.page_path = window.location.pathname;
   properties.page_url = window.location.href;
   properties.scroll_depth = getScrollDepthPercentage();
-  
+
   // Add element-specific properties
   if (element.tagName) {
     properties.tag_name = element.tagName.toLowerCase();
   }
-  
+
   if (element.id) {
     properties.element_id = element.id;
   }
-  
+
   if (element.className) {
     properties.element_class = element.className;
   }
-  
+
   // For headings, add text content and level
   if (element.tagName && element.tagName.match(/^H[1-6]$/)) {
     properties.heading_level = element.tagName.toLowerCase();
     properties.heading_text = element.textContent?.trim().substring(0, 200); // Limit text length to 200 chars
     properties.text = element.textContent?.trim().substring(0, 200); // Add 'text' property as requested
   }
-  
+
   return properties;
 }
 
@@ -153,25 +153,25 @@ function setupElementTracking(config) {
     console.warn('IntersectionObserver not supported, element tracking disabled');
     return;
   }
-  
+
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       // Fire event every time element comes into view (not just first time)
       if (entry.isIntersecting) {
         // Find matching selector config
-        const selectorConfig = config.selectors.find(sc => 
+        const selectorConfig = config.selectors.find(sc =>
           entry.target.matches(sc.selector)
         );
-        
+
         if (selectorConfig) {
           // For code blocks on mobile, add a small delay to ensure DOM has updated
           const isMobile = window.innerWidth <= 768;
           const isCodeBlock = entry.target.matches('.ch-codeblock');
           const delay = (isMobile && isCodeBlock) ? 100 : 0;
-          
+
           setTimeout(() => {
             const properties = getElementProperties(entry.target, selectorConfig.properties || {});
-            
+
             if (window.analytics && typeof window.analytics.track === 'function') {
               window.analytics.track(selectorConfig.eventName, properties);
             }
@@ -183,7 +183,7 @@ function setupElementTracking(config) {
     threshold: 0.1, // Element needs to be 10% visible
     rootMargin: '0px'
   });
-  
+
   // Function to observe elements for a given selector
   const observeElementsForSelector = (selectorConfig) => {
     const elements = document.querySelectorAll(selectorConfig.selector);
@@ -194,15 +194,15 @@ function setupElementTracking(config) {
       }
     });
   };
-  
+
   // Observe all existing elements matching the selectors
   config.selectors.forEach(observeElementsForSelector);
-  
+
   // Also scan after a delay for dynamically rendered content
   setTimeout(() => {
     config.selectors.forEach(observeElementsForSelector);
   }, 1000);
-  
+
   // Set up mutation observer for dynamically added elements
   if (window.MutationObserver) {
     const mutationObserver = new MutationObserver((mutations) => {
@@ -218,7 +218,7 @@ function setupElementTracking(config) {
                   node._scrollTrackingObserved = true;
                 }
               }
-              
+
               // Check children
               const childElements = node.querySelectorAll ? node.querySelectorAll(selectorConfig.selector) : [];
               childElements.forEach(child => {
@@ -232,16 +232,16 @@ function setupElementTracking(config) {
         });
       });
     });
-    
+
     mutationObserver.observe(document.body, {
       childList: true,
       subtree: true
     });
-    
+
     // Store mutation observer for cleanup
     observer._mutationObserver = mutationObserver;
   }
-  
+
   return observer;
 }
 
@@ -252,17 +252,17 @@ function setupElementTracking(config) {
 function initializeScrollTracking(userConfig = {}) {
   // Only run on client side and prevent duplicate initialization
   if (!ExecutionEnvironment.canUseDOM || isScrollTrackingInitialized) return;
-  
+
   // Merge default config with injected config and user config
   const injectedConfig = window.__SCROLL_TRACKING_CONFIG__ || {};
   const config = { ...defaultConfig, ...injectedConfig, ...userConfig };
-  
+
   // Set up element intersection tracking
   const observer = setupElementTracking(config);
-  
+
   // Mark as initialized
   isScrollTrackingInitialized = true;
-  
+
   // Store observer for cleanup
   window._scrollTrackingObserver = observer;
 }
@@ -276,18 +276,18 @@ function cleanupScrollTracking() {
     if (window._scrollTrackingObserver._mutationObserver) {
       window._scrollTrackingObserver._mutationObserver.disconnect();
     }
-    
+
     // Clean up intersection observer
     window._scrollTrackingObserver.disconnect();
     window._scrollTrackingObserver = null;
   }
-  
+
   // Clear tracking flags from elements
   document.querySelectorAll('[data-scroll-tracked]').forEach(el => {
     delete el._scrollTrackingObserved;
     el.removeAttribute('data-scroll-tracked');
   });
-  
+
   isScrollTrackingInitialized = false;
 }
 
@@ -310,7 +310,7 @@ if (ExecutionEnvironment.canUseDOM) {
     // Document is fully loaded
     initWhenReady();
   }
-  
+
   // Re-initialize on route changes for SPA navigation
   window.addEventListener('popstate', () => {
     cleanupScrollTracking();

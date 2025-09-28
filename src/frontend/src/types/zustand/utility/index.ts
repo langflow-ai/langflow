@@ -28,6 +28,8 @@ export type UtilityStoreType = {
   setEventDelivery: (eventDelivery: EventDeliveryType) => void;
   serializationMaxItemsLength: number;
   setSerializationMaxItemsLength: (serializationMaxItemsLength: number) => void;
+  webhookAuthEnable: boolean;
+  setWebhookAuthEnable: (webhookAuthEnable: boolean) => void;
   sandboxEnabled: boolean;
   setSandboxEnabled: (sandboxEnabled: boolean) => void;
   lockAllComponents: boolean;

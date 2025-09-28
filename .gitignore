@@ -279,5 +279,7 @@ src/frontend/temp
 *.db
 *.mcp.json
 
-# Crush working dir
-.crush/
+news-aggregated.json
+CLAUDE.md
+
+member_servers.json

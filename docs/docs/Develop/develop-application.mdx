@@ -3,6 +3,8 @@ title: Containerize a Langflow application
 slug: /develop-application
 ---
 
+import Icon from "@site/src/components/icon";
+
 Designing flows in the visual editor is only the first step in building an application that uses Langflow.
 
 Once you have a functional flow, you can use that flow in a larger application, such as a website or mobile app.
@@ -54,7 +56,7 @@ COPY pyproject.toml uv.lock /app/
 ### Environment variables {#docker-env}
 
 The `docker.env` file is a `.env` file loaded into your Docker image.
-It contains environment variables that control Langflow's behavior, such as authentication, database storage, API keys, and server configurations.
+It contains [Langflow environment variables](/environment-variables) that are used in flows or control Langflow's behavior, such as authentication, database storage, API keys, and server configurations.
 For example:
 
 ```text
@@ -64,11 +66,10 @@ LANGFLOW_BASE_URL=http://0.0.0.0:7860
 OPENAI_API_KEY=sk-...
 ```
 
-The specific values you include depend on your application's needs and how you want to configure Langflow.
-For more information, see [Langflow environment variables](/environment-variables) and [Global variables](/configuration-global-variables).
-
-You can also set environment variables in the Dockerfile.
+You can set environment variables in the Dockerfile as well.
 However, if you set an environment variable in both `docker.env` and the Dockerfile, Langflow uses the value set in `docker.env`.
+
+Langflow can also [create global variables from your environment variables](/configuration-global-variables#add-custom-global-variables-from-the-environment), or [use environment variables as a backup for missing global variables](/configuration-global-variables#use-environment-variables-for-missing-global-variables).
 
 ### Secrets
 
@@ -97,7 +98,7 @@ When you package Langflow as a dependency of an application, you only want to in
 
 ### Components
 
-The core components and bundles that you see in the Langflow visual editor are automatically included in the base Langflow Docker image.
+The <Icon name="Component" aria-hidden="true" /> **Core components** and <Icon name="Blocks" aria-hidden="true" /> [**Bundles**] that you see in the Langflow visual editor are automatically included in the base Langflow Docker image.
 
 If you have any [custom components](/components-custom-components) that you created for your application, you must include these components in your application directory:
 

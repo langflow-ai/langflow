@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo $LANGFLOW_SANDBOX_LOCK_COMPONENTS)",
+      "Bash(python3:*)",
+      "Bash(env)",
+      "Bash(docker restart:*)",
+      "Bash(docker exec:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -120,10 +120,16 @@ const NodeToolbarComponent = memo(
     );
     const addFlow = useAddFlow();
 
-    const isMinimal = useMemo(
-      () => countHandlesFn(data) <= 1 && numberOfOutputHandles <= 1,
-      [data, numberOfOutputHandles],
+    const hasGroupOutputs = data.node?.outputs?.some?.(
+      (output) => output.group_outputs,
     );
+    const hasOutputs =
+      data.node?.outputs?.length && data.node?.outputs?.length > 1;
+
+    const hasSelectOutput = hasOutputs && !hasGroupOutputs;
+    const hasOnlyOneOutput = data.node?.outputs?.length === 1;
+
+    const isMinimal = hasSelectOutput || hasOnlyOneOutput;
 
     const [toolMode, setToolMode] = useState(
       () =>
@@ -658,7 +664,9 @@ const NodeToolbarComponent = memo(
                 {(isMinimal || !showNode) && (
                   <SelectItem
                     value={"show"}
-                    data-testid={`${showNode ? "minimize" : "expand"}-button-modal`}
+                    data-testid={`${
+                      showNode ? "minimize" : "expand"
+                    }-button-modal`}
                   >
                     <ToolbarSelectItem
                       shortcut={
