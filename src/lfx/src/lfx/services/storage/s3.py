@@ -8,9 +8,11 @@ from lfx.log.logger import logger
 
 from .service import StorageService
 
-# AWS S3 key length limit is 1024 bytes, so we limit to 1000 bytes to be a bit conservative
-MAX_KEY_LENGTH = 1000
 
+MAX_KEY_LENGTH = 1024
+MAX_TAG_KEY_LENGTH = 128
+MAX_TAG_VALUE_LENGTH = 256
+MAX_TAGS_PER_OBJECT = 10
 
 class S3StorageService(StorageService):
     """A service class for handling operations with AWS S3 storage."""
@@ -100,6 +102,31 @@ class S3StorageService(StorageService):
 
         return sanitized
 
+    def _validate_tags(self, tags: dict) -> None:
+        """Validate S3 tags according to AWS limits.
+
+        Args:
+            tags: Dictionary of tag key-value pairs
+
+        Raises:
+            ValueError: If tags violate AWS limits
+        """
+        if len(tags) > MAX_TAGS_PER_OBJECT:
+            msg = f"Too many tags: {len(tags)}. AWS S3 allows maximum {MAX_TAGS_PER_OBJECT} tags per object"
+            raise ValueError(msg)
+
+        for key, value in tags.items():
+            key_str = str(key)
+            value_str = str(value)
+
+            if len(key_str) > MAX_TAG_KEY_LENGTH:
+                msg = f"Tag key too long: '{key_str[:50]}...' ({len(key_str)} chars). AWS S3 allows maximum {MAX_TAG_KEY_LENGTH} characters"
+                raise ValueError(msg)
+
+            if len(value_str) > MAX_TAG_VALUE_LENGTH:
+                msg = f"Tag value too long for key '{key_str}': '{value_str[:50]}...' ({len(value_str)} chars). AWS S3 allows maximum {MAX_TAG_VALUE_LENGTH} characters"
+                raise ValueError(msg)
+
     def _build_s3_key(self, flow_id: str, file_name: str) -> str:
         """Build and validate S3 key with security checks.
 
@@ -157,6 +184,7 @@ class S3StorageService(StorageService):
 
             # Add tags if configured
             if self.tags:
+                self._validate_tags(self.tags)
                 tag_pairs = [f"{quote(str(k))}={quote(str(v))}" for k, v in self.tags.items()]
                 put_args["Tagging"] = "&".join(tag_pairs)
 
