@@ -285,7 +285,7 @@ This example uploads a local file named `agent-with-astra-db-tool.json` to a pro
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_URL/api/v1/flows/upload/?project_id=$PROJECT_ID" \
+  "$LANGFLOW_URL/api/v1/flows/upload/?folder_id=$PROJECT_ID" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
   -H "x-api-key: $LANGFLOW_API_KEY" \
