@@ -15,7 +15,7 @@ This page describes the components that are available in the **DataStax** bundle
 
 ## Astra DB
 
-:::important
+:::warning
 It is recommended that you create any databases, keyspaces, and collections you need before configuring the **Astra DB** component.
 
 You can create new databases and collections through this component, but this is only possible in the Langflow visual editor (not at runtime), and you must wait while the database or collection initializes before proceeding with flow configuration.
@@ -405,7 +405,7 @@ The **Astra DB Chat Memory** component retrieves and stores chat messages using 
 Chat memories are passed between memory storage components as the [`Memory`](/data-types#memory) data type.
 Specifically, the component creates an instance of `AstraDBChatMessageHistory`, which is a LangChain chat message history class that uses Astra DB for storage.
 
-:::important
+:::warning
 The **Astra DB Chat Memory** component isn't recommended for most memory storage because memories tend to be long JSON objects or strings, often exceeding the maximum size of a document or object supported by Astra DB.
 
 However, Langflow's **Agent** component includes built-in chat memory that is enabled by default.
