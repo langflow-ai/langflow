@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.9488e50d.css">
-<script src="/assets/js/runtime~main.1ce68fca.js" defer="defer"></script>
-<script src="/assets/js/main.90f3e6c7.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.1366ee80.js" defer="defer"></script>
+<script src="/assets/js/main.35384374.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -148,7 +148,7 @@ The component will have only one output port where the user can select the prefe
 <p>This behavior is controlled by the <code>group_outputs</code> parameter:</p>
 <ul>
 <li>
-<p><strong><code>group_outputs=False</code> (default)</strong>: When a component has more than one output and <code>group_outputs</code> is false or not set, the outputs are grouped in the visual editor, and the user must select one.</p>
+<p><strong><code>group_outputs=False</code> (default)</strong>: When a component has more than one output and <code>group_outputs</code> is <code>false</code> or not set, the outputs are grouped in the visual editor, and the user must select one.</p>
 <p>Use this option when the component is expected to return only one type of output when used in a flow.</p>
 </li>
 <li>
@@ -193,9 +193,9 @@ For example, to add a component to the <strong>Helpers</strong> category, place 
 <li><strong><code>display_name</code></strong>: The label shown to users in the visual editor.</li>
 <li><strong><code>info</code></strong> <em>(optional)</em>: A tooltip or short description.</li>
 <li><strong><code>value</code></strong> <em>(optional)</em>: The default value.</li>
-<li><strong><code>advanced</code></strong> <em>(optional)</em>: If true, moves the field into the &quot;Advanced&quot; section.</li>
-<li><strong><code>required</code></strong> <em>(optional)</em>: If true, forces the user to provide a value.</li>
-<li><strong><code>is_list</code></strong> <em>(optional)</em>: If true, allows multiple values.</li>
+<li><strong><code>advanced</code></strong> <em>(optional)</em>: If <code>true</code>, moves the field into the &quot;Advanced&quot; section.</li>
+<li><strong><code>required</code></strong> <em>(optional)</em>: If <code>true</code>, forces the user to provide a value.</li>
+<li><strong><code>is_list</code></strong> <em>(optional)</em>: If <code>true</code>, allows multiple values.</li>
 <li><strong><code>input_types</code></strong> <em>(optional)</em>: Restricts allowed connection types (e.g., <code>[&quot;Data&quot;]</code>, <code>[&quot;LanguageModel&quot;]</code>).</li>
 </ul>
 <p>Here are the most commonly used input classes and their typical usage.</p>

@@ -23,8 +23,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.9488e50d.css">
-<script src="/assets/js/runtime~main.1ce68fca.js" defer="defer"></script>
-<script src="/assets/js/main.90f3e6c7.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.1366ee80.js" defer="defer"></script>
+<script src="/assets/js/main.35384374.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -94,7 +94,7 @@ A <strong>Last Run</strong> value indicates that the component ran successfully.
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="inspect-component-output-and-logs">Inspect component output and logs<a href="#inspect-component-output-and-logs" class="hash-link" aria-label="Direct link to Inspect component output and logs" title="Direct link to Inspect component output and logs">​</a></h3>
 <p>To view the output and logs for a single component, click <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-text-search" aria-hidden="true"><path d="M21 6H3"></path><path d="M10 12H3"></path><path d="M10 18H3"></path><circle cx="17" cy="15" r="3"></circle><path d="m21 19-1.9-1.9"></path></svg> <strong>Inspect</strong>.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="freeze-a-component">Freeze a component<a href="#freeze-a-component" class="hash-link" aria-label="Direct link to Freeze a component" title="Direct link to Freeze a component">​</a></h3>
-<div class="theme-admonition theme-admonition-important admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>important</div><div class="admonitionContent_BuS1"><p>Freezing a component also freezes all components upstream of the selected component.</p></div></div>
+<div class="theme-admonition theme-admonition-info admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>info</div><div class="admonitionContent_BuS1"><p>Freezing a component also freezes all components upstream of the selected component.</p></div></div>
 <p>Use the freeze option if you expect consistent output from a component <em>and all upstream components</em>, and you only need to run those components once.</p>
 <p>Freezing a component prevents that component and all upstream components from re-running, and it preserves the last output state for those components.
 Any future flow runs use the preserved output.</p>
@@ -119,7 +119,7 @@ Click a port to <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" v
 </ul></div></div>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="dynamic-ports">Dynamic ports<a href="#dynamic-ports" class="hash-link" aria-label="Direct link to Dynamic ports" title="Direct link to Dynamic ports">​</a></h3>
 <p>Some components have ports that are dynamically added or removed.
-For example, the <strong>Prompt Template</strong> component accepts inputs within curly braces, and new ports are opened when a value within curly braces is detected in the <strong>Template</strong> field.</p>
+For example, the <strong>Prompt Template</strong> component accepts <a href="/components-prompts#define-variables-in-prompts">inputs wrapped in curly braces</a>, and new ports are opened when a value wrapped in curly braces is detected in the <strong>Template</strong> field.</p>
 <p><img decoding="async" loading="lazy" alt="Prompt Template component with multiple inputs" src="/assets/images/prompt-component-with-multiple-inputs-6e43783422ff57a873929aa2c97f43f0.png" width="2104" height="2928" class="img_ev3q"></p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="output-type-selection">Output type selection<a href="#output-type-selection" class="hash-link" aria-label="Direct link to Output type selection" title="Direct link to Output type selection">​</a></h3>
 <p>All components produce output that is either sent to another component in the flow or returned as the final flow result.</p>
