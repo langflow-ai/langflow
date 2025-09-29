@@ -165,7 +165,7 @@ export default function AddMcpServerModal({
         return;
       }
       const name = parseString(sseName, [
-        "snake_case",
+        "mcp_name_case",
         "no_blank",
         "lowercase",
       ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
