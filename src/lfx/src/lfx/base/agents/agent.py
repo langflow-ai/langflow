@@ -138,7 +138,9 @@ class LCAgentComponent(Component):
                 max_iterations=max_iterations,
             )
         input_dict: dict[str, str | list[BaseMessage]] = {
-            "input": self.input_value.to_lc_message() if isinstance(self.input_value, Message) else self.input_value
+            "input": self.input_value.to_lc_message()
+            if hasattr(self.input_value, "to_lc_message")
+            else self.input_value
         }
         if hasattr(self, "system_prompt"):
             input_dict["system_prompt"] = self.system_prompt
