@@ -620,9 +620,9 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
           newCol.cellClass = "no-border !py-2";
           newCol.type = "boolean";
         } else {
-          if (col.global_variable) {
+          if (col.load_from_db) {
             newCol.editable = false;
-            newCol.cellClass = "no-border !p-0";
+            newCol.cellClass = "no-border !py-0 !pr-0";
           }
           newCol.cellRenderer = TableAutoCellRender;
         }
