@@ -131,7 +131,7 @@ export default function AddMcpServerModal({
         return;
       }
       const name = parseString(stdioName, [
-        "snake_case",
+        "mcp_name_case",
         "no_blank",
         "lowercase",
       ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
@@ -199,7 +199,7 @@ export default function AddMcpServerModal({
       servers = extractMcpServersFromJson(jsonValue).map((server) => ({
         ...server,
         name: parseString(server.name, [
-          "snake_case",
+          "mcp_name_case",
           "no_blank",
           "lowercase",
         ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH),
