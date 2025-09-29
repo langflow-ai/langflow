@@ -146,8 +146,8 @@ class LCAgentComponent(Component):
             if isinstance(self.chat_history, Data):
                 input_dict["chat_history"] = data_to_messages(self.chat_history)
             # Handle both lfx.schema.message.Message and langflow.schema.message.Message types
-            if all(hasattr(m, "to_data") and callable(m.to_data) for m in self.chat_history):
-                input_dict["chat_history"] = data_to_messages([m.to_data() for m in self.chat_history])
+            if all(hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data for m in self.chat_history):
+                input_dict["chat_history"] = data_to_messages(self.chat_history)
         if hasattr(input_dict["input"], "content") and isinstance(input_dict["input"].content, list):
             # ! Because the input has to be a string, we must pass the images in the chat_history
 
@@ -227,7 +227,7 @@ class LCToolsAgentComponent(LCAgentComponent):
             required=False,
             info="These are the tools that the agent can use to help with tasks.",
         ),
-        *LCAgentComponent._base_inputs,
+        *LCAgentComponent.get_base_inputs(),
     ]
 
     def build_agent(self) -> AgentExecutor:
