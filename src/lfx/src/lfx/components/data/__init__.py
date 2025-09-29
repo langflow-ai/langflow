@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from lfx.components.data.sql_executor import SQLComponent
     from lfx.components.data.url import URLComponent
     from lfx.components.data.web_search import WebSearchComponent
-    from lfx.components.data.webhook import WebhookComponent
 
 _dynamic_imports = {
     "APIRequestComponent": "api_request",
@@ -28,7 +27,6 @@ _dynamic_imports = {
     "SQLComponent": "sql_executor",
     "URLComponent": "url",
     "WebSearchComponent": "web_search",
-    "WebhookComponent": "webhook",
 }
 
 __all__ = [
@@ -42,7 +40,6 @@ __all__ = [
     "SQLComponent",
     "URLComponent",
     "WebSearchComponent",
-    "WebhookComponent",
 ]
 
 

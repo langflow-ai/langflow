@@ -9,6 +9,8 @@ class TextInputComponent(TextComponent):
     documentation: str = "https://docs.langflow.org/components-io#text-input"
     icon = "type"
     name = "TextInput"
+    legacy = True
+    replacement = ["input_output.JSONInput"]
 
     inputs = [
         MultilineInput(

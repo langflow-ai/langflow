@@ -8,16 +8,20 @@ if TYPE_CHECKING:
     from lfx.components.input_output.api_response import APIResponseComponent
     from lfx.components.input_output.chat import ChatInput
     from lfx.components.input_output.chat_output import ChatOutput
+    from lfx.components.input_output.request_payload import JSONInputComponent
     from lfx.components.input_output.text import TextInputComponent
+    from lfx.components.input_output.webhook import WebhookComponent
 
 _dynamic_imports = {
     "ChatInput": "chat",
     "ChatOutput": "chat_output",
     "APIResponseComponent": "api_response",
+    "JSONInputComponent": "request_payload",
     "TextInputComponent": "text",
+    "WebhookComponent": "webhook",
 }
 
-__all__ = ["APIResponseComponent", "ChatInput", "ChatOutput", "TextInputComponent"]
+__all__ = ["APIResponseComponent", "ChatInput", "ChatOutput", "JSONInputComponent", "TextInputComponent", "WebhookComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:
