@@ -94,17 +94,17 @@ module.exports = {
       type: "category",
       label: "Develop",
       items: [
-        "Configuration/api-keys-and-authentication",
+        "Develop/api-keys-and-authentication",
         "Develop/install-custom-dependencies",
-        "Configuration/configuration-global-variables",
-        "Configuration/environment-variables",
+        "Develop/configuration-global-variables",
+        "Develop/environment-variables",
         {
           type: "category",
           label: "Storage and memory",
           items: [
             {
               type: "doc",
-              id: "Concepts/concepts-file-management",
+              id: "Develop/concepts-file-management",
               label: "Manage files"
             },
             {
@@ -117,7 +117,7 @@ module.exports = {
               id: "Develop/session-id",
               label: "Use Session IDs"
             },
-            "Configuration/configuration-custom-database",
+            "Develop/configuration-custom-database",
             {
               type: "doc",
               id: "Develop/enterprise-database-guide",
@@ -147,17 +147,17 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Concepts/data-types",
+          id: "Develop/data-types",
           label: "Use Langflow data types"
         },
         {
           type: "doc",
-          id: "Concepts/concepts-voice-mode",
+          id: "Develop/concepts-voice-mode",
           label: "Use voice mode"
         },
         {
           type: "doc",
-          id: "Configuration/configuration-cli",
+          id: "Develop/configuration-cli",
           label: "Use the Langflow CLI"
         },
       ],
@@ -180,7 +180,7 @@ module.exports = {
           type: "category",
           label: "Containerized deployments",
           items: [
-            "Develop/develop-application",
+            "Deployment/develop-application",
             {
               type: "doc",
               id: "Deployment/deployment-docker",
