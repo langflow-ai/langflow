@@ -1,5 +1,3 @@
-from flx.io import Output
-
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import (
     BoolInput,
@@ -7,6 +5,7 @@ from lfx.inputs.inputs import (
     SecretStrInput,
     StrInput,
 )
+from lfx.io import Output
 from lfx.schema.data import Data
 
 
