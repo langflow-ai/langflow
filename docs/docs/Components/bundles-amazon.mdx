@@ -29,7 +29,7 @@ For more information, see [Language model components](/components-models).
 |------|------|-------------|
 | input | String | Input parameter. The input string for text generation. |
 | system_message | String | Input parameter. A system message to pass to the model. |
-| stream | Boolean | Input parameter. Whether to stream the response. Only works in chat. Default: false. |
+| stream | Boolean | Input parameter. Whether to stream the response. Only works in chat. Default: `false`. |
 | model_id | String | Input parameter. The Amazon Bedrock model to use. |
 | aws_access_key_id | SecretString | Input parameter. AWS Access Key for authentication. |
 | aws_secret_access_key | SecretString | Input parameter. AWS Secret Key for authentication. |
@@ -81,4 +81,4 @@ The component produces logs but it doesn't emit output to the flow.
 | **Strategy for file upload** | String | Input parameter. The file upload strategy. **Store Data** (default) iterates over `Data` inputs, logs the file path and text content, and uploads each file to the specified S3 bucket if both file path and text content are available. **Store Original File** iterates through the list of data inputs, retrieves the file path from each data item, uploads the file to the specified S3 bucket if the file path is available, and logs the file path being uploaded. |
 | **Data Inputs** | Data | Input parameter. The `Data` input to iterate over and upload as files in the specified S3 bucket. |
 | **S3 Prefix** | String | Input parameter. Optional prefix (folder path) within the S3 bucket where files will be uploaded. |
-| **Strip Path** | Boolean | Input parameter. Whether to strip the file path when uploading. Default: false. |
+| **Strip Path** | Boolean | Input parameter. Whether to strip the file path when uploading. Default: `false`. |
