@@ -3,6 +3,8 @@ title: Prompt Template
 slug: /components-prompts
 ---
 
+import PartialCurlyBraces from '@site/docs/_partial-escape-curly-braces.mdx';
+
 Use the **Prompt Template** core component to create a _prompt_ that supplies instructions and context to an LLM or agent, separate from other input like chat messages and file uploads.
 
 Prompts are structured input that use natural language, fixed values, and dynamic variables to provide baseline context for the LLM.
@@ -19,7 +21,7 @@ The **Prompt Template** component can also output variable instructions to other
 
 | Name     | Display Name   | Description                                                       |
 |----------|----------------|-------------------------------------------------------------------|
-| template | Template       | Input parameter. Create a prompt template with dynamic variables (`{VARIABLE_NAME}`). |
+| template | Template       | Input parameter. Create a prompt template with dynamic variables in curly braces, such as `{VARIABLE_NAME}`. <PartialCurlyBraces /> |
 | prompt   | Prompt Message | Output parameter. The built prompt message returned by the `build_prompt` method. |
 
 ## Define variables in prompts
@@ -52,6 +54,8 @@ The following steps demonstrate how to add variables to a **Prompt Template** co
 
     {user_question}
     ```
+
+    <PartialCurlyBraces />
 
 4. Click **Check & Save** to save the template.
 
