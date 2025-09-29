@@ -3,9 +3,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from lfx.components.chroma import ChromaVectorStoreComponent
 from lfx.schema.data import Data
+
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
 

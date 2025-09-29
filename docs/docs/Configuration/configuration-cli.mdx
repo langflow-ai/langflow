@@ -37,7 +37,7 @@ Langflow CLI options override the values of [environment variables](/environment
 For example, if you have `LANGFLOW_PORT=7860` defined as an environment variable, and you run the CLI with `--port 7880`, then Langflow sets the port to `7880` because the CLI option overrides the environment variable.
 
 This also applies to Boolean environment variables.
-For example, if you set `LANGFLOW_REMOVE_API_KEYS=True` in your `.env` file, then you can change it to `False` by running the CLI with `--no-remove-api-keys`.
+For example, if you set `LANGFLOW_REMOVE_API_KEYS=True` in your `.env` file, you can change it to `False` at runtime by running the CLI with `--no-remove-api-keys`.
 
 ## Langflow CLI options
 
@@ -259,28 +259,27 @@ For more information Langflow configuration options, see [Langflow environment v
 
 | Option | Default | Type | Description |
 |--------|---------|--------|-------------|
-| `--auto-saving` | `--auto-saving` (true) | Boolean | Whether to enable flow auto-saving. Use `--no-auto-saving` to disable flow auto-saving. |
+| `--auto-saving` | `--auto-saving` (true) | Boolean | Whether to enable flow auto-saving in the visual editor. Use `--no-auto-saving` to disable flow auto-saving. |
 | `--auto-saving-interval` | `1000` | Integer | The interval for flow auto-saving in milliseconds. |
 | `--backend-only` | `--no-backend-only` (false) | Boolean | Whether to run Langflow's backend service only (no frontend). Omit or use `--no-backend-only` to start both the frontend and backend. See [Start Langflow in headless mode](#start-langflow-in-headless-mode). |
-| `--cache` | `async` | String | The type of cache to use. One of `async`, `redis`, `memory`, or `disk`. |
-| `--components-path` | Not set | String | The path to the directory containing custom components. |
+| `--cache` | `async` | String | The type of [cache storage](/memory) to use. One of `async`, `redis`, `memory`, or `disk`. |
+| `--components-path` | Not set | String | The path to the directory containing your custom components. |
 | `--dev` | `--no-dev` (false) | Boolean | Whether to run in development mode (may contain bugs). |
 | `--env-file` | Not set | String | The path to the `.env` file containing Langflow environment variables. See [Start Langflow with a specific .env file](#start-langflow-with-a-specific-env-file). |
 | `--frontend-path` | Not set | String | The path to the frontend directory containing build files. This is only used when [contributing to the Langflow codebase](/contributing-how-to-contribute) or developing a custom Langflow image that includes customized frontend code. |
-| `--health-check-max-retries` | `5` | Integer | The maximum number of retries for the health check. |
+| `--health-check-max-retries` | `5` | Integer | The maximum number of retries for your Langflow server's health check. |
 | `--host` | `localhost` | String | The host on which the Langflow server will run. |
 | `--log-file` | `logs/langflow.log` | String | The path to the log file for Langflow. |
 | `--log-level` | `critical` | String | The logging level as one of `debug`, `info`, `warning`, `error`, or `critical`. |
-| `--log-rotation` | Not set | String | The log rotation (Time/Size). |
-| `--max-file-size-upload` | `100` | Integer | The maximum size in megabytes for file uploads. |
+| `--log-rotation` | Not set | String | The log rotation interval, either a time duration or file size. |
+| `--max-file-size-upload` | `1024` | Integer | The maximum size in megabytes for file uploads. |
 | `--open-browser` | `--no-open-browser` (false) | Boolean | Whether to open the system web browser on startup. Use `--open-browser` to open the system's default web browser when Langflow starts. |
 | `--port` | `7860` | Integer | The port on which the Langflow server will run. The server automatically selects a free port if the specified port is in use. |
-| `--remove-api-keys` | `--no-remove-api-keys` (false) | Boolean | Whether to remove API keys from projects saved in the Langflow database. |
-| `--ssl-cert-file-path` | Not set | String | The path to the SSL certificate file on the local system. |
-| `--ssl-key-file-path` | Not set | String | The path to the SSL key file on the local system. |
-| `--store` | `--store` (true) | Boolean | Whether to enable the Langflow Store features. Use `--no-store` to disable the Langflow Store features. |
-| `--worker-timeout` | `300` | Integer | The worker timeout in seconds. |
-| `--workers` | `1` | Integer | The number of worker processes. |
+| `--remove-api-keys` | `--no-remove-api-keys` (false) | Boolean | Whether to remove API keys and tokens from flows saved in the Langflow database. |
+| `--ssl-cert-file-path` | Not set | String | The path to the SSL certificate file on the local system for SSL-encrypted connections. |
+| `--ssl-key-file-path` | Not set | String | The path to the SSL key file on the local system for SSL-encrypted connections. |
+| `--worker-timeout` | `300` | Integer | The Langflow server worker timeout in seconds. |
+| `--workers` | `1` | Integer | The number of Langflow server worker processes. |
 
 #### Start Langflow with a specific .env file {#start-langflow-with-a-specific-env-file}
 

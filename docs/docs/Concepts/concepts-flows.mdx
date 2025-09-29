@@ -50,7 +50,7 @@ You can also create a flow with the [Langflow API](/api-flows), but the Langflow
 Flows consist of [components](/concepts-components), which are nodes that you configure and connect in the [workspace](/concepts-overview#workspace).
 Each component performs a specific task, like serving an AI model or connecting a data source.
 
-Drag and drop components from the **Components** menu to add them to your flow.
+Drag and drop components from the <Icon name="Component" aria-hidden="true" /> **Core components** and <Icon name="Blocks" aria-hidden="true" /> **Bundles** menus to add them to your flow.
 Then, configure the component settings and connect the components together.
 
 ![Chat Input and Output connected to a Language Model component](/img/connect-component.png)
@@ -98,6 +98,26 @@ To get back to the **Projects** page after editing a flow, click the project nam
 2. Click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Edit details**.
 3. Edit the **Name** and **Description**, and then click **Save**.
 
+### Lock a flow
+
+To prevent changes to a flow, you can lock it:
+
+1. On the **Projects** page, locate the flow you want to lock.
+2. Click <Icon name="Ellipsis" aria-hidden="true" /> **More**, and then select **Edit details**.
+3. Enable **Lock Flow**, and then click **Save**.
+
+Repeat these steps to unlock the flow by disabling **Lock Flow**.
+
+When editing a flow, the **Lock Status** indicates whether the flow is <Icon name="Lock" aria-hidden="true" /> **Locked** or <Icon name="LockOpen" aria-hidden="true" /> **Unlocked**.
+You cannot change the lock status while editing the flow.
+
+### Move a flow
+
+To move a flow from one project to another, do the following:
+
+1. On the **Projects** page, locate the flow you want to move.
+2. Click and drag the flow from the list of flows to the target project name in the list of projects.
+
 ### Delete a flow
 
 1. On the **Projects** page, locate the flow you want to delete.
@@ -105,16 +125,8 @@ To get back to the **Projects** page after editing a flow, click the project nam
 
 ## Flow storage and logs
 
-By default, flows and [flow logs](/logging) are stored on local disk at the following default locations:
-
-- **macOS Desktop**: `/Users/<username>/.langflow/cache`
-- **Windows Desktop**: `C:\Users\<username>\AppData\Roaming\com.Langflow\cache`
-- **OSS macOS/Windows/Linux/WSL (uv pip install)**: `<path_to_venv>/lib/python3.12/site-packages/langflow/cache`
-- **OSS macOS/Windows/Linux/WSL (git clone)**: `<path_to_clone>/src/backend/base/langflow/cache`
-
-The overall storage location can be customized with the `LANGFLOW_CONFIG_DIR` environment variable, and the flow log storage location can be customized separately with the `LANGFLOW_LOG_FILE` environment variable.
-
-For more information, see [Memory management options](/memory).
+By default, flows and flow execution data are stored in the Langflow database, and flow logs are stored with other Langflow logs in the Langflow config directory.
+For more information, see [Memory management options](/memory) and [Logging](/logging).
 
 ## See also
 

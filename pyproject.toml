@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base~=0.5.0",
+    "langflow-base~=0.6.0",
     "beautifulsoup4==4.12.3",
     "google-search-results>=2.4.1,<3.0.0",
     "google-api-python-client==2.154.0",
@@ -42,7 +42,7 @@ dependencies = [
     "langfuse==2.53.9",
     "metal_sdk==2.5.1",
     "MarkupSafe==3.0.2",
-    "boto3==1.34.162",
+    "boto3>=1.34.162,<2.0.0",
     "numexpr==2.10.2",
     "qianfan==0.3.5",
     "pgvector==0.3.6",
@@ -53,7 +53,7 @@ dependencies = [
     "datasets>2.14.7",
     "assemblyai==0.35.1",
     "litellm>=1.60.2,<2.0.0",
-    "chromadb==0.5.23",
+    "chromadb>=1.0.0",
     "zep-python==2.0.2",
     "youtube-transcript-api==0.6.3",
     "Markdown==3.7",
@@ -79,17 +79,17 @@ dependencies = [
     "langchain-cohere==0.3.3",
     "langchain-huggingface==0.3.1",
     "langchain-anthropic==0.3.14",
-    "langchain-astradb~=0.6.0",
+    "langchain-astradb~=0.6.1",
     "langchain-openai>=0.2.12",
     "langchain-google-vertexai>=2.0.7,<3.0.0",
     "langchain-groq==0.2.1",
     "langchain-pinecone>=0.2.8",
     "langchain-mistralai==0.2.3",
-    "langchain-chroma==0.1.4",
-    "langchain-aws==0.2.7",
+    "langchain-chroma>=0.2.6",
+    "langchain-aws==0.2.33",
     "langchain-unstructured==0.1.5",
     "langchain-milvus==0.1.7",
-    "langchain-mongodb==0.2.0",
+    "langchain-mongodb==0.7.0",
     "langchain-nvidia-ai-endpoints==0.3.8",
     "langchain-google-calendar-tools==0.0.1",
     "langchain-google-community==2.0.3",
@@ -113,8 +113,8 @@ dependencies = [
     "pydantic-ai>=0.0.19",
     "smolagents>=1.8.0",
     "apify-client>=1.8.1",
-    "langchain-graph-retriever==0.6.1",
-    "graph-retriever==0.6.1",
+    "langchain-graph-retriever==0.8.0",
+    "graph-retriever==0.8.0",
     "ibm-watsonx-ai>=1.3.1",
     "langchain-ibm>=0.3.8",
     "opik>=1.6.3",
@@ -122,13 +122,15 @@ dependencies = [
     "cleanlab-tlm>=1.1.2",
     'gassist>=0.0.1; sys_platform == "win32"',
     "twelvelabs>=0.4.7",
-    "docling_core>=2.36.1",
+    "docling>=2.36.1",
     "filelock>=3.18.0",
     "jigsawstack==0.2.7",
     "structlog>=25.4.0",
     "aiosqlite==0.21.0",
     "fastparquet>=2024.11.0",
     "traceloop-sdk>=0.43.1",
+    "easyocr>=1.7.2",
+    "opencv-python>=4.11",
 ]
 
 [dependency-groups]
@@ -179,7 +181,6 @@ dev = [
     "pytest-timeout>=2.3.1",
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
-    "docling>=2.36.1"
 ]
 
 [tool.uv.sources]
@@ -203,7 +204,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 docling = [
-    "docling>=2.36.1",
+    "langchain-docling>=1.1.0",
     "tesserocr>=2.8.0",
     "rapidocr-onnxruntime>=1.4.4",
     "ocrmac>=1.0.0; sys_platform == 'darwin'",

@@ -44,6 +44,15 @@ on:
         required: false
         type: boolean
         default: false
+      runs_on:
+        description: "Runner to use for CI tests (use self-hosted for safe/release code)"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+        default: ubuntu-latest
 
 
 
@@ -56,6 +65,7 @@ jobs:
       python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
       release: true
+      runs-on: ${{ (inputs['runs_on'] && startsWith(format('{0}', inputs['runs_on']), '[') && fromJSON(inputs['runs_on'])) || inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
     secrets: inherit
 
 
@@ -69,7 +79,7 @@ jobs:
       skipped: ${{ steps.check-version.outputs.skipped }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -137,7 +147,7 @@ jobs:
       version: ${{ steps.check-version.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -340,7 +350,7 @@ jobs:
       version: ${{ steps.check-version.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:

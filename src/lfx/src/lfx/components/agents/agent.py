@@ -9,8 +9,8 @@ from lfx.base.agents.events import ExceptionWithMessageError
 from lfx.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
     MODEL_DYNAMIC_UPDATE_FIELDS,
-    MODEL_PROVIDERS,
     MODEL_PROVIDERS_DICT,
+    MODEL_PROVIDERS_LIST,
     MODELS_METADATA,
 )
 from lfx.base.models.model_utils import get_model_name
@@ -20,8 +20,8 @@ from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComp
 from lfx.custom.custom_component.component import get_component_toolkit
 from lfx.custom.utils import update_component_build_config
 from lfx.helpers.base_model import build_model_from_schema
-from lfx.inputs.inputs import TableInput
-from lfx.io import BoolInput, DropdownInput, IntInput, MultilineInput, Output
+from lfx.inputs.inputs import BoolInput
+from lfx.io import DropdownInput, IntInput, MultilineInput, Output, TableInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
@@ -32,9 +32,6 @@ from lfx.schema.table import EditMode
 def set_advanced_true(component_input):
     component_input.advanced = True
     return component_input
-
-
-MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "Groq", "OpenAI"]
 
 
 class AgentComponent(ToolCallingAgentComponent):
@@ -62,12 +59,23 @@ class AgentComponent(ToolCallingAgentComponent):
             name="agent_llm",
             display_name="Model Provider",
             info="The provider of the language model that the agent will use to generate responses.",
-            options=[*MODEL_PROVIDERS_LIST, "Custom"],
+            options=[*MODEL_PROVIDERS_LIST],
             value="OpenAI",
             real_time_refresh=True,
+            refresh_button=False,
             input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA]
-            + [{"icon": "brain"}],
+            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA],
+            external_options={
+                "fields": {
+                    "data": {
+                        "node": {
+                            "name": "connect_other_models",
+                            "display_name": "Connect other models",
+                            "icon": "CornerDownLeft",
+                        }
+                    }
+                },
+            },
         ),
         *openai_inputs_filtered,
         MultilineInput(
@@ -159,7 +167,6 @@ class AgentComponent(ToolCallingAgentComponent):
     ]
     outputs = [
         Output(name="response", display_name="Response", method="message_response"),
-        Output(name="structured_response", display_name="Structured Response", method="json_response", tool_mode=False),
     ]
 
     async def get_agent_requirements(self):
@@ -179,7 +186,7 @@ class AgentComponent(ToolCallingAgentComponent):
         if self.add_current_date_tool:
             if not isinstance(self.tools, list):  # type: ignore[has-type]
                 self.tools = []
-            current_date_tool = (CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
+            current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
             if not isinstance(current_date_tool, StructuredTool):
                 msg = "CurrentDateComponent must be converted to a StructuredTool"
                 raise TypeError(msg)
@@ -228,7 +235,13 @@ class AgentComponent(ToolCallingAgentComponent):
             }
             # Ensure multiple is handled correctly
             if isinstance(processed_field["multiple"], str):
-                processed_field["multiple"] = processed_field["multiple"].lower() in ["true", "1", "t", "y", "yes"]
+                processed_field["multiple"] = processed_field["multiple"].lower() in [
+                    "true",
+                    "1",
+                    "t",
+                    "y",
+                    "yes",
+                ]
             processed_schema.append(processed_field)
         return processed_schema
 
@@ -343,7 +356,12 @@ class AgentComponent(ToolCallingAgentComponent):
                 raise
             try:
                 result = await self.run_agent(structured_agent)
-            except (ExceptionWithMessageError, ValueError, TypeError, RuntimeError) as e:
+            except (
+                ExceptionWithMessageError,
+                ValueError,
+                TypeError,
+                RuntimeError,
+            ) as e:
                 await logger.aerror(f"Error with structured agent result: {e}")
                 raise
             # Extract content from structured agent result
@@ -354,7 +372,13 @@ class AgentComponent(ToolCallingAgentComponent):
             else:
                 content = str(result)
 
-        except (ExceptionWithMessageError, ValueError, TypeError, NotImplementedError, AttributeError) as e:
+        except (
+            ExceptionWithMessageError,
+            ValueError,
+            TypeError,
+            NotImplementedError,
+            AttributeError,
+        ) as e:
             await logger.aerror(f"Error with structured chat agent: {e}")
             # Fallback to regular agent
             content_str = "No content returned from agent"
@@ -381,7 +405,11 @@ class AgentComponent(ToolCallingAgentComponent):
         # TODO: This is a temporary fix to avoid message duplication. We should develop a function for this.
         messages = (
             await MemoryComponent(**self.get_base_args())
-            .set(session_id=self.graph.session_id, order="Ascending", n_messages=self.n_messages)
+            .set(
+                session_id=self.graph.session_id,
+                order="Ascending",
+                n_messages=self.n_messages,
+            )
             .retrieve_messages()
         )
         return [
@@ -488,19 +516,31 @@ class AgentComponent(ToolCallingAgentComponent):
                 # Reset input types for agent_llm
                 build_config["agent_llm"]["input_types"] = []
                 build_config["agent_llm"]["display_name"] = "Model Provider"
-            elif field_value == "Custom":
+            elif field_value == "connect_other_models":
                 # Delete all provider fields
                 self.delete_fields(build_config, ALL_PROVIDER_FIELDS)
-                # Update with custom component
+                # # Update with custom component
                 custom_component = DropdownInput(
                     name="agent_llm",
                     display_name="Language Model",
-                    options=[*sorted(MODEL_PROVIDERS), "Custom"],
-                    value="Custom",
+                    info="The provider of the language model that the agent will use to generate responses.",
+                    options=[*MODEL_PROVIDERS_LIST],
                     real_time_refresh=True,
+                    refresh_button=False,
                     input_types=["LanguageModel"],
-                    options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())]
-                    + [{"icon": "brain"}],
+                    placeholder="Awaiting model input.",
+                    options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA],
+                    external_options={
+                        "fields": {
+                            "data": {
+                                "node": {
+                                    "name": "connect_other_models",
+                                    "display_name": "Connect other models",
+                                    "icon": "CornerDownLeft",
+                                },
+                            }
+                        },
+                    },
                 )
                 build_config.update({"agent_llm": custom_component.to_dict()})
             # Update input types for all fields
@@ -544,14 +584,16 @@ class AgentComponent(ToolCallingAgentComponent):
                     )
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
 
-    def _get_tools(self) -> list[Tool]:
+    async def _get_tools(self) -> list[Tool]:
         component_toolkit = get_component_toolkit()
         tools_names = self._build_tools_names()
         agent_description = self.get_tool_description()
         # TODO: Agent Description Depreciated Feature to be removed
         description = f"{agent_description}{tools_names}"
         tools = component_toolkit(component=self).get_tools(
-            tool_name="Call_Agent", tool_description=description, callbacks=self.get_langchain_callbacks()
+            tool_name="Call_Agent",
+            tool_description=description,
+            callbacks=self.get_langchain_callbacks(),
         )
         if hasattr(self, "tools_metadata"):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)

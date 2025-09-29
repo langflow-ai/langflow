@@ -1,6 +1,5 @@
 module.exports = {
   docs: [
-    "Get-Started/welcome-to-langflow",
     {
       type: "category",
       label: "Get started",
@@ -140,6 +139,7 @@ module.exports = {
                 "Integrations/integrations-langsmith",
                 "Integrations/integrations-langwatch",
                 "Integrations/integrations-opik",
+                "Integrations/integrations-instana-traceloop",
               ],
             },
             "Contributing/contributing-telemetry",
@@ -267,7 +267,6 @@ module.exports = {
               ]
             },
             "Components/components-data",
-            "Components/components-vector-stores",
             {
               type: "category",
               label: "Processing",
@@ -279,7 +278,6 @@ module.exports = {
             "Components/components-logic",
             "Components/components-helpers",
             "Components/components-tools",
-            "Components/components-memories",
           ],
         },
         {
@@ -296,15 +294,21 @@ module.exports = {
             "Components/bundles-azure",
             "Components/bundles-baidu",
             "Components/bundles-bing",
+            "Components/bundles-cassandra",
+            "Components/bundles-chroma",
             "Integrations/Cleanlab/integrations-cleanlab",
+            "Components/bundles-clickhouse",
             "Components/bundles-cloudflare",
             "Components/bundles-cohere",
             "Integrations/Composio/integrations-composio",
+            "Components/bundles-couchbase",
             "Components/bundles-datastax",
             "Components/bundles-deepseek",
             "Integrations/Docling/integrations-docling",
             "Components/bundles-duckduckgo",
+            "Components/bundles-elastic",
             "Components/bundles-exa",
+            "Components/bundles-faiss",
             "Components/bundles-glean",
             {
               type: 'category',
@@ -322,7 +326,9 @@ module.exports = {
             "Components/bundles-lmstudio",
             "Components/bundles-maritalk",
             "Components/bundles-mem0",
+            "Components/bundles-milvus",
             "Components/bundles-mistralai",
+            "Components/bundles-mongodb",
             {
               type: "category",
               label: "Notion",
@@ -359,10 +365,18 @@ module.exports = {
             "Components/bundles-openai",
             "Components/bundles-openrouter",
             "Components/bundles-perplexity",
+            "Components/bundles-pgvector",
+            "Components/bundles-pinecone",
+            "Components/bundles-qdrant",
             "Components/bundles-redis",
             "Components/bundles-sambanova",
             "Components/bundles-searchapi",
+            "Components/bundles-serper",
+            "Components/bundles-supabase",
+            "Components/bundles-upstash",
+            "Components/bundles-vectara",
             "Components/bundles-vertexai",
+            "Components/bundles-weaviate",
             "Components/bundles-wikipedia",
             "Components/bundles-xai",
           ],
@@ -388,6 +402,11 @@ module.exports = {
           type: "doc",
           id: "API-Reference/api-flows-run",
           label: "Flow trigger endpoints",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-openai-responses",
+          label: "OpenAI Responses endpoints",
         },
         {
           type: "doc",

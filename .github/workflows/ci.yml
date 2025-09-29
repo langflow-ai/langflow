@@ -18,6 +18,11 @@ on:
         required: false
         type: boolean
         default: false
+      runs-on:
+        description: "Runner to use for the tests"
+        required: false
+        type: string
+        default: "ubuntu-latest"
   workflow_dispatch:
     inputs:
       branch:
@@ -37,6 +42,15 @@ on:
         required: false
         type: string
         default: "['3.10']"
+      runs-on:
+        description: "Runner to use for the tests"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - self-hosted
+          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
+        default: ubuntu-latest
   pull_request:
     types: [opened, synchronize, labeled]
   merge_group:
@@ -163,7 +177,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.branch || github.ref }}
       - name: Filter Paths
@@ -179,6 +193,7 @@ jobs:
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
+      runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
@@ -200,6 +215,7 @@ jobs:
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}
       release: ${{ inputs.release || false }}
+      runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
@@ -225,7 +241,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.branch || github.ref }}
 
