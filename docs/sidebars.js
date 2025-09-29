@@ -37,12 +37,12 @@ module.exports = {
       items: [
         {
           type: "doc",
-          id: "Concepts/concepts-overview",
+          id: "Flows/concepts-overview",
           label: "Use the visual editor"
         },
         {
           type: "doc",
-          id: "Concepts/concepts-flows",
+          id: "Flows/concepts-flows",
           label: "Build flows"
         },
         {
@@ -51,24 +51,24 @@ module.exports = {
           items: [
             {
               type: "doc",
-              id: "Concepts/concepts-publish",
+              id: "Flows/concepts-publish",
               label: "Trigger flows with the Langflow API"
             },
             {
               type: "doc",
-              id: "Develop/webhook",
+              id: "Flows/webhook",
               label: "Trigger flows with webhooks"
             },
           ],
         },
         {
           type: "doc",
-          id: "Concepts/concepts-playground",
+          id: "Flows/concepts-playground",
           label: "Test flows"
         },
         {
           type: "doc",
-          id: "Concepts/concepts-flows-import",
+          id: "Flows/concepts-flows-import",
           label: "Import and export flows"
         },
       ],
