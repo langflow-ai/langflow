@@ -10,7 +10,7 @@ from langchain_core.runnables import Runnable
 
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
-from lfx.base.agents.utils import data_to_messages
+from lfx.base.agents.utils import data_to_messages, get_chat_output_sender_name
 from lfx.custom.custom_component.component import Component, _get_component_toolkit
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import InputTypes, MultilineInput
@@ -167,9 +167,11 @@ class LCAgentComponent(Component):
         else:
             session_id = None
 
+        sender_name = get_chat_output_sender_name(self) or self.display_name or "Agent"
+
         agent_message = Message(
             sender=MESSAGE_SENDER_AI,
-            sender_name=self.display_name or "Agent",
+            sender_name=sender_name,
             properties={"icon": "Bot", "state": "partial"},
             content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
             session_id=session_id or uuid.uuid4(),
