@@ -1,0 +1,108 @@
+---
+title: Arize
+slug: /integrations-arize
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Arize is a tool built on [OpenTelemetry](https://opentelemetry.io/) and [OpenInference](https://docs.arize.com/phoenix/reference/open-inference) for monitoring and optimizing LLM applications.
+
+To enable Arize tracing, set the required Arize environment variables in your Langflow deployment.
+Arize begins monitoring and collecting telemetry data from your LLM applications automatically.
+
+:::tip
+Instructions for integrating Langflow and Arize are also available in the Arize documentation:
+
+* [Langflow tracing with Arize Platform](https://arize.com/docs/ax/integrations/frameworks-and-platforms/langflow/langflow-tracing)
+* [Langflow tracing with Arize Phoenix](https://arize.com/docs/phoenix/integrations/langflow/langflow-tracing)
+:::
+
+## Prerequisites
+
+* If you are using the [standard Arize platform](https://docs.arize.com/arize), you need an **Arize Space ID** and **Arize API Key**.
+* If you are using the open-source [Arize Phoenix platform](https://docs.arize.com/phoenix), you need an **Arize Phoenix API key**.
+
+## Connect Arize to Langflow
+
+<Tabs>
+<TabItem value="platform" label="Arize Platform" default>
+
+1. In your [Arize dashboard](https://app.arize.com/), copy your **Space ID** and [**API Key (Ingestion Service Account Key)**](https://arize.com/docs/ax/security-and-settings/api-keys).
+
+2. In the root of your Langflow application, edit your existing Langflow `.env` file or create a new one.
+
+3. Add `ARIZE_SPACE_ID` and `ARIZE_API_KEY` environment variables:
+
+    ```bash
+    ARIZE_SPACE_ID=SPACE_ID
+    ARIZE_API_KEY=API_KEY
+    ```
+
+    Replace `SPACE_ID` and `API_KEY` with the values you copied from the Arize platform.
+
+    You don't need to specify the Arize project name if you're using the standard Arize platform.
+
+4. Start your Langflow application with your `.env` file:
+
+    ```bash
+    uv run langflow run --env-file .env
+    ```
+
+</TabItem>
+<TabItem value="phoenix" label="Arize Phoenix">
+
+1. In your [Arize Phoenix dashboard](https://app.phoenix.arize.com/), copy your **API Key**.
+
+2. In the root of your Langflow application, edit your existing Langflow `.env` file or create a new one.
+
+3. Add a `PHOENIX_API_KEY` environment variable:
+
+    ```bash
+    PHOENIX_API_KEY=API_KEY
+    ```
+
+    Replace `API_KEY` with the Arize Phoenix API key that you copied from the Arize Phoenix platform.
+
+4. Start your Langflow application with your `.env` file:
+
+    ```bash
+    uv run langflow run --env-file .env
+    ```
+
+</TabItem>
+</Tabs>
+
+## Run a flow and view metrics in Arize
+
+1. In Langflow, run a flow that has an LLM-driven component, such as an **Agent** component or any language model component.
+You must chat with the flow or trigger the LLM to produce traffic for Arize to trace.
+
+    For example, you can create a flow with the **Simple Agent** template, add your OpenAI API key to the **Agent** component, and then click **Playground** to chat with the flow and generate traffic.
+
+2. In Arize, open your project dashboard, and then wait for Arize to process the data.
+This can take a few minutes.
+
+3. To view metrics for your flows, go to the **LLM Tracing** tab.
+
+    Each Langflow execution generates two traces in Arize:
+
+    * The `AgentExecutor` trace is the Arize trace of LangChain's `AgentExecutor`.
+    * The `UUID` trace is the trace of the Langflow components.
+
+4. To view traces, go to the **Traces** tab.
+
+    A _trace_ is the complete journey of a request, made of multiple _spans_.
+
+5. To view spans, go to the **Spans** tab.
+
+    A _span_ is a single operation within a trace.
+    For example, a _span_ could be a single API call to OpenAI or a single function call to a custom tool.
+
+    For information about tracing metrics in Arize, see the [Arize LLM tracing documentation](https://docs.arize.com/arize/llm-tracing/tracing).
+
+6. To add a span to a [dataset](https://docs.arize.com/arize/llm-datasets-and-experiments/datasets-and-experiments), click **Add to Dataset**.
+
+    All metrics on the **LLM Tracing** tab can be added to datasets.
+
+7. To view a dataset, click the **Datasets** tab, and then select your dataset.
