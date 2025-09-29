@@ -4,10 +4,10 @@ from typing import Any
 
 import pytest
 from langchain_community.embeddings.fake import DeterministicFakeEmbedding
-from pymongo.collection import Collection
-
 from lfx.components.mongodb import MongoVectorStoreComponent
 from lfx.schema.data import Data
+from pymongo.collection import Collection
+
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
 

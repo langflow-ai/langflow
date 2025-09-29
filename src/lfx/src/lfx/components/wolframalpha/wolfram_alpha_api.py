@@ -22,7 +22,7 @@ topics, delivering structured responses."""
         MultilineInput(
             name="input_value", display_name="Input Query", info="Example query: 'What is the population of France?'"
         ),
-        SecretStrInput(name="app_id", display_name="App ID", required=True),
+        SecretStrInput(name="app_id", display_name="WolframAlpha App ID", required=True),
     ]
 
     icon = "WolframAlphaAPI"

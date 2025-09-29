@@ -3,34 +3,29 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 
 export function SidebarFilterComponent({
-  isInput,
-  type,
-  color,
+  name,
+  description,
   resetFilters,
 }: {
-  isInput: boolean;
-  type: string;
-  color: string;
+  name: string;
+  description: string;
   resetFilters: () => void;
 }) {
-  const tooltips = type.split("\n");
+  const tooltips = description.split("\n");
   const plural = tooltips.length > 1 ? "s" : "";
   return (
     <div
-      className={`mb-0.5 flex w-full items-center justify-between rounded border p-2 text-sm text-foreground`}
-      style={{
-        backgroundColor: `hsl(var(--datatype-${color}-foreground))`,
-      }}
+      className={`mb-0.5 flex w-full items-center overflow-hidden justify-between rounded border p-2 text-sm text-foreground`}
     >
-      <div className="flex flex-1 items-center gap-1.5">
+      <div className="flex flex-1 items-center gap-1.5 overflow-hidden">
         <ForwardedIconComponent
           name="ListFilter"
           className={`h-4 w-4 shrink-0 stroke-2`}
         />
-        <div className="flex flex-1">
-          {isInput ? "Input" : "Output"}
+        <div className="flex flex-1 overflow-hidden">
+          {name}
           {plural}:{" "}
-          <div className="w-[5.7rem] flex-1 overflow-hidden truncate pl-1">
+          <div className="flex-1 overflow-hidden truncate pl-1">
             {tooltips.join(", ")}
           </div>
         </div>
