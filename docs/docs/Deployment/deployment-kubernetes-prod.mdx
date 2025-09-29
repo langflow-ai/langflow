@@ -8,10 +8,10 @@ import TabItem from '@theme/TabItem';
 
 The [Langflow runtime Helm chart](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime) is tailored for deploying applications in a production environment. It is focused on stability, performance, isolation, and security to ensure that applications run reliably and efficiently.
 
-:::important
+:::warning
 For security reasons, the default Langflow runtime Helm chart sets [`readOnlyRootFilesystem: true`](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml#L46). This setting prevents modifications to the container's root filesystem at runtime, which is a recommended security measure in production environments.
 
-If `readOnlyRootFilesystem` is disabled (false), it degrades your deployment's security posture. Only disable this setting if you understand the security implications and you have implemented other security measures.
+If `readOnlyRootFilesystem` is disabled (`false`), it degrades your deployment's security posture. Only disable this setting if you understand the security implications and you have implemented other security measures.
 
 For more information, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
 :::

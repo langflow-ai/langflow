@@ -357,7 +357,7 @@ module.exports = {
                 {
                   type: "doc",
                   id: "Integrations/Nvidia/integrations-nvidia-g-assist",
-                  label: "NVIDIA G-Assist"
+                  label: "NVIDIA System-Assist"
                 },
               ],
             },

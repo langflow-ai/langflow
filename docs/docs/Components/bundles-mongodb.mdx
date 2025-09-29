@@ -39,7 +39,7 @@ For information about accepted values and functionality, see the [MongoDB Atlas 
 | Name                      | Type         | Description                               |
 | ------------------------- | ------------ | ----------------------------------------- |
 | mongodb_atlas_cluster_uri | SecretString | Input parameter. The connection URI for your MongoDB Atlas cluster. Required. |
-| enable_mtls               | Boolean      | Input parameter. Enable mutual TLS authentication. Default: false. |
+| enable_mtls               | Boolean      | Input parameter. Enable mutual TLS authentication. Default: `false`. |
 | mongodb_atlas_client_cert | SecretString | Input parameter. Client certificate combined with private key for mTLS authentication. Required if mTLS is enabled. |
 | db_name                   | String       | Input parameter. The name of the database to use. Required. |
 | collection_name           | String       | Input parameter. The name of the collection to use. Required. |

@@ -150,7 +150,7 @@ You can use the [`.env.example`](https://github.com/langflow-ai/langflow/blob/ma
 This variable controls whether authentication is required to access your Langflow server, including the visual editor, API, and Langflow CLI:
 
 * If `LANGFLOW_AUTO_LOGIN=False`, automatic login is disabled. Users must sign in to the visual editor, authenticate as a superuser to run certain Langflow CLI commands, and use a Langflow API key for Langflow API requests.
-If false, the Langflow team recommends that you also explicitly set [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser) to avoid using the insecure default values.
+If `false`, the Langflow team recommends that you also explicitly set [`LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser) to avoid using the insecure default values.
 
 * If `LANGFLOW_AUTO_LOGIN=True` (default), all API requests require authentication with a Langflow API key, but the visual editor automatically signs in all users as superusers, and Langflow uses _only_ the default [superuser credentials](/api-keys-and-authentication#langflow-superuser).
 All users access the same visual editor environment without password protection, they can run all Langflow CLI commands as superusers, and Langflow automatically authenticates internal requests between the backend and frontend based on the users' superuser privileges.
@@ -164,7 +164,7 @@ If two users edit the same flow, Langflow saves only the work of the most recent
 In Langflow version 1.6, the default settings are `LANGFLOW_AUTO_LOGIN=True` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False`.
 This enforces authentication for API requests only, as explained in the preceding section.
 
-For temporary backwards compatibility, you can revert to the fully unauthenticated behavior from earlier versions by setting both variables to true.
+For temporary backwards compatibility, you can revert to the fully unauthenticated behavior from earlier versions by setting both variables to `true`.
 However, a future release will set `LANGFLOW_AUTO_LOGIN=False` and remove `LANGFLOW_SKIP_AUTH_AUTO_LOGIN`.
 At that point, Langflow will strictly enforce API key authentication for API requests, and you can manually disable authentication for some features, like the visual editor, by setting `LANGFLOW_AUTO_LOGIN=True`.
 
@@ -172,7 +172,7 @@ At that point, Langflow will strictly enforce API key authentication for API req
 <summary>Authentication enforcement in earlier versions</summary>
 
 Langflow version 1.5 was the first version that could enforce authentication for Langflow API requests, regardless of the value of `LANGFLOW_AUTO_LOGIN`.
-As a temporary bypass for backwards compatibility, this version added the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` environment variable and set both variables to true by default to preserve the fully unauthenticated behavior from earlier versions.
+As a temporary bypass for backwards compatibility, this version added the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` environment variable and set both variables to `true` by default to preserve the fully unauthenticated behavior from earlier versions.
 This allowed users to upgrade to version 1.5 with no change in the authentication behavior.
 
 In Langflow versions earlier than 1.5, Langflow API requests didn't require authentication.
@@ -182,7 +182,7 @@ Additionally, the default setting of `LANGFLOW_AUTO_LOGIN=True` automatically gr
 ### LANGFLOW_ENABLE_SUPERUSER_CLI {#langflow-enable-superuser-cli}
 
 Controls the availability of the `langflow superuser` command in the Langflow CLI.
-The default is true, but false is recommended to prevent unrestricted superuser creation.
+The default is `true`, but `false` is recommended to prevent unrestricted superuser creation.
 For more information, see [`langflow superuser`](/configuration-cli#langflow-superuser).
 
 ### LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD {#langflow-superuser}
@@ -289,7 +289,7 @@ The following `LANGFLOW_CORS_*` environment variables are available:
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_CORS_ALLOW_CREDENTIALS` | Boolean | True | Whether to allow credentials, such as cookies and authorization headers, in CORS requests. |
+| `LANGFLOW_CORS_ALLOW_CREDENTIALS` | Boolean | `True` | Whether to allow credentials, such as cookies and authorization headers, in CORS requests. |
 | `LANGFLOW_CORS_ALLOW_HEADERS` | List[String] or String | `*` | The allowed headers for CORS requests. Provide a comma-separated list of headers or use `*` to allow all headers. |
 | `LANGFLOW_CORS_ALLOW_METHODS` | List[String] or String | `*` | The allowed HTTP methods for CORS requests. Provide a comma-separated list of methods or use `*` to allow all methods. |
 | `LANGFLOW_CORS_ORIGINS` | String | `*` | The allowed CORS origins. Provide a comma-separated list of origins or use `*` for all origins. |

@@ -38,10 +38,10 @@ To customize log storage locations and behaviors, set the following [Langflow en
 | `LANGFLOW_LOG_LEVEL` | String | `ERROR` | Sets the log level as one of `DEBUG`, `ERROR`, `INFO`, `WARNING`, and `CRITICAL`. For example, `LANGFLOW_LOG_LEVEL=DEBUG`. |
 | `LANGFLOW_LOG_FILE` | String | Not set | Sets the log file storage location if you want to use a non-default location. For example, `LANGFLOW_LOG_FILE=path/to/logfile.log`. If not set, logs are written to stdout. |
 | `LANGFLOW_LOG_ENV` | String | `default` | This variable is the primary log format controller. `container`: JSON format for Docker/structured logging. `container_csv`: Key-value format for data analysis. `default` or unset: Uses `LANGFLOW_PRETTY_LOGS` to determine format. |
-| `LANGFLOW_PRETTY_LOGS` | Boolean | True | This variable controls log output format when `LANGFLOW_LOG_ENV=default` or unset. When `true`, uses structlog's [ConsoleRenderer](https://www.structlog.org/en/stable/console-output.html). When `false`, outputs logs in JSON format.  |
+| `LANGFLOW_PRETTY_LOGS` | Boolean | `True` | This variable controls log output format when `LANGFLOW_LOG_ENV=default` or unset. When `true`, uses structlog's [ConsoleRenderer](https://www.structlog.org/en/stable/console-output.html). When `false`, outputs logs in JSON format.  |
 | `LANGFLOW_LOG_FORMAT` | String | Not set | Switch between key-value format and console format. Set to `key_value` for key-value format or `console` to use structlog's [ConsoleRenderer](https://www.structlog.org/en/stable/console-output.html). This variable only works when `LANGFLOW_LOG_ENV=default` and `LANGFLOW_PRETTY_LOGS=true`. |
 | `LANGFLOW_LOG_ROTATION` | String | `1 day` | Controls when the log file is rotated, either based on time or file size. For time-based rotation, set to `1 day`, `12 hours`, or `1 week`. For size-based rotation, set to `10 MB` or `1 GB`. To disable rotation, set to `None`. If disabled, log files grow without limit. |
-| `LANGFLOW_ENABLE_LOG_RETRIEVAL` | Boolean | False | Enables retrieval of logs from your Langflow instance with [Logs endpoints](/api-logs). |
+| `LANGFLOW_ENABLE_LOG_RETRIEVAL` | Boolean | `False` | Enables retrieval of logs from your Langflow instance with [Logs endpoints](/api-logs). |
 | `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` | Integer | `10000` | Set the buffer size for log retrieval if `LANGFLOW_ENABLE_LOG_RETRIEVAL=True`. Must be greater than `0` for log retrieval to function. |
 
 ## View logs in real-time
