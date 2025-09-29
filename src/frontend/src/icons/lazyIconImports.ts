@@ -3,6 +3,8 @@ export const lazyIconsMapping = {
   AIML: () => import("@/icons/AIML").then((mod) => ({ default: mod.AIMLIcon })),
   AgentQL: () =>
     import("@/icons/AgentQL").then((mod) => ({ default: mod.AgentQLIcon })),
+  Agiled: () =>
+    import("@/icons/Agiled").then((mod) => ({ default: mod.AgiledIcon })),
   Airbyte: () =>
     import("@/icons/Airbyte").then((mod) => ({ default: mod.AirbyteIcon })),
   Anthropic: () =>
@@ -40,6 +42,8 @@ export const lazyIconsMapping = {
     import("@/icons/discord").then((mod) => ({
       default: mod.DiscordIcon,
     })),
+  Digicert: () =>
+    import("@/icons/Digicert").then((mod) => ({ default: mod.DigicertIcon })),
   Contentful: () =>
     import("@/icons/contentful").then((mod) => ({
       default: mod.ContentfulIcon,
@@ -48,6 +52,12 @@ export const lazyIconsMapping = {
     import("@/icons/calendly").then((mod) => ({
       default: mod.CalendlyIcon,
     })),
+  CapsuleCRM: () =>
+    import("@/icons/Capsulecrm").then((mod) => ({ default: mod.CapsulecrmIcon })),
+  Canvas: () =>
+    import("@/icons/Canvas").then((mod) => ({ default: mod.CanvasIcon })),
+  Canvaas: () =>
+    import("@/icons/Canvas").then((mod) => ({ default: mod.CanvasIcon })),
   Attio: () =>
     import("@/icons/attio").then((mod) => ({ default: mod.AttioIcon })),
   Asana: () =>
@@ -66,10 +76,16 @@ export const lazyIconsMapping = {
   Azure: () =>
     import("@/icons/Azure").then((mod) => ({ default: mod.AzureIcon })),
   Bing: () => import("@/icons/Bing").then((mod) => ({ default: mod.BingIcon })),
+  Bolna: () =>
+    import("@/icons/Bolna").then((mod) => ({ default: mod.BolnaIcon })),
   BotMessageSquareIcon: () =>
     import("@/icons/BotMessageSquare").then((mod) => ({
       default: mod.BotMessageSquareIcon,
     })),
+  Brandfetch: () =>
+    import("@/icons/Brandfetch").then((mod) => ({ default: mod.BrandfetchIcon })),
+  Brightdata: () =>
+    import("@/icons/Brightdata").then((mod) => ({ default: mod.BrightdataIcon })),
   BWPython: () =>
     import("@/icons/BW python").then((mod) => ({ default: mod.BWPythonIcon })),
   Cassandra: () =>
@@ -213,6 +229,8 @@ export const lazyIconsMapping = {
     import("@/icons/JigsawStack").then((mod) => ({
       default: mod.JigsawStackIcon,
     })),
+  Jira: () =>
+    import("@/icons/Jira").then((mod) => ({ default: mod.JiraIcon })),
   Linear: () =>
     import("@/icons/linear").then((mod) => ({ default: mod.LinearIcon })),
   LangChain: () =>
@@ -330,6 +348,8 @@ export const lazyIconsMapping = {
     import("@/icons/thumbs").then((mod) => ({
       default: mod.ThumbUpIconCustom,
     })),
+  Timelinesai: () =>
+    import("@/icons/Timelinesai").then((mod) => ({ default: mod.TimelinesaiIcon })),
   TwelveLabs: () =>
     import("@/icons/TwelveLabs").then((mod) => ({
       default: mod.TwelveLabsIcon,
