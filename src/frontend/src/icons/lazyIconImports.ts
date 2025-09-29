@@ -53,7 +53,9 @@ export const lazyIconsMapping = {
       default: mod.CalendlyIcon,
     })),
   CapsuleCRM: () =>
-    import("@/icons/Capsulecrm").then((mod) => ({ default: mod.CapsulecrmIcon })),
+    import("@/icons/Capsulecrm").then((mod) => ({
+      default: mod.CapsulecrmIcon,
+    })),
   Canvas: () =>
     import("@/icons/Canvas").then((mod) => ({ default: mod.CanvasIcon })),
   Canvaas: () =>
@@ -83,9 +85,13 @@ export const lazyIconsMapping = {
       default: mod.BotMessageSquareIcon,
     })),
   Brandfetch: () =>
-    import("@/icons/Brandfetch").then((mod) => ({ default: mod.BrandfetchIcon })),
+    import("@/icons/Brandfetch").then((mod) => ({
+      default: mod.BrandfetchIcon,
+    })),
   Brightdata: () =>
-    import("@/icons/Brightdata").then((mod) => ({ default: mod.BrightdataIcon })),
+    import("@/icons/Brightdata").then((mod) => ({
+      default: mod.BrightdataIcon,
+    })),
   BWPython: () =>
     import("@/icons/BW python").then((mod) => ({ default: mod.BWPythonIcon })),
   Cassandra: () =>
@@ -229,8 +235,7 @@ export const lazyIconsMapping = {
     import("@/icons/JigsawStack").then((mod) => ({
       default: mod.JigsawStackIcon,
     })),
-  Jira: () =>
-    import("@/icons/Jira").then((mod) => ({ default: mod.JiraIcon })),
+  Jira: () => import("@/icons/Jira").then((mod) => ({ default: mod.JiraIcon })),
   Linear: () =>
     import("@/icons/linear").then((mod) => ({ default: mod.LinearIcon })),
   LangChain: () =>
@@ -349,7 +354,9 @@ export const lazyIconsMapping = {
       default: mod.ThumbUpIconCustom,
     })),
   Timelinesai: () =>
-    import("@/icons/Timelinesai").then((mod) => ({ default: mod.TimelinesaiIcon })),
+    import("@/icons/Timelinesai").then((mod) => ({
+      default: mod.TimelinesaiIcon,
+    })),
   TwelveLabs: () =>
     import("@/icons/TwelveLabs").then((mod) => ({
       default: mod.TwelveLabsIcon,

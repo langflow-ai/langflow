@@ -14,21 +14,21 @@ if TYPE_CHECKING:
     from .brandfetch_composio import ComposioBrandfetchAPIComponent
     from .brightdata_composio import ComposioBrightdataAPIComponent
     from .calendly_composio import ComposioCalendlyAPIComponent
-    from .capsulecrm_composio import ComposioCapsuleCRMAPIComponent
     from .canvas_composio import ComposioCanvaasAPIComponent
+    from .capsulecrm_composio import ComposioCapsuleCRMAPIComponent
     from .composio_api import ComposioAPIComponent
     from .contentful_composio import ComposioContentfulAPIComponent
-    from .discord_composio import ComposioDiscordAPIComponent
     from .digicert_composio import ComposioDigicertAPIComponent
+    from .discord_composio import ComposioDiscordAPIComponent
     from .figma_composio import ComposioFigmaAPIComponent
     from .github_composio import ComposioGitHubAPIComponent
-    from .jira_composio import ComposioJiraAPIComponent
     from .gmail_composio import ComposioGmailAPIComponent
     from .googlecalendar_composio import ComposioGoogleCalendarAPIComponent
     from .googledocs_composio import ComposioGoogleDocsAPIComponent
     from .googlemeet_composio import ComposioGooglemeetAPIComponent
     from .googlesheets_composio import ComposioGoogleSheetsAPIComponent
     from .googletasks_composio import ComposioGoogleTasksAPIComponent
+    from .jira_composio import ComposioJiraAPIComponent
     from .klaviyo_composio import ComposioKlaviyoAPIComponent
     from .linear_composio import ComposioLinearAPIComponent
     from .miro_composio import ComposioMiroAPIComponent
@@ -97,11 +97,11 @@ __all__ = [
     "ComposioBrandfetchAPIComponent",
     "ComposioBrightdataAPIComponent",
     "ComposioCalendlyAPIComponent",
-    "ComposioCapsuleCRMAPIComponent",
     "ComposioCanvaasAPIComponent",
+    "ComposioCapsuleCRMAPIComponent",
     "ComposioContentfulAPIComponent",
-    "ComposioDiscordAPIComponent",
     "ComposioDigicertAPIComponent",
+    "ComposioDiscordAPIComponent",
     "ComposioFigmaAPIComponent",
     "ComposioGitHubAPIComponent",
     "ComposioGmailAPIComponent",
