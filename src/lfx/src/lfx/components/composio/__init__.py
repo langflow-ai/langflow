@@ -11,11 +11,9 @@ if TYPE_CHECKING:
     from .asana_composio import ComposioAsanaAPIComponent
     from .attio_composio import ComposioAttioAPIComponent
     from .bolna_composio import ComposioBolnaAPIComponent
-    from .brandfetch_composio import ComposioBrandfetchAPIComponent
     from .brightdata_composio import ComposioBrightdataAPIComponent
     from .calendly_composio import ComposioCalendlyAPIComponent
     from .canvas_composio import ComposioCanvaasAPIComponent
-    from .capsulecrm_composio import ComposioCapsuleCRMAPIComponent
     from .composio_api import ComposioAPIComponent
     from .contentful_composio import ComposioContentfulAPIComponent
     from .digicert_composio import ComposioDigicertAPIComponent
@@ -52,10 +50,8 @@ _dynamic_imports = {
     "ComposioAsanaAPIComponent": "asana_composio",
     "ComposioAttioAPIComponent": "attio_composio",
     "ComposioBolnaAPIComponent": "bolna_composio",
-    "ComposioBrandfetchAPIComponent": "brandfetch_composio",
     "ComposioBrightdataAPIComponent": "brightdata_composio",
     "ComposioCalendlyAPIComponent": "calendly_composio",
-    "ComposioCapsuleCRMAPIComponent": "capsulecrm_composio",
     "ComposioCanvaasAPIComponent": "canvaas_composio",
     "ComposioContentfulAPIComponent": "contentful_composio",
     "ComposioDiscordAPIComponent": "discord_composio",
@@ -94,11 +90,9 @@ __all__ = [
     "ComposioAsanaAPIComponent",
     "ComposioAttioAPIComponent",
     "ComposioBolnaAPIComponent",
-    "ComposioBrandfetchAPIComponent",
     "ComposioBrightdataAPIComponent",
     "ComposioCalendlyAPIComponent",
     "ComposioCanvaasAPIComponent",
-    "ComposioCapsuleCRMAPIComponent",
     "ComposioContentfulAPIComponent",
     "ComposioDigicertAPIComponent",
     "ComposioDiscordAPIComponent",
