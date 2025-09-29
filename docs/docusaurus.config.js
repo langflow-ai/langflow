@@ -327,6 +327,18 @@ const config = {
             to: "/bundles-assemblyai",
             from: "/integrations-assemblyai",
           },
+          {
+            to: "/bundles-cleanlab",
+            from: "/integrations-cleanlab",
+          },
+          {
+            to: "/bundles-composio",
+            from: "/integrations-composio",
+          },
+          {
+            to: "/bundles-docling",
+            from: "/integrations-docling",
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
