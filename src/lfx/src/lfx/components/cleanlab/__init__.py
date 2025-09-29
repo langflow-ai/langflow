@@ -5,20 +5,14 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from .cleanlab_evaluator import CleanlabEvaluator
-    from .cleanlab_rag_evaluator import CleanlabRAGEvaluator
-    from .cleanlab_remediator import CleanlabRemediator
+    from .cleanlab import Cleanlab
 
 _dynamic_imports = {
-    "CleanlabEvaluator": "cleanlab_evaluator",
-    "CleanlabRAGEvaluator": "cleanlab_rag_evaluator",
-    "CleanlabRemediator": "cleanlab_remediator",
+    "Cleanlab": "cleanlab",
 }
 
 __all__ = [
-    "CleanlabEvaluator",
-    "CleanlabRAGEvaluator",
-    "CleanlabRemediator",
+    "Cleanlab",
 ]
 
 

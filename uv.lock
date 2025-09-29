@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and sys_platform == 'darwin'",
@@ -1063,6 +1063,20 @@ wheels = [
 ]
 
 [[package]]
+name = "cleanlab-codex"
+version = "1.0.29"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cleanlab-tlm" },
+    { name = "codex-sdk" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/11/7a/2d86f78f3133fcb34761199d31c544d128a64afe80526b1a944e3d6b077b/cleanlab_codex-1.0.29.tar.gz", hash = "sha256:a3c89b37d6148f8d986019e6b79b09937d6aa28784a66135d9a42c1444b1ff4b", size = 29911, upload-time = "2025-09-19T23:04:39.185Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b0/aa/e2515fcffe4a4a7a16775b325cc53aea463acf12705ca8c9031782b3b71a/cleanlab_codex-1.0.29-py3-none-any.whl", hash = "sha256:581e2b6470fb7aeb04900d663b912d01473b1b3935793546d514c9e655c690a1", size = 25791, upload-time = "2025-09-19T23:04:37.927Z" },
+]
+
+[[package]]
 name = "cleanlab-tlm"
 version = "1.1.35"
 source = { registry = "https://pypi.org/simple" }
@@ -1237,6 +1251,23 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c4/54/d90d90bb679df915fe6225d350cd6b8ffdd761458f037655e5b949aee928/codeflash_benchmark-0.2.0.tar.gz", hash = "sha256:05ffbc948c9e3896b15d57aee18dec96f2db6159157b63aa109973c4d41c0595", size = 2794, upload-time = "2025-08-07T22:46:57.081Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a2/83/b8ed6cbdedc79425b1fa33f06077c694d1d377fe185fda07a1bd33acbc68/codeflash_benchmark-0.2.0-py3-none-any.whl", hash = "sha256:996e8bf79e6ab6e3c6b5dacd7370a4414d37bea085b69c691bb3c5e07c879c39", size = 3364, upload-time = "2025-08-07T22:46:58.028Z" },
+]
+
+[[package]]
+name = "codex-sdk"
+version = "0.1.0a28"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "distro" },
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/74/46/607f6218fce8806e797632069bc0207cc9e45ee06192b718fb238eccbd5b/codex_sdk-0.1.0a28.tar.gz", hash = "sha256:e3b0dec9d95935b753f04f2934b4bfb6972312666f0225c26a9c906188d14f5a", size = 148029, upload-time = "2025-09-19T22:33:16.249Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/42/62/4c64c2ab8be4b515da8521150762993c16a8044e8c4982d4e322b16496d3/codex_sdk-0.1.0a28-py3-none-any.whl", hash = "sha256:de88d052f4be8864fcf337f5dba927f5505f047e1ebbc23635b3f51c0f1d907f", size = 164462, upload-time = "2025-09-19T22:33:14.953Z" },
 ]
 
 [[package]]
@@ -2773,10 +2804,10 @@ name = "gassist"
 version = "0.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama" },
-    { name = "flask" },
-    { name = "flask-cors" },
-    { name = "tqdm" },
+    { name = "colorama", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "flask", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "flask-cors", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "tqdm", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b0/2e/f79632d7300874f7f0e60b61a6ab22455a245e1556116a1729542a77b0da/gassist-0.0.1-py3-none-any.whl", hash = "sha256:bb0fac74b453153a6c74b2db40a14fdde7879cbc10ec692ed170e576c8e2b6aa", size = 23819, upload-time = "2025-05-09T18:22:23.609Z" },
@@ -4941,6 +4972,20 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-voyageai"
+version = "0.1.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "pydantic" },
+    { name = "voyageai" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cb/da/213d25d4adfcc21e6b98eafa58e5badda28bbf56389f72bd8a15d8d9e163/langchain_voyageai-0.1.7.tar.gz", hash = "sha256:e9f16a24589122c3a71ad0d46ea330d3dc00ad89b48f4cb5094c87f434cb8d8e", size = 8163, upload-time = "2025-08-05T15:59:16.225Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/71/45/d122ebb0660c191129df23b529305cf268b308d7df6b5ef02e2c664f1379/langchain_voyageai-0.1.7-py3-none-any.whl", hash = "sha256:1f982b3ca14b9fed66fa3e1755f42e1ce19b94379d6f83fd56b8b141f25879da", size = 6239, upload-time = "2025-08-05T15:59:15.204Z" },
+]
+
+[[package]]
 name = "langchainhub"
 version = "0.1.21"
 source = { registry = "https://pypi.org/simple" }
@@ -4970,6 +5015,7 @@ dependencies = [
     { name = "boto3" },
     { name = "certifi" },
     { name = "chromadb" },
+    { name = "cleanlab-codex" },
     { name = "cleanlab-tlm" },
     { name = "composio" },
     { name = "composio-langchain" },
@@ -5021,6 +5067,7 @@ dependencies = [
     { name = "langchain-pinecone" },
     { name = "langchain-sambanova" },
     { name = "langchain-unstructured" },
+    { name = "langchain-voyageai" },
     { name = "langflow-base" },
     { name = "langfuse" },
     { name = "langsmith" },
@@ -5171,6 +5218,7 @@ requires-dist = [
     { name = "certifi", specifier = "==2024.8.30" },
     { name = "certifi", specifier = ">=2023.11.17,<2025.0.0" },
     { name = "chromadb", specifier = ">=1.0.0" },
+    { name = "cleanlab-codex", specifier = ">=1.0.29" },
     { name = "cleanlab-tlm", specifier = ">=1.1.2" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
     { name = "composio", specifier = "==0.8.5" },
@@ -5226,6 +5274,7 @@ requires-dist = [
     { name = "langchain-pinecone", specifier = ">=0.2.8" },
     { name = "langchain-sambanova", specifier = "==0.1.0" },
     { name = "langchain-unstructured", specifier = "==0.1.5" },
+    { name = "langchain-voyageai", specifier = ">=0.1.7" },
     { name = "langflow-base", editable = "src/backend/base" },
     { name = "langfuse", specifier = "==2.53.9" },
     { name = "langsmith", specifier = ">=0.3.42,<1.0.0" },
@@ -7256,9 +7305,9 @@ name = "ocrmac"
 version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
-    { name = "pillow" },
-    { name = "pyobjc-framework-vision" },
+    { name = "click", marker = "sys_platform == 'darwin'" },
+    { name = "pillow", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-vision", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/dd/dc/de3e9635774b97d9766f6815bbb3f5ec9bce347115f10d9abbf2733a9316/ocrmac-1.0.0.tar.gz", hash = "sha256:5b299e9030c973d1f60f82db000d6c2e5ff271601878c7db0885e850597d1d2e", size = 1463997, upload-time = "2024-11-07T12:00:00.197Z" }
 wheels = [
@@ -9615,7 +9664,7 @@ name = "pyobjc-framework-cocoa"
 version = "11.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
+    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4b/c5/7a866d24bc026f79239b74d05e2cf3088b03263da66d53d1b4cf5207f5ae/pyobjc_framework_cocoa-11.1.tar.gz", hash = "sha256:87df76b9b73e7ca699a828ff112564b59251bb9bbe72e610e670a4dc9940d038", size = 5565335, upload-time = "2025-06-14T20:56:59.683Z" }
 wheels = [
@@ -9631,8 +9680,8 @@ name = "pyobjc-framework-coreml"
 version = "11.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
-    { name = "pyobjc-framework-cocoa" },
+    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-cocoa", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0d/5d/4309f220981d769b1a2f0dcb2c5c104490d31389a8ebea67e5595ce1cb74/pyobjc_framework_coreml-11.1.tar.gz", hash = "sha256:775923eefb9eac2e389c0821b10564372de8057cea89f1ea1cdaf04996c970a7", size = 82005, upload-time = "2025-06-14T20:57:12.004Z" }
 wheels = [
@@ -9648,8 +9697,8 @@ name = "pyobjc-framework-quartz"
 version = "11.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
-    { name = "pyobjc-framework-cocoa" },
+    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-cocoa", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c7/ac/6308fec6c9ffeda9942fef72724f4094c6df4933560f512e63eac37ebd30/pyobjc_framework_quartz-11.1.tar.gz", hash = "sha256:a57f35ccfc22ad48c87c5932818e583777ff7276605fef6afad0ac0741169f75", size = 3953275, upload-time = "2025-06-14T20:58:17.924Z" }
 wheels = [
@@ -9665,10 +9714,10 @@ name = "pyobjc-framework-vision"
 version = "11.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
-    { name = "pyobjc-framework-cocoa" },
-    { name = "pyobjc-framework-coreml" },
-    { name = "pyobjc-framework-quartz" },
+    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-cocoa", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-coreml", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-quartz", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/40/a8/7128da4d0a0103cabe58910a7233e2f98d18c590b1d36d4b3efaaedba6b9/pyobjc_framework_vision-11.1.tar.gz", hash = "sha256:26590512ee7758da3056499062a344b8a351b178be66d4b719327884dde4216b", size = 133721, upload-time = "2025-06-14T20:58:46.095Z" }
 wheels = [
@@ -12674,6 +12723,27 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1c/14/37fcdba2808a6c615681cd216fecae00413c9dab44fb2e57805ecf3eaee3/virtualenv-20.34.0.tar.gz", hash = "sha256:44815b2c9dee7ed86e387b842a84f20b93f7f417f95886ca1996a72a4138eb1a", size = 6003808, upload-time = "2025-08-13T14:24:07.464Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/76/06/04c8e804f813cf972e3262f3f8584c232de64f0cde9f703b46cf53a45090/virtualenv-20.34.0-py3-none-any.whl", hash = "sha256:341f5afa7eee943e4984a9207c025feedd768baff6753cd660c857ceb3e36026", size = 5983279, upload-time = "2025-08-13T14:24:05.111Z" },
+]
+
+[[package]]
+name = "voyageai"
+version = "0.3.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "aiolimiter" },
+    { name = "langchain-text-splitters" },
+    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "pillow" },
+    { name = "pydantic" },
+    { name = "requests" },
+    { name = "tenacity" },
+    { name = "tokenizers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/51/9b/e40f90793c1d03610b6109852791f752fcb257989a96701258278f874e00/voyageai-0.3.5.tar.gz", hash = "sha256:963e0d71611af529fa0e496db232a4f660b5f73bce7af1ab288a7f59df7512da", size = 20414, upload-time = "2025-09-11T00:28:26.29Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8a/9d/709f5c7fc80a7bf11952fbccfca2bc5525bd5d345521795358819bd01d02/voyageai-0.3.5-py3-none-any.whl", hash = "sha256:1f70fcf3532d7e0bbc4332b1831a6fc1f714f268eeddc8b2859b81bf06a82411", size = 28257, upload-time = "2025-09-11T00:28:24.62Z" },
 ]
 
 [[package]]
