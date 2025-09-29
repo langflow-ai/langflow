@@ -56,16 +56,20 @@ export function getNewCurlCode({
   processedPayload,
   platform,
   shouldDisplayApiKey,
+  hasAPIResponse = false,
 }: {
   flowId: string;
   endpointName: string;
   processedPayload: any;
   platform?: "unix" | "powershell";
   shouldDisplayApiKey: boolean;
+  hasAPIResponse?: boolean;
 }): { steps: { title: string; code: string }[] } | string {
   const { protocol, host } = customGetHostProtocol();
   const baseUrl = `${protocol}//${host}`;
-  const apiUrl = `${baseUrl}/api/v1/run/${endpointName || flowId}`;
+  const apiUrl = hasAPIResponse 
+    ? `${baseUrl}/api/v1/workflow/${endpointName || flowId}`
+    : `${baseUrl}/api/v1/run/${endpointName || flowId}`;
 
   // Auto-detect if no platform specified
   const detectedPlatform =
@@ -80,48 +84,88 @@ export function getNewCurlCode({
 
   // If no file uploads, use existing logic
   if (!hasFiles) {
-    if (detectedPlatform === "powershell") {
-      const payloadWithSession = {
-        ...processedPayload,
-        session_id: "YOUR_SESSION_ID_HERE",
-      };
-      const singleLinePayload = JSON.stringify(payloadWithSession);
-      // PowerShell with here-string (most robust for complex JSON)
-      const authHeader = shouldDisplayApiKey
-        ? `     --header "x-api-key: YOUR_API_KEY_HERE" \``
-        : "";
+    if (hasAPIResponse) {
+      // Clean workflow API for API Response components - only send tweaks
+      const workflowPayload = processedPayload.tweaks ? { tweaks: processedPayload.tweaks } : {};
+      const singleLinePayload = JSON.stringify(workflowPayload);
+      
+      if (detectedPlatform === "powershell") {
+        const authHeader = shouldDisplayApiKey
+          ? `     --header "x-api-key: YOUR_API_KEY_HERE" \``
+          : "";
 
-      return `$jsonData = @'
+        return `$jsonData = @'
+${singleLinePayload}
+'@
+
+curl.exe --request POST \`
+     --url "${apiUrl}" \`
+     --header "Content-Type: application/json" \`${
+       authHeader ? "\n" + authHeader : ""
+     }
+     --data $jsonData`;
+      } else {
+        const unixFormattedPayload = JSON.stringify(workflowPayload, null, 2)
+          .split("\n")
+          .map((line, index) => (index === 0 ? line : "         " + line))
+          .join("\n\t\t");
+
+        const authHeader = shouldDisplayApiKey
+          ? `     --header "x-api-key: YOUR_API_KEY_HERE" \\ `
+          : "";
+
+        return `curl --request POST \\
+     --url '${apiUrl}' \\
+     --header 'Content-Type: application/json' \\${
+       authHeader ? "\n" + authHeader : ""
+     }
+     --data '${unixFormattedPayload}'`;
+      }
+    } else {
+      // Original chat/text API with session management
+      if (detectedPlatform === "powershell") {
+        const payloadWithSession = {
+          ...processedPayload,
+          session_id: "YOUR_SESSION_ID_HERE",
+        };
+        const singleLinePayload = JSON.stringify(payloadWithSession);
+        // PowerShell with here-string (most robust for complex JSON)
+        const authHeader = shouldDisplayApiKey
+          ? `     --header "x-api-key: YOUR_API_KEY_HERE" \``
+          : "";
+
+        return `$jsonData = @'
 ${singleLinePayload}
 '@
 
 curl.exe --request POST \`
      --url "${apiUrl}?stream=false" \`
      --header "Content-Type: application/json" \`${
-       authHeader ? "\n" + authHeader : ""
-     }
+         authHeader ? "\n" + authHeader : ""
+       }
      --data $jsonData`;
-    } else {
-      const payloadWithSession = {
-        ...processedPayload,
-        session_id: "YOUR_SESSION_ID_HERE",
-      };
-      // Unix-like systems (Linux, Mac, WSL2)
-      const unixFormattedPayload = JSON.stringify(payloadWithSession, null, 2)
-        .split("\n")
-        .map((line, index) => (index === 0 ? line : "         " + line))
-        .join("\n\t\t");
+      } else {
+        const payloadWithSession = {
+          ...processedPayload,
+          session_id: "YOUR_SESSION_ID_HERE",
+        };
+        // Unix-like systems (Linux, Mac, WSL2)
+        const unixFormattedPayload = JSON.stringify(payloadWithSession, null, 2)
+          .split("\n")
+          .map((line, index) => (index === 0 ? line : "         " + line))
+          .join("\n\t\t");
 
-      const authHeader = shouldDisplayApiKey
-        ? `     --header "x-api-key: YOUR_API_KEY_HERE" \\ `
-        : "";
+        const authHeader = shouldDisplayApiKey
+          ? `     --header "x-api-key: YOUR_API_KEY_HERE" \\ `
+          : "";
 
-      return `curl --request POST \\
+        return `curl --request POST \\
      --url '${apiUrl}?stream=false' \\
      --header 'Content-Type: application/json' \\${
-       authHeader ? "\n" + authHeader : ""
-     }
+         authHeader ? "\n" + authHeader : ""
+       }
      --data '${unixFormattedPayload}'`;
+      }
     }
   }
 
@@ -222,7 +266,20 @@ curl.exe --request POST \`
       : "";
 
     const uploadStep = uploadCommands.join("\n");
-    const executeStep = `curl.exe -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader} -d '{
+    
+    const executeStep = hasAPIResponse 
+      ? `curl.exe -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader} -d '{${
+          processedPayload.output_type ? `\n  "output_type": "${processedPayload.output_type}",` : ""
+        }${
+          processedPayload.input_type ? `\n  "input_type": "${processedPayload.input_type}",` : ""
+        }${
+          processedPayload.input_value ? `\n  "input_value": "${processedPayload.input_value}",` : ""
+        }
+  "tweaks": {
+${allTweaks}
+  }
+}'`
+      : `curl.exe -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader} -d '{
   "output_type": "${processedPayload.output_type || "chat"}",
   "input_type": "${processedPayload.input_type || "chat"}",
   "input_value": "${processedPayload.input_value || "Your message here"}",
@@ -245,7 +302,25 @@ ${allTweaks}
       : "";
 
     const uploadStep = uploadCommands.join("\n");
-    const executeStep = `curl -X POST \\
+    
+    const executeStep = hasAPIResponse 
+      ? `curl -X POST \\
+  "${apiUrl}" \\
+  -H "Content-Type: application/json"${
+    authHeader ? " \\\n " + authHeader : ""
+  } \\
+  -d '{${
+    processedPayload.output_type ? `\n    "output_type": "${processedPayload.output_type}",` : ""
+  }${
+    processedPayload.input_type ? `\n    "input_type": "${processedPayload.input_type}",` : ""
+  }${
+    processedPayload.input_value ? `\n    "input_value": "${processedPayload.input_value}",` : ""
+  }
+    "tweaks": {
+${allTweaks}
+    }
+  }'`
+      : `curl -X POST \\
   "${apiUrl}" \\
   -H "Content-Type: application/json"${
     authHeader ? " \\\n " + authHeader : ""

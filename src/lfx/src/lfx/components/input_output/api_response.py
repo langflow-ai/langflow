@@ -18,12 +18,12 @@ class APIResponseComponent(TextComponent):
             name="input_value",
             display_name="Inputs",
             info="Data to be passed as output.",
-            input_types=["Data", "DataFrame", "Message", "str"],
+            input_types=["Data", "DataFrame", "Message"],
             required=True,
         ),
     ]
     outputs = [
-        Output(display_name="Simple Output", name="output", method="output_response"),
+        Output(display_name="Response", name="output", method="output_response"),
     ]
 
     def _convert_input_to_output(self):

@@ -19,6 +19,7 @@ class JSONInputComponent(TextComponent):
             info="Manual JSON payload for testing (will be overridden by actual HTTP request when used via API)",
             value='{\n  "method": "POST",\n  "headers": {"Content-Type": "application/json"},\n  "body": {"name": "test", "value": 123},\n  "query": {"page": "1"},\n  "path": {"id": "456"},\n  "url": "/api/test/456"\n}',
             advanced=False,
+            multiline=True,
         ),
     ]
     
