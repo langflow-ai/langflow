@@ -142,7 +142,7 @@ module.exports = {
                 "Integrations/integrations-instana-traceloop",
               ],
             },
-            "Contributing/contributing-telemetry",
+            "Develop/contributing-telemetry",
           ],
         },
         {
@@ -395,7 +395,7 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Develop/Clients/typescript-client",
+          id: "API-Reference/typescript-client",
           label: "Use the TypeScript client"
         },
         {
@@ -484,7 +484,7 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Contributing/contributing-github-issues",
+          id: "Support/contributing-github-issues",
           label: "Get help and request enhancements",
         },
         {
