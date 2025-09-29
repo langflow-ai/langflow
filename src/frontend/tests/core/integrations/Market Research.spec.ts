@@ -42,7 +42,7 @@ withEventDeliveryModes(
       .fill(process.env.TAVILY_API_KEY ?? "");
 
     await page
-      .getByTestId("handle-parser-shownode-data or dataframe-left")
+      .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")
       .click();
 
     await page.getByTestId("tab_1_stringify").click();

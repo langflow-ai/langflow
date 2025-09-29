@@ -44,6 +44,8 @@ class Column(BaseModel):
     disable_edit: bool = Field(default=False)
     edit_mode: EditMode | None = Field(default=EditMode.POPOVER)
     hidden: bool = Field(default=False)
+    load_from_db: bool = Field(default=False)
+    """Whether this column's default value should be loaded from global variables"""
 
     @model_validator(mode="after")
     def set_display_name(self):
