@@ -98,3 +98,38 @@ test(
     ).toBe(0);
   },
 );
+
+test(
+  "user must not be able to add duplicate mcp servers from starter projects",
+  { tag: ["@release", "@workspace", "@components"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
+
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+
+    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+      timeout: 100000,
+    });
+
+    await page.getByTestId("icon-ChevronLeft").first().click();
+
+    await page.getByTestId("mcp-btn").click();
+    await page.getByText("JSON").last().click();
+    await page.getByTestId("icon-copy").click();
+
+    await navigateSettingsPages(page, "Settings", "MCP Servers");
+
+    await page.getByTestId("add-mcp-server-button-page").click();
+    await page.getByTestId("json-input").click();
+    await page.keyboard.press(`ControlOrMeta+V`);
+    await page.getByTestId("add-mcp-server-button").click();
+
+    await page.waitForTimeout(2000);
+
+    const numberOfErrors = await page
+      .getByText("Server already exists.")
+      .count();
+    expect(numberOfErrors).toBe(1);
+  },
+);
