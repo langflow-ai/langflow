@@ -422,7 +422,7 @@ class TestClass:
 
         with (
             patch("lfx.custom.validate.prepare_global_scope", side_effect=validation_error),
-            pytest.raises(ValueError, match=".*"),
+            pytest.raises(ValueError, match=r".*"),
         ):
             create_class(code, "TestClass")
 
