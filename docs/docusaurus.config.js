@@ -301,7 +301,10 @@ const config = {
           },
           {
             to: "/bundles-google",
-            from: "/integrations-setup-google-oauth-langflow",
+            from: [
+              "/integrations-setup-google-oauth-langflow",
+              "/integrations-google-big-query",
+            ],
           },
           {
             to: "/bundles-vertexai",

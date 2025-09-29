@@ -310,14 +310,7 @@ module.exports = {
             "Components/bundles-exa",
             "Components/bundles-faiss",
             "Components/bundles-glean",
-            {
-              type: 'category',
-              label: 'Google',
-              items: [
-                "Components/bundles-google",
-                "Integrations/Google/integrations-google-big-query",
-              ],
-            },
+            "Components/bundles-google",
             "Components/bundles-groq",
             "Components/bundles-huggingface",
             "Components/bundles-ibm",
