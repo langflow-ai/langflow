@@ -38,7 +38,7 @@ export function getNewJsApiCode({
 
   // If no file uploads, use existing logic
   if (!hasFiles) {
-    const apiUrl = hasAPIResponse 
+    const apiUrl = hasAPIResponse
       ? `${baseUrl}/api/v1/workflow/${endpointName || flowId}`
       : `${baseUrl}/api/v1/run/${endpointName || flowId}`;
 
@@ -58,7 +58,9 @@ export function getNewJsApiCode({
 
     if (hasAPIResponse) {
       // Clean workflow API for API Response components - only send tweaks
-      const workflowPayload = processedPayload.tweaks ? { tweaks: processedPayload.tweaks } : {};
+      const workflowPayload = processedPayload.tweaks
+        ? { tweaks: processedPayload.tweaks }
+        : {};
       const workflowPayloadString = JSON.stringify(workflowPayload, null, 4);
 
       return `${authSection}async function callWorkflowAPI() {

@@ -32,10 +32,10 @@ export function getNewPythonApiCode({
 
   // If no file uploads, use existing logic
   if (!hasFiles) {
-    const apiUrl = hasAPIResponse 
+    const apiUrl = hasAPIResponse
       ? `${baseUrl}/api/v1/workflow/${endpointName || flowId}`
       : `${baseUrl}/api/v1/run/${endpointName || flowId}`;
-    
+
     const payloadString = JSON.stringify(processedPayload, null, 4)
       .replace(/true/g, "True")
       .replace(/false/g, "False")
@@ -51,7 +51,9 @@ export function getNewPythonApiCode({
 
     if (hasAPIResponse) {
       // Clean workflow API for API Response components - only send tweaks
-      const workflowPayload = processedPayload.tweaks ? { tweaks: processedPayload.tweaks } : {};
+      const workflowPayload = processedPayload.tweaks
+        ? { tweaks: processedPayload.tweaks }
+        : {};
       const workflowPayloadString = JSON.stringify(workflowPayload, null, 4)
         .replace(/true/g, "True")
         .replace(/false/g, "False")
@@ -65,7 +67,7 @@ ${authSection}url = "${apiUrl}"  # Clean workflow API endpoint
 payload = ${workflowPayloadString}
 ${headersSection}
 # Send API request
-response = requests.post(url, json=payload${shouldDisplayApiKey ? ', headers=headers' : ''})
+response = requests.post(url, json=payload${shouldDisplayApiKey ? ", headers=headers" : ""})
 response.raise_for_status()  # Raise exception for bad status codes
 
 # Parse clean JSON response

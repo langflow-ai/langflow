@@ -46,7 +46,9 @@ export default function APITabsComponent() {
   const outputs = useFlowStore((state) => state.outputs);
   const hasChatInput = inputs.some((input) => input.type === "ChatInput");
   const hasChatOutput = outputs.some((output) => output.type === "ChatOutput");
-  const hasAPIResponse = outputs.some((output) => output.type === "APIResponse");
+  const hasAPIResponse = outputs.some(
+    (output) => output.type === "APIResponse",
+  );
   let input_value = "hello world!";
   if (hasChatInput) {
     const chatInputId = inputs.find((input) => input.type === "ChatInput")?.id;

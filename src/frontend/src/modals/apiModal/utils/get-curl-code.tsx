@@ -67,7 +67,7 @@ export function getNewCurlCode({
 }): { steps: { title: string; code: string }[] } | string {
   const { protocol, host } = customGetHostProtocol();
   const baseUrl = `${protocol}//${host}`;
-  const apiUrl = hasAPIResponse 
+  const apiUrl = hasAPIResponse
     ? `${baseUrl}/api/v1/workflow/${endpointName || flowId}`
     : `${baseUrl}/api/v1/run/${endpointName || flowId}`;
 
@@ -86,9 +86,11 @@ export function getNewCurlCode({
   if (!hasFiles) {
     if (hasAPIResponse) {
       // Clean workflow API for API Response components - only send tweaks
-      const workflowPayload = processedPayload.tweaks ? { tweaks: processedPayload.tweaks } : {};
+      const workflowPayload = processedPayload.tweaks
+        ? { tweaks: processedPayload.tweaks }
+        : {};
       const singleLinePayload = JSON.stringify(workflowPayload);
-      
+
       if (detectedPlatform === "powershell") {
         const authHeader = shouldDisplayApiKey
           ? `     --header "x-api-key: YOUR_API_KEY_HERE" \``
@@ -141,8 +143,8 @@ ${singleLinePayload}
 curl.exe --request POST \`
      --url "${apiUrl}?stream=false" \`
      --header "Content-Type: application/json" \`${
-         authHeader ? "\n" + authHeader : ""
-       }
+       authHeader ? "\n" + authHeader : ""
+     }
      --data $jsonData`;
       } else {
         const payloadWithSession = {
@@ -162,8 +164,8 @@ curl.exe --request POST \`
         return `curl --request POST \\
      --url '${apiUrl}?stream=false' \\
      --header 'Content-Type: application/json' \\${
-         authHeader ? "\n" + authHeader : ""
-       }
+       authHeader ? "\n" + authHeader : ""
+     }
      --data '${unixFormattedPayload}'`;
       }
     }
@@ -266,14 +268,20 @@ curl.exe --request POST \`
       : "";
 
     const uploadStep = uploadCommands.join("\n");
-    
-    const executeStep = hasAPIResponse 
+
+    const executeStep = hasAPIResponse
       ? `curl.exe -X POST "${apiUrl}" -H "Content-Type: application/json"${authHeader} -d '{${
-          processedPayload.output_type ? `\n  "output_type": "${processedPayload.output_type}",` : ""
+          processedPayload.output_type
+            ? `\n  "output_type": "${processedPayload.output_type}",`
+            : ""
         }${
-          processedPayload.input_type ? `\n  "input_type": "${processedPayload.input_type}",` : ""
+          processedPayload.input_type
+            ? `\n  "input_type": "${processedPayload.input_type}",`
+            : ""
         }${
-          processedPayload.input_value ? `\n  "input_value": "${processedPayload.input_value}",` : ""
+          processedPayload.input_value
+            ? `\n  "input_value": "${processedPayload.input_value}",`
+            : ""
         }
   "tweaks": {
 ${allTweaks}
@@ -302,19 +310,25 @@ ${allTweaks}
       : "";
 
     const uploadStep = uploadCommands.join("\n");
-    
-    const executeStep = hasAPIResponse 
+
+    const executeStep = hasAPIResponse
       ? `curl -X POST \\
   "${apiUrl}" \\
   -H "Content-Type: application/json"${
     authHeader ? " \\\n " + authHeader : ""
   } \\
   -d '{${
-    processedPayload.output_type ? `\n    "output_type": "${processedPayload.output_type}",` : ""
+    processedPayload.output_type
+      ? `\n    "output_type": "${processedPayload.output_type}",`
+      : ""
   }${
-    processedPayload.input_type ? `\n    "input_type": "${processedPayload.input_type}",` : ""
+    processedPayload.input_type
+      ? `\n    "input_type": "${processedPayload.input_type}",`
+      : ""
   }${
-    processedPayload.input_value ? `\n    "input_value": "${processedPayload.input_value}",` : ""
+    processedPayload.input_value
+      ? `\n    "input_value": "${processedPayload.input_value}",`
+      : ""
   }
     "tweaks": {
 ${allTweaks}
