@@ -167,7 +167,7 @@ class LCAgentComponent(Component):
         else:
             session_id = None
 
-        sender_name = get_chat_output_sender_name(self) or self.display_name or "Agent"
+        sender_name = get_chat_output_sender_name(self) or self.display_name or "AI"
 
         agent_message = Message(
             sender=MESSAGE_SENDER_AI,
