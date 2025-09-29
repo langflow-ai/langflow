@@ -2170,7 +2170,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "newcol"
+                "value": ""
               },
               "content_field": {
                 "_input_type": "StrInput",
@@ -2309,7 +2309,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "astra-vector"
+                "value": ""
               },
               "deletion_field": {
                 "_input_type": "StrInput",
