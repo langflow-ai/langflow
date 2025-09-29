@@ -15,11 +15,13 @@ export function getNewJsApiCode({
   endpointName,
   processedPayload,
   shouldDisplayApiKey,
+  hasAPIResponse = false,
 }: {
   flowId: string;
   endpointName: string;
   processedPayload: any;
   shouldDisplayApiKey: boolean;
+  hasAPIResponse?: boolean;
 }): string {
   const { protocol, host } = customGetHostProtocol();
   const baseUrl = `${protocol}//${host}`;
@@ -36,13 +38,14 @@ export function getNewJsApiCode({
 
   // If no file uploads, use existing logic
   if (!hasFiles) {
-    const apiUrl = `${baseUrl}/api/v1/run/${endpointName || flowId}`;
+    const apiUrl = hasAPIResponse
+      ? `${baseUrl}/api/v1/workflow/${endpointName || flowId}`
+      : `${baseUrl}/api/v1/run/${endpointName || flowId}`;
 
     const payloadString = JSON.stringify(processedPayload, null, 4);
 
     const authSection = shouldDisplayApiKey
-      ? `const crypto = require('crypto');
-const apiKey = 'YOUR_API_KEY_HERE';
+      ? `const apiKey = 'YOUR_API_KEY_HERE';
 `
       : "";
 
@@ -51,9 +54,48 @@ const apiKey = 'YOUR_API_KEY_HERE';
         'Content-Type': 'application/json',
         "x-api-key": apiKey
     },`
-      : "";
+      : "    headers: {\n        'Content-Type': 'application/json'\n    },";
 
-    return `${authSection}const payload = ${payloadString};
+    if (hasAPIResponse) {
+      // Clean workflow API for API Response components - only send tweaks
+      const workflowPayload = processedPayload.tweaks
+        ? { tweaks: processedPayload.tweaks }
+        : {};
+      const workflowPayloadString = JSON.stringify(workflowPayload, null, 4);
+
+      return `${authSection}async function callWorkflowAPI() {
+    // Clean workflow API endpoint
+    const url = "${apiUrl}";
+
+    // Request payload configuration (only tweaks for workflow API)
+    const payload = ${workflowPayloadString};
+    
+    const options = {
+        method: 'POST',
+${headersSection}
+        body: JSON.stringify(payload)
+    };
+
+    // Send API request
+    const response = await fetch(url, options);
+    if (!response.ok) throw new Error(\`HTTP error! status: \${response.status}\`);
+
+    // Parse clean JSON response  
+    const result = await response.json();
+    console.log("Output:", result.output);
+    console.log("Metadata:", result.metadata);
+}
+
+callWorkflowAPI();`;
+    } else {
+      // Original chat/text API with session management
+      const authSectionWithCrypto = shouldDisplayApiKey
+        ? `const crypto = require('crypto');
+const apiKey = 'YOUR_API_KEY_HERE';
+`
+        : "const crypto = require('crypto');\n";
+
+      return `${authSectionWithCrypto}const payload = ${payloadString};
 payload.session_id = crypto.randomUUID();
 
 const options = {
@@ -64,8 +106,9 @@ ${headersSection}
 
 fetch('${apiUrl}', options)
     .then(response => response.json())
-    .then(response => console.warn(response))
+    .then(response => console.log(response))
     .catch(err => console.error(err));`;
+    }
   }
 
   // File upload logic - handle multiple file types additively
@@ -79,6 +122,7 @@ fetch('${apiUrl}', options)
       endpointName,
       processedPayload: { ...processedPayload, tweaks: nonFileTweaks },
       shouldDisplayApiKey,
+      hasAPIResponse,
     });
   }
 
@@ -285,7 +329,7 @@ ${allTweaks}
         const executeOptions = {
             hostname: '${hostname}',
             port: ${port},
-            path: \`/api/v1/run/${endpointName || flowId}\`,
+            path: \`${hasAPIResponse ? `/api/v1/workflow/${endpointName || flowId}` : `/api/v1/run/${endpointName || flowId}`}\`,
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

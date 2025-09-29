@@ -677,6 +677,8 @@ export const priorityFields = new Set(["code", "template", "mode"]);
 
 export const INPUT_TYPES = new Set([
   "ChatInput",
+  "JSONInput",
+  "Webhook",
   // "TextInput",
   // "KeyPairInput",
   // "JsonInput",
@@ -684,7 +686,8 @@ export const INPUT_TYPES = new Set([
 ]);
 export const OUTPUT_TYPES = new Set([
   "ChatOutput",
-  // "TextOutput",
+  "APIResponse",
+  "TextOutput",
   // "PDFOutput",
   // "ImageOutput",
   // "CSVOutput",

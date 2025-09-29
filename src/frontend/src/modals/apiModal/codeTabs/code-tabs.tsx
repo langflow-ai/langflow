@@ -46,6 +46,9 @@ export default function APITabsComponent() {
   const outputs = useFlowStore((state) => state.outputs);
   const hasChatInput = inputs.some((input) => input.type === "ChatInput");
   const hasChatOutput = outputs.some((output) => output.type === "ChatOutput");
+  const hasAPIResponse = outputs.some(
+    (output) => output.type === "APIResponse",
+  );
   let input_value = "hello world!";
   if (hasChatInput) {
     const chatInputId = inputs.find((input) => input.type === "ChatInput")?.id;
@@ -62,9 +65,13 @@ export default function APITabsComponent() {
 
   const includeTopLevelInputValue = formatPayloadTweaks(tweaks);
   const processedPayload: any = {
-    output_type: hasChatOutput ? "chat" : "text",
     input_type: hasChatInput ? "chat" : "text",
   };
+
+  // Only add output_type for non-API Response components
+  if (!hasAPIResponse) {
+    processedPayload.output_type = hasChatOutput ? "chat" : "text";
+  }
 
   if (includeTopLevelInputValue) {
     processedPayload.input_value = input_value;
@@ -79,6 +86,7 @@ export default function APITabsComponent() {
     streaming: streaming,
     flowId: flowId || "",
     processedPayload: processedPayload,
+    hasAPIResponse: hasAPIResponse,
   };
 
   // Platform selection for cURL

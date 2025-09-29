@@ -15,11 +15,13 @@ export function getNewPythonApiCode({
   endpointName,
   processedPayload,
   shouldDisplayApiKey,
+  hasAPIResponse = false,
 }: {
   flowId: string;
   endpointName: string;
   processedPayload: any;
   shouldDisplayApiKey: boolean;
+  hasAPIResponse?: boolean;
 }): string {
   const { protocol, host } = customGetHostProtocol();
   const baseUrl = `${protocol}//${host}`;
@@ -30,7 +32,10 @@ export function getNewPythonApiCode({
 
   // If no file uploads, use existing logic
   if (!hasFiles) {
-    const apiUrl = `${baseUrl}/api/v1/run/${endpointName || flowId}`;
+    const apiUrl = hasAPIResponse
+      ? `${baseUrl}/api/v1/workflow/${endpointName || flowId}`
+      : `${baseUrl}/api/v1/run/${endpointName || flowId}`;
+
     const payloadString = JSON.stringify(processedPayload, null, 4)
       .replace(/true/g, "True")
       .replace(/false/g, "False")
@@ -44,7 +49,34 @@ export function getNewPythonApiCode({
       ? `headers = {"x-api-key": api_key}`
       : "";
 
-    return `import requests
+    if (hasAPIResponse) {
+      // Clean workflow API for API Response components - only send tweaks
+      const workflowPayload = processedPayload.tweaks
+        ? { tweaks: processedPayload.tweaks }
+        : {};
+      const workflowPayloadString = JSON.stringify(workflowPayload, null, 4)
+        .replace(/true/g, "True")
+        .replace(/false/g, "False")
+        .replace(/null/g, "None");
+
+      return `import requests
+
+${authSection}url = "${apiUrl}"  # Clean workflow API endpoint
+
+# Request payload configuration (only tweaks for workflow API)
+payload = ${workflowPayloadString}
+${headersSection}
+# Send API request
+response = requests.post(url, json=payload${shouldDisplayApiKey ? ", headers=headers" : ""})
+response.raise_for_status()  # Raise exception for bad status codes
+
+# Parse clean JSON response
+result = response.json()
+print("Output:", result["output"])
+print("Metadata:", result["metadata"])`;
+    } else {
+      // Original chat/text API with session management
+      return `import requests
 import os
 import uuid
 
@@ -68,6 +100,7 @@ except requests.exceptions.RequestException as e:
     print(f"Error making API request: {e}")
 except ValueError as e:
     print(f"Error parsing response: {e}")`;
+    }
   }
 
   // File upload logic - handle multiple file types additively

@@ -9,6 +9,8 @@ class TextOutputComponent(TextComponent):
     documentation: str = "https://docs.langflow.org/components-io#text-output"
     icon = "type"
     name = "TextOutput"
+    legacy = True
+    replacement = ["input_output.APIResponse"]
 
     inputs = [
         MultilineInput(
