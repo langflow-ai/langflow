@@ -85,9 +85,9 @@ module.exports = {
       type: "category",
       label: "Model Context Protocol (MCP)",
       items: [
-        "Components/mcp-client",
-        "Concepts/mcp-server",
-        "Integrations/mcp-component-astra",
+        "Agents/mcp-client",
+        "Agents/mcp-server",
+        "Agents/mcp-component-astra",
       ],
     },
     {
