@@ -200,10 +200,9 @@ class MemoryComponent(Component):
             # langchain memories are supposed to return messages in ascending order
 
             if n_messages:
-                if order == "DESC":
-                    stored = stored[:n_messages]  # Get first N messages (newest when DESC)
-                else:
-                    stored = stored[-n_messages:]  # Get last N messages (newest when ASC)
+                # When order is DESC: take first N messages (these are the most recent from the database)
+                # When order is ASC: take last N messages (these are the most recent, keeping chronological order)
+                stored = stored[:n_messages] if order == "DESC" else stored[-n_messages:]
 
             if order == "DESC":
                 stored = stored[::-1]  # Then reverse if needed
@@ -218,7 +217,7 @@ class MemoryComponent(Component):
                 sender=sender_type,
                 sender_name=sender_name,
                 session_id=session_id,
-                limit=n_messages if n_messages else 10000,
+                limit=n_messages if n_messages is not None else 10000,
                 order=order,
             )
 
