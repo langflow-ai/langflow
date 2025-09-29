@@ -143,7 +143,11 @@ class LCAgentComponent(Component):
         if hasattr(self, "system_prompt"):
             input_dict["system_prompt"] = self.system_prompt
         if hasattr(self, "chat_history") and self.chat_history:
-            if isinstance(self.chat_history, Data):
+            if (
+                hasattr(self.chat_history, "to_data")
+                and callable(self.chat_history.to_data)
+                and self.chat_history.__class__.__name__ == "Data"
+            ):
                 input_dict["chat_history"] = data_to_messages(self.chat_history)
             # Handle both lfx.schema.message.Message and langflow.schema.message.Message types
             if all(hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data for m in self.chat_history):
