@@ -58,9 +58,9 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     In Langflow version 1.6, `LANGFLOW_AUTO_LOGIN=True` and `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False` by default.
     This enforces authentication for Langflow API requests while still automatically authenticating all users as superusers in the visual editor.
 
-    **This is a breaking change from 1.5 where both of these environment variables were true by default, bypassing all authentication.**
+    **This is a breaking change from 1.5 where both of these environment variables were `true` by default, bypassing all authentication.**
 
-    For temporary backwards compatibility, you can revert to the earlier unauthenticated behavior by setting both variables to true.
+    For temporary backwards compatibility, you can revert to the earlier unauthenticated behavior by setting both variables to `true`.
     However, a future release will set `LANGFLOW_AUTO_LOGIN=False` and remove `LANGFLOW_SKIP_AUTH_AUTO_LOGIN`.
     At that point, Langflow will strictly enforce API key authentication for API requests, and you can manually disable authentication for some features, like the visual editor, by setting `LANGFLOW_AUTO_LOGIN=True`.
 
@@ -117,7 +117,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     To enhance security and ensure proper authentication for automatic login features, Langflow API endpoints now require authentication with a Langflow API key, even when `LANGFLOW_AUTO_LOGIN=True`.
     This change will be enforced in a future release.
     For temporary backwards compatibility, this release adds the `LANGFLOW_SKIP_AUTH_AUTO_LOGIN` environment variable.
-    The default value is true, which disables API authentication enforcement.
+    The default value is `true`, which disables API authentication enforcement.
     To enforce API authentication, set `LANGFLOW_SKIP_AUTH_AUTO_LOGIN=False`.
     For more information, see the documentation for [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login).
 
