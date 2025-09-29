@@ -7,6 +7,7 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialCurlyBraces from '@site/docs/_partial-escape-curly-braces.mdx';
 
 Processing components process and transform data within a flow.
 They have many uses, including:
@@ -74,7 +75,7 @@ For example, `Create a business card for each name.`
 | df | DataFrameInput | Input parameter. The DataFrame whose column is treated as text messages, as specified by 'column_name'. Required. |
 | column_name | MessageTextInput | Input parameter. The name of the DataFrame column to treat as text messages. If empty, all columns are formatted in TOML. |
 | output_column_name | MessageTextInput | Input parameter. Name of the column where the model's response is stored. Default=`model_response`. |
-| enable_metadata | BoolInput | Input parameter. If True, add metadata to the output DataFrame. |
+| enable_metadata | BoolInput | Input parameter. If `True`, add metadata to the output DataFrame. |
 | batch_results | DataFrame | Output parameter. A DataFrame with all original columns plus the model's response column. |
 
 ## Data Operations
@@ -341,7 +342,7 @@ The **Sort** operation allows you to sort the `DataFrame` on a specific column i
 Provide the following parameters:
 
 * **Column Name** (`column_name`): The name of the column to sort on.
-* **Sort Ascending** (`ascending`): Whether to sort in ascending or descending order. If enabled (true), sorts in ascending order; if disabled (false), sorts in descending order. Default: Enabled (true)
+* **Sort Ascending** (`ascending`): Whether to sort in ascending or descending order. If enabled (`true`), sorts in ascending order; if disabled (`false`), sorts in descending order. Default: Enabled (`true`)
 
 </TabItem>
 <TabItem value="tail" label="Tail">
@@ -389,9 +390,9 @@ The input and output components create a seamless chat interaction where you sen
 | `judge_llm` | **Judge LLM** | Input parameter. Connect `LanguageModel` output from _one_ **Language Model** component to serve as the judge LLM for request routing. |
 | `optimization` | **Optimization** | Input parameter. Set a preferred characteristic for model selection by the judge LLM. The options are `quality` (highest response quality), `speed` (fastest response time), `cost` (most cost-effective model), or `balanced` (equal weight for quality, speed, and cost). Default: `balanced` |
 | `use_openrouter_specs` | **Use OpenRouter Specs** | Input parameter. Whether to fetch model specifications from the OpenRouter API.
-If false, only the model name is provided to the judge LLM. Default: Enabled (true) |
+If `false`, only the model name is provided to the judge LLM. Default: Enabled (`true`) |
 | `timeout` | **API Timeout** | Input parameter. Set a timeout duration in seconds for API requests made by the router. Default: `10` |
-| `fallback_to_first` | **Fallback to First Model** | Input parameter. Whether to use the first LLM in `models` as a backup if routing fails to reach the selected model. Default: Enabled (true) |
+| `fallback_to_first` | **Fallback to First Model** | Input parameter. Whether to use the first LLM in `models` as a backup if routing fails to reach the selected model. Default: Enabled (`true`) |
 
 ### LLM Router outputs
 
@@ -449,6 +450,8 @@ Variables must match keys in the `DataFrame` or `Data` input, such as column nam
 For example, `{name}` extracts the value of a `name` key.
 For more information about the content and structure of `DataFrame` and `Data` objects, see [Langflow data types](/data-types).
 
+<PartialCurlyBraces />
+
 When the flow runs, the **Parser** component iterates over the input, producing a `Message` for each parsed item.
 For example, parsing a `DataFrame` creates a `Message` for each row, populated with the unique values from that row.
 
@@ -498,7 +501,7 @@ The following parameters are available in **Parser** mode.
 | input_data | Data or DataFrame | Input parameter. The `Data` or `DataFrame` input to parse. |
 | pattern | Template | Input parameter. The formatting template using plaintext and variables for keys (`{KEY_NAME}`). See the preceding examples for more information. |
 | sep | Separator | Input parameter. A string defining the separator for rows or lines. Default: `\n` (new line). |
-| clean_data | Clean Data | Whether to remove empty rows and lines in each cell or key of the `DataFrame` or `Data` input. Default: Enabled (true) |
+| clean_data | Clean Data | Whether to remove empty rows and lines in each cell or key of the `DataFrame` or `Data` input. Default: Enabled (`true`) |
 
 </TabItem>
 <TabItem value="stringify" label="Stringify mode">
@@ -513,7 +516,7 @@ The following parameters are available in **Stringify** mode.
 |------|--------------|------|
 | input_data | Data or DataFrame | Input parameter. The `Data` or `DataFrame` input to parse. |
 | sep | Separator | Input parameter. A string defining the separator for rows or lines. Default: `\n` (new line). |
-| clean_data | Clean Data | Whether to remove empty rows and lines in each cell or key of the `DataFrame` or `Data` input. Default: Enabled (true) |
+| clean_data | Clean Data | Whether to remove empty rows and lines in each cell or key of the `DataFrame` or `Data` input. Default: Enabled (`true`) |
 
 </TabItem>
 </Tabs>
@@ -668,7 +671,7 @@ To configure the **Save File** component and use it in a flow, do the following:
 
     * `Message` can be saved to TXT, JSON (default), or Markdown.
 
-    :::important Overwrites allowed
+    :::warning Overwrites allowed
     If you have multiple **Save File** components, in one or more flows, with the same file name, path, and extension, the file contains the data from the most recent run only.
     Langflow doesn't block overwrites if a matching file already exists.
     To avoid unintended overwrites, use unique file names and paths.
@@ -754,7 +757,7 @@ If the chunks aren't split as you expect, adjust the parameters, rerun the compo
 | chunk_size | Chunk Size | Input parameter. The target length for each chunk after splitting. The data is first split by separator, and then chunks smaller than the `chunk_size` are merged up to this limit. However, if the initial separator split produces any chunks larger than the `chunk_size`, those chunks are neither further subdivided nor combined with any smaller chunks; these chunks will be output as-is even though they exceed the `chunk_size`. Default: `1000`. See [Tokenization errors due to chunk size](#chunk-size) for important considerations. |
 | separator | Separator | Input parameter. A string defining a character to split on, such as `\n` to split on new line characters, `\n\n` to split at paragraph breaks, or `},` to split at the end of JSON objects. You can directly provide the separator string, or pass a separator string from another component as `Message` input. |
 | text_key | Text Key | Input parameter. The key to use for the text column that is extracted from the input and then split. Default: `text`. |
-| keep_separator | Keep Separator | Input parameter. Select how to handle separators in output chunks. If False, separators are omitted from output chunks. Options include `False` (remove separators), `True` (keep separators in chunks without preference for placement), `Start` (place separators at the beginning of chunks), or `End` (place separators at the end of chunks). Default: `False`. |
+| keep_separator | Keep Separator | Input parameter. Select how to handle separators in output chunks. If `False`, separators are omitted from output chunks. Options include `False` (remove separators), `True` (keep separators in chunks without preference for placement), `Start` (place separators at the beginning of chunks), or `End` (place separators at the end of chunks). Default: `False`. |
 
 ### Tokenization errors due to chunk size {#chunk-size}
 
@@ -1136,9 +1139,9 @@ It accepts the following parameters:
 | Name | Display Name | Info |
 |------|--------------|------|
 | json_str | JSON String | Input parameter. The JSON string to be cleaned. This can be a raw, potentially malformed JSON string produced by language models or other sources that may not fully comply with JSON specifications. |
-| remove_control_chars | Remove Control Characters | Input parameter. If set to True, this option removes control characters (ASCII characters 0-31 and 127) from the JSON string. This can help eliminate invisible characters that might cause parsing issues or make the JSON invalid. |
+| remove_control_chars | Remove Control Characters | Input parameter. If set to `True`, this option removes control characters (ASCII characters 0-31 and 127) from the JSON string. This can help eliminate invisible characters that might cause parsing issues or make the JSON invalid. |
 | normalize_unicode | Normalize Unicode | Input parameter. When enabled, this option normalizes Unicode characters in the JSON string to their canonical composition form (NFC). This ensures consistent representation of Unicode characters across different systems and prevents potential issues with character encoding. |
-| validate_json | Validate JSON | Input parameter. If set to True, this option attempts to parse the JSON string to ensure it is well-formed before applying the final repair operation. It raises a ValueError if the JSON is invalid, allowing for early detection of major structural issues in the JSON. |
+| validate_json | Validate JSON | Input parameter. If set to `True`, this option attempts to parse the JSON string to ensure it is well-formed before applying the final repair operation. It raises a ValueError if the JSON is invalid, allowing for early detection of major structural issues in the JSON. |
 | output | Cleaned JSON String | Output parameter. The resulting cleaned, repaired, and validated JSON string that fully complies with the JSON specification. |
 
 </details>
