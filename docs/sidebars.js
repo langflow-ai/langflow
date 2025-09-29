@@ -322,15 +322,7 @@ module.exports = {
             "Components/bundles-milvus",
             "Components/bundles-mistralai",
             "Components/bundles-mongodb",
-            {
-              type: "category",
-              label: "Notion",
-              items: [
-                "Integrations/Notion/integrations-notion",
-                "Integrations/Notion/notion-agent-conversational",
-                "Integrations/Notion/notion-agent-meeting-notes",
-              ],
-            },
+            "Components/bundles-notion",
             "Components/bundles-novita",
             {
               type: "category",

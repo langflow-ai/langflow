@@ -342,6 +342,14 @@ const config = {
             to: "/bundles-docling",
             from: "/integrations-docling",
           },
+          {
+            to: "/bundles-notion",
+            from: [
+              "/integrations/notion/setup",
+              "/integrations/notion/notion-agent-meeting-notes",
+              "/integrations/notion/notion-agent-conversational",
+            ],
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',

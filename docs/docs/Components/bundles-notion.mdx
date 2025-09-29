@@ -1,0 +1,169 @@
+---
+title: Notion
+slug: /bundles-notion
+---
+
+import Icon from "@site/src/components/icon";
+
+To use Notion components in Langflow, you first need to create a Notion integration and configure it with the necessary capabilities. This guide will walk you through the process of setting up a Notion integration and granting it access to your Notion databases, and then provide two examples of flows with Notion components.
+
+## Set up a Notion app
+
+To create a Notion app, you need the following:
+
+- A Notion account with access to the workspace where you want to use the integration.
+- Admin permissions in the Notion workspace to create and manage integrations.
+
+### Create a Notion Integration
+
+1. Go to the [Notion Integrations](https://www.notion.com/my-integrations) page.
+2. Click **New Integration**.
+3. Enter an integration name, and then select the workspace where you want to use it.
+4. Optional: Enable the [necessary Notion integration capabilities](https://developers.notion.com/reference/capabilities) based on your requirements.
+5. Click **Submit** to create the integration.
+
+### Configure Integration Capabilities
+
+After creating the integration, you need to configure its capabilities to define what actions it can perform and what data it can access.
+
+1. In the integration settings page, go to the **Capabilities** tab.
+2. Enable the required capabilities for your integration. For example:
+   - If your integration needs to read data from Notion, enable the "Read content" capability.
+   - If your integration needs to create new content in Notion, enable the "Insert content" capability.
+   - If your integration needs to update existing content in Notion, enable the "Update content" capability.
+3. Configure the user information access level based on your integration's requirements.
+4. Save the changes.
+
+### Obtain Integration Token
+
+:::warning
+Your integration token is a sensitive piece of information. Make sure to keep it secure and never share it publicly. Store it safely in your Langflow configuration or environment variables.
+:::
+
+To authenticate your integration with Notion, you need to obtain an integration token.
+
+1. In the integration settings page, go to the "Secrets" tab.
+2. Copy the "Internal Integration Token" value. This token will be used to authenticate your integration with Notion.
+
+### Grant Integration Access to Notion Databases
+
+For your integration to interact with Notion databases, you need to grant it access to the specific databases it must work with:
+
+1. Open the Notion database that you want your integration to access.
+2. Click **Share**.
+3. In the **Invite** section, select your integration from the list.
+4. Click **Invite** to grant the integration access to the database.
+
+   If your database contains references to other databases, you need to grant the integration access to those referenced databases as well.
+   Repeat this step for each referenced database that your integration must access.
+
+## Build with Notion components in Langflow
+
+Once you have set up your Notion integration and granted it access to the required databases, you can start using the Notion components in Langflow:
+
+- **Add Content to Page**: Converts markdown text to Notion blocks and appends them to a specified Notion page.
+- **Create Page**: Creates a new page in a specified Notion database with the provided properties.
+- **List Database Properties**: Retrieves the properties of a specified Notion database.
+- **List Pages**: Queries a Notion database with filtering and sorting options.
+- **List Users**: Retrieves a list of users from the Notion workspace.
+- **Page Content Viewer**: Retrieves the content of a Notion page as plain text.
+- **Search**: Searches all pages and databases that have been shared with the integration. You can filter results to either pages or databases and specify the sort direction.
+- **Update Page Property**: Updates the properties of an existing Notion page.
+
+Each of these components can output `Data` and `Tool` [data types](/data-types).
+
+## Notion Meeting Notes Agent
+
+The Notion Agent for Meeting Notes is an AI-powered tool that automatically processes meeting transcripts and updates your Notion workspace. It identifies tasks, action items, and key points from your meetings, then creates new tasks or updates existing ones in Notion without manual input.
+
+To build this flow, you need the following:
+
+- [A Notion App](#set-up-a-notion-app)
+- [A Notion API key](https://www.notion.so/my-integrations)
+- [An OpenAI API key](https://platform.openai.com/account/api-keys)
+- Recommended: [Download the Meeting Agent Flow JSON](/files/Meeting_Notes_Agent.json), and then [import the flow](/concepts-flows-import) into Langflow.
+
+:::warning
+Treat all keys and other credentials as sensitive information. Use secure references, and don't share them publicly.
+:::
+
+### Components used in this flow
+
+![Notion Meeting Agent Part 1](/img/notion_meeting_agent_part_1.png)
+
+* Meeting Transcript (text input): This component allows users to input the meeting transcript directly into the flow.
+* List Users (Notion component): Retrieves a list of users from the Notion workspace. Requires a Notion Secret (API key).
+* List Databases (Notion component): Searches and lists all databases in the Notion workspace. Requires the following inputs:
+    - Notion Secret (API key)
+    - Query (optional)
+    - Filter Type (default: database)
+    - Sort Direction
+* Prompt Template: This component creates a dynamic prompt template using the following inputs:
+    - Meeting Transcript
+    - List of Users
+    - List of Databases
+    - Current Date
+* Meeting Summarizer (Tool Calling Agent): Analyzes the meeting transcript and identifies tasks and action items. Requires the following inputs:
+    - System Prompt (from the **Prompt Template** component)
+    - Language Model (OpenAI)
+    - Tools:
+        - Notion Search
+        - List Database Properties: Retrieves the properties of a specified Notion database. Requires a Database ID and a Notion Secret (API key) as input.
+        - Create Page: Creates a new page in a Notion database. Requires a Database ID, Properties (JSON), and a Notion Secret (API key) as input.
+        - Update Page Property: Updates the properties of an existing Notion page. Requires a Page ID, Notion Secret (API key), and properties to update as input.
+        - Add Content to Page: Converts markdown text to Notion blocks and appends them to a specified Notion page. Requires a Page/Block ID, Notion Secret (API key), and Markdown text as input.
+
+![Notion Meeting Agent Part 2](/img/notion_meeting_agent_part_2.png)
+
+* Notion Agent (Tool Calling Agent): Executes actions in Notion based on the meeting summary/ Requires the following inputs:
+    - System Prompt (from the second **Prompt Template** component)
+    - Language Model (OpenAI)
+    - Tools:
+        - List Database Properties: Retrieves the properties of a specified Notion database. Requires a Database ID and a Notion Secret (API key) as input.
+        - Create Page: Creates a new page in a Notion database. Requires a Database ID, Properties (JSON), and a Notion Secret (API key) as input.
+        - Update Page Property: Updates the properties of an existing Notion page. Requires a Page ID, Notion Secret (API key), and properties to update as input.
+        - Add Content to Page: Converts markdown text to Notion blocks and appends them to a specified Notion page. Requires a Page/Block ID, Notion Secret (API key), and Markdown text as input.
+* Chat Output: Displays the final output of the Notion Agent in the Playground.
+
+### Flow Process
+
+1. The user inputs a meeting transcript.
+2. The flow retrieves the list of Notion users and databases.
+3. A prompt is generated using the transcript, user list, database list, and current date.
+4. The Meeting Summarizer analyzes the transcript and identifies tasks and action items.
+5. The Notion Agent uses the meeting summary to:
+   - Create new pages for new tasks
+   - Update existing pages for existing tasks
+   - Add content to pages with meeting notes
+6. The Chat Output displays a summary of actions taken in Notion.
+
+### Run the Notion Meeting Notes flow
+
+1. Create a flow manually or import a pre-built flow JSON file:
+
+    * Recommended: [Download the Meeting Agent flow JSON](/files/Meeting_Notes_Agent.json) and then [import the flow](/concepts-flows-import) into Langflow.
+    * Create a blank flow, and then add the previously described components to your flow, connecting them as shown in the flow diagram.
+
+2. Input the Notion and OpenAI API keys in their respective components.
+3. Paste your meeting transcript into the **Meeting Transcript** component.
+
+    For optimal results, use detailed meeting transcripts. The quality of the output depends on the comprehensiveness of the input provided.
+
+4. Run the flow by clicking <Icon name="Play" aria-hidden="true" /> **Run component** on the **Chat Output** component or open the **Playground**.
+5. Review the output summarizing the actions taken in your Notion workspace.
+6. Optional: The flow can be customized to meet your team's specific needs.
+Customize this flow by:
+    * Adjusting the system prompt to change the agent's behavior or context.
+    * Adding or removing Notion tools based on your specific needs.
+    * Modifying the OpenAI model parameters (e.g., temperature) to adjust the agent's response style.
+
+## Troubleshooting
+
+If you encounter issues:
+
+1. Ensure all API keys are correctly set and have the necessary permissions.
+2. Check that your Notion integration has access to the relevant pages and databases.
+3. Verify that all components are properly connected in the flow.
+4. Review the Langflow logs for any error messages.
+
+For more advanced usage and integration options, refer to the [Notion API documentation](https://developers.notion.com/) and [Langflow documentation](/).
