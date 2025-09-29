@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.9488e50d.css">
-<script src="/assets/js/runtime~main.1366ee80.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.a056d0ec.js" defer="defer"></script>
 <script src="/assets/js/main.35384374.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -61,9 +61,8 @@ For more information, see <a href="#start-a-langflow-server-with-authentication-
 </ul>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="langflow-api-keys">Langflow API keys<a href="#langflow-api-keys" class="hash-link" aria-label="Direct link to Langflow API keys" title="Direct link to Langflow API keys">​</a></h2>
 <p>You can use Langflow API keys to interact with Langflow programmatically.</p>
-<p>By default, most Langflow API endpoints, such as <code>/v1/run/$FLOW_ID</code>, require authentication with a Langflow API key.
-To require API key authentication for flow webhook endpoints, use the <a href="/webhook#require-authentication-for-webhooks"><code>LANGFLOW_WEBHOOK_AUTH_ENABLE</code></a> environment variable.
-To configure authentication for Langflow MCP servers, see <a href="/mcp-server">Use Langflow as an MCP server</a>.</p>
+<p>By default, most Langflow API endpoints, such as <code>/v1/run/$FLOW_ID</code>, require authentication with a Langflow API key.</p>
+<p>To configure authentication for Langflow MCP servers, see <a href="/mcp-server">Use Langflow as an MCP server</a>.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="langflow-api-key-permissions">Langflow API key permissions<a href="#langflow-api-key-permissions" class="hash-link" aria-label="Direct link to Langflow API key permissions" title="Direct link to Langflow API key permissions">​</a></h3>
 <p>A Langflow API key adopts the privileges of the user who created it.
 This means that API keys you create have the same permissions and access that you do, including access to your flows, components, and Langflow database.
