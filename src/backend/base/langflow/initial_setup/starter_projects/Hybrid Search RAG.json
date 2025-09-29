@@ -2134,37 +2134,12 @@
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
                 "name": "collection_name",
                 "options": [],
-                "options_metadata": [
-                  {
-                    "icon": "NVIDIA",
-                    "model": "NV-Embed-QA",
-                    "provider": "nvidia",
-                    "records": 9348
-                  },
-                  {
-                    "icon": "OpenAI",
-                    "model": "text-embedding-ada-002",
-                    "provider": "openai",
-                    "records": 6
-                  },
-                  {
-                    "icon": "vectorstores",
-                    "model": null,
-                    "provider": null,
-                    "records": 280
-                  },
-                  {
-                    "icon": "NVIDIA",
-                    "model": "NV-Embed-QA",
-                    "provider": "nvidia",
-                    "records": 283
-                  }
-                ],
+                "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "refresh_button": true,
                 "required": true,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "toggle": false,
                 "tool_mode": false,
@@ -2285,20 +2260,7 @@
                 "info": "The Database name for the Astra DB instance.",
                 "name": "database_name",
                 "options": [],
-                "options_metadata": [
-                  {
-                    "api_endpoints": [
-                      "https://f3166ac4-3e2f-4b32-880c-231d1f9e3f3e-us-east-2.apps.astra.datastax.com"
-                    ],
-                    "collections": 4,
-                    "keyspaces": [
-                      "default_keyspace",
-                      "test"
-                    ],
-                    "org_id": "b7c08322-20a3-4516-80b0-5fa08655143e",
-                    "status": null
-                  }
-                ],
+                "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "refresh_button": true,
