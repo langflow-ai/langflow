@@ -1,6 +1,6 @@
 ---
 title: Apify
-slug: /integrations-apify
+slug: /bundles-apify
 ---
 
 import Icon from "@site/src/components/icon";
@@ -31,11 +31,11 @@ The following scenarios provide a few examples of how you could use the **Apify 
 
 * **Extract website text content in Markdown**: Use the [Website Content Crawler Actor](https://apify.com/apify/website-content-crawler) to extract text content in Markdown format from a website, and then connect the **Output** to a **Parser** component's input for further processing.
 
-    ![Apify Flow - Website Content Crawler](./apify_flow_wcc.png)
+    ![Apify Flow - Website Content Crawler](/img/apify_flow_wcc.png)
 
 * **Process web content with an agent**: Attach a [Website Content Crawler Actor](https://apify.com/apify/website-content-crawler) to an **Agent** component as a tool so the agent can decide whether to extract website content based on the chat input. The agent could take the extracted data and transform it into summaries, insights, or structured responses to make the information more actionable.
 
-    ![Apify Agent Flow - Simple](./apify_agent_flow_simple.png)
+    ![Apify Agent Flow - Simple](/img/apify_agent_flow_simple.png)
 
 * **Analyze social media profiles with multiple actors**: Perform comprehensive social media research with multiple Apify Actors:
 
@@ -43,4 +43,4 @@ The following scenarios provide a few examples of how you could use the **Apify 
     * Use the [TikTok Data Extractor Actor](https://apify.com/clockworks/free-tiktok-scraper) to gather data and videos.
     * Attach both actors as tools for an **Agent** component to collect the links from Google and content from TikTok, and then analyze the data to provide insights about a person, brand, or topic.
 
-    ![Apify Agent Flow](./apify_agent_flow.png)
+    ![Apify Agent Flow](/img/apify_agent_flow.png)

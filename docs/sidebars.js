@@ -251,7 +251,7 @@ module.exports = {
       type: "category",
       label: "Components reference",
       items: [
-        "Concepts/concepts-components",
+        "Components/concepts-components",
         {
           type: "category",
           label: "Core components",
@@ -288,9 +288,9 @@ module.exports = {
             "Components/bundles-aiml",
             "Components/bundles-amazon",
             "Components/bundles-anthropic",
-            "Integrations/Apify/integrations-apify",
+            "Components/bundles-apify",
             "Components/bundles-arxiv",
-            "Integrations/integrations-assemblyai",
+            "Components/bundles-assemblyai",
             "Components/bundles-azure",
             "Components/bundles-baidu",
             "Components/bundles-bing",

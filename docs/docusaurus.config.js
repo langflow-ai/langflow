@@ -319,6 +319,14 @@ const config = {
             to: "/components-helpers",
             from: "/components-memories",
           },
+          {
+            to: "/bundles-apify",
+            from: "/integrations-apify",
+          },
+          {
+            to: "/bundles-assemblyai",
+            from: "/integrations-assemblyai",
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
