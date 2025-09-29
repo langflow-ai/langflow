@@ -104,7 +104,7 @@ The following example flows show how to use the **Cleanlab Evaluator** and **Cle
 
 This flow evaluates and remediates the trustworthiness of a response from any LLM using the **Cleanlab Evaluator** and **Cleanlab Remediator** components.
 
-You can [download the Evaluate and Remediate flow](./eval_and_remediate_cleanlab.json), and then [import the flow](/concepts-flows-import) to your Langflow instance.
+You can [download the Evaluate and Remediate flow](/files/eval_and_remediate_cleanlab.json), and then [import the flow](/concepts-flows-import) to your Langflow instance.
 Or, you can build the flow from scratch by connecting the following components:
 
 * Connect the `Message` output from any **Language Model** or **Agent** component to the **Response** input of the **Cleanlab Evaluator** component.
@@ -112,7 +112,7 @@ Or, you can build the flow from scratch by connecting the following components:
 
 <!-- Components missing per image -->
 
-![Evaluate response trustworthiness](./eval_response.png)
+![Evaluate response trustworthiness](/img/eval_response.png)
 
 When you run the flow, the **Cleanlab Evaluator** component returns a trust score and explanation from the flow.
 
@@ -120,21 +120,21 @@ The **Cleanlab Remediator** component uses this trust score to determine whether
 
 This example shows a response that was determined to be untrustworthy (a score of `.09`) and flagged with a warning by the **Cleanlab Remediator** component.
 
-![Cleanlab Remediator Example](./cleanlab_remediator_example.png)
+![Cleanlab Remediator Example](/img/cleanlab_remediator_example.png)
 
 To hide untrustworthy responses, configure the **Cleanlab Remediator** component to replace the response with a fallback message.
 
-![Cleanlab Remediator Example](./cleanlab_remediator_example_fallback.png)
+![Cleanlab Remediator Example](/img/cleanlab_remediator_example_fallback.png)
 
 ### Evaluate RAG pipeline
 
 As an example, create a flow based on the **Vector Store RAG** template, and then add the **Cleanlab RAG Evaluator** component to evaluate the flow's context, query, and response.
 Connect the **context**, **query**, and **response** outputs from the other components in the RAG flow to the **Cleanlab RAG Evaluator** component.
 
-![Evaluate RAG pipeline](./eval_rag.png)
+![Evaluate RAG pipeline](/img/eval_rag.png)
 
 Here is an example of the `Evaluation Summary` output from the **Cleanlab RAG Evaluator** component:
 
-![Evaluate RAG pipeline](./eval_summary_rag.png)
+![Evaluate RAG pipeline](/img/eval_summary_rag.png)
 
 The `Evaluation Summary` includes the query, context, response, and all evaluation results. In this example, the `Context Sufficiency` and `Response Groundedness` scores are low (a score of `0.002`) because the context doesn't contain information about the query, and the response isn't grounded in the context.
