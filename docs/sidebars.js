@@ -324,28 +324,7 @@ module.exports = {
             "Components/bundles-mongodb",
             "Components/bundles-notion",
             "Components/bundles-novita",
-            {
-              type: "category",
-              label: "NVIDIA",
-              items: [
-                "Components/bundles-nvidia",
-                {
-                  type: "doc",
-                  id: "Integrations/Nvidia/integrations-nvidia-ingest",
-                  label: "NVIDIA Ingest"
-                },
-                {
-                  type: "doc",
-                  id: "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
-                  label: "NVIDIA NIM on WSL2"
-                },
-                {
-                  type: "doc",
-                  id: "Integrations/Nvidia/integrations-nvidia-g-assist",
-                  label: "NVIDIA System-Assist"
-                },
-              ],
-            },
+            "Components/bundles-nvidia",
             "Components/bundles-ollama",
             "Components/bundles-openai",
             "Components/bundles-openrouter",

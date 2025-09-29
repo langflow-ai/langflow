@@ -280,10 +280,6 @@ const config = {
             from: "/integrations-mcp",
           },
           {
-            to: "/integrations-nvidia-g-assist",
-            from: "/integrations-nvidia-system-assist",
-          },
-          {
             to: "/deployment-kubernetes-dev",
             from: "/deployment-kubernetes",
           },
@@ -350,6 +346,15 @@ const config = {
               "/integrations/notion/notion-agent-conversational",
             ],
           },
+          {
+            to: "/bundles-nvidia",
+            from: [
+              "/integrations-nvidia-ingest-wsl2",
+              "/integrations-nvidia-ingest",
+              "/integrations-nvidia-g-assist",
+              "/integrations-nvidia-system-assist",
+            ]
+          }
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
