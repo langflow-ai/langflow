@@ -27,9 +27,9 @@
         "id": "reactflow__edge-ParserComponent-NUETC{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-NUETCœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-HTCA7{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HTCA7œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ParserComponent-NUETC",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-NUETCœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-NUETCœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-HTCA7",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-HTCA7œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-HTCA7œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-ChatInput-RLI5m{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RLI5mœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-u1JXb{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-u1JXbœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
         "selected": false,
         "source": "ChatInput-RLI5m",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RLI5mœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-RLI5mœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AstraDB-u1JXb",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-u1JXbœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}"
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-u1JXbœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-LanguageModelComponent-aH5Bi{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-aH5Biœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-MyXBb{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-MyXBbœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-aH5Bi",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-aH5Biœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-aH5Biœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-MyXBb",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-MyXBbœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-MyXBbœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -111,9 +111,9 @@
         "id": "reactflow__edge-LanguageModelComponent-WUfVa{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-WUfVaœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-MyXBb{œfieldNameœ:œsystem_promptœ,œidœ:œStructuredOutput-MyXBbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "LanguageModelComponent-WUfVa",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-WUfVaœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-WUfVaœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-MyXBb",
-        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œStructuredOutput-MyXBbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œStructuredOutput-MyXBbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -139,9 +139,9 @@
         "id": "reactflow__edge-ChatInput-RLI5m{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RLI5mœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-MyXBb{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-MyXBbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-RLI5m",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RLI5mœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-RLI5mœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-MyXBb",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-MyXBbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-MyXBbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -168,9 +168,9 @@
         "id": "reactflow__edge-StructuredOutput-MyXBb{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-MyXBbœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-HTPnn{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-HTPnnœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "StructuredOutput-MyXBb",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-MyXBbœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-MyXBbœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ParserComponent-HTPnn",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-HTPnnœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-HTPnnœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -196,9 +196,9 @@
         "id": "xy-edge__ParserComponent-HTPnn{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-HTPnnœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-AstraDB-u1JXb{œfieldNameœ:œlexical_termsœ,œidœ:œAstraDB-u1JXbœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}",
         "selected": false,
         "source": "ParserComponent-HTPnn",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-HTPnnœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-HTPnnœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AstraDB-u1JXb",
-        "targetHandle": "{œfieldNameœ:œlexical_termsœ,œidœ:œAstraDB-u1JXbœ,œinputTypesœ:[œMessageœ],œtypeœ:œqueryœ}"
+        "targetHandle": "{œfieldNameœ: œlexical_termsœ, œidœ: œAstraDB-u1JXbœ, œinputTypesœ: [œMessageœ], œtypeœ: œqueryœ}"
       },
       {
         "animated": false,
@@ -225,9 +225,9 @@
         "id": "xy-edge__AstraDB-u1JXb{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-u1JXbœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-NUETC{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-NUETCœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AstraDB-u1JXb",
-        "sourceHandle": "{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-u1JXbœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-u1JXbœ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ParserComponent-NUETC",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-NUETCœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-NUETCœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -978,8 +978,6 @@
                 "group_outputs": false,
                 "method": "parse_combined_text",
                 "name": "parsed_text",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -991,24 +989,6 @@
             "pinned": false,
             "template": {
               "_type": "Component",
-              "clean_data": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Clean Data",
-                "dynamic": false,
-                "info": "Enable to clean the data by removing empty rows and lines in each cell of the DataFrame/ Data object.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "clean_data",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -1896,8 +1876,7 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "options": null,
-                "required_inputs": null,
+                "selected": null,
                 "tool_mode": true,
                 "types": [
                   "Data"
@@ -1911,8 +1890,6 @@
                 "group_outputs": false,
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "options": null,
-                "required_inputs": null,
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -1928,8 +1905,7 @@
                 "hidden": false,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
-                "options": null,
-                "required_inputs": null,
+                "selected": null,
                 "tool_mode": true,
                 "types": [
                   "VectorStore"
@@ -1968,9 +1944,7 @@
                 "dynamic": false,
                 "info": "The API Endpoint for the Astra DB instance. Supercedes database selection.",
                 "name": "api_endpoint",
-                "options": [
-                  "https://f3166ac4-3e2f-4b32-880c-231d1f9e3f3e-us-east-2.apps.astra.datastax.com"
-                ],
+                "options": [],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -2159,12 +2133,7 @@
                 "dynamic": false,
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
                 "name": "collection_name",
-                "options": [
-                  "flowtest",
-                  "langflow_marketplace",
-                  "movie_reviews",
-                  "newcol"
-                ],
+                "options": [],
                 "options_metadata": [
                   {
                     "icon": "NVIDIA",
@@ -2315,9 +2284,7 @@
                 "dynamic": false,
                 "info": "The Database name for the Astra DB instance.",
                 "name": "database_name",
-                "options": [
-                  "astra-vector"
-                ],
+                "options": [],
                 "options_metadata": [
                   {
                     "api_endpoints": [
@@ -2457,10 +2424,7 @@
                 "dynamic": false,
                 "info": "Optional keyspace within Astra DB to use for the collection.",
                 "name": "keyspace",
-                "options": [
-                  "default_keyspace",
-                  "test"
-                ],
+                "options": [],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -2524,9 +2488,7 @@
                 "dynamic": false,
                 "info": "Post-retrieval model that re-scores results for optimal relevance ranking.",
                 "name": "reranker",
-                "options": [
-                  "nvidia/llama-3.2-nv-rerankqa-1b-v2"
-                ],
+                "options": [],
                 "options_metadata": [
                   {
                     "icon": "NVIDIA"
