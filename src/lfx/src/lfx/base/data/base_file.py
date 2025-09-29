@@ -301,7 +301,7 @@ class BaseFileComponent(Component, ABC):
             if not metadata:
                 metadata = await self._extract_file_metadata(data_item)
 
-        return Message(text=sep.join(parts), metadata=metadata)
+        return Message(text=sep.join(parts), **metadata)
 
     def load_files_path(self) -> Message:
         """Returns a Message containing file paths from loaded files.

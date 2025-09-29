@@ -9,7 +9,6 @@ from langflow.services.tracing.service import (
     component_context_var,
     trace_context_var,
 )
-
 from lfx.services.settings.base import Settings
 from lfx.services.settings.service import SettingsService
 

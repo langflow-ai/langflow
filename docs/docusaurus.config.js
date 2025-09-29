@@ -239,8 +239,12 @@ const config = {
             ],
           },
           {
-            to: "/components-vector-stores",
-            from: "/components-rag",
+            to: "/components-bundle-components",
+            from: [
+              "/components-rag",
+              "/components-vector-stores",
+              "/components-loaders",
+            ],
           },
           {
             to: "/api-keys-and-authentication",
@@ -270,10 +274,6 @@ const config = {
           {
             to: "/components-custom-components",
             from: "/components/custom",
-          },
-          {
-            to: "/components-bundle-components",
-            from: "/components-loaders",
           },
           {
             to: "/mcp-server",
@@ -314,6 +314,10 @@ const config = {
           {
             to: "/data-types",
             from: "/concepts-objects",
+          },
+          {
+            to: "/components-helpers",
+            from: "/components-memories",
           },
           // add more redirects like this
           // {
@@ -398,6 +402,7 @@ const config = {
       docs: {
         sidebar: {
           hideable: false,
+          autoCollapseCategories: true,
         },
       },
       footer: {

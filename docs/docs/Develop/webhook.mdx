@@ -43,7 +43,7 @@ To use the **Webhook** component in a flow, do the following:
     }
     ```
 
-    Then, you can use curly braces to reference the JSON keys anywhere in your parser template:
+    Then, you can [use curly braces](/components-prompts#define-variables-in-prompts) to reference the JSON keys anywhere in your parser template:
 
     ```text
     ID: {id} - Name: {name} - Email: {email}
@@ -87,6 +87,11 @@ For the preceding example, the parsed payload would be a string like `ID: 12345 
 
 Typically, you won't manually trigger the **Webhook** component.
 To learn about triggering flows with payloads from external applications, see the video tutorial [How to Use Webhooks in Langflow](https://www.youtube.com/watch?v=IC1CAtzFRE0).
+
+## Require authentication for webhooks {#require-authentication-for-webhooks}
+
+By default, webhooks run as the flow owner without authentication (`LANGFLOW_WEBHOOK_AUTH_ENABLE=False`).
+If you want to require API key authentication for webhooks, set `LANGFLOW_WEBHOOK_AUTH_ENABLE=True`.
 
 ## Troubleshoot flows with Webhook components
 

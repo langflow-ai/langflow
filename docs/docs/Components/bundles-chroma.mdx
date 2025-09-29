@@ -1,0 +1,80 @@
+---
+title: Chroma
+slug: /bundles-chroma
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Chroma** bundle.
+
+## Chroma DB
+
+You can use the **Chroma DB** component to read and write to a Chroma database using an instance of `Chroma` vector store.
+Includes support for remote or in-memory instances with or without persistence.
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+When writing, the component can create a new database or collection at the specified location.
+
+:::tip
+An ephemeral (non-persistent) local Chroma vector store is helpful for testing vector search flows where you don't need to retain the database.
+:::
+
+<PartialVectorSearchResults />
+
+### Use the Chroma DB component in a flow
+
+The following example flow uses one **Chroma DB** component for both reads and writes:
+
+![ChromaDB receiving split text](/img/component-chroma-db.png)
+
+* When writing, it splits `Data` from a [**URL** component](/components-data#url) into chunks, computes embeddings with attached **Embedding Model** component, and then loads the chunks and embeddings into the Chroma vector store.
+To trigger writes, click <Icon name="Play" aria-hidden="true"/> **Run component** on the **Chroma DB** component.
+
+* When reading, it uses chat input to perform a similarity search on the vector store, and then print the search results to the chat.
+To trigger reads, open the **Playground** and enter a chat message.
+
+After running the flow once, you can click <Icon name="TextSearch" aria-hidden="true"/> **Inspect Output** on each component to understand how the data transformed as it passed from component to component.
+
+### Chroma DB parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the provider's documentation or inspect [component code](/concepts-components#component-code).
+
+| Name | Type | Description |
+|------|------|-------------|
+| **Collection Name** (`collection_name`) | String | Input parameter.  The name of your Chroma vector store collection. Default: `langflow`. |
+| **Persist Directory** (`persist_directory`) | String | Input parameter. To persist the Chroma database, enter a relative or absolute path to a directory to store the `chroma.sqlite3` file. Leave empty for an ephemeral database. When reading or writing to an existing persistent database, specify the path to the persistent directory. |
+| **Ingest Data** (`ingest_data`) | Data or DataFrame | Input parameter. `Data` or `DataFrame` input containing the records to write to the vector store. Only relevant for writes. |
+| **Search Query** (`search_query`) | String | Input parameter. The query to use for vector search. Only relevant for reads. |
+| **Cache Vector Store** (`cache_vector_store`) | Boolean | Input parameter. If `true`, the component caches the vector store in memory for faster reads. Default: Enabled (`true`). |
+| **Embedding** (`embedding`) | Embeddings | Input parameter. The embedding function to use for the vector store. By default, Chroma DB uses its built-in embeddings model, or you can attach an **Embedding Model** component to use a different provider or model. |
+| **CORS Allow Origins** (`chroma_server_cors_allow_origins`) | String | Input parameter. The allowed CORS origins for the Chroma server. |
+| **Chroma Server Host** (`chroma_server_host`) | String | Input parameter. The host for the Chroma server. |
+| **Chroma Server HTTP Port** (`chroma_server_http_port`) | Integer | Input parameter. The HTTP port for the Chroma server. |
+| **Chroma Server gRPC Port** (`chroma_server_grpc_port`) | Integer | Input parameter. The gRPC port for the Chroma server. |
+| **Chroma Server SSL Enabled** (`chroma_server_ssl_enabled`) | Boolean | Input parameter. Enable SSL for the Chroma server. |
+| **Allow Duplicates** (`allow_duplicates`) | Boolean | Input parameter. If `true` (default), writes don't check for existing duplicates in the collection, allowing you to store multiple copies of the same content. If `false`, writes won't add documents that match existing documents already present in the collection. If `false`, it can strictly enforce deduplication by searching the entire collection or only search the number of records, specified in `limit`. Only relevant for writes.|
+| **Search Type** (`search_type`) | String | Input parameter. The type of search to perform, either `Similarity` or `MMR`. Only relevant for reads. |
+| **Number of Results** (`number_of_results`) | Integer | Input parameter. The number of search results to return. Default: `10`. Only relevant for reads. |
+| **Limit** (`limit`) | Integer | Input parameter. Limit the number of records to compare when **Allow Duplicates** is `false`. This can help improve performance when writing to large collections, but it can result in some duplicate records. Only relevant for writes. |
+
+## See also
+
+* [**Local DB** component](/components-bundle-components#vector-stores-bundle)
