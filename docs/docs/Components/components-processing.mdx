@@ -7,6 +7,7 @@ import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialCurlyBraces from '@site/docs/_partial-escape-curly-braces.mdx';
 
 Processing components process and transform data within a flow.
 They have many uses, including:
@@ -448,6 +449,8 @@ Use curly braces to define variables anywhere in the template.
 Variables must match keys in the `DataFrame` or `Data` input, such as column names.
 For example, `{name}` extracts the value of a `name` key.
 For more information about the content and structure of `DataFrame` and `Data` objects, see [Langflow data types](/data-types).
+
+<PartialCurlyBraces />
 
 When the flow runs, the **Parser** component iterates over the input, producing a `Message` for each parsed item.
 For example, parsing a `DataFrame` creates a `Message` for each row, populated with the unique values from that row.

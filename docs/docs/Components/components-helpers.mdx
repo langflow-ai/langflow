@@ -72,7 +72,7 @@ The following steps explain how to create a chat-based flow that uses **Message 
 
 3. Optional: In the **Message History** [component's header menu](/concepts-components#component-menus), click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** to enable parameters for memory sorting, filtering, and limits.
 
-3. Add a [**Prompt Template** component](/components-prompts), add a `{memory}` variable to the **Template** field, and then connect the **Message History** output to the **memory** input.
+3. Add a **Prompt Template** component, add a `{memory}` variable to the **Template** field, and then connect the **Message History** output to the **memory** input.
 
     The **Prompt Template** component supplies instructions and context to LLMs, separate from chat messages passed through a **Chat Input** component.
     The template can include any text and variables that you want to supply to the LLM, for example:
@@ -88,6 +88,7 @@ The following steps explain how to create a chat-based flow that uses **Message 
     ```
 
     Variables (`{variable}`) in the template dynamically add fields to the **Prompt Template** component so that your flow can receive definitions for those values from elsewhere, such as other components, Langflow global variables, or runtime input.
+    For more information, see [Define variables in prompts](/components-prompts#define-variables-in-prompts).
 
     In this example, the `{memory}` variable is populated by the retrieved chat memories, which are then passed to a **Language Model** or **Agent** component to provide additional context to the LLM.
 
@@ -127,7 +128,7 @@ Other options include the [**Mem0 Chat Memory** component](/bundles-mem0) and [*
 
    4. Connect the **Redis Chat Memory** component's output to the **Message History** component's **External Memory** input.
 
-3. Add a [**Prompt Template** component](/components-prompts), add a `{memory}` variable to the **Template** field, and then connect the **Message History** output to the **memory** input.
+3. Add a **Prompt Template** component, add a `{memory}` variable to the **Template** field, and then connect the **Message History** output to the **memory** input.
 
     The **Prompt Template** component supplies instructions and context to LLMs, separate from chat messages passed through a **Chat Input** component.
     The template can include any text and variables that you want to supply to the LLM, for example:
@@ -143,6 +144,7 @@ Other options include the [**Mem0 Chat Memory** component](/bundles-mem0) and [*
     ```
 
     Variables (`{variable}`) in the template dynamically add fields to the **Prompt Template** component so that your flow can receive definitions for those values from elsewhere, such as other components, Langflow global variables, or runtime input.
+    For more information, see [Define variables in prompts](/components-prompts#define-variables-in-prompts).
 
     In this example, the `{memory}` variable is populated by the retrieved chat memories, which are then passed to a **Language Model** or **Agent** component to provide additional context to the LLM.
 
