@@ -42,6 +42,6 @@ For information about accepted values and functionality, see the [FAISS document
 | persist_directory          | String        | Input parameter. Path to save the FAISS index. It is relative to where Langflow is running. |
 | search_query               | String        | Input parameter. The query to search for in the vector store.     |
 | ingest_data                | Data          | Input parameter. The list of data to ingest into the vector store. |
-| allow_dangerous_deserialization | Boolean  | Input parameter. Set to True to allow loading pickle files from untrusted sources. Default: True. |
+| allow_dangerous_deserialization | Boolean  | Input parameter. Set to `True` to allow loading pickle files from untrusted sources. Default: `True`. |
 | embedding                  | Embeddings    | Input parameter. The embedding function to use for the vector store. |
 | number_of_results          | Integer       | Input parameter. Number of results to return from the search. Default: 4. |
