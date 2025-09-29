@@ -1,4 +1,12 @@
+from flx.io import Output
+
 from lfx.custom.custom_component.component import Component
+from lfx.inputs.inputs import (
+    BoolInput,
+    MessageTextInput,
+    SecretStrInput,
+    StrInput,
+)
 from lfx.schema.data import Data
 
 
@@ -12,12 +20,50 @@ class WatsonxGovernanceComponent(Component):
     name: str = "WatsonxGovernance"
 
     inputs = [
-        # example inputs
+        SecretStrInput(
+            name="api_key",
+            display_name="Watsonx API Key",
+            required=True,
+            info="The API Key to connect to your IBM Cloud Account"
+        ),
+        StrInput(
+            name="instance_url",
+            display_name="Watsonx.Gov Service URL",
+            info="The Service URL of your Watsonx.Governance Instance",
+            required=True
+        ),
+        StrInput(
+            name="service_instance_id",
+            display_name="Service Instance ID",
+            info="The ID of the Watsonx.Governance Instance to connect to",
+            required=True
+        ),
+        MessageTextInput(
+            name="payload",
+            display_name="Payload",
+            required=True,
+            info="Payload to be logged with Watsonx.Governance"
+        ),
+        BoolInput(
+            name="include_user_prompt_flag",
+            display_name="Include User Prompt",
+            required=True,
+            info="Determine whether to include the user's prompt in the payload"
+        ),
+        MessageTextInput(
+            name="user_prompt",
+            display_name="User Prompt",
+            required=False,
+            info="Prompt used to generate response"
+        )
     ]
 
     outputs = [
-        # Example output
-        # Output(display_name="Result", name="result", method="execute_call"),
+        Output(
+            name="gov_response",
+            display_name="Watsonx.Governance Response",
+            method="execute_call"
+        )
     ]
 
     def update_build_config(self, build_config: dict, field_name: str, field_value: str | None = None) -> dict:
