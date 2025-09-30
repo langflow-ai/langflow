@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Langflow",
-    "version": "1.5.1"
+    "version": "1.6.0"
   },
   "paths": {
     "/api/v1/build/{flow_id}/vertices": {
@@ -1096,7 +1096,7 @@
           "Base"
         ],
         "summary": "Custom Component Update",
-        "description": "Update a custom component with the provided code request.\n\nThis endpoint generates the CustomComponentFrontendNode normally but then runs the `update_build_config` method\non the latest version of the template.\nThis ensures that every time it runs, it has the latest version of the template.\n\nArgs:\n    code_request (CustomComponentRequest): The code request containing the updated code for the custom component.\n    user (User, optional): The user making the request. Defaults to the current active user.\n\nReturns:\n    dict: The updated custom component node.\n\nRaises:\n    HTTPException: If there's an error building or updating the component\n    SerializationError: If there's an error serializing the component to JSON",
+        "description": "Update an existing custom component with new code and configuration.\n\nProcesses the provided code and template updates, applies parameter changes (including those loaded from the\ndatabase), updates the component's build configuration, and validates outputs. Returns the updated component node as\na JSON-serializable dictionary.\n\nRaises:\n    HTTPException: If an error occurs during component building or updating.\n    SerializationError: If serialization of the updated component node fails.",
         "operationId": "custom_component_update_api_v1_custom_component_update_post",
         "requestBody": {
           "content": {
@@ -1147,6 +1147,7 @@
           "Base"
         ],
         "summary": "Get Config",
+        "description": "Retrieve the current application configuration settings.\n\nReturns:\n    ConfigResponse: The configuration settings of the application.\n\nRaises:\n    HTTPException: If an error occurs while retrieving the configuration.",
         "operationId": "get_config_api_v1_config_get",
         "responses": {
           "200": {
@@ -4927,6 +4928,294 @@
         ]
       }
     },
+    "/api/v1/knowledge_bases/": {
+      "get": {
+        "tags": [
+          "Knowledge Bases"
+        ],
+        "summary": "List Knowledge Bases",
+        "description": "List all available knowledge bases.",
+        "operationId": "list_knowledge_bases_api_v1_knowledge_bases__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/KnowledgeBaseInfo"
+                  },
+                  "type": "array",
+                  "title": "Response List Knowledge Bases Api V1 Knowledge Bases  Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Knowledge Bases"
+        ],
+        "summary": "Delete Knowledge Bases Bulk",
+        "description": "Delete multiple knowledge bases.",
+        "operationId": "delete_knowledge_bases_bulk_api_v1_knowledge_bases__delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDeleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Delete Knowledge Bases Bulk Api V1 Knowledge Bases  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      }
+    },
+    "/api/v1/knowledge_bases": {
+      "get": {
+        "tags": [
+          "Knowledge Bases"
+        ],
+        "summary": "List Knowledge Bases",
+        "description": "List all available knowledge bases.",
+        "operationId": "list_knowledge_bases_api_v1_knowledge_bases_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/KnowledgeBaseInfo"
+                  },
+                  "type": "array",
+                  "title": "Response List Knowledge Bases Api V1 Knowledge Bases Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Knowledge Bases"
+        ],
+        "summary": "Delete Knowledge Bases Bulk",
+        "description": "Delete multiple knowledge bases.",
+        "operationId": "delete_knowledge_bases_bulk_api_v1_knowledge_bases_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDeleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "title": "Response Delete Knowledge Bases Bulk Api V1 Knowledge Bases Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
+      }
+    },
+    "/api/v1/knowledge_bases/{kb_name}": {
+      "get": {
+        "tags": [
+          "Knowledge Bases"
+        ],
+        "summary": "Get Knowledge Base",
+        "description": "Get detailed information about a specific knowledge base.",
+        "operationId": "get_knowledge_base_api_v1_knowledge_bases__kb_name__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kb_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Kb Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeBaseInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Knowledge Bases"
+        ],
+        "summary": "Delete Knowledge Base",
+        "description": "Delete a specific knowledge base.",
+        "operationId": "delete_knowledge_base_api_v1_knowledge_bases__kb_name__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kb_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Kb Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Delete Knowledge Base Api V1 Knowledge Bases  Kb Name  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/mcp/sse": {
       "get": {
         "tags": [
@@ -5049,10 +5338,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/MCPSettings"
-                  },
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MCPProjectResponse"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
                   "title": "Response List Project Tools Api V1 Mcp Project  Project Id  Get"
                 }
               }
@@ -5077,17 +5370,6 @@
         "summary": "Handle Project Messages",
         "description": "Handle POST messages for a project-specific MCP server.",
         "operationId": "handle_project_messages_api_v1_mcp_project__project_id__post",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ],
         "parameters": [
           {
             "name": "project_id",
@@ -5126,7 +5408,7 @@
           "mcp_projects"
         ],
         "summary": "Update Project Mcp Settings",
-        "description": "Update the MCP settings of all flows in a project.",
+        "description": "Update the MCP settings of all flows in a project and project-level auth settings.\n\nOn MCP Composer failure, this endpoint should return with a 200 status code and an error message in\nthe body of the response to display to the user.",
         "operationId": "update_project_mcp_settings_api_v1_mcp_project__project_id__patch",
         "security": [
           {
@@ -5156,11 +5438,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/MCPSettings"
-                },
-                "title": "Settings"
+                "$ref": "#/components/schemas/MCPProjectUpdateRequest"
               }
             }
           }
@@ -5195,17 +5473,6 @@
         "summary": "Handle Project Sse",
         "description": "Handle SSE connections for a specific project.",
         "operationId": "handle_project_sse_api_v1_mcp_project__project_id__sse_get",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ],
         "parameters": [
           {
             "name": "project_id",
@@ -5250,17 +5517,6 @@
         "summary": "Handle Project Messages With Slash",
         "description": "Handle POST messages for a project-specific MCP server with trailing slash.",
         "operationId": "handle_project_messages_with_slash_api_v1_mcp_project__project_id___post",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          },
-          {
-            "API key query": []
-          },
-          {
-            "API key header": []
-          }
-        ],
         "parameters": [
           {
             "name": "project_id",
@@ -5358,6 +5614,59 @@
         }
       }
     },
+    "/api/v1/mcp/project/{project_id}/composer-url": {
+      "get": {
+        "tags": [
+          "mcp_projects"
+        ],
+        "summary": "Get Project Composer Url",
+        "description": "Get the MCP Composer URL for a specific project.\n\nOn failure, this endpoint should return with a 200 status code and an error message in\nthe body of the response to display to the user.",
+        "operationId": "get_project_composer_url_api_v1_mcp_project__project_id__composer_url_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/mcp/project/{project_id}/installed": {
       "get": {
         "tags": [
@@ -5409,6 +5718,54 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/responses": {
+      "post": {
+        "tags": [
+          "OpenAI Responses API"
+        ],
+        "summary": "Create Response",
+        "description": "Create a response using OpenAI Responses API format.\n\nThis endpoint accepts a flow_id in the model parameter and processes\nthe input through the specified Langflow flow.\n\nArgs:\n    request: OpenAI Responses API request with model (flow_id) and input\n    background_tasks: FastAPI background task manager\n    api_key_user: Authenticated user from API key\n    http_request: The incoming HTTP request\n    telemetry_service: Telemetry service for logging\n\nReturns:\n    OpenAI-compatible response or streaming response\n\nRaises:\n    HTTPException: For validation errors or flow execution issues",
+        "operationId": "create_response_api_v1_responses_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenAIResponsesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ]
       }
     },
     "/api/v2/files/": {
@@ -6571,6 +6928,135 @@
         ],
         "title": "ApiKeysResponse"
       },
+      "AuthSettings": {
+        "properties": {
+          "auth_type": {
+            "type": "string",
+            "enum": [
+              "none",
+              "apikey",
+              "oauth"
+            ],
+            "title": "Auth Type",
+            "default": "none"
+          },
+          "oauth_host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Host"
+          },
+          "oauth_port": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Port"
+          },
+          "oauth_server_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Server Url"
+          },
+          "oauth_callback_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Callback Path"
+          },
+          "oauth_client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Client Id"
+          },
+          "oauth_client_secret": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Client Secret"
+          },
+          "oauth_auth_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Auth Url"
+          },
+          "oauth_token_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Token Url"
+          },
+          "oauth_mcp_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Mcp Scope"
+          },
+          "oauth_provider_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oauth Provider Scope"
+          }
+        },
+        "type": "object",
+        "title": "AuthSettings",
+        "description": "Model representing authentication settings for MCP."
+      },
       "BaseModel": {
         "properties": {},
         "type": "object",
@@ -6889,6 +7375,22 @@
         ],
         "title": "Body_upload_user_file_api_v2_files_post"
       },
+      "BulkDeleteRequest": {
+        "properties": {
+          "kb_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kb Names"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kb_names"
+        ],
+        "title": "BulkDeleteRequest"
+      },
       "CancelFlowResponse": {
         "properties": {
           "success": {
@@ -7050,13 +7552,11 @@
           },
           "serialization_max_items_length": {
             "type": "integer",
-            "title": "Serialization Max Items Length",
-            "default": 1000
+            "title": "Serialization Max Items Length"
           },
           "serialization_max_text_length": {
             "type": "integer",
-            "title": "Serialization Max Text Length",
-            "default": 2000
+            "title": "Serialization Max Text Length"
           },
           "frontend_timeout": {
             "type": "integer",
@@ -7098,11 +7598,17 @@
               "direct"
             ],
             "title": "Event Delivery"
+          },
+          "voice_mode_available": {
+            "type": "boolean",
+            "title": "Voice Mode Available"
           }
         },
         "type": "object",
         "required": [
           "feature_flags",
+          "serialization_max_items_length",
+          "serialization_max_text_length",
           "frontend_timeout",
           "auto_saving",
           "auto_saving_interval",
@@ -7111,7 +7617,8 @@
           "webhook_polling_interval",
           "public_flow_cleanup_interval",
           "public_flow_expiration",
-          "event_delivery"
+          "event_delivery",
+          "voice_mode_available"
         ],
         "title": "ConfigResponse"
       },
@@ -8368,6 +8875,18 @@
             ],
             "title": "Description"
           },
+          "auth_settings": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth Settings",
+            "description": "Authentication settings for the folder/project"
+          },
           "components_list": {
             "anyOf": [
               {
@@ -8422,6 +8941,18 @@
             ],
             "title": "Description"
           },
+          "auth_settings": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth Settings",
+            "description": "Authentication settings for the folder/project"
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -8464,6 +8995,18 @@
               }
             ],
             "title": "Description"
+          },
+          "auth_settings": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth Settings",
+            "description": "Authentication settings for the folder/project"
           },
           "id": {
             "type": "string",
@@ -8550,6 +9093,17 @@
             },
             "type": "array",
             "title": "Flows"
+          },
+          "auth_settings": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth Settings"
           }
         },
         "type": "object",
@@ -8750,6 +9304,20 @@
             "type": "boolean",
             "title": "Legacy",
             "default": false
+          },
+          "replacement": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replacement"
           },
           "error": {
             "anyOf": [
@@ -8956,6 +9524,20 @@
             "type": "boolean",
             "title": "Legacy",
             "default": false
+          },
+          "replacement": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replacement"
           },
           "error": {
             "anyOf": [
@@ -9207,6 +9789,73 @@
       },
       "JSONContent": {
         "type": "object"
+      },
+      "KnowledgeBaseInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "embedding_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Embedding Provider",
+            "default": "Unknown"
+          },
+          "embedding_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Embedding Model",
+            "default": "Unknown"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size",
+            "default": 0
+          },
+          "words": {
+            "type": "integer",
+            "title": "Words",
+            "default": 0
+          },
+          "characters": {
+            "type": "integer",
+            "title": "Characters",
+            "default": 0
+          },
+          "chunks": {
+            "type": "integer",
+            "title": "Chunks",
+            "default": 0
+          },
+          "avg_chunk_size": {
+            "type": "number",
+            "title": "Avg Chunk Size",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "KnowledgeBaseInfo"
       },
       "ListComponentResponse": {
         "properties": {
@@ -9487,6 +10136,60 @@
           "client"
         ],
         "title": "MCPInstallRequest"
+      },
+      "MCPProjectResponse": {
+        "properties": {
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/MCPSettings"
+            },
+            "type": "array",
+            "title": "Tools"
+          },
+          "auth_settings": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthSettings"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "tools"
+        ],
+        "title": "MCPProjectResponse",
+        "description": "Response model for MCP project tools with auth settings."
+      },
+      "MCPProjectUpdateRequest": {
+        "properties": {
+          "settings": {
+            "items": {
+              "$ref": "#/components/schemas/MCPSettings"
+            },
+            "type": "array",
+            "title": "Settings"
+          },
+          "auth_settings": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthSettings"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "settings"
+        ],
+        "title": "MCPProjectUpdateRequest",
+        "description": "Request model for updating MCP project settings including auth."
       },
       "MCPSettings": {
         "properties": {
@@ -9915,6 +10618,79 @@
         ],
         "title": "NodeTypeEnum"
       },
+      "OpenAIResponsesRequest": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "The flow ID to execute (used instead of OpenAI model)"
+          },
+          "input": {
+            "type": "string",
+            "title": "Input",
+            "description": "The input text to process"
+          },
+          "stream": {
+            "type": "boolean",
+            "title": "Stream",
+            "description": "Whether to stream the response",
+            "default": false
+          },
+          "background": {
+            "type": "boolean",
+            "title": "Background",
+            "description": "Whether to process in background",
+            "default": false
+          },
+          "tools": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tools",
+            "description": "Tools are not supported yet"
+          },
+          "previous_response_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Response Id",
+            "description": "ID of previous response to continue conversation"
+          },
+          "include": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include",
+            "description": "Additional response data to include, e.g., ['tool_call.results']"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model",
+          "input"
+        ],
+        "title": "OpenAIResponsesRequest",
+        "description": "OpenAI-compatible responses request with flow_id as model parameter."
+      },
       "Output": {
         "properties": {
           "types": {
@@ -10097,59 +10873,33 @@
             "title": "Items"
           },
           "total": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 0.0,
             "title": "Total"
           },
           "page": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 1.0,
             "title": "Page"
           },
           "size": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 1.0,
             "title": "Size"
           },
           "pages": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 0.0,
             "title": "Pages"
           }
         },
         "type": "object",
         "required": [
           "items",
+          "total",
           "page",
-          "size"
+          "size",
+          "pages"
         ],
         "title": "Page[FlowRead]"
       },
@@ -10163,59 +10913,33 @@
             "title": "Items"
           },
           "total": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 0.0,
             "title": "Total"
           },
           "page": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 1.0,
             "title": "Page"
           },
           "size": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 1.0,
             "title": "Size"
           },
           "pages": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 0.0,
             "title": "Pages"
           }
         },
         "type": "object",
         "required": [
           "items",
+          "total",
           "page",
-          "size"
+          "size",
+          "pages"
         ],
         "title": "Page[Flow]"
       },
@@ -10229,59 +10953,33 @@
             "title": "Items"
           },
           "total": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 0.0,
             "title": "Total"
           },
           "page": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 1.0,
             "title": "Page"
           },
           "size": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 1.0,
             "title": "Size"
           },
           "pages": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 0.0,
             "title": "Pages"
           }
         },
         "type": "object",
         "required": [
           "items",
+          "total",
           "page",
-          "size"
+          "size",
+          "pages"
         ],
         "title": "Page[TransactionTable]"
       },
