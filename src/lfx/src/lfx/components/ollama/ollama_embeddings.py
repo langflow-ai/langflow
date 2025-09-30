@@ -8,6 +8,7 @@ from lfx.base.models.model import LCModelComponent
 from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS, URL_LIST
 from lfx.field_typing import Embeddings
 from lfx.io import DropdownInput, MessageTextInput, Output
+from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
 
@@ -43,8 +44,9 @@ class OllamaEmbeddingsComponent(LCModelComponent):
     ]
 
     def build_embeddings(self) -> Embeddings:
+        tranformed_base_url = transform_localhost_url(self.base_url)
         try:
-            output = OllamaEmbeddings(model=self.model_name, base_url=self.base_url)
+            output = OllamaEmbeddings(model=self.model_name, base_url=tranformed_base_url)
         except Exception as e:
             msg = (
                 "Unable to connect to the Ollama API. ",
