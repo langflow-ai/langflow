@@ -1138,7 +1138,7 @@
                   },
                   {
                     "name": "google",
-                    "version": "0.8.5"
+                    "version": "1.117.0"
                   },
                   {
                     "name": "googleapiclient",
