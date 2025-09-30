@@ -131,9 +131,8 @@ df = DataFrame(data)
 
 ### Step 2: Configure the Component
 - Connect your DataFrame to the `dataframe` input
-- Type "action" in the `action_name_column` field
-- Type "response" in the `content_column` field
-
+- Type "action" in the `tool_name_column` field
+- Type "response" in the `tool_output_column` field
 ### Step 3: Connect to an Agent
 - Connect the `tools` output to an agent's tools input
 - The agent can now call any of these tools by name
