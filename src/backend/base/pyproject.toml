@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.5.0.post1"
+version = "0.6.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -17,6 +17,7 @@ maintainers = [
 ]
 
 dependencies = [
+    "lfx~=0.1.0",
     "fastapi>=0.115.2,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
@@ -27,6 +28,7 @@ dependencies = [
     "langchain-core~=0.3.45",
     "langchainhub~=0.1.15",
     "loguru>=0.7.1,<1.0.0",
+    "structlog>=25.4.0",
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental>=0.3.4,<1.0.0",
     "sqlmodel==0.0.22",
@@ -88,6 +90,7 @@ dependencies = [
     "ibm-watsonx-ai>=1.3.1",
     "langchain-ibm>=0.3.8",
     "trustcall>=0.0.38",
+    "langchain-chroma>=0.1.4",
 ]
 
 [dependency-groups]
@@ -98,7 +101,7 @@ dev = [
     "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
     "mypy>=1.11.0",
-    "ruff>=0.6.2",
+    "ruff>=0.12.7",
     "httpx[http2]>=0.27",
     "pytest>=8.2.0",
     "types-requests>=2.32.0",
@@ -186,11 +189,12 @@ ignore = [
     "TD002", # Missing author in TODO
     "TD003", # Missing issue link in TODO
     "TRY301", # A bit too harsh (Abstract `raise` to an inner function)
-
+    "PLC0415", # Inline imports
     # Rules that are TODOs
     "ANN", # Missing type annotations
     "D1", # Missing docstrings
     "SLF001", # Using private attributes outside of class
+    "D10"
 ]
 
 [tool.ruff.lint.per-file-ignores]

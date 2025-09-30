@@ -1,6 +1,5 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
-import { cloneDeep } from "lodash";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
@@ -8,6 +7,9 @@ import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
+import { useTypesStore } from "@/stores/typesStore";
+import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 import {
   convertStringToHTML,
   getStatusColor,
@@ -17,7 +19,7 @@ import {
   cn,
   filterNullOptions,
   formatName,
-  formatPlaceholderName,
+  groupByFamily,
 } from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
 import ShadTooltip from "../../common/shadTooltipComponent";
@@ -54,6 +56,7 @@ export default function Dropdown({
   handleNodeClass,
   name,
   dialogInputs,
+  externalOptions,
   handleOnNewValue,
   toggle,
   ...baseInputProps
@@ -66,7 +69,10 @@ export default function Dropdown({
   // Initialize state and refs
   const [open, setOpen] = useState(children ? true : false);
   const [openDialog, setOpenDialog] = useState(false);
+  const [waitingForResponse, setWaitingForResponse] = useState(false);
   const [customValue, setCustomValue] = useState("");
+  const nodes = useFlowStore((state) => state.nodes);
+
   const [filteredOptions, setFilteredOptions] = useState(() => {
     // Include the current value in filteredOptions if it's a custom value not in validOptions
     if (value && !validOptions.includes(value) && combobox) {
@@ -89,9 +95,8 @@ export default function Dropdown({
   }, [value, options, filteredOptions]);
 
   // Initialize utilities and constants
-  const _placeholderName = name
-    ? formatPlaceholderName(name)
-    : "Choose an option...";
+
+  const sourceOptions = dialogInputs?.fields ? dialogInputs : externalOptions;
   const { firstWord } = formatName(name);
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
@@ -173,6 +178,85 @@ export default function Dropdown({
       setFilteredMetadata(newMetadata);
     } else {
       setFilteredMetadata(undefined);
+    }
+  };
+
+  const handleSourceOptions = async (value: string) => {
+    setWaitingForResponse(true);
+    setOpen(false);
+
+    await mutateTemplate(
+      value,
+      nodeId,
+      nodeClass!,
+      handleNodeClass,
+      postTemplateValue,
+      setErrorData,
+      name,
+    );
+
+    // TODO: this is a hack to make the connect other models option work
+    // we should find a better way to do this
+    try {
+      if (value === "connect_other_models") {
+        const store = useFlowStore.getState();
+        const node = store.getNode(nodeId!);
+        const templateField = node?.data?.node?.template?.[name!];
+        if (!templateField) return;
+
+        const inputTypes: string[] =
+          (Array.isArray(templateField.input_types)
+            ? templateField.input_types
+            : []) || [];
+        const effectiveInputTypes =
+          inputTypes.length > 0 ? inputTypes : ["LanguageModel"];
+        const tooltipTitle: string =
+          (inputTypes && inputTypes.length > 0
+            ? inputTypes.join("\n")
+            : templateField.type) || "";
+
+        const myId = scapedJSONStringfy({
+          inputTypes: effectiveInputTypes,
+          type: templateField.type,
+          id: nodeId,
+          fieldName: name,
+          proxy: templateField.proxy,
+        });
+
+        const typesData = useTypesStore.getState().data;
+        const grouped = groupByFamily(
+          typesData,
+          (effectiveInputTypes && effectiveInputTypes.length > 0
+            ? effectiveInputTypes.join("\n")
+            : tooltipTitle) || "",
+          true,
+          store.nodes,
+        );
+
+        // Build a pseudo source so compatible target handles (left side) glow
+        const pseudoSourceHandle = scapedJSONStringfy({
+          fieldName: name,
+          id: nodeId,
+          inputTypes: effectiveInputTypes,
+          type: "str",
+        });
+
+        const filterObj = {
+          source: undefined,
+          sourceHandle: undefined,
+          target: nodeId,
+          targetHandle: pseudoSourceHandle,
+          type: "LanguageModel",
+          // Use a generic color; exact tone is resolved when user hovers/clicks handles
+          color: "datatype-fuchsia",
+        } as any;
+
+        // Show compatible handles glow
+        store.setFilterEdge(grouped);
+        store.setFilterType(filterObj);
+      }
+    } finally {
+      setWaitingForResponse(false);
     }
   };
 
@@ -305,7 +389,9 @@ export default function Dropdown({
             disabled ||
             (Object.keys(validOptions).length === 0 &&
               !combobox &&
-              !dialogInputs?.fields?.data?.node?.template)
+              !sourceOptions?.fields?.data?.node?.template &&
+              !hasRefreshButton &&
+              !sourceOptions?.fields)
           }
           variant="primary"
           size="xs"
@@ -330,13 +416,33 @@ export default function Dropdown({
                 RECEIVING_INPUT_VALUE
               ) : (
                 <>
-                  {value && filteredOptions.includes(value)
-                    ? value
-                    : placeholder || SELECT_AN_OPTION}{" "}
+                  {
+                    options?.includes(value) ? (
+                      value
+                    ) : // this logic is used for the agents component, if you update make sure to test the agent component
+                    sourceOptions?.fields?.data?.node?.name ===
+                      "connect_other_models" ? (
+                      <span className="text-muted-foreground">
+                        <LoadingTextComponent
+                          text={placeholder || SELECT_AN_OPTION}
+                        />
+                      </span>
+                    ) : (
+                      placeholder || SELECT_AN_OPTION
+                    )
+                    // ) : (
+                    //   <span className="text-muted-foreground">
+                    //     <LoadingTextComponent
+                    //       text={placeholder || SELECT_AN_OPTION}
+                    //     />
+                    //   </span>
+                    // )}
+                  }
                 </>
               )}
             </span>
           </span>
+
           <ForwardedIconComponent
             name={disabled ? "Lock" : "ChevronsUpDown"}
             className={cn(
@@ -390,6 +496,7 @@ export default function Dropdown({
                   onSelect={(currentValue) => {
                     onSelect(currentValue);
                     setOpen(false);
+                    setWaitingForResponse(false);
                   }}
                   className="w-full items-center rounded-none"
                   data-testid={`${option}-${index}-option`}
@@ -409,11 +516,7 @@ export default function Dropdown({
                         "pl-2": !filteredMetadata?.[index]?.icon,
                       })}
                     >
-                      <div
-                        className={cn("truncate text-[13px]", {
-                          "w-1/2": filteredMetadata?.length !== 0,
-                        })}
-                      >
+                      <div className="text-[13px] mr-2 whitespace-nowrap flex-shrink-0">
                         {option}
                       </div>
                       {filteredMetadata?.[index]?.status && (
@@ -453,7 +556,7 @@ export default function Dropdown({
                                     className="mx-1 h-1 w-1 flex-shrink-0 overflow-visible fill-muted-foreground"
                                   />
                                 )}
-                                <div className="truncate text-xs">
+                                <div className="text-xs truncate">
                                   {`${String(value)} ${key}`}
                                 </div>
                               </div>
@@ -481,49 +584,60 @@ export default function Dropdown({
             </ShadTooltip>
           ))
         ) : (
-          <CommandItem disabled className="text-center text-sm">
+          <CommandItem
+            disabled
+            className="w-full text-center text-sm text-muted-foreground px-2.5 py-1.5"
+          >
             No options found
           </CommandItem>
         )}
       </CommandGroup>
       <CommandSeparator />
-      {dialogInputs && dialogInputs?.fields && (
+      {sourceOptions && sourceOptions?.fields && (
         <CommandGroup className="p-0">
-          <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground">
-            <Button
-              className="w-full"
-              unstyled
-              onClick={() => {
+          <CommandItem
+            className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+            onSelect={(value) => {
+              if (dialogInputs?.fields) {
                 setOpenDialog(true);
-              }}
-            >
-              <div className="flex items-center gap-2 pl-1">
+              } else {
+                handleSourceOptions(
+                  sourceOptions?.fields?.data?.node?.name! || value,
+                );
+              }
+            }}
+          >
+            <div className="flex items-center gap-2 pl-1 text-[13px] font-semibold">
+              <ForwardedIconComponent name="Plus" className="h-3 w-3 " />
+              {sourceOptions?.fields?.data?.node?.display_name}
+            </div>
+            {sourceOptions?.fields?.data?.node?.icon && (
+              <div className="ml-auto">
                 <ForwardedIconComponent
-                  name="Plus"
-                  className="h-3 w-3 text-primary"
+                  name={sourceOptions?.fields?.data?.node?.icon}
+                  className="h-3 w-3 "
                 />
-                {`New ${firstWord}`}
               </div>
-            </Button>
+            )}
           </CommandItem>
-          <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground">
-            <Button
-              className="w-full"
-              unstyled
-              data-testid={`refresh-dropdown-list-${name}`}
-              onClick={() => {
+
+          {hasRefreshButton && (
+            <CommandItem
+              className="flex w-full cursor-pointer items-center justify-start gap-2 truncate rounded-none py-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+              onSelect={() => {
                 handleRefreshButtonPress();
               }}
+              data-testid={`refresh-dropdown-list-${name}`}
             >
-              <div className="flex items-center gap-2 pl-1">
+              <div className="flex items-center gap-2 pl-1 text-[13px] font-semibold">
                 <ForwardedIconComponent
                   name="RefreshCcw"
-                  className={cn("refresh-icon h-3 w-3 text-primary")}
+                  className={cn("h-3 w-3")}
                 />
                 Refresh list
               </div>
-            </Button>
-          </CommandItem>
+            </CommandItem>
+          )}
           <NodeDialog
             open={openDialog}
             dialogInputs={dialogInputs}
@@ -552,7 +666,7 @@ export default function Dropdown({
       <Command className="flex flex-col">
         {options?.length > 0 && renderSearchInput()}
         {renderOptionsList()}
-        {!dialogInputs?.fields && hasRefreshButton && (
+        {!sourceOptions?.fields && hasRefreshButton && (
           <div className="sticky bottom-0 border-t bg-background">
             <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate rounded-b-md py-3 text-xs font-semibold text-muted-foreground">
               <Button

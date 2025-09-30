@@ -1,0 +1,49 @@
+---
+title: AI/ML API
+slug: /bundles-aiml
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **AI/ML** bundle.
+
+## AI/ML API text generation
+
+This component creates a `ChatOpenAI` model instance using the AI/ML API.
+The output is exclusively a **Language Model** ([`LanguageModel`](/data-types#languagemodel)) that you can connect to another LLM-driven component, such as a **Smart Function** component.
+
+For more information, see the [AI/ML API Langflow integration documentation](https://docs.aimlapi.com/integrations/langflow) and [Language model components](/components-models).
+
+### AI/ML API text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to 0 for unlimited tokens. Range: 0-128000. |
+| model_kwargs | Dictionary | Input parameter. Additional keyword arguments for the model. |
+| model_name | String | Input parameter. The name of the AIML model to use. Options are predefined in `AIML_CHAT_MODELS`. |
+| aiml_api_base | String | Input parameter. The base URL of the AIML API. Defaults to `https://api.aimlapi.com`. |
+| api_key | SecretString | Input parameter. The AIML API Key to use for the model. |
+| temperature | Float | Input parameter. Controls randomness in the output. Default: `0.1`. |
+
+## AI/ML API Embeddings
+
+The **AI/ML API Embeddings** component generates embeddings using the [AI/ML API](https://docs.aimlapi.com/api-overview/embeddings).
+
+The output is [`Embeddings`](/data-types#embeddings).
+Specifically, an instance of `AIMLEmbeddingsImpl`.
+
+For more information about using embedding model components in flows, see [Embedding model components](/components-embedding-models).
+
+### AI/ML API Embeddings parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| model_name | String | Input parameter. The name of the AI/ML embedding model to use. |
+| aiml_api_key | SecretString | Input parameter. The API key required for authenticating with the AI/ML service. |

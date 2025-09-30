@@ -2,6 +2,7 @@ import Convert from "ansi-to-html";
 import { useEffect, useRef, useState } from "react";
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
+import { CustomMarkdownField } from "@/customization/components/custom-markdown-field";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
@@ -16,7 +17,6 @@ import useAlertStore from "../../../../../stores/alertStore";
 import type { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
 import { ErrorView } from "./components/content-view";
-import { MarkdownField } from "./components/edit-message";
 import EditMessageField from "./components/edit-message-field";
 import FileCardWrapper from "./components/file-card-wrapper";
 import { EditMessageButton } from "./components/message-options";
@@ -132,7 +132,7 @@ export default function ChatMessage({
     updateMessageMutation(
       {
         message: {
-          ...chat,
+          id: chat.id,
           files: convertFiles(chat.files),
           sender_name: chat.sender_name ?? "AI",
           text: message,
@@ -205,7 +205,7 @@ export default function ChatMessage({
 
   return (
     <>
-      <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
+      <div className="w-full py-4 word-break-break-word">
         <div
           className={cn(
             "group relative flex w-full gap-4 rounded-md p-2",
@@ -359,7 +359,7 @@ export default function ChatMessage({
                                 onCancel={() => setEditMessage(false)}
                               />
                             ) : (
-                              <MarkdownField
+                              <CustomMarkdownField
                                 isAudioMessage={isAudioMessage}
                                 chat={chat}
                                 isEmpty={isEmpty}
@@ -418,8 +418,9 @@ export default function ChatMessage({
                   onCopy={() => {
                     navigator.clipboard.writeText(chatMessage);
                   }}
-                  onDelete={() => {}}
-                  onEdit={() => setEditMessage(true)}
+                  onEdit={
+                    playgroundPage ? undefined : () => setEditMessage(true)
+                  }
                   className="h-fit group-hover:visible"
                   isBotMessage={!chat.isSend}
                   onEvaluate={handleEvaluateAnswer}

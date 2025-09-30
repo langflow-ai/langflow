@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -95,6 +95,41 @@ jobs:
           echo "BUILD_FAILURE<<EOF" >> $GITHUB_ENV
           echo $MULTILINE_LOG >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
+
+      - name: Hide Previous Build Comments
+        if: ${{ github.event.pull_request.number && (success() || failure()) }}
+        run: |
+          set -e
+
+          # Get all comments on the PR that match our build comments
+          comments=$(gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
+            --jq '.[] | select(.body | test("Build failure! :x:|Build successful! :white_check_mark:")) | .node_id')
+
+          # Minimize each matching comment using GraphQL API
+          if [[ -n "$comments" ]]; then
+            echo "Found previous build comments to hide"
+            while IFS= read -r comment_id; do
+              if [[ -n "$comment_id" ]]; then
+                echo "Minimizing comment: $comment_id"
+                gh api graphql \
+                  --field id="$comment_id" \
+                  --field classifier="OUTDATED" \
+                  --raw-field query='
+                    mutation($id: ID!, $classifier: ReportedContentClassifiers!) {
+                      minimizeComment(input: { subjectId: $id, classifier: $classifier }) {
+                        minimizedComment {
+                          isMinimized
+                        }
+                      }
+                    }' || echo "Failed to minimize comment $comment_id, continuing..."
+                echo
+              fi
+            done <<< "$comments"
+          else
+            echo "No previous build comments found to hide"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Assemble Build Success Comment
         if: success()

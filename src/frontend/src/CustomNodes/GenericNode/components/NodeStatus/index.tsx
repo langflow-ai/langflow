@@ -70,6 +70,7 @@ export default function NodeStatus({
   );
 
   const connectionLink = nodeAuth?.value;
+  const apiKeyValue = (data.node?.template as any)?.api_key?.value ?? "";
   const isAuthenticated = nodeAuth?.value === "validated";
 
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
@@ -95,6 +96,7 @@ export default function NodeStatus({
   const version = useDarkStore((state) => state.version);
   const eventDeliveryConfig = useUtilityStore((state) => state.eventDelivery);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setFlowPool = useFlowStore((state) => state.setFlowPool);
 
   const postTemplateValue = usePostTemplateValue({
     parameterId: nodeAuth?.name ?? "auth",
@@ -104,33 +106,61 @@ export default function NodeStatus({
 
   // Start polling when connection is initiated
   const startPolling = () => {
-    customOpenNewTab(connectionLink);
     stopPolling();
-
     setIsPolling(true);
 
-    pollingInterval.current = setInterval(() => {
-      mutateTemplate(
-        { validate: data.node?.template?.auth?.value || "" },
-        data.id,
-        data.node,
-        (newNode) => {
-          setNode(nodeId, (old) => ({
-            ...old,
-            data: { ...old.data, node: newNode },
-          }));
-        },
-        postTemplateValue,
-        setErrorData,
-        nodeAuth?.name ?? "auth_link",
-        () => {},
-        data.node.tool_mode,
-      );
-    }, POLLING_INTERVAL);
+    mutateTemplate(
+      { validate: "" },
+      data.id,
+      data.node,
+      (newNode) => {
+        setNode(nodeId, (old) => ({
+          ...old,
+          data: { ...old.data, node: newNode },
+        }));
 
-    pollingTimeout.current = setTimeout(() => {
-      stopPolling();
-    }, POLLING_TIMEOUT);
+        const updatedAuth = Object.values(newNode?.template ?? {}).find(
+          (value: any) => value?.type === "auth",
+        ) as any;
+        const oauthUrl = updatedAuth?.value;
+
+        if (
+          oauthUrl &&
+          typeof oauthUrl === "string" &&
+          oauthUrl.startsWith("http")
+        ) {
+          customOpenNewTab(oauthUrl);
+        }
+      },
+      postTemplateValue,
+      setErrorData,
+      nodeAuth?.name ?? "auth_link",
+      () => {
+        pollingInterval.current = setInterval(() => {
+          mutateTemplate(
+            { validate: data.node?.template?.auth?.value || "" },
+            data.id,
+            data.node,
+            (newNode) => {
+              setNode(nodeId, (old) => ({
+                ...old,
+                data: { ...old.data, node: newNode },
+              }));
+            },
+            postTemplateValue,
+            setErrorData,
+            nodeAuth?.name ?? "auth_link",
+            () => {},
+            data.node.tool_mode,
+          );
+        }, POLLING_INTERVAL);
+
+        pollingTimeout.current = setTimeout(() => {
+          stopPolling();
+        }, POLLING_TIMEOUT);
+      },
+      data.node.tool_mode,
+    );
   };
 
   useEffect(() => {
@@ -258,6 +288,8 @@ export default function NodeStatus({
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const handleClickRun = () => {
+    setFlowPool({});
+
     if (BuildStatus.BUILDING === buildStatus && isHovered) {
       stopBuilding();
       return;
@@ -316,7 +348,9 @@ export default function NodeStatus({
         : isAuthenticated && !isPolling
           ? "border-accent-emerald-foreground hover:border-accent-amber-foreground"
           : "",
-      connectionLink === "" && "cursor-not-allowed opacity-50",
+      connectionLink === "" &&
+        (!apiKeyValue || apiKeyValue === "COMPOSIO_API_KEY") &&
+        "cursor-not-allowed opacity-50",
     );
   };
 
@@ -375,13 +409,24 @@ export default function NodeStatus({
             >
               <div className="cursor-help">
                 {conditionSuccess && validationStatus?.data?.duration ? (
-                  <div className="flex rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald">
+                  <div
+                    className="flex rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald"
+                    data-testid={`node_duration_` + display_name.toLowerCase()}
+                  >
                     <span>
                       {normalizeTimeString(validationStatus?.data?.duration)}
                     </span>
                   </div>
                 ) : (
-                  <div className="flex items-center self-center">
+                  <div
+                    data-testid={
+                      `node_status_icon_` +
+                      display_name.toLowerCase() +
+                      `_` +
+                      buildStatus?.toLowerCase()
+                    }
+                    className="flex items-center self-center"
+                  >
                     {iconStatus}
                   </div>
                 )}
@@ -394,7 +439,11 @@ export default function NodeStatus({
               <div>
                 <Button
                   unstyled
-                  disabled={connectionLink === "" || connectionLink === "error"}
+                  disabled={
+                    (connectionLink === "" &&
+                      (!apiKeyValue || apiKeyValue === "COMPOSIO_API_KEY")) ||
+                    connectionLink === "error"
+                  }
                   className={getConnectionButtonClasses(
                     connectionLink,
                     isAuthenticated,

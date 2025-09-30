@@ -1,0 +1,81 @@
+---
+title: OpenAI
+slug: /bundles-openai
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **OpenAI** bundle.
+
+For more information about OpenAI features and functionality used by OpenAI components, see the [OpenAI documentation](https://platform.openai.com/docs/overview).
+
+## OpenAI text generation
+
+The **OpenAI** component generates text using [OpenAI's language models](https://platform.openai.com/docs/models).
+
+It provides access to the same OpenAI models that are available in the core **Language Model** component, but the **OpenAI** component provides additional parameters for customizing the request to the OpenAI API.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a specific OpenAI model configuration as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
+
+For more information, see [Language model components](/components-models).
+
+### OpenAI text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your OpenAI API Key. |
+| model | String | Input parameter. The name of the OpenAI model to use. Options include "gpt-3.5-turbo" and "gpt-4". |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.7. |
+| top_p | Float | Input parameter. Controls the nucleus sampling. Range: [0.0, 1.0]. Default: 1.0. |
+| frequency_penalty | Float | Input parameter. Controls the frequency penalty. Range: [0.0, 2.0]. Default: 0.0. |
+| presence_penalty | Float | Input parameter. Controls the presence penalty. Range: [0.0, 2.0]. Default: 0.0. |
+
+## OpenAI Embeddings
+
+The **OpenAI Embeddings** component uses [OpenAI embedding models](https://platform.openai.com/docs/guides/embeddings) for embedding generation.
+
+It provides access to the same OpenAI models that are available in the core **Embedding Model** component, but the **OpenAI Embeddings** component provides additional parameters for customizing the request to the OpenAI embedding API.
+
+For more information about using embedding model components in flows, see [Embedding model components](/components-embedding-models).
+
+### OpenAI Embeddings parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| OpenAI API Key | String | Input parameter. The API key to use for accessing the OpenAI API. |
+| Default Headers | Dict | Input parameter. The default headers for the HTTP requests. |
+| Default Query | NestedDict | Input parameter. The default query parameters for the HTTP requests. |
+| Allowed Special | List | Input parameter. The special tokens allowed for processing. Default: `[]`. |
+| Disallowed Special | List | Input parameter. The special tokens disallowed for processing. Default: `["all"]`. |
+| Chunk Size | Integer | Input parameter. The chunk size for processing. Default: `1000`. |
+| Client | Any | Input parameter. The HTTP client for making requests. |
+| Deployment | String | Input parameter. The deployment name for the model. Default: `text-embedding-3-small`. |
+| Embedding Context Length | Integer | Input parameter. The length of embedding context. Default: `8191`. |
+| Max Retries | Integer | Input parameter. The maximum number of retries for failed requests. Default: `6`. |
+| Model | String | Input parameter. The name of the model to use. Default: `text-embedding-3-small`. |
+| Model Kwargs | NestedDict | Input parameter. Additional keyword arguments for the model. |
+| OpenAI API Base | String | Input parameter. The base URL of the OpenAI API. |
+| OpenAI API Type | String | Input parameter. The type of the OpenAI API. |
+| OpenAI API Version | String | Input parameter. The version of the OpenAI API. |
+| OpenAI Organization | String | Input parameter. The organization associated with the API key. |
+| OpenAI Proxy | String | Input parameter. The proxy server for the requests. |
+| Request Timeout | Float | Input parameter. The timeout for the HTTP requests. |
+| Show Progress Bar | Boolean | Input parameter. Whether to show a progress bar for processing. Default: `false`. |
+| Skip Empty | Boolean | Input parameter. Whether to skip empty inputs. Default: `false`. |
+| TikToken Enable | Boolean | Input parameter. Whether to enable TikToken. Default: `true`. |
+| TikToken Model Name | String | Input parameter. The name of the TikToken model. |
+
+## See also
+
+* [**Agent** component](/components-agents)
+* [LangChain **OpenAI Tools Agent** component](/bundles-langchain#openai-tools-agent)
