@@ -301,10 +301,10 @@ class BaseFileComponent(Component, ABC):
                     parts.append(str(data_text))
                 elif isinstance(d.data, dict):
                     # convert the data dict to a readable string
-                    parts.append(orjson.dumps(d.data, indent=2, default=str))
+                    parts.append(orjson.dumps(d.data, default=str).decode())
                 else:
                     parts.append(str(d))
-            except Exception:
+            except (AttributeError, TypeError, ValueError):
                 # Final fallback - just try to convert to string
                 parts.append(str(d))
 
