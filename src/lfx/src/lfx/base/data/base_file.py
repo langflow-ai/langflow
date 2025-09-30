@@ -7,7 +7,6 @@ from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile, is_zipfile
 
-import anyio
 import orjson
 import pandas as pd
 
@@ -250,7 +249,7 @@ class BaseFileComponent(Component, ABC):
             return metadata
 
         file_path = data_item.file_path
-        file_path_obj = anyio.Path(file_path)
+        file_path_obj = Path(file_path)
         file_size_stat = file_path_obj.stat()
         filename = file_path_obj.name
 
