@@ -23,6 +23,11 @@ on:
         required: false
         type: string
         description: "Ref to check out. If not specified, will default to the main version or current branch."
+      warning_check:
+        required: true
+        type: boolean
+        description: "Warning - use docker-build-v2 unless you have a very valid reason for using this deprecated workflow. By setting to True, you acknowledge all risks of using a possibly breaking workflow."
+        default: false
 
   workflow_dispatch:
     inputs:
@@ -47,6 +52,11 @@ on:
         required: false
         type: string
         description: "Ref to check out. If not specified, will default to the main version or current branch."
+      warning_check:
+        description: "Warning - use docker-build-v2 unless you have a very valid reason for using this deprecated workflow. By setting to True, you acknowledge all risks of using a possibly breaking workflow."
+        required: true
+        type: boolean
+        default: false
 
 
 env:
@@ -60,6 +70,15 @@ jobs:
     outputs:
       version: ${{ steps.get-version-input.outputs.version || steps.get-version-base.outputs.version || steps.get-version-main.outputs.version }}
     steps:
+      - name: Verify warning check
+        run: |
+          if [[ "${{ inputs.warning_check }}" == "false" ]]; then
+            echo "Warning - use docker-build-v2 unless you have a very valid reason for using this deprecated workflow. By setting to True, you acknowledge all risks of using a possibly breaking workflow."
+            exit 1
+          else
+            echo "User has acknowledged the risks of using this deprecated workflow. Proceeding with build."
+          fi
+
       - name: Verify a main version exists
         if: ${{ inputs.main_version == '' }}
         run: |
