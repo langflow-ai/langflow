@@ -34,7 +34,7 @@ class OllamaEmbeddingsComponent(LCModelComponent):
         MessageTextInput(
             name="base_url",
             display_name="Ollama Base URL",
-            value="",
+            value="http://localhost:11434",
             required=True,
         ),
     ]
@@ -78,6 +78,7 @@ class OllamaEmbeddingsComponent(LCModelComponent):
         """Get the model names from Ollama."""
         model_ids = []
         try:
+            base_url_value = transform_localhost_url(base_url_value)
             url = urljoin(base_url_value, "/api/tags")
             async with httpx.AsyncClient() as client:
                 response = await client.get(url)
@@ -103,6 +104,7 @@ class OllamaEmbeddingsComponent(LCModelComponent):
     async def is_valid_ollama_url(self, url: str) -> bool:
         try:
             async with httpx.AsyncClient() as client:
+                url = transform_localhost_url(url)
                 return (await client.get(f"{url}/api/tags")).status_code == HTTP_STATUS_OK
         except httpx.RequestError:
             return False
