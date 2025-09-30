@@ -170,7 +170,7 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
             await session.commit()
         except Exception as e:
             msg = f"Error during session scope: {e}"
-            await logger.aerror(msg)
+            await logger.aerror(msg, exc_info=True)
             await session.rollback()
             raise
 

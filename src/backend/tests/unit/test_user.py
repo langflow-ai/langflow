@@ -6,9 +6,8 @@ from langflow.services.auth.utils import create_super_user, get_password_hash
 from langflow.services.database.models.user import UserUpdate
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
-from sqlmodel import select
-
 from lfx.services.settings.constants import DEFAULT_SUPERUSER
+from sqlmodel import select
 
 
 @pytest.fixture

@@ -11,9 +11,8 @@ from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.folder.model import FolderCreate
 from langflow.services.deps import get_db_service, session_scope
-from sqlalchemy import text
-
 from lfx.graph.utils import log_transaction, log_vertex_build
+from sqlalchemy import text
 
 
 @pytest.fixture(scope="module")
