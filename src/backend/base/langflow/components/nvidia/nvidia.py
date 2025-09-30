@@ -25,9 +25,7 @@ class NVIDIAModelComponent(LCModelComponent):
         msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
         raise ImportError(msg) from e
     except Exception as e:  # noqa: BLE001
-        logger.warning(
-            f"Failed to fetch NVIDIA models during initialization: {e}. Model list will be unavailable."
-        )
+        logger.warning(f"Failed to fetch NVIDIA models during initialization: {e}. Model list will be unavailable.")
         all_models = []
 
     inputs = [
