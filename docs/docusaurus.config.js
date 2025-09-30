@@ -178,7 +178,7 @@ const config = {
             from: "/getting-started-quickstart",
           },
           {
-            to: "concepts-overview",
+            to: "/concepts-overview",
             from: [
               "/workspace-overview",
               "/365085a8-a90a-43f9-a779-f8769ec7eca1",
@@ -280,10 +280,6 @@ const config = {
             from: "/integrations-mcp",
           },
           {
-            to: "/integrations-nvidia-g-assist",
-            from: "/integrations-nvidia-system-assist",
-          },
-          {
             to: "/deployment-kubernetes-dev",
             from: "/deployment-kubernetes",
           },
@@ -301,7 +297,10 @@ const config = {
           },
           {
             to: "/bundles-google",
-            from: "/integrations-setup-google-oauth-langflow",
+            from: [
+              "/integrations-setup-google-oauth-langflow",
+              "/integrations-google-big-query",
+            ],
           },
           {
             to: "/bundles-vertexai",
@@ -319,6 +318,43 @@ const config = {
             to: "/components-helpers",
             from: "/components-memories",
           },
+          {
+            to: "/bundles-apify",
+            from: "/integrations-apify",
+          },
+          {
+            to: "/bundles-assemblyai",
+            from: "/integrations-assemblyai",
+          },
+          {
+            to: "/bundles-cleanlab",
+            from: "/integrations-cleanlab",
+          },
+          {
+            to: "/bundles-composio",
+            from: "/integrations-composio",
+          },
+          {
+            to: "/bundles-docling",
+            from: "/integrations-docling",
+          },
+          {
+            to: "/bundles-notion",
+            from: [
+              "/integrations/notion/setup",
+              "/integrations/notion/notion-agent-meeting-notes",
+              "/integrations/notion/notion-agent-conversational",
+            ],
+          },
+          {
+            to: "/bundles-nvidia",
+            from: [
+              "/integrations-nvidia-ingest-wsl2",
+              "/integrations-nvidia-ingest",
+              "/integrations-nvidia-g-assist",
+              "/integrations-nvidia-system-assist",
+            ]
+          }
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
@@ -402,6 +438,7 @@ const config = {
       docs: {
         sidebar: {
           hideable: false,
+          autoCollapseCategories: true,
         },
       },
       footer: {
