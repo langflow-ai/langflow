@@ -7,8 +7,8 @@ from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 from zipfile import ZipFile, is_zipfile
 
-import orjson
 import anyio
+import orjson
 import pandas as pd
 
 from lfx.custom.custom_component.component import Component
