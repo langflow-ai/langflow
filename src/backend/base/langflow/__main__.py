@@ -275,10 +275,7 @@ def run(
 
     # Must set as env var for child process to pick up
     env_log_level = os.environ.get("LANGFLOW_LOG_LEVEL")
-    if env_log_level is None:
-        os.environ["LANGFLOW_LOG_LEVEL"] = log_level_str
-    else:
-        os.environ["LANGFLOW_LOG_LEVEL"] = env_log_level.lower()
+    log_level = log_level_str if env_log_level is None else env_log_level.lower()
 
     configure(log_level=log_level, log_file=log_file, log_rotation=log_rotation)
 
