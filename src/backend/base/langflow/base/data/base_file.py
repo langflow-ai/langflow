@@ -265,7 +265,7 @@ class BaseFileComponent(Component, ABC):
                     parts.append(str(data_text))
                 elif isinstance(d.data, dict):
                     # convert the data dict to a readable string
-                    parts.append(orjson.dumps(d.data, indent=2, default=str))
+                    parts.append(orjson.dumps(d.data, option=orjson.OPT_INDENT_2, default=str).decode())
                 else:
                     parts.append(str(d))
             except Exception:  # noqa: BLE001
