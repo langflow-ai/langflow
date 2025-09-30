@@ -229,7 +229,7 @@ class LCModelComponent(Component):
                             system_message_added = True
                         runnable = prompt | runnable
                     else:
-                        messages.append(input_value.to_lc_message())
+                        messages.append(input_value.to_lc_message(self.name))
             else:
                 messages.append(HumanMessage(content=input_value))
 
