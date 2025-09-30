@@ -1,5 +1,6 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
 import {
   Select,
   SelectContent,
@@ -45,7 +46,9 @@ export const SelectOptions = ({
           <SelectTrigger
             className="w-fit"
             id={`options-trigger-${item.name}`}
-            data-testid="more-options-button"
+            data-testid={
+              "more-options-button" + `_${convertTestName(item?.name ?? "")}`
+            }
           >
             <IconComponent
               name={"MoreHorizontal"}

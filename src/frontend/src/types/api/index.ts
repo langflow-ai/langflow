@@ -322,6 +322,7 @@ export type FieldValidatorType =
   | "password";
 
 export type FieldParserType =
+  | "mcp_name_case"
   | "snake_case"
   | "camel_case"
   | "pascal_case"

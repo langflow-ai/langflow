@@ -58,6 +58,8 @@ withEventDeliveryModes(
       .last()
       .isVisible();
 
+    await page.waitForTimeout(5000);
+
     const textAnalysis = await page.locator(".markdown").last().textContent();
     expect(textAnalysis?.length).toBeGreaterThan(50);
   },
