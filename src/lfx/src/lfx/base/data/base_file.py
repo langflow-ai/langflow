@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from zipfile import ZipFile, is_zipfile
 
 import orjson
+import anyio
 import pandas as pd
 
 from lfx.custom.custom_component.component import Component
@@ -15,6 +16,7 @@ from lfx.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx.utils.helpers import build_content_type_from_extension
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -241,22 +243,57 @@ class BaseFileComponent(Component, ABC):
             return [Data()]
         return data_list
 
-    def load_files_message(self) -> Message:
+    async def _extract_file_metadata(self, data_item) -> dict:
+        """Extract metadata from a data item with file_path."""
+        metadata = {}
+        if not hasattr(data_item, "file_path"):
+            return metadata
+
+        file_path = data_item.file_path
+        file_path_obj = anyio.Path(file_path)
+        file_size_stat = await file_path_obj.stat()
+        filename = file_path_obj.name
+
+        # Basic file metadata
+        metadata["filename"] = filename
+        metadata["file_size"] = file_size_stat.st_size
+
+        # Add MIME type from extension
+        extension = filename.split(".")[-1]
+        if extension:
+            metadata["mimetype"] = build_content_type_from_extension(extension)
+
+        # Copy additional metadata from data if available
+        if hasattr(data_item, "data") and isinstance(data_item.data, dict):
+            metadata_fields = ["mimetype", "file_size", "created_time", "modified_time"]
+            for field in metadata_fields:
+                if field in data_item.data:
+                    metadata[field] = data_item.data[field]
+
+        return metadata
+
+    def _extract_text(self, data_item) -> str:
+        """Extract text content from a data item."""
+        if isinstance(data_item.data, dict):
+            text = getattr(data_item, "get_text", lambda: None)() or data_item.data.get("text")
+            return text if text is not None else str(data_item)
+        return str(data_item)
+
+    async def load_files_message(self) -> Message:
         """Load files and return as Message.
 
         Returns:
-            Message: Message containing all file data
+          Message: Message containing all file data
         """
         data_list = self.load_files_core()
         if not data_list:
-            return Message()  # No data -> empty message
+            return Message()
 
         sep: str = getattr(self, "separator", "\n\n") or "\n\n"
-
         parts: list[str] = []
         for d in data_list:
             try:
-                data_text = d.get_text()
+                data_text = self._extract_text(d)
                 if data_text and isinstance(data_text, str):
                     parts.append(data_text)
                 elif data_text:
@@ -271,7 +308,7 @@ class BaseFileComponent(Component, ABC):
                 # Final fallback - just try to convert to string
                 parts.append(str(d))
 
-        return Message(text=sep.join(parts))
+        return Message(text=sep.join(parts), **metadata)
 
     def load_files_path(self) -> Message:
         """Returns a Message containing file paths from loaded files.
