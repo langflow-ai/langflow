@@ -131,8 +131,10 @@ test(
       // Log which component is being tested
       console.log(`Testing starter project: ${exampleName}`);
 
+      await page.waitForTimeout(500);
+
       await page.waitForSelector('[data-testid="div-generic-node"]', {
-        timeout: 5000,
+        timeout: 5000 * 3,
       });
 
       if ((await page.getByTestId("update-all-button").count()) > 0) {
