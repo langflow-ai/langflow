@@ -197,7 +197,7 @@ To use advanced parsing, do the following:
     :::info Advanced parsing limitations
     * Advanced parsing processes only one file.
     If you select multiple files, the **File** component processes the first file only, ignoring any additional files.
-    To process multiple files with advanced parsing, pass each file to a separate **File** components, or use the dedicated [**Docling** components](/integrations-docling).
+    To process multiple files with advanced parsing, pass each file to a separate **File** components, or use the dedicated [**Docling** components](/bundles-docling).
 
     * Advanced parsing can process any of the **File** component's supported file types except `.csv`, `.xlsx`, and `.parquet` files because it is designed for document processing, such as extracting text from PDFs.
     For structured data analysis, use the [**Parser** component](/components-processing#parser).
@@ -216,7 +216,7 @@ To use advanced parsing, do the following:
     | doc_key | Document Key | Input parameter, advanced parsing. The key to use for the `DoclingDocument` column, which holds the structured information extracted from the source document. See [Docling Document](https://docling-project.github.io/docling/concepts/docling_document/) for details. Default: `doc`. |
 
     :::tip
-    For additional Docling features, including other components and OCR parsers, use the [**Docling** bundle](/integrations-docling).
+    For additional Docling features, including other components and OCR parsers, use the [**Docling** bundle](/bundles-docling).
     :::
 
 ### File output
@@ -601,5 +601,5 @@ Replace these components with the **File** component, which supports loading CSV
 ## See also
 
 - [**Google** bundle](/bundles-google)
-- [**Composio** bundle](/integrations-composio)
+- [**Composio** bundle](/bundles-composio)
 - [File management](/concepts-file-management)
