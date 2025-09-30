@@ -100,18 +100,14 @@ class DataFrameToToolsetComponent(LCToolComponent):
                 f"Tool name column '{self.tool_name_column}' not found in DataFrame columns: "
                 f"{list(self.dataframe.columns)}"
             )
-            raise ValueError(
-                msg
-            )
+            raise ValueError(msg)
 
         if self.tool_output_column not in self.dataframe.columns:
             msg = (
                 f"Tool output column '{self.tool_output_column}' not found in DataFrame columns: "
                 f"{list(self.dataframe.columns)}"
             )
-            raise ValueError(
-                msg
-            )
+            raise ValueError(msg)
 
         # Clear previous data
         self._action_data = {}
@@ -135,7 +131,7 @@ class DataFrameToToolsetComponent(LCToolComponent):
         def action_function(**kwargs) -> str:
             # You could extend this to use kwargs to modify the content
             # For now, just return the stored content
-            self.log(kwargs) # TODO: Coming soon: implement arguments to modify content
+            self.log(kwargs)  # TODO: Coming soon: implement arguments to modify content
             return content
 
         action_function.__name__ = f"execute_{action_name}"
@@ -205,7 +201,7 @@ class DataFrameToToolsetComponent(LCToolComponent):
         if not tools:
             # Return a placeholder tool when no data is available
             def placeholder_function(**kwargs) -> str:
-                self.log(kwargs) # TODO: Coming soon: implement arguments to modify content
+                self.log(kwargs)  # TODO: Coming soon: implement arguments to modify content
                 return "No tools available. Please connect a DataFrame with appropriate columns."
 
             return StructuredTool(
