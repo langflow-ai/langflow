@@ -3,6 +3,8 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
+from lfx.log.logger import logger
+
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
@@ -166,7 +168,9 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
             await session.commit()
-        except Exception:
+        except Exception as e:
+            msg = f"Error during session scope: {e}"
+            await logger.aerror(msg)
             await session.rollback()
             raise
 
