@@ -224,37 +224,14 @@ class ChatOllamaComponent(LCModelComponent):
                     build_config["mirostat_eta"]["value"] = 0.1
                     build_config["mirostat_tau"]["value"] = 5
 
-        if field_name in {"base_url", "model_name"}:
-            if build_config["base_url"].get("load_from_db", False):
-                base_url_value = await self.get_variables(build_config["base_url"].get("value", ""), "base_url")
-            else:
-                base_url_value = build_config["base_url"].get("value", "")
-
-            if not await self.is_valid_ollama_url(base_url_value):
-                # Check if any URL in the list is valid
-                valid_url = ""
-                check_urls = URL_LIST
-                if self.base_url:
-                    check_urls = [self.base_url, *URL_LIST]
-                for url in check_urls:
-                    if await self.is_valid_ollama_url(url):
-                        valid_url = url
-                        break
-                if valid_url != "":
-                    build_config["base_url"]["value"] = valid_url
-                else:
-                    msg = "No valid Ollama URL found."
-                    raise ValueError(msg)
+        if field_name in {"base_url", "model_name"} and not await self.is_valid_ollama_url(self.base_url):
+            msg = "Ollama is not running. Please start Ollama and try again."
+            raise ValueError(msg)
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
             if await self.is_valid_ollama_url(self.base_url):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
                 build_config["model_name"]["options"] = await self.get_models(
                     self.base_url, tool_model_enabled=tool_model_enabled
-                )
-            elif await self.is_valid_ollama_url(build_config["base_url"].get("value", "")):
-                tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
-                build_config["model_name"]["options"] = await self.get_models(
-                    build_config["base_url"].get("value", ""), tool_model_enabled=tool_model_enabled
                 )
             else:
                 build_config["model_name"]["options"] = []
@@ -289,6 +266,7 @@ class ChatOllamaComponent(LCModelComponent):
         try:
             # Normalize the base URL to avoid the repeated "/" at the end
             base_url = base_url_value.rstrip("/") + "/"
+            base_url = transform_localhost_url(base_url)
 
             # Ollama REST API to return models
             tags_url = urljoin(base_url, "api/tags")
