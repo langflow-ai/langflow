@@ -1,6 +1,7 @@
 # ruff: noqa: T201
 import asyncio
 import time
+import warnings
 
 import pytest
 from lfx.constants import BASE_COMPONENTS_PATH
@@ -66,7 +67,6 @@ class TestComponentLoading:
 
         # Both should complete in reasonable time
         # Add warnings for slow performance before failing
-        import warnings
 
         if langflow_duration > 10.0:
             warnings.warn(f"import_langflow_components is slow: {langflow_duration:.2f}s", UserWarning, stacklevel=2)
