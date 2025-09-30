@@ -6,7 +6,6 @@ import httpx
 from langchain_ollama import ChatOllama
 
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.ollama_constants import URL_LIST
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SliderInput
