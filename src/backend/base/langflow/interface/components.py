@@ -101,6 +101,10 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
     except (ImportError, AttributeError) as e:
         logger.error(f"Error importing module {modname}: {e}", exc_info=True)
         return None
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Error building module {modname}: {e}", exc_info=True)
+        return None
+
     # Extract the top-level subpackage name after "langflow.components."
     # e.g., "langflow.components.Notion.add_content_to_page" -> "Notion"
     mod_parts = modname.split(".")
