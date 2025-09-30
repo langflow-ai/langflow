@@ -128,6 +128,9 @@ test(
 
       await page.getByTestId("text_card_container").nth(i).click();
 
+      // Log which component is being tested
+      console.log(`Testing starter project: ${exampleName}`);
+
       await page.waitForSelector('[data-testid="div-generic-node"]', {
         timeout: 5000,
       });

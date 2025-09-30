@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URLComponent",
-            "id": "URLComponent-WBxJx",
+            "id": "URLComponent-kJIK6",
             "name": "page_results",
             "output_types": [
               "DataFrame"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "data_inputs",
-            "id": "SplitText-edq28",
+            "id": "SplitText-wctH9",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,19 +24,20 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URLComponent-WBxJx{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-WBxJxœ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œDataFrameœ]}-SplitText-edq28{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-edq28œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-URLComponent-kJIK6{œdataTypeœ:œURLComponentœ,œidœ:œURLComponent-kJIK6œ,œnameœ:œpage_resultsœ,œoutput_typesœ:[œDataFrameœ]}-SplitText-wctH9{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-wctH9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "URLComponent-WBxJx",
-        "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-WBxJxœ, œnameœ: œpage_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "SplitText-edq28",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-edq28œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "source": "URLComponent-kJIK6",
+        "sourceHandle": "{œdataTypeœ: œURLComponentœ, œidœ: œURLComponent-kJIK6œ, œnameœ: œpage_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "SplitText-wctH9",
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-wctH9œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "SplitText",
-            "id": "SplitText-edq28",
+            "id": "SplitText-wctH9",
             "name": "dataframe",
             "output_types": [
               "DataFrame"
@@ -44,7 +45,7 @@
           },
           "targetHandle": {
             "fieldName": "input_df",
-            "id": "KnowledgeIngestion-uSOy6",
+            "id": "KnowledgeIngestion-bEeRI",
             "inputTypes": [
               "Data",
               "DataFrame"
@@ -52,17 +53,18 @@
             "type": "other"
           }
         },
-        "id": "xy-edge__SplitText-edq28{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-edq28œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-KnowledgeIngestion-uSOy6{œfieldNameœ:œinput_dfœ,œidœ:œKnowledgeIngestion-uSOy6œ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
-        "source": "SplitText-edq28",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-edq28œ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "KnowledgeIngestion-uSOy6",
-        "targetHandle": "{œfieldNameœ: œinput_dfœ, œidœ: œKnowledgeIngestion-uSOy6œ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__SplitText-wctH9{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-wctH9œ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-KnowledgeIngestion-bEeRI{œfieldNameœ:œinput_dfœ,œidœ:œKnowledgeIngestion-bEeRIœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "SplitText-wctH9",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-wctH9œ, œnameœ: œdataframeœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "KnowledgeIngestion-bEeRI",
+        "targetHandle": "{œfieldNameœ: œinput_dfœ, œidœ: œKnowledgeIngestion-bEeRIœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "SplitText-edq28",
+          "id": "SplitText-wctH9",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -279,7 +281,7 @@
           "type": "SplitText"
         },
         "dragging": false,
-        "id": "SplitText-edq28",
+        "id": "SplitText-wctH9",
         "measured": {
           "height": 413,
           "width": 320
@@ -293,7 +295,7 @@
       },
       {
         "data": {
-          "id": "note-httIY",
+          "id": "note-ByFTQ",
           "node": {
             "description": "## Knowledge Ingestion\n\nThis flow shows the basics of the creation and ingestion of knowledge bases in Langflow. Here we use the `URL` component to dynamically fetch page data from the Langflow website, split it into chunks of 100 tokens, then ingest into a Knowledge Base.\n\n1. (Optional) Change the URL or switch to a different input data source as desired.\n2. (Optional) Adjust the Chunk Size as desired.\n3. Select or Create a new knowledge base.\n4. Ensure the column you wish to Vectorize is properly reflected in the Column Configuration table.",
             "display_name": "",
@@ -304,7 +306,7 @@
         },
         "dragging": false,
         "height": 401,
-        "id": "note-httIY",
+        "id": "note-ByFTQ",
         "measured": {
           "height": 401,
           "width": 388
@@ -320,7 +322,7 @@
       },
       {
         "data": {
-          "id": "URLComponent-WBxJx",
+          "id": "URLComponent-kJIK6",
           "node": {
             "base_classes": [
               "DataFrame",
@@ -696,7 +698,7 @@
           "type": "URLComponent"
         },
         "dragging": false,
-        "id": "URLComponent-WBxJx",
+        "id": "URLComponent-kJIK6",
         "measured": {
           "height": 292,
           "width": 320
@@ -710,7 +712,7 @@
       },
       {
         "data": {
-          "id": "KnowledgeIngestion-uSOy6",
+          "id": "KnowledgeIngestion-bEeRI",
           "node": {
             "base_classes": [
               "Data"
@@ -732,7 +734,7 @@
             ],
             "frozen": false,
             "icon": "upload",
-            "last_updated": "2025-08-26T18:21:03.358Z",
+            "last_updated": "2025-09-29T18:32:20.563Z",
             "legacy": false,
             "metadata": {
               "code_hash": "849094667f6f",
@@ -880,49 +882,34 @@
                 "required": true,
                 "show": true,
                 "table_icon": "Table",
-                "table_schema": {
-                  "columns": [
-                    {
-                      "default": "None",
-                      "description": "Name of the column in the source DataFrame",
-                      "disable_edit": false,
-                      "display_name": "Column Name",
-                      "edit_mode": "inline",
-                      "filterable": true,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "column_name",
-                      "sortable": true,
-                      "type": "str"
-                    },
-                    {
-                      "default": false,
-                      "description": "Create embeddings for this column",
-                      "disable_edit": false,
-                      "display_name": "Vectorize",
-                      "edit_mode": "inline",
-                      "filterable": true,
-                      "formatter": "boolean",
-                      "hidden": false,
-                      "name": "vectorize",
-                      "sortable": true,
-                      "type": "boolean"
-                    },
-                    {
-                      "default": false,
-                      "description": "Use this column as unique identifier",
-                      "disable_edit": false,
-                      "display_name": "Identifier",
-                      "edit_mode": "inline",
-                      "filterable": true,
-                      "formatter": "boolean",
-                      "hidden": false,
-                      "name": "identifier",
-                      "sortable": true,
-                      "type": "boolean"
-                    }
-                  ]
-                },
+                "table_schema": [
+                  {
+                    "description": "Name of the column in the source DataFrame",
+                    "display_name": "Column Name",
+                    "edit_mode": "inline",
+                    "formatter": "text",
+                    "name": "column_name",
+                    "type": "str"
+                  },
+                  {
+                    "default": false,
+                    "description": "Create embeddings for this column",
+                    "display_name": "Vectorize",
+                    "edit_mode": "inline",
+                    "formatter": "text",
+                    "name": "vectorize",
+                    "type": "boolean"
+                  },
+                  {
+                    "default": false,
+                    "description": "Use this column as unique identifier",
+                    "display_name": "Identifier",
+                    "edit_mode": "inline",
+                    "formatter": "text",
+                    "name": "identifier",
+                    "type": "boolean"
+                  }
+                ],
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
@@ -999,8 +986,9 @@
                             "advanced": false,
                             "combobox": false,
                             "dialog_inputs": {},
-                            "display_name": "Model Name",
+                            "display_name": "Choose Embedding",
                             "dynamic": false,
+                            "external_options": {},
                             "info": "Select the embedding model to use for this knowledge base.",
                             "name": "embedding_model",
                             "options": [
@@ -1070,6 +1058,7 @@
                 },
                 "display_name": "Knowledge",
                 "dynamic": false,
+                "external_options": {},
                 "info": "Select the knowledge to load data from.",
                 "name": "knowledge_base",
                 "options": [],
@@ -1093,30 +1082,30 @@
           "type": "KnowledgeIngestion"
         },
         "dragging": false,
-        "id": "KnowledgeIngestion-uSOy6",
+        "id": "KnowledgeIngestion-bEeRI",
         "measured": {
           "height": 333,
           "width": 320
         },
         "position": {
-          "x": 1001.4259863865477,
-          "y": 110.75185048793182
+          "x": 1002.7382278349772,
+          "y": 109.42342637545282
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 283.8838616133703,
-      "y": 160.13925386069144,
-      "zoom": 0.937778878472336
+      "x": 45.3759640702566,
+      "y": 137.9830219818511,
+      "zoom": 0.6398719208253193
     }
   },
   "description": "An example of creating a Knowledge Base and ingesting data into it from a web URL.",
   "endpoint_name": null,
-  "id": "fd03902d-38ec-4bc5-ac00-c308bbcca359",
+  "id": "c80c1e59-3474-46fc-94ac-80435b1dcb8a",
   "is_component": false,
-  "last_tested_version": "1.5.0.post2",
+  "last_tested_version": "1.6.0",
   "name": "Knowledge Ingestion",
   "tags": []
 }
