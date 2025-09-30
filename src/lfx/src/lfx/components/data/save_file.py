@@ -6,8 +6,6 @@ import orjson
 import pandas as pd
 from fastapi import UploadFile
 from fastapi.encoders import jsonable_encoder
-from langflow.api.v2.files import upload_user_file
-from langflow.services.database.models.user.crud import get_user_by_id
 
 from lfx.custom import Component
 from lfx.inputs import SortableListInput
@@ -277,10 +275,15 @@ class SaveToFileComponent(Component):
 
     async def _upload_file(self, file_path: Path) -> None:
         """Upload the saved file using the upload_user_file service."""
+        from langflow.api.v2.files import upload_user_file
+        from langflow.services.database.models.user.crud import get_user_by_id
+
+        # Ensure the file exists
         if not file_path.exists():
             msg = f"File not found: {file_path}"
             raise FileNotFoundError(msg)
 
+        # Upload the file
         with file_path.open("rb") as f:
             async with session_scope() as db:
                 if not self.user_id:
@@ -440,7 +443,7 @@ class SaveToFileComponent(Component):
         s3_client = boto3.client("s3", **client_config)
 
         # Extract content
-        content = await self._extract_content_for_upload()
+        content = self._extract_content_for_upload()
         file_format = self._get_file_format_for_location("AWS")
 
         # Generate file path
