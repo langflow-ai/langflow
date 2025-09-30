@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import json
+import re
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 from google.auth.exceptions import RefreshError
 from google.oauth2.service_account import Credentials
+from lfx.components.google.google_bq_sql_executor import BigQueryExecutorComponent
 from pandas import DataFrame
 
-from lfx.components.google.google_bq_sql_executor import BigQueryExecutorComponent
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -177,7 +178,9 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         fake_client.query.side_effect = RefreshError("Token expired")
 
         component = component_class(**default_kwargs)
-        with pytest.raises(ValueError, match="Authentication error: Unable to refresh authentication token."):
+        with pytest.raises(
+            ValueError, match=re.escape("Authentication error: Unable to refresh authentication token.")
+        ):
             component.execute_sql()
 
     @patch.object(Credentials, "from_service_account_file")
