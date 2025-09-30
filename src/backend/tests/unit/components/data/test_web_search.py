@@ -248,7 +248,7 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         assert "topic/TECHNOLOGY" in call_args
 
     @patch("lfx.components.data.web_search.requests.get")
-    def test_perform_news_search_no_params(self, mock_get):
+    def test_perform_news_search_no_params(self, mock_get):  # noqa: ARG002
         """Test news search with no parameters."""
         component = WebSearchComponent()
         component.timeout = 5
