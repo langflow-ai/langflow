@@ -5,7 +5,9 @@ import type { FieldParserType } from "../types/api";
 function toSnakeCase(str: string): string {
   return str.trim().replace(/[-\s]+/g, "_");
 }
-
+function toMcpNameCase(str: string): string {
+  return str.trim().replace(/\s+/g, "_");
+}
 function toCamelCase(str: string): string {
   return str
     .replace(/[-_\s]+(.)?/g, (_, c) => (c ? c.toUpperCase() : ""))
@@ -140,6 +142,9 @@ export function parseString(
   for (const parser of parsersArray) {
     try {
       switch (parser) {
+        case "mcp_name_case":
+          result = toMcpNameCase(result);
+          break;
         case "snake_case":
           result = toSnakeCase(result);
           break;
