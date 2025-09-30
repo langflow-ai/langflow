@@ -1262,7 +1262,7 @@ class ComposioBaseComponent(Component):
                 build_config["auth_link"]["auth_tooltip"] = "Disconnect"
                 build_config["auth_link"]["connection_id"] = connection_id
                 # Reflect the connected auth scheme in the UI
-                scheme, is_managed = self._get_connection_auth_info(connection_id)
+                scheme, _ = self._get_connection_auth_info(connection_id)
                 if scheme:
                     build_config.setdefault("auth_link", {})
                     build_config["auth_link"]["auth_scheme"] = scheme
@@ -1630,7 +1630,7 @@ class ComposioBaseComponent(Component):
                 build_config["auth_link"]["auth_tooltip"] = "Disconnect"
                 build_config["auth_link"]["show"] = False
                 # Update auth mode UI to reflect connected scheme
-                scheme, is_managed = self._get_connection_auth_info(active_connection_id)
+                scheme, _ = self._get_connection_auth_info(active_connection_id)
                 if scheme:
                     build_config.setdefault("auth_link", {})
                     build_config["auth_link"]["auth_scheme"] = scheme
@@ -1950,7 +1950,7 @@ class ComposioBaseComponent(Component):
             configured_tools.append(tool)
         return configured_tools
 
-    def _get_tools(self) -> list[Tool]:
+    async def _get_tools(self) -> list[Tool]:
         """Get tools with cached results and optimized name sanitization."""
         composio = self._build_wrapper()
         self.set_default_tools()

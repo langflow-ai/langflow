@@ -1,4 +1,6 @@
-import { expect, type Page, test } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 // TODO: This test might not be needed anymore
@@ -21,11 +23,7 @@ test(
     );
 
     await page.getByTestId("sidebar-custom-component-button").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTitle("fit view").click();
-    await page.getByTitle("zoom out").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 1 });
 
     await page.getByTestId("title-Custom Component").first().click();
 
@@ -67,15 +65,7 @@ test(
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(cleanCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 3000,
-    });
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     expect(await page.getByText("BUTTON").isVisible()).toBeTruthy();
     expect(await page.getByText("Click me").isVisible()).toBeTruthy();

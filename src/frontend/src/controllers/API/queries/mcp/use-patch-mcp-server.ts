@@ -4,6 +4,7 @@ import type { MCPServerType } from "@/types/mcp";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import type { getMCPServersResponse } from "./use-get-mcp-servers";
 
 interface PatchMCPServerResponse {
   message: string;
@@ -41,6 +42,17 @@ export const usePatchMCPServer: useMutationFunctionType<
       const res = await api.patch(
         `${getURL("MCP_SERVERS", undefined, true)}/${body.name}`,
         payload,
+      );
+
+      queryClient.setQueryData(
+        ["useGetMCPServers"],
+        (oldData: getMCPServersResponse = []) => {
+          return oldData.map((server) => {
+            return server.name === body.name
+              ? { ...server, toolsCount: null }
+              : server;
+          });
+        },
       );
 
       return {

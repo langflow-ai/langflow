@@ -1,0 +1,47 @@
+---
+title: FAISS
+slug: /bundles-faiss
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **FAISS** bundle.
+
+## FAISS vector store
+
+The **FAISS** component provides access to the Facebook AI Similarity Search (FAISS) library through an instance of `FAISS` vector store.
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+<PartialVectorSearchResults />
+
+### FAISS vector store parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [FAISS documentation](https://faiss.ai/index.html) or inspect [component code](/concepts-components#component-code).
+
+| Name                      | Type          | Description                                      |
+|---------------------------|---------------|--------------------------------------------------|
+| index_name                 | String        | Input parameter. The name of the FAISS index. Default: "langflow_index". |
+| persist_directory          | String        | Input parameter. Path to save the FAISS index. It is relative to where Langflow is running. |
+| search_query               | String        | Input parameter. The query to search for in the vector store.     |
+| ingest_data                | Data          | Input parameter. The list of data to ingest into the vector store. |
+| allow_dangerous_deserialization | Boolean  | Input parameter. Set to `True` to allow loading pickle files from untrusted sources. Default: `True`. |
+| embedding                  | Embeddings    | Input parameter. The embedding function to use for the vector store. |
+| number_of_results          | Integer       | Input parameter. Number of results to return from the search. Default: 4. |

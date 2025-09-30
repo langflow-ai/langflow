@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from lfx.log.logger import logger
 from lfx.schema.data import Data
+from lfx.schema.message import Message
 from lfx.services.cache.base import CacheService
 from lfx.services.cache.utils import CacheMiss
 
@@ -39,14 +40,14 @@ class AgentSpec(BaseModel):
     hub_repo: str | None = None
 
 
-def data_to_messages(data: list[Data]) -> list[BaseMessage]:
+def data_to_messages(data: list[Data | Message]) -> list[BaseMessage]:
     """Convert a list of data to a list of messages.
 
     Args:
-        data (List[Data]): The data to convert.
+        data (List[Data | Message]): The data to convert.
 
     Returns:
-        List[Message]: The data as messages.
+        List[BaseMessage]: The data as messages.
     """
     return [value.to_lc_message() for value in data]
 
@@ -203,3 +204,21 @@ def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
                 cur = cur.setdefault(part, {})
 
     return nested
+
+
+def get_chat_output_sender_name(self) -> str | None:
+    """Get sender_name from ChatOutput component."""
+    if not hasattr(self, "graph") or not self.graph:
+        return None
+
+    for vertex in self.graph.vertices:
+        # Safely check if vertex has data attribute, correct type, and raw_params
+        if (
+            hasattr(vertex, "data")
+            and vertex.data.get("type") == "ChatOutput"
+            and hasattr(vertex, "raw_params")
+            and vertex.raw_params
+        ):
+            return vertex.raw_params.get("sender_name")
+
+    return None
