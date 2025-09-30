@@ -47,7 +47,7 @@ The following tables are stored in `langflow.db`:
 
     :::tip
     To automatically remove API keys and tokens from flow data before saving a flow to the database, set `LANGFLOW_REMOVE_API_KEYS=True` in your [Langflow environment variables](/environment-variables).
-    When true, any field marked as a password field that _also_ has `api`, `key`, or `token` in its name is set to `null` before the flow is saved.
+    When `true`, any field marked as a password field that _also_ has `api`, `key`, or `token` in its name is set to `null` before the flow is saved.
     This helps prevent credentials from being stored in the database.
     :::
 
@@ -76,7 +76,7 @@ LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
 
 To fine-tune your database connection pool and timeout settings, you can set the following additional environment variables:
 
-* `LANGFLOW_DATABASE_CONNECTION_RETRY`: Whether to retry lost connections to your Langflow database. If true, Langflow tries to connect to the database again if the connection fails. Default: False.
+* `LANGFLOW_DATABASE_CONNECTION_RETRY`: Whether to retry lost connections to your Langflow database. If `true`, Langflow tries to connect to the database again if the connection fails. Default: `false`.
 
 * `LANGFLOW_DB_CONNECT_TIMEOUT`: The number of seconds to wait before giving up on a lock to be released or establishing a connection to the database. This may be separate from the `pool_timeout` in `LANGFLOW_DB_CONNECTION_SETTINGS`. Default: 30.
 
@@ -85,9 +85,9 @@ To fine-tune your database connection pool and timeout settings, you can set the
     - `pool_size`: The base number of connections to keep open in the connection pool. Default: 20.
     - `max_overflow`: Maximum number of connections that can be created in excess of `pool_size` if needed. Default: 30.
     - `pool_timeout`: Number of seconds to wait for a connection from the pool before timing out. Default: 30.
-    - `pool_pre_ping`: If true, the pool tests connections for liveness upon each checkout. Default: True.
+    - `pool_pre_ping`: If `true`, the pool tests connections for liveness upon each checkout. Default: `true`.
     - `pool_recycle`: Number of seconds after which a connection is automatically recycled. Default: 1800 (30 minutes).
-    - `echo`: If true, SQL queries are logged for debugging purposes. Default: False.
+    - `echo`: If `true`, SQL queries are logged for debugging purposes. Default: `false`.
 
     For example:
 
