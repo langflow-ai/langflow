@@ -5,7 +5,7 @@ import httpx
 from langchain_ollama import OllamaEmbeddings
 
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS, URL_LIST
+from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS
 from lfx.field_typing import Embeddings
 from lfx.io import DropdownInput, MessageTextInput, Output
 from lfx.utils.util import transform_localhost_url
