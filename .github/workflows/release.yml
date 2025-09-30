@@ -4,8 +4,8 @@ run-name: Langflow Release by @${{ github.actor }}
 on:
   workflow_dispatch:
     inputs:
-      release_branch:
-        description: "Branch to release from. This is the branch that contains the source code for the release."
+      release_tag:
+        description: "Tag to release from. This is the tag that contains the source code for the release."
         required: true
         type: string
       release_package_base:
@@ -47,37 +47,76 @@ on:
 
 
 jobs:
+  echo-inputs:
+    name: Echo Workflow Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo workflow inputs
+        run: |
+          echo "release_tag: ${{ inputs.release_tag }}"
+          echo "release_package_base: ${{ inputs.release_package_base }}"
+          echo "release_package_main: ${{ inputs.release_package_main }}"
+          echo "release_lfx: ${{ inputs.release_lfx }}"
+          echo "build_docker_base: ${{ inputs.build_docker_base }}"
+          echo "build_docker_main: ${{ inputs.build_docker_main }}"
+          echo "build_docker_ep: ${{ inputs.build_docker_ep }}"
+          echo "pre_release: ${{ inputs.pre_release }}"
+          echo "create_release: ${{ inputs.create_release }}"
+          echo "runs_on: ${{ inputs.runs_on }}"
+
+  validate-tag:
+    name: Validate Tag Input
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # Fetch all history - required for tags (?)
+      - name: Validate that input is a tag, not a branch
+        run: |
+          # Check if the input exists as a tag
+          if ! git tag -l | grep -q "^${{ inputs.release_tag }}$"; then
+            echo "Error: '${{ inputs.release_tag }}' is not a valid tag."
+            echo "Available tags:"
+            git tag -l | head -20
+            exit 1
+          fi
+
+          # Check if the input also exists as a branch (warn if so, but don't fail)
+          if git branch -r | grep -q "origin/${{ inputs.release_tag }}$"; then
+            echo "Tag '${{ inputs.release_tag }}' also exists as a branch. Exiting out of caution."
+            exit 1
+          fi
+
+          echo "Validated: '${{ inputs.release_tag }}' is a valid tag."
+
   ci:
-    if: ${{ github.event.inputs.release_package_base == 'true' || github.event.inputs.release_package_main == 'true' }}
+    if: inputs.release_package_base || inputs.release_package_main || inputs.release_lfx
     name: CI
+    needs: [validate-tag]
     uses: ./.github/workflows/ci.yml
     with:
-      branch: ${{ inputs.release_branch }}
+      branch: ${{ inputs.release_tag }}
       python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
       release: true
+      runs-on: ${{ (inputs['runs_on'] && startsWith(format('{0}', inputs['runs_on']), '[') && fromJSON(inputs['runs_on'])) || inputs['runs_on'] || inputs['runs_on'] || 'ubuntu-latest' }}
     secrets: inherit
 
 
   build-base:
     name: Build Langflow Base
     needs: [ci]
-    if: inputs.release_package_base == true
+    if: inputs.release_package_base
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check-version.outputs.version }}
       skipped: ${{ steps.check-version.outputs.skipped }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.release_branch }}
-      - name: Debug branch information
-        run: |
-          echo "Workflow triggered from: ${{ github.ref }}"
-          echo "Checking out branch: ${{ inputs.release_branch }}"
-          echo "Current branch after checkout: $(git branch --show-current)"
-          echo "Current commit: $(git rev-parse HEAD)"
+          ref: ${{ inputs.release_tag }}
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -138,22 +177,16 @@ jobs:
 
   build-main:
     name: Build Langflow Main
-    if: inputs.release_package_main == true
+    if: inputs.release_package_main
     needs: [build-base]
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check-version.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.release_branch }}
-      - name: Debug branch information
-        run: |
-          echo "Workflow triggered from: ${{ github.ref }}"
-          echo "Checking out branch: ${{ inputs.release_branch }}"
-          echo "Current branch after checkout: $(git branch --show-current)"
-          echo "Current commit: $(git rev-parse HEAD)"
+          ref: ${{ inputs.release_tag }}
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
         with:
@@ -169,7 +202,7 @@ jobs:
       # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post"] is in the version string
       # if the version string is incorrect, we need to exit the workflow
       - name: Check if pre-release
-        if: inputs.pre_release == 'true'
+        if: inputs.pre_release
         run: |
           version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
           if [[ "${version}" =~ ^([0-9]+\.)?([0-9]+\.)?[0-9]+((a|b|rc|dev|post)([0-9]+))$ ]]; then
@@ -185,7 +218,8 @@ jobs:
           last_released_version=$(curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."
-            exit 1
+            echo skipped=true >> $GITHUB_OUTPUT
+            exit 0
           else
             echo version=$version >> $GITHUB_OUTPUT
           fi
@@ -223,7 +257,7 @@ jobs:
 
   test-cross-platform:
     name: Test Cross-Platform Installation
-    if: inputs.release_package_base == true || inputs.release_package_main == true
+    if: inputs.release_package_base || inputs.release_package_main
     needs: [build-base, build-main]
     uses: ./.github/workflows/cross-platform-test.yml
     with:
@@ -232,7 +266,7 @@ jobs:
 
   publish-base:
     name: Publish Langflow Base to PyPI
-    if: inputs.release_package_base == true
+    if: inputs.release_package_base
     needs: [build-base, test-cross-platform]
     runs-on: ubuntu-latest
     steps:
@@ -255,7 +289,7 @@ jobs:
 
   publish-main:
     name: Publish Langflow Main to PyPI
-    if: inputs.release_package_main == true
+    if: inputs.release_package_main
     needs: [build-main, test-cross-platform, publish-base]
     runs-on: ubuntu-latest
     steps:
@@ -284,51 +318,58 @@ jobs:
       ref: ${{ inputs.release_branch }}
       base_version: ${{ needs.build-base.outputs.version }}
       main_version: ${{ needs.build-main.outputs.version }}
+
+  call_docker_build_base:
+    name: Call Docker Build Workflow for Langflow Base
+    if: inputs.build_docker_base
+    needs: [validate-tag]
+    uses: ./.github/workflows/docker-build-v2.yml
+    with:
+      ref: ${{ inputs.release_tag }}
       release_type: base
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
 
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
-    if: inputs.build_docker_ep == true
-    needs: [build-main, publish-main, call_docker_build_base]
-    uses: ./.github/workflows/docker-build.yml
+    if: inputs.build_docker_ep
+    needs: [validate-tag]
+    uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ inputs.release_branch }}
-      main_version: ${{ needs.build-main.outputs.version }}
+      ref: ${{ inputs.release_tag }}
       release_type: main-ep
       pre_release: False
     secrets: inherit
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    if: inputs.build_docker_main == true
-    needs: [build-main, publish-main, call_docker_build_main_ep]
-    uses: ./.github/workflows/docker-build.yml
+    if: inputs.build_docker_main
+    needs: [validate-tag]
+    uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ inputs.release_branch }}
-      main_version: ${{ needs.build-main.outputs.version }}
+      ref: ${{ inputs.release_tag }}
       release_type: main
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
 
   call_docker_build_main_all:
     name: Call Docker Build Workflow for langflow-all
-    if: inputs.build_docker_main == true
-    needs: [build-main, publish-main]
-    uses: ./.github/workflows/docker-build.yml
+    if: inputs.build_docker_main
+    needs: [validate-tag]
+    uses: ./.github/workflows/docker-build-v2.yml
     with:
-      ref: ${{ inputs.release_branch }}
-      main_version: ${{ needs.build-main.outputs.version }}
+      ref: ${{ inputs.release_tag }}
       release_type: main-all
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
+
 
 
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [build-main, publish-main]
+    if: always() && inputs.create_release && (needs.publish-main.result == 'success' )
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -343,4 +384,5 @@ jobs:
           generateReleaseNotes: true
           prerelease: ${{ inputs.pre_release }}
           tag: ${{ needs.build-main.outputs.version }}
-          commit: ${{ inputs.release_branch }}
+          allowUpdates: true
+          updateOnlyUnreleased: false

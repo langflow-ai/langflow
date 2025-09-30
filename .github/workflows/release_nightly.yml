@@ -52,6 +52,11 @@ on:
         description: "Tag for the nightly base build"
         required: true
         type: string
+      push_to_registry:
+        description: "Whether to push images to registries. Set to false for testing builds without publishing."
+        required: true
+        type: boolean
+        default: false
 
 env:
   POETRY_VERSION: "1.8.3"
@@ -222,7 +227,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.nightly_tag_main }}
+          persist-credentials: true
       - name: Download base artifact
         uses: actions/download-artifact@v4
         with:
@@ -247,7 +255,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.nightly_tag_main }}
+          persist-credentials: true
       - name: Download main artifact
         uses: actions/download-artifact@v4
         with:
@@ -267,23 +278,24 @@ jobs:
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
-    if: always() && ${{ inputs.build_docker_base == 'true' }}
+    if: always() && inputs.build_docker_base
     needs: [build-nightly-base, build-nightly-main]
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-nightly-build.yml
     with:
+      ref: ${{ inputs.nightly_tag_main }}
       release_type: nightly-base
-      base_version: ${{ inputs.nightly_tag_base }}
-      main_version: ${{ inputs.nightly_tag_main }}
+      push_to_registry: ${{ inputs.push_to_registry }}
     secrets: inherit
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    if: always() && ${{ inputs.build_docker_main == 'true' }}
+    if: always() && inputs.build_docker_main
     needs: [build-nightly-main, call_docker_build_base]
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-nightly-build.yml
     with:
+      ref: ${{ inputs.nightly_tag_main }}
       release_type: nightly-main
-      main_version: ${{ inputs.nightly_tag_main }}
+      push_to_registry: ${{ inputs.push_to_registry }}
     secrets: inherit
 
   # TODO: Uncomment this when our runner can fit the builds that contain pytorch (and other large dependencies)
@@ -291,18 +303,20 @@ jobs:
   #   name: Call Docker Build Workflow for langflow-all
   #   if: always() && ${{ inputs.build_docker_main == 'true' }}
   #   needs: [build-nightly-main]
-  #   uses: ./.github/workflows/docker-build.yml
+  #   uses: ./.github/workflows/docker-nightly-build.yml
   #   with:
+  #     ref: ${{ inputs.nightly_tag_main }}
   #     release_type: nightly-main-all
   #     main_version: ${{ inputs.nightly_tag_main }}
   #   secrets: inherit
 
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
-    if: always() && ${{ inputs.build_docker_ep == 'true' }}
+    if: always() && inputs.build_docker_ep
     needs: [build-nightly-main, call_docker_build_main]
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-build-v2.yml
     with:
+      ref: ${{ inputs.nightly_tag_main }}
       release_type: main-ep
-      main_version: ${{ inputs.nightly_tag_main }}
+      push_to_registry: ${{ inputs.push_to_registry }}
     secrets: inherit
