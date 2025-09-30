@@ -106,14 +106,14 @@ const SelectionIndicator = ({ isSelected }: { isSelected: boolean }) => (
       isSelected ? "opacity-100" : "opacity-0",
     )}
   >
-    <div className="absolute opacity-100 transition-all group-hover:opacity-0">
+    <div className="absolute opacity-100 transition-all group-hover/popover-item:opacity-0">
       <ForwardedIconComponent
         name="Check"
         className="mr-2 h-4 w-4 text-primary"
         aria-hidden="true"
       />
     </div>
-    <div className="absolute opacity-0 transition-all group-hover:opacity-100">
+    <div className="absolute opacity-0 transition-all group-hover/popover-item:opacity-100">
       <ForwardedIconComponent
         name="X"
         className="mr-2 h-4 w-4 text-status-red"
@@ -146,15 +146,18 @@ const getAnchorClassName = (
   editNode: boolean,
   disabled: boolean,
   isFocused: boolean,
+  allowCustomValue: boolean,
 ) => {
-  return cn(
-    "primary-input noflow nopan nodelete nodrag border-1 flex h-full min-h-[2.375rem] cursor-default flex-wrap items-center px-2",
-    editNode && "min-h-7 p-0 px-1",
-    editNode && disabled && "min-h-5 border-muted",
-    disabled && "bg-muted text-muted",
-    isFocused &&
-      "border-foreground ring-1 ring-foreground hover:border-foreground",
-  );
+  return allowCustomValue
+    ? cn(
+        "primary-input noflow nopan nodelete nodrag border-1 flex h-full min-h-[2.375rem] cursor-default flex-wrap items-center px-2",
+        editNode && "min-h-7 p-0 px-1",
+        editNode && disabled && "min-h-5 border-muted",
+        disabled && "bg-muted text-muted",
+        isFocused &&
+          "border-foreground ring-1 ring-foreground hover:border-foreground",
+      )
+    : "flex items-center gap-2 w-full h-full min-h-[2.375rem]";
 };
 
 const CustomInputPopover = ({
@@ -187,6 +190,7 @@ const CustomInputPopover = ({
   commandWidth,
   blockAddNewGlobalVariable,
   hasRefreshButton,
+  allowCustomValue,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [cursor, setCursor] = useState<number | null>(null);
@@ -236,8 +240,17 @@ const CustomInputPopover = ({
       <PopoverAnchor>
         <div
           data-testid={`anchor-${id}`}
-          className={getAnchorClassName(editNode, disabled, isFocused)}
-          onClick={() => !nodeStyle && !disabled && setShowOptions(true)}
+          className={getAnchorClassName(
+            editNode,
+            disabled,
+            isFocused,
+            allowCustomValue,
+          )}
+          onClick={() =>
+            (!allowCustomValue || !nodeStyle) &&
+            !disabled &&
+            setShowOptions(true)
+          }
         >
           {!disabled && selectedOptions?.length > 0 ? (
             <div className="mr-5 flex flex-wrap gap-2">
@@ -273,7 +286,9 @@ const CustomInputPopover = ({
             </ShadTooltip>
           ) : null}
 
-          {(!selectedOption?.length && !selectedOptions?.length) || disabled ? (
+          {allowCustomValue &&
+          ((!selectedOption?.length && !selectedOptions?.length) ||
+            disabled) ? (
             <input
               autoComplete="off"
               onFocus={() => setIsFocused(true)}
@@ -341,7 +356,7 @@ const CustomInputPopover = ({
                   key={option + id}
                   value={option}
                   onSelect={handleOptionSelect}
-                  className="group"
+                  className="group/popover-item"
                 >
                   <CommandItemContent
                     option={option}
