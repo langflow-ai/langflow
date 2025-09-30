@@ -1,8 +1,5 @@
 from typing import Any
 
-from requests.exceptions import ConnectionError  # noqa: A004
-from urllib3.exceptions import MaxRetryError, NameResolutionError
-
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
@@ -27,10 +24,9 @@ class NVIDIAModelComponent(LCModelComponent):
     except ImportError as e:
         msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
         raise ImportError(msg) from e
-    except (ConnectionError, MaxRetryError, NameResolutionError):
+    except Exception as e:  # noqa: BLE001
         logger.warning(
-            "Failed to connect to NVIDIA API. Model list may be unavailable."
-            " Please check your internet connection and API credentials."
+            f"Failed to fetch NVIDIA models during initialization: {e}. Model list will be unavailable."
         )
         all_models = []
 
