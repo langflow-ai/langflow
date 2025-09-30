@@ -440,7 +440,7 @@ class SaveToFileComponent(Component):
         s3_client = boto3.client("s3", **client_config)
 
         # Extract content
-        content = self._extract_content_for_upload()
+        content = await self._extract_content_for_upload()
         file_format = self._get_file_format_for_location("AWS")
 
         # Generate file path
