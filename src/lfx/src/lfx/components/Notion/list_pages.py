@@ -16,10 +16,7 @@ class NotionListPages(LCToolComponent):
     display_name: str = "List Pages "
     description: str = (
         "Query a Notion database with filtering and sorting. "
-        "The input should be a JSON string containing the 'filter' and 'sorts' objects. "
-        "Example input:\n"
-        '{"filter": {"property": "Status", "select": {"equals": "Done"}}, '
-        '"sorts": [{"timestamp": "created_time", "direction": "descending"}]}'
+        "The input should be a JSON string containing the 'filter' and 'sorts' objects."
     )
     documentation: str = "https://docs.langflow.org/integrations/notion/list-pages"
     icon = "NotionDirectoryLoader"
@@ -40,6 +37,9 @@ class NotionListPages(LCToolComponent):
             name="query_json",
             display_name="Database query (JSON)",
             info="A JSON string containing the filters and sorts that will be used for querying the database. "
+            "Example input:\n"
+            '{"filter": {"property": "Status", "select": {"equals": "Done"}}, '
+            '"sorts": [{"timestamp": "created_time", "direction": "descending"}]}\n'
             "Leave empty for no filters or sorts.",
         ),
     ]

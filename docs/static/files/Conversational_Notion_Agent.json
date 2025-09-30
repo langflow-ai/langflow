@@ -801,7 +801,7 @@
       },
       {
         "data": {
-          "description": "Query a Notion database with filtering and sorting. The input should be a JSON string containing the 'filter' and 'sorts' objects. Example input:\n{\"filter\": {\"property\": \"Status\", \"select\": {\"equals\": \"Done\"}}, \"sorts\": [{\"timestamp\": \"created_time\", \"direction\": \"descending\"}]}",
+          "description": "Query a Notion database with filtering and sorting. The input should be a JSON string containing the 'filter' and 'sorts' objects.",
           "display_name": "List Pages ",
           "id": "NotionListPages-9cC7f",
           "node": {
@@ -812,7 +812,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Query a Notion database with filtering and sorting. The input should be a JSON string containing the 'filter' and 'sorts' objects. Example input:\n{\"filter\": {\"property\": \"Status\", \"select\": {\"equals\": \"Done\"}}, \"sorts\": [{\"timestamp\": \"created_time\", \"direction\": \"descending\"}]}",
+            "description": "Query a Notion database with filtering and sorting. The input should be a JSON string containing the 'filter' and 'sorts' objects.",
             "display_name": "List Pages ",
             "documentation": "https://docs.langflow.org/integrations/notion/list-pages",
             "edited": true,
