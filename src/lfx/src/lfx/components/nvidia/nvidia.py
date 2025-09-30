@@ -1,8 +1,5 @@
 from typing import Any
 
-from requests.exceptions import ConnectionError  # noqa: A004
-from urllib3.exceptions import MaxRetryError, NameResolutionError
-
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
