@@ -72,7 +72,6 @@ class DataFrameToToolsetComponent(LCToolComponent):
         if sanitized and not sanitized[0].isalpha() and sanitized[0] != "_":
             sanitized = f"tool_{sanitized}"
         return sanitized or "unnamed_tool"
-
     def _prepare_action_data(self) -> None:
         """Prepare action data from DataFrame."""
         # Check if dataframe exists and is valid
