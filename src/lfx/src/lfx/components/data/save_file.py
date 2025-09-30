@@ -72,6 +72,7 @@ class SaveToFileComponent(Component):
             info="Name file will be saved as (without extension).",
             required=True,
             show=False,
+            tool_mode=True,
         ),
         # Format inputs (dynamic based on storage location)
         DropdownInput(
