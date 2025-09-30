@@ -18,7 +18,7 @@ class NotionListPages(LCToolComponent):
         "Query a Notion database with filtering and sorting. "
         "The input should be a JSON string containing the 'filter' and 'sorts' objects."
     )
-    documentation: str = "https://docs.langflow.org/integrations/notion/list-pages"
+    documentation: str = "https://docs.langflow.org/bundles-notion"
     icon = "NotionDirectoryLoader"
 
     inputs = [

@@ -59,7 +59,7 @@ export function SaveChangesModal({
             <a
               target="_blank"
               className="text-secondary underline"
-              href="https://docs.langflow.org/configuration-auto-save"
+              href="https://docs.langflow.org/environment-variables#visual-editor-and-playground-behavior"
               rel="noopener"
             >
               Enable auto-saving
