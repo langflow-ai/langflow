@@ -578,6 +578,7 @@ class TestComponentLoading:
         missing dependencies, or initialization failures), it doesn't crash Langflow startup.
         """
         from unittest.mock import patch
+
         from langflow.interface.components import _process_single_module
 
         print("\n" + "=" * 80)
@@ -586,21 +587,21 @@ class TestComponentLoading:
 
         # Test 1: ImportError during module import
         print("\n1. Testing ImportError handling...")
-        with patch('importlib.import_module', side_effect=ImportError("Missing dependency: some_package")):
+        with patch("importlib.import_module", side_effect=ImportError("Missing dependency: some_package")):
             result = _process_single_module("lfx.components.test_module")
             assert result is None, "Should return None when ImportError occurs"
             print("   ✓ ImportError handled correctly")
 
         # Test 2: AttributeError during module import
         print("\n2. Testing AttributeError handling...")
-        with patch('importlib.import_module', side_effect=AttributeError("Module has no attribute 'something'")):
+        with patch("importlib.import_module", side_effect=AttributeError("Module has no attribute 'something'")):
             result = _process_single_module("lfx.components.test_module")
             assert result is None, "Should return None when AttributeError occurs"
             print("   ✓ AttributeError handled correctly")
 
         # Test 3: ConnectionError (e.g., HTTP 503 from external API)
         print("\n3. Testing ConnectionError handling (simulating HTTP 503)...")
-        with patch('importlib.import_module', side_effect=ConnectionError("503 Service Unavailable")):
+        with patch("importlib.import_module", side_effect=ConnectionError("503 Service Unavailable")):
             result = _process_single_module("lfx.components.nvidia.nvidia")
             assert result is None, "Should return None when ConnectionError occurs"
             print("   ✓ ConnectionError handled correctly")
@@ -608,35 +609,36 @@ class TestComponentLoading:
         # Test 4: Generic HTTPError
         print("\n4. Testing HTTPError handling...")
         from urllib3.exceptions import MaxRetryError
-        with patch('importlib.import_module', side_effect=MaxRetryError(None, "", reason="Connection timeout")):
+
+        with patch("importlib.import_module", side_effect=MaxRetryError(None, "", reason="Connection timeout")):
             result = _process_single_module("lfx.components.test_module")
             assert result is None, "Should return None when HTTPError occurs"
             print("   ✓ HTTPError handled correctly")
 
         # Test 5: TimeoutError
         print("\n5. Testing TimeoutError handling...")
-        with patch('importlib.import_module', side_effect=TimeoutError("Request timed out")):
+        with patch("importlib.import_module", side_effect=TimeoutError("Request timed out")):
             result = _process_single_module("lfx.components.test_module")
             assert result is None, "Should return None when TimeoutError occurs"
             print("   ✓ TimeoutError handled correctly")
 
         # Test 6: Generic Exception
         print("\n6. Testing generic Exception handling...")
-        with patch('importlib.import_module', side_effect=Exception("Unexpected error during import")):
+        with patch("importlib.import_module", side_effect=Exception("Unexpected error during import")):
             result = _process_single_module("lfx.components.test_module")
             assert result is None, "Should return None when generic Exception occurs"
             print("   ✓ Generic Exception handled correctly")
 
         # Test 7: RuntimeError (e.g., from component initialization)
         print("\n7. Testing RuntimeError handling...")
-        with patch('importlib.import_module', side_effect=RuntimeError("Component initialization failed")):
+        with patch("importlib.import_module", side_effect=RuntimeError("Component initialization failed")):
             result = _process_single_module("lfx.components.test_module")
             assert result is None, "Should return None when RuntimeError occurs"
             print("   ✓ RuntimeError handled correctly")
 
         # Test 8: ValueError (e.g., from invalid configuration)
         print("\n8. Testing ValueError handling...")
-        with patch('importlib.import_module', side_effect=ValueError("Invalid configuration")):
+        with patch("importlib.import_module", side_effect=ValueError("Invalid configuration")):
             result = _process_single_module("lfx.components.test_module")
             assert result is None, "Should return None when ValueError occurs"
             print("   ✓ ValueError handled correctly")
