@@ -63,7 +63,6 @@ class DataFrameToToolsetComponent(LCToolComponent):
         super().__init__(**kwargs)
         self._tools_cache: list[Tool] = []
         self._action_data: dict[str, dict[str, str]] = {}
-
     def _sanitize_tool_name(self, name: str) -> str:
         """Sanitize tool name to match required format '^[a-zA-Z0-9_-]+$'."""
         # Replace any non-alphanumeric characters (except _ and -) with underscores
