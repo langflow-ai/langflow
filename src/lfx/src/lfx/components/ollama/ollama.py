@@ -156,10 +156,10 @@ class ChatOllamaComponent(LCModelComponent):
             mirostat_eta = self.mirostat_eta
             mirostat_tau = self.mirostat_tau
 
-        tranformed_base_url = transform_localhost_url(self.base_url)
+        transformed_base_url = transform_localhost_url(self.base_url)
         # Mapping system settings to their corresponding values
         llm_params = {
-            "base_url": tranformed_base_url,
+            "base_url": transformed_base_url,
             "model": self.model_name,
             "mirostat": mirostat_value,
             "format": self.format,

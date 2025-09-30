@@ -44,9 +44,9 @@ class OllamaEmbeddingsComponent(LCModelComponent):
     ]
 
     def build_embeddings(self) -> Embeddings:
-        tranformed_base_url = transform_localhost_url(self.base_url)
+        transformed_base_url = transform_localhost_url(self.base_url)
         try:
-            output = OllamaEmbeddings(model=self.model_name, base_url=tranformed_base_url)
+            output = OllamaEmbeddings(model=self.model_name, base_url=transformed_base_url)
         except Exception as e:
             msg = (
                 "Unable to connect to the Ollama API. ",
