@@ -1,4 +1,3 @@
-
 import pytest
 from lfx.components.processing.dataframe_to_toolset import DataFrameToToolsetComponent
 from lfx.schema.dataframe import DataFrame
@@ -128,7 +127,7 @@ class TestDataFrameToToolset:
             "Breaking: New AI breakthrough announced. Scientists develop more efficient language model architecture.",
         ]
 
-        for i, (tool, expected) in enumerate(zip(tools[:3], expected_contents)):
+        for i, (tool, expected) in enumerate(zip(tools[:3], expected_contents, strict=False)):
             result = tool.func()
             assert result == expected, f"Tool {i} returned unexpected content"
 
@@ -219,7 +218,9 @@ class TestEdgeCases:
         component.tool_name_column = "non_existent_column"
         component.tool_output_column = "content"
 
-        with pytest.raises(ValueError, match=r"Tool name column 'non_existent_column' not found in DataFrame columns: .*"):
+        with pytest.raises(
+            ValueError, match=r"Tool name column 'non_existent_column' not found in DataFrame columns: .*"
+        ):
             component.build_tools()
 
     def test_single_row_dataframe(self, component):
