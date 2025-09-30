@@ -25,9 +25,9 @@
         "id": "reactflow__edge-AgentQL-064NO{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-064NOœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-ZH2Rd{œfieldNameœ:œtoolsœ,œidœ:œAgent-ZH2Rdœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AgentQL-064NO",
-        "sourceHandle": "{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-064NOœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-064NOœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-ZH2Rd",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-ZH2Rdœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-ZH2Rdœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ChatInput-S2wgk{œdataTypeœ:œChatInputœ,œidœ:œChatInput-S2wgkœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-ZH2Rd{œfieldNameœ:œinput_valueœ,œidœ:œAgent-ZH2Rdœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-S2wgk",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-S2wgkœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-S2wgkœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-ZH2Rd",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-ZH2Rdœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-ZH2Rdœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "reactflow__edge-Agent-ZH2Rd{œdataTypeœ:œAgentœ,œidœ:œAgent-ZH2Rdœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-jNfAw{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-jNfAwœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "Agent-ZH2Rd",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-ZH2Rdœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-ZH2Rdœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-jNfAw",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-jNfAwœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-jNfAwœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "xy-edge__ChatOutput-jNfAw{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-jNfAwœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-SaveToFile-VVVVb{œfieldNameœ:œinputœ,œidœ:œSaveToFile-VVVVbœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ChatOutput-jNfAw",
-        "sourceHandle": "{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-jNfAwœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatOutputœ, œidœ: œChatOutput-jNfAwœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "SaveToFile-VVVVb",
-        "targetHandle": "{œfieldNameœ:œinputœ,œidœ:œSaveToFile-VVVVbœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinputœ, œidœ: œSaveToFile-VVVVbœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -1815,8 +1815,6 @@
                 "group_outputs": false,
                 "method": "save_to_file",
                 "name": "message",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
