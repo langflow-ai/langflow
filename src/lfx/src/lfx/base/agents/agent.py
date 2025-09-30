@@ -10,7 +10,7 @@ from langchain_core.runnables import Runnable
 
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
-from lfx.base.agents.utils import data_to_messages
+from lfx.base.agents.utils import data_to_messages, get_chat_output_sender_name
 from lfx.custom.custom_component.component import Component, _get_component_toolkit
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import InputTypes, MultilineInput
@@ -149,7 +149,14 @@ class LCAgentComponent(Component):
         if hasattr(self, "system_prompt"):
             input_dict["system_prompt"] = self.system_prompt
         if hasattr(self, "chat_history") and self.chat_history:
-            if isinstance(self.chat_history, Data):
+            if (
+                hasattr(self.chat_history, "to_data")
+                and callable(self.chat_history.to_data)
+                and self.chat_history.__class__.__name__ == "Data"
+            ):
+                input_dict["chat_history"] = data_to_messages(self.chat_history)
+            # Handle both lfx.schema.message.Message and langflow.schema.message.Message types
+            if all(hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data for m in self.chat_history):
                 input_dict["chat_history"] = data_to_messages(self.chat_history)
             if all(isinstance(m, Message) for m in self.chat_history):
                 input_dict["chat_history"] = data_to_messages([m.to_data() for m in self.chat_history])
@@ -173,9 +180,11 @@ class LCAgentComponent(Component):
         else:
             session_id = None
 
+        sender_name = get_chat_output_sender_name(self) or self.display_name or "AI"
+
         agent_message = Message(
             sender=MESSAGE_SENDER_AI,
-            sender_name=self.display_name or "Agent",
+            sender_name=sender_name,
             properties={"icon": "Bot", "state": "partial"},
             content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
             session_id=session_id or uuid.uuid4(),
