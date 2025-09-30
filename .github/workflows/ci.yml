@@ -185,6 +185,9 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: ./.github/changes-filter.yaml
+      - name: Validate Filter Coverage
+        run: |
+          git diff --name-only ${{ github.event.pull_request.base.sha || 'origin/main' }} HEAD | python scripts/check_changes_filter.py
 
   test-backend:
     needs: [path-filter, set-ci-condition]
