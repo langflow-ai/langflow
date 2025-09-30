@@ -1,6 +1,7 @@
 # noqa: INP001
 import asyncio
 from logging.config import fileConfig
+from typing import Any
 
 from alembic import context
 from sqlalchemy import pool, text
@@ -106,7 +107,7 @@ def _do_run_migrations(connection):
 async def _run_async_migrations() -> None:
     # Get database URL to determine dialect
     url = config.get_main_option("sqlalchemy.url")
-    connect_args = {}
+    connect_args: dict[str, Any] = {}
 
     # Only add prepare_threshold for PostgreSQL
     if url and "postgresql" in url:
