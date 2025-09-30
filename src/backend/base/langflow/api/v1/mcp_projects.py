@@ -528,6 +528,9 @@ def is_local_ip(ip_str: str) -> bool:
     if ip_str == ALL_INTERFACES_HOST:
         return True
 
+    if ip_str == "127.0.0.1" or ip_str == "::1":
+        return True
+
     try:
         # Convert string to IP address object
         ip = ip_address(ip_str)
