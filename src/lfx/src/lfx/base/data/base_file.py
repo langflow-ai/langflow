@@ -4,7 +4,7 @@ import tarfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile, is_zipfile
 
 import anyio
@@ -245,7 +245,7 @@ class BaseFileComponent(Component, ABC):
 
     async def _extract_file_metadata(self, data_item) -> dict:
         """Extract metadata from a data item with file_path."""
-        metadata = {}
+        metadata: dict[str, Any] = {}
         if not hasattr(data_item, "file_path"):
             return metadata
 
@@ -288,6 +288,9 @@ class BaseFileComponent(Component, ABC):
         data_list = self.load_files_core()
         if not data_list:
             return Message()
+
+        # Extract metadata from the first data item
+        metadata = await self._extract_file_metadata(data_list[0])
 
         sep: str = getattr(self, "separator", "\n\n") or "\n\n"
         parts: list[str] = []
