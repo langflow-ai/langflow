@@ -13,8 +13,8 @@ The DataFrame to Toolset component takes a DataFrame where each row represents a
 **Purpose**: Converts DataFrame rows into callable tools
 **Inputs**:
 - `dataframe`: DataFrame where each row becomes a tool/action
-- `action_name_column`: Name of the column containing the names for each tool/action (string input)
-- `content_column`: Name of the column containing the content/response for each tool/action (string input)
+- `tool_name_column`: Name of the column containing the names for each tool/action (string input)
+- `tool_output_column`: Name of the column containing the content/response for each tool/action (string input)
 
 **Outputs**:
 - `tools`: List of callable tools created from the DataFrame
