@@ -12,6 +12,7 @@ class APIResponseComponent(TextComponent):
     description = "Provides clean, stateless API responses with minimal JSON structure."
     icon = "code-xml"
     name = "APIResponse"
+    beta = True
 
     inputs = [
         HandleInput(

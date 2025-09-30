@@ -1,6 +1,6 @@
 import json
 from lfx.base.io.text import TextComponent
-from lfx.inputs.inputs import MessageTextInput
+from lfx.io import MultilineInput
 from lfx.io import Output
 from lfx.schema.data import Data
 from lfx.schema.message import Message
@@ -13,13 +13,12 @@ class JSONInputComponent(TextComponent):
     name = "JSONInput"
 
     inputs = [
-        MessageTextInput(
+        MultilineInput(
             name="payload",
             display_name="Payload",
             info="Manual JSON payload for testing (will be overridden by actual HTTP request when used via API)",
             value='{\n  "method": "POST",\n  "headers": {"Content-Type": "application/json"},\n  "body": {"name": "test", "value": 123},\n  "query": {"page": "1"},\n  "path": {"id": "456"},\n  "url": "/api/test/456"\n}',
             advanced=False,
-            multiline=True,
         ),
     ]
     

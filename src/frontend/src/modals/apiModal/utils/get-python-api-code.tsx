@@ -33,7 +33,7 @@ export function getNewPythonApiCode({
   // If no file uploads, use existing logic
   if (!hasFiles) {
     const apiUrl = hasAPIResponse
-      ? `${baseUrl}/api/v1/workflow/${endpointName || flowId}`
+      ? `${baseUrl}/api/v2/run/stateless/${endpointName || flowId}`
       : `${baseUrl}/api/v1/run/${endpointName || flowId}`;
 
     const payloadString = JSON.stringify(processedPayload, null, 4)

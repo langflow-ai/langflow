@@ -68,7 +68,7 @@ export function getNewCurlCode({
   const { protocol, host } = customGetHostProtocol();
   const baseUrl = `${protocol}//${host}`;
   const apiUrl = hasAPIResponse
-    ? `${baseUrl}/api/v1/workflow/${endpointName || flowId}`
+    ? `${baseUrl}/api/v2/run/stateless/${endpointName || flowId}`
     : `${baseUrl}/api/v1/run/${endpointName || flowId}`;
 
   // Auto-detect if no platform specified

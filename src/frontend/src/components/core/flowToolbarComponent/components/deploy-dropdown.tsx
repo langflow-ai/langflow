@@ -46,6 +46,14 @@ export default function PublishDropdown({
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   const isPublished = currentFlow?.access_type === "PUBLIC";
   const hasIO = useFlowStore((state) => state.hasIO);
+  const nodes = useFlowStore((state) => state.nodes);
+  
+  // Check if there are any input components available for API configuration
+  const hasInputComponents = nodes.some((node) => {
+    const nodeType = node.data?.node?.display_name || node.data?.type;
+    return nodeType && !nodeType.endsWith('Output') && !nodeType.includes('Response');
+  });
+  
   const isAuth = useAuthStore((state) => !!state.autoLogin);
   const [openExportModal, setOpenExportModal] = useState(false);
 
@@ -107,6 +115,7 @@ export default function PublishDropdown({
         >
           <DropdownMenuItem
             className="deploy-dropdown-item group"
+            disabled={!hasInputComponents}
             onClick={() => setOpenApiModal(true)}
             data-testid="api-access-item"
           >
