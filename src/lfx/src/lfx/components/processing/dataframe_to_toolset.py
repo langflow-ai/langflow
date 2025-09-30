@@ -8,16 +8,19 @@ comes from another column.
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 from langchain.tools import StructuredTool
 from pydantic import BaseModel, create_model
 
 from lfx.base.langchain_utilities.model import LCToolComponent
-from lfx.field_typing import Tool
 from lfx.io import HandleInput, Output, StrInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+
+if TYPE_CHECKING:
+    from lfx.field_typing import Tool
 
 
 class DataFrameToToolsetComponent(LCToolComponent):
@@ -58,7 +61,7 @@ class DataFrameToToolsetComponent(LCToolComponent):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._tools_cache: list[Tool] = []
-        self._action_data: dict[str, str] = {}
+        self._action_data: dict[str, dict[str, str]] = {}
 
     def _sanitize_tool_name(self, name: str) -> str:
         """Sanitize tool name to match required format '^[a-zA-Z0-9_-]+$'."""
@@ -90,13 +93,21 @@ class DataFrameToToolsetComponent(LCToolComponent):
             return
 
         if self.tool_name_column not in self.dataframe.columns:
+            msg = (
+                f"Tool name column '{self.tool_name_column}' not found in DataFrame columns: "
+                f"{list(self.dataframe.columns)}"
+            )
             raise ValueError(
-                f"Tool name column '{self.tool_name_column}' not found in DataFrame columns: {list(self.dataframe.columns)}"
+                msg
             )
 
         if self.tool_output_column not in self.dataframe.columns:
+            msg = (
+                f"Tool output column '{self.tool_output_column}' not found in DataFrame columns: "
+                f"{list(self.dataframe.columns)}"
+            )
             raise ValueError(
-                f"Tool output column '{self.tool_output_column}' not found in DataFrame columns: {list(self.dataframe.columns)}"
+                msg
             )
 
         # Clear previous data
@@ -121,6 +132,7 @@ class DataFrameToToolsetComponent(LCToolComponent):
         def action_function(**kwargs) -> str:
             # You could extend this to use kwargs to modify the content
             # For now, just return the stored content
+            self.log(kwargs) # TODO: Coming soon: implement arguments to modify content
             return content
 
         action_function.__name__ = f"execute_{action_name}"
@@ -137,6 +149,9 @@ class DataFrameToToolsetComponent(LCToolComponent):
 
         if not self._action_data:
             return []
+
+        tools_description_preview_length = 100
+        tools_description_content_length = 200
 
         tools = []
 
@@ -159,7 +174,11 @@ class DataFrameToToolsetComponent(LCToolComponent):
             # Create the StructuredTool
             tool = StructuredTool(
                 name=sanitized_name,
-                description=f"Execute {original_name} action. Returns: {content[:100]}{'...' if len(content) > 100 else ''}",
+                description=(
+                    f"Execute {original_name} action. Returns: "
+                    f"{content[:tools_description_preview_length]}"
+                    f"{'...' if len(content) > tools_description_preview_length else ''}"
+                ),
                 func=tool_function,
                 args_schema=tool_schema,
                 handle_tool_error=True,
@@ -168,7 +187,7 @@ class DataFrameToToolsetComponent(LCToolComponent):
                     "display_name": original_name,
                     "display_description": f"Action: {original_name}",
                     "original_name": original_name,
-                    "content_preview": content[:200],
+                    "content_preview": content[:tools_description_content_length],
                 },
             )
 
@@ -183,6 +202,7 @@ class DataFrameToToolsetComponent(LCToolComponent):
         if not tools:
             # Return a placeholder tool when no data is available
             def placeholder_function(**kwargs) -> str:
+                self.log(kwargs) # TODO: Coming soon: implement arguments to modify content
                 return "No tools available. Please connect a DataFrame with appropriate columns."
 
             return StructuredTool(
