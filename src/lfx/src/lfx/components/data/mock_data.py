@@ -20,20 +20,17 @@ class MockDataGeneratorComponent(Component):
     - Development and debugging of Langflow components
     """
 
-    display_name = "Mock Data Generator"
-    description = (
-        "Generate sample data for testing and development. "
-        "Choose from text messages, JSON data, or tabular data formats."
-    )
+    display_name = "Mock Data"
+    description = "Generate mock data for testing and development."
     icon = "database"
     name = "MockDataGenerator"
 
     inputs = []
 
     outputs = [
-        Output(display_name="DataFrame Output", name="dataframe_output", method="generate_dataframe_output"),
-        Output(display_name="Message Output", name="message_output", method="generate_message_output"),
-        Output(display_name="Data Output", name="data_output", method="generate_data_output"),
+        Output(display_name="Result", name="dataframe_output", method="generate_dataframe_output"),
+        Output(display_name="Result", name="message_output", method="generate_message_output"),
+        Output(display_name="Result", name="data_output", method="generate_data_output"),
     ]
 
     def build(self) -> DataFrame:
