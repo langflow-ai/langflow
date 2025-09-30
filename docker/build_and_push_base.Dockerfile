@@ -9,6 +9,21 @@
 
 # 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
 # 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
+# Frontend builder stage - use native platform to avoid QEMU issues with esbuild
+FROM --platform=$BUILDPLATFORM node:18-slim AS frontend-builder
+
+# Install build dependencies that may be needed for native modules
+RUN apt-get update \
+    && apt-get install -y build-essential python3 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY src/frontend /tmp/src/frontend
+WORKDIR /tmp/src/frontend
+# Increase memory and disable concurrent builds to avoid esbuild crashes on emulated architectures
+RUN RUSTFLAGS='--cfg reqwest_unstable' npm install \
+    && NODE_OPTIONS="--max-old-space-size=8192" JOBS=1 npm run build
+
 # Use a Python image with uv pre-installed
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
 
@@ -20,6 +35,9 @@ ENV UV_COMPILE_BYTECODE=1
 
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
+
+# Set RUSTFLAGS for Python packages with Rust dependencies
+ENV RUSTFLAGS='--cfg reqwest_unstable'
 
 RUN apt-get update \
     && apt-get upgrade -y \
@@ -53,13 +71,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 COPY ./src /app/src
 
-COPY src/frontend /tmp/src/frontend
-WORKDIR /tmp/src/frontend
-# Increase memory and disable concurrent builds to avoid esbuild crashes on emulated architectures
-RUN npm install \
-    && NODE_OPTIONS="--max-old-space-size=8192" JOBS=1 npm run build \
-    && cp -r build /app/src/backend/base/langflow/frontend \
-    && rm -rf /tmp/src/frontend
+# Copy the pre-built frontend from the native platform stage
+COPY --from=frontend-builder /tmp/src/frontend/build /app/src/backend/base/langflow/frontend
 
 WORKDIR /app/src/backend/base
 RUN --mount=type=cache,target=/root/.cache/uv \
