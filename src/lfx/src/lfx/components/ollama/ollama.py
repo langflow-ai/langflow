@@ -200,6 +200,7 @@ class ChatOllamaComponent(LCModelComponent):
     async def is_valid_ollama_url(self, url: str) -> bool:
         try:
             async with httpx.AsyncClient() as client:
+                url = transform_localhost_url(url)
                 return (await client.get(urljoin(url, "api/tags"))).status_code == HTTP_STATUS_OK
         except httpx.RequestError:
             return False
