@@ -139,37 +139,55 @@ async def get_user_from_clerk_payload(db: AsyncSession) -> User:
 
 
 async def clerk_token_middleware(request: Request, call_next):
-    """Middleware to decode Clerk token when present."""
+    """Middleware to handle Clerk JWT tokens and Langflow API keys."""
     settings = get_settings_service()
     if not settings.auth_settings.CLERK_AUTH_ENABLED:
         return await call_next(request)
 
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        return await call_next(request)
-
     ctx_token: Token | None = None
-    token = auth_header[len("Bearer ") :]
-    try:
-        payload = await verify_clerk_token(token)
-    except ValueError as exc:
-        # Treat invalid Clerk tokens as unauthenticated so public endpoints
-        # such as the health check keep working. Endpoints that depend on a
-        # verified Clerk payload will still return an authorization error.
-        logger.warning(f"Failed to verify Clerk token: {exc}")
-        payload = None
-    except Exception:  # noqa: BLE001
-        logger.exception("Unexpected error while verifying Clerk token")
-        return JSONResponse(
-            status_code=HTTP_401_UNAUTHORIZED,
-            content={"detail": "Invalid Clerk token"},
-        )
-
-    if payload is not None:
-        ctx_token = auth_header_ctx.set(payload)
+    response = None
 
     try:
-        response = await call_next(request)
+        # 1️⃣ Clerk JWT
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[len("Bearer ") :]
+            try:
+                payload = await verify_clerk_token(token)
+                ctx_token = auth_header_ctx.set(payload)
+                response = await call_next(request)
+            except Exception as exc:  # noqa: BLE001
+
+                logger.warning(f"[ClerkMiddleware] Failed to verify Clerk token: {exc}")
+                response = JSONResponse(
+                    status_code=HTTP_401_UNAUTHORIZED,
+                    content={"detail": "Invalid Clerk token"},
+                )
+
+        # 2️⃣ API Key
+        elif (api_key_header := request.headers.get("x-api-key")):
+
+            from langflow.services.auth.api_key_codec import decode_api_key
+
+            decoded = decode_api_key(api_key_header)
+            if not decoded.is_encoded or not decoded.organization_id:
+                logger.warning(f"[ClerkMiddleware] Invalid or unscoped API key: {api_key_header}")
+                response = JSONResponse(
+                    status_code=HTTP_401_UNAUTHORIZED,
+                    content={"detail": "Invalid or unscoped API key"},
+                )
+            else:
+                context_payload = {
+                    "org_id": decoded.organization_id,
+                    "uuid": decoded.user_id,
+                }
+                ctx_token = auth_header_ctx.set(context_payload)
+                response = await call_next(request)
+
+        # 3️⃣ No auth header → pass through
+        else:
+            response = await call_next(request)
+
     finally:
         if ctx_token is not None:
             auth_header_ctx.reset(ctx_token)

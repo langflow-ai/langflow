@@ -67,7 +67,7 @@ async def list_project_tools(
     """List all tools in a project that are enabled for MCP."""
     tools: list[MCPSettings] = []
     try:
-        async with session_scope(use_organisation=False) as session:
+        async with session_scope() as session:
             # Fetch the project first to verify it exists and belongs to the current user
             project = (
                 await session.exec(
@@ -138,7 +138,7 @@ async def handle_project_sse(
 ):
     """Handle SSE connections for a specific project."""
     # Verify project exists and user has access
-    async with session_scope(use_organisation=False) as session:
+    async with session_scope() as session:
         project = (
             await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
         ).first()

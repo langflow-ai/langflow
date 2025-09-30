@@ -1,5 +1,4 @@
 import datetime
-import secrets
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -7,6 +6,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.services.auth.api_key_codec import apply_api_key_context, generate_api_key_for_user
 from langflow.services.database.models import User
 from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
 from langflow.services.deps import get_settings_service, session_scope
@@ -22,8 +22,7 @@ async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]
 
 
 async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, user_id: UUID) -> UnmaskedApiKeyRead:
-    # Generate a random API key with 32 bytes of randomness
-    generated_api_key = f"sk-{secrets.token_urlsafe(32)}"
+    generated_api_key = generate_api_key_for_user(user_id)
 
     api_key = ApiKey(
         api_key=generated_api_key,
@@ -55,6 +54,12 @@ async def check_key(session: AsyncSession, api_key: str) -> User | None:
     api_key_object: ApiKey | None = (await session.exec(query)).first()
     if api_key_object is not None:
         settings_service = get_settings_service()
+        if not apply_api_key_context(
+            api_key,
+            expected_user_id=api_key_object.user_id,
+            settings_service=settings_service,
+        ):
+            return None
         if settings_service.settings.disable_track_apikey_usage is not True:
             await update_total_uses(api_key_object.id)
         return api_key_object.user
