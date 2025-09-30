@@ -169,7 +169,10 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         field_value = None
         field_name = "model_name"
         component.base_url = None
-        with pytest.raises(ValueError, match=re.escape("Ollama is not running. Please start Ollama and try again.")):
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Ollama is not running on the provided base URL. Please start Ollama and try again."),
+        ):
             await component.update_build_config(build_config, field_value, field_name)
 
     @pytest.mark.asyncio

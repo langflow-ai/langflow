@@ -225,7 +225,7 @@ class ChatOllamaComponent(LCModelComponent):
                     build_config["mirostat_tau"]["value"] = 5
 
         if field_name in {"base_url", "model_name"} and not await self.is_valid_ollama_url(self.base_url):
-            msg = "Ollama is not running. Please start Ollama and try again."
+            msg = "Ollama is not running on the provided base URL. Please start Ollama and try again."
             raise ValueError(msg)
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
             if await self.is_valid_ollama_url(self.base_url):
