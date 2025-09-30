@@ -8,22 +8,16 @@ comes from another column.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
 
 from langchain.tools import StructuredTool
 from pydantic import BaseModel, create_model
 
 from lfx.base.langchain_utilities.model import LCToolComponent
-
-if TYPE_CHECKING:
-    from lfx.field_typing import Tool
+from lfx.field_typing.constants import Tool
 from lfx.io import HandleInput, Output, StrInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
-
-if TYPE_CHECKING:
-    from lfx.field_typing import Tool
 
 
 class DataFrameToToolsetComponent(LCToolComponent):
