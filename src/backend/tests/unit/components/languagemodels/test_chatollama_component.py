@@ -16,13 +16,15 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self):
         return {
-            "base_url": "http://localhost:8000",
+            "base_url": "http://localhost:11434",
             "model_name": "ollama-model",
             "temperature": 0.1,
             "format": "json",
             "metadata": {},
             "tags": "",
             "mirostat": "Disabled",
+            "mirostat_eta": None,
+            "mirostat_tau": None,
             "num_ctx": 2048,
             "num_gpu": 1,
             "num_thread": 4,
@@ -33,7 +35,10 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
             "top_k": 40,
             "top_p": 0.9,
             "verbose": False,
+            "stop_tokens": "",
+            "system": "",
             "tool_model_enabled": True,
+            "template": "",
         }
 
     @pytest.fixture
@@ -48,11 +53,11 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
         model = component.build_model()
         mock_chat_ollama.assert_called_once_with(
-            base_url="http://localhost:8000",
+            base_url="http://localhost:11434",
             model="ollama-model",
             mirostat=0,
             format="json",
-            metadata={"keywords": ["model", "llm", "language model", "large language model"]},
+            metadata={},
             num_ctx=2048,
             num_gpu=1,
             num_thread=4,
@@ -159,10 +164,12 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         build_config = {
             "base_url": {"load_from_db": False, "value": None},
             "model_name": {"options": []},
+            "tool_model_enabled": {"value": False},
         }
         field_value = None
         field_name = "model_name"
-        with pytest.raises(ValueError, match=re.escape("No valid Ollama URL found")):
+        component.base_url = None
+        with pytest.raises(ValueError, match=re.escape("Ollama is not running. Please start Ollama and try again.")):
             await component.update_build_config(build_config, field_value, field_name)
 
     @pytest.mark.asyncio
