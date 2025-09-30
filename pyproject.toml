@@ -125,6 +125,7 @@ dependencies = [
     "filelock>=3.18.0,<4.0.0",
     "jigsawstack==0.2.7",
     "structlog>=25.4.0,<26.0.0",
+    "cryptography>=43.0.1,<44.0.0",
     "aiosqlite==0.21.0",
     "fastparquet>=2024.11.0,<2025.0.0",
     "traceloop-sdk>=0.43.1,<1.0.0",

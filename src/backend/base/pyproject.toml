@@ -52,7 +52,7 @@ dependencies = [
     "jq>=1.7.0,<2.0.0; sys_platform != 'win32'",
     "nest-asyncio>=1.6.0,<2.0.0",
     "emoji>=2.12.0,<3.0.0",
-    "cryptography>=42.0.5,<43.0.0",
+    "cryptography>=43.0.1,<44.0.0",
     "asyncer>=0.0.5,<1.0.0",
     "pyperclip>=1.8.2,<2.0.0",
     "uncurl>=0.0.11,<1.0.0",
