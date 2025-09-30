@@ -746,7 +746,7 @@
                   },
                   {
                     "name": "cryptography",
-                    "version": "43.0.3"
+                    "version": "42.0.8"
                   },
                   {
                     "name": "langchain_chroma",
