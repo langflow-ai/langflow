@@ -8,8 +8,8 @@ from lfx.utils.connection_string_parser import transform_connection_string
 
 
 class PGVectorStoreComponent(LCVectorStoreComponent):
-    display_name = "PGVector"
-    description = "PGVector Vector Store with search capabilities"
+    display_name = "pgvector"
+    description = "pgvector Vector Store with search capabilities"
     name = "pgvector"
     icon = "cpu"
 
