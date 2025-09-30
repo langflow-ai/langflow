@@ -400,9 +400,9 @@ class TestAutoConfigureStarterProjectsMcp:
                 await auto_configure_starter_projects_mcp(session)
 
                 # Note: Due to database constraints, mcp_enabled defaults to False instead of None
-                # The auto_configure function only acts when mcp_enabled is None, so in this case
-                # the flow configuration won't be updated. This test verifies the function runs
-                # without error even when flows are already configured (mcp_enabled=False).
+                # This test verifies the function runs without error even when
+                # flows are already configured (mcp_enabled=False).
+                #TODO: add test to check the mcp_enabled is False/ True for flows and is that enabled in the MCP server
                 updated_flow = await session.get(Flow, flow.id)
                 assert updated_flow.mcp_enabled is False  # Remains unchanged due to database default
 
