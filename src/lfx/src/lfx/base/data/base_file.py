@@ -243,7 +243,7 @@ class BaseFileComponent(Component, ABC):
             return [Data()]
         return data_list
 
-    async def _extract_file_metadata(self, data_item) -> dict:
+    def _extract_file_metadata(self, data_item) -> dict:
         """Extract metadata from a data item with file_path."""
         metadata: dict[str, Any] = {}
         if not hasattr(data_item, "file_path"):
@@ -251,7 +251,7 @@ class BaseFileComponent(Component, ABC):
 
         file_path = data_item.file_path
         file_path_obj = anyio.Path(file_path)
-        file_size_stat = await file_path_obj.stat()
+        file_size_stat = file_path_obj.stat()
         filename = file_path_obj.name
 
         # Basic file metadata
@@ -279,7 +279,7 @@ class BaseFileComponent(Component, ABC):
             return text if text is not None else str(data_item)
         return str(data_item)
 
-    async def load_files_message(self) -> Message:
+    def load_files_message(self) -> Message:
         """Load files and return as Message.
 
         Returns:
@@ -290,7 +290,7 @@ class BaseFileComponent(Component, ABC):
             return Message()
 
         # Extract metadata from the first data item
-        metadata = await self._extract_file_metadata(data_list[0])
+        metadata = self._extract_file_metadata(data_list[0])
 
         sep: str = getattr(self, "separator", "\n\n") or "\n\n"
         parts: list[str] = []
