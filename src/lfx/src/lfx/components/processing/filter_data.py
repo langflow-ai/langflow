@@ -10,6 +10,7 @@ class FilterDataComponent(Component):
     beta = True
     name = "FilterData"
     legacy = True
+    replacement = ["processing.DataOperations"]
 
     inputs = [
         DataInput(

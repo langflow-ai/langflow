@@ -138,15 +138,22 @@ class LCAgentComponent(Component):
                 max_iterations=max_iterations,
             )
         input_dict: dict[str, str | list[BaseMessage]] = {
-            "input": self.input_value.to_lc_message() if isinstance(self.input_value, Message) else self.input_value
+            "input": self.input_value.to_lc_message()
+            if hasattr(self.input_value, "to_lc_message")
+            else self.input_value
         }
         if hasattr(self, "system_prompt"):
             input_dict["system_prompt"] = self.system_prompt
         if hasattr(self, "chat_history") and self.chat_history:
-            if isinstance(self.chat_history, Data):
+            if (
+                hasattr(self.chat_history, "to_data")
+                and callable(self.chat_history.to_data)
+                and self.chat_history.__class__.__name__ == "Data"
+            ):
                 input_dict["chat_history"] = data_to_messages(self.chat_history)
-            if all(isinstance(m, Message) for m in self.chat_history):
-                input_dict["chat_history"] = data_to_messages([m.to_data() for m in self.chat_history])
+            # Handle both lfx.schema.message.Message and langflow.schema.message.Message types
+            if all(hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data for m in self.chat_history):
+                input_dict["chat_history"] = data_to_messages(self.chat_history)
         if hasattr(input_dict["input"], "content") and isinstance(input_dict["input"].content, list):
             # ! Because the input has to be a string, we must pass the images in the chat_history
 
@@ -254,7 +261,7 @@ class LCToolsAgentComponent(LCAgentComponent):
             tools_names = ", ".join([tool.name for tool in self.tools])
         return tools_names
 
-    def _get_tools(self) -> list[Tool]:
+    async def _get_tools(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
         tools_names = self._build_tools_names()
         agent_description = self.get_tool_description()

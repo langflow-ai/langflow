@@ -7,9 +7,9 @@ import pytest
 from langchain_openai import ChatOpenAI
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs.inputs import TableInput
+from lfx.components.processing.structured_output import StructuredOutputComponent
 from pydantic import BaseModel
 
-from lfx.components.processing.structured_output import StructuredOutputComponent
 from tests.base import ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 
@@ -252,8 +252,8 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         mock_get_chat_result.assert_called_once()
 
     @pytest.mark.skipif(
-        "OPENAI_API_KEY" not in os.environ,
-        reason="OPENAI_API_KEY environment variable not set",
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
+        reason="OPENAI_API_KEY is not set or is empty",
     )
     def test_with_real_openai_model_simple_schema(self):
         # Create a real OpenAI model
@@ -284,7 +284,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result[0]["age"] == 30
 
     @pytest.mark.skipif(
-        "OPENAI_API_KEY" not in os.environ,
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
     )
     def test_with_real_openai_model_multiple_patterns(self):
@@ -397,7 +397,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert 899.99 in prices
 
     @pytest.mark.skipif(
-        "OPENAI_API_KEY" not in os.environ,
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
     )
     def test_with_real_openai_model_simple_schema_fail(self):
@@ -433,7 +433,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         ), f"Expected max_tokens error but got: {error_message}"
 
     @pytest.mark.skipif(
-        "OPENAI_API_KEY" not in os.environ,
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
     )
     def test_with_real_openai_model_complex_schema(self):
@@ -482,7 +482,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result[0]["rating"] == 4.0
 
     @pytest.mark.skipif(
-        "OPENAI_API_KEY" not in os.environ,
+        not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
     )
     def test_with_real_openai_model_nested_schema(self):
@@ -547,7 +547,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result[0]["would_return"] is True
 
     @pytest.mark.skipif(
-        "NVIDIA_API_KEY" not in os.environ,
+        not (os.getenv("NVIDIA_API_KEY") or "").strip(),
         reason="NVIDIA_API_KEY environment variable not set",
     )
     def test_with_real_nvidia_model_simple_schema(self):
