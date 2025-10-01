@@ -114,6 +114,12 @@ async def run_flow_for_openai_responses(
             )
 
             try:
+                logger.debug(
+                    "[OpenAIResponses][stream] start: response_id=%s model=%s session_id=%s",
+                    response_id,
+                    request.model,
+                    session_id,
+                )
                 # Send initial chunk to establish connection
                 initial_chunk = OpenAIResponsesStreamChunk(
                     id=response_id,
@@ -129,6 +135,7 @@ async def run_flow_for_openai_responses(
 
                 async for event_data in consume_and_yield(asyncio_queue, asyncio_queue_client_consumed):
                     if event_data is None:
+                        logger.debug("[OpenAIResponses][stream] received None event_data; breaking loop")
                         break
 
                     content = ""
@@ -144,6 +151,11 @@ async def run_flow_for_openai_responses(
                             if isinstance(parsed_event, dict):
                                 event_type = parsed_event.get("event")
                                 data = parsed_event.get("data", {})
+                                logger.debug(
+                                    "[OpenAIResponses][stream] event: %s keys=%s",
+                                    event_type,
+                                    list(data.keys()) if isinstance(data, dict) else type(data),
+                                )
 
                                 # Handle add_message events
                                 if event_type == "add_message":
@@ -151,6 +163,13 @@ async def run_flow_for_openai_responses(
                                     text = data.get("text", "")
                                     sender = data.get("sender", "")
                                     content_blocks = data.get("content_blocks", [])
+
+                                    logger.debug(
+                                        "[OpenAIResponses][stream] add_message: sender=%s sender_name=%s text_len=%d",
+                                        sender,
+                                        sender_name,
+                                        len(text) if isinstance(text, str) else -1,
+                                    )
 
                                     # Look for Agent Steps in content_blocks
                                     for block in content_blocks:
@@ -194,6 +213,12 @@ async def run_flow_for_openai_responses(
                                                             f"event: response.output_item.added\n"
                                                             f"data: {json.dumps(tool_call_event)}\n\n"
                                                         )
+                                                        logger.debug(
+                                                            "[OpenAIResponses][stream] tool_call.added name=%s call_id=%s item_id=%s",
+                                                            tool_name,
+                                                            call_id,
+                                                            tool_id,
+                                                        )
 
                                                         # Send function call arguments as delta events (like OpenAI)
                                                         arguments_str = json.dumps(tool_input)
@@ -207,6 +232,11 @@ async def run_flow_for_openai_responses(
                                                             f"event: response.function_call_arguments.delta\n"
                                                             f"data: {json.dumps(arg_delta_event)}\n\n"
                                                         )
+                                                        logger.debug(
+                                                            "[OpenAIResponses][stream] tool_call.args.delta name=%s len=%d",
+                                                            tool_name,
+                                                            len(arguments_str),
+                                                        )
 
                                                         # Send function call arguments done event
                                                         arg_done_event = {
@@ -218,6 +248,10 @@ async def run_flow_for_openai_responses(
                                                         yield (
                                                             f"event: response.function_call_arguments.done\n"
                                                             f"data: {json.dumps(arg_done_event)}\n\n"
+                                                        )
+                                                        logger.debug(
+                                                            "[OpenAIResponses][stream] tool_call.args.done name=%s",
+                                                            tool_name,
                                                         )
 
                                                         # If there's output, send completion event
@@ -261,6 +295,10 @@ async def run_flow_for_openai_responses(
                                                                 f"event: response.output_item.done\n"
                                                                 f"data: {json.dumps(tool_done_event)}\n\n"
                                                             )
+                                                            logger.debug(
+                                                                "[OpenAIResponses][stream] tool_call.done name=%s",
+                                                                tool_name,
+                                                            )
 
                                     # Extract text content for streaming (only AI responses)
                                     if (
@@ -272,13 +310,23 @@ async def run_flow_for_openai_responses(
                                         if text.startswith(previous_content):
                                             content = text[len(previous_content) :]
                                             previous_content = text
+                                            logger.debug(
+                                                "[OpenAIResponses][stream] delta computed len=%d total_len=%d",
+                                                len(content),
+                                                len(previous_content),
+                                            )
                                         else:
                                             # If text doesn't start with previous content, send full text
                                             # This handles cases where the content might be reset
                                             content = text
                                             previous_content = text
+                                            logger.debug(
+                                                "[OpenAIResponses][stream] content reset; sending full text len=%d",
+                                                len(content),
+                                            )
 
                         except (json.JSONDecodeError, UnicodeDecodeError):
+                            logger.debug("[OpenAIResponses][stream] failed to decode event bytes; skipping")
                             continue
 
                     # Only send chunks with actual content
@@ -290,6 +338,10 @@ async def run_flow_for_openai_responses(
                             delta={"content": content},
                         )
                         yield f"data: {chunk.model_dump_json()}\n\n"
+                        logger.warning(
+                            "[OpenAIResponses][stream] sent chunk with delta_len=%d",
+                            len(content),
+                        )
 
                 # Send final completion chunk
                 final_chunk = OpenAIResponsesStreamChunk(
@@ -301,6 +353,11 @@ async def run_flow_for_openai_responses(
                 )
                 yield f"data: {final_chunk.model_dump_json()}\n\n"
                 yield "data: [DONE]\n\n"
+                logger.debug(
+                    "[OpenAIResponses][stream] completed: response_id=%s total_sent_len=%d",
+                    response_id,
+                    len(previous_content),
+                )
 
             except Exception as e:  # noqa: BLE001
                 logger.error(f"Error in stream generator: {e}")
@@ -335,6 +392,11 @@ async def run_flow_for_openai_responses(
     # Extract output text and tool calls from result
     output_text = ""
     tool_calls: list[dict[str, Any]] = []
+    try:
+        outputs_len = len(result.outputs) if getattr(result, "outputs", None) else 0
+        logger.debug("[OpenAIResponses][non-stream] result.outputs len=%d", outputs_len)
+    except Exception:  # noqa: BLE001
+        logger.debug("[OpenAIResponses][non-stream] unable to read result.outputs len")
 
     if result.outputs:
         for run_output in result.outputs:
@@ -372,6 +434,12 @@ async def run_flow_for_openai_responses(
                         break
             if output_text:
                 break
+
+    logger.debug(
+        "[OpenAIResponses][non-stream] extracted output_text_len=%d tool_calls=%d",
+        len(output_text) if isinstance(output_text, str) else -1,
+        len(tool_calls),
+    )
 
     # Build output array
     output_items = []
