@@ -13,9 +13,9 @@ class NvidiaSystemAssistComponent(ComponentWithCache):
     description = (
         "(Windows only) Prompts NVIDIA System-Assist to interact with the NVIDIA GPU Driver. "
         "The user may query GPU specifications, state, and ask the NV-API to perform "
-        "several GPU-editing acations. The prompt must be human-readable language."
+        "several GPU-editing actions. The prompt must be human-readable language."
     )
-    documentation = "https://docs.langflow.org/integrations-nvidia-g-assist"
+    documentation = "https://docs.langflow.org/bundles-nvidia"
     icon = "NVIDIA"
     rise_initialized = False
 

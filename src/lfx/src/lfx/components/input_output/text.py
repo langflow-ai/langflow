@@ -6,7 +6,7 @@ from lfx.schema.message import Message
 class TextInputComponent(TextComponent):
     display_name = "Text Input"
     description = "Get user text inputs."
-    documentation: str = "https://docs.langflow.org/components-io#text-input"
+    documentation: str = "https://docs.langflow.org/components-io#text-io"
     icon = "type"
     name = "TextInput"
 
