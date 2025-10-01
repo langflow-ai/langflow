@@ -6,10 +6,10 @@ import httpx
 import pytest
 import respx
 from httpx import Response
-
 from lfx.components.data import APIRequestComponent
 from lfx.schema import Data
 from lfx.schema.dotdict import dotdict
+
 from tests.base import ComponentTestBaseWithoutClient
 
 
