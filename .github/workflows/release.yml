@@ -107,6 +107,7 @@ jobs:
   validate-dependencies:
     name: Validate Release Dependencies
     runs-on: ubuntu-latest
+    if: inputs.release_package_base || inputs.release_package_main
     needs: [validate-tag]
     steps:
       - name: Validate that build-base is enabled if build-main is enabled
@@ -121,7 +122,7 @@ jobs:
   ci:
     if: inputs.release_package_base || inputs.release_package_main
     name: CI
-    needs: [validate-dependencies]
+    needs: [validate-tag, validate-dependencies]
     uses: ./.github/workflows/ci.yml
     with:
       branch: ${{ inputs.release_tag }}
