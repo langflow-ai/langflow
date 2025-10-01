@@ -228,8 +228,8 @@ async def read_project(
     project_id: UUID,
     current_user: CurrentActiveUser,
     params: Annotated[Params | None, Depends(custom_params)],
-    page: int | None = Query(None),
-    size: int | None = Query(None),
+    page: Annotated[int | None, Query()] = None,
+    size: Annotated[int | None, Query()] = None,
     is_component: bool = False,
     is_flow: bool = False,
     search: str = "",
@@ -277,7 +277,7 @@ async def read_project(
         # If no pagination requested, return all flows for the current user
         flows_from_current_user_in_project = [flow for flow in project.flows if flow.user_id == current_user.id]
         project.flows = flows_from_current_user_in_project
-        return project
+        return project  # noqa: TRY300
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
