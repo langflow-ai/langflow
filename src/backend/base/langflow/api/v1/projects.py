@@ -7,7 +7,7 @@ from urllib.parse import quote
 from uuid import UUID
 
 import orjson
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Response, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Params
@@ -138,6 +138,8 @@ async def read_project(
     project_id: UUID,
     current_user: CurrentActiveUser,
     params: Annotated[Params | None, Depends(custom_params)],
+    page: Annotated[int | None, Query()] = None,
+    size: Annotated[int | None, Query()] = None,
     is_component: bool = False,
     is_flow: bool = False,
     search: str = "",
@@ -159,7 +161,8 @@ async def read_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     try:
-        if params and params.page and params.size:
+        # Check if pagination is explicitly requested by the user (both page and size provided)
+        if page is not None and size is not None:
             stmt = select(Flow).where(Flow.folder_id == project_id)
 
             if Flow.updated_at is not None:
@@ -170,6 +173,7 @@ async def read_project(
                 stmt = stmt.where(Flow.is_component == False)  # noqa: E712
             if search:
                 stmt = stmt.where(Flow.name.like(f"%{search}%"))  # type: ignore[attr-defined]
+
             import warnings
 
             with warnings.catch_warnings():
@@ -180,12 +184,13 @@ async def read_project(
 
             return FolderWithPaginatedFlows(folder=FolderRead.model_validate(project), flows=paginated_flows)
 
+        # If no pagination requested, return all flows for the current user
+        flows_from_current_user_in_project = [flow for flow in project.flows if flow.user_id == current_user.id]
+        project.flows = flows_from_current_user_in_project
+        return project  # noqa: TRY300
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
-
-    flows_from_current_user_in_project = [flow for flow in project.flows if flow.user_id == current_user.id]
-    project.flows = flows_from_current_user_in_project
-    return project
 
 
 @router.patch("/{project_id}", response_model=FolderRead, status_code=200)
