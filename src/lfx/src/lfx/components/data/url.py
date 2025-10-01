@@ -109,7 +109,11 @@ class URLComponent(Component):
         DropdownInput(
             name="format",
             display_name="Output Format",
-            info="Output Format. Use 'Text' to extract the text from the HTML or 'HTML' for the raw HTML content.",
+            info=(
+                "Output Format. Use 'Text' to extract the text from the HTML, "
+                "'Markdown' to parse the HTML into Markdown format, or 'HTML' "
+                "for the raw HTML content."
+            ),
             options=["Text", "HTML", "Markdown"],
             value=DEFAULT_FORMAT,
             advanced=True,
