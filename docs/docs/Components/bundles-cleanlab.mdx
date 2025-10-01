@@ -60,11 +60,11 @@ You will also need to create a [Project](https://help.cleanlab.ai/codex/concepts
 
 When you run the flow, **Cleanlab** will either validate and return the original response, replace it with an expert-provided answer, or fall back to your configured fallback text. This is enabled by Cleanlab's novel uncertainty estimation algorithms, developed to reliably evaluate LLM inputs and outputs.
 
-Here's an example of a response to the query "How can Cleanlab improve my AI app?" that passed validation.
+Here's an example of a response to the query `"How can Cleanlab improve my AI app?"` that passed validation.
 
 ![Response Passed Validation](/img/cleanlab-response-passed-validation.png)
 
-You can view the respective query and all the associated scores that Cleanlab provides in the Project you created earlier. Here is what the query looks like in the Cleanlab AI Platform. Notice how the trustworthiness score has passed validation (score = 0.985)!
+You can view the respective query and all the associated scores that Cleanlab provides in the Project you created earlier. Here is what the query looks like in the Cleanlab AI Platform. Notice how the trustworthiness score has passed validation (trustworthiness = 0.985)!
 
 ![Cleanlab AI Platform](/img/cleanlab-ai-platform.png)
 
@@ -72,9 +72,13 @@ Let's try something more fun (and complex): `"How many basketballs fit between t
 
 ![Cleanlab Fallback example](/img/cleanlab-fallback.png)
 
-If we take a closer look at this query in the Cleanlab AI Platform, we see that the original response given was entirely incorrect and was flagged correctly (score = 0.269)!
+If we take a closer look at this query in the Cleanlab AI Platform, we see that the original response given was entirely incorrect (100 basketballs fit between the earth and sun) and was flagged correctly (trustworthiness = 0.269)!
 
 ![Cleanlab flags wrong response](/img/cleanlab-wrong-response.png)
+
+Instead of spending hours sifting through thousands of responses, you can focus only on the small percentage that were flagged as potentially problematic. This targeted approach dramatically reduces the time and effort needed for quality assurance while ensuring critical issues don't slip through the cracks.
+
+In the next section, we will cover how to create `custom` guardrails and evaluations to flag issues that are important to your application or business use case.
 
 ## Guardrails and Evaluations
 
@@ -86,11 +90,32 @@ At the core of the Cleanlab AI Platform lies Guardrails and Evaluations.
 
 For detailed configuration of guardrails and evaluations, see the [Guardrails & Evaluations](https://help.cleanlab.ai/codex/web_tutorials/codex_guardrails_evals/) documentation.
 
-You have the ability to create custom guardrails and evaluations in a few minutes. Let's add the following guardrail to the Project:
+You have the ability to create custom guardrails and evaluations in a few minutes. Imagine you want prevent your AI from discussing politics in any way. Let's add the following guardrail to the Project to prevent this:
+
+```markdown
+Name: Politics
+Eval Key: politics
+
+Criteria:
+Determine if the Response discusses politics in any way.
+
+A good Response:
+- Contains no references to politics, political figures,
+parties, elections, governments, or policies
+
+A bad Response:
+- Mentions politics, political figures, parties, elections,
+or governments (e.g., “The president said…” or “Democrats vs Republicans”).
+- Discusses political ideologies or systems (e.g., socialism, capitalism,
+communism, democracy vs authoritarianism).
+- Engages with political events, controversies, or news coverage in any way.
+```
+
+In just a few sentences, we can prevent the AI from discussing politics!
 
 ![Cleanlab add guardrail](/img/cleanlab-politics-guardrail.png)
 
-Now, when the AI responds with something political, the guardrail is triggered, and the fallback response is returned in its place.
+Now, when the AI responds with something political, the guardrail is triggered, and the fallback response is returned in its place. Notice how the (original) AI Response in the image below does discuss politics. Instead of returning this response, the fallback response configured in the component is returned.
 
 ![Cleanlab politics guardrailed](/img/cleanlab-politics-guardrailed.png)
 ![Cleanlab politics guardrailed chat](/img/cleanlab-politics-guardrailed-chat.png)
@@ -106,3 +131,22 @@ For the basketball question earlier, we can directly add the correct answer here
 Then, when a user asks the same or semantically similar query in the future, instead of returning the unhelpful fallback answer, Cleanlab serves the newly added Expert Answer automatically.
 
 ![Cleanlab expert answer](/img/cleanlab-expert-answer.png)
+
+## Wrap Up
+
+The Cleanlab component in Langflow provides a powerful safety layer for your AI applications. By integrating Cleanlab's validation capabilities, you can:
+
+- Monitor and evaluate every AI interaction in real-time
+- Automatically detect and block problematic responses
+- Provide expert-curated answers for flagged queries
+- Continuously improve your AI system through SME remediations
+
+Getting started is straightforward:
+1. [Sign up](https://cleanlab.ai/contact/) for a Cleanlab account
+2. Add the Cleanlab component to your flow (quickstart flow [here](#quickstart))
+3. Configure your guardrails and evaluations
+4. Start monitoring and improving your AI responses
+
+With Cleanlab's comprehensive AI Platform and Langflow's intuitive interface, you can build more reliable and trustworthy AI applications that deliver consistently high-quality responses to your users.
+
+If you have any questions or want help with integrating Cleanlab into your application, please reach out to Cleanlab at [support@cleanlab.ai](mailto:support@cleanlab.ai).
