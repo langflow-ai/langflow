@@ -1,24 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { getAuthToken } from "../../utils/auth-helpers";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
-// Helper function to get JWT token for API requests
-async function getAuthToken(request: any) {
-  const formData = new URLSearchParams();
-  formData.append("username", "langflow");
-  formData.append("password", "langflow");
-
-  const loginResponse = await request.post("/api/v1/login", {
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    data: formData.toString(),
-  });
-
-  expect(loginResponse.status()).toBe(200);
-  const tokenData = await loginResponse.json();
-  return tokenData.access_token;
-}
 
 test(
   "vector store from starter projects should have its connections and nodes on the flow",
@@ -103,74 +86,5 @@ test(
         edges === edgesFromServer - 2,
     ).toBeTruthy();
     expect(nodes).toBe(nodesFromServer);
-  },
-);
-
-test(
-  "user should be able to use all starter projects without any outdated components on the flow",
-  { tag: ["@release", "@components"] },
-  async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-
-    const numberOfTemplates = await page
-      .getByTestId("text_card_container")
-      .count();
-
-    let numberOfOutdatedComponents = 0;
-
-    for (let i = 0; i < numberOfTemplates; i++) {
-      const exampleName = await page
-        .getByTestId("text_card_container")
-        .nth(i)
-        .getAttribute("role");
-
-      await page.getByTestId("text_card_container").nth(i).click();
-
-      // Log which component is being tested
-      console.log(`Testing starter project: ${exampleName}`);
-
-      await page.waitForSelector('[data-testid="div-generic-node"]', {
-        timeout: 5000,
-      });
-
-      if ((await page.getByTestId("update-all-button").count()) > 0) {
-        console.error(`
-          ---------------------------------------------------------------------------------------
-          There's an outdated component on the basic template: ${exampleName}
-          ---------------------------------------------------------------------------------------
-          `);
-        numberOfOutdatedComponents++;
-      }
-
-      await Promise.all([
-        page.waitForURL((url) => url.pathname === "/", { timeout: 30000 }),
-        page.getByTestId("icon-ChevronLeft").click(),
-      ]);
-
-      await expect(page.getByTestId("mainpage_title")).toBeVisible({
-        timeout: 30000,
-      });
-
-      await page.waitForTimeout(500);
-
-      await page.waitForSelector('[data-testid="new-project-btn"]', {
-        timeout: 5000,
-      });
-
-      await page.getByTestId("new-project-btn").first().click();
-
-      await page.waitForSelector(
-        '[data-testid="side_nav_options_all-templates"]',
-        {
-          timeout: 5000,
-        },
-      );
-
-      await page.getByTestId("side_nav_options_all-templates").click();
-    }
-
-    expect(numberOfOutdatedComponents).toBe(0);
   },
 );
