@@ -4972,20 +4972,6 @@ wheels = [
 ]
 
 [[package]]
-name = "langchain-voyageai"
-version = "0.1.7"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "langchain-core" },
-    { name = "pydantic" },
-    { name = "voyageai" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/cb/da/213d25d4adfcc21e6b98eafa58e5badda28bbf56389f72bd8a15d8d9e163/langchain_voyageai-0.1.7.tar.gz", hash = "sha256:e9f16a24589122c3a71ad0d46ea330d3dc00ad89b48f4cb5094c87f434cb8d8e", size = 8163, upload-time = "2025-08-05T15:59:16.225Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/71/45/d122ebb0660c191129df23b529305cf268b308d7df6b5ef02e2c664f1379/langchain_voyageai-0.1.7-py3-none-any.whl", hash = "sha256:1f982b3ca14b9fed66fa3e1755f42e1ce19b94379d6f83fd56b8b141f25879da", size = 6239, upload-time = "2025-08-05T15:59:15.204Z" },
-]
-
-[[package]]
 name = "langchainhub"
 version = "0.1.21"
 source = { registry = "https://pypi.org/simple" }
@@ -5067,7 +5053,6 @@ dependencies = [
     { name = "langchain-pinecone" },
     { name = "langchain-sambanova" },
     { name = "langchain-unstructured" },
-    { name = "langchain-voyageai" },
     { name = "langflow-base" },
     { name = "langfuse" },
     { name = "langsmith" },
@@ -5274,7 +5259,6 @@ requires-dist = [
     { name = "langchain-pinecone", specifier = ">=0.2.8" },
     { name = "langchain-sambanova", specifier = "==0.1.0" },
     { name = "langchain-unstructured", specifier = "==0.1.5" },
-    { name = "langchain-voyageai", specifier = ">=0.1.7" },
     { name = "langflow-base", editable = "src/backend/base" },
     { name = "langfuse", specifier = "==2.53.9" },
     { name = "langsmith", specifier = ">=0.3.42,<1.0.0" },
@@ -12723,27 +12707,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1c/14/37fcdba2808a6c615681cd216fecae00413c9dab44fb2e57805ecf3eaee3/virtualenv-20.34.0.tar.gz", hash = "sha256:44815b2c9dee7ed86e387b842a84f20b93f7f417f95886ca1996a72a4138eb1a", size = 6003808, upload-time = "2025-08-13T14:24:07.464Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/76/06/04c8e804f813cf972e3262f3f8584c232de64f0cde9f703b46cf53a45090/virtualenv-20.34.0-py3-none-any.whl", hash = "sha256:341f5afa7eee943e4984a9207c025feedd768baff6753cd660c857ceb3e36026", size = 5983279, upload-time = "2025-08-13T14:24:05.111Z" },
-]
-
-[[package]]
-name = "voyageai"
-version = "0.3.5"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "aiohttp" },
-    { name = "aiolimiter" },
-    { name = "langchain-text-splitters" },
-    { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "pillow" },
-    { name = "pydantic" },
-    { name = "requests" },
-    { name = "tenacity" },
-    { name = "tokenizers" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/51/9b/e40f90793c1d03610b6109852791f752fcb257989a96701258278f874e00/voyageai-0.3.5.tar.gz", hash = "sha256:963e0d71611af529fa0e496db232a4f660b5f73bce7af1ab288a7f59df7512da", size = 20414, upload-time = "2025-09-11T00:28:26.29Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8a/9d/709f5c7fc80a7bf11952fbccfca2bc5525bd5d345521795358819bd01d02/voyageai-0.3.5-py3-none-any.whl", hash = "sha256:1f70fcf3532d7e0bbc4332b1831a6fc1f714f268eeddc8b2859b81bf06a82411", size = 28257, upload-time = "2025-09-11T00:28:24.62Z" },
 ]
 
 [[package]]

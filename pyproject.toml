@@ -132,7 +132,6 @@ dependencies = [
     "easyocr>=1.7.2",
     "opencv-python>=4.11",
     "cleanlab-codex>=1.0.29",
-    "langchain-voyageai>=0.1.7",
 ]
 
 [dependency-groups]

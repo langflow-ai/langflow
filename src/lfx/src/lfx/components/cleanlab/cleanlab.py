@@ -38,7 +38,6 @@ class Cleanlab(Component):
         - response (MessageTextInput): The generated response from your RAG system.
         - context (MessageTextInput, optional): Retrieved context for the user's query. Defaults to "" if not provided.
         - fallback_text (PromptInput): Text to use if the response is flagged as bad and no expert answer is available.
-        - quality_preset (DropdownInput, optional): Quality preset to use for evaluation. Defaults to 'best'.
 
     Output:
         - final_response (Message): Either the original response, an expert remediated answer, or fallback text.
