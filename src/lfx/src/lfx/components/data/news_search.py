@@ -18,7 +18,6 @@ class NewsSearchComponent(Component):
     legacy = True
     replacement = "data.WebSearch"
 
-
     inputs = [
         MessageTextInput(
             name="query",
