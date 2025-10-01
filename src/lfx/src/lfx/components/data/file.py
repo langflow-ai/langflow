@@ -15,6 +15,7 @@ import subprocess
 import sys
 import textwrap
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
 
 from lfx.base.data.base_file import BaseFileComponent
@@ -24,6 +25,7 @@ from lfx.io import BoolInput, FileInput, IntInput, Output
 from lfx.schema import DataFrame  # noqa: TC001
 from lfx.schema.data import Data
 from lfx.schema.message import Message
+from lfx.utils.s3_helpers import fetch_s3_file_sync, is_s3_uri, parse_s3_uri
 
 
 class FileComponent(BaseFileComponent):
@@ -281,6 +283,17 @@ class FileComponent(BaseFileComponent):
         )
         return file_path.lower().endswith(docling_exts)
 
+    def _fetch_s3_file_bytes(self, s3_uri: str) -> tuple[bytes, str]:
+        """Fetch S3 file content as bytes and return (bytes, filename)."""
+        s3_info = parse_s3_uri(s3_uri)
+        if not s3_info:
+            msg = f"Invalid S3 URI format: {s3_uri}"
+            raise ValueError(msg)
+
+        _flow_id, file_name = s3_info
+        file_content = fetch_s3_file_sync(s3_uri)
+        return (file_content, file_name)
+
     def _process_docling_in_subprocess(self, file_path: str) -> Data | None:
         """Run Docling in a separate OS process and map the result to a Data object.
 
@@ -290,8 +303,22 @@ class FileComponent(BaseFileComponent):
         if not file_path:
             return None
 
+        # If S3 URI, fetch bytes instead of using temp file
+        file_bytes = None
+        original_file_path = file_path
+        file_name = Path(file_path).name
+
+        if is_s3_uri(file_path):
+            file_bytes, file_name = self._fetch_s3_file_bytes(file_path)
+            self.log(f"Fetched S3 file {original_file_path} ({len(file_bytes)} bytes)")
+
+        # Prepare args with file bytes as base64 if from S3
+        import base64
+
         args: dict[str, Any] = {
-            "file_path": file_path,
+            "file_path": file_path if not file_bytes else None,
+            "file_name": file_name,
+            "file_bytes": base64.b64encode(file_bytes).decode("utf-8") if file_bytes else None,
             "markdown": bool(self.markdown),
             "image_mode": str(self.IMAGE_MODE),
             "md_image_placeholder": str(self.md_image_placeholder),
@@ -303,12 +330,16 @@ class FileComponent(BaseFileComponent):
         }
 
         self.log(f"Starting Docling subprocess for file: {file_path}")
-        self.log(args)
+        if file_bytes:
+            self.log(f"Processing {len(file_bytes)} bytes from S3")
 
         # Child script for isolating the docling processing
         child_script = textwrap.dedent(
             r"""
-            import json, sys
+            import base64
+            import json
+            import sys
+            from io import BytesIO
 
             def try_imports():
                 # Strategy 1: latest layout
@@ -434,20 +465,36 @@ class FileComponent(BaseFileComponent):
 
             def main():
                 cfg = json.loads(sys.stdin.read())
-                file_path = cfg["file_path"]
+                file_path = cfg.get("file_path")
+                file_name = cfg.get("file_name", "document")
+                file_bytes_b64 = cfg.get("file_bytes")
                 markdown = cfg["markdown"]
                 image_mode = cfg["image_mode"]
                 img_ph = cfg["md_image_placeholder"]
                 pg_ph = cfg["md_page_break_placeholder"]
                 pipeline = cfg["pipeline"]
                 ocr_engine = cfg.get("ocr_engine")
-                meta = {"file_path": file_path}
+                meta = {"file_path": file_path if file_path else file_name}
 
                 try:
                     ConversionStatus, InputFormat, DocumentConverter, ImageRefMode, strategy = try_imports()
                     converter = create_converter(strategy, InputFormat, DocumentConverter, pipeline, ocr_engine)
+
+                    # Handle either file path or bytes from S3
                     try:
-                        res = converter.convert(file_path)
+                        if file_bytes_b64:
+                            # Decode base64 bytes and use DocumentStream
+                            from docling.datamodel.document import DocumentStream
+                            from docling.datamodel.base_models import DocumentConversionInput
+
+                            file_bytes = base64.b64decode(file_bytes_b64)
+                            buf = BytesIO(file_bytes)
+                            docs = [DocumentStream(filename=file_name, stream=buf)]
+                            conv_input = DocumentConversionInput.from_streams(docs)
+                            res = converter.convert(conv_input)
+                        else:
+                            # Use file path
+                            res = converter.convert(file_path)
                     except Exception as e:
                         print(json.dumps({"ok": False, "error": f"Docling conversion error: {e}", "meta": meta}))
                         return
@@ -497,8 +544,10 @@ class FileComponent(BaseFileComponent):
             """
         )
 
-        # Validate file_path to avoid command injection or unsafe input
-        if not isinstance(args["file_path"], str) or any(c in args["file_path"] for c in [";", "|", "&", "$", "`"]):
+        # Validate file_path to avoid command injection (only if not using bytes)
+        if args["file_path"] and (
+            not isinstance(args["file_path"], str) or any(c in args["file_path"] for c in [";", "|", "&", "$", "`"])
+        ):
             return Data(data={"error": "Unsafe file path detected.", "file_path": args["file_path"]})
 
         proc = subprocess.run(  # noqa: S603
@@ -510,20 +559,24 @@ class FileComponent(BaseFileComponent):
 
         if not proc.stdout:
             err_msg = proc.stderr.decode("utf-8", errors="replace") or "no output from child process"
-            return Data(data={"error": f"Docling subprocess error: {err_msg}", "file_path": file_path})
+            return Data(data={"error": f"Docling subprocess error: {err_msg}", "file_path": original_file_path})
 
         try:
             result = json.loads(proc.stdout.decode("utf-8"))
         except Exception as e:  # noqa: BLE001
             err_msg = proc.stderr.decode("utf-8", errors="replace")
             return Data(
-                data={"error": f"Invalid JSON from Docling subprocess: {e}. stderr={err_msg}", "file_path": file_path},
+                data={"error": f"Invalid JSON from Docling subprocess: {e}. stderr={err_msg}", "file_path": original_file_path},
             )
 
         if not result.get("ok"):
             return Data(data={"error": result.get("error", "Unknown Docling error"), **result.get("meta", {})})
 
         meta = result.get("meta", {})
+        # Ensure S3 path is in metadata
+        if file_bytes:
+            meta["file_path"] = original_file_path
+
         if result.get("mode") == "markdown":
             exported_content = str(result.get("text", ""))
             return Data(
