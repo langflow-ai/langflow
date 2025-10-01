@@ -170,7 +170,7 @@ class FileComponent(BaseFileComponent):
         if field_name == "path":
             paths = self._path_value(build_config)
 
-            # Advanced mode only for single (non-tabular) file
+            # If all files can be processed by docling, do so
             allow_advanced = all(not file_path.endswith((".csv", ".xlsx", ".parquet")) for file_path in paths)
             build_config["advanced_mode"]["show"] = allow_advanced
             if not allow_advanced:
