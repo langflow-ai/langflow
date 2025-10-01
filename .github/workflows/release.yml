@@ -107,7 +107,7 @@ jobs:
   validate-dependencies:
     name: Validate Release Dependencies
     runs-on: ubuntu-latest
-    if: inputs.release_package_base || inputs.release_package_main
+    if: inputs.release_package_base || inputs.release_package_main || inputs.build_docker_base || inputs.build_docker_main || inputs.build_docker_ep
     needs: [validate-tag]
     steps:
       - name: Validate that build-base is enabled if build-main is enabled
@@ -120,7 +120,7 @@ jobs:
           echo "✅ Release dependencies validated successfully."
 
   ci:
-    if: inputs.release_package_base || inputs.release_package_main
+    if: inputs.release_package_base || inputs.release_package_main || inputs.build_docker_base || inputs.build_docker_main || inputs.build_docker_ep
     name: CI
     needs: [validate-tag, validate-dependencies]
     uses: ./.github/workflows/ci.yml
@@ -442,7 +442,7 @@ jobs:
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
     if: inputs.build_docker_base
-    needs: [validate-tag]
+    needs: [ci]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -453,7 +453,7 @@ jobs:
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
     if: inputs.build_docker_ep
-    needs: [validate-tag]
+    needs: [ci]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -464,7 +464,7 @@ jobs:
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
     if: inputs.build_docker_main
-    needs: [validate-tag]
+    needs: [ci]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
@@ -475,7 +475,7 @@ jobs:
   call_docker_build_main_all:
     name: Call Docker Build Workflow for langflow-all
     if: inputs.build_docker_main
-    needs: [validate-tag]
+    needs: [ci]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
       ref: ${{ inputs.release_tag }}
