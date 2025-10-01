@@ -139,6 +139,7 @@ async def run_flow_for_openai_responses(
                         break
 
                     content = ""
+                    token_data = {}
 
                     # Parse byte string events as JSON
                     if isinstance(event_data, bytes):
@@ -158,6 +159,12 @@ async def run_flow_for_openai_responses(
                                 )
 
                                 # Handle add_message events
+                                if event_type == "token":
+                                    token_data = data.get("chunk", "")
+                                    logger.debug(
+                                        "[OpenAIResponses][stream] token: token_data=%s",
+                                        token_data,
+                                    )
                                 if event_type == "add_message":
                                     sender_name = data.get("sender_name", "")
                                     text = data.get("text", "")
@@ -330,7 +337,12 @@ async def run_flow_for_openai_responses(
                             continue
 
                     # Only send chunks with actual content
-                    if content:
+                    if content or token_data:
+                        if isinstance(token_data, str):
+                            content = token_data
+                            logger.warning(
+                                f"[OpenAIResponses][stream] sent chunk with delta_len={len(content)}, content={content}",
+                            )
                         chunk = OpenAIResponsesStreamChunk(
                             id=response_id,
                             created=created_timestamp,
