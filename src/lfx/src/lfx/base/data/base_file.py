@@ -1,14 +1,13 @@
 import ast
-import json
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile, is_zipfile
 
-import anyio
+import orjson
 import pandas as pd
 
 from lfx.custom.custom_component.component import Component
@@ -224,7 +223,6 @@ class BaseFileComponent(Component, ABC):
             # Delete temporary directories
             for temp_dir in self._temp_dirs:
                 temp_dir.cleanup()
-
             # Delete files marked for deletion
             for file in final_files:
                 if file.delete_after_processing and file.path.exists():
@@ -244,15 +242,15 @@ class BaseFileComponent(Component, ABC):
             return [Data()]
         return data_list
 
-    async def _extract_file_metadata(self, data_item) -> dict:
+    def _extract_file_metadata(self, data_item) -> dict:
         """Extract metadata from a data item with file_path."""
-        metadata = {}
+        metadata: dict[str, Any] = {}
         if not hasattr(data_item, "file_path"):
             return metadata
 
         file_path = data_item.file_path
-        file_path_obj = anyio.Path(file_path)
-        file_size_stat = await file_path_obj.stat()
+        file_path_obj = Path(file_path)
+        file_size_stat = file_path_obj.stat()
         filename = file_path_obj.name
 
         # Basic file metadata
@@ -280,7 +278,7 @@ class BaseFileComponent(Component, ABC):
             return text if text is not None else str(data_item)
         return str(data_item)
 
-    async def load_files_message(self) -> Message:
+    def load_files_message(self) -> Message:
         """Load files and return as Message.
 
         Returns:
@@ -290,16 +288,27 @@ class BaseFileComponent(Component, ABC):
         if not data_list:
             return Message()
 
+        # Extract metadata from the first data item
+        metadata = self._extract_file_metadata(data_list[0])
+
         sep: str = getattr(self, "separator", "\n\n") or "\n\n"
         parts: list[str] = []
-        metadata = {}
-
-        for data_item in data_list:
-            parts.append(self._extract_text(data_item))
-
-            # Set metadata from first file only
-            if not metadata:
-                metadata = await self._extract_file_metadata(data_item)
+        for d in data_list:
+            try:
+                data_text = self._extract_text(d)
+                if data_text and isinstance(data_text, str):
+                    parts.append(data_text)
+                elif data_text:
+                    # get_text() returned non-string, convert it
+                    parts.append(str(data_text))
+                elif isinstance(d.data, dict):
+                    # convert the data dict to a readable string
+                    parts.append(orjson.dumps(d.data, default=str).decode())
+                else:
+                    parts.append(str(d))
+            except (AttributeError, TypeError, ValueError):
+                # Final fallback - just try to convert to string
+                parts.append(str(d))
 
         return Message(text=sep.join(parts), **metadata)
 
@@ -366,10 +375,10 @@ class BaseFileComponent(Component, ABC):
     def parse_string_to_dict(self, s: str) -> dict:
         # Try JSON first (handles true/false/null)
         try:
-            result = json.loads(s)
+            result = orjson.loads(s)
             if isinstance(result, dict):
                 return result
-        except json.JSONDecodeError:
+        except orjson.JSONDecodeError:
             pass
 
         # Fall back to Python literal evaluation

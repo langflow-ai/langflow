@@ -10,6 +10,7 @@ This module tests the agent workflow by:
 import os
 from pathlib import Path
 
+from lfx.utils.async_helpers import run_until_complete
 import pytest
 
 
@@ -145,7 +146,6 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         try:
             from lfx.graph import Graph
             from lfx.log.logger import LogConfig
-            from lfx.utils.async_helpers import run_until_complete
 
             from lfx import components as cp
         except ImportError as e:
@@ -318,7 +318,6 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         try:
             from lfx.graph import Graph
             from lfx.log.logger import LogConfig
-            from lfx.utils.async_helpers import run_until_complete
 
             from lfx import components as cp
         except ImportError as e:
