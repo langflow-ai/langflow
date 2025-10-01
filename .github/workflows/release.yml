@@ -71,7 +71,6 @@ jobs:
           echo "release_tag: ${{ inputs.release_tag }}"
           echo "release_package_base: ${{ inputs.release_package_base }}"
           echo "release_package_main: ${{ inputs.release_package_main }}"
-          echo "release_lfx: ${{ inputs.release_lfx }}"
           echo "build_docker_base: ${{ inputs.build_docker_base }}"
           echo "build_docker_main: ${{ inputs.build_docker_main }}"
           echo "build_docker_ep: ${{ inputs.build_docker_ep }}"
@@ -105,10 +104,24 @@ jobs:
 
           echo "Validated: '${{ inputs.release_tag }}' is a valid tag."
 
-  ci:
-    if: inputs.release_package_base || inputs.release_package_main || inputs.release_lfx
-    name: CI
+  validate-dependencies:
+    name: Validate Release Dependencies
+    runs-on: ubuntu-latest
     needs: [validate-tag]
+    steps:
+      - name: Validate that build-base is enabled if build-main is enabled
+        run: |
+          if [ "${{ inputs.release_package_main }}" = "true" ] && [ "${{ inputs.release_package_base }}" = "false" ]; then
+            echo "Error: Cannot release Langflow Main without releasing Langflow Base."
+            echo "Please enable 'release_package_base' or disable 'release_package_main'."
+            exit 1
+          fi
+          echo "✅ Release dependencies validated successfully."
+
+  ci:
+    if: inputs.release_package_base || inputs.release_package_main
+    name: CI
+    needs: [validate-dependencies]
     uses: ./.github/workflows/ci.yml
     with:
       branch: ${{ inputs.release_tag }}
@@ -272,19 +285,16 @@ jobs:
 
   test-cross-platform:
     name: Test Cross-Platform Installation
-    needs: [build-base, build-main, build-lfx]
-    # Make build-lfx optional by always continuing even if it's skipped
-    # Run if either base or main succeeded (regardless of LFX status)
+    needs: [build-base, build-main]
     if: |
       always() &&
       !cancelled() &&
-      (needs.build-base.result == 'success' || needs.build-main.result == 'success') &&
-      (needs.build-lfx.result == 'success' || needs.build-lfx.result == 'skipped')
+      (needs.build-base.result == 'success' || needs.build-main.result == 'success')
     uses: ./.github/workflows/cross-platform-test.yml
     with:
       base-artifact-name: "dist-base"
       main-artifact-name: "dist-main"
-      lfx-artifact-name: ${{ inputs.release_lfx && 'dist-lfx' || '' }}
+      lfx-artifact-name: ""
 
 
   publish-base:
@@ -477,34 +487,25 @@ jobs:
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
-    # Make all dependencies optional - job runs if any of the publish jobs succeed
-    needs: [build-main, build-lfx, publish-main, publish-lfx]
+    needs: [build-main, publish-main]
     if: |
       always() &&
       !cancelled() &&
       inputs.create_release &&
-      (needs.publish-main.result == 'success' || needs.publish-lfx.result == 'success')
+      needs.publish-main.result == 'success'
     steps:
       - uses: actions/download-artifact@v4
-        if: needs.publish-main.result == 'success'
         with:
           name: dist-main
           path: dist
-      - uses: actions/download-artifact@v4
-        if: needs.publish-lfx.result == 'success'
-        with:
-          name: dist-lfx
-          path: dist-lfx
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: |
-            dist/*
-            dist-lfx/*
+          artifacts: dist/*
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           generateReleaseNotes: true
           prerelease: ${{ inputs.pre_release }}
-          tag: ${{ needs.build-main.outputs.version || needs.build-lfx.outputs.version }}
+          tag: ${{ needs.build-main.outputs.version }}
           allowUpdates: true
           updateOnlyUnreleased: false
