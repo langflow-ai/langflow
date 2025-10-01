@@ -5,7 +5,7 @@ slug: /bundles-ollama
 
 import Icon from "@site/src/components/icon";
 
-[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
 This page describes the components that are available in the **Ollama** bundle.
 
@@ -32,7 +32,7 @@ To use the **Ollama** component in a flow, connect Langflow to your locally runn
 
 5. Connect the **Ollama** component to other components in the flow, depending on how you want to use the model.
 
-    **Language Model** components can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)). Use the **Language Model** output when you want to use an Ollama model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component. For more information, see [**Language Model** components](/components-models).
+    Language model components can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)). Use the **Language Model** output when you want to use an Ollama model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component. For more information, see [Language model components](/components-models).
 
     In the following example, the flow uses `LanguageModel` output to use an Ollama model as the LLM for an [**Agent** component](/components-agents).
 
@@ -59,7 +59,7 @@ To use this component in a flow, connect Langflow to your locally running Ollama
 Available parameters depend on the selected model.
 
 5. Connect the **Ollama Embeddings** component to other components in the flow.
-For more information about using embedding model components in flows, see [**Embedding Model** components](/components-embedding-models).
+For more information about using embedding model components in flows, see [Embedding model components](/components-embedding-models).
 
     This example connects the **Ollama Embeddings** component to generate embeddings for text chunks extracted from a PDF file, and then stores the embeddings and chunks in a Chroma DB vector store.
 

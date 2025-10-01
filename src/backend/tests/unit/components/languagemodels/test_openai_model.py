@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_openai import ChatOpenAI
-from langflow.components.openai.openai_chat_model import OpenAIModelComponent
+from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -33,7 +33,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         # Provide an empty list or the actual mapping if versioned files exist
         return []
 
-    @patch("langflow.components.openai.openai_chat_model.ChatOpenAI")
+    @patch("lfx.components.openai.openai_chat_model.ChatOpenAI")
     async def test_build_model(self, mock_chat_openai, component_class, default_kwargs):
         mock_instance = MagicMock()
         mock_chat_openai.return_value = mock_instance
@@ -53,7 +53,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         )
         assert model == mock_instance
 
-    @patch("langflow.components.openai.openai_chat_model.ChatOpenAI")
+    @patch("lfx.components.openai.openai_chat_model.ChatOpenAI")
     async def test_build_model_reasoning_model(self, mock_chat_openai, component_class, default_kwargs):
         mock_instance = MagicMock()
         mock_chat_openai.return_value = mock_instance
@@ -74,11 +74,11 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         assert model == mock_instance
 
         # Verify that temperature and seed are not in the parameters
-        args, kwargs = mock_chat_openai.call_args
+        _args, kwargs = mock_chat_openai.call_args
         assert "temperature" not in kwargs
         assert "seed" not in kwargs
 
-    @patch("langflow.components.openai.openai_chat_model.ChatOpenAI")
+    @patch("lfx.components.openai.openai_chat_model.ChatOpenAI")
     async def test_build_model_with_json_mode(self, mock_chat_openai, component_class, default_kwargs):
         mock_instance = MagicMock()
         mock_bound_instance = MagicMock()
@@ -93,7 +93,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         mock_instance.bind.assert_called_once_with(response_format={"type": "json_object"})
         assert model == mock_bound_instance
 
-    @patch("langflow.components.openai.openai_chat_model.ChatOpenAI")
+    @patch("lfx.components.openai.openai_chat_model.ChatOpenAI")
     async def test_build_model_no_api_key(self, mock_chat_openai, component_class, default_kwargs):
         mock_instance = MagicMock()
         mock_chat_openai.return_value = mock_instance
@@ -102,10 +102,10 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         component.build_model()
 
         # When api_key is None, it should be passed as None to ChatOpenAI
-        args, kwargs = mock_chat_openai.call_args
+        _args, kwargs = mock_chat_openai.call_args
         assert kwargs["api_key"] is None
 
-    @patch("langflow.components.openai.openai_chat_model.ChatOpenAI")
+    @patch("lfx.components.openai.openai_chat_model.ChatOpenAI")
     async def test_build_model_max_tokens_zero(self, mock_chat_openai, component_class, default_kwargs):
         mock_instance = MagicMock()
         mock_chat_openai.return_value = mock_instance
@@ -114,7 +114,7 @@ class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
         component.build_model()
 
         # When max_tokens is 0, it should be passed as None to ChatOpenAI
-        args, kwargs = mock_chat_openai.call_args
+        _args, kwargs = mock_chat_openai.call_args
         assert kwargs["max_tokens"] is None
 
     async def test_get_exception_message_bad_request_error(self, component_class, default_kwargs):

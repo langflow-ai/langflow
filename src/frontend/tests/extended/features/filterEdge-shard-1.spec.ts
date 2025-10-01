@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -70,7 +70,6 @@ test(
     const elementTestIds = [
       "input_outputChat Output",
       "dataAPI Request",
-      "datastaxAstra DB",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
       "mem0Mem0 Chat Memory",
@@ -104,7 +103,6 @@ test(
       "groqGroq",
       "lmstudioLM Studio",
       "maritalkMariTalk",
-      "mistralMistralAI",
       "perplexityPerplexity",
       "baiduQianfan",
       "sambanovaSambaNova",

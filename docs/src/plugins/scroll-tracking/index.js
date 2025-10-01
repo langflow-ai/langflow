@@ -35,7 +35,7 @@ function pluginScrollTracking(context, options = {}) {
       const config = {
         selectors: options.selectors || DEFAULT_SELECTORS
       };
-      
+
       const configScript = `
         window.__SCROLL_TRACKING_CONFIG__ = ${JSON.stringify(config)};
       `;
