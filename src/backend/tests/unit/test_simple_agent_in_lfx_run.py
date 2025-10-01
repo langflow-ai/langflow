@@ -10,8 +10,8 @@ This module tests the agent workflow by:
 import os
 from pathlib import Path
 
-from lfx.utils.async_helpers import run_until_complete
 import pytest
+from lfx.utils.async_helpers import run_until_complete
 
 
 class TestAgentInLfxRun:
