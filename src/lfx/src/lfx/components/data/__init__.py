@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     from lfx.components.data.url import URLComponent
     from lfx.components.data.web_search import WebSearchComponent
     from lfx.components.data.webhook import WebhookComponent
+    from lfx.components.data.news_search import NewsSearchComponent
+    from lfx.components.data.rss import RSSReaderComponent
 
 _dynamic_imports = {
     "APIRequestComponent": "api_request",
@@ -25,6 +27,8 @@ _dynamic_imports = {
     "URLComponent": "url",
     "WebSearchComponent": "web_search",
     "WebhookComponent": "webhook",
+    "NewsSearchComponent": "news_search",
+    "RSSReaderComponent": "rss",
 }
 
 __all__ = [
@@ -37,6 +41,8 @@ __all__ = [
     "URLComponent",
     "WebSearchComponent",
     "WebhookComponent",
+    "NewsSearchComponent",
+    "RSSReaderComponent",
 ]
 
 
