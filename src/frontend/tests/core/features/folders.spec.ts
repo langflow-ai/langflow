@@ -53,11 +53,13 @@ test(
     });
 
     await page
-      .getByText("new project test name")
+      .getByTestId("sidebar-nav-new project test name")
       .last()
       .hover()
       .then(async () => {
-        await page.getByTestId("more-options-button").last().click();
+        await page
+          .getByTestId("more-options-button_new-project-test-name")
+          .click();
       });
 
     await page.getByTestId("btn-delete-project").click();
