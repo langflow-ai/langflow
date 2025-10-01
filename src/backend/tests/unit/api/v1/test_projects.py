@@ -476,7 +476,7 @@ class TestProjectMCPIntegration:
 
             # Mock API key creation
             mock_api_key_response = MagicMock()
-            mock_api_key_response.api_key = "test-api-key-123"
+            mock_api_key_response.api_key = "test-api-key-123" #pragma: allowlist secret
             mock_create_api_key.return_value = mock_api_key_response
 
             # Mock validation - no conflict
@@ -885,3 +885,214 @@ class TestProjectMCPIntegration:
             result = response.json()
             assert "name" in result
             assert result["name"] == basic_case["name"]
+
+
+# Tests for the read_project bug fix
+class TestReadProjectBugFix:
+    """Test the read_project endpoint fix for ASGI response bug."""
+
+    async def test_read_project_without_pagination_params(self, client: AsyncClient, logged_in_headers, basic_case):
+        """Test read_project returns correct response when no pagination params are provided."""
+        # Create a project first
+        create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+        assert create_response.status_code == status.HTTP_201_CREATED
+        project_id = create_response.json()["id"]
+
+        # Read project without pagination params
+        response = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+
+        assert response.status_code == status.HTTP_200_OK
+        result = response.json()
+
+        # Should return FolderReadWithFlows (direct project response)
+        assert isinstance(result, dict)
+        assert "name" in result
+        assert "description" in result
+        assert "id" in result
+        assert "flows" in result
+        assert result["name"] == basic_case["name"]
+
+    async def test_read_project_with_pagination_params(self, client: AsyncClient, logged_in_headers, basic_case):
+        """Test read_project returns paginated response when pagination params are provided."""
+        # Create a project first
+        create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+        assert create_response.status_code == status.HTTP_201_CREATED
+        project_id = create_response.json()["id"]
+
+        # Read project with pagination params
+        response = await client.get(f"api/v1/projects/{project_id}?page=1&size=10", headers=logged_in_headers)
+
+        assert response.status_code == status.HTTP_200_OK
+        result = response.json()
+
+        # Should return FolderWithPaginatedFlows (paginated response)
+        assert isinstance(result, dict)
+        assert "folder" in result
+        assert "flows" in result
+
+        # Check folder structure
+        folder = result["folder"]
+        assert "name" in folder
+        assert "description" in folder
+        assert "id" in folder
+        assert folder["name"] == basic_case["name"]
+
+        # Check flows pagination structure
+        flows = result["flows"]
+        assert "items" in flows
+        assert "total" in flows
+        assert "page" in flows
+        assert "size" in flows
+
+    async def test_read_project_with_partial_pagination_params(
+        self, client: AsyncClient, logged_in_headers, basic_case
+    ):
+        """Test read_project behavior when only some pagination params are provided."""
+        # Create a project first
+        create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+        assert create_response.status_code == status.HTTP_201_CREATED
+        project_id = create_response.json()["id"]
+
+        # Test with only page param (no size)
+        response = await client.get(f"api/v1/projects/{project_id}?page=1", headers=logged_in_headers)
+        assert response.status_code == status.HTTP_200_OK
+        result = response.json()
+
+        # Should return non-paginated response (FolderReadWithFlows)
+        assert isinstance(result, dict)
+        assert "name" in result  # Direct project response
+        assert "flows" in result
+        assert result["name"] == basic_case["name"]
+
+        # Test with only size param (no page)
+        response = await client.get(f"api/v1/projects/{project_id}?size=10", headers=logged_in_headers)
+        assert response.status_code == status.HTTP_200_OK
+        result = response.json()
+
+        # Should return non-paginated response (FolderReadWithFlows)
+        assert isinstance(result, dict)
+        assert "name" in result  # Direct project response
+        assert "flows" in result
+        assert result["name"] == basic_case["name"]
+
+    async def test_read_project_with_filtering_params(self, client: AsyncClient, logged_in_headers, basic_case):
+        """Test read_project with filtering parameters (is_component, is_flow, search)."""
+        # Create a project first
+        create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+        assert create_response.status_code == status.HTTP_201_CREATED
+        project_id = create_response.json()["id"]
+
+        # Create a flow and component in the project for filtering tests
+        flow_payload = {
+            "name": "Test Flow",
+            "description": "A test flow",
+            "folder_id": project_id,
+            "data": {"nodes": [], "edges": []},
+            "is_component": False,
+        }
+        component_payload = {
+            "name": "Test Component",
+            "description": "A test component",
+            "folder_id": project_id,
+            "data": {"nodes": [], "edges": []},
+            "is_component": True,
+        }
+
+        flow_response = await client.post("api/v1/flows/", json=flow_payload, headers=logged_in_headers)
+        comp_response = await client.post("api/v1/flows/", json=component_payload, headers=logged_in_headers)
+        assert flow_response.status_code == status.HTTP_201_CREATED
+        assert comp_response.status_code == status.HTTP_201_CREATED
+
+        # Test with filtering params but no pagination (should use non-paginated path)
+        response = await client.get(f"api/v1/projects/{project_id}?is_flow=true", headers=logged_in_headers)
+        assert response.status_code == status.HTTP_200_OK
+        result = response.json()
+
+        # Should return non-paginated response
+        assert isinstance(result, dict)
+        assert "name" in result
+        assert "flows" in result
+
+        # Test with filtering params AND pagination (should use paginated path)
+        response = await client.get(
+            f"api/v1/projects/{project_id}?is_flow=true&page=1&size=10", headers=logged_in_headers
+        )
+        assert response.status_code == status.HTTP_200_OK
+        result = response.json()
+
+        # Should return paginated response
+        assert isinstance(result, dict)
+        assert "folder" in result
+        assert "flows" in result
+        assert "items" in result["flows"]
+
+    async def test_read_project_consistent_response_structure(self, client: AsyncClient, logged_in_headers, basic_case):
+        """Test that read_project returns consistent response structure in all cases."""
+        # Create a project first
+        create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+        assert create_response.status_code == status.HTTP_201_CREATED
+        project_id = create_response.json()["id"]
+
+        # Test multiple request scenarios to ensure consistency
+        test_cases = [
+            # No params - should return FolderReadWithFlows
+            {"params": "", "expect_paginated": False},
+            # Only search - should return FolderReadWithFlows
+            {"params": "?search=test", "expect_paginated": False},
+            # Only is_component - should return FolderReadWithFlows
+            {"params": "?is_component=true", "expect_paginated": False},
+            # Only is_flow - should return FolderReadWithFlows
+            {"params": "?is_flow=true", "expect_paginated": False},
+            # Only page - should return FolderReadWithFlows
+            {"params": "?page=1", "expect_paginated": False},
+            # Only size - should return FolderReadWithFlows
+            {"params": "?size=10", "expect_paginated": False},
+            # Both page and size - should return FolderWithPaginatedFlows
+            {"params": "?page=1&size=10", "expect_paginated": True},
+            # Page, size and filters - should return FolderWithPaginatedFlows
+            {"params": "?page=1&size=10&is_flow=true", "expect_paginated": True},
+        ]
+
+        for test_case in test_cases:
+            response = await client.get(f"api/v1/projects/{project_id}{test_case['params']}", headers=logged_in_headers)
+            assert response.status_code == status.HTTP_200_OK, f"Failed for params: {test_case['params']}"
+
+            result = response.json()
+            assert isinstance(result, dict), f"Result should be dict for params: {test_case['params']}"
+
+            if test_case["expect_paginated"]:
+                # Paginated response structure
+                assert "folder" in result, f"Paginated response missing 'folder' for params: {test_case['params']}"
+                assert "flows" in result, f"Paginated response missing 'flows' for params: {test_case['params']}"
+                assert "items" in result["flows"], f"Paginated flows missing 'items' for params: {test_case['params']}"
+                assert "total" in result["flows"], f"Paginated flows missing 'total' for params: {test_case['params']}"
+            else:
+                # Non-paginated response structure
+                assert "name" in result, f"Non-paginated response missing 'name' for params: {test_case['params']}"
+                assert "flows" in result, f"Non-paginated response missing 'flows' for params: {test_case['params']}"
+                # Should NOT have pagination structure
+                assert "folder" not in result, (
+                    f"Non-paginated response should not have 'folder' for params: {test_case['params']}"
+                )
+
+    async def test_read_project_error_handling_consistency(self, client: AsyncClient, logged_in_headers):
+        """Test that error handling is consistent across both response paths."""
+        import uuid
+
+        non_existent_id = str(uuid.uuid4())
+
+        # Test both pagination and non-pagination paths with non-existent project
+        test_cases = [
+            "",  # Non-paginated path
+            "?page=1&size=10",  # Paginated path
+        ]
+
+        for params in test_cases:
+            response = await client.get(f"api/v1/projects/{non_existent_id}{params}", headers=logged_in_headers)
+            assert response.status_code == status.HTTP_404_NOT_FOUND, f"Should return 404 for params: {params}"
+
+            result = response.json()
+            assert "detail" in result, f"Error response should have 'detail' for params: {params}"
+            assert "not found" in result["detail"].lower(), (
+                f"Error message should mention 'not found' for params: {params}"
+            )
