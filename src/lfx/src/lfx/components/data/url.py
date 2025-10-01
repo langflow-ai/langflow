@@ -1,9 +1,11 @@
 import importlib
+import io
 import re
 
 import requests
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
+from markitdown import MarkItDown
 
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
@@ -108,7 +110,7 @@ class URLComponent(Component):
             name="format",
             display_name="Output Format",
             info="Output Format. Use 'Text' to extract the text from the HTML or 'HTML' for the raw HTML content.",
-            options=["Text", "HTML"],
+            options=["Text", "HTML", "Markdown"],
             value=DEFAULT_FORMAT,
             advanced=True,
         ),
@@ -225,7 +227,20 @@ class URLComponent(Component):
             RecursiveUrlLoader: Configured loader instance
         """
         headers_dict = {header["key"]: header["value"] for header in self.headers if header["value"] is not None}
-        extractor = (lambda x: x) if self.format == "HTML" else (lambda x: BeautifulSoup(x, "lxml").get_text())
+        if self.format == "HTML":
+
+            def extractor(x: str) -> str:
+                return x
+        elif self.format == "Markdown":
+
+            def extractor(x: str) -> str:
+                stream = io.BytesIO(x.encode("utf-8"))
+                result = MarkItDown(enable_plugins=False).convert_stream(stream)
+                return result.markdown
+        else:
+
+            def extractor(x: str) -> str:
+                return BeautifulSoup(x, "lxml").get_text()
 
         return RecursiveUrlLoader(
             url=url,
