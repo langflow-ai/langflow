@@ -272,8 +272,14 @@ jobs:
 
   test-cross-platform:
     name: Test Cross-Platform Installation
-    if: inputs.release_package_base || inputs.release_package_main
     needs: [build-base, build-main, build-lfx]
+    # Make build-lfx optional by always continuing even if it's skipped
+    # Run if either base or main succeeded (regardless of LFX status)
+    if: |
+      always() &&
+      !cancelled() &&
+      (needs.build-base.result == 'success' || needs.build-main.result == 'success') &&
+      (needs.build-lfx.result == 'success' || needs.build-lfx.result == 'skipped')
     uses: ./.github/workflows/cross-platform-test.yml
     with:
       base-artifact-name: "dist-base"
@@ -471,8 +477,13 @@ jobs:
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
+    # Make all dependencies optional - job runs if any of the publish jobs succeed
     needs: [build-main, build-lfx, publish-main, publish-lfx]
-    if: always() && inputs.create_release && (needs.publish-main.result == 'success' || needs.publish-lfx.result == 'success')
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.create_release &&
+      (needs.publish-main.result == 'success' || needs.publish-lfx.result == 'success')
     steps:
       - uses: actions/download-artifact@v4
         if: needs.publish-main.result == 'success'
