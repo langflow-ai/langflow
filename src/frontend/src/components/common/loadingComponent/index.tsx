@@ -1,13 +1,31 @@
 import type { LoadingComponentProps } from "../../../types/components";
 
+const langflowTips = [
+  "💡 Connect components by dragging from output to input handles",
+  "🔧 Use the playground to test your flows before deploying",
+  "📝 Right-click any component to view its documentation",
+  "⚡ Press Ctrl+Space for quick component search",
+  "🎯 Use environment variables to keep your API keys secure",
+  "🔄 Components run automatically when their inputs change",
+  "📊 Check the logs panel for debugging information",
+  "🚀 Export your flows as API endpoints with one click"
+];
+
 export default function LoadingComponent({
   remSize,
 }: LoadingComponentProps): JSX.Element {
+  const randomTip = langflowTips[Math.floor(Math.random() * langflowTips.length)];
+  
   return (
-    <div role="status" className="flex flex-col items-center justify-center">
+    <div role="status" aria-live="polite" className="flex flex-col items-center justify-center space-y-4">
       <svg
         aria-hidden="true"
-        className={`w-${remSize} h-${remSize} animate-spin fill-primary text-muted`}
+        className="fill-primary text-muted"
+        style={{ 
+          width: `${remSize * 4}px`, 
+          height: `${remSize * 4}px`,
+          animation: 'spin 2s linear infinite'
+        }}
         viewBox="0 0 100 101"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -21,8 +39,20 @@ export default function LoadingComponent({
           fill="currentFill"
         />
       </svg>
-      <br></br>
-      <span className="animate-pulse text-lg text-primary">Loading...</span>
+      
+      <div className="text-center space-y-3">
+        <span className="text-lg text-primary font-medium">Loading</span>
+        <p className="text-sm text-muted-foreground max-w-sm px-4">
+          {randomTip}
+        </p>
+      </div>
+      
+      <style jsx>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
