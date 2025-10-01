@@ -1,12 +1,12 @@
-from lfx.components.processing import CreateDataComponent
+from lfx.components.processing import DynamicCreateDataComponent
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 
 
-class TestCreateDataComponent:
+class TestDynamicCreateDataComponent:
     def test_update_build_config_creates_dynamic_inputs(self):
         """Test that dynamic inputs are created based on form_fields configuration."""
-        component = CreateDataComponent()
+        component = DynamicCreateDataComponent()
         build_config = {"form_fields": {"value": []}}
 
         field_value = [
@@ -25,7 +25,7 @@ class TestCreateDataComponent:
 
     def test_update_build_config_clears_old_dynamic_inputs(self):
         """Test that old dynamic inputs are removed when form_fields change."""
-        component = CreateDataComponent()
+        component = DynamicCreateDataComponent()
         build_config = {
             "dynamic_old_field": {"display_name": "Old Field"},
             "form_fields": {"value": []},
@@ -40,7 +40,7 @@ class TestCreateDataComponent:
 
     def test_process_form_returns_data_with_simple_values(self):
         """Test that process_form extracts and returns simple values from inputs."""
-        component = CreateDataComponent()
+        component = DynamicCreateDataComponent()
         component.form_fields = [
             {"field_name": "name", "field_type": "Text"},
             {"field_name": "count", "field_type": "Number"},
@@ -58,7 +58,7 @@ class TestCreateDataComponent:
 
     def test_extract_simple_value_handles_message_objects(self):
         """Test that Message objects are properly extracted to their text content."""
-        component = CreateDataComponent()
+        component = DynamicCreateDataComponent()
 
         test_message = Message(text="Hello World")
         result = component._extract_simple_value(test_message)
@@ -68,7 +68,7 @@ class TestCreateDataComponent:
 
     def test_get_message_formats_data_as_text(self):
         """Test that get_message returns properly formatted text output."""
-        component = CreateDataComponent()
+        component = DynamicCreateDataComponent()
         component.form_fields = [
             {"field_name": "title", "field_type": "Text"},
             {"field_name": "enabled", "field_type": "Boolean"},
@@ -86,7 +86,7 @@ class TestCreateDataComponent:
 
     def test_handles_none_field_config_gracefully(self):
         """Test that None values in form_fields are handled without errors."""
-        component = CreateDataComponent()
+        component = DynamicCreateDataComponent()
         build_config = {"form_fields": {"value": []}}
 
         field_value = [
