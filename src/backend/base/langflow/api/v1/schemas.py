@@ -374,6 +374,7 @@ class ConfigResponse(BaseModel):
     event_delivery: Literal["polling", "streaming", "direct"]
     webhook_auth_enable: bool
     voice_mode_available: bool
+    run_with_openrag: bool
 
     @classmethod
     def from_settings(cls, settings: Settings, auth_settings) -> "ConfigResponse":
@@ -386,6 +387,8 @@ class ConfigResponse(BaseModel):
         Returns:
             ConfigResponse: An instance populated with configuration and feature flag values.
         """
+        import os
+
         return cls(
             feature_flags=FEATURE_FLAGS,
             serialization_max_items_length=settings.max_items_length,
@@ -401,6 +404,7 @@ class ConfigResponse(BaseModel):
             event_delivery=settings.event_delivery,
             voice_mode_available=settings.voice_mode_available,
             webhook_auth_enable=auth_settings.WEBHOOK_AUTH_ENABLE,
+            run_with_openrag=os.getenv("RUN_WITH_OPENRAG", "").lower() == "true",
         )
 
 

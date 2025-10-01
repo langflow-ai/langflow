@@ -30,4 +30,6 @@ export type UtilityStoreType = {
   setSerializationMaxItemsLength: (serializationMaxItemsLength: number) => void;
   webhookAuthEnable: boolean;
   setWebhookAuthEnable: (webhookAuthEnable: boolean) => void;
+  runWithOpenrag: boolean;
+  setRunWithOpenrag: (runWithOpenrag: boolean) => void;
 };
