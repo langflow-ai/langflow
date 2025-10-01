@@ -40,6 +40,7 @@ describe("useUtilityStore", () => {
       currentSessionId: "",
       eventDelivery: EventDeliveryType.POLLING,
       webhookAuthEnable: true,
+      runWithOpenrag: false,
     });
   });
 
@@ -61,6 +62,7 @@ describe("useUtilityStore", () => {
       expect(result.current.currentSessionId).toBe("");
       expect(result.current.eventDelivery).toBe(EventDeliveryType.POLLING);
       expect(result.current.webhookAuthEnable).toBe(true);
+      expect(result.current.runWithOpenrag).toBe(false);
     });
   });
 
@@ -553,6 +555,51 @@ describe("useUtilityStore", () => {
         result.current.setWebhookAuthEnable(true);
       });
       expect(result.current.webhookAuthEnable).toBe(true);
+    });
+  });
+
+  describe("setRunWithOpenrag", () => {
+    it("should set runWithOpenrag to true", () => {
+      const { result } = renderHook(() => useUtilityStore());
+
+      act(() => {
+        result.current.setRunWithOpenrag(true);
+      });
+
+      expect(result.current.runWithOpenrag).toBe(true);
+    });
+
+    it("should set runWithOpenrag to false", () => {
+      const { result } = renderHook(() => useUtilityStore());
+
+      act(() => {
+        result.current.setRunWithOpenrag(true);
+      });
+      expect(result.current.runWithOpenrag).toBe(true);
+
+      act(() => {
+        result.current.setRunWithOpenrag(false);
+      });
+      expect(result.current.runWithOpenrag).toBe(false);
+    });
+
+    it("should toggle runWithOpenrag multiple times", () => {
+      const { result } = renderHook(() => useUtilityStore());
+
+      act(() => {
+        result.current.setRunWithOpenrag(true);
+      });
+      expect(result.current.runWithOpenrag).toBe(true);
+
+      act(() => {
+        result.current.setRunWithOpenrag(false);
+      });
+      expect(result.current.runWithOpenrag).toBe(false);
+
+      act(() => {
+        result.current.setRunWithOpenrag(true);
+      });
+      expect(result.current.runWithOpenrag).toBe(true);
     });
   });
 
