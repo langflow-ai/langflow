@@ -10,12 +10,12 @@ if TYPE_CHECKING:
     from lfx.components.data.directory import DirectoryComponent
     from lfx.components.data.file import FileComponent
     from lfx.components.data.json_to_data import JSONToDataComponent
+    from lfx.components.data.news_search import NewsSearchComponent
+    from lfx.components.data.rss import RSSReaderComponent
     from lfx.components.data.sql_executor import SQLComponent
     from lfx.components.data.url import URLComponent
     from lfx.components.data.web_search import WebSearchComponent
     from lfx.components.data.webhook import WebhookComponent
-    from lfx.components.data.news_search import NewsSearchComponent
-    from lfx.components.data.rss import RSSReaderComponent
 
 _dynamic_imports = {
     "APIRequestComponent": "api_request",
@@ -37,12 +37,12 @@ __all__ = [
     "DirectoryComponent",
     "FileComponent",
     "JSONToDataComponent",
+    "NewsSearchComponent",
+    "RSSReaderComponent",
     "SQLComponent",
     "URLComponent",
     "WebSearchComponent",
     "WebhookComponent",
-    "NewsSearchComponent",
-    "RSSReaderComponent",
 ]
 
 
