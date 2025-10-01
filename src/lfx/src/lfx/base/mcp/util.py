@@ -488,7 +488,7 @@ class MCPSessionManager:
         sessions = server_data["sessions"]
 
         # Try to find a healthy existing session
-        for session_id, session_info in sessions.items():
+        for session_id, session_info in list(sessions.items()):
             session = session_info["session"]
             task = session_info["task"]
 
