@@ -34,7 +34,7 @@ class OllamaEmbeddingsComponent(LCModelComponent):
         MessageTextInput(
             name="base_url",
             display_name="Ollama Base URL",
-            value="http://localhost:11434",
+            value="",
             required=True,
         ),
     ]
