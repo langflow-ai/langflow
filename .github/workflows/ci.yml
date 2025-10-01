@@ -186,8 +186,12 @@ jobs:
         with:
           filters: ./.github/changes-filter.yaml
       - name: Validate Filter Coverage
+
+        env:
+          BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || 'main' }}
         run: |
-          git diff --name-only ${{ github.event.pull_request.base.sha || 'origin/main' }} HEAD | python scripts/check_changes_filter.py
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          git diff --name-only "origin/$BASE_REF"...HEAD | python scripts/check_changes_filter.py
 
   test-backend:
     needs: [path-filter, set-ci-condition]
