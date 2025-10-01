@@ -2774,10 +2774,10 @@ name = "gassist"
 version = "0.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama" },
-    { name = "flask" },
-    { name = "flask-cors" },
-    { name = "tqdm" },
+    { name = "colorama", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "flask", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "flask-cors", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "tqdm", marker = "(platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b0/2e/f79632d7300874f7f0e60b61a6ab22455a245e1556116a1729542a77b0da/gassist-0.0.1-py3-none-any.whl", hash = "sha256:bb0fac74b453153a6c74b2db40a14fdde7879cbc10ec692ed170e576c8e2b6aa", size = 23819 },
@@ -5236,7 +5236,7 @@ requires-dist = [
     { name = "litellm", specifier = ">=1.60.2,<2.0.0" },
     { name = "llama-cpp-python", marker = "extra == 'local'", specifier = "~=0.2.0" },
     { name = "markdown", specifier = "==3.7" },
-    { name = "markitdown", specifier = ">=0.0.2" },
+    { name = "markitdown", specifier = ">=0.1.2" },
     { name = "markupsafe", specifier = "==3.0.2" },
     { name = "mcp", specifier = ">=1.10.1" },
     { name = "mem0ai", specifier = "==0.1.34" },
@@ -7346,9 +7346,9 @@ name = "ocrmac"
 version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
-    { name = "pillow" },
-    { name = "pyobjc-framework-vision" },
+    { name = "click", marker = "sys_platform == 'darwin'" },
+    { name = "pillow", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-vision", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/dd/dc/de3e9635774b97d9766f6815bbb3f5ec9bce347115f10d9abbf2733a9316/ocrmac-1.0.0.tar.gz", hash = "sha256:5b299e9030c973d1f60f82db000d6c2e5ff271601878c7db0885e850597d1d2e", size = 1463997 }
 wheels = [
@@ -9741,7 +9741,7 @@ name = "pyobjc-framework-cocoa"
 version = "11.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
+    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4b/c5/7a866d24bc026f79239b74d05e2cf3088b03263da66d53d1b4cf5207f5ae/pyobjc_framework_cocoa-11.1.tar.gz", hash = "sha256:87df76b9b73e7ca699a828ff112564b59251bb9bbe72e610e670a4dc9940d038", size = 5565335 }
 wheels = [
@@ -9757,8 +9757,8 @@ name = "pyobjc-framework-coreml"
 version = "11.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
-    { name = "pyobjc-framework-cocoa" },
+    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-cocoa", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0d/5d/4309f220981d769b1a2f0dcb2c5c104490d31389a8ebea67e5595ce1cb74/pyobjc_framework_coreml-11.1.tar.gz", hash = "sha256:775923eefb9eac2e389c0821b10564372de8057cea89f1ea1cdaf04996c970a7", size = 82005 }
 wheels = [
@@ -9774,8 +9774,8 @@ name = "pyobjc-framework-quartz"
 version = "11.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
-    { name = "pyobjc-framework-cocoa" },
+    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-cocoa", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c7/ac/6308fec6c9ffeda9942fef72724f4094c6df4933560f512e63eac37ebd30/pyobjc_framework_quartz-11.1.tar.gz", hash = "sha256:a57f35ccfc22ad48c87c5932818e583777ff7276605fef6afad0ac0741169f75", size = 3953275 }
 wheels = [
@@ -9791,10 +9791,10 @@ name = "pyobjc-framework-vision"
 version = "11.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
-    { name = "pyobjc-framework-cocoa" },
-    { name = "pyobjc-framework-coreml" },
-    { name = "pyobjc-framework-quartz" },
+    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-cocoa", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-coreml", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-quartz", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/40/a8/7128da4d0a0103cabe58910a7233e2f98d18c590b1d36d4b3efaaedba6b9/pyobjc_framework_vision-11.1.tar.gz", hash = "sha256:26590512ee7758da3056499062a344b8a351b178be66d4b719327884dde4216b", size = 133721 }
 wheels = [
