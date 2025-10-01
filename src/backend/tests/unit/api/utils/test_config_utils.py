@@ -529,3 +529,212 @@ class TestMultiUserMCPServerAccess:
 
         response_two = await client.get(f"/api/v2/mcp/servers/{server_name}", headers={"x-api-key": user_two_api_key})
         assert response_two.json() is None
+
+
+class TestMCPWithDefaultFolderName:
+    """Test MCP configuration with different DEFAULT_FOLDER_NAME values."""
+
+    @pytest.mark.asyncio
+    async def test_mcp_finds_default_folder_standard_mode(self, client: AsyncClient):  # noqa: ARG002
+        """Test that MCP finds the correct folder in standard mode (Starter Project)."""
+        user_id = uuid4()
+        project_id = uuid4()
+        flow_id = uuid4()
+
+        async with session_scope() as session:
+            # Create user
+            user = User(id=user_id, username=f"test_default_folder_{user_id}", password="hashed_password")  # noqa: S106
+            session.add(user)
+
+            # Create folder with DEFAULT_FOLDER_NAME (should match current setting)
+            folder = Folder(id=project_id, name=DEFAULT_FOLDER_NAME, user_id=user_id, description="Test folder")
+            session.add(folder)
+
+            # Create flow in folder
+            flow = Flow(
+                id=flow_id,
+                name="Test Flow",
+                description="A test flow",
+                folder_id=project_id,
+                user_id=user_id,
+                is_component=False,
+                mcp_enabled=None,
+            )
+            session.add(flow)
+
+            await session.commit()
+
+        try:
+            async with session_scope() as session:
+                from langflow.services.deps import get_settings_service
+
+                settings_service = get_settings_service()
+                original_setting = settings_service.settings.add_projects_to_mcp_servers
+
+                try:
+                    settings_service.settings.add_projects_to_mcp_servers = True
+                    await auto_configure_starter_projects_mcp(session)
+
+                    # Verify folder was found and processed
+                    updated_folder = await session.get(Folder, project_id)
+                    assert updated_folder is not None
+                    assert updated_folder.name == DEFAULT_FOLDER_NAME
+
+                finally:
+                    settings_service.settings.add_projects_to_mcp_servers = original_setting
+
+        finally:
+            # Cleanup
+            async with session_scope() as session:
+                flow_to_delete = await session.get(Flow, flow_id)
+                if flow_to_delete:
+                    await session.delete(flow_to_delete)
+                folder_to_delete = await session.get(Folder, project_id)
+                if folder_to_delete:
+                    await session.delete(folder_to_delete)
+                user_to_delete = await session.get(User, user_id)
+                if user_to_delete:
+                    await session.delete(user_to_delete)
+                await session.commit()
+
+    @pytest.mark.asyncio
+    async def test_mcp_with_legacy_folder_after_migration(self, client: AsyncClient):  # noqa: ARG002
+        """Test that MCP finds migrated folders after enabling OpenRAG mode."""
+        import os
+
+        user_id = uuid4()
+        project_id = uuid4()
+        flow_id = uuid4()
+
+        # Only run this test when OpenRAG is enabled
+        run_with_openrag = os.getenv("RUN_WITH_OPENRAG", "").lower() == "true"
+        if not run_with_openrag:
+            pytest.skip("Test only applicable when RUN_WITH_OPENRAG is enabled")
+
+        async with session_scope() as session:
+            # Create user
+            user = User(id=user_id, username=f"test_migrated_{user_id}", password="hashed_password")  # noqa: S106
+            session.add(user)
+
+            # Create folder with legacy name that will be migrated
+            legacy_folder = Folder(id=project_id, name="Starter Project", user_id=user_id, description="Legacy folder")
+            session.add(legacy_folder)
+
+            # Create flow in folder
+            flow = Flow(
+                id=flow_id,
+                name="Test Flow in Legacy Folder",
+                description="A test flow",
+                folder_id=project_id,
+                user_id=user_id,
+                is_component=False,
+                mcp_enabled=None,
+            )
+            session.add(flow)
+
+            await session.commit()
+
+        try:
+            # Trigger migration by calling get_or_create_default_folder
+            from langflow.initial_setup.setup import get_or_create_default_folder
+
+            async with session_scope() as session:
+                migrated_folder = await get_or_create_default_folder(session, user_id)
+                assert migrated_folder.name == "OpenRAG"
+                assert migrated_folder.id == project_id  # Same folder, renamed
+
+            # Now test that MCP can find the migrated folder
+            async with session_scope() as session:
+                from langflow.services.deps import get_settings_service
+
+                settings_service = get_settings_service()
+                original_setting = settings_service.settings.add_projects_to_mcp_servers
+
+                try:
+                    settings_service.settings.add_projects_to_mcp_servers = True
+                    await auto_configure_starter_projects_mcp(session)
+
+                    # Verify MCP found the migrated folder
+                    updated_folder = await session.get(Folder, project_id)
+                    assert updated_folder is not None
+                    assert updated_folder.name == "OpenRAG"
+
+                finally:
+                    settings_service.settings.add_projects_to_mcp_servers = original_setting
+
+        finally:
+            # Cleanup
+            async with session_scope() as session:
+                flow_to_delete = await session.get(Flow, flow_id)
+                if flow_to_delete:
+                    await session.delete(flow_to_delete)
+                folder_to_delete = await session.get(Folder, project_id)
+                if folder_to_delete:
+                    await session.delete(folder_to_delete)
+                user_to_delete = await session.get(User, user_id)
+                if user_to_delete:
+                    await session.delete(user_to_delete)
+                await session.commit()
+
+    @pytest.mark.asyncio
+    async def test_mcp_skips_wrong_folder_name(self, client: AsyncClient):  # noqa: ARG002
+        """Test that MCP skips folders that don't match DEFAULT_FOLDER_NAME."""
+        user_id = uuid4()
+        project_id = uuid4()
+        flow_id = uuid4()
+
+        async with session_scope() as session:
+            # Create user
+            user = User(id=user_id, username=f"test_wrong_folder_{user_id}", password="hashed_password")  # noqa: S106
+            session.add(user)
+
+            # Create folder with different name
+            folder = Folder(id=project_id, name="Some Other Folder", user_id=user_id, description="Wrong folder")
+            session.add(folder)
+
+            # Create flow in folder
+            flow = Flow(
+                id=flow_id,
+                name="Test Flow",
+                description="A test flow",
+                folder_id=project_id,
+                user_id=user_id,
+                is_component=False,
+                mcp_enabled=None,
+            )
+            session.add(flow)
+
+            await session.commit()
+
+        try:
+            async with session_scope() as session:
+                from langflow.services.deps import get_settings_service
+
+                settings_service = get_settings_service()
+                original_setting = settings_service.settings.add_projects_to_mcp_servers
+
+                try:
+                    settings_service.settings.add_projects_to_mcp_servers = True
+                    # Should not raise an error, just skip this user
+                    await auto_configure_starter_projects_mcp(session)
+
+                    # Verify flow was NOT configured (still None or False)
+                    updated_flow = await session.get(Flow, flow_id)
+                    assert updated_flow.mcp_enabled in [None, False]
+
+                finally:
+                    settings_service.settings.add_projects_to_mcp_servers = original_setting
+
+        finally:
+            # Cleanup
+            async with session_scope() as session:
+                flow_to_delete = await session.get(Flow, flow_id)
+                if flow_to_delete:
+                    await session.delete(flow_to_delete)
+                folder_to_delete = await session.get(Folder, project_id)
+                if folder_to_delete:
+                    await session.delete(folder_to_delete)
+                user_to_delete = await session.get(User, user_id)
+                if user_to_delete:
+                    await session.delete(user_to_delete)
+                await session.commit()
