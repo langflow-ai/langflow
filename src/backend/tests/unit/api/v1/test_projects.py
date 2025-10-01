@@ -476,7 +476,7 @@ class TestProjectMCPIntegration:
 
             # Mock API key creation
             mock_api_key_response = MagicMock()
-            mock_api_key_response.api_key = "test-api-key-123" #pragma: allowlist secret
+            mock_api_key_response.api_key = "test-api-key-123"  # pragma: allowlist secret
             mock_create_api_key.return_value = mock_api_key_response
 
             # Mock validation - no conflict
