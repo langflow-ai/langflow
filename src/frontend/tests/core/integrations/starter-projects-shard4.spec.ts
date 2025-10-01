@@ -2,7 +2,7 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
-  "user should be able to use final quarter of starter projects without any outdated components on the flow",
+  "user should be able to use fourth quarter of starter projects without any outdated components on the flow",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);

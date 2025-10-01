@@ -2,7 +2,7 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
-  "user should be able to use third quarter of starter projects without any outdated components on the flow",
+  "user should be able to use second quarter of starter projects without any outdated components on the flow",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
@@ -13,11 +13,11 @@ test(
       .getByTestId("text_card_container")
       .count();
 
+    const firstQuarterEnd = Math.ceil(numberOfTemplates / 4);
     const secondQuarterEnd = Math.ceil((numberOfTemplates * 2) / 4);
-    const thirdQuarterEnd = Math.ceil((numberOfTemplates * 3) / 4);
     let numberOfOutdatedComponents = 0;
 
-    for (let i = secondQuarterEnd; i < thirdQuarterEnd; i++) {
+    for (let i = firstQuarterEnd; i < secondQuarterEnd; i++) {
       const exampleName = await page
         .getByTestId("text_card_container")
         .nth(i)
