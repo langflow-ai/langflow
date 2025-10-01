@@ -15,12 +15,11 @@ from lfx.schema.data import Data
 from lfx.schema.message import Message
 
 
-class CreateDataComponent(Component):
-    display_name: str = "Create Data"
+class DynamicCreateDataComponent(Component):
+    display_name: str = "Dynamic Create Data"
     description: str = "Dynamically create a Data with a specified number of fields."
-    name: str = "CreateData"
+    name: str = "DynamicCreateData"
     MAX_FIELDS = 15  # Define a constant for maximum number of fields
-    replacement = ["processing.DataOperations"]
     icon = "ListFilter"
 
     def __init__(self, **kwargs):
