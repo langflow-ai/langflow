@@ -76,7 +76,7 @@ class MCPToolsComponent(ComponentWithCache):
                 "Enable caching of MCP Server and tools to improve performance. "
                 "Disable to always fetch fresh tools and server updates."
             ),
-            value=False,
+            value=True,
             advanced=True,
         ),
         DropdownInput(
