@@ -1,9 +1,10 @@
+import re
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_ollama import ChatOllama
-
 from lfx.components.ollama.ollama import ChatOllamaComponent
+
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -74,7 +75,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         mock_chat_ollama.side_effect = Exception("connection error")
         component = component_class(**default_kwargs)
         component.base_url = None
-        with pytest.raises(ValueError, match="Unable to connect to the Ollama API."):
+        with pytest.raises(ValueError, match=re.escape("Unable to connect to the Ollama API.")):
             component.build_model()
 
     @pytest.mark.asyncio
@@ -114,7 +115,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         component = ChatOllamaComponent()
         mock_get.side_effect = httpx.RequestError("Connection error", request=None)
         base_url = "http://localhost:11434"
-        with pytest.raises(ValueError, match="Could not get model names from Ollama."):
+        with pytest.raises(ValueError, match=re.escape("Could not get model names from Ollama.")):
             await component.get_models(base_url)
 
     @pytest.mark.asyncio
@@ -161,7 +162,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         }
         field_value = None
         field_name = "model_name"
-        with pytest.raises(ValueError, match="No valid Ollama URL found"):
+        with pytest.raises(ValueError, match=re.escape("No valid Ollama URL found")):
             await component.update_build_config(build_config, field_value, field_name)
 
     @pytest.mark.asyncio
