@@ -102,7 +102,7 @@ Effective monitoring ensures Langflow operates reliably and performs well under 
 * **Application logs**: Collect and analyze logs for errors, warnings, and flow execution issues. Centralize logs using tools like ELK Stack or Fluentd. You can also inspect [Langflow logs](/logging).
 * **Resource usage**: Track CPU, memory, and disk usage of Langflow instances. Use Prometheus and Grafana for real-time metrics collection and monitoring in Kubernetes.
 
-    To expose your Langflow server's Prometheus metrics, set `LANGFLOW_PROMETHEUS_ENABLED=True` (the default is false).
+    To expose your Langflow server's Prometheus metrics, set `LANGFLOW_PROMETHEUS_ENABLED=True` (the default is `false`).
     The default port for the Prometheus metrics is 9090.
     To change the port, set `LANGFLOW_PROMETHEUS_PORT`.
 
