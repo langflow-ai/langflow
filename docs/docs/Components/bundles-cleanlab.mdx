@@ -8,133 +8,101 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
 [Cleanlab](https://www.cleanlab.ai/) adds automation and trust to every data point going in and every prediction coming out of AI and RAG solutions.
 
-Use the Cleanlab components to integrate Cleanlab Evaluations with Langflow and unlock trustworthy agentic, RAG, and LLM pipelines with Cleanlab's evaluation and remediation suite.
+Integrate the **Cleanlab** component with Langflow and unlock trustworthy agentic, RAG, and LLM pipelines by utilizing Cleanlab's evaluation and remediation suite.
 
-You can use these components to quantify the trustworthiness of any LLM response with a score between `0` and `1`, and explain why a response may be good or bad. For RAG or agent pipelines with context, you can evaluate context sufficiency, groundedness, helpfulness, and query clarity with quantitative scores. Additionally, you can remediate low-trust responses with warnings or fallback answers.
+This component evaluates the quality of an LLM response using Cleanlab, optionally remediating the response with fallback text or expert-provided answers, provided in the [Cleanlab AI Platform](https://help.cleanlab.ai/codex/).
 
-Authentication is required with a Cleanlab API key.
+Authentication is required with a Cleanlab API key. You can submit a request for one [here](https://cleanlab.ai/contact/).
 
-## Cleanlab Evaluator
+## Cleanlab Component
 
-The **Cleanlab Evaluator** component evaluates and explains the trustworthiness of a prompt and response pair using Cleanlab. For more information on how the score works, see the [Cleanlab documentation](https://help.cleanlab.ai/tlm/).
+The **Cleanlab** component validates an AI-generated response against the same inputs your LLM saw (system message, user input, query, and optional context). It can automatically replace untrustworthy/unhelpful responses with fallback or expert answers.
 
-### Cleanlab Evaluator parameters
+Currently, this component only supports single-turn conversations. The component will still function with multi-turn conversations, but it will only validate the last message in the conversation with no context of prior message history. If you need support for multi-turn conversations with message history, please reach out to Cleanlab at [support@cleanlab.ai](mailto:support@cleanlab.ai).
 
-<PartialParams />
-
-| Name                    | Type       | Description                        |
-|-------------------------|------------|------------------------------------|
-| system_prompt           | Message    | Input parameter. The system message prepended to the prompt. Optional. |
-| prompt                  | Message    | Input parameter. The user-facing input to the LLM.  |
-| response                | Message    | Input parameter. The model's response to evaluate.    |
-| cleanlab_api_key        | Secret     | Input parameter. Your Cleanlab API key.  |
-| cleanlab_evaluation_model | Dropdown   | Input parameter. Evaluation model used by Cleanlab, such as GPT-4 or Claude. This doesn't need to be the same model that generated the response. |
-| quality_preset          | Dropdown   | Input parameter. Tradeoff between evaluation speed and accuracy. |
-
-### Cleanlab Evaluator outputs
-
-The **Cleanlab Evaluator** component has three possible outputs.
-
-| Name                    | Type       | Description            |
-|-------------------------|------------|-------------------------|
-| score                   | number, float | Displays the trust score between 0 and 1.  |
-| explanation             | `Message`    | Provides an explanation of the trust score. |
-| response                | `Message`    | Returns the original response for easy chaining to the **Cleanlab Remediator** component. |
-
-## Cleanlab Remediator
-
-The **Cleanlab Remediator** component uses the trust score from the [**Cleanlab Evaluator** component](#cleanlab-evaluator) to determine whether to show, warn about, or replace an LLM response.
-
-This component has parameters for the score threshold, warning text, and fallback message that you can customize as needed.
-
-The output is **Remediated Response** (`remediated_response`), which is a `Message` containing the final message shown to the user after remediation logic is applied.
-
-### Cleanlab Remediator parameters
-
-| Name                        | Type       | Description |
-|-----------------------------|------------|---------|
-| response                    | Message    | Input parameter. The response to potentially remediate.  |
-| score                       | Number     | Input parameter. The trust score from `CleanlabEvaluator`. |
-| explanation                 | Message    | Input parameter. The explanation to append if a warning is shown. Optional.|
-| threshold                   | Float      | Input parameter. The minimum trust score to pass a response unchanged.  |
-| show_untrustworthy_response | Boolean      | Input parameter. Whether to display or hide the original response with a warning if a response is deemed untrustworthy. |
-| untrustworthy_warning_text  | Prompt     | Input parameter. The warning text for untrustworthy responses. |
-| fallback_text              | Prompt     | Input parameter. The fallback message if the response is hidden. |
-
-## Cleanlab RAG Evaluator
-
-The **Cleanlab RAG Evaluator** component evaluates RAG and LLM pipeline outputs for trustworthiness, context sufficiency, response groundedness, helpfulness, and query ease using [Cleanlab's evaluation metrics](https://help.cleanlab.ai/tlm/use-cases/tlm_rag/).
-
-You can pair this component with the [**Cleanlab Remediator** component](#cleanlab-remediator) to remediate low-trust responses coming from the RAG pipeline.
-
-### Cleanlab RAG Evaluator parameters
+### Cleanlab Inputs
 
 <PartialParams />
 
-| Name                        | Type       | Description |
-|-----------------------------|------------|------------|
-| cleanlab_api_key           | Secret     | Input parameter. Your Cleanlab API key.    |
-| cleanlab_evaluation_model  | Dropdown   | Input parameter. The evaluation model used by Cleanlab, such as GPT-4, or Claude. This doesn't need to be the same model that generated the response. |
-| quality_preset             | Dropdown   | Input parameter. The tradeoff between evaluation speed and accuracy.  |
-| context                    | Message    | Input parameter. The retrieved context from your RAG system.   |
-| query                      | Message    | Input parameter. The original user query.   |
-| response                   | Message    | Input parameter. The model's response based on the context and query. |
-| run_context_sufficiency    | Boolean      | Input parameter. Evaluate whether context supports answering the query.  |
-| run_response_groundedness  | Boolean      | Input parameter. Evaluate whether the response is grounded in the context. |
-| run_response_helpfulness   | Boolean      | Input parameter. Evaluate how helpful the response is.  |
-| run_query_ease            | Boolean      | Input parameter. Evaluate if the query is vague, complex, or adversarial. |
+| Name            | Type     | Description                                                                 |
+|-----------------|----------|-----------------------------------------------------------------------------|
+| api_key         | Secret   | Your Cleanlab API (project access) key.                                                      |
+| input           | Message  | The complete input message passed into the LLM to produce the response.          |
+| query           | Message  | The user's core query (latest user message). This must be present in the `input`.                                |
+| response        | Message  | The AI-generated response to validate.                                      |
+| context         | Message  | (Optional) Retrieved context for the query. Defaults to empty string if not provided. This must be present in the `input`.   |
+| system_message  | Message  | (Optional) A system message prepended as the first message.                  |
+| fallback_text   | Prompt   | Fallback message if the response is flagged bad and no expert answer exists. |
 
-### Cleanlab RAG Evaluator outputs
+### Cleanlab Outputs
 
-The **Cleanlab RAG Evaluator** component has the following output options:
+The **Cleanlab** component outputs a single message:
 
-| Name               | Type       | Description              |
-|--------------------|------------|--------------------------|
-| trust_score        | Number     | The overall trust score. |
-| trust_explanation  | Message    | The explanation for the trust score. |
-| other_scores       | Dictionary | A dictionary of optional enabled RAG evaluation metrics. |
-| evaluation_summary | Message    | A Markdown summary of query, context, response, and evaluation results. |
-| response           | Message    | Returns the original response for easy chaining to the **Cleanlab Remediator** component. |
+| Name           | Type     | Description                                                                 |
+|----------------|----------|-----------------------------------------------------------------------------|
+| final_response | Message  | Either the original response, an expert remediated answer, or the fallback text. |
 
-## Example Cleanlab flows
 
-The following example flows show how to use the **Cleanlab Evaluator** and **Cleanlab Remediator** components to evaluate and remediate responses from any LLM, and how to use the **Cleanlab RAG Evaluator** component to evaluate RAG pipeline outputs.
+## Quickstart
 
-### Evaluate and remediate responses from an LLM
+You can download the [Cleanlab Quickstart flow](/files/eval_and_remediate_cleanlab.json), and then [import the flow](/concepts-flows-import) to your Langflow instance. This flow takes in a user's query, does a web search to retrieve relevant context, then serves an answer.
 
-This flow evaluates and remediates the trustworthiness of a response from any LLM using the **Cleanlab Evaluator** and **Cleanlab Remediator** components.
+![Cleanlab Example Flow](/img/cleanlab-flow-example.png)
 
-You can [download the Evaluate and Remediate flow](/files/eval_and_remediate_cleanlab.json), and then [import the flow](/concepts-flows-import) to your Langflow instance.
-Or, you can build the flow from scratch by connecting the following components:
+This example flow shows how to insert **Cleanlab** at the end of the generation to validate and remediate the model response:
 
-* Connect the `Message` output from any **Language Model** or **Agent** component to the **Response** input of the **Cleanlab Evaluator** component.
-* Connect a **Prompt Template** component to the **Cleanlab Evaluator** component's **Prompt** input.
+* Connect the `Model Response` from your LLM or Agent to the **Model Response** input.
+* Connect the original input `query` to the `User Query` input. This should be the core user query that `Model Response` is answering. For most cases this is just the output from the `Chat Input` component.
+* (Optional) Connect the retrieved `context` to the `Context` input. This can be any information added into the prompt after the user query.
+* (Optional) Connect your system instructions or messages to the `System Message` input. This should include any instructions or system messages provided to the LLM.
 
-<!-- Components missing per image -->
+You will also need to create a [Project](https://help.cleanlab.ai/codex/concepts/projects/) within the Cleanlab Platform and add the [Access Key](https://help.cleanlab.ai/codex/web_tutorials/create_project/#access-keys) from the Settings page of the Project into the `API Key` field of the Component.
 
-![Evaluate response trustworthiness](/img/eval_response.png)
+When you run the flow, **Cleanlab** will either validate and return the original response, replace it with an expert-provided answer, or fall back to your configured fallback text. This is enabled by Cleanlab's novel uncertainty estimation algorithms, developed to reliably evaluate LLM inputs and outputs.
 
-When you run the flow, the **Cleanlab Evaluator** component returns a trust score and explanation from the flow.
+Here's an example of a response to the query "How can Cleanlab improve my AI app?" that passed validation.
 
-The **Cleanlab Remediator** component uses this trust score to determine whether to output the original response, warn about it, or replace it with a fallback answer.
+![Response Passed Validation](/img/cleanlab-response-passed-validation.png)
 
-This example shows a response that was determined to be untrustworthy (a score of `.09`) and flagged with a warning by the **Cleanlab Remediator** component.
+You can view the respective query and all the associated scores that Cleanlab provides in the Project you created earlier. Here is what the query looks like in the Cleanlab AI Platform. Notice how the trustworthiness score has passed validation (score = 0.985)!
 
-![Cleanlab Remediator Example](/img/cleanlab_remediator_example.png)
+![Cleanlab AI Platform](/img/cleanlab-ai-platform.png)
 
-To hide untrustworthy responses, configure the **Cleanlab Remediator** component to replace the response with a fallback message.
+Let's try something more fun (and complex): `"How many basketballs fit between the earth and sun?"` In this case, we see that the flow returns the provided fallback answer, which means Cleanlab has flagged the original response.
 
-![Cleanlab Remediator Example](/img/cleanlab_remediator_example_fallback.png)
+![Cleanlab Fallback example](/img/cleanlab-fallback.png)
 
-### Evaluate RAG pipeline
+If we take a closer look at this query in the Cleanlab AI Platform, we see that the original response given was entirely incorrect and was flagged correctly (score = 0.269)!
 
-As an example, create a flow based on the **Vector Store RAG** template, and then add the **Cleanlab RAG Evaluator** component to evaluate the flow's context, query, and response.
-Connect the **context**, **query**, and **response** outputs from the other components in the RAG flow to the **Cleanlab RAG Evaluator** component.
+![Cleanlab flags wrong response](/img/cleanlab-wrong-response.png)
 
-![Evaluate RAG pipeline](/img/eval_rag.png)
+## Guardrails and Evaluations
 
-Here is an example of the `Evaluation Summary` output from the **Cleanlab RAG Evaluator** component:
+At the core of the Cleanlab AI Platform lies Guardrails and Evaluations.
 
-![Evaluate RAG pipeline](/img/eval_summary_rag.png)
+**Guardrails** are safety mechanisms that block AI outputs when they fail to meet specified criteria. When a guardrail is triggered, the AI response is prevented from reaching the user, and an alternative response (such as an SME-provided answer) is served instead.
 
-The `Evaluation Summary` includes the query, context, response, and all evaluation results. In this example, the `Context Sufficiency` and `Response Groundedness` scores are low (a score of `0.002`) because the context doesn't contain information about the query, and the response isn't grounded in the context.
+**Evaluations** are monitoring tools used for analytics and visibility. They score AI responses based on specific criteria but do not block outputs. Evaluations help you understand AI performance patterns and identify areas for improvement.
+
+For detailed configuration of guardrails and evaluations, see the [Guardrails & Evaluations](https://help.cleanlab.ai/codex/web_tutorials/codex_guardrails_evals/) documentation.
+
+You have the ability to create custom guardrails and evaluations in a few minutes. Let's add the following guardrail to the Project:
+
+![Cleanlab add guardrail](/img/cleanlab-politics-guardrail.png)
+
+Now, when the AI responds with something political, the guardrail is triggered, and the fallback response is returned in its place.
+
+![Cleanlab politics guardrailed](/img/cleanlab-politics-guardrailed.png)
+![Cleanlab politics guardrailed chat](/img/cleanlab-politics-guardrailed-chat.png)
+
+## Remediations
+
+The Cleanlab AI Platform also enables Subject Matter Experts (SMEs) to directly improve your AI application by providing Expert Answers for issues flagged by the Guardrails and Evaluations. Simply navigate to the `Issues` tab where all flagged user queries will be aggregated and prioritized for easy remediation.
+
+For the basketball question earlier, we can directly add the correct answer here.
+
+![Cleanlab add remediation](/img/cleanlab-add-remediation.png)
+
+Then, when a user asks the same or sementically similar query in the future, instead of returning the unhelpful fallback answer, Cleanlab serves the newly added Expert Answer automatically.
+
+![Cleanlab expert answer](/img/cleanlab-expert-answer.png)
