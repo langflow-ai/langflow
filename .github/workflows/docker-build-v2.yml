@@ -54,7 +54,7 @@ env:
 jobs:
   build-base:
     name: Build Base Package
-    if: inputs.release_type == 'base'
+    if: ${{ inputs.release_type == 'base' }}
     strategy:
       matrix:
         include:
@@ -138,7 +138,7 @@ jobs:
 
   build-main:
     name: Build Main Package
-    if: inputs.release_type == 'main'
+    if: ${{ inputs.release_type == 'main' }}
     strategy:
       matrix:
         include:
@@ -222,7 +222,7 @@ jobs:
 
   build-main-ep:
     name: Build Main EP Package
-    if: inputs.release_type == 'main-ep'
+    if: ${{ inputs.release_type == 'main-ep' }}
     strategy:
       matrix:
         include:
@@ -306,7 +306,7 @@ jobs:
 
   build-main-all:
     name: Build Main All Package
-    if: inputs.release_type == 'main-all'
+    if: ${{ inputs.release_type == 'main-all' }}
     strategy:
       matrix:
         include:
@@ -391,7 +391,7 @@ jobs:
     name: Create Multi-Arch Manifest
     needs: [build-base, build-main, build-main-ep, build-main-all]
     runs-on: ubuntu-latest
-    if: always() && inputs.push_to_registry && (needs.build-base.result == 'success' || needs.build-main.result == 'success' || needs.build-main-ep.result == 'success' || needs.build-main-all.result == 'success')
+    if: ${{ always() && inputs.push_to_registry && (needs.build-base.result == 'success' || needs.build-main.result == 'success' || needs.build-main-ep.result == 'success' || needs.build-main-all.result == 'success') }}
     steps:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6

@@ -44,7 +44,7 @@ env:
 jobs:
   build-nightly-base:
     name: Build Nightly Base Package
-    if: inputs.release_type == 'nightly-base'
+    if: ${{ inputs.release_type == 'nightly-base' }}
     strategy:
       matrix:
         include:
@@ -135,7 +135,7 @@ jobs:
 
   build-nightly-main:
     name: Build Nightly Main Package
-    if: inputs.release_type == 'nightly-main'
+    if: ${{ inputs.release_type == 'nightly-main' }}
     strategy:
       matrix:
         include:
@@ -226,7 +226,7 @@ jobs:
 
   build-nightly-main-all:
     name: Build Nightly Main All Package
-    if: inputs.release_type == 'nightly-main-all'
+    if: ${{ inputs.release_type == 'nightly-main-all' }}
     strategy:
       matrix:
         include:
@@ -319,7 +319,7 @@ jobs:
     name: Create Multi-Arch Nightly Manifest
     needs: [build-nightly-base, build-nightly-main, build-nightly-main-all]
     runs-on: ubuntu-latest
-    if: always() && inputs.push_to_registry && (needs.build-nightly-base.result == 'success' || needs.build-nightly-main.result == 'success' || needs.build-nightly-main-all.result == 'success')
+    if: ${{ always() && inputs.push_to_registry && (needs.build-nightly-base.result == 'success' || needs.build-nightly-main.result == 'success' || needs.build-nightly-main-all.result == 'success') }}
     steps:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
