@@ -120,7 +120,6 @@ jobs:
           echo "✅ Release dependencies validated successfully."
 
   ci:
-    if: ${{ inputs.release_package_base || inputs.release_package_main || inputs.build_docker_base || inputs.build_docker_main || inputs.build_docker_ep }}
     name: CI
     needs: [validate-tag, validate-dependencies]
     uses: ./.github/workflows/ci.yml
