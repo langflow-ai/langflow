@@ -106,7 +106,7 @@ class TestFileComponentDynamicOutputs:
             "advanced_mode": {"show": True, "value": False},
             "pipeline": {"show": False},
             "ocr_engine": {"show": False},
-            "path": {"file_path": ["test.csv"]}
+            "path": {"file_path": ["test.csv"]},
         }
 
         result = component.update_build_config(build_config, ["test.csv"], "path")
