@@ -15,6 +15,7 @@ class AmazonBedrockComponent(LCModelComponent):
     icon = "Amazon"
     name = "AmazonBedrockModel"
     legacy = True
+    replacement = "amazon.AmazonBedrockConverseComponent"
 
     inputs = [
         *LCModelComponent.get_base_inputs(),

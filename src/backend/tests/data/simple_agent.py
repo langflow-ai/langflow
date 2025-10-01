@@ -24,8 +24,6 @@ from lfx.utils.async_helpers import run_until_complete
 # Using the new flattened component access
 from lfx import components as cp
 
-# Using the new flattened component access
-
 log_config = LogConfig(
     log_level="INFO",
     log_file=Path("langflow.log"),

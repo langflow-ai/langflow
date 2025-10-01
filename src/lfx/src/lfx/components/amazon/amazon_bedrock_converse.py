@@ -1,8 +1,9 @@
-from langflow.base.models.aws_constants import AWS_REGIONS, AWS_MODEL_IDs
-from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs.inputs import BoolInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 from langflow.io import DictInput, DropdownInput
+
+from lfx.base.models.aws_constants import AWS_REGIONS, AWS_MODEL_IDs
+from lfx.base.models.model import LCModelComponent
 
 
 class AmazonBedrockConverseComponent(LCModelComponent):
