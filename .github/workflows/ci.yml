@@ -185,13 +185,24 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: ./.github/changes-filter.yaml
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deps for coverage check
+        run: |
+          python -m pip install --upgrade pip
+          pip install --disable-pip-version-check --no-cache-dir pyyaml
       - name: Validate Filter Coverage
         continue-on-error: true
-        env:
-          BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || 'main' }}
+        shell: bash
         run: |
-          git fetch --no-tags --depth=1 origin "$BASE_REF"
-          git diff --name-only "origin/$BASE_REF"...HEAD | python scripts/check_changes_filter.py
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          BASE_REF="${{ github.event.pull_request.base.ref || 'main' }}"
+          # Ensure base commit is present locally
+          git fetch --no-tags --depth=1 origin "$BASE_REF" || true
+          git fetch --no-tags --depth=1 origin "$BASE_SHA" || true
+          git diff --name-only "${BASE_SHA:-origin/$BASE_REF}"...HEAD | python scripts/check_changes_filter.py
 
   test-backend:
     needs: [path-filter, set-ci-condition]
