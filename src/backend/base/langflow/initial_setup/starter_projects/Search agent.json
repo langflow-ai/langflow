@@ -112,7 +112,7 @@
                   },
                   {
                     "name": "scrapegraph_py",
-                    "version": "1.30.0"
+                    "version": "1.31.0"
                   }
                 ],
                 "total_dependencies": 2
@@ -553,7 +553,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.117.1"
+                    "version": "0.118.0"
                   },
                   {
                     "name": "lfx",
