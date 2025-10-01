@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import inspect
+import json
 import os
 import platform
 import re
@@ -198,7 +199,7 @@ def _camel_to_snake(name: str) -> str:
     return s1.lower()
 
 
-def _convert_field_names(provided_args: dict[str, Any], arg_schema: type[BaseModel]) -> dict[str, Any]:
+def _convert_camel_case_to_snake_case(provided_args: dict[str, Any], arg_schema: type[BaseModel]) -> dict[str, Any]:
     """Convert camelCase field names to snake_case if the schema expects snake_case fields."""
     schema_fields = set(arg_schema.model_fields.keys())
     converted_args = {}
@@ -220,6 +221,24 @@ def _convert_field_names(provided_args: dict[str, Any], arg_schema: type[BaseMod
     return converted_args
 
 
+def _handle_tool_validation_error(
+    e: Exception, tool_name: str, provided_args: dict[str, Any], arg_schema: type[BaseModel]
+) -> None:
+    """Handle validation errors for tool arguments with detailed error messages."""
+    # Check if this is a case where the tool was called with no arguments
+    if not provided_args and hasattr(arg_schema, "model_fields"):
+        required_fields = [name for name, field in arg_schema.model_fields.items() if field.is_required()]
+        if required_fields:
+            msg = (
+                f"Tool '{tool_name}' requires arguments but none were provided. "
+                f"Required fields: {', '.join(required_fields)}. "
+                f"Please check that the LLM is properly calling the tool with arguments."
+            )
+            raise ValueError(msg) from e
+    msg = f"Invalid input: {e}"
+    raise ValueError(msg) from e
+
+
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
     async def tool_coroutine(*args, **kwargs):
         # Get field names from the model (preserving order)
@@ -233,24 +252,12 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
             provided_args[field_names[i]] = arg
         # Merge in keyword arguments
         provided_args.update(kwargs)
-        # Convert camelCase field names to snake_case if needed
-        provided_args = _convert_field_names(provided_args, arg_schema)
+        provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
         # Validate input and fill defaults for missing optional fields
         try:
             validated = arg_schema.model_validate(provided_args)
-        except Exception as e:
-            # Check if this is a case where the tool was called with no arguments
-            if not provided_args and hasattr(arg_schema, "model_fields"):
-                required_fields = [name for name, field in arg_schema.model_fields.items() if field.is_required()]
-                if required_fields:
-                    msg = (
-                        f"Tool '{tool_name}' requires arguments but none were provided. "
-                        f"Required fields: {', '.join(required_fields)}. "
-                        f"Please check that the LLM is properly calling the tool with arguments."
-                    )
-                    raise ValueError(msg) from e
-            msg = f"Invalid input: {e}"
-            raise ValueError(msg) from e
+        except Exception as e:  # noqa: BLE001
+            _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
 
         try:
             return await client.run_tool(tool_name, arguments=validated.model_dump())
@@ -273,23 +280,11 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
                 raise ValueError(msg)
             provided_args[field_names[i]] = arg
         provided_args.update(kwargs)
-        # Convert camelCase field names to snake_case if needed
-        provided_args = _convert_field_names(provided_args, arg_schema)
+        provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
         try:
             validated = arg_schema.model_validate(provided_args)
-        except Exception as e:
-            # Check if this is a case where the tool was called with no arguments
-            if not provided_args and hasattr(arg_schema, "model_fields"):
-                required_fields = [name for name, field in arg_schema.model_fields.items() if field.is_required()]
-                if required_fields:
-                    msg = (
-                        f"Tool '{tool_name}' requires arguments but none were provided. "
-                        f"Required fields: {', '.join(required_fields)}. "
-                        f"Please check that the LLM is properly calling the tool with arguments."
-                    )
-                    raise ValueError(msg) from e
-            msg = f"Invalid input: {e}"
-            raise ValueError(msg) from e
+        except Exception as e:  # noqa: BLE001
+            _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
 
         try:
             loop = asyncio.get_event_loop()
@@ -945,8 +940,6 @@ class MCPStdioClient:
         Raises:
             ValueError: If session is not initialized or tool execution fails
         """
-        import asyncio
-
         if not self._connected or not self._connection_params:
             msg = "Session not initialized or disconnected. Call connect_to_server first."
             raise ValueError(msg)
@@ -1252,8 +1245,6 @@ class MCPSseClient:
         Raises:
             ValueError: If session is not initialized or tool execution fails
         """
-        import asyncio
-
         if not self._connected or not self._connection_params:
             msg = "Session not initialized or disconnected. Call connect_to_server first."
             raise ValueError(msg)
@@ -1441,8 +1432,6 @@ async def update_tools(
                     # Parse tool_input if it's a string
                     if isinstance(tool_input, str):
                         try:
-                            import json
-
                             parsed_input = json.loads(tool_input)
                         except json.JSONDecodeError:
                             parsed_input = {"input": tool_input}
@@ -1460,8 +1449,6 @@ async def update_tools(
                     # Parse tool_input if it's a string
                     if isinstance(tool_input, str):
                         try:
-                            import json
-
                             parsed_input = json.loads(tool_input)
                         except json.JSONDecodeError:
                             parsed_input = {"input": tool_input}
