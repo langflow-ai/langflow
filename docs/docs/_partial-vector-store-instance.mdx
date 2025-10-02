@@ -1,4 +1,4 @@
-Because Langflow is based on LangChain, vector store components use an instance of [LangChain vector store](https://python.langchain.com/docs/integrations/vectorstores/) to drive the underlying read and write functions.
+Because Langflow is based on LangChain, vector store components use an instance of [LangChain vector store](https://docs.langchain.com/oss/python/integrations/vectorstores) to drive the underlying read and write functions.
 These instances are provider-specific and configured according to the component's parameters, such as the connection string, index name, and schema.
 
 In component code, this is often instantiated as `vector_store`, but some vector store components use a different name, such as the provider name.
