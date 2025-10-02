@@ -23,7 +23,7 @@ export interface ConfigResponse {
   event_delivery: EventDeliveryType;
   webhook_auth_enable: boolean;
   voice_mode_available: boolean;
-  run_with_openrag: boolean;
+  default_folder_name: string;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
@@ -50,7 +50,9 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
   const setWebhookAuthEnable = useUtilityStore(
     (state) => state.setWebhookAuthEnable,
   );
-  const setRunWithOpenrag = useUtilityStore((state) => state.setRunWithOpenrag);
+  const setDefaultFolderName = useUtilityStore(
+    (state) => state.setDefaultFolderName,
+  );
 
   const { query } = UseRequestProcessor();
 
@@ -74,7 +76,7 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
       );
       setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
       setWebhookAuthEnable(data.webhook_auth_enable ?? true);
-      setRunWithOpenrag(data.run_with_openrag ?? false);
+      setDefaultFolderName(data.default_folder_name ?? "Starter Project");
     }
     return data;
   };

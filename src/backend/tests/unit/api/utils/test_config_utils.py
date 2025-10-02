@@ -599,17 +599,14 @@ class TestMCPWithDefaultFolderName:
 
     @pytest.mark.asyncio
     async def test_mcp_with_legacy_folder_after_migration(self, client: AsyncClient):  # noqa: ARG002
-        """Test that MCP finds migrated folders after enabling OpenRAG mode."""
-        import os
-
+        """Test that MCP finds migrated folders after setting custom DEFAULT_FOLDER_NAME."""
         user_id = uuid4()
         project_id = uuid4()
         flow_id = uuid4()
 
-        # Only run this test when OpenRAG is enabled
-        run_with_openrag = os.getenv("RUN_WITH_OPENRAG", "").lower() == "true"
-        if not run_with_openrag:
-            pytest.skip("Test only applicable when RUN_WITH_OPENRAG is enabled")
+        # Only run this test when DEFAULT_FOLDER_NAME is set to custom value (e.g., "OpenRAG")
+        if DEFAULT_FOLDER_NAME in ["Starter Project", "My Collection"]:
+            pytest.skip("Test only applicable when DEFAULT_FOLDER_NAME is set to custom value")
 
         async with session_scope() as session:
             # Create user
@@ -640,7 +637,7 @@ class TestMCPWithDefaultFolderName:
 
             async with session_scope() as session:
                 migrated_folder = await get_or_create_default_folder(session, user_id)
-                assert migrated_folder.name == "OpenRAG"
+                assert migrated_folder.name == DEFAULT_FOLDER_NAME
                 assert migrated_folder.id == project_id  # Same folder, renamed
 
             # Now test that MCP can find the migrated folder
@@ -657,7 +654,7 @@ class TestMCPWithDefaultFolderName:
                     # Verify MCP found the migrated folder
                     updated_folder = await session.get(Folder, project_id)
                     assert updated_folder is not None
-                    assert updated_folder.name == "OpenRAG"
+                    assert updated_folder.name == DEFAULT_FOLDER_NAME
 
                 finally:
                     settings_service.settings.add_projects_to_mcp_servers = original_setting

@@ -20,7 +20,8 @@ export const HeaderButtons = ({
   addNewFolder: () => void;
 }) => {
   const userData = useAuthStore((state) => state.userData);
-  const runWithOpenrag = useUtilityStore((state) => state.runWithOpenrag);
+  const defaultFolderName = useUtilityStore((state) => state.defaultFolderName);
+  const isOpenRAGMode = defaultFolderName === "OpenRAG";
 
   const [isDismissedDialog, setIsDismissedDialog] = useState(
     userData?.optins?.dialog_dismissed,
@@ -57,7 +58,7 @@ export const HeaderButtons = ({
 
   return (
     <>
-      {!runWithOpenrag && !isDismissedDialog && userData && (
+      {!isOpenRAGMode && !isDismissedDialog && userData && (
         <>
           <CustomGetStartedProgress
             userData={userData!}

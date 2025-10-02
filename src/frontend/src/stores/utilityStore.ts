@@ -51,6 +51,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   webhookAuthEnable: true,
   setWebhookAuthEnable: (webhookAuthEnable: boolean) =>
     set({ webhookAuthEnable }),
-  runWithOpenrag: false,
-  setRunWithOpenrag: (runWithOpenrag: boolean) => set({ runWithOpenrag }),
+  defaultFolderName: "Starter Project",
+  setDefaultFolderName: (defaultFolderName: string) =>
+    set({ defaultFolderName }),
 }));

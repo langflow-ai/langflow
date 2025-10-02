@@ -40,7 +40,7 @@ describe("useUtilityStore", () => {
       currentSessionId: "",
       eventDelivery: EventDeliveryType.POLLING,
       webhookAuthEnable: true,
-      runWithOpenrag: false,
+      defaultFolderName: "Starter Project",
     });
   });
 
@@ -62,7 +62,7 @@ describe("useUtilityStore", () => {
       expect(result.current.currentSessionId).toBe("");
       expect(result.current.eventDelivery).toBe(EventDeliveryType.POLLING);
       expect(result.current.webhookAuthEnable).toBe(true);
-      expect(result.current.runWithOpenrag).toBe(false);
+      expect(result.current.defaultFolderName).toBe("Starter Project");
     });
   });
 
@@ -558,48 +558,46 @@ describe("useUtilityStore", () => {
     });
   });
 
-  describe("setRunWithOpenrag", () => {
-    it("should set runWithOpenrag to true", () => {
+  describe("setDefaultFolderName", () => {
+    it("should set defaultFolderName", () => {
       const { result } = renderHook(() => useUtilityStore());
 
       act(() => {
-        result.current.setRunWithOpenrag(true);
+        result.current.setDefaultFolderName("OpenRAG");
       });
 
-      expect(result.current.runWithOpenrag).toBe(true);
+      expect(result.current.defaultFolderName).toBe("OpenRAG");
     });
 
-    it("should set runWithOpenrag to false", () => {
+    it("should change defaultFolderName", () => {
       const { result } = renderHook(() => useUtilityStore());
 
       act(() => {
-        result.current.setRunWithOpenrag(true);
+        result.current.setDefaultFolderName("OpenRAG");
       });
-      expect(result.current.runWithOpenrag).toBe(true);
+      expect(result.current.defaultFolderName).toBe("OpenRAG");
 
       act(() => {
-        result.current.setRunWithOpenrag(false);
+        result.current.setDefaultFolderName("My Custom Folder");
       });
-      expect(result.current.runWithOpenrag).toBe(false);
+      expect(result.current.defaultFolderName).toBe("My Custom Folder");
     });
 
-    it("should toggle runWithOpenrag multiple times", () => {
+    it("should handle various folder names", () => {
       const { result } = renderHook(() => useUtilityStore());
 
-      act(() => {
-        result.current.setRunWithOpenrag(true);
+      const folderNames = [
+        "Starter Project",
+        "OpenRAG",
+        "My Collection",
+        "Custom Folder",
+      ];
+      folderNames.forEach((folderName) => {
+        act(() => {
+          result.current.setDefaultFolderName(folderName);
+        });
+        expect(result.current.defaultFolderName).toBe(folderName);
       });
-      expect(result.current.runWithOpenrag).toBe(true);
-
-      act(() => {
-        result.current.setRunWithOpenrag(false);
-      });
-      expect(result.current.runWithOpenrag).toBe(false);
-
-      act(() => {
-        result.current.setRunWithOpenrag(true);
-      });
-      expect(result.current.runWithOpenrag).toBe(true);
     });
   });
 
