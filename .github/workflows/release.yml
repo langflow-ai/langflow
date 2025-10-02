@@ -165,7 +165,7 @@ jobs:
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."
             echo skipped=true >> $GITHUB_OUTPUT
-            exit 0
+            exit 1
           else
             echo version=$version >> $GITHUB_OUTPUT
             echo skipped=false >> $GITHUB_OUTPUT
@@ -248,7 +248,7 @@ jobs:
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."
             echo skipped=true >> $GITHUB_OUTPUT
-            exit 0
+            exit 1
           else
             echo version=$version >> $GITHUB_OUTPUT
           fi
