@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+from lfx.utils.async_helpers import run_until_complete
+
 
 class TestAgentInLfxRun:
     """Test the agent workflow that demonstrates lfx run functionality."""
@@ -52,7 +54,7 @@ log_config = LogConfig(
 chat_input = cp.ChatInput()
 agent = cp.AgentComponent()
 url_component = cp.URLComponent()
-tools = url_component.to_toolkit()
+tools = await url_component.to_toolkit()
 
 agent.set(
     model_name="gpt-4o-mini",
@@ -143,10 +145,9 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         """Test the agent workflow by executing the graph directly."""
         # Import the components for direct execution
         try:
+            from lfx import components as cp
             from lfx.graph import Graph
             from lfx.log.logger import LogConfig
-
-            from lfx import components as cp
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 
@@ -162,7 +163,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
 
         # Configure URL component for tools
         url_component.set(urls=["https://httpbin.org/json"])
-        tools = await url_component.to_toolkit()
+        tools = run_until_complete(url_component.to_toolkit())
 
         # Configure agent
         agent.set(
@@ -213,6 +214,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         """Test that URLComponent.to_toolkit() works properly."""
         try:
             from lfx import components as cp
+            from lfx.utils.async_helpers import run_until_complete
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 
@@ -222,7 +224,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
         url_component.set(urls=["https://httpbin.org/json"])
 
         # Test to_toolkit functionality
-        tools = await url_component.to_toolkit()
+        tools = run_until_complete(url_component.to_toolkit())
 
         # Should return some kind of tools object/list
         assert tools is not None
@@ -256,9 +258,8 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
     def test_chat_output_chaining_pattern(self):
         """Test the chat output chaining pattern."""
         try:
-            from lfx.schema.message import Message
-
             from lfx import components as cp
+            from lfx.schema.message import Message
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 
@@ -313,10 +314,9 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
     def test_complete_workflow_integration(self):
         """Test the complete agent workflow integration."""
         try:
+            from lfx import components as cp
             from lfx.graph import Graph
             from lfx.log.logger import LogConfig
-
-            from lfx import components as cp
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 
@@ -332,7 +332,7 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
 
         # Configure URL component
         url_component.set(urls=["https://httpbin.org/json"])
-        tools = url_component.to_toolkit()
+        tools = run_until_complete(url_component.to_toolkit())
 
         # Configure agent with real API key
         agent.set(
