@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import inspect
+import json
 import os
 import platform
 import re
@@ -189,6 +190,55 @@ def sanitize_mcp_name(name: str, max_length: int = 46) -> str:
     return name
 
 
+def _camel_to_snake(name: str) -> str:
+    """Convert camelCase to snake_case."""
+    import re
+
+    # Insert an underscore before any uppercase letter that follows a lowercase letter
+    s1 = re.sub("([a-z0-9])([A-Z])", r"\1_\2", name)
+    return s1.lower()
+
+
+def _convert_camel_case_to_snake_case(provided_args: dict[str, Any], arg_schema: type[BaseModel]) -> dict[str, Any]:
+    """Convert camelCase field names to snake_case if the schema expects snake_case fields."""
+    schema_fields = set(arg_schema.model_fields.keys())
+    converted_args = {}
+
+    for key, value in provided_args.items():
+        # If the key already exists in schema, use it as-is
+        if key in schema_fields:
+            converted_args[key] = value
+        else:
+            # Try converting camelCase to snake_case
+            snake_key = _camel_to_snake(key)
+            if snake_key in schema_fields:
+                converted_args[snake_key] = value
+            else:
+                # If neither the original nor converted key exists, keep original
+                # The validation will catch this error
+                converted_args[key] = value
+
+    return converted_args
+
+
+def _handle_tool_validation_error(
+    e: Exception, tool_name: str, provided_args: dict[str, Any], arg_schema: type[BaseModel]
+) -> None:
+    """Handle validation errors for tool arguments with detailed error messages."""
+    # Check if this is a case where the tool was called with no arguments
+    if not provided_args and hasattr(arg_schema, "model_fields"):
+        required_fields = [name for name, field in arg_schema.model_fields.items() if field.is_required()]
+        if required_fields:
+            msg = (
+                f"Tool '{tool_name}' requires arguments but none were provided. "
+                f"Required fields: {', '.join(required_fields)}. "
+                f"Please check that the LLM is properly calling the tool with arguments."
+            )
+            raise ValueError(msg) from e
+    msg = f"Invalid input: {e}"
+    raise ValueError(msg) from e
+
+
 def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
     async def tool_coroutine(*args, **kwargs):
         # Get field names from the model (preserving order)
@@ -202,12 +252,12 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
             provided_args[field_names[i]] = arg
         # Merge in keyword arguments
         provided_args.update(kwargs)
+        provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
         # Validate input and fill defaults for missing optional fields
         try:
             validated = arg_schema.model_validate(provided_args)
-        except Exception as e:
-            msg = f"Invalid input: {e}"
-            raise ValueError(msg) from e
+        except Exception as e:  # noqa: BLE001
+            _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
 
         try:
             return await client.run_tool(tool_name, arguments=validated.model_dump())
@@ -230,11 +280,11 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
                 raise ValueError(msg)
             provided_args[field_names[i]] = arg
         provided_args.update(kwargs)
+        provided_args = _convert_camel_case_to_snake_case(provided_args, arg_schema)
         try:
             validated = arg_schema.model_validate(provided_args)
-        except Exception as e:
-            msg = f"Invalid input: {e}"
-            raise ValueError(msg) from e
+        except Exception as e:  # noqa: BLE001
+            _handle_tool_validation_error(e, tool_name, provided_args, arg_schema)
 
         try:
             loop = asyncio.get_event_loop()
@@ -391,7 +441,7 @@ class MCPSessionManager:
             sessions = server_data.get("sessions", {})
             sessions_to_remove = []
 
-            for session_id, session_info in sessions.items():
+            for session_id, session_info in list(sessions.items()):
                 if current_time - session_info["last_used"] > SESSION_IDLE_TIMEOUT:
                     sessions_to_remove.append(session_id)
 
@@ -1216,9 +1266,6 @@ class MCPSseClient:
                 # Get or create persistent session
                 session = await self._get_or_create_session()
 
-                # Add timeout to prevent hanging
-                import asyncio
-
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
                     timeout=30.0,  # 30 second timeout
@@ -1378,7 +1425,65 @@ async def update_tools(
                 logger.warning(f"Could not create schema for tool '{tool.name}' from server '{server_name}'")
                 continue
 
-            tool_obj = StructuredTool(
+            # Create a custom StructuredTool that bypasses schema validation
+            class MCPStructuredTool(StructuredTool):
+                def run(self, tool_input: str | dict, config=None, **kwargs):
+                    """Override the main run method to handle parameter conversion before validation."""
+                    # Parse tool_input if it's a string
+                    if isinstance(tool_input, str):
+                        try:
+                            parsed_input = json.loads(tool_input)
+                        except json.JSONDecodeError:
+                            parsed_input = {"input": tool_input}
+                    else:
+                        parsed_input = tool_input or {}
+
+                    # Convert camelCase parameters to snake_case
+                    converted_input = self._convert_parameters(parsed_input)
+
+                    # Call the parent run method with converted parameters
+                    return super().run(converted_input, config=config, **kwargs)
+
+                async def arun(self, tool_input: str | dict, config=None, **kwargs):
+                    """Override the main arun method to handle parameter conversion before validation."""
+                    # Parse tool_input if it's a string
+                    if isinstance(tool_input, str):
+                        try:
+                            parsed_input = json.loads(tool_input)
+                        except json.JSONDecodeError:
+                            parsed_input = {"input": tool_input}
+                    else:
+                        parsed_input = tool_input or {}
+
+                    # Convert camelCase parameters to snake_case
+                    converted_input = self._convert_parameters(parsed_input)
+
+                    # Call the parent arun method with converted parameters
+                    return await super().arun(converted_input, config=config, **kwargs)
+
+                def _convert_parameters(self, input_dict):
+                    if not input_dict or not isinstance(input_dict, dict):
+                        return input_dict
+
+                    converted_dict = {}
+                    original_fields = set(self.args_schema.model_fields.keys())
+
+                    for key, value in input_dict.items():
+                        if key in original_fields:
+                            # Field exists as-is
+                            converted_dict[key] = value
+                        else:
+                            # Try to convert camelCase to snake_case
+                            snake_key = _camel_to_snake(key)
+                            if snake_key in original_fields:
+                                converted_dict[snake_key] = value
+                            else:
+                                # Keep original key
+                                converted_dict[key] = value
+
+                    return converted_dict
+
+            tool_obj = MCPStructuredTool(
                 name=tool.name,
                 description=tool.description or "",
                 args_schema=args_schema,
@@ -1387,6 +1492,7 @@ async def update_tools(
                 tags=[tool.name],
                 metadata={"server_name": server_name},
             )
+
             tool_list.append(tool_obj)
             tool_cache[tool.name] = tool_obj
         except (ConnectionError, TimeoutError, OSError, ValueError) as e:
