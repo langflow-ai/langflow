@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 
 import pytest
+
 from lfx.utils.async_helpers import run_until_complete
 
 
@@ -212,9 +213,8 @@ graph = Graph(chat_input, chat_output, log_config=log_config)
     async def test_url_component_to_toolkit_functionality(self):
         """Test that URLComponent.to_toolkit() works properly."""
         try:
-            from lfx.utils.async_helpers import run_until_complete
-
             from lfx import components as cp
+            from lfx.utils.async_helpers import run_until_complete
         except ImportError as e:
             pytest.skip(f"LFX components not available: {e}")
 

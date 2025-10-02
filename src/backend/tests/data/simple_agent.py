@@ -17,15 +17,11 @@ Usage:
 import os
 from pathlib import Path
 
-
-from lfx.graph import Graph
-from lfx.log.logger import LogConfig
-from lfx.utils.async_helpers import run_until_complete
-
 # Using the new flattened component access
 from lfx import components as cp
 from lfx.graph import Graph
 from lfx.log.logger import LogConfig
+from lfx.utils.async_helpers import run_until_complete
 
 log_config = LogConfig(
     log_level="INFO",
