@@ -115,7 +115,7 @@ def get_container_host() -> str | None:
     return None
 
 
-def transform_localhost_url(url: str) -> str:
+def transform_localhost_url(url: str | None) -> str | None:
     """Transform localhost URLs to container-accessible hosts when running in a container.
 
     Automatically detects if running inside a container and finds the appropriate host
@@ -125,17 +125,26 @@ def transform_localhost_url(url: str) -> str:
     - Gateway IP from routing table (fallback)
 
     Args:
-        url: The original URL
+        url: The original URL, can be None or empty string
 
     Returns:
         Transformed URL with container-accessible host if applicable, otherwise the original URL.
+        Returns None if url is None, empty string if url is empty string.
 
     Example:
         >>> transform_localhost_url("http://localhost:5001")
         # Returns "http://host.docker.internal:5001" if running in Docker and hostname resolves
         # Returns "http://172.17.0.1:5001" if running in Docker on Linux (gateway IP fallback)
         # Returns "http://localhost:5001" if not in a container
+        >>> transform_localhost_url(None)
+        # Returns None
+        >>> transform_localhost_url("")
+        # Returns ""
     """
+    # Guard against None and empty string to prevent TypeError
+    if not url:
+        return url
+
     container_host = get_container_host()
 
     if not container_host:

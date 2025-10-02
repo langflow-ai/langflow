@@ -258,3 +258,27 @@ class TestTransformLocalhostUrl:
             url = "http://localhost/api"
             result = transform_localhost_url(url)
             assert result == "http://host.docker.internal/api"
+
+    def test_handles_none_url_gracefully(self):
+        """Test returns None when URL is None without raising TypeError."""
+        with patch("lfx.utils.util.get_container_host", return_value="host.docker.internal"):
+            result = transform_localhost_url(None)
+            assert result is None
+
+    def test_handles_empty_string_url_gracefully(self):
+        """Test returns empty string when URL is empty string."""
+        with patch("lfx.utils.util.get_container_host", return_value="host.docker.internal"):
+            result = transform_localhost_url("")
+            assert result == ""
+
+    def test_handles_none_url_when_not_in_container(self):
+        """Test returns None when URL is None and not in a container."""
+        with patch("lfx.utils.util.get_container_host", return_value=None):
+            result = transform_localhost_url(None)
+            assert result is None
+
+    def test_handles_empty_string_url_when_not_in_container(self):
+        """Test returns empty string when URL is empty and not in a container."""
+        with patch("lfx.utils.util.get_container_host", return_value=None):
+            result = transform_localhost_url("")
+            assert result == ""

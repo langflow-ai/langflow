@@ -5,9 +5,10 @@ import httpx
 from langchain_ollama import OllamaEmbeddings
 
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS, URL_LIST
+from lfx.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS
 from lfx.field_typing import Embeddings
 from lfx.io import DropdownInput, MessageTextInput, Output
+from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
 
@@ -43,8 +44,9 @@ class OllamaEmbeddingsComponent(LCModelComponent):
     ]
 
     def build_embeddings(self) -> Embeddings:
+        transformed_base_url = transform_localhost_url(self.base_url)
         try:
-            output = OllamaEmbeddings(model=self.model_name, base_url=self.base_url)
+            output = OllamaEmbeddings(model=self.model_name, base_url=transformed_base_url)
         except Exception as e:
             msg = (
                 "Unable to connect to the Ollama API. ",
@@ -53,20 +55,13 @@ class OllamaEmbeddingsComponent(LCModelComponent):
             raise ValueError(msg) from e
         return output
 
-    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
-        if field_name in {"base_url", "model_name"} and not await self.is_valid_ollama_url(field_value):
-            # Check if any URL in the list is valid
-            valid_url = ""
-            for url in URL_LIST:
-                if await self.is_valid_ollama_url(url):
-                    valid_url = url
-                    break
-            build_config["base_url"]["value"] = valid_url
+    async def update_build_config(self, build_config: dict, _field_value: Any, field_name: str | None = None):
+        if field_name in {"base_url", "model_name"} and not await self.is_valid_ollama_url(self.base_url):
+            msg = "Ollama is not running on the provided base URL. Please start Ollama and try again."
+            raise ValueError(msg)
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
             if await self.is_valid_ollama_url(self.base_url):
                 build_config["model_name"]["options"] = await self.get_model(self.base_url)
-            elif await self.is_valid_ollama_url(build_config["base_url"].get("value", "")):
-                build_config["model_name"]["options"] = await self.get_model(build_config["base_url"].get("value", ""))
             else:
                 build_config["model_name"]["options"] = []
 
@@ -76,6 +71,7 @@ class OllamaEmbeddingsComponent(LCModelComponent):
         """Get the model names from Ollama."""
         model_ids = []
         try:
+            base_url_value = transform_localhost_url(base_url_value)
             url = urljoin(base_url_value, "/api/tags")
             async with httpx.AsyncClient() as client:
                 response = await client.get(url)
@@ -101,6 +97,7 @@ class OllamaEmbeddingsComponent(LCModelComponent):
     async def is_valid_ollama_url(self, url: str) -> bool:
         try:
             async with httpx.AsyncClient() as client:
+                url = transform_localhost_url(url)
                 return (await client.get(f"{url}/api/tags")).status_code == HTTP_STATUS_OK
         except httpx.RequestError:
             return False
