@@ -5,28 +5,31 @@ const mockLogout = jest.fn();
 const mockResetFlowState = jest.fn();
 const mockResetFlowsManagerStore = jest.fn();
 const mockResetFolderStore = jest.fn();
-const mockQueryClient = { invalidateQueries: jest.fn() };
+const mockQueryClient = {
+  invalidateQueries: jest.fn(),
+  clear: jest.fn(),
+};
 const mockGetAuthCookie = jest.fn();
 const mockApiPost = jest.fn();
 
 jest.mock("@/stores/authStore", () => {
   const mockState = { autoLogin: false };
-  const mockStore = jest.fn((selector) => {
+  const mockStore = jest.fn((selector: any) => {
     if (selector.toString().includes("logout")) return mockLogout;
     return false;
-  });
+  }) as any;
   mockStore.getState = jest.fn(() => mockState);
   return mockStore;
 });
 
 jest.mock("@/stores/flowStore", () => {
-  const mockStore = jest.fn();
+  const mockStore = jest.fn() as any;
   mockStore.getState = jest.fn(() => ({ resetFlowState: mockResetFlowState }));
   return mockStore;
 });
 
 jest.mock("@/stores/flowsManagerStore", () => {
-  const mockStore = jest.fn();
+  const mockStore = jest.fn() as any;
   mockStore.getState = jest.fn(() => ({
     resetStore: mockResetFlowsManagerStore,
   }));
@@ -51,7 +54,7 @@ jest.mock("@/controllers/API/api", () => ({
 
 jest.mock("@/controllers/API/services/request-processor", () => ({
   UseRequestProcessor: jest.fn(() => ({
-    mutate: jest.fn((key, fn, options) => ({
+    mutate: jest.fn((_key, fn, options) => ({
       mutate: async () => {
         try {
           await fn();
@@ -114,22 +117,14 @@ describe("logout functionality", () => {
       expect(mockResetFolderStore).toHaveBeenCalled();
     });
 
-    it("should invalidate queries on successful logout", async () => {
+    it("should clear query cache on successful logout", async () => {
       mockGetAuthCookie.mockReturnValue(null); // Not "auto", so autoLogin is false
       mockApiPost.mockResolvedValue({ data: { success: true } });
 
       const logoutMutation = useLogout();
       await logoutMutation.mutate();
 
-      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["useGetRefreshFlowsQuery"],
-      });
-      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["useGetFolders"],
-      });
-      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["useGetFolder"],
-      });
+      expect(mockQueryClient.clear).toHaveBeenCalled();
     });
   });
 

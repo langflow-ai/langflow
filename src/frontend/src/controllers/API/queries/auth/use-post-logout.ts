@@ -42,14 +42,14 @@ export const useLogout: useMutationFunctionType<undefined, void> = (
       useFlowsManagerStore.getState().resetStore();
       useFolderStore.getState().resetStore();
 
-      queryClient.invalidateQueries({ queryKey: ["useGetRefreshFlowsQuery"] });
-      queryClient.invalidateQueries({ queryKey: ["useGetFolders"] });
-      queryClient.invalidateQueries({ queryKey: ["useGetFolder"] });
+      // Clear all React Query cache to prevent data leakage between users
+      queryClient.clear();
     },
     onError: (error) => {
       console.error(error);
     },
     ...options,
+    retry: false,
   });
 
   return mutation;
