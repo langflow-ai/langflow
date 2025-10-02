@@ -1,6 +1,6 @@
 import useAlertStore from "@/stores/alertStore";
 import { useEffect, useRef, useState } from "react";
-import { JsonEditor as VanillaJsonEditor } from "vanilla-jsoneditor";
+import type { JsonEditor as VanillaJsonEditor } from "vanilla-jsoneditor";
 import IconComponent from "../../components/common/genericIconComponent";
 import JsonEditor from "../../components/core/jsonEditor";
 import BaseModal from "../baseModal";
