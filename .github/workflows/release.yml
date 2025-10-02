@@ -55,7 +55,7 @@ on:
         options:
           - ubuntu-latest
           - self-hosted
-          - "[self-hosted, linux, X64, Langflow-runner]"
+          - "[Langflow-runner]"
           - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
         default: ubuntu-latest
 
@@ -288,7 +288,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download base artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: dist-base
           path: src/backend/base/dist
@@ -311,7 +311,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download main artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: dist-main
           path: dist
@@ -386,7 +386,7 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - name: Download LFX artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: dist-lfx
           path: dist-lfx
@@ -407,7 +407,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download LFX artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: dist-lfx
           path: src/lfx/dist
@@ -474,12 +474,12 @@ jobs:
     needs: [build-main, build-lfx, publish-main, publish-lfx]
     if: always() && inputs.create_release && (needs.publish-main.result == 'success' || needs.publish-lfx.result == 'success')
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         if: needs.publish-main.result == 'success'
         with:
           name: dist-main
           path: dist
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         if: needs.publish-lfx.result == 'success'
         with:
           name: dist-lfx

@@ -276,7 +276,7 @@ src/frontend/temp
 .history
 
 .dspy_cache/
-*.db
+*.db*
 *.mcp.json
 
 news-aggregated.json
