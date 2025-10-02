@@ -221,6 +221,23 @@ class URLComponent(Component):
 
         return url
 
+    @staticmethod
+    def _html_extractor(x: str) -> str:
+        """Extract raw HTML content."""
+        return x
+
+    @staticmethod
+    def _markdown_extractor(x: str) -> str:
+        """Convert HTML to Markdown format."""
+        stream = io.BytesIO(x.encode("utf-8"))
+        result = MarkItDown(enable_plugins=False).convert_stream(stream)
+        return result.markdown
+
+    @staticmethod
+    def _text_extractor(x: str) -> str:
+        """Extract clean text from HTML."""
+        return BeautifulSoup(x, "lxml").get_text()
+
     def _create_loader(self, url: str) -> RecursiveUrlLoader:
         """Creates a RecursiveUrlLoader instance with the configured settings.
 
@@ -231,20 +248,13 @@ class URLComponent(Component):
             RecursiveUrlLoader: Configured loader instance
         """
         headers_dict = {header["key"]: header["value"] for header in self.headers if header["value"] is not None}
-        if self.format == "HTML":
 
-            def extractor(x: str) -> str:
-                return x
-        elif self.format == "Markdown":
-
-            def extractor(x: str) -> str:
-                stream = io.BytesIO(x.encode("utf-8"))
-                result = MarkItDown(enable_plugins=False).convert_stream(stream)
-                return result.markdown
-        else:
-
-            def extractor(x: str) -> str:
-                return BeautifulSoup(x, "lxml").get_text()
+        extractors = {
+            "HTML": self._html_extractor,
+            "Markdown": self._markdown_extractor,
+            "Text": self._text_extractor,
+        }
+        extractor = extractors.get(self.format, self._text_extractor)
 
         return RecursiveUrlLoader(
             url=url,
