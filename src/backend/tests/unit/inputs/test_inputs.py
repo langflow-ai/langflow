@@ -1,4 +1,6 @@
 import pytest
+from pydantic import ValidationError
+
 from lfx.inputs.inputs import (
     BoolInput,
     CodeInput,
@@ -24,7 +26,6 @@ from lfx.inputs.inputs import (
     instantiate_input,
 )
 from lfx.schema.message import Message
-from pydantic import ValidationError
 
 
 def test_table_input_valid():
