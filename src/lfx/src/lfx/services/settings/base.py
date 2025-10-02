@@ -180,6 +180,13 @@ class Settings(BaseSettings):
     like_webhook_url: str | None = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
 
     storage_type: str = "local"
+    """Storage type for file storage. Defaults to 'local'. Supports 'local' and 's3'."""
+    object_storage_bucket_name: str | None = "langflow-bucket"
+    """Object storage bucket name for file storage. Defaults to 'langflow-bucket'."""
+    object_storage_prefix: str | None = "files"
+    """Object storage prefix for file storage. Defaults to 'files'."""
+    object_storage_tags: dict[str, str] | None = None
+    """Object storage tags for file storage. """
 
     celery_enabled: bool = False
 
@@ -552,7 +559,7 @@ class Settings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
-        return (CustomSource(settings_cls),)
+        return (env_settings, dotenv_settings, CustomSource(settings_cls))
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str) -> None:
