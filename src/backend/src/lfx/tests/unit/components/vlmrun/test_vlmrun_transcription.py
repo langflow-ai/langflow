@@ -2,7 +2,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 from langflow.schema.data import Data
-
 from lfx.components.vlmrun import VLMRunTranscription
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -54,7 +53,11 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self):
         """Return default kwargs for component initialization."""
-        return {"api_key": "test-api-key", "media_type": "audio", "_session_id": "test-session-123"}  # pragma: allowlist secret
+        return {
+            "api_key": "test-api-key",  # pragma: allowlist secret
+            "media_type": "audio",
+            "_session_id": "test-session-123",
+        }
 
     @pytest.fixture
     def file_names_mapping(self):
@@ -243,7 +246,9 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
         mock_client.predictions.wait.assert_called_once_with(mock_response.id, timeout=600)
 
         # Verify API key was passed correctly
-        mock_vlmrun_class.assert_called_once_with(api_key="test-api-key")  # pragma: allowlist secret  # pragma: allowlist secret
+        mock_vlmrun_class.assert_called_once_with(
+            api_key="test-api-key"  # pragma: allowlist secret
+        )
 
     @patch("vlmrun.client.VLMRun")
     def test_video_file_with_audio_content(self, mock_vlmrun_class, component_class, default_kwargs):
