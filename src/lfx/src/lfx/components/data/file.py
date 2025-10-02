@@ -21,8 +21,8 @@ from lfx.base.data.base_file import BaseFileComponent
 from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
 from lfx.io import BoolInput, FileInput, IntInput, Output
-from lfx.schema import DataFrame  # noqa: TC001
 from lfx.schema.data import Data
+from lfx.schema.dataframe import DataFrame  # noqa: TC001
 from lfx.schema.message import Message
 
 
