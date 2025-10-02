@@ -21,10 +21,10 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         return StructuredOutputComponent
 
     @pytest.fixture
-    def default_kwargs(self):
+    def default_kwargs(self, mock_llm):
         """Return the default kwargs for the component."""
         return {
-            "llm": MockLanguageModel(),
+            "llm": mock_llm,
             "input_value": "Test input",
             "schema_name": "TestSchema",
             "output_schema": [{"name": "field", "type": "str", "description": "A test field"}],

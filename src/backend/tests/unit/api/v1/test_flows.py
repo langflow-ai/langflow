@@ -7,23 +7,17 @@ from httpx import AsyncClient
 from langflow.services.database.models import Flow
 
 
-async def test_create_flow(client: AsyncClient, logged_in_headers):
+async def test_create_flow(client: AsyncClient, logged_in_headers, basic_flow_json):
     flow_file = Path(tempfile.tempdir) / f"{uuid.uuid4()}.json"
     try:
-        basic_case = {
-            "name": "string",
-            "description": "string",
-            "icon": "string",
-            "icon_bg_color": "#ff00ff",
-            "gradient": "string",
-            "data": {},
-            "is_component": False,
-            "webhook": False,
-            "endpoint_name": "string",
-            "tags": ["string"],
-            "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-            "fs_path": str(flow_file),
-        }
+        # Use shared JSON structure and customize as needed
+        basic_case = basic_flow_json.copy()
+        basic_case.update(
+            {
+                "name": "string",
+                "fs_path": str(flow_file),
+            }
+        )
         response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
         result = response.json()
 
