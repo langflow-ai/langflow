@@ -110,22 +110,23 @@ def _extract_output_text(output: str | list) -> str:
                 # This is a workaround to deal with function calling by Anthropic
                 if "partial_json" in item:
                     return ""
+                # For any other dict format, return empty string
+                return ""
+            # For any other single item type (not str or dict), return empty string
+            return ""
 
         # Handle multiple items - extract text from all text-type items
-        else:
-            text_parts = []
-            for item in output:
-                if isinstance(item, str):
-                    text_parts.append(item)
-                elif isinstance(item, dict):
-                    if "text" in item and item["text"] is not None:
-                        text_parts.append(item["text"])
-                    # Skip tool_use, index-only, and partial_json items
-                    elif (
-                        item.get("type") == "tool_use" or "partial_json" in item or ("index" in item and len(item) == 1)
-                    ):
-                        continue
-            return "".join(text_parts)
+        text_parts = []
+        for item in output:
+            if isinstance(item, str):
+                text_parts.append(item)
+            elif isinstance(item, dict):
+                if "text" in item and item["text"] is not None:
+                    text_parts.append(item["text"])
+                # Skip tool_use, index-only, and partial_json items
+                elif item.get("type") == "tool_use" or "partial_json" in item or ("index" in item and len(item) == 1):
+                    continue
+        return "".join(text_parts)
 
     # If we get here, the format is unexpected but try to be graceful
     return ""
