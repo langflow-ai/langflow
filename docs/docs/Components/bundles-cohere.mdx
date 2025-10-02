@@ -18,7 +18,7 @@ This component generates text using Cohere's language models.
 
 It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
 
-Use the **Language Model** output when you want to use a Cohere model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
+Use the **Language Model** output when you want to use a Cohere model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
 
 For more information, see [Language model components](/components-models).
 
@@ -30,7 +30,7 @@ For more information, see [Language model components](/components-models).
 |------|------|-------------|
 | Input | String | Input parameter. Specifies the input text for text generation. |
 | System Message | String | Input parameter. A [system message](https://docs.cohere.com/docs/system-instructions) to pass to the model. |
-| Stream | Boolean | Input parameter. Whether to stream the response. Only works in chat. Default: false. |
+| Stream | Boolean | Input parameter. Whether to stream the response. Only works in chat. Default: `false`. |
 | Cohere API Key | SecretString | Input parameter. Your Cohere API key. |
 | Temperature | Float | Input parameter. Specifies the randomness of sampling. Lower values (near 0) are more deterministic, and higher values (near 1) are more creative. Defaults to `0.75`. |
 
