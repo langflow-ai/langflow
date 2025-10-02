@@ -230,10 +230,10 @@ class URLComponent(Component):
         """Convert HTML to Markdown format."""
         try:
             from markitdown import MarkItDown
-        except ImportError:
+        except ImportError as e:
             msg = "markitdown is not installed. Install using 'uv pip install markitdown' to enable Markdown output."
             logger.error(msg)
-            raise ImportError(msg)
+            raise ImportError(msg) from e
 
         stream = io.BytesIO(x.encode("utf-8"))
         result = MarkItDown(enable_plugins=False).convert_stream(stream)
