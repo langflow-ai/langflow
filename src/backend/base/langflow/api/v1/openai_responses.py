@@ -220,12 +220,6 @@ async def run_flow_for_openai_responses(
                                                             f"event: response.output_item.added\n"
                                                             f"data: {json.dumps(tool_call_event)}\n\n"
                                                         )
-                                                        logger.debug(
-                                                            "[OpenAIResponses][stream] tool_call.added name=%s call_id=%s item_id=%s",
-                                                            tool_name,
-                                                            call_id,
-                                                            tool_id,
-                                                        )
 
                                                         # Send function call arguments as delta events (like OpenAI)
                                                         arguments_str = json.dumps(tool_input)
@@ -238,11 +232,6 @@ async def run_flow_for_openai_responses(
                                                         yield (
                                                             f"event: response.function_call_arguments.delta\n"
                                                             f"data: {json.dumps(arg_delta_event)}\n\n"
-                                                        )
-                                                        logger.debug(
-                                                            "[OpenAIResponses][stream] tool_call.args.delta name=%s len=%d",
-                                                            tool_name,
-                                                            len(arguments_str),
                                                         )
 
                                                         # Send function call arguments done event
@@ -341,7 +330,7 @@ async def run_flow_for_openai_responses(
                         if isinstance(token_data, str):
                             content = token_data
                             logger.warning(
-                                f"[OpenAIResponses][stream] sent chunk with delta_len={len(content)}, content={content}",
+                                f"[OpenAIResponses][stream] sent chunk with content={content}",
                             )
                         chunk = OpenAIResponsesStreamChunk(
                             id=response_id,
