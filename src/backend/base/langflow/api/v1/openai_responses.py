@@ -74,7 +74,7 @@ async def run_flow_for_openai_responses(
     context = {}
     if variables:
         context["request_variables"] = variables
-        logger.debug(f"Added request variables to context: {variables}")
+        await logger.adebug(f"Added request variables to context: {variables}")
 
     # Convert OpenAI request to SimplifiedAPIRequest
     # Note: We're moving away from tweaks to a context-based approach
@@ -88,7 +88,7 @@ async def run_flow_for_openai_responses(
 
     # Context will be passed separately to simple_run_flow
 
-    logger.debug(f"SimplifiedAPIRequest created with context: {context}")
+    await logger.adebug(f"SimplifiedAPIRequest created with context: {context}")
 
     # Use session_id as response_id for OpenAI compatibility
     response_id = session_id
@@ -114,7 +114,7 @@ async def run_flow_for_openai_responses(
             )
 
             try:
-                logger.debug(
+                await logger.adebug(
                     "[OpenAIResponses][stream] start: response_id=%s model=%s session_id=%s",
                     response_id,
                     request.model,
@@ -135,7 +135,7 @@ async def run_flow_for_openai_responses(
 
                 async for event_data in consume_and_yield(asyncio_queue, asyncio_queue_client_consumed):
                     if event_data is None:
-                        logger.debug("[OpenAIResponses][stream] received None event_data; breaking loop")
+                        await logger.adebug("[OpenAIResponses][stream] received None event_data; breaking loop")
                         break
 
                     content = ""
@@ -152,7 +152,7 @@ async def run_flow_for_openai_responses(
                             if isinstance(parsed_event, dict):
                                 event_type = parsed_event.get("event")
                                 data = parsed_event.get("data", {})
-                                logger.debug(
+                                await logger.adebug(
                                     "[OpenAIResponses][stream] event: %s keys=%s",
                                     event_type,
                                     list(data.keys()) if isinstance(data, dict) else type(data),
@@ -161,7 +161,7 @@ async def run_flow_for_openai_responses(
                                 # Handle add_message events
                                 if event_type == "token":
                                     token_data = data.get("chunk", "")
-                                    logger.debug(
+                                    await logger.adebug(
                                         "[OpenAIResponses][stream] token: token_data=%s",
                                         token_data,
                                     )
@@ -171,7 +171,7 @@ async def run_flow_for_openai_responses(
                                     sender = data.get("sender", "")
                                     content_blocks = data.get("content_blocks", [])
 
-                                    logger.debug(
+                                    await logger.adebug(
                                         "[OpenAIResponses][stream] add_message: sender=%s sender_name=%s text_len=%d",
                                         sender,
                                         sender_name,
@@ -245,7 +245,7 @@ async def run_flow_for_openai_responses(
                                                             f"event: response.function_call_arguments.done\n"
                                                             f"data: {json.dumps(arg_done_event)}\n\n"
                                                         )
-                                                        logger.debug(
+                                                        await logger.adebug(
                                                             "[OpenAIResponses][stream] tool_call.args.done name=%s",
                                                             tool_name,
                                                         )
@@ -291,7 +291,7 @@ async def run_flow_for_openai_responses(
                                                                 f"event: response.output_item.done\n"
                                                                 f"data: {json.dumps(tool_done_event)}\n\n"
                                                             )
-                                                            logger.debug(
+                                                            await logger.adebug(
                                                                 "[OpenAIResponses][stream] tool_call.done name=%s",
                                                                 tool_name,
                                                             )
@@ -306,7 +306,7 @@ async def run_flow_for_openai_responses(
                                         if text.startswith(previous_content):
                                             content = text[len(previous_content) :]
                                             previous_content = text
-                                            logger.debug(
+                                            await logger.adebug(
                                                 "[OpenAIResponses][stream] delta computed len=%d total_len=%d",
                                                 len(content),
                                                 len(previous_content),
@@ -316,20 +316,20 @@ async def run_flow_for_openai_responses(
                                             # This handles cases where the content might be reset
                                             content = text
                                             previous_content = text
-                                            logger.debug(
+                                            await logger.adebug(
                                                 "[OpenAIResponses][stream] content reset; sending full text len=%d",
                                                 len(content),
                                             )
 
                         except (json.JSONDecodeError, UnicodeDecodeError):
-                            logger.debug("[OpenAIResponses][stream] failed to decode event bytes; skipping")
+                            await logger.adebug("[OpenAIResponses][stream] failed to decode event bytes; skipping")
                             continue
 
                     # Only send chunks with actual content
                     if content or token_data:
                         if isinstance(token_data, str):
                             content = token_data
-                            logger.warning(
+                            await logger.adebug(
                                 f"[OpenAIResponses][stream] sent chunk with content={content}",
                             )
                         chunk = OpenAIResponsesStreamChunk(
@@ -339,7 +339,7 @@ async def run_flow_for_openai_responses(
                             delta={"content": content},
                         )
                         yield f"data: {chunk.model_dump_json()}\n\n"
-                        logger.warning(
+                        await logger.adebug(
                             "[OpenAIResponses][stream] sent chunk with delta_len=%d",
                             len(content),
                         )
@@ -354,7 +354,7 @@ async def run_flow_for_openai_responses(
                 )
                 yield f"data: {final_chunk.model_dump_json()}\n\n"
                 yield "data: [DONE]\n\n"
-                logger.debug(
+                await logger.adebug(
                     "[OpenAIResponses][stream] completed: response_id=%s total_sent_len=%d",
                     response_id,
                     len(previous_content),
@@ -395,9 +395,9 @@ async def run_flow_for_openai_responses(
     tool_calls: list[dict[str, Any]] = []
     try:
         outputs_len = len(result.outputs) if getattr(result, "outputs", None) else 0
-        logger.debug("[OpenAIResponses][non-stream] result.outputs len=%d", outputs_len)
+        await logger.adebug("[OpenAIResponses][non-stream] result.outputs len=%d", outputs_len)
     except Exception:  # noqa: BLE001
-        logger.debug("[OpenAIResponses][non-stream] unable to read result.outputs len")
+        await logger.adebug("[OpenAIResponses][non-stream] unable to read result.outputs len")
 
     if result.outputs:
         for run_output in result.outputs:
@@ -436,7 +436,7 @@ async def run_flow_for_openai_responses(
             if output_text:
                 break
 
-    logger.debug(
+    await logger.adebug(
         "[OpenAIResponses][non-stream] extracted output_text_len=%d tool_calls=%d",
         len(output_text) if isinstance(output_text, str) else -1,
         len(tool_calls),
@@ -525,9 +525,9 @@ async def create_response(
     # Extract global variables from X-LANGFLOW-GLOBAL-VAR-* headers
     variables = extract_global_variables_from_headers(http_request.headers)
 
-    logger.debug(f"All headers received: {list(http_request.headers.keys())}")
-    logger.debug(f"Extracted global variables from headers: {list(variables.keys())}")
-    logger.debug(f"Variables dict: {variables}")
+    await logger.adebug(f"All headers received: {list(http_request.headers.keys())}")
+    await logger.adebug(f"Extracted global variables from headers: {list(variables.keys())}")
+    await logger.adebug(f"Variables dict: {variables}")
 
     # Validate tools parameter - error out if tools are provided
     if request.tools is not None:
