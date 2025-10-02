@@ -250,7 +250,6 @@ postgresql = [
 override-dependencies = [
     # temporary force a newer python-pptx
     "python-pptx>=1.0.2",
-    "numpy>=2.3.3,<3.0.0; python_version >= '3.12'",
 ]
 
 [project.scripts]
