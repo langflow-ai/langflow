@@ -30,7 +30,7 @@ from lfx.graph.graph.utils import (
     should_continue,
 )
 from lfx.graph.schema import InterfaceComponentTypes, RunOutputs
-from lfx.graph.utils import log_vertex_build
+from lfx.graph.utils import UnbuiltObject, log_vertex_build
 from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
@@ -1532,13 +1532,27 @@ class Graph:
                 else:
                     try:
                         cached_vertex_dict = cached_result["result"]
-                        # Now set update the vertex with the cached vertex
-                        vertex.built = cached_vertex_dict["built"]
-                        vertex.artifacts = cached_vertex_dict["artifacts"]
-                        vertex.built_object = cached_vertex_dict["built_object"]
-                        vertex.built_result = cached_vertex_dict["built_result"]
-                        vertex.full_data = cached_vertex_dict["full_data"]
-                        vertex.results = cached_vertex_dict["results"]
+                        # Support normalized (DTO) vertex snapshots
+                        if isinstance(cached_vertex_dict, dict) and cached_vertex_dict.get("__cache_vertex__"):
+                            vertex.built = cached_vertex_dict.get("built", True)
+                            vertex.artifacts = cached_vertex_dict.get("artifacts", {})
+                            built_obj = cached_vertex_dict.get("built_object")
+                            if isinstance(built_obj, dict) and built_obj.get("__cache_placeholder__") == "unbuilt":
+                                vertex.built_object = UnbuiltObject()
+                            else:
+                                vertex.built_object = built_obj
+                            vertex.built_result = cached_vertex_dict.get("built_result")
+                            vertex.full_data = cached_vertex_dict.get("full_data", vertex.full_data)
+                            vertex.results = cached_vertex_dict.get("results", {})
+                        else:
+                            # Backwards compatibility: original shape
+                            # Now set update the vertex with the cached vertex
+                            vertex.built = cached_vertex_dict["built"]
+                            vertex.artifacts = cached_vertex_dict["artifacts"]
+                            vertex.built_object = cached_vertex_dict["built_object"]
+                            vertex.built_result = cached_vertex_dict["built_result"]
+                            vertex.full_data = cached_vertex_dict["full_data"]
+                            vertex.results = cached_vertex_dict["results"]
                         try:
                             vertex.finalize_build()
 
