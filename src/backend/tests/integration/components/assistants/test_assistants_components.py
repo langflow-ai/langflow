@@ -1,4 +1,5 @@
 import pytest
+
 from lfx.components.datastax import (
     AssistantsCreateAssistant,
     AssistantsCreateThread,
@@ -6,7 +7,6 @@ from lfx.components.datastax import (
     AssistantsListAssistants,
     AssistantsRun,
 )
-
 from tests.integration.utils import run_single_component
 
 

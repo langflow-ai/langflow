@@ -1,6 +1,5 @@
 from lfx.schema.data import Data
 from lfx.schema.table import Column
-
 from tests.unit.components.data.table_schema_demo_component import TableSchemaDemoComponent
 
 

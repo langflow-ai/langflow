@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+
 from lfx.services.settings.base import Settings
 
 

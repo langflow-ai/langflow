@@ -333,7 +333,7 @@ def run(
 
     # Step 2: Starting Core Services
     with progress.step(2):
-        app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
+        app = setup_app(static_files_dir=static_files_dir, backend_only=bool(backend_only))
 
     # Step 3: Connecting Database (this happens inside setup_app via dependencies)
     with progress.step(3):
@@ -364,7 +364,7 @@ def run(
             # We _may_ be able to subprocess, but with window's spawn behavior, we'd have to move all
             # non-picklable code to the subprocess.
             progress.print_summary()
-            print_banner(host, port, protocol)
+            print_banner(str(host), int(port or 7860), protocol)
 
         # Blocking call, so must be outside of the progress step
         uvicorn.run(
@@ -387,7 +387,7 @@ def run(
                 "timeout": worker_timeout,
                 "certfile": ssl_cert_file_path,
                 "keyfile": ssl_key_file_path,
-                "log_level": log_level.lower(),
+                "log_level": log_level.lower() if log_level is not None else "info",
             }
             server = LangflowApplication(app, options)
 
@@ -399,7 +399,7 @@ def run(
 
         # Print summary and banner after server is ready
         progress.print_summary()
-        print_banner(host, port, protocol)
+        print_banner(str(host), int(port or 7860), protocol)
 
         # Handle browser opening
         if open_browser and not backend_only:

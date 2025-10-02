@@ -1,6 +1,7 @@
 import re
 
 import pytest
+
 from lfx.components.processing import UpdateDataComponent
 from lfx.schema import Data
 
