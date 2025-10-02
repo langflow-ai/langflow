@@ -3,6 +3,7 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 from langchain_core.agents import AgentFinish
+
 from lfx.base.agents.agent import process_agent_events
 from lfx.base.agents.events import (
     _extract_output_text,
