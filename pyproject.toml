@@ -131,6 +131,8 @@ dependencies = [
     "traceloop-sdk>=0.43.1,<1.0.0",
     "easyocr>=1.7.2,<2.0.0",
     "opencv-python>=4.11,<5.0.0",
+    "numpy>=1.26.0,<2.0.0; python_version < '3.11'",
+    "numpy>=2.3.3,<3.0.0; python_version >= '3.11'",
     'mlx-vlm>=0.0.7; sys_platform == "darwin"',
 ]
 
@@ -247,7 +249,8 @@ postgresql = [
 [tool.uv]
 override-dependencies = [
     # temporary force a newer python-pptx
-    "python-pptx>=1.0.2"
+    "python-pptx>=1.0.2",
+    "numpy>=2.3.3,<3.0.0; python_version >= '3.12'",
 ]
 
 [project.scripts]
