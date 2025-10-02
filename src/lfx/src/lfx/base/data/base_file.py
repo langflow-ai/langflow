@@ -18,7 +18,7 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.utils.helpers import build_content_type_from_extension
-from lfx.utils.s3_helpers import fetch_s3_file_sync, is_s3_uri
+from lfx.utils.storage_file_io import is_remote_path, read_file_sync
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -320,44 +320,28 @@ class BaseFileComponent(Component, ABC):
         if not file_path:
             return None
 
-        # Get file extension
-        if is_s3_uri(file_path):
-            # Extract extension from S3 URI
-            ext = Path(file_path.split("/")[-1]).suffix.lower()
+        # Get file extension (works for both local paths and S3 URIs)
+        ext = Path(file_path.split("/")[-1]).suffix.lower()
+
+        # Supported formats
+        if ext not in {".csv", ".xlsx", ".parquet"}:
+            return None
+
+        # Read file from any storage backend (local or S3)
+        raw_data = read_file_sync(file_path)
+        file_obj = BytesIO(raw_data)
+
+        # Parse based on extension
+        if ext == ".csv":
+            result = pd.read_csv(file_obj)
+        elif ext == ".xlsx":
+            result = pd.read_excel(file_obj)
+        elif ext == ".parquet":
+            result = pd.read_parquet(file_obj)
         else:
-            ext = Path(file_path).suffix.lower()
+            return None
 
-        # Map file extensions to pandas read functions
-        # For S3, we'll fetch bytes and use BytesIO
-        if is_s3_uri(file_path):
-            raw_data = fetch_s3_file_sync(file_path)
-            file_obj = BytesIO(raw_data)
-
-            if ext == ".csv":
-                result = pd.read_csv(file_obj)
-            elif ext == ".xlsx":
-                result = pd.read_excel(file_obj)
-            elif ext == ".parquet":
-                result = pd.read_parquet(file_obj)
-            else:
-                return None
-
-            return result.to_dict("records")
-
-        # Standard filesystem path
-        file_readers: dict[str, Callable[[str], pd.DataFrame]] = {
-            ".csv": pd.read_csv,
-            ".xlsx": pd.read_excel,
-            ".parquet": pd.read_parquet,
-            # TODO: sqlite and json support?
-        }
-
-        reader = file_readers.get(ext)
-        if reader:
-            result = reader(file_path)
-            return result.to_dict("records")
-
-        return None
+        return result.to_dict("records")
 
     def load_files_structured(self) -> DataFrame:
         """Load files and return as DataFrame with structured content.
@@ -571,9 +555,9 @@ class BaseFileComponent(Component, ABC):
             resolved_path_str = self.resolve_path(str(path))
             resolved_path = Path(resolved_path_str)
 
-            # For S3 URLs, skip the exists() check since Path.exists() doesn't work with S3 URLs
-            # The S3 storage service will handle the actual file existence check
-            if not resolved_path_str.startswith("s3://") and not resolved_path.exists():
+            # For remote storage (e.g., S3), skip the exists() check since Path.exists() doesn't work
+            # The storage service will handle the actual file existence check when reading
+            if not is_remote_path(resolved_path_str) and not resolved_path.exists():
                 msg = f"File or directory not found: {path}"
                 self.log(msg)
                 if not self.silent_errors:

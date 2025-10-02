@@ -317,3 +317,131 @@ class S3StorageService(StorageService):
     async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down."""
         # No specific teardown actions required for S3 client
+
+    def is_remote_path(self, path: str) -> bool:
+        """Check if path is a remote storage path (S3 URI).
+
+        Args:
+            path: The path to check
+
+        Returns:
+            bool: True if path is an S3 URI (starts with s3://), False otherwise
+        """
+        return isinstance(path, str) and path.startswith("s3://")
+
+    def parse_path(self, path: str) -> tuple[str, str] | None:
+        """Parse S3 path into (flow_id, file_name) components.
+
+        Expected format: s3://bucket/prefix/flow_id/file_name
+
+        Args:
+            path: The S3 URI to parse
+
+        Returns:
+            tuple[str, str] | None: (flow_id, file_name) if valid S3 URI, None otherwise
+        """
+        if not self.is_remote_path(path):
+            return None
+
+        # Remove s3:// prefix and split into parts
+        path_parts = path[5:].split("/")
+
+        # We need at least: bucket/prefix/flow_id/file_name (4 parts minimum)
+        if len(path_parts) < 4:
+            return None
+
+        # Extract flow_id (second to last) and file_name (last)
+        flow_id = path_parts[-2]
+        file_name = path_parts[-1]
+
+        return (flow_id, file_name)
+
+    async def path_exists(self, flow_id: str, file_name: str) -> bool:
+        """Check if file exists in S3 storage.
+
+        Args:
+            flow_id: The identifier for the flow
+            file_name: The name of the file to check
+
+        Returns:
+            bool: True if file exists, False otherwise
+        """
+        if self.s3_client is None:
+            msg = "S3 client not initialized"
+            raise RuntimeError(msg)
+
+        try:
+            key = self._build_s3_key(flow_id, file_name)
+            self.s3_client.head_object(Bucket=self.bucket_name, Key=key)
+            return True
+        except ClientError as e:
+            # If error code is 404, file doesn't exist
+            error_code = e.response.get("Error", {}).get("Code", "Unknown")
+            if error_code == "404":
+                return False
+            # For other errors, re-raise
+            await logger.aerror(f"Error checking if file {file_name} exists in flow {flow_id}: {e}")
+            raise
+
+    async def read_file(self, path: str) -> bytes:
+        """Read file from S3 URI (unified interface).
+
+        Args:
+            path: The S3 URI to read from (e.g., s3://bucket/prefix/flow_id/file_name)
+
+        Returns:
+            bytes: The file content
+
+        Raises:
+            ValueError: If S3 URI is invalid
+            FileNotFoundError: If the file does not exist
+        """
+        # Parse the S3 URI
+        parsed = self.parse_path(path)
+        if not parsed:
+            msg = f"Invalid S3 URI format: {path}"
+            raise ValueError(msg)
+
+        flow_id, file_name = parsed
+        return await self.get_file(flow_id, file_name)
+
+    async def write_file(self, path: str, data: bytes, *, flow_id: str | None = None) -> str:
+        """Write file to S3 and return final storage path.
+
+        Args:
+            path: The desired S3 URI or file name
+            data: The file content to write
+            flow_id: Optional flow ID for organizing files (overrides path-based flow_id)
+
+        Returns:
+            str: The final S3 URI where file was written
+
+        Raises:
+            ValueError: If path is invalid or flow_id cannot be determined
+        """
+        # If flow_id is explicitly provided, use it
+        if flow_id:
+            # Extract just the filename from path
+            if self.is_remote_path(path):
+                parsed = self.parse_path(path)
+                file_name = parsed[1] if parsed else path.split("/")[-1]
+            else:
+                file_name = path.split("/")[-1]
+        else:
+            # Parse the path to extract flow_id and file_name
+            if self.is_remote_path(path):
+                parsed = self.parse_path(path)
+                if not parsed:
+                    msg = f"Invalid S3 URI format: {path}"
+                    raise ValueError(msg)
+                flow_id, file_name = parsed
+            else:
+                # If path is not an S3 URI, we need flow_id to be provided
+                msg = f"flow_id must be provided when path is not an S3 URI: {path}"
+                raise ValueError(msg)
+
+        # Save the file
+        await self.save_file(flow_id, file_name, data)
+
+        # Return the full S3 URI
+        return self.build_full_path(flow_id, file_name)

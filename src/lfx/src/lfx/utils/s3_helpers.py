@@ -1,6 +1,8 @@
-"""Shared S3 utility functions for working with S3 URIs and file operations."""
+"""Shared S3 utility functions for working with S3 URIs and file operations.
 
-import asyncio
+This module provides S3-specific utilities and delegates to the unified storage_file_io
+module for actual file operations. This ensures consistent behavior across storage backends.
+"""
 
 from lfx.services.deps import get_storage_service
 
@@ -22,6 +24,12 @@ def parse_s3_uri(s3_uri: str) -> tuple[str, str] | None:
         >>> parse_s3_uri("/local/file/path.txt")
         None
     """
+    storage_service = get_storage_service()
+    if storage_service:
+        # Use storage service's parse_path method for consistency
+        return storage_service.parse_path(s3_uri)
+
+    # Fallback to manual parsing if storage service not available
     if not s3_uri.startswith("s3://"):
         return None
 
@@ -42,6 +50,9 @@ def parse_s3_uri(s3_uri: str) -> tuple[str, str] | None:
 async def fetch_s3_file_async(flow_id: str, file_name: str) -> bytes:
     """Fetch file content from S3 asynchronously.
 
+    NOTE: This function is deprecated. Use storage_file_io.read_file_async() instead
+    for storage-agnostic file reading.
+
     Args:
         flow_id: The flow ID where the file is stored
         file_name: The name of the file to fetch
@@ -53,18 +64,23 @@ async def fetch_s3_file_async(flow_id: str, file_name: str) -> bytes:
         RuntimeError: If storage service is not available
         ValueError: If file cannot be retrieved
     """
+    from lfx.utils.storage_file_io import read_file_async
+
     storage_service = get_storage_service()
     if not storage_service:
         msg = "Storage service not available"
         raise RuntimeError(msg)
 
-    return await storage_service.get_file(flow_id, file_name)
+    # Build S3 URI and use unified read function
+    s3_uri = storage_service.build_full_path(flow_id, file_name)
+    return await read_file_async(s3_uri)
 
 
 def fetch_s3_file_sync(s3_uri: str) -> bytes:
     """Fetch file content from S3 synchronously (for use in sync contexts).
 
-    This function handles the async event loop setup automatically.
+    NOTE: This function is deprecated. Use storage_file_io.read_file_sync() instead
+    for storage-agnostic file reading with proper async handling.
 
     Args:
         s3_uri: The S3 URI (e.g., s3://bucket/prefix/flow_id/file_name)
@@ -81,21 +97,15 @@ def fetch_s3_file_sync(s3_uri: str) -> bytes:
         >>> len(content) > 0
         True
     """
-    s3_info = parse_s3_uri(s3_uri)
-    if not s3_info:
+    from lfx.utils.storage_file_io import read_file_sync
+
+    # Validate S3 URI format
+    if not is_s3_uri(s3_uri):
         msg = f"Invalid S3 URI format: {s3_uri}"
         raise ValueError(msg)
 
-    flow_id, file_name = s3_info
-
-    # Get or create event loop for async operation
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    return loop.run_until_complete(fetch_s3_file_async(flow_id, file_name))
+    # Use unified read function which handles async properly
+    return read_file_sync(s3_uri)
 
 
 def is_s3_uri(path: str) -> bool:
@@ -113,4 +123,10 @@ def is_s3_uri(path: str) -> bool:
         >>> is_s3_uri("/local/path/file.txt")
         False
     """
+    storage_service = get_storage_service()
+    if storage_service:
+        # Use storage service's is_remote_path method for consistency
+        return storage_service.is_remote_path(path)
+
+    # Fallback to simple check if storage service not available
     return isinstance(path, str) and path.startswith("s3://")

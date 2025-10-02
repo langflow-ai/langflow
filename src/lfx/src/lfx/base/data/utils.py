@@ -10,7 +10,7 @@ import yaml
 from defusedxml import ElementTree
 
 from lfx.schema.data import Data
-from lfx.utils.s3_helpers import fetch_s3_file_sync, is_s3_uri
+from lfx.utils.storage_file_io import read_file_sync
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
@@ -111,12 +111,8 @@ def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | Non
 
 
 def read_text_file(file_path: str) -> str:
-    # Check if this is an S3 URI
-    if is_s3_uri(file_path):
-        raw_data = fetch_s3_file_sync(file_path)
-    else:
-        file_path_ = Path(file_path)
-        raw_data = file_path_.read_bytes()
+    # Read file from any storage backend (local or S3)
+    raw_data = read_file_sync(file_path)
 
     result = chardet.detect(raw_data)
     encoding = result["encoding"]
@@ -130,12 +126,9 @@ def read_text_file(file_path: str) -> str:
 def read_docx_file(file_path: str) -> str:
     from docx import Document
 
-    # Check if this is an S3 URI
-    if is_s3_uri(file_path):
-        raw_data = fetch_s3_file_sync(file_path)
-        doc = Document(BytesIO(raw_data))
-    else:
-        doc = Document(file_path)
+    # Read file from any storage backend (local or S3)
+    raw_data = read_file_sync(file_path)
+    doc = Document(BytesIO(raw_data))
 
     return "\n\n".join([p.text for p in doc.paragraphs])
 
@@ -143,14 +136,10 @@ def read_docx_file(file_path: str) -> str:
 def parse_pdf_to_text(file_path: str) -> str:
     from pypdf import PdfReader
 
-    # Check if this is an S3 URI
-    if is_s3_uri(file_path):
-        raw_data = fetch_s3_file_sync(file_path)
-        reader = PdfReader(BytesIO(raw_data))
-        return "\n\n".join([page.extract_text() for page in reader.pages])
-
-    with Path(file_path).open("rb") as f, PdfReader(f) as reader:
-        return "\n\n".join([page.extract_text() for page in reader.pages])
+    # Read file from any storage backend (local or S3)
+    raw_data = read_file_sync(file_path)
+    reader = PdfReader(BytesIO(raw_data))
+    return "\n\n".join([page.extract_text() for page in reader.pages])
 
 
 def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:

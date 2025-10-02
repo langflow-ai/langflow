@@ -341,3 +341,229 @@ class TestS3StorageService:
         """Test teardown method."""
         # Should not raise any exceptions
         await s3_service.teardown()
+
+    # Tests for new unified storage methods
+    # Test is_remote_path method
+    def test_is_remote_path_true(self, s3_service):
+        """Test is_remote_path returns True for S3 URIs."""
+        assert s3_service.is_remote_path("s3://bucket/prefix/flow/file.txt") is True
+        assert s3_service.is_remote_path("s3://my-bucket/test.pdf") is True
+
+    def test_is_remote_path_false(self, s3_service):
+        """Test is_remote_path returns False for non-S3 paths."""
+        assert s3_service.is_remote_path("/local/path/file.txt") is False
+        assert s3_service.is_remote_path("relative/path.txt") is False
+        assert s3_service.is_remote_path("") is False
+
+    def test_is_remote_path_invalid_type(self, s3_service):
+        """Test is_remote_path handles non-string input."""
+        assert s3_service.is_remote_path(None) is False
+        assert s3_service.is_remote_path(123) is False
+
+    # Test parse_path method
+    def test_parse_path_valid_s3_uri(self, s3_service):
+        """Test parsing valid S3 URI."""
+        flow_id, file_name = s3_service.parse_path("s3://bucket/prefix/flow-123/document.pdf")
+
+        assert flow_id == "flow-123"
+        assert file_name == "document.pdf"
+
+    def test_parse_path_complex_s3_uri(self, s3_service):
+        """Test parsing S3 URI with multiple prefix levels."""
+        flow_id, file_name = s3_service.parse_path("s3://my-bucket/tenants/org1/flow-456/report.xlsx")
+
+        assert flow_id == "flow-456"
+        assert file_name == "report.xlsx"
+
+    def test_parse_path_non_s3_uri(self, s3_service):
+        """Test parsing non-S3 path returns None."""
+        assert s3_service.parse_path("/local/path/file.txt") is None
+        assert s3_service.parse_path("relative/file.txt") is None
+
+    def test_parse_path_invalid_s3_uri(self, s3_service):
+        """Test parsing invalid S3 URI returns None."""
+        # Too few path components
+        assert s3_service.parse_path("s3://bucket/file.txt") is None
+        assert s3_service.parse_path("s3://bucket") is None
+        assert s3_service.parse_path("s3://") is None
+
+    def test_parse_path_empty_string(self, s3_service):
+        """Test parsing empty string returns None."""
+        assert s3_service.parse_path("") is None
+
+    # Test path_exists method
+    @pytest.mark.asyncio
+    async def test_path_exists_true(self, s3_service, test_flow_id, test_file_name):
+        """Test path_exists returns True when file exists."""
+        s3_service.s3_client.head_object.return_value = {"ContentLength": 100}
+
+        exists = await s3_service.path_exists(test_flow_id, test_file_name)
+
+        assert exists is True
+        s3_service.s3_client.head_object.assert_called_once_with(
+            Bucket="test-bucket", Key=f"tenants/{test_flow_id}/{test_file_name}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_path_exists_false_404(self, s3_service, test_flow_id, test_file_name):
+        """Test path_exists returns False when file doesn't exist (404)."""
+        s3_service.s3_client.head_object.side_effect = ClientError(
+            {"Error": {"Code": "404", "Message": "Not Found"}}, "HeadObject"
+        )
+
+        exists = await s3_service.path_exists(test_flow_id, test_file_name)
+
+        assert exists is False
+
+    @pytest.mark.asyncio
+    async def test_path_exists_no_client(self, s3_service_no_client, test_flow_id, test_file_name):
+        """Test path_exists raises error when S3 client not initialized."""
+        with pytest.raises(RuntimeError, match="S3 client not initialized"):
+            await s3_service_no_client.path_exists(test_flow_id, test_file_name)
+
+    @pytest.mark.asyncio
+    async def test_path_exists_other_error(self, s3_service, test_flow_id, test_file_name):
+        """Test path_exists raises error for non-404 errors."""
+        s3_service.s3_client.head_object.side_effect = ClientError(
+            {"Error": {"Code": "AccessDenied", "Message": "Access Denied"}}, "HeadObject"
+        )
+
+        with pytest.raises(ClientError):
+            await s3_service.path_exists(test_flow_id, test_file_name)
+
+    # Test read_file method
+    @pytest.mark.asyncio
+    async def test_read_file_success(self, s3_service, test_data):
+        """Test reading file through unified interface."""
+        s3_uri = "s3://bucket/prefix/flow-789/document.pdf"
+
+        mock_body = MagicMock()
+        mock_body.read.return_value = test_data
+        s3_service.s3_client.get_object.return_value = {"Body": mock_body}
+
+        content = await s3_service.read_file(s3_uri)
+
+        assert content == test_data
+        s3_service.s3_client.get_object.assert_called_once_with(
+            Bucket="test-bucket", Key="tenants/flow-789/document.pdf"
+        )
+
+    @pytest.mark.asyncio
+    async def test_read_file_invalid_uri(self, s3_service):
+        """Test reading file with invalid S3 URI raises ValueError."""
+        with pytest.raises(ValueError, match="Invalid S3 URI format"):
+            await s3_service.read_file("s3://bucket/file.txt")
+
+    @pytest.mark.asyncio
+    async def test_read_file_non_s3_uri(self, s3_service):
+        """Test reading file with non-S3 path raises ValueError."""
+        with pytest.raises(ValueError, match="Invalid S3 URI format"):
+            await s3_service.read_file("/local/path/file.txt")
+
+    @pytest.mark.asyncio
+    async def test_read_file_not_found(self, s3_service):
+        """Test reading non-existent file raises appropriate error."""
+        s3_uri = "s3://bucket/prefix/flow-123/nonexistent.txt"
+
+        s3_service.s3_client.get_object.side_effect = ClientError(
+            {"Error": {"Code": "NoSuchKey", "Message": "The specified key does not exist"}}, "GetObject"
+        )
+
+        with pytest.raises(ClientError):
+            await s3_service.read_file(s3_uri)
+
+    # Test write_file method
+    @pytest.mark.asyncio
+    async def test_write_file_with_s3_uri(self, s3_service, test_data):
+        """Test writing file with S3 URI."""
+        s3_uri = "s3://bucket/prefix/flow-abc/new.txt"
+
+        result = await s3_service.write_file(s3_uri, test_data)
+
+        assert result == s3_uri
+        s3_service.s3_client.put_object.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_write_file_with_explicit_flow_id(self, s3_service, test_data):
+        """Test writing file with explicit flow_id parameter."""
+        result = await s3_service.write_file("document.pdf", test_data, flow_id="my-flow")
+
+        expected_uri = "s3://test-bucket/tenants/my-flow/document.pdf"
+        assert result == expected_uri
+        s3_service.s3_client.put_object.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_write_file_extracts_filename_from_s3_uri(self, s3_service, test_data):
+        """Test writing file extracts filename correctly from S3 URI."""
+        s3_uri = "s3://bucket/prefix/flow-123/report.pdf"
+
+        await s3_service.write_file(s3_uri, test_data, flow_id="override-flow")
+
+        # Should use override flow_id but keep filename from URI
+        expected_uri = "s3://test-bucket/tenants/override-flow/report.pdf"
+        result = s3_service.s3_client.put_object.call_args[1]
+        assert "tenants/override-flow/report.pdf" in result["Key"]
+
+    @pytest.mark.asyncio
+    async def test_write_file_without_flow_id_non_s3_path(self, s3_service, test_data):
+        """Test writing file without flow_id and non-S3 path raises ValueError."""
+        with pytest.raises(ValueError, match="flow_id must be provided"):
+            await s3_service.write_file("local/file.txt", test_data)
+
+    @pytest.mark.asyncio
+    async def test_write_file_invalid_s3_uri(self, s3_service, test_data):
+        """Test writing file with invalid S3 URI raises ValueError."""
+        with pytest.raises(ValueError, match="Invalid S3 URI format"):
+            await s3_service.write_file("s3://bucket/file.txt", test_data)
+
+    @pytest.mark.asyncio
+    async def test_write_file_empty_content(self, s3_service):
+        """Test writing empty file."""
+        result = await s3_service.write_file("empty.txt", b"", flow_id="test-flow")
+
+        expected_uri = "s3://test-bucket/tenants/test-flow/empty.txt"
+        assert result == expected_uri
+
+    # Integration tests combining multiple new methods
+    @pytest.mark.asyncio
+    async def test_workflow_parse_write_check_read(self, s3_service, test_data):
+        """Test complete workflow: parse, write, check, read."""
+        s3_uri = "s3://bucket/prefix/integration-flow/workflow.txt"
+
+        # Parse the URI
+        flow_id, file_name = s3_service.parse_path(s3_uri)
+        assert flow_id == "integration-flow"
+        assert file_name == "workflow.txt"
+
+        # Write the file
+        mock_body = MagicMock()
+        mock_body.read.return_value = test_data
+        s3_service.s3_client.get_object.return_value = {"Body": mock_body}
+        s3_service.s3_client.head_object.return_value = {"ContentLength": len(test_data)}
+
+        result_uri = await s3_service.write_file(s3_uri, test_data)
+        assert "integration-flow/workflow.txt" in result_uri
+
+        # Check existence
+        exists = await s3_service.path_exists(flow_id, file_name)
+        assert exists is True
+
+        # Read back
+        content = await s3_service.read_file(s3_uri)
+        assert content == test_data
+
+    def test_is_remote_path_consistency(self, s3_service):
+        """Test is_remote_path is consistent with parse_path."""
+        s3_paths = [
+            "s3://bucket/prefix/flow/file.txt",
+            "s3://my-bucket/tenants/org/flow-123/doc.pdf",
+        ]
+        local_paths = ["/local/path.txt", "relative/file.txt", ""]
+
+        for path in s3_paths:
+            assert s3_service.is_remote_path(path) is True
+            assert s3_service.parse_path(path) is not None
+
+        for path in local_paths:
+            assert s3_service.is_remote_path(path) is False
+            assert s3_service.parse_path(path) is None

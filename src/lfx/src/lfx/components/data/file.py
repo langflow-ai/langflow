@@ -25,7 +25,7 @@ from lfx.io import BoolInput, FileInput, IntInput, Output
 from lfx.schema import DataFrame  # noqa: TC001
 from lfx.schema.data import Data
 from lfx.schema.message import Message
-from lfx.utils.s3_helpers import fetch_s3_file_sync, is_s3_uri, parse_s3_uri
+from lfx.utils.storage_file_io import read_file_sync
 
 
 class FileComponent(BaseFileComponent):
@@ -283,15 +283,10 @@ class FileComponent(BaseFileComponent):
         )
         return file_path.lower().endswith(docling_exts)
 
-    def _fetch_s3_file_bytes(self, s3_uri: str) -> tuple[bytes, str]:
-        """Fetch S3 file content as bytes and return (bytes, filename)."""
-        s3_info = parse_s3_uri(s3_uri)
-        if not s3_info:
-            msg = f"Invalid S3 URI format: {s3_uri}"
-            raise ValueError(msg)
-
-        _flow_id, file_name = s3_info
-        file_content = fetch_s3_file_sync(s3_uri)
+    def _fetch_file_bytes(self, file_path: str) -> tuple[bytes, str]:
+        """Fetch file content as bytes from any storage backend and return (bytes, filename)."""
+        file_content = read_file_sync(file_path)
+        file_name = Path(file_path).name
         return (file_content, file_name)
 
     def _process_docling_in_subprocess(self, file_path: str) -> Data | None:
@@ -303,22 +298,22 @@ class FileComponent(BaseFileComponent):
         if not file_path:
             return None
 
-        # If S3 URI, fetch bytes instead of using temp file
+        # Fetch bytes from any storage backend (local or remote)
         file_bytes = None
         original_file_path = file_path
         file_name = Path(file_path).name
 
-        if is_s3_uri(file_path):
-            file_bytes, file_name = self._fetch_s3_file_bytes(file_path)
-            self.log(f"Fetched S3 file {original_file_path} ({len(file_bytes)} bytes)")
+        # Always fetch bytes for consistency (works for both local and S3)
+        file_bytes, file_name = self._fetch_file_bytes(file_path)
+        self.log(f"Fetched file {original_file_path} ({len(file_bytes)} bytes)")
 
-        # Prepare args with file bytes as base64 if from S3
+        # Prepare args with file bytes as base64
         import base64
 
         args: dict[str, Any] = {
-            "file_path": file_path if not file_bytes else None,
+            "file_path": None,  # Always use bytes for consistency
             "file_name": file_name,
-            "file_bytes": base64.b64encode(file_bytes).decode("utf-8") if file_bytes else None,
+            "file_bytes": base64.b64encode(file_bytes).decode("utf-8"),
             "markdown": bool(self.markdown),
             "image_mode": str(self.IMAGE_MODE),
             "md_image_placeholder": str(self.md_image_placeholder),
@@ -330,8 +325,7 @@ class FileComponent(BaseFileComponent):
         }
 
         self.log(f"Starting Docling subprocess for file: {file_path}")
-        if file_bytes:
-            self.log(f"Processing {len(file_bytes)} bytes from S3")
+        self.log(f"Processing {len(file_bytes)} bytes from storage")
 
         # Child script for isolating the docling processing
         child_script = textwrap.dedent(
@@ -576,9 +570,8 @@ class FileComponent(BaseFileComponent):
             return Data(data={"error": result.get("error", "Unknown Docling error"), **result.get("meta", {})})
 
         meta = result.get("meta", {})
-        # Ensure S3 path is in metadata
-        if file_bytes:
-            meta["file_path"] = original_file_path
+        # Ensure original file path is in metadata
+        meta["file_path"] = original_file_path
 
         if result.get("mode") == "markdown":
             exported_content = str(result.get("text", ""))
