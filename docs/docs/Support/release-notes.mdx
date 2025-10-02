@@ -17,6 +17,7 @@ Due to strict SemVer requirements, Langflow Desktop can have different patch ver
 Whenever possible, the Langflow team recommends installing new Langflow versions in a new virtual environment or VM before upgrading your primary installation.
 This allows you to [import flows](/concepts-flows-import#import-a-flow) from your existing installation and test them in the new version without disrupting your existing installation.
 In the event of breaking changes or bugs, your existing installation is preserved in a stable state.
+If you are upgrading Windows Desktop to 1.6.0, don't auto-upgrade with the in-app **Update** button. Instead, follow the instructions in [Known issue: Don't auto-upgrade Windows Desktop](#windows-desktop-update-issue).
 :::
 
 To avoid the impact of potential breaking changes and test new versions, the Langflow team recommends the following upgrade process:
@@ -51,6 +52,42 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 Highlights of this release include the following changes.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
 
+### Known issue: Don't auto-upgrade Windows Desktop {#windows-desktop-update-issue}
+
+:::warning
+Windows users of Langflow Desktop should **not** use the in-app update feature to upgrade to Langflow version 1.6.0.
+Only Windows Desktop users upgrading to Langflow version 1.6.0 are affected.
+:::
+
+The **Update** button in Langflow Desktop will not work for Windows users, and may result in data loss.
+
+Instead, download a fresh installation from the [Langflow website](https://langflow.org) when a new version is available.
+
+Follow the instructions below to minimize the risk of losing flows.
+
+These instructions assume the default path for the Langflow database of `C:\Users\YOUR_USERNAME\AppData\Roaming\com.langflow\data\database.db` or `C:\Users\%YOUR_USERNAME%\AppData\Roaming\com.langflow\data\database.db`. Replace `YOUR_USERNAME` with your Windows username.
+
+1. Ensure you have Administrator privileges.
+2. Ensure you have enough disk space for a second installation of Langflow.
+3. Close Langflow, and ensure no Langflow process is running in Task Manager.
+4. The Langflow 1.6.0 installer automatically performs a database backup in a later step, but an additional manual backup provides additional redundancy and is recommended.
+To manually back up your Langflow database file, do the following:
+   1. In Windows Explorer, navigate to `C:\Users\YOUR_USERNAME\AppData\Roaming\com.langflow\data\`. Replace `YOUR_USERNAME` with your Windows username.
+   2. Copy the `database.db` at this location, and paste it to a safe location.
+5. Download the Windows installer from the [Langflow website](https://langflow.org).
+6. Run the Windows installer as an Administrator. To run the installer as an Administrator, right-click the executable and select **Run as administrator**.
+7. Follow the Windows installer's guided steps.
+The Langflow 1.6.0 installer automatically performs a database backup.
+These steps install Langflow from scratch, and result in two Langflow installations: the previously installed version, and version 1.6.0.
+This is expected behavior.
+8. Start version 1.6.0 of Langflow, and confirm your flows behave as expected.
+9. **If flows are missing**, restore your flows from your manual backup by doing the following:
+    1. Close Langflow.
+    2. Navigate to your backup location, and copy the `database.db` file.
+    3. Replace the database file in the new installation's `data` directory.
+    4. Start Langflow, and confirm your flows behave as expected.
+    5. After confirmation, uninstall the previous version of Langflow, and keep version 1.6.0.
+
 ### Breaking changes
 
 - Authentication enforced for Langflow API requests by default
@@ -79,7 +116,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
   The **File** component supports advanced parsing with the Docling library.
 
-  To make it easier to use the [**Docling** components](/integrations-docling) and the **File** component's new advanced parsing feature, the Docling dependency is now included with Langflow for all operating systems except macOS Intel (x86_64).
+  To make it easier to use the [**Docling** components](/bundles-docling) and the **File** component's new advanced parsing feature, the Docling dependency is now included with Langflow for all operating systems except macOS Intel (x86_64).
 
   For more information, see [Advanced parsing](/components-data#advanced-parsing).
 
@@ -98,7 +135,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
   - [Traceloop](/integrations-instana-traceloop)
   - [Cohere Rerank](/bundles-cohere)
   - [S3 Bucket Uploader](/bundles-amazon)
-  - [Composio single-service components](/integrations-composio)
+  - [Composio single-service components](/bundles-composio)
 
 ### Deprecations
 
@@ -161,7 +198,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 - New integrations and bundles
 
-   - [**Cleanlab** bundle](/integrations-cleanlab)
+   - [**Cleanlab** bundle](/bundles-cleanlab)
 
 ## 1.4.2
 
