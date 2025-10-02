@@ -167,7 +167,7 @@ class CustomComponent(BaseComponent):
         """Resolves the path to an absolute path."""
         if not path:
             return path
-            
+
         path_object = Path(path)
 
         if path_object.parts and path_object.parts[0] == "~":

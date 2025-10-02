@@ -566,7 +566,10 @@ class FileComponent(BaseFileComponent):
         except Exception as e:  # noqa: BLE001
             err_msg = proc.stderr.decode("utf-8", errors="replace")
             return Data(
-                data={"error": f"Invalid JSON from Docling subprocess: {e}. stderr={err_msg}", "file_path": original_file_path},
+                data={
+                    "error": f"Invalid JSON from Docling subprocess: {e}. stderr={err_msg}",
+                    "file_path": original_file_path,
+                },
             )
 
         if not result.get("ok"):

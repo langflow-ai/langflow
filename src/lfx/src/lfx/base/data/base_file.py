@@ -18,7 +18,7 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.utils.helpers import build_content_type_from_extension
-from lfx.utils.s3_helpers import fetch_s3_file_sync, is_s3_uri, parse_s3_uri
+from lfx.utils.s3_helpers import fetch_s3_file_sync, is_s3_uri
 
 if TYPE_CHECKING:
     from collections.abc import Callable
