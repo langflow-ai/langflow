@@ -97,11 +97,31 @@ class ConnectionPoolMonitor:
             pool = engine.pool
             metrics = self.engines[engine_id]
 
-            # Update pool statistics
-            metrics.checked_in = getattr(pool, "checkedin", lambda: 0)()
-            metrics.checked_out = getattr(pool, "checkedout", lambda: 0)()
-            metrics.overflow = getattr(pool, "overflow", lambda: 0)()
-            metrics.invalid = getattr(pool, "invalid", lambda: 0)()
+            # Fast-path to avoid multiple getattr lookups for each
+            checkedin = getattr(pool, "checkedin", None)
+            if checkedin is not None:
+                metrics.checked_in = checkedin()
+            else:
+                metrics.checked_in = 0
+
+            checkedout = getattr(pool, "checkedout", None)
+            if checkedout is not None:
+                metrics.checked_out = checkedout()
+            else:
+                metrics.checked_out = 0
+
+            overflow = getattr(pool, "overflow", None)
+            if overflow is not None:
+                metrics.overflow = overflow()
+            else:
+                metrics.overflow = 0
+
+            invalid = getattr(pool, "invalid", None)
+            if invalid is not None:
+                metrics.invalid = invalid()
+            else:
+                metrics.invalid = 0
+
             metrics.total_connections = metrics.checked_in + metrics.checked_out
             metrics.last_updated = time.time()
 
