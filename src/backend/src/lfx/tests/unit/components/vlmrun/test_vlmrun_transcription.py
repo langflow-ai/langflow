@@ -67,14 +67,20 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
 
     def test_component_metadata(self, component_class):
         """Test component metadata attributes."""
-        assert component_class.display_name == "VLM Run Transcription"
-        assert (
+        # Using pytest comparison for better error messages
+        if component_class.display_name != "VLM Run Transcription":
+            pytest.fail(f"Expected display_name to be 'VLM Run Transcription', got '{component_class.display_name}'")
+        if (
             component_class.description
-            == "Extract structured data from audio and video using [VLM Run AI](https://app.vlm.run)"
-        )
-        assert component_class.documentation == "https://docs.vlm.run"
-        assert component_class.icon == "VLMRun"
-        assert component_class.beta is True
+            != "Extract structured data from audio and video using [VLM Run AI](https://app.vlm.run)"
+        ):
+            pytest.fail(f"Expected description mismatch, got '{component_class.description}'")
+        if component_class.documentation != "https://docs.vlm.run":
+            pytest.fail(f"Expected documentation to be 'https://docs.vlm.run', got '{component_class.documentation}'")
+        if component_class.icon != "VLMRun":
+            pytest.fail(f"Expected icon to be 'VLMRun', got '{component_class.icon}'")
+        if component_class.beta is not True:
+            pytest.fail(f"Expected beta to be True, got '{component_class.beta}'")
 
     def test_component_inputs(self, component_class):
         """Test component input definitions."""
@@ -82,36 +88,65 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
         inputs_dict = {inp.name: inp for inp in component.inputs}
 
         # Check API key input
-        assert "api_key" in inputs_dict
-        assert inputs_dict["api_key"].display_name == "VLM Run API Key"
-        assert inputs_dict["api_key"].required is True
+        if "api_key" not in inputs_dict:
+            pytest.fail("api_key not found in inputs_dict")
+        if inputs_dict["api_key"].display_name != "VLM Run API Key":
+            pytest.fail(
+                f"Expected api_key display_name to be 'VLM Run API Key', got '{inputs_dict['api_key'].display_name}'"
+            )
+        if inputs_dict["api_key"].required is not True:
+            pytest.fail(f"Expected api_key to be required, got {inputs_dict['api_key'].required}")
 
         # Check media type input
-        assert "media_type" in inputs_dict
-        assert inputs_dict["media_type"].display_name == "Media Type"
-        assert inputs_dict["media_type"].options == ["audio", "video"]
-        assert inputs_dict["media_type"].value == "audio"
+        if "media_type" not in inputs_dict:
+            pytest.fail("media_type not found in inputs_dict")
+        if inputs_dict["media_type"].display_name != "Media Type":
+            pytest.fail(
+                f"Expected media_type display_name to be 'Media Type', got '{inputs_dict['media_type'].display_name}'"
+            )
+        if inputs_dict["media_type"].options != ["audio", "video"]:
+            pytest.fail(
+                f"Expected media_type options to be ['audio', 'video'], got {inputs_dict['media_type'].options}"
+            )
+        if inputs_dict["media_type"].value != "audio":
+            pytest.fail(f"Expected media_type value to be 'audio', got '{inputs_dict['media_type'].value}'")
 
         # Check media files input
-        assert "media_files" in inputs_dict
-        assert inputs_dict["media_files"].display_name == "Media Files"
-        assert inputs_dict["media_files"].is_list is True
-        assert inputs_dict["media_files"].required is False
+        if "media_files" not in inputs_dict:
+            pytest.fail("media_files not found in inputs_dict")
+        if inputs_dict["media_files"].display_name != "Media Files":
+            pytest.fail(
+                f"Expected media_files display_name to be 'Media Files', "
+                f"got '{inputs_dict['media_files'].display_name}'"
+            )
+        if inputs_dict["media_files"].is_list is not True:
+            pytest.fail(f"Expected media_files.is_list to be True, got {inputs_dict['media_files'].is_list}")
+        if inputs_dict["media_files"].required is not False:
+            pytest.fail(f"Expected media_files to not be required, got {inputs_dict['media_files'].required}")
 
         # Check media URL input
-        assert "media_url" in inputs_dict
-        assert inputs_dict["media_url"].display_name == "Media URL"
-        assert inputs_dict["media_url"].required is False
-        assert inputs_dict["media_url"].advanced is True
+        if "media_url" not in inputs_dict:
+            pytest.fail("media_url not found in inputs_dict")
+        if inputs_dict["media_url"].display_name != "Media URL":
+            pytest.fail(
+                f"Expected media_url display_name to be 'Media URL', got '{inputs_dict['media_url'].display_name}'"
+            )
+        if inputs_dict["media_url"].required is not False:
+            pytest.fail(f"Expected media_url to not be required, got {inputs_dict['media_url'].required}")
+        if inputs_dict["media_url"].advanced is not True:
+            pytest.fail(f"Expected media_url to be advanced, got {inputs_dict['media_url'].advanced}")
 
     def test_component_outputs(self, component_class):
         """Test component output definitions."""
         component = component_class()
         outputs_dict = {out.name: out for out in component.outputs}
 
-        assert "result" in outputs_dict
-        assert outputs_dict["result"].display_name == "Result"
-        assert outputs_dict["result"].method == "process_media"
+        if "result" not in outputs_dict:
+            pytest.fail("result not found in outputs_dict")
+        if outputs_dict["result"].display_name != "Result":
+            pytest.fail(f"Expected result display_name to be 'Result', got '{outputs_dict['result'].display_name}'")
+        if outputs_dict["result"].method != "process_media":
+            pytest.fail(f"Expected result method to be 'process_media', got '{outputs_dict['result'].method}'")
 
     def test_no_input_validation(self, component_class, default_kwargs):
         """Test validation when no media input is provided."""
@@ -119,10 +154,14 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
 
         result = component.process_media()
 
-        assert isinstance(result, Data)
-        assert "error" in result.data
-        assert result.data["error"] == "Either media files or media URL must be provided"
-        assert component.status == "Either media files or media URL must be provided"
+        if not isinstance(result, Data):
+            pytest.fail(f"Expected result to be Data instance, got {type(result)}")
+        if "error" not in result.data:
+            pytest.fail("error not found in result.data")
+        if result.data["error"] != "Either media files or media URL must be provided":
+            pytest.fail(f"Expected error message mismatch, got '{result.data['error']}'")
+        if component.status != "Either media files or media URL must be provided":
+            pytest.fail(f"Expected status mismatch, got '{component.status}'")
 
     @patch("builtins.__import__")
     def test_vlmrun_import_error(self, mock_import, component_class, default_kwargs):
@@ -143,9 +182,12 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
 
         result = component.process_media()
 
-        assert isinstance(result, Data)
-        assert "error" in result.data
-        assert "VLM Run SDK not installed" in result.data["error"]
+        if not isinstance(result, Data):
+            pytest.fail(f"Expected result to be Data instance, got {type(result)}")
+        if "error" not in result.data:
+            pytest.fail("error not found in result.data")
+        if "VLM Run SDK not installed" not in result.data["error"]:
+            pytest.fail(f"Expected 'VLM Run SDK not installed' in error message, got '{result.data['error']}'")
 
     def test_frontend_node_generation(self, component_class, default_kwargs):
         """Test frontend node generation."""
@@ -154,22 +196,33 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
         frontend_node = component.to_frontend_node()
 
         # Verify node structure
-        assert frontend_node is not None
-        assert isinstance(frontend_node, dict)
-        assert "data" in frontend_node
-        assert "type" in frontend_node["data"]
+        if frontend_node is None:
+            pytest.fail("frontend_node is None")
+        if not isinstance(frontend_node, dict):
+            pytest.fail(f"Expected frontend_node to be dict, got {type(frontend_node)}")
+        if "data" not in frontend_node:
+            pytest.fail("data not found in frontend_node")
+        if "type" not in frontend_node["data"]:
+            pytest.fail("type not found in frontend_node['data']")
 
         node_data = frontend_node["data"]["node"]
-        assert "description" in node_data
-        assert "icon" in node_data
-        assert "template" in node_data
+        if "description" not in node_data:
+            pytest.fail("description not found in node_data")
+        if "icon" not in node_data:
+            pytest.fail("icon not found in node_data")
+        if "template" not in node_data:
+            pytest.fail("template not found in node_data")
 
         # Verify template has correct inputs
         template = node_data["template"]
-        assert "api_key" in template
-        assert "media_type" in template
-        assert "media_files" in template
-        assert "media_url" in template
+        if "api_key" not in template:
+            pytest.fail("api_key not found in template")
+        if "media_type" not in template:
+            pytest.fail("media_type not found in template")
+        if "media_files" not in template:
+            pytest.fail("media_files not found in template")
+        if "media_url" not in template:
+            pytest.fail("media_url not found in template")
 
     def test_input_field_types(self, component_class):
         """Test that input fields have correct types."""
@@ -183,16 +236,21 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
         expected_types = expected_audio_types + expected_video_types
 
         for file_type in expected_types:
-            assert file_type in media_files_input.file_types
+            if file_type not in media_files_input.file_types:
+                pytest.fail(f"Expected file type '{file_type}' not found in media_files_input.file_types")
 
     def test_component_initialization(self, component_class, default_kwargs):
         """Test component can be initialized with default kwargs."""
         component = component_class(**default_kwargs)
 
-        assert component.api_key == "test-api-key"  # pragma: allowlist secret
-        assert component.media_type == "audio"
-        assert hasattr(component, "media_files")
-        assert hasattr(component, "media_url")
+        if component.api_key != "test-api-key":  # pragma: allowlist secret
+            pytest.fail(f"Expected api_key to be 'test-api-key', got '{component.api_key}'")
+        if component.media_type != "audio":
+            pytest.fail(f"Expected media_type to be 'audio', got '{component.media_type}'")
+        if not hasattr(component, "media_files"):
+            pytest.fail("component does not have 'media_files' attribute")
+        if not hasattr(component, "media_url"):
+            pytest.fail("component does not have 'media_url' attribute")
 
     def test_media_type_options(self, component_class):
         """Test media type dropdown has correct options."""
@@ -200,8 +258,10 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
         inputs_dict = {inp.name: inp for inp in component.inputs}
 
         media_type_input = inputs_dict["media_type"]
-        assert media_type_input.options == ["audio", "video"]
-        assert media_type_input.value == "audio"  # Default value
+        if media_type_input.options != ["audio", "video"]:
+            pytest.fail(f"Expected media_type options to be ['audio', 'video'], got {media_type_input.options}")
+        if media_type_input.value != "audio":  # Default value
+            pytest.fail(f"Expected media_type value to be 'audio', got '{media_type_input.value}'")
 
     def test_api_key_info_contains_url(self, component_class):
         """Test that API key input contains app URL for user guidance."""
@@ -209,7 +269,8 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
         inputs_dict = {inp.name: inp for inp in component.inputs}
 
         api_key_input = inputs_dict["api_key"]
-        assert "https://app.vlm.run" in api_key_input.info
+        if "https://app.vlm.run" not in api_key_input.info:
+            pytest.fail(f"Expected 'https://app.vlm.run' in api_key info, got '{api_key_input.info}'")
 
     @patch("vlmrun.client.VLMRun")
     def test_single_audio_file_with_mocked_client(self, mock_vlmrun_class, component_class, default_kwargs):
@@ -228,18 +289,30 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
 
         result = component.process_media()
 
-        assert isinstance(result, Data)
-        assert "results" in result.data
-        assert len(result.data["results"]) == 1
+        if not isinstance(result, Data):
+            pytest.fail(f"Expected result to be Data instance, got {type(result)}")
+        if "results" not in result.data:
+            pytest.fail("results not found in result.data")
+        if len(result.data["results"]) != 1:
+            pytest.fail(f"Expected 1 result, got {len(result.data['results'])}")
 
         audio_result = result.data["results"][0]
-        assert audio_result["prediction_id"] == "test-prediction-123"
-        assert audio_result["transcription"] == "Hello world This is a test"
-        assert audio_result["metadata"]["duration"] == 10.5
-        assert audio_result["status"] == "completed"
-        assert audio_result["usage"].total_tokens == 150
-        assert "filename" in audio_result
-        assert audio_result["filename"] == "test.mp3"
+        if audio_result["prediction_id"] != "test-prediction-123":
+            pytest.fail(f"Expected prediction_id to be 'test-prediction-123', got '{audio_result['prediction_id']}'")
+        if audio_result["transcription"] != "Hello world This is a test":
+            pytest.fail(f"Expected transcription mismatch, got '{audio_result['transcription']}'")
+        expected_duration = 10.5
+        if audio_result["metadata"]["duration"] != expected_duration:
+            pytest.fail(f"Expected duration to be {expected_duration}, got {audio_result['metadata']['duration']}")
+        if audio_result["status"] != "completed":
+            pytest.fail(f"Expected status to be 'completed', got '{audio_result['status']}'")
+        expected_tokens = 150
+        if audio_result["usage"].total_tokens != expected_tokens:
+            pytest.fail(f"Expected total_tokens to be {expected_tokens}, got {audio_result['usage'].total_tokens}")
+        if "filename" not in audio_result:
+            pytest.fail("filename not found in audio_result")
+        if audio_result["filename"] != "test.mp3":
+            pytest.fail(f"Expected filename to be 'test.mp3', got '{audio_result['filename']}'")
 
         # Verify the client was called correctly
         mock_client.audio.generate.assert_called_once()
@@ -272,21 +345,36 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
 
         result = component.process_media()
 
-        assert isinstance(result, Data)
-        assert "results" in result.data
-        assert len(result.data["results"]) == 1
+        if not isinstance(result, Data):
+            pytest.fail(f"Expected result to be Data instance, got {type(result)}")
+        if "results" not in result.data:
+            pytest.fail("results not found in result.data")
+        if len(result.data["results"]) != 1:
+            pytest.fail(f"Expected 1 result, got {len(result.data['results'])}")
 
         video_result = result.data["results"][0]
-        assert video_result["prediction_id"] == "test-video-456"
+        if video_result["prediction_id"] != "test-video-456":
+            pytest.fail(f"Expected prediction_id to be 'test-video-456', got '{video_result['prediction_id']}'")
         # Check that transcription includes both video content and audio in brackets
         expected_transcription = (
             "Scene description 1 [Audio: Dialog line 1] Scene description 2 [Audio: Dialog line 2] Scene description 3"
         )
-        assert video_result["transcription"] == expected_transcription
-        assert video_result["metadata"]["media_type"] == "video"
-        assert video_result["metadata"]["duration"] == 120.0
-        assert video_result["status"] == "completed"
-        assert video_result["usage"].total_tokens == 300
+        if video_result["transcription"] != expected_transcription:
+            pytest.fail(f"Expected transcription mismatch, got '{video_result['transcription']}'")
+        if video_result["metadata"]["media_type"] != "video":
+            pytest.fail(f"Expected media_type to be 'video', got '{video_result['metadata']['media_type']}'")
+        expected_video_duration = 120.0
+        if video_result["metadata"]["duration"] != expected_video_duration:
+            pytest.fail(
+                f"Expected duration to be {expected_video_duration}, got {video_result['metadata']['duration']}"
+            )
+        if video_result["status"] != "completed":
+            pytest.fail(f"Expected status to be 'completed', got '{video_result['status']}'")
+        expected_video_tokens = 300
+        if video_result["usage"].total_tokens != expected_video_tokens:
+            pytest.fail(
+                f"Expected total_tokens to be {expected_video_tokens}, got {video_result['usage'].total_tokens}"
+            )
 
         # Verify the client was called correctly
         mock_client.video.generate.assert_called_once()
@@ -319,30 +407,58 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
 
         result = component.process_media()
 
-        assert isinstance(result, Data)
-        assert "results" in result.data
-        assert len(result.data["results"]) == 2
-        assert result.data["total_files"] == 2
+        if not isinstance(result, Data):
+            pytest.fail(f"Expected result to be Data instance, got {type(result)}")
+        if "results" not in result.data:
+            pytest.fail("results not found in result.data")
+        expected_file_count = 2
+        if len(result.data["results"]) != expected_file_count:
+            pytest.fail(f"Expected {expected_file_count} results, got {len(result.data['results'])}")
+        if result.data["total_files"] != expected_file_count:
+            pytest.fail(f"Expected total_files to be {expected_file_count}, got {result.data['total_files']}")
 
         # Verify individual transcription results are accessible
-        assert result.data["results"][0]["transcription"] == "File 1 content"
-        assert result.data["results"][1]["transcription"] == "File 2 content"
-        assert result.data["results"][0]["filename"] == "file1.mp3"
-        assert result.data["results"][1]["filename"] == "file2.mp3"
+        if result.data["results"][0]["transcription"] != "File 1 content":
+            pytest.fail(
+                f"Expected first transcription to be 'File 1 content', "
+                f"got '{result.data['results'][0]['transcription']}'"
+            )
+        if result.data["results"][1]["transcription"] != "File 2 content":
+            pytest.fail(
+                f"Expected second transcription to be 'File 2 content', "
+                f"got '{result.data['results'][1]['transcription']}'"
+            )
+        if result.data["results"][0]["filename"] != "file1.mp3":
+            pytest.fail(f"Expected first filename to be 'file1.mp3', got '{result.data['results'][0]['filename']}'")
+        if result.data["results"][1]["filename"] != "file2.mp3":
+            pytest.fail(f"Expected second filename to be 'file2.mp3', got '{result.data['results'][1]['filename']}'")
 
         # Verify the client was called correctly for both files
-        assert mock_client.audio.generate.call_count == 2
-        assert mock_client.predictions.wait.call_count == 2
+        if mock_client.audio.generate.call_count != expected_file_count:
+            pytest.fail(
+                f"Expected audio.generate to be called {expected_file_count} times, "
+                f"got {mock_client.audio.generate.call_count}"
+            )
+        if mock_client.predictions.wait.call_count != expected_file_count:
+            pytest.fail(
+                f"Expected predictions.wait to be called {expected_file_count} times, "
+                f"got {mock_client.predictions.wait.call_count}"
+            )
 
         # Verify API key was passed correctly
         mock_vlmrun_class.assert_called_once_with(api_key="test-api-key")  # pragma: allowlist secret
 
         # Verify predictions.wait was called with correct IDs and timeout
         wait_calls = mock_client.predictions.wait.call_args_list
-        assert wait_calls[0][0][0] == "pred-1"
-        assert wait_calls[0][1]["timeout"] == 600
-        assert wait_calls[1][0][0] == "pred-2"
-        assert wait_calls[1][1]["timeout"] == 600
+        default_timeout = 600
+        if wait_calls[0][0][0] != "pred-1":
+            pytest.fail(f"Expected first wait call ID to be 'pred-1', got '{wait_calls[0][0][0]}'")
+        if wait_calls[0][1]["timeout"] != default_timeout:
+            pytest.fail(f"Expected first wait call timeout to be {default_timeout}, got {wait_calls[0][1]['timeout']}")
+        if wait_calls[1][0][0] != "pred-2":
+            pytest.fail(f"Expected second wait call ID to be 'pred-2', got '{wait_calls[1][0][0]}'")
+        if wait_calls[1][1]["timeout"] != default_timeout:
+            pytest.fail(f"Expected second wait call timeout to be {default_timeout}, got {wait_calls[1][1]['timeout']}")
 
     @patch("vlmrun.client.VLMRun")
     def test_url_input_processing(self, mock_vlmrun_class, component_class, default_kwargs):
@@ -363,11 +479,15 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
 
         result = component.process_media()
 
-        assert isinstance(result, Data)
-        assert "results" in result.data
+        if not isinstance(result, Data):
+            pytest.fail(f"Expected result to be Data instance, got {type(result)}")
+        if "results" not in result.data:
+            pytest.fail("results not found in result.data")
         audio_result = result.data["results"][0]
-        assert "source" in audio_result  # URL should use 'source' not 'filename'
-        assert audio_result["source"] == "https://example.com/media.mp3"
+        if "source" not in audio_result:  # URL should use 'source' not 'filename'
+            pytest.fail("source not found in audio_result")
+        if audio_result["source"] != "https://example.com/media.mp3":
+            pytest.fail(f"Expected source to be 'https://example.com/media.mp3', got '{audio_result['source']}'")
 
         # Verify the client was called with the correct URL and API key
         mock_client.audio.generate.assert_called_once()
@@ -376,8 +496,10 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
 
         # Verify URL parameter was passed correctly
         call_args = mock_client.audio.generate.call_args
-        assert "url" in call_args.kwargs
-        assert call_args.kwargs["url"] == "https://example.com/media.mp3"
+        if "url" not in call_args.kwargs:
+            pytest.fail("url not found in call_args.kwargs")
+        if call_args.kwargs["url"] != "https://example.com/media.mp3":
+            pytest.fail(f"Expected url to be 'https://example.com/media.mp3', got '{call_args.kwargs['url']}'")
 
     def test_advanced_inputs_added(self, component_class):
         """Test that new advanced inputs are properly added."""
@@ -385,17 +507,34 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
         inputs_dict = {inp.name: inp for inp in component.inputs}
 
         # Check timeout_seconds input
-        assert "timeout_seconds" in inputs_dict
-        assert inputs_dict["timeout_seconds"].display_name == "Timeout (seconds)"
-        assert inputs_dict["timeout_seconds"].value == 600
-        assert inputs_dict["timeout_seconds"].advanced is True
+        default_timeout = 600
+        if "timeout_seconds" not in inputs_dict:
+            pytest.fail("timeout_seconds not found in inputs_dict")
+        if inputs_dict["timeout_seconds"].display_name != "Timeout (seconds)":
+            pytest.fail(
+                f"Expected timeout_seconds display_name to be 'Timeout (seconds)', "
+                f"got '{inputs_dict['timeout_seconds'].display_name}'"
+            )
+        if inputs_dict["timeout_seconds"].value != default_timeout:
+            pytest.fail(
+                f"Expected timeout_seconds value to be {default_timeout}, got {inputs_dict['timeout_seconds'].value}"
+            )
+        if inputs_dict["timeout_seconds"].advanced is not True:
+            pytest.fail(f"Expected timeout_seconds to be advanced, got {inputs_dict['timeout_seconds'].advanced}")
 
         # Check domain input
-        assert "domain" in inputs_dict
-        assert inputs_dict["domain"].display_name == "Processing Domain"
-        assert inputs_dict["domain"].options == ["transcription"]
-        assert inputs_dict["domain"].value == "transcription"
-        assert inputs_dict["domain"].advanced is True
+        if "domain" not in inputs_dict:
+            pytest.fail("domain not found in inputs_dict")
+        if inputs_dict["domain"].display_name != "Processing Domain":
+            pytest.fail(
+                f"Expected domain display_name to be 'Processing Domain', got '{inputs_dict['domain'].display_name}'"
+            )
+        if inputs_dict["domain"].options != ["transcription"]:
+            pytest.fail(f"Expected domain options to be ['transcription'], got {inputs_dict['domain'].options}")
+        if inputs_dict["domain"].value != "transcription":
+            pytest.fail(f"Expected domain value to be 'transcription', got '{inputs_dict['domain'].value}'")
+        if inputs_dict["domain"].advanced is not True:
+            pytest.fail(f"Expected domain to be advanced, got {inputs_dict['domain'].advanced}")
 
     @patch("vlmrun.client.VLMRun")
     def test_api_error_handling(self, mock_vlmrun_class, component_class, default_kwargs):
@@ -410,10 +549,16 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
 
         result = component.process_media()
 
-        assert isinstance(result, Data)
-        assert "error" in result.data
-        assert "Processing failed: API request failed" in result.data["error"]
-        assert component.status is not None
+        if not isinstance(result, Data):
+            pytest.fail(f"Expected result to be Data instance, got {type(result)}")
+        if "error" not in result.data:
+            pytest.fail("error not found in result.data")
+        if "Processing failed: API request failed" not in result.data["error"]:
+            pytest.fail(
+                f"Expected 'Processing failed: API request failed' in error message, got '{result.data['error']}'"
+            )
+        if component.status is None:
+            pytest.fail("Expected component.status to not be None")
 
         # Verify the client was called correctly
         mock_client.audio.generate.assert_called_once()
@@ -437,8 +582,10 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
 
         result = component.process_media()
 
-        assert isinstance(result, Data)
-        assert "results" in result.data
+        if not isinstance(result, Data):
+            pytest.fail(f"Expected result to be Data instance, got {type(result)}")
+        if "results" not in result.data:
+            pytest.fail("results not found in result.data")
 
         # Verify timeout was passed to predictions.wait
         mock_client.predictions.wait.assert_called_once_with(mock_response.id, timeout=300)
