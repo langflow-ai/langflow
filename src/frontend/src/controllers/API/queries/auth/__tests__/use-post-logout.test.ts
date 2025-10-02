@@ -97,7 +97,7 @@ describe("logout functionality", () => {
       mockApiPost.mockResolvedValue({ data: { success: true } });
 
       const logoutMutation = useLogout();
-      logoutMutation.mutate();
+      await logoutMutation.mutate();
 
       expect(mockApiPost).toHaveBeenCalledWith(
         expect.stringContaining("logout"),
@@ -109,7 +109,7 @@ describe("logout functionality", () => {
       mockApiPost.mockResolvedValue({ data: { success: true } });
 
       const logoutMutation = useLogout();
-      logoutMutation.mutate();
+      await logoutMutation.mutate();
 
       expect(mockLogout).toHaveBeenCalled();
       expect(mockResetFlowState).toHaveBeenCalled();
@@ -122,7 +122,7 @@ describe("logout functionality", () => {
       mockApiPost.mockResolvedValue({ data: { success: true } });
 
       const logoutMutation = useLogout();
-      logoutMutation.mutate();
+      await logoutMutation.mutate();
 
       expect(mockQueryClient.clear).toHaveBeenCalled();
     });
@@ -133,7 +133,7 @@ describe("logout functionality", () => {
       mockGetAuthCookie.mockReturnValue("auto");
 
       const logoutMutation = useLogout();
-      logoutMutation.mutate();
+      await logoutMutation.mutate();
 
       expect(mockApiPost).not.toHaveBeenCalled();
     });
@@ -142,7 +142,7 @@ describe("logout functionality", () => {
       mockGetAuthCookie.mockReturnValue("auto");
 
       const logoutMutation = useLogout();
-      logoutMutation.mutate();
+      await logoutMutation.mutate();
 
       expect(mockLogout).toHaveBeenCalled();
       expect(mockResetFlowState).toHaveBeenCalled();
@@ -156,7 +156,7 @@ describe("logout functionality", () => {
       mockApiPost.mockRejectedValue(mockError);
 
       const logoutMutation = useLogout();
-      expect(logoutMutation.mutate()).rejects.toThrow("API Error");
+      await expect(logoutMutation.mutate()).rejects.toThrow("API Error");
     });
   });
 });
