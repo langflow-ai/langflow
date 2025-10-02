@@ -49,7 +49,7 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            runner: [self-hosted, linux, X64, Langflow-runners]
+            runner: [Langflow-runner]
           - arch: arm64
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
@@ -140,7 +140,7 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            runner: [self-hosted, linux, X64, Langflow-runners]
+            runner: [Langflow-runner]
           - arch: arm64
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
@@ -231,7 +231,7 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            runner: [self-hosted, linux, X64, Langflow-runners]
+            runner: [Langflow-runner]
           - arch: arm64
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}

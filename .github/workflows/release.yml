@@ -55,7 +55,7 @@ on:
         options:
           - ubuntu-latest
           - self-hosted
-          - "[self-hosted, linux, X64, Langflow-runners]"
+          - "[Langflow-runner]"
           - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
         default: ubuntu-latest
 

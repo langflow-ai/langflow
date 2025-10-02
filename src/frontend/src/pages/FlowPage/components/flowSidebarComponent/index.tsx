@@ -597,7 +597,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
           <SidebarContent
             segmentedSidebar={ENABLE_NEW_SIDEBAR}
-            className="flex-1 group-data-[collapsible=icon]:hidden"
+            className="flex-1 group-data-[collapsible=icon]:hidden gutter-stable"
           >
             {isLoading ? (
               <div className="flex flex-col gap-2">
