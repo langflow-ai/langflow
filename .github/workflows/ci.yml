@@ -3,8 +3,8 @@ name: CI
 on:
   workflow_call:
     inputs:
-      branch:
-        description: "(Optional) Branch to checkout"
+      ref:
+        description: "(Optional) Ref to checkout"
         required: false
         type: string
       python-versions:
@@ -34,8 +34,8 @@ on:
         default: "ubuntu-latest"
   workflow_dispatch:
     inputs:
-      branch:
-        description: "(Optional) Branch to checkout"
+      ref:
+        description: "(Optional) Ref to checkout"
         required: false
         type: string
       openai_api_key:
@@ -74,6 +74,20 @@ env:
   TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
 jobs:
+  echo-inputs:
+    name: Echo Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo inputs
+        run: |
+          echo "Inputs:"
+          echo "  ref: ${{ inputs.ref }}"
+          echo "  python-versions: ${{ inputs.python-versions }}"
+          echo "  frontend-tests-folder: ${{ inputs.frontend-tests-folder }}"
+          echo "  release: ${{ inputs.release }}"
+          echo "  run-all-tests: ${{ inputs.run-all-tests }}"
+          echo "  runs-on: ${{ inputs.runs-on }}"
+
   check-nightly-status:
     name: Check PyPI Version Update
     runs-on: ubuntu-latest
@@ -189,7 +203,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.branch || github.ref }}
+          ref: ${{ inputs.ref || github.ref }}
       - name: Filter Paths
         id: filter
         uses: dorny/paths-filter@v3
@@ -208,6 +222,7 @@ jobs:
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
       runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+      ref: ${{ inputs.ref || github.ref }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
@@ -222,6 +237,8 @@ jobs:
       needs.set-ci-condition.outputs.should-run-tests == 'true' &&
       (inputs.run-all-tests || needs.path-filter.outputs.frontend == 'true')
     uses: ./.github/workflows/jest_test.yml
+    with:
+      ref: ${{ inputs.ref || github.ref }}
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
 
@@ -238,6 +255,7 @@ jobs:
       tests_folder: ${{ inputs.frontend-tests-folder }}
       release: ${{ inputs.release || false }}
       runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+      ref: ${{ inputs.ref || github.ref }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
@@ -275,7 +293,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.branch || github.ref }}
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
