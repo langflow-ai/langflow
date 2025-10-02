@@ -41,6 +41,7 @@ describe("useUtilityStore", () => {
       eventDelivery: EventDeliveryType.POLLING,
       webhookAuthEnable: true,
       defaultFolderName: "Starter Project",
+      hideGettingStartedProgress: false,
     });
   });
 
@@ -63,6 +64,7 @@ describe("useUtilityStore", () => {
       expect(result.current.eventDelivery).toBe(EventDeliveryType.POLLING);
       expect(result.current.webhookAuthEnable).toBe(true);
       expect(result.current.defaultFolderName).toBe("Starter Project");
+      expect(result.current.hideGettingStartedProgress).toBe(false);
     });
   });
 
@@ -598,6 +600,32 @@ describe("useUtilityStore", () => {
         });
         expect(result.current.defaultFolderName).toBe(folderName);
       });
+    });
+  });
+
+  describe("setHideGettingStartedProgress", () => {
+    it("should set hideGettingStartedProgress to true", () => {
+      const { result } = renderHook(() => useUtilityStore());
+
+      act(() => {
+        result.current.setHideGettingStartedProgress(true);
+      });
+
+      expect(result.current.hideGettingStartedProgress).toBe(true);
+    });
+
+    it("should toggle hideGettingStartedProgress", () => {
+      const { result } = renderHook(() => useUtilityStore());
+
+      act(() => {
+        result.current.setHideGettingStartedProgress(true);
+      });
+      expect(result.current.hideGettingStartedProgress).toBe(true);
+
+      act(() => {
+        result.current.setHideGettingStartedProgress(false);
+      });
+      expect(result.current.hideGettingStartedProgress).toBe(false);
     });
   });
 

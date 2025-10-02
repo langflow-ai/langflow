@@ -375,6 +375,7 @@ class ConfigResponse(BaseModel):
     webhook_auth_enable: bool
     voice_mode_available: bool
     default_folder_name: str
+    hide_getting_started_progress: bool
 
     @classmethod
     def from_settings(cls, settings: Settings, auth_settings) -> "ConfigResponse":
@@ -387,6 +388,8 @@ class ConfigResponse(BaseModel):
         Returns:
             ConfigResponse: An instance populated with configuration and feature flag values.
         """
+        import os
+
         from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 
         return cls(
@@ -405,6 +408,7 @@ class ConfigResponse(BaseModel):
             voice_mode_available=settings.voice_mode_available,
             webhook_auth_enable=auth_settings.WEBHOOK_AUTH_ENABLE,
             default_folder_name=DEFAULT_FOLDER_NAME,
+            hide_getting_started_progress=os.getenv("HIDE_GETTING_STARTED_PROGRESS", "").lower() == "true",
         )
 
 

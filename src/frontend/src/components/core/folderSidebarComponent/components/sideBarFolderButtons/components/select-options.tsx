@@ -7,7 +7,6 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select-custom";
-import { DEFAULT_FOLDER, OPENRAG_FOLDER } from "@/constants/constants";
 import type { FolderType } from "@/pages/MainPage/entities";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
@@ -29,8 +28,7 @@ export const SelectOptions = ({
   handleSelectFolderToRename: (folder: FolderType) => void;
   checkPathName: (folderId: string) => boolean;
 }) => {
-  const runWithOpenrag = useUtilityStore((state) => state.runWithOpenrag);
-  const defaultFolderName = runWithOpenrag ? OPENRAG_FOLDER : DEFAULT_FOLDER;
+  const defaultFolderName = useUtilityStore((state) => state.defaultFolderName);
   return (
     <div>
       <Select
