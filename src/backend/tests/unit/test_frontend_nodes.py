@@ -1,4 +1,5 @@
 import pytest
+
 from lfx.template.field.base import Input
 from lfx.template.frontend_node.base import FrontendNode
 from lfx.template.template.base import Template
