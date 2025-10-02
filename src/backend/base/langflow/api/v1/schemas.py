@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -24,6 +25,7 @@ from langflow.serialization.serialization import get_max_items_length, get_max_t
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow.model import FlowCreate, FlowRead
+from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.tracing.schema import Log
 
@@ -388,9 +390,14 @@ class ConfigResponse(BaseModel):
         Returns:
             ConfigResponse: An instance populated with configuration and feature flag values.
         """
-        import os
+        # Avoid repeated imports by moving them to module-level
 
-        from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
+        # .lower()=="true" causes a str allocation for every call
+        # Optimize by checking os.getenv first, and comparing casefolded once if present
+        hide_getting_started_env = os.getenv("HIDE_GETTING_STARTED_PROGRESS", "")
+        hide_getting_started_progress = (
+            hide_getting_started_env.casefold() == "true" if hide_getting_started_env else False
+        )
 
         return cls(
             feature_flags=FEATURE_FLAGS,
@@ -408,7 +415,7 @@ class ConfigResponse(BaseModel):
             voice_mode_available=settings.voice_mode_available,
             webhook_auth_enable=auth_settings.WEBHOOK_AUTH_ENABLE,
             default_folder_name=DEFAULT_FOLDER_NAME,
-            hide_getting_started_progress=os.getenv("HIDE_GETTING_STARTED_PROGRESS", "").lower() == "true",
+            hide_getting_started_progress=hide_getting_started_progress,
         )
 
 
