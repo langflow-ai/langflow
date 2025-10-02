@@ -124,7 +124,7 @@ jobs:
     needs: [validate-tag, validate-dependencies]
     uses: ./.github/workflows/ci.yml
     with:
-      branch: ${{ inputs.release_tag }}
+      ref: ${{ inputs.release_tag }}
       python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
       release: true
