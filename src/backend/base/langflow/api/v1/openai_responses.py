@@ -311,7 +311,7 @@ async def run_flow_for_openai_responses(
                                     if (
                                         sender in ["Machine", "AI", "Agent"]
                                         and text != request.input
-                                        and sender_name == "Agent"
+                                        and sender_name in ["Agent", "AI"]
                                     ):
                                         # Calculate delta: only send newly generated content
                                         if text.startswith(previous_content):
