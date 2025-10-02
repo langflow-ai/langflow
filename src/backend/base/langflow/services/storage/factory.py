@@ -4,7 +4,10 @@ from typing_extensions import override
 
 from langflow.services.factory import ServiceFactory
 from langflow.services.session.service import SessionService
+from langflow.services.storage.local import LocalStorageService
 from langflow.services.storage.service import StorageService
+
+_S3StorageService = None
 
 
 class StorageServiceFactory(ServiceFactory):
@@ -16,15 +19,16 @@ class StorageServiceFactory(ServiceFactory):
     @override
     def create(self, session_service: SessionService, settings_service: SettingsService):
         storage_type = settings_service.settings.storage_type
-        if storage_type.lower() == "local":
-            from .local import LocalStorageService
 
+        storage_type_lc = storage_type.lower()
+        if storage_type_lc == "local":
             return LocalStorageService(session_service, settings_service)
-        if storage_type.lower() == "s3":
-            from lfx.services.storage.s3 import S3StorageService
+        if storage_type_lc == "s3":
+            global _S3StorageService
+            if _S3StorageService is None:
+                from lfx.services.storage.s3 import S3StorageService
 
-            return S3StorageService(settings_service=settings_service, session_service=session_service)
+                _S3StorageService = S3StorageService
+            return _S3StorageService(settings_service=settings_service, session_service=session_service)
         logger.warning(f"Storage type {storage_type} not supported. Using local storage.")
-        from .local import LocalStorageService
-
         return LocalStorageService(session_service, settings_service)
