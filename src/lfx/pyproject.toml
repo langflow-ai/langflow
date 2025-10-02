@@ -12,6 +12,7 @@ dependencies = [
     "pandas>=2.0.0",
     "pydantic>=2.0.0",
     "pillow>=10.0.0",
+    "python-dateutil>=2.8",
     "fastapi>=0.115.13",
     "uvicorn>=0.34.3",
     "typer>=0.16.0",
