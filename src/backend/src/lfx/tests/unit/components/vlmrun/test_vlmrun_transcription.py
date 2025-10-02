@@ -54,7 +54,7 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self):
         """Return default kwargs for component initialization."""
-        return {"api_key": "test-api-key", "media_type": "audio", "_session_id": "test-session-123"}
+        return {"api_key": "test-api-key", "media_type": "audio", "_session_id": "test-session-123"}  # pragma: allowlist secret
 
     @pytest.fixture
     def file_names_mapping(self):
@@ -186,7 +186,7 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
         """Test component can be initialized with default kwargs."""
         component = component_class(**default_kwargs)
 
-        assert component.api_key == "test-api-key"
+        assert component.api_key == "test-api-key"  # pragma: allowlist secret
         assert component.media_type == "audio"
         assert hasattr(component, "media_files")
         assert hasattr(component, "media_url")
@@ -243,7 +243,7 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
         mock_client.predictions.wait.assert_called_once_with(mock_response.id, timeout=600)
 
         # Verify API key was passed correctly
-        mock_vlmrun_class.assert_called_once_with(api_key="test-api-key")
+        mock_vlmrun_class.assert_called_once_with(api_key="test-api-key")  # pragma: allowlist secret  # pragma: allowlist secret
 
     @patch("vlmrun.client.VLMRun")
     def test_video_file_with_audio_content(self, mock_vlmrun_class, component_class, default_kwargs):
@@ -288,7 +288,7 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
         mock_client.predictions.wait.assert_called_once_with(mock_response.id, timeout=600)
 
         # Verify API key was passed correctly
-        mock_vlmrun_class.assert_called_once_with(api_key="test-api-key")
+        mock_vlmrun_class.assert_called_once_with(api_key="test-api-key")  # pragma: allowlist secret
 
     @patch("vlmrun.client.VLMRun")
     def test_multiple_files_combined_transcription(self, mock_vlmrun_class, component_class, default_kwargs):
@@ -330,7 +330,7 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
         assert mock_client.predictions.wait.call_count == 2
 
         # Verify API key was passed correctly
-        mock_vlmrun_class.assert_called_once_with(api_key="test-api-key")
+        mock_vlmrun_class.assert_called_once_with(api_key="test-api-key")  # pragma: allowlist secret
 
         # Verify predictions.wait was called with correct IDs and timeout
         wait_calls = mock_client.predictions.wait.call_args_list
@@ -367,7 +367,7 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
         # Verify the client was called with the correct URL and API key
         mock_client.audio.generate.assert_called_once()
         mock_client.predictions.wait.assert_called_once_with(mock_response.id, timeout=600)
-        mock_vlmrun_class.assert_called_once_with(api_key="test-api-key")
+        mock_vlmrun_class.assert_called_once_with(api_key="test-api-key")  # pragma: allowlist secret
 
         # Verify URL parameter was passed correctly
         call_args = mock_client.audio.generate.call_args
@@ -412,7 +412,7 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
 
         # Verify the client was called correctly
         mock_client.audio.generate.assert_called_once()
-        mock_vlmrun_class.assert_called_once_with(api_key="test-api-key")
+        mock_vlmrun_class.assert_called_once_with(api_key="test-api-key")  # pragma: allowlist secret
 
     @patch("vlmrun.client.VLMRun")
     def test_timeout_parameter_usage(self, mock_vlmrun_class, component_class, default_kwargs):
