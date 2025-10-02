@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@550;600&amp;display=swap">
 <script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}()</script>
 <script defer="true">!function(){const e=e=>{if(window.gtag&&e.purposes&&"analytics"in e.purposes&&"targeted_advertising"in e.purposes){const n=!0===e.purposes.analytics?"granted":"denied",t=!0===e.purposes.targeted_advertising?"granted":"denied",a={analytics_storage:n,ad_personalization:t,ad_storage:t,ad_user_data:t};window.gtag("consent","update",a)}};window.ketch&&window.ketch("on","consent",e)}()</script><link rel="stylesheet" href="/assets/css/styles.9488e50d.css">
-<script src="/assets/js/runtime~main.e8f68371.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.af8503fa.js" defer="defer"></script>
 <script src="/assets/js/main.8715c1c6.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -52,7 +52,7 @@
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="chroma-db">Chroma DB<a href="#chroma-db" class="hash-link" aria-label="Direct link to Chroma DB" title="Direct link to Chroma DB">​</a></h2>
 <p>You can use the <strong>Chroma DB</strong> component to read and write to a Chroma database using an instance of <code>Chroma</code> vector store.
 Includes support for remote or in-memory instances with or without persistence.</p>
-<details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>About vector store instances</summary><div><div class="collapsibleContent_i85q"><p>Because Langflow is based on LangChain, vector store components use an instance of <a href="https://python.langchain.com/docs/integrations/vectorstores/" target="_blank" rel="noopener noreferrer">LangChain vector store</a> to drive the underlying read and write functions.
+<details class="details_lb9f alert alert--info details_b_Ee" data-collapsed="true"><summary>About vector store instances</summary><div><div class="collapsibleContent_i85q"><p>Because Langflow is based on LangChain, vector store components use an instance of <a href="https://docs.langchain.com/oss/python/integrations/vectorstores" target="_blank" rel="noopener noreferrer">LangChain vector store</a> to drive the underlying read and write functions.
 These instances are provider-specific and configured according to the component&#x27;s parameters, such as the connection string, index name, and schema.</p>
 <p>In component code, this is often instantiated as <code>vector_store</code>, but some vector store components use a different name, such as the provider name.</p>
 <p>Some LangChain classes don&#x27;t expose all possible options as component parameters.
