@@ -365,15 +365,21 @@ class FileComponent(BaseFileComponent):
                             try:
                                 import mlx_vlm
                                 vl_pipe.vlm_options = GRANITEDOCLING_MLX
-                            except ImportError:
-                                pass
+                            except ImportError as e:
+                                raise e
 
                         # VLM paths generally don't need OCR; keep OCR off by default here.
                         fmt = {}
                         if hasattr(input_format, "PDF"):
-                            fmt[getattr(input_format, "PDF")] = PdfFormatOption(pipeline_cls=VlmPipeline)
+                            fmt[getattr(input_format, "PDF")] = PdfFormatOption(
+                            pipeline_cls=VlmPipeline,
+                            pipeline_options=vl_pipe
+                        )
                         if hasattr(input_format, "IMAGE"):
-                            fmt[getattr(input_format, "IMAGE")] = PdfFormatOption(pipeline_cls=VlmPipeline)
+                            fmt[getattr(input_format, "IMAGE")] = PdfFormatOption(
+                            pipeline_cls=VlmPipeline,
+                            pipeline_options=vl_pipe
+                        )
 
                         return DocumentConverter(format_options=fmt)
                     except Exception as e:
