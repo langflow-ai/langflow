@@ -1,4 +1,4 @@
-import LoadingComponent from "@/components/common/loadingComponent";
+import { ProgressBar as LoadingComponent } from "@/components/common/progressBar";
 import { cn } from "@/utils/utils";
 
 export function LoadingPage({ overlay = false }: { overlay?: boolean }) {
