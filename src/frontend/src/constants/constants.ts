@@ -558,7 +558,10 @@ export const NOUNS: string[] = [
  */
 export const USER_PROJECTS_HEADER = "My Collection";
 
+// This will be dynamically set based on the RUN_WITH_OPENRAG feature flag
+// The actual value is determined by the backend configuration
 export const DEFAULT_FOLDER = "Starter Project";
+export const OPENRAG_FOLDER = "OpenRAG";
 
 export const MAX_MCP_SERVER_NAME_LENGTH = 30;
 
@@ -741,7 +744,7 @@ export const STATUS_INACTIVE = "Execution blocked";
 export const STATUS_BUILDING = "Building...";
 export const SAVED_HOVER = "Last saved: ";
 export const RUN_TIMESTAMP_PREFIX = "Last Run: ";
-export const STARTER_FOLDER_NAME = "Starter Projects";
+
 export const PRIORITY_SIDEBAR_ORDER = [
   "saved_components",
   "inputs",

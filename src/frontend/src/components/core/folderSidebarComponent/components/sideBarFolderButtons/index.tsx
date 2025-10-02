@@ -13,7 +13,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { DEFAULT_FOLDER } from "@/constants/constants";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
 import {
   usePatchFolders,
@@ -41,6 +40,7 @@ import type { FolderType } from "../../../../../pages/MainPage/entities";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../../stores/foldersStore";
+import { useUtilityStore } from "../../../../../stores/utilityStore";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
 import { cn } from "../../../../../utils/utils";
 import useFileDrop from "../../hooks/use-on-file-drop";
@@ -86,6 +86,7 @@ const SideBarFoldersButtonsComponent = ({
   const folderIdDragging = useFolderStore((state) => state.folderIdDragging);
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
+  const defaultFolderName = useUtilityStore((state) => state.defaultFolderName);
 
   const folderId = useParams().folderId ?? myCollectionId ?? "";
 
@@ -275,7 +276,7 @@ const SideBarFoldersButtonsComponent = ({
   };
 
   const handleDoubleClick = (event, item) => {
-    if (item.name === DEFAULT_FOLDER) {
+    if (item.name === defaultFolderName) {
       return;
     }
 

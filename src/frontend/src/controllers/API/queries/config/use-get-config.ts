@@ -23,6 +23,8 @@ export interface ConfigResponse {
   event_delivery: EventDeliveryType;
   webhook_auth_enable: boolean;
   voice_mode_available: boolean;
+  default_folder_name: string;
+  hide_getting_started_progress: boolean;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
@@ -49,6 +51,12 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
   const setWebhookAuthEnable = useUtilityStore(
     (state) => state.setWebhookAuthEnable,
   );
+  const setDefaultFolderName = useUtilityStore(
+    (state) => state.setDefaultFolderName,
+  );
+  const setHideGettingStartedProgress = useUtilityStore(
+    (state) => state.setHideGettingStartedProgress,
+  );
 
   const { query } = UseRequestProcessor();
 
@@ -72,6 +80,10 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
       );
       setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
       setWebhookAuthEnable(data.webhook_auth_enable ?? true);
+      setDefaultFolderName(data.default_folder_name ?? "Starter Project");
+      setHideGettingStartedProgress(
+        data.hide_getting_started_progress ?? false,
+      );
     }
     return data;
   };
