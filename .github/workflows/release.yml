@@ -129,7 +129,7 @@ jobs:
       frontend-tests-folder: "tests"
       release: true
       run-all-tests: true
-      runs-on: ${{ (inputs['runs_on'] && startsWith(format('{0}', inputs['runs_on']), '[') && fromJSON(inputs['runs_on'])) || inputs['runs_on'] || inputs['runs_on'] || 'ubuntu-latest' }}
+      runs-on: ${{ inputs.runs_on || 'ubuntu-latest' }}
     secrets: inherit
 
 
