@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and sys_platform == 'darwin'",
@@ -661,16 +661,16 @@ wheels = [
 
 [[package]]
 name = "boto3-stubs"
-version = "1.40.43"
+version = "1.40.44"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "botocore-stubs" },
     { name = "types-s3transfer" },
     { name = "typing-extensions", marker = "python_full_version < '3.12'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/22/f8/6dd4bc9c1b14760f97a7543f213607063b08b8bca3a2e0dc7fd938beb740/boto3_stubs-1.40.43.tar.gz", hash = "sha256:01d68d7f07a859533edc0ae94073a3be9386050f99cd3181cc3e814a4110c7d9", size = 100856, upload-time = "2025-10-01T19:47:28.75Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/56/65/7996dd7e6035ea8ede82169403a7f0a6e5a60fadbd79ecfd042b62dc888f/boto3_stubs-1.40.44.tar.gz", hash = "sha256:c49030d3c8a1f719e2ea283d7eff834037406ef41ecad47490d780ae8a15ff5c", size = 100839, upload-time = "2025-10-02T20:37:35.47Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/30/8e/25ce8fff3ddbda63db09ab23d8d7f8327d5de389fe126af3a54ee03da44f/boto3_stubs-1.40.43-py3-none-any.whl", hash = "sha256:e64243b440138be92dca5f2959e83aa26510cc1b7884d001989b5cbb803f790b", size = 69688, upload-time = "2025-10-01T19:47:19.639Z" },
+    { url = "https://files.pythonhosted.org/packages/24/79/e389dd7ca833f93c06921c2d57650784446c9a18aea091dd8dd1ee25ee23/boto3_stubs-1.40.44-py3-none-any.whl", hash = "sha256:0fa09cca77e4b3be0222ece396ef8eb99cfb495e48e8b33c8e497d910597e376", size = 69687, upload-time = "2025-10-02T20:37:30.366Z" },
 ]
 
 [package.optional-dependencies]
@@ -4944,7 +4944,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.6.0"
+version = "1.6.1"
 source = { editable = "." }
 dependencies = [
     { name = "aiofile" },
