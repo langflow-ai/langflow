@@ -49,6 +49,7 @@ export const useLogout: useMutationFunctionType<undefined, void> = (
       console.error(error);
     },
     ...options,
+    retry: false,
   });
 
   return mutation;
