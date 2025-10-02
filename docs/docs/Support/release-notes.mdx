@@ -58,6 +58,11 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     Added the `LANGFLOW_WEBHOOK_AUTH_ENABLE` environment variable for authenticating requests to the [/webhook endpoint](/api-flows-run#webhook-run-flow). When `LANGFLOW_WEBHOOK_AUTH_ENABLE=TRUE`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `FALSE`, no Langflow API key is required.
 
+- DataFrame Operations component enhancements
+
+    The [**DataFrame Operations** component](components-processing#dataframe-operations) now includes an operator for `does not contains` for filtering data.
+    With this operator, you can remove invalid email addresses from your mailing list by filtering records that don't contain `@`.
+
 - New integrations and bundles:
 
 ### Deprecations
