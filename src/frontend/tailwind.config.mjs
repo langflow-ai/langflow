@@ -373,6 +373,9 @@ const config = {
             display: "none",
           },
         },
+        ".gutter-stable": {
+          "scrollbar-gutter": "stable",
+        },
         ".truncate-multiline": {
           display: "-webkit-box",
           "-webkit-line-clamp":

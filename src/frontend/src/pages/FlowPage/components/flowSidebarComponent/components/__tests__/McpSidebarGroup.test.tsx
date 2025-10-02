@@ -606,7 +606,11 @@ describe("McpSidebarGroup", () => {
       const TestWrapper = createTestWrapper();
       render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
-      expect(screen.getByTestId("sidebar-group")).toHaveClass("p-3", "h-full");
+      expect(screen.getByTestId("sidebar-group")).toHaveClass(
+        "p-3",
+        "pr-2",
+        "h-full",
+      );
     });
 
     it("should not apply h-full class when hasMcpServers is true", () => {
@@ -619,7 +623,7 @@ describe("McpSidebarGroup", () => {
       render(<McpSidebarGroup {...props} />, { wrapper: TestWrapper });
 
       const sidebarGroup = screen.getByTestId("sidebar-group");
-      expect(sidebarGroup).toHaveClass("p-3");
+      expect(sidebarGroup).toHaveClass("p-3", "pr-2");
       expect(sidebarGroup).not.toHaveClass("h-full");
     });
   });
