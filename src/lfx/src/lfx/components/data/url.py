@@ -5,7 +5,6 @@ import re
 import requests
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
-from markitdown import MarkItDown
 
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
@@ -229,6 +228,13 @@ class URLComponent(Component):
     @staticmethod
     def _markdown_extractor(x: str) -> str:
         """Convert HTML to Markdown format."""
+        try:
+            from markitdown import MarkItDown
+        except ImportError:
+            msg = "markitdown is not installed. Install using 'uv pip install markitdown' to enable Markdown output."
+            logger.error(msg)
+            raise ImportError(msg)
+
         stream = io.BytesIO(x.encode("utf-8"))
         result = MarkItDown(enable_plugins=False).convert_stream(stream)
         return result.markdown
