@@ -19,7 +19,7 @@ import type { MCPServerInfoType } from "@/types/mcp";
 import { cn } from "@/utils/utils";
 
 export default function MCPServersPage() {
-  const { data: servers } = useGetMCPServers();
+  const { data: servers } = useGetMCPServers({ withCounts: true });
   const { mutate: deleteServer } = useDeleteMCPServer();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [addOpen, setAddOpen] = useState(false);
