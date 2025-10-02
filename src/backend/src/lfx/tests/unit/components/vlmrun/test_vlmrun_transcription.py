@@ -302,7 +302,7 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
         if audio_result["transcription"] != "Hello world This is a test":
             pytest.fail(f"Expected transcription mismatch, got '{audio_result['transcription']}'")
         expected_duration = 10.5
-        if audio_result["metadata"]["duration"] != expected_duration:
+        if audio_result["metadata"]["duration"] != pytest.approx(expected_duration):
             pytest.fail(f"Expected duration to be {expected_duration}, got {audio_result['metadata']['duration']}")
         if audio_result["status"] != "completed":
             pytest.fail(f"Expected status to be 'completed', got '{audio_result['status']}'")
@@ -364,7 +364,7 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
         if video_result["metadata"]["media_type"] != "video":
             pytest.fail(f"Expected media_type to be 'video', got '{video_result['metadata']['media_type']}'")
         expected_video_duration = 120.0
-        if video_result["metadata"]["duration"] != expected_video_duration:
+        if video_result["metadata"]["duration"] != pytest.approx(expected_video_duration):
             pytest.fail(
                 f"Expected duration to be {expected_video_duration}, got {video_result['metadata']['duration']}"
             )
