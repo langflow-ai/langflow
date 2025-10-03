@@ -78,7 +78,6 @@ class TestFileComponentDynamicOutputs:
         assert "advanced_markdown" in output_names  # Markdown
         assert "path" in output_names  # File Path
 
-
     def test_update_outputs_advanced_mode_vlm_pipeline(self):
         """Test advanced mode with VLM pipeline shows advanced outputs."""
         component = FileComponent()
