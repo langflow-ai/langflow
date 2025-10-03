@@ -3,16 +3,24 @@
 from pathlib import Path
 
 from lfx.log.logger import logger
+from lfx.services.base import Service
 from lfx.services.storage.service import StorageService
 
 
-class LocalStorageService(StorageService):
+class LocalStorageService(StorageService, Service):
     """A service class for handling local file storage operations."""
+
+    name = "storage_service"
 
     def __init__(self, data_dir: str | Path | None = None) -> None:
         """Initialize the local storage service."""
-        super().__init__(data_dir)
+        StorageService.__init__(self, data_dir)
+        Service.__init__(self)
         self.set_ready()
+
+    async def teardown(self) -> None:
+        """Teardown the storage service."""
+        # No cleanup needed for local storage
 
     def build_full_path(self, flow_id: str, file_name: str) -> str:
         """Build the full path of a file in the local storage."""
