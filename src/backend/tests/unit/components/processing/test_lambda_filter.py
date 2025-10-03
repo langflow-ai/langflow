@@ -1,9 +1,9 @@
 from unittest.mock import AsyncMock
 
 import pytest
-
 from lfx.components.processing.lambda_filter import LambdaFilterComponent
 from lfx.schema import Data
+
 from tests.base import ComponentTestBaseWithoutClient
 
 
