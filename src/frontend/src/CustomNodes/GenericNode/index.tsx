@@ -4,18 +4,13 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { CustomNodeStatus } from "@/customization/components/custom-NodeStatus";
 import UpdateComponentModal from "@/modals/updateComponentModal";
 import { useAlternate } from "@/shared/hooks/use-alternate";
 import type { FlowStoreType } from "@/types/zustand/flow";
 import { Button } from "../../components/ui/button";
-import {
-  ICON_STROKE_WIDTH,
-  TOOLTIP_HIDDEN_OUTPUTS,
-  TOOLTIP_OPEN_HIDDEN_OUTPUTS,
-} from "../../constants/constants";
+import { ICON_STROKE_WIDTH } from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
 import useAlertStore from "../../stores/alertStore";
@@ -364,6 +359,8 @@ function GenericNode({
     return useFlowStore.getState().nodes.filter((node) => node.selected).length;
   }, [selected]);
 
+  const rightClickedNodeId = useFlowStore((state) => state.rightClickedNodeId);
+
   const shouldShowUpdateComponent = useMemo(
     () => (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
     [isOutdated, hasBreakingChange, isUserEdited, dismissAll],
@@ -375,7 +372,11 @@ function GenericNode({
   );
 
   const memoizedNodeToolbarComponent = useMemo(() => {
-    return selected && selectedNodesCount === 1 ? (
+    const isRightClicked = rightClickedNodeId === data.id;
+    const isSelectedSingle = selected && selectedNodesCount === 1;
+    const shouldShowToolbar = isSelectedSingle || isRightClicked;
+
+    return shouldShowToolbar ? (
       <>
         <div
           className={cn(
@@ -403,6 +404,7 @@ function GenericNode({
             isOutdated={isOutdated && (dismissAll || isUserEdited)}
             isUserEdited={isUserEdited}
             hasBreakingChange={hasBreakingChange}
+            openDropdownOnRightClick={isRightClicked}
           />
         </div>
         <div className="-z-10">
@@ -459,6 +461,7 @@ function GenericNode({
     hasChangedNodeDescription,
     toggleEditNameDescription,
     selectedNodesCount,
+    rightClickedNodeId,
   ]);
   useEffect(() => {
     if (hiddenOutputs && hiddenOutputs.length === 0) {

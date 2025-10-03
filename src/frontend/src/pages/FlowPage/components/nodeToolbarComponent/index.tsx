@@ -1,7 +1,6 @@
 import { useUpdateNodeInternals } from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { countHandlesFn } from "@/CustomNodes/helpers/count-handles";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
@@ -56,7 +55,10 @@ const NodeToolbarComponent = memo(
     isUserEdited,
     hasBreakingChange,
     setOpenShowMoreOptions,
-  }: nodeToolbarPropsType): JSX.Element => {
+    openDropdownOnRightClick = false,
+  }: nodeToolbarPropsType & {
+    openDropdownOnRightClick?: boolean;
+  }): JSX.Element => {
     const version = useDarkStore((state) => state.version);
     const [showModalAdvanced, setShowModalAdvanced] = useState(false);
     const [showconfirmShare, setShowconfirmShare] = useState(false);
@@ -75,6 +77,7 @@ const NodeToolbarComponent = memo(
     const shortcuts = useShortcutsStore((state) => state.shortcuts);
     const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
     const [openModal, setOpenModal] = useState(false);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
     const frozen = data.node?.frozen ?? false;
     const updateNodeInternals = useUpdateNodeInternals();
 
@@ -281,6 +284,15 @@ const NodeToolbarComponent = memo(
       }
     }, [showModalAdvanced]);
 
+    // Open dropdown when right-clicked
+    useEffect(() => {
+      if (openDropdownOnRightClick) {
+        setDropdownOpen(true);
+      } else {
+        setDropdownOpen(false);
+      }
+    }, [openDropdownOnRightClick]);
+
     const setLastCopiedSelection = useFlowStore(
       (state) => state.setLastCopiedSelection,
     );
@@ -307,6 +319,13 @@ const NodeToolbarComponent = memo(
       (event) => {
         let nodes;
         setSelectedValue(event);
+
+        // Clear right-clicked state when user selects an option
+        if (openDropdownOnRightClick) {
+          const setRightClickedNodeId =
+            useFlowStore.getState().setRightClickedNodeId;
+          setRightClickedNodeId(null);
+        }
 
         switch (event) {
           case "save":
@@ -422,6 +441,14 @@ const NodeToolbarComponent = memo(
 
     const handleOpenChange = (open: boolean) => {
       setOpenShowMoreOptions && setOpenShowMoreOptions(open);
+      setDropdownOpen(open);
+
+      // Clear right-clicked state when dropdown closes without selection
+      if (!open && openDropdownOnRightClick) {
+        const setRightClickedNodeId =
+          useFlowStore.getState().setRightClickedNodeId;
+        setRightClickedNodeId(null);
+      }
     };
 
     const isCustomComponent = useMemo(() => {
@@ -550,6 +577,7 @@ const NodeToolbarComponent = memo(
               onValueChange={handleSelectChange}
               value={selectedValue!}
               onOpenChange={handleOpenChange}
+              open={dropdownOpen}
             >
               <SelectTrigger className="w-62">
                 <ShadTooltip content="Show More" side="top">
