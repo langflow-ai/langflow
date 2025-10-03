@@ -14,6 +14,7 @@ class ToolRouterComponent(Component):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._matched_tool = None
+        self._setup_dynamic_outputs()
 
     inputs = [
         HandleInput(
@@ -66,6 +67,38 @@ class ToolRouterComponent(Component):
 
     outputs: list[Output] = []
 
+    def _setup_dynamic_outputs(self):
+        """Set up dynamic outputs based on connected tools."""
+        print("DEBUG: _setup_dynamic_outputs called")
+        tools = getattr(self, "tools", [])
+        if tools:
+            print(f"DEBUG: Found {len(tools)} tools in _setup_dynamic_outputs")
+            # Clear existing outputs
+            self.outputs = []
+            
+            # Add outputs for each tool
+            for i, tool in enumerate(tools):
+                tool_name = getattr(tool, "name", f"Tool {i + 1}")
+                print(f"DEBUG: Adding output for tool: {tool_name}")
+                self.outputs.append(
+                    Output(
+                        display_name=tool_name,
+                        name=f"tool_{i + 1}_result",
+                        method="process_tool",
+                        group_outputs=True,
+                    )
+                )
+            
+            # Add else output if enabled
+            enable_else = getattr(self, "enable_else_output", False)
+            if enable_else:
+                print("DEBUG: Adding Else output in _setup_dynamic_outputs")
+                self.outputs.append(
+                    Output(display_name="Else", name="default_result", method="default_response", group_outputs=True)
+                )
+        else:
+            print("DEBUG: No tools found in _setup_dynamic_outputs")
+
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Create a dynamic output for each connected tool."""
         # Debug logging
@@ -109,6 +142,9 @@ class ToolRouterComponent(Component):
 
     def process_tool(self) -> Message:
         """Process all tools using LLM categorization and execute the matching tool."""
+        # Ensure dynamic outputs are set up
+        self._setup_dynamic_outputs()
+        
         # Clear any previous match state
         self._matched_tool = None
 
