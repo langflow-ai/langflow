@@ -70,7 +70,7 @@ class ToolRouterComponent(Component):
         """Create a dynamic output for each connected tool."""
         # Debug logging
         print(f"DEBUG: update_outputs called with field_name='{field_name}', field_value type: {type(field_value)}")
-        
+
         if field_name in {"tools", "enable_else_output"}:
             frontend_node["outputs"] = []
 
@@ -101,7 +101,9 @@ class ToolRouterComponent(Component):
             if enable_else:
                 print("DEBUG: Adding Else output")
                 frontend_node["outputs"].append(
-                    Output(display_name="Else", name="default_result", method="default_response", group_outputs=True).to_dict()
+                    Output(
+                        display_name="Else", name="default_result", method="default_response", group_outputs=True
+                    ).to_dict()
                 )
         return frontend_node
 
