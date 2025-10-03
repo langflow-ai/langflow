@@ -59,8 +59,16 @@ class SmartRouterComponent(Component):
                 },
             ],
             value=[
-                {"route_category": "Positive", "route_description": "Positive feedback, satisfaction, or compliments", "output_value": ""},
-                {"route_category": "Negative", "route_description": "Complaints, issues, or dissatisfaction", "output_value": ""},
+                {
+                    "route_category": "Positive",
+                    "route_description": "Positive feedback, satisfaction, or compliments",
+                    "output_value": "",
+                },
+                {
+                    "route_category": "Negative",
+                    "route_description": "Complaints, issues, or dissatisfaction",
+                    "output_value": "",
+                },
             ],
             real_time_refresh=True,
             required=True,
@@ -149,7 +157,7 @@ class SmartRouterComponent(Component):
                     category_info.append(f'"{cat_name}": {cat_desc}')
                 else:
                     category_info.append(f'"{cat_name}"')
-            
+
             categories_text = "\n".join([f"- {info}" for info in category_info if info])
 
             # Create base prompt
@@ -169,8 +177,9 @@ class SmartRouterComponent(Component):
                 self.status = "Using custom prompt as additional instructions"
                 # Format custom prompt with variables
                 # For the routes variable, create a simpler format for custom prompt usage
-                simple_routes = ", ".join([f'"{cat.get("route_category", f"Category {i + 1}")}"' 
-                                          for i, cat in enumerate(categories)])
+                simple_routes = ", ".join(
+                    [f'"{cat.get("route_category", f"Category {i + 1}")}"' for i, cat in enumerate(categories)]
+                )
                 formatted_custom = custom_prompt.format(input_text=input_text, routes=simple_routes)
                 # Combine base prompt with custom instructions
                 prompt = f"{base_prompt}\n\nAdditional Instructions:\n{formatted_custom}"
@@ -310,7 +319,7 @@ class SmartRouterComponent(Component):
                         category_info.append(f'"{cat_name}": {cat_desc}')
                     else:
                         category_info.append(f'"{cat_name}"')
-                
+
                 categories_text = "\n".join([f"- {info}" for info in category_info if info])
 
                 # Create base prompt
@@ -330,8 +339,9 @@ class SmartRouterComponent(Component):
                     self.status = "Using custom prompt as additional instructions (default check)"
                     # Format custom prompt with variables
                     # For the routes variable, create a simpler format for custom prompt usage
-                    simple_routes = ", ".join([f'"{cat.get("route_category", f"Category {i + 1}")}"' 
-                                              for i, cat in enumerate(categories)])
+                    simple_routes = ", ".join(
+                        [f'"{cat.get("route_category", f"Category {i + 1}")}"' for i, cat in enumerate(categories)]
+                    )
                     formatted_custom = custom_prompt.format(input_text=input_text, routes=simple_routes)
                     # Combine base prompt with custom instructions
                     prompt = f"{base_prompt}\n\nAdditional Instructions:\n{formatted_custom}"
