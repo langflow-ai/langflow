@@ -68,23 +68,28 @@ class ToolRouterComponent(Component):
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Create a dynamic output for each connected tool."""
+        # Debug logging
+        print(f"DEBUG: update_outputs called with field_name='{field_name}', field_value type: {type(field_value)}")
+        
         if field_name in {"tools", "enable_else_output"}:
             frontend_node["outputs"] = []
 
             # Get the tools data - either from field_value (if tools field) or from component state
             tools_data = field_value if field_name == "tools" else getattr(self, "tools", [])
+            print(f"DEBUG: tools_data type: {type(tools_data)}, length: {len(tools_data) if tools_data else 0}")
 
             # Add a dynamic output for each tool
             if tools_data:
                 for i, tool in enumerate(tools_data):
                     tool_name = getattr(tool, "name", f"Tool {i + 1}")
+                    print(f"DEBUG: Creating output for tool {i}: {tool_name}")
                     frontend_node["outputs"].append(
                         Output(
                             display_name=tool_name,
                             name=f"tool_{i + 1}_result",
                             method="process_tool",
                             group_outputs=True,
-                        )
+                        ).to_dict()
                     )
 
             # Add default output only if enabled
@@ -94,8 +99,9 @@ class ToolRouterComponent(Component):
                 enable_else = getattr(self, "enable_else_output", False)
 
             if enable_else:
+                print("DEBUG: Adding Else output")
                 frontend_node["outputs"].append(
-                    Output(display_name="Else", name="default_result", method="default_response", group_outputs=True)
+                    Output(display_name="Else", name="default_result", method="default_response", group_outputs=True).to_dict()
                 )
         return frontend_node
 
