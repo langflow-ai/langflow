@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: "21"
+  NODE_VERSION: "22"
 jobs:
   autofix:
     runs-on: ubuntu-latest
