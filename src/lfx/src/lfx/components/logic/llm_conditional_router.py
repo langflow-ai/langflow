@@ -3,6 +3,7 @@ from typing import Any
 from lfx.custom import Component
 from lfx.io import BoolInput, HandleInput, MessageInput, MessageTextInput, MultilineInput, Output, TableInput
 from lfx.schema.message import Message
+from lfx.schema.table import EditMode
 
 
 class SmartRouterComponent(Component):
@@ -42,6 +43,7 @@ class SmartRouterComponent(Component):
                     "display_name": "Route Name",
                     "type": "str",
                     "description": "Name for the route (used for both output name and category matching)",
+                    "edit_mode": EditMode.INLINE,
                 },
                 {
                     "name": "route_description",
@@ -49,6 +51,7 @@ class SmartRouterComponent(Component):
                     "type": "str",
                     "description": "Description of when this route should be used (helps LLM understand the category)",
                     "default": "",
+                    "edit_mode": EditMode.POPOVER,
                 },
                 {
                     "name": "output_value",
@@ -56,6 +59,7 @@ class SmartRouterComponent(Component):
                     "type": "str",
                     "description": "Optional message to send when this route is matched. Leave empty to pass through the original input text.",
                     "default": "",
+                    "edit_mode": EditMode.POPOVER,
                 },
             ],
             value=[
