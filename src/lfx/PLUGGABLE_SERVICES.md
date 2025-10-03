@@ -322,43 +322,15 @@ class ServiceB(Service):
 ## Examples
 
 See:
-- `lfx.toml.example` - Example configuration file
-- `src/lfx/services/` - Built-in service implementations
+- `lfx.toml.example` - Example configuration file showing Langflow service registration
+- `src/lfx/services/` - Minimal built-in service implementations
 - `src/backend/base/langflow/services/` - Full-featured Langflow services
 
-## Migration Guide
+## Architecture Benefits
 
-### Old Way (Manual Registration)
-
-```python
-# langflow/services/utils.py
-def register_all_service_factories():
-    service_manager.register_factory(DatabaseServiceFactory())
-    service_manager.register_factory(StorageServiceFactory())
-    # ... 15+ more manual registrations
-```
-
-### New Way (Automatic Discovery)
-
-**Option 1: Config File**
-```toml
-# lfx.toml
-[services]
-database_service = "langflow.services.database.service:DatabaseService"
-storage_service = "langflow.services.storage.service:StorageService"
-```
-
-**Option 2: Decorator**
-```python
-from lfx.services import register_service
-
-@register_service(ServiceType.DATABASE_SERVICE)
-class DatabaseService(Service):
-    ...
-```
-
-The service manager now handles:
-- ✅ Discovery (from config/decorators/entry points)
-- ✅ Instantiation (lazy, on-demand)
-- ✅ Dependency injection (automatic)
-- ✅ Lifecycle management (teardown)
+The pluggable service system provides:
+- ✅ **Automatic discovery** - Services found from config files, decorators, or entry points
+- ✅ **Lazy instantiation** - Services created only when first accessed
+- ✅ **Dependency injection** - Service dependencies resolved automatically
+- ✅ **Lifecycle management** - Proper teardown when service manager shuts down
+- ✅ **Flexibility** - Swap implementations without code changes (via config)
