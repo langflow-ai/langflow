@@ -2,6 +2,7 @@ import AlertDropdown from "@/alerts/alertDropDown";
 import DataStaxLogo from "@/assets/DataStaxLogo.svg?react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import OrganizationDisplay from "@/components/common/organizationDisplay";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -71,6 +72,8 @@ export default function AppHeader(): JSX.Element {
             <LangflowLogo className="h-6 w-6" />
           )}
         </Button>
+        {/* Display organization name when Clerk auth is enabled */}
+        <OrganizationDisplay />
         {ENABLE_DATASTAX_LANGFLOW && (
           <>
             <CustomOrgSelector />
