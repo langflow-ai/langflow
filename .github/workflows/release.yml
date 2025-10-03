@@ -58,6 +58,11 @@ on:
           - "[Langflow-runner]"
           - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
         default: ubuntu-latest
+      dry_run:
+        description: "Dry run mode - disables all pushes to external services (PyPI, Docker, GitHub releases)"
+        required: false
+        type: boolean
+        default: true
 
 
 
@@ -77,6 +82,7 @@ jobs:
           echo "pre_release: ${{ inputs.pre_release }}"
           echo "create_release: ${{ inputs.create_release }}"
           echo "runs_on: ${{ inputs.runs_on }}"
+          echo "dry_run: ${{ inputs.dry_run }}"
 
   validate-tag:
     name: Validate Tag Input
@@ -315,7 +321,7 @@ jobs:
           enable-cache: false
           python-version: "3.13"
       - name: Publish base to PyPI
-        if: needs.build-base.outputs.skipped == 'false'
+        if: ${{ !inputs.dry_run }}
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
@@ -338,6 +344,7 @@ jobs:
           enable-cache: false
           python-version: "3.13"
       - name: Publish main to PyPI
+        if: ${{ !inputs.dry_run }}
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
@@ -434,6 +441,7 @@ jobs:
           enable-cache: false
           python-version: "3.13"
       - name: Publish LFX to PyPI
+        if: ${{ !inputs.dry_run }}
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
@@ -448,6 +456,7 @@ jobs:
       ref: ${{ inputs.release_tag }}
       release_type: base
       pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
   call_docker_build_main_ep:
@@ -459,6 +468,7 @@ jobs:
       ref: ${{ inputs.release_tag }}
       release_type: main-ep
       pre_release: False
+      push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
   call_docker_build_main:
@@ -470,6 +480,7 @@ jobs:
       ref: ${{ inputs.release_tag }}
       release_type: main
       pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
   call_docker_build_main_all:
@@ -481,6 +492,7 @@ jobs:
       ref: ${{ inputs.release_tag }}
       release_type: main-all
       pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
 
@@ -492,6 +504,7 @@ jobs:
     if: |
       always() &&
       !cancelled() &&
+      !inputs.dry_run &&
       inputs.create_release &&
       needs.publish-main.result == 'success'
     steps:
