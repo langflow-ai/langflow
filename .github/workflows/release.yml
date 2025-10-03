@@ -19,7 +19,7 @@ on:
         type: boolean
         default: false
       release_lfx:
-        description: "Release LFX"
+        description: "WARNING: Not implemented yet."
         required: true
         type: boolean
         default: false
@@ -107,6 +107,13 @@ jobs:
             echo "Please enable 'release_package_base' or disable 'release_package_main'."
             exit 1
           fi
+
+          if [ "${{ inputs.release_lfx }}" = "true" ]; then
+            echo "Error: Release LFX is not implemented yet."
+            echo "Please disable 'release_lfx' or wait for it to be implemented."
+            exit 1
+          fi
+
           echo "✅ Release dependencies validated successfully."
 
   ci:
