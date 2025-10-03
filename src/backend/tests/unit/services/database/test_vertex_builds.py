@@ -314,3 +314,22 @@ async def test_concurrent_log_vertex_build(vertex_build_data, mock_settings):
         async with AsyncSession(engine) as session:
             count = await session.scalar(select(func.count()).select_from(VertexBuildTable))
             assert count <= mock_settings.max_vertex_builds_to_keep
+
+# write an unit test that verifies settings are fetched from .env file
+def test_settings_from_env(monkeypatch):
+    """Test that settings are correctly fetched from .env file."""
+    # Set environment variables
+    monkeypatch.setenv("LANGFLOW_MAX_VERTEX_BUILDS_TO_KEEP", "10")
+    monkeypatch.setenv("LANGFLOW_MAX_VERTEX_BUILDS_PER_VERTEX", "5")
+    monkeypatch.setenv("LANGFLOW_VERTEX_BUILDS_STORAGE_ENABLED", "false")
+    monkeypatch.setenv("LANGLFOW_DATABASE_URL", "sqlite:///test.db")
+
+    from lfx.services.settings.service import SettingsService
+
+    settings_service = SettingsService.initialize()
+    settings = settings_service.settings
+
+    assert settings.max_vertex_builds_to_keep == 10
+    assert settings.max_vertex_builds_per_vertex == 5
+    assert settings.vertex_builds_storage_enabled is False
+    assert settings.database_url == "sqlite:///test.db"
