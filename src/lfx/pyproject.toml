@@ -38,8 +38,7 @@ dependencies = [
     "structlog>=25.4.0,<26.0.0",
     "loguru>=0.7.3,<1.0.0",
     "langchain~=0.3.23",
-    "validators>=0.34.0,<1.0.0",
-    "aiomysql>=0.2.0,<1.0.0",
+    "validators>=0.34.0,<1.0.0"
 ]
 
 [project.scripts]
