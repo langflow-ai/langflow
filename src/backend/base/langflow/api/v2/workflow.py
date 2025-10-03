@@ -189,11 +189,21 @@ async def workflow_run_flow(
     context: dict | None = None,
     http_request: Request,
 ):
-    """Executes a flow and returns clean JSON without verbose wrapping.
+    """Executes a flow in stateless mode and returns clean JSON without verbose wrapping.
 
     This endpoint is optimized for workflow automation and provides clean, minimal
     JSON responses without the verbose RunResponse wrapper. It automatically detects
     API Response components and returns their clean JSON structure directly.
+
+    **Stateless Execution:**
+    This endpoint runs in stateless mode, which means:
+    - Message history is NOT persisted to the database
+    - Chat memory components will work but messages won't be saved
+    - Flow execution, transactions, and vertex builds are still tracked
+    - load_from_db_fields will still work for global variables
+
+    This makes the endpoint ideal for production stateless execution where
+    you don't need persistent chat history.
 
     Request Body:
         {
@@ -223,22 +233,23 @@ async def workflow_run_flow(
         - Does not include session_id or verbose metadata like the /run endpoint
         - Streaming is not supported
         - Extracts global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+        - Stateless mode: Messages are NOT persisted to the database
     """
     telemetry_service = get_telemetry_service()
 
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
+    # Initialize context with stateless flag for this endpoint
+    context = {} if context is None else context.copy()  # Don't modify the original context
+
+    # Set stateless mode - this endpoint doesn't persist message history
+    context["stateless"] = True
+
     # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
     request_variables = extract_global_variables_from_headers(http_request.headers)
-
-    # Merge request variables with existing context
     if request_variables:
-        if context is None:
-            context = {"request_variables": request_variables}
-        else:
-            context = context.copy()  # Don't modify the original context
-            context["request_variables"] = request_variables
+        context["request_variables"] = request_variables
 
     # Create a minimal input request object for compatibility with existing helper functions
     input_request = SimplifiedAPIRequest(tweaks=inputs or {})
