@@ -179,7 +179,7 @@ export const SidebarDraggableComponent = forwardRef(
                 </ShadTooltip>
                 {beta && (
                   <Badge
-                    variant="pinkStatic"
+                    variant="purpleStatic"
                     size="xq"
                     className="ml-1.5 shrink-0"
                   >
