@@ -131,6 +131,8 @@ dependencies = [
     "traceloop-sdk>=0.43.1",
     "easyocr>=1.7.2",
     "opencv-python>=4.11",
+    "ibm-cloud-sdk-core>=3.16.0",
+    "ibm-watson-openscale>=3.0.0"
 ]
 
 [dependency-groups]
