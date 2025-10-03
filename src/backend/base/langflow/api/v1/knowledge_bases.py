@@ -195,8 +195,8 @@ def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[i
             continue
 
         text_series = df[col].astype(str).fillna("")
-        total_characters += int(text_series.str.len().sum().item())
-        total_words += int(text_series.str.split().str.len().sum().item())
+        total_characters += int(text_series.str.len().to_numpy().sum())
+        total_words += int(text_series.str.count(r"\S+").to_numpy().sum())
 
     return total_words, total_characters
 
