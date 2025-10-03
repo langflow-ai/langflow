@@ -1,8 +1,21 @@
 from __future__ import annotations
 
+import os
+
+from dotenv import find_dotenv, load_dotenv
+
+from lfx.log.logger import logger
 from lfx.services.base import Service
 from lfx.services.settings.auth import AuthSettings
 from lfx.services.settings.base import Settings
+
+# Load .env file if it exists
+if not os.environ.get("_LANGFLOW_DOTENV_LOADED"):
+    env_file = find_dotenv()
+    if env_file:
+        logger.debug("Loading .env file inside lfx settings service")
+        load_dotenv(env_file, override=False)
+        os.environ["_LANGFLOW_DOTENV_LOADED"] = "true"
 
 
 class SettingsService(Service):
@@ -15,8 +28,6 @@ class SettingsService(Service):
 
     @classmethod
     def initialize(cls) -> SettingsService:
-        # Check if a string is a valid path or a file name
-
         settings = Settings()
         if not settings.config_dir:
             msg = "CONFIG_DIR must be set in settings"
