@@ -43,7 +43,9 @@ from lfx.template.field.base import Output
 
 class ConstantComponent(Component):
     display_name = "Constant"
-    description = "A configurable constant component that can output different data types based on the selected input type."
+    description = (
+        "A configurable constant component that can output different data types based on the selected input type."
+    )
     icon = "bookmark"
     name = "Constant"
 
@@ -96,7 +98,7 @@ class ConstantComponent(Component):
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "input_type":
             # Remove any existing dynamic input
-            keys_to_remove = [key for key in build_config.keys() if key not in ["input_type", "_type", "code"]]
+            keys_to_remove = [key for key in build_config if key not in ["input_type", "_type", "code"]]
             for key in keys_to_remove:
                 build_config.pop(key, None)
 
@@ -270,91 +272,81 @@ class ConstantComponent(Component):
     def get_message_output(self) -> Message:
         """Convert the input value to a Message object."""
         value = getattr(self, "value", None)
-        
+
         if isinstance(value, Message):
             return value
-        elif isinstance(value, Data):
+        if isinstance(value, Data):
             return Message(text=value.get_text())
-        elif isinstance(value, (str, int, float, bool)):
+        if isinstance(value, (str, int, float, bool, dict)):
             return Message(text=str(value))
-        elif isinstance(value, dict):
-            return Message(text=str(value))
-        elif isinstance(value, list):
+        if isinstance(value, list):
             if len(value) > 0 and isinstance(value[0], str):
                 return Message(text=", ".join(value))
-            else:
-                return Message(text=str(value))
-        elif isinstance(value, PandasDataFrame):
+            return Message(text=str(value))
+        if isinstance(value, PandasDataFrame):
             return Message(text=value.to_string())
-        else:
-            return Message(text=str(value) if value is not None else "")
+        return Message(text=str(value) if value is not None else "")
 
     def get_data_output(self) -> Data:
         """Convert the input value to a Data object."""
         value = getattr(self, "value", None)
-        
+
         if isinstance(value, Data):
             return value
-        elif isinstance(value, Message):
+        if isinstance(value, Message):
             return Data(text=value.text)
-        elif isinstance(value, (str, int, float, bool)):
+        if isinstance(value, (str, int, float, bool)):
             return Data(text=str(value), data={"value": value})
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             return Data(data=value, text=str(value))
-        elif isinstance(value, list):
+        if isinstance(value, list):
             if len(value) > 0:
                 if isinstance(value[0], dict):
                     # List of dictionaries - create a composite data object
                     return Data(data={"items": value}, text=f"List with {len(value)} items")
-                elif isinstance(value[0], str):
+                if isinstance(value[0], str):
                     return Data(text=", ".join(value), data={"items": value})
-                else:
-                    return Data(text=str(value), data={"items": value})
-            else:
-                return Data(text="Empty list", data={"items": []})
-        elif isinstance(value, PandasDataFrame):
+                return Data(text=str(value), data={"items": value})
+            return Data(text="Empty list", data={"items": []})
+        if isinstance(value, PandasDataFrame):
             return Data(data={"dataframe": value.to_dict()}, text=f"DataFrame with {len(value)} rows")
-        else:
-            return Data(text=str(value) if value is not None else "", data={"value": value})
+        return Data(text=str(value) if value is not None else "", data={"value": value})
 
     def get_dataframe_output(self) -> DataFrame:
         """Convert the input value to a DataFrame object."""
         value = getattr(self, "value", None)
-        
+
         if isinstance(value, PandasDataFrame):
             return DataFrame(value)
-        elif isinstance(value, list):
+        if isinstance(value, list):
             if len(value) > 0:
                 if isinstance(value[0], dict):
                     # List of dictionaries can be converted to DataFrame
                     df = PandasDataFrame(value)
                     return DataFrame(df)
-                elif isinstance(value[0], Data):
+                if isinstance(value[0], Data):
                     # List of Data objects
                     data_list = [data.data for data in value]
                     df = PandasDataFrame(data_list)
                     return DataFrame(df)
-                else:
-                    # Simple list - create single column DataFrame
-                    df = PandasDataFrame({"value": value})
-                    return DataFrame(df)
-            else:
-                # Empty list
-                df = PandasDataFrame()
+                # Simple list - create single column DataFrame
+                df = PandasDataFrame({"value": value})
                 return DataFrame(df)
-        elif isinstance(value, dict):
+            # Empty list
+            df = PandasDataFrame()
+            return DataFrame(df)
+        if isinstance(value, dict):
             # Single dictionary - create DataFrame with one row
             df = PandasDataFrame([value])
             return DataFrame(df)
-        elif isinstance(value, Data):
+        if isinstance(value, Data):
             # Single Data object
             df = PandasDataFrame([value.data])
             return DataFrame(df)
-        elif isinstance(value, (str, int, float, bool)):
+        if isinstance(value, (str, int, float, bool)):
             # Single value - create DataFrame with one column and one row
             df = PandasDataFrame({"value": [value]})
             return DataFrame(df)
-        else:
-            # Default case - create empty DataFrame
-            df = PandasDataFrame()
-            return DataFrame(df)
+        # Default case - create empty DataFrame
+        df = PandasDataFrame()
+        return DataFrame(df)
