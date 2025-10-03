@@ -267,12 +267,8 @@ def run(
     ssl_key_file_path: str | None = typer.Option(None, help="Defines the SSL key file path.", show_default=False),
 ) -> None:
     """Run Langflow."""
-
     if env_file:
         load_dotenv(env_file, override=True)
-        logger.debug("Inside main , trying to access os.environ['LANGFLOW_DATABASE_URL'] ->",
-              os.environ.get("LANGFLOW_DATABASE_URL"))
-
     # Set default log level if not provided
     log_level_str = "info" if log_level is None else log_level.lower()
 
