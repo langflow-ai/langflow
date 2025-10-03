@@ -410,7 +410,7 @@ jobs:
         id: version
         run: |
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
-            version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
+            version=$(uv tree | grep 'langflow-base' | awk '{print $2}' | sed 's/^v//' | head -n 1)
           else
             version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//' | head -n 1)
           fi
