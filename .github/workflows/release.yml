@@ -48,16 +48,6 @@ on:
         required: false
         type: boolean
         default: false
-      runs_on:
-        description: "Runner to use for CI tests (use self-hosted for safe/release code)"
-        required: false
-        type: choice
-        options:
-          - ubuntu-latest
-          - self-hosted
-          - "[Langflow-runner]"
-          - "[self-hosted, linux, ARM64, langflow-ai-arm64-40gb]"
-        default: ubuntu-latest
       dry_run:
         description: "Dry run mode - disables all pushes to external services (PyPI, Docker, GitHub releases)"
         required: false
@@ -81,7 +71,6 @@ jobs:
           echo "build_docker_ep: ${{ inputs.build_docker_ep }}"
           echo "pre_release: ${{ inputs.pre_release }}"
           echo "create_release: ${{ inputs.create_release }}"
-          echo "runs_on: ${{ inputs.runs_on }}"
           echo "dry_run: ${{ inputs.dry_run }}"
 
   validate-tag:
@@ -135,7 +124,7 @@ jobs:
       frontend-tests-folder: "tests"
       release: true
       run-all-tests: true
-      runs-on: ${{ inputs.runs_on || 'ubuntu-latest' }}
+      runs-on: ubuntu-latest
     secrets: inherit
 
 
