@@ -2609,7 +2609,7 @@
                 "advanced": false,
                 "display_name": "Advanced Parser",
                 "dynamic": false,
-                "info": "Enable advanced document processing and export with Docling for PDFs, images, and office documents. Available only for single file processing.Note that advanced document processing can consume significant resources.",
+                "info": "Enable advanced document processing and export with Docling for PDFs, images, and office documents. Note that advanced document processing can consume significant resources.",
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "advanced_mode",

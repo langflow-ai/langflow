@@ -81,10 +81,9 @@ class FileComponent(BaseFileComponent):
             real_time_refresh=True,
             info=(
                 "Enable advanced document processing and export with Docling for PDFs, images, and office documents. "
-                "Available only for single file processing."
                 "Note that advanced document processing can consume significant resources."
             ),
-            show=False,
+            show=True,
         ),
         DropdownInput(
             name="pipeline",
@@ -171,11 +170,9 @@ class FileComponent(BaseFileComponent):
         """Show/hide Advanced Parser and related fields based on selection context."""
         if field_name == "path":
             paths = self._path_value(build_config)
-            file_path = paths[0] if paths else ""
-            file_count = len(field_value) if field_value else 0
 
-            # Advanced mode only for single (non-tabular) file
-            allow_advanced = file_count == 1 and not file_path.endswith((".csv", ".xlsx", ".parquet"))
+            # If all files can be processed by docling, do so
+            allow_advanced = all(not file_path.endswith((".csv", ".xlsx", ".parquet")) for file_path in paths)
             build_config["advanced_mode"]["show"] = allow_advanced
             if not allow_advanced:
                 build_config["advanced_mode"]["value"] = False
@@ -529,7 +526,7 @@ class FileComponent(BaseFileComponent):
     ) -> list[BaseFileComponent.BaseFile]:
         """Process input files.
 
-        - Single file + advanced_mode => Docling in a separate process.
+        - advanced_mode => Docling in a separate process.
         - Otherwise => standard parsing in current process (optionally threaded).
         """
         if not file_list:
@@ -550,10 +547,13 @@ class FileComponent(BaseFileComponent):
                     raise
                 return None
 
-        # Advanced path: only for a single Docling-compatible file
-        if len(file_list) == 1:
-            file_path = str(file_list[0].path)
-            if self.advanced_mode and self._is_docling_compatible(file_path):
+        docling_compatible = all(self._is_docling_compatible(str(f.path)) for f in file_list)
+
+        # Advanced path: Check if ALL files are compatible with Docling
+        if self.advanced_mode and docling_compatible:
+            final_return: list[BaseFileComponent.BaseFile] = []
+            for file in file_list:
+                file_path = str(file.path)
                 advanced_data: Data | None = self._process_docling_in_subprocess(file_path)
 
                 # --- UNNEST: expand each element in `doc` to its own Data row
@@ -569,10 +569,11 @@ class FileComponent(BaseFileComponent):
                         )
                         for item in doc_rows
                     ]
-                    return self.rollup_data(file_list, rows)
-
-                # If not structured, keep as-is (e.g., markdown export or error dict)
-                return self.rollup_data(file_list, [advanced_data])
+                    final_return.extend(self.rollup_data(file_list, rows))
+                else:
+                    # If not structured, keep as-is (e.g., markdown export or error dict)
+                    final_return.extend(self.rollup_data(file_list, [advanced_data]))
+            return final_return
 
         # Standard multi-file (or single non-advanced) path
         concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)
