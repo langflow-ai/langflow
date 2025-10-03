@@ -21,8 +21,8 @@ from lfx.base.data.base_file import BaseFileComponent
 from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
 from lfx.io import BoolInput, FileInput, IntInput, Output
-from lfx.schema import DataFrame  # noqa: TC001
 from lfx.schema.data import Data
+from lfx.schema.dataframe import DataFrame  # noqa: TC001
 from lfx.schema.message import Message
 
 
@@ -45,6 +45,7 @@ class FileComponent(BaseFileComponent):
         "dotx",
         "dotm",
         "docm",
+        "jpg",
         "jpeg",
         "png",
         "potx",
@@ -184,6 +185,8 @@ class FileComponent(BaseFileComponent):
             for f in ("pipeline", "ocr_engine", "doc_key", "md_image_placeholder", "md_page_break_placeholder"):
                 if f in build_config:
                     build_config[f]["show"] = bool(field_value)
+                    if f == "pipeline":
+                        build_config[f]["advanced"] = not bool(field_value)
 
         elif field_name == "pipeline":
             if field_value == "standard":
@@ -257,6 +260,7 @@ class FileComponent(BaseFileComponent):
             ".docx",
             ".htm",
             ".html",
+            ".jpg",
             ".jpeg",
             ".json",
             ".md",
@@ -308,45 +312,13 @@ class FileComponent(BaseFileComponent):
             import json, sys
 
             def try_imports():
-                # Strategy 1: latest layout
                 try:
                     from docling.datamodel.base_models import ConversionStatus, InputFormat  # type: ignore
                     from docling.document_converter import DocumentConverter  # type: ignore
                     from docling_core.types.doc import ImageRefMode  # type: ignore
                     return ConversionStatus, InputFormat, DocumentConverter, ImageRefMode, "latest"
-                except Exception:
-                    pass
-                # Strategy 2: alternative layout
-                try:
-                    from docling.document_converter import DocumentConverter  # type: ignore
-                    try:
-                        from docling_core.types import ConversionStatus, InputFormat  # type: ignore
-                    except Exception:
-                        try:
-                            from docling.datamodel import ConversionStatus, InputFormat  # type: ignore
-                        except Exception:
-                            class ConversionStatus: SUCCESS = "success"
-                            class InputFormat:
-                                PDF="pdf"; IMAGE="image"
-                    try:
-                        from docling_core.types.doc import ImageRefMode  # type: ignore
-                    except Exception:
-                        class ImageRefMode:
-                            PLACEHOLDER="placeholder"; EMBEDDED="embedded"
-                    return ConversionStatus, InputFormat, DocumentConverter, ImageRefMode, "alternative"
-                except Exception:
-                    pass
-                # Strategy 3: basic converter only
-                try:
-                    from docling.document_converter import DocumentConverter  # type: ignore
-                    class ConversionStatus: SUCCESS = "success"
-                    class InputFormat:
-                        PDF="pdf"; IMAGE="image"
-                    class ImageRefMode:
-                        PLACEHOLDER="placeholder"; EMBEDDED="embedded"
-                    return ConversionStatus, InputFormat, DocumentConverter, ImageRefMode, "basic"
                 except Exception as e:
-                    raise ImportError(f"Docling imports failed: {e}") from e
+                    raise e
 
             def create_converter(strategy, input_format, DocumentConverter, pipeline, ocr_engine):
                 # --- Standard PDF/IMAGE pipeline (your existing behavior), with optional OCR ---
@@ -381,21 +353,38 @@ class FileComponent(BaseFileComponent):
                 # --- Vision-Language Model (VLM) pipeline ---
                 if pipeline == "vlm":
                     try:
+                        from docling.datamodel.pipeline_options import VlmPipelineOptions
+                        from docling.datamodel.vlm_model_specs import GRANITEDOCLING_MLX, GRANITEDOCLING_TRANSFORMERS
+                        from docling.document_converter import PdfFormatOption
                         from docling.pipeline.vlm_pipeline import VlmPipeline
-                        from docling.document_converter import PdfFormatOption  # type: ignore
 
-                        vl_pipe = VlmPipelineOptions()
+                        vl_pipe = VlmPipelineOptions(
+                            vlm_options=GRANITEDOCLING_TRANSFORMERS,
+                        )
+
+                        if sys.platform == "darwin":
+                            try:
+                                import mlx_vlm
+                                vl_pipe.vlm_options = GRANITEDOCLING_MLX
+                            except ImportError as e:
+                                raise e
 
                         # VLM paths generally don't need OCR; keep OCR off by default here.
                         fmt = {}
                         if hasattr(input_format, "PDF"):
-                            fmt[getattr(input_format, "PDF")] = PdfFormatOption(pipeline_cls=VlmPipeline)
+                            fmt[getattr(input_format, "PDF")] = PdfFormatOption(
+                            pipeline_cls=VlmPipeline,
+                            pipeline_options=vl_pipe
+                        )
                         if hasattr(input_format, "IMAGE"):
-                            fmt[getattr(input_format, "IMAGE")] = PdfFormatOption(pipeline_cls=VlmPipeline)
+                            fmt[getattr(input_format, "IMAGE")] = PdfFormatOption(
+                            pipeline_cls=VlmPipeline,
+                            pipeline_options=vl_pipe
+                        )
 
                         return DocumentConverter(format_options=fmt)
-                    except Exception:
-                        return DocumentConverter()
+                    except Exception as e:
+                        raise e
 
                 # --- Fallback: default converter with no special options ---
                 return DocumentConverter()
