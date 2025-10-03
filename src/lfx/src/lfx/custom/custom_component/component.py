@@ -1556,6 +1556,7 @@ class Component(CustomComponent):
             id_: Optional message ID
             skip_db_update: If True, only update in-memory and send event, skip DB write.
                            Useful during streaming to avoid excessive DB round-trips.
+                           Note: This assumes the message already exists in the database with message.id set.
         """
         if self._should_skip_message(message):
             return message
@@ -1567,9 +1568,13 @@ class Component(CustomComponent):
         self._ensure_message_required_fields(message)
 
         # If skip_db_update is True and message already has an ID, skip the DB write
+        # This path is used during agent streaming to avoid excessive DB round-trips
         if skip_db_update and message.id:
-            stored_message = message
-            # Still send the event to update the client
+            # Create a fresh Message instance for consistency with normal flow
+            stored_message = await Message.create(**message.model_dump())
+            self._stored_message_id = stored_message.id
+            # Still send the event to update the client in real-time
+            # Note: If this fails, we don't need DB cleanup since we didn't write to DB
             await self._send_message_event(stored_message, id_=id_)
         else:
             # Normal flow: store/update in database
