@@ -18,6 +18,7 @@ if not os.environ.get("_LANGFLOW_DOTENV_LOADED"):
         load_dotenv(env_file, override=False)
         os.environ["_LANGFLOW_DOTENV_LOADED"] = "true"
 
+
 class SettingsService(Service):
     name = "settings_service"
 
