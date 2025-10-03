@@ -70,12 +70,16 @@ test(
 
       // Test available types
       await expect(page.getByText("csv, json, pdf")).toBeVisible();
-      await page.getByTestId("info-types").hover();
-      await expect(
-        page.getByText(
-          "adoc, asc, asciidoc, bmp, bz2, docm, docx, dotm, dotx, gz, htm, html, jpeg, js, md, mdx, png, potm, potx, ppsm, ppsx, pptm, pptx, py, sh, sql, tar, tgz, tiff, ts, tsx, txt, webp, xhtml, xls, xlsx, xml, yaml, yml, zip",
-        ),
-      ).toBeVisible();
+      await page
+        .getByTestId("info-types")
+        .hover()
+        .then(async () => {
+          await expect(
+            page.getByText(
+              "adoc, asc, asciidoc, bmp, bz2, docm, docx, dotm, dotx, gz, htm, html, jpeg, js, md, mdx, png, potm, potx, ppsm, ppsx, pptm, pptx, py, sh, sql, tar, tgz, tiff, ts, tsx, txt, webp, xhtml, xls, xlsx, xml, yaml, yml, zip",
+            ),
+          ).toBeVisible();
+        });
 
       await page.getByText("My Files").first().hover();
       await page.waitForTimeout(500);
