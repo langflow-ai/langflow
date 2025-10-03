@@ -9,16 +9,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-8bLHN",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "search_query",
             "id": "ArXivComponent-wpsLb",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -37,16 +33,12 @@
             "dataType": "ArXivComponent",
             "id": "ArXivComponent-wpsLb",
             "name": "dataframe",
-            "output_types": [
-              "DataFrame"
-            ]
+            "output_types": ["DataFrame"]
           },
           "targetHandle": {
             "fieldName": "data",
             "id": "LoopComponent-GV15E",
-            "inputTypes": [
-              "DataFrame"
-            ],
+            "inputTypes": ["DataFrame"],
             "type": "other"
           }
         },
@@ -65,17 +57,12 @@
             "dataType": "LoopComponent",
             "id": "LoopComponent-GV15E",
             "name": "item",
-            "output_types": [
-              "Data"
-            ]
+            "output_types": ["Data"]
           },
           "targetHandle": {
             "fieldName": "input_data",
             "id": "ParserComponent-aKcLF",
-            "inputTypes": [
-              "DataFrame",
-              "Data"
-            ],
+            "inputTypes": ["DataFrame", "Data"],
             "type": "other"
           }
         },
@@ -94,16 +81,12 @@
             "dataType": "ParserComponent",
             "id": "ParserComponent-aKcLF",
             "name": "parsed_text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "LanguageModelComponent-ze4nq",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -122,18 +105,12 @@
             "dataType": "LanguageModelComponent",
             "id": "LanguageModelComponent-ze4nq",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_data",
             "id": "TypeConverterComponent-NClYY",
-            "inputTypes": [
-              "Message",
-              "Data",
-              "DataFrame"
-            ],
+            "inputTypes": ["Message", "Data", "DataFrame"],
             "type": "other"
           }
         },
@@ -152,17 +129,13 @@
             "dataType": "TypeConverterComponent",
             "id": "TypeConverterComponent-NClYY",
             "name": "data_output",
-            "output_types": [
-              "Data"
-            ]
+            "output_types": ["Data"]
           },
           "targetHandle": {
             "dataType": "LoopComponent",
             "id": "LoopComponent-GV15E",
             "name": "item",
-            "output_types": [
-              "Data"
-            ]
+            "output_types": ["Data"]
           }
         },
         "id": "reactflow__edge-TypeConverterComponent-NClYY{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-NClYYœ,œnameœ:œdata_outputœ,œoutput_typesœ:[œDataœ]}-LoopComponent-GV15E{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GV15Eœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
@@ -180,18 +153,12 @@
             "dataType": "LoopComponent",
             "id": "LoopComponent-GV15E",
             "name": "done",
-            "output_types": [
-              "DataFrame"
-            ]
+            "output_types": ["DataFrame"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-hmMTq",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
+            "inputTypes": ["Data", "DataFrame", "Message"],
             "type": "other"
           }
         },
@@ -208,9 +175,7 @@
         "data": {
           "id": "ArXivComponent-wpsLb",
           "node": {
-            "base_classes": [
-              "DataFrame"
-            ],
+            "base_classes": ["DataFrame"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -218,11 +183,7 @@
             "display_name": "arXiv",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "search_query",
-              "search_type",
-              "max_results"
-            ],
+            "field_order": ["search_query", "search_type", "max_results"],
             "frozen": false,
             "icon": "arXiv",
             "legacy": false,
@@ -256,9 +217,7 @@
                 "name": "dataframe",
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": [
-                  "DataFrame"
-                ],
+                "types": ["DataFrame"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -308,9 +267,7 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "The search query for arXiv papers (e.g., 'quantum computing')",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -334,13 +291,7 @@
                 "dynamic": false,
                 "info": "The field to search in",
                 "name": "search_type",
-                "options": [
-                  "all",
-                  "title",
-                  "abstract",
-                  "author",
-                  "cat"
-                ],
+                "options": ["all", "title", "abstract", "author", "cat"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -375,9 +326,7 @@
         "data": {
           "id": "ChatOutput-hmMTq",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -434,9 +383,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -485,9 +432,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -508,11 +453,7 @@
                 "display_name": "Inputs",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
+                "input_types": ["Data", "DataFrame", "Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_value",
@@ -533,10 +474,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -554,9 +492,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -577,9 +513,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -635,9 +569,7 @@
         "data": {
           "id": "ChatInput-8bLHN",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -685,9 +617,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -788,10 +718,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -809,9 +736,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -832,9 +757,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -917,9 +840,7 @@
         "data": {
           "id": "ParserComponent-aKcLF",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -927,12 +848,7 @@
             "display_name": "Parser",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "input_data",
-              "mode",
-              "pattern",
-              "sep"
-            ],
+            "field_order": ["input_data", "mode", "pattern", "sep"],
             "frozen": false,
             "icon": "braces",
             "legacy": false,
@@ -962,9 +878,7 @@
                 "name": "parsed_text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -995,10 +909,7 @@
                 "display_name": "Data or DataFrame",
                 "dynamic": false,
                 "info": "Accepts either a DataFrame or a Data object.",
-                "input_types": [
-                  "DataFrame",
-                  "Data"
-                ],
+                "input_types": ["DataFrame", "Data"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_data",
@@ -1018,10 +929,7 @@
                 "info": "Convert into raw string instead of using a template.",
                 "load_from_db": false,
                 "name": "mode",
-                "options": [
-                  "Parser",
-                  "Stringify"
-                ],
+                "options": ["Parser", "Stringify"],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -1039,9 +947,7 @@
                 "display_name": "Template",
                 "dynamic": true,
                 "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1063,9 +969,7 @@
                 "display_name": "Separator",
                 "dynamic": false,
                 "info": "String used to separate rows/items.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1103,10 +1007,7 @@
         "data": {
           "id": "LoopComponent-GV15E",
           "node": {
-            "base_classes": [
-              "Data",
-              "DataFrame"
-            ],
+            "base_classes": ["Data", "DataFrame"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1114,9 +1015,7 @@
             "display_name": "Loop",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "data"
-            ],
+            "field_order": ["data"],
             "frozen": false,
             "icon": "infinity",
             "legacy": false,
@@ -1146,9 +1045,7 @@
                 "name": "item",
                 "selected": "Data",
                 "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
+                "types": ["Data"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1160,9 +1057,7 @@
                 "name": "done",
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": [
-                  "DataFrame"
-                ],
+                "types": ["DataFrame"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1193,9 +1088,7 @@
                 "display_name": "Inputs",
                 "dynamic": false,
                 "info": "The initial list of Data objects or DataFrame to iterate over.",
-                "input_types": [
-                  "DataFrame"
-                ],
+                "input_types": ["DataFrame"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "data",
@@ -1230,10 +1123,7 @@
         "data": {
           "id": "LanguageModelComponent-ze4nq",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1297,9 +1187,7 @@
                 "name": "text_output",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1311,9 +1199,7 @@
                 "name": "model_output",
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1363,9 +1249,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input text to send to the model",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1430,11 +1314,7 @@
                 "dynamic": false,
                 "info": "Select the model provider",
                 "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
-                ],
+                "options": ["OpenAI", "Anthropic", "Google"],
                 "options_metadata": [
                   {
                     "icon": "OpenAI"
@@ -1482,9 +1362,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1552,9 +1430,7 @@
         "data": {
           "id": "TypeConverterComponent-NClYY",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "processing",
             "conditional_paths": [],
@@ -1563,10 +1439,7 @@
             "display_name": "Type Convert",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "input_data",
-              "output_type"
-            ],
+            "field_order": ["input_data", "output_type"],
             "frozen": false,
             "icon": "repeat",
             "key": "TypeConverterComponent",
@@ -1603,9 +1476,7 @@
                 "required_inputs": null,
                 "selected": "Data",
                 "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
+                "types": ["Data"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1655,11 +1526,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "Accept Message, Data or DataFrame as input",
-                "input_types": [
-                  "Message",
-                  "Data",
-                  "DataFrame"
-                ],
+                "input_types": ["Message", "Data", "DataFrame"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_data",
@@ -1678,11 +1545,7 @@
                 "dynamic": false,
                 "info": "Select the desired output data type",
                 "name": "output_type",
-                "options": [
-                  "Message",
-                  "Data",
-                  "DataFrame"
-                ],
+                "options": ["Message", "Data", "DataFrame"],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -1725,8 +1588,5 @@
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Research Translation Loop",
-  "tags": [
-    "chatbots",
-    "content-generation"
-  ]
+  "tags": ["chatbots", "content-generation"]
 }

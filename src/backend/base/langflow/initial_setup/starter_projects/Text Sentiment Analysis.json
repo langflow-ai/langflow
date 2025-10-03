@@ -9,16 +9,12 @@
             "dataType": "Prompt",
             "id": "Prompt-RaLHB",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "LanguageModelComponent-qFXT1",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -37,16 +33,12 @@
             "dataType": "LanguageModelComponent",
             "id": "LanguageModelComponent-qFXT1",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "summary",
             "id": "Prompt-C5FYM",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -65,16 +57,12 @@
             "dataType": "Prompt",
             "id": "Prompt-C5FYM",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "LanguageModelComponent-Wp3pC",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -93,18 +81,12 @@
             "dataType": "LanguageModelComponent",
             "id": "LanguageModelComponent-Wp3pC",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-K40Du",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
+            "inputTypes": ["Data", "DataFrame", "Message"],
             "type": "other"
           }
         },
@@ -123,16 +105,12 @@
             "dataType": "Prompt",
             "id": "Prompt-dabhh",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "system_message",
             "id": "LanguageModelComponent-gYAmH",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -151,18 +129,12 @@
             "dataType": "LanguageModelComponent",
             "id": "LanguageModelComponent-gYAmH",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-yiSgq",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
+            "inputTypes": ["Data", "DataFrame", "Message"],
             "type": "other"
           }
         },
@@ -180,16 +152,12 @@
             "dataType": "File",
             "id": "File-oAEuF",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "LanguageModelComponent-gYAmH",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -206,16 +174,12 @@
             "dataType": "File",
             "id": "File-oAEuF",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "text",
             "id": "Prompt-RaLHB",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -231,24 +195,17 @@
         "data": {
           "id": "Prompt-C5FYM",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": [
-                "summary"
-              ]
+              "template": ["summary"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "template",
-              "tool_placeholder"
-            ],
+            "field_order": ["template", "tool_placeholder"],
             "frozen": false,
             "icon": "braces",
             "legacy": false,
@@ -265,9 +222,7 @@
                 "name": "prompt",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -300,9 +255,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -339,9 +292,7 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -380,25 +331,18 @@
         "data": {
           "id": "Prompt-RaLHB",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": [
-                "text"
-              ]
+              "template": ["text"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
             "error": null,
-            "field_order": [
-              "template",
-              "tool_placeholder"
-            ],
+            "field_order": ["template", "tool_placeholder"],
             "frozen": false,
             "full_path": null,
             "icon": "braces",
@@ -420,9 +364,7 @@
                 "name": "prompt",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -475,9 +417,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -495,9 +435,7 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -536,9 +474,7 @@
         "data": {
           "id": "Prompt-dabhh",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
@@ -548,10 +484,7 @@
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "template",
-              "tool_placeholder"
-            ],
+            "field_order": ["template", "tool_placeholder"],
             "frozen": false,
             "icon": "braces",
             "legacy": false,
@@ -568,9 +501,7 @@
                 "name": "prompt",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -620,9 +551,7 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -687,9 +616,7 @@
         "data": {
           "id": "ChatOutput-yiSgq",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -745,9 +672,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -796,9 +721,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -819,11 +742,7 @@
                 "display_name": "Inputs",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
+                "input_types": ["Data", "DataFrame", "Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_value",
@@ -844,10 +763,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -865,9 +781,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -888,9 +802,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -946,9 +858,7 @@
         "data": {
           "id": "ChatOutput-K40Du",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1004,9 +914,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1055,9 +963,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1078,11 +984,7 @@
                 "display_name": "Inputs",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
+                "input_types": ["Data", "DataFrame", "Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_value",
@@ -1103,10 +1005,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1124,9 +1023,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1147,9 +1044,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1286,10 +1181,7 @@
         "data": {
           "id": "LanguageModelComponent-qFXT1",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -1356,9 +1248,7 @@
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1372,9 +1262,7 @@
                 "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1425,9 +1313,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input text to send to the model",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1492,11 +1378,7 @@
                 "dynamic": false,
                 "info": "Select the model provider",
                 "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
-                ],
+                "options": ["OpenAI", "Anthropic", "Google"],
                 "options_metadata": [
                   {
                     "icon": "OpenAI"
@@ -1544,9 +1426,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1614,10 +1494,7 @@
         "data": {
           "id": "LanguageModelComponent-Wp3pC",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -1684,9 +1561,7 @@
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1700,9 +1575,7 @@
                 "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1753,9 +1626,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input text to send to the model",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1820,11 +1691,7 @@
                 "dynamic": false,
                 "info": "Select the model provider",
                 "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
-                ],
+                "options": ["OpenAI", "Anthropic", "Google"],
                 "options_metadata": [
                   {
                     "icon": "OpenAI"
@@ -1872,9 +1739,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1941,10 +1806,7 @@
         "data": {
           "id": "LanguageModelComponent-gYAmH",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -2011,9 +1873,7 @@
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2027,9 +1887,7 @@
                 "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2080,9 +1938,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input text to send to the model",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2147,11 +2003,7 @@
                 "dynamic": false,
                 "info": "Select the model provider",
                 "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
-                ],
+                "options": ["OpenAI", "Anthropic", "Google"],
                 "options_metadata": [
                   {
                     "icon": "OpenAI"
@@ -2199,9 +2051,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2268,9 +2118,7 @@
         "data": {
           "id": "File-oAEuF",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2317,9 +2165,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2405,9 +2251,7 @@
                 "display_name": "Doc Key",
                 "dynamic": false,
                 "info": "The key to use for the DoclingDocument column.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2428,10 +2272,7 @@
                 "display_name": "Server File Path",
                 "dynamic": false,
                 "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
-                "input_types": [
-                  "Data",
-                  "Message"
-                ],
+                "input_types": ["Data", "Message"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "file_path",
@@ -2545,10 +2386,7 @@
                 "external_options": {},
                 "info": "OCR engine to use. Only available when pipeline is set to 'standard'.",
                 "name": "ocr_engine",
-                "options": [
-                  "None",
-                  "easyocr"
-                ],
+                "options": ["None", "easyocr"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -2635,10 +2473,7 @@
                 "external_options": {},
                 "info": "Docling pipeline to use",
                 "name": "pipeline",
-                "options": [
-                  "standard",
-                  "vlm"
-                ],
+                "options": ["standard", "vlm"],
                 "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
@@ -2738,7 +2573,5 @@
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Text Sentiment Analysis",
-  "tags": [
-    "classification"
-  ]
+  "tags": ["classification"]
 }

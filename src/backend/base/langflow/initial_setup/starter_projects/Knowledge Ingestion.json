@@ -9,18 +9,12 @@
             "dataType": "URLComponent",
             "id": "URLComponent-WBxJx",
             "name": "page_results",
-            "output_types": [
-              "DataFrame"
-            ]
+            "output_types": ["DataFrame"]
           },
           "targetHandle": {
             "fieldName": "data_inputs",
             "id": "SplitText-edq28",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
+            "inputTypes": ["Data", "DataFrame", "Message"],
             "type": "other"
           }
         },
@@ -38,17 +32,12 @@
             "dataType": "SplitText",
             "id": "SplitText-edq28",
             "name": "dataframe",
-            "output_types": [
-              "DataFrame"
-            ]
+            "output_types": ["DataFrame"]
           },
           "targetHandle": {
             "fieldName": "input_df",
             "id": "KnowledgeIngestion-uSOy6",
-            "inputTypes": [
-              "Data",
-              "DataFrame"
-            ],
+            "inputTypes": ["Data", "DataFrame"],
             "type": "other"
           }
         },
@@ -64,9 +53,7 @@
         "data": {
           "id": "SplitText-edq28",
           "node": {
-            "base_classes": [
-              "DataFrame"
-            ],
+            "base_classes": ["DataFrame"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -115,9 +102,7 @@
                 "name": "dataframe",
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": [
-                  "DataFrame"
-                ],
+                "types": ["DataFrame"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -184,11 +169,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The data with texts to split in chunks.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
+                "input_types": ["Data", "DataFrame", "Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "data_inputs",
@@ -209,12 +190,7 @@
                 "dynamic": false,
                 "info": "Whether to keep the separator in the output chunks and where to place it.",
                 "name": "keep_separator",
-                "options": [
-                  "False",
-                  "True",
-                  "Start",
-                  "End"
-                ],
+                "options": ["False", "True", "Start", "End"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -232,9 +208,7 @@
                 "display_name": "Separator",
                 "dynamic": false,
                 "info": "The character to split on. Use \\n for newline. Examples: \\n\\n for paragraphs, \\n for lines, . for sentences",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -255,9 +229,7 @@
                 "display_name": "Text Key",
                 "dynamic": false,
                 "info": "The key to use for the text column.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -322,10 +294,7 @@
         "data": {
           "id": "URLComponent-WBxJx",
           "node": {
-            "base_classes": [
-              "DataFrame",
-              "Message"
-            ],
+            "base_classes": ["DataFrame", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -387,9 +356,7 @@
                 "name": "page_results",
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": [
-                  "DataFrame"
-                ],
+                "types": ["DataFrame"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -401,9 +368,7 @@
                 "name": "raw_results",
                 "selected": null,
                 "tool_mode": false,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -509,10 +474,7 @@
                 "dynamic": false,
                 "info": "Output Format. Use 'Text' to extract the text from the HTML or 'HTML' for the raw HTML content.",
                 "name": "format",
-                "options": [
-                  "Text",
-                  "HTML"
-                ],
+                "options": ["Text", "HTML"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -530,9 +492,7 @@
                 "display_name": "Headers",
                 "dynamic": false,
                 "info": "The headers to send with the request",
-                "input_types": [
-                  "DataFrame"
-                ],
+                "input_types": ["DataFrame"],
                 "is_list": true,
                 "list_add_label": "Add More",
                 "name": "headers",
@@ -666,9 +626,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": [
-                  "https://langflow.org"
-                ]
+                "value": ["https://langflow.org"]
               },
               "use_async": {
                 "_input_type": "BoolInput",
@@ -712,9 +670,7 @@
         "data": {
           "id": "KnowledgeIngestion-uSOy6",
           "node": {
-            "base_classes": [
-              "Data"
-            ],
+            "base_classes": ["Data"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -787,9 +743,7 @@
                 "name": "dataframe_output",
                 "selected": "Data",
                 "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
+                "types": ["Data"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -943,10 +897,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "Table with all original columns (already chunked / processed). Accepts Data or DataFrame. If Data is provided, it is converted to a DataFrame automatically.",
-                "input_types": [
-                  "Data",
-                  "DataFrame"
-                ],
+                "input_types": ["Data", "DataFrame"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_df",

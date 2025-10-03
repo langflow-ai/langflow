@@ -9,16 +9,12 @@
             "dataType": "TextInput",
             "id": "TextInput-i5Z2Y",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "CONTENT_GUIDELINES",
             "id": "Prompt-JXzxV",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -37,16 +33,12 @@
             "dataType": "TextInput",
             "id": "TextInput-OAt8o",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "OUTPUT_FORMAT",
             "id": "Prompt-JXzxV",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -65,16 +57,12 @@
             "dataType": "TextInput",
             "id": "TextInput-58oH9",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "OUTPUT_LANGUAGE",
             "id": "Prompt-JXzxV",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -93,16 +81,12 @@
             "dataType": "TextInput",
             "id": "TextInput-3nKXg",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "PROFILE_DETAILS",
             "id": "Prompt-JXzxV",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -121,16 +105,12 @@
             "dataType": "TextInput",
             "id": "TextInput-MlxGC",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "PROFILE_TYPE",
             "id": "Prompt-JXzxV",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -149,16 +129,12 @@
             "dataType": "TextInput",
             "id": "TextInput-rIJMY",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "TONE_AND_STYLE",
             "id": "Prompt-JXzxV",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -176,16 +152,12 @@
             "dataType": "Prompt",
             "id": "Prompt-JXzxV",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "system_message",
             "id": "LanguageModelComponent-URKKz",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -203,16 +175,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-JpNZb",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "LanguageModelComponent-URKKz",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -230,18 +198,12 @@
             "dataType": "LanguageModelComponent",
             "id": "LanguageModelComponent-URKKz",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-GgTGu",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
+            "inputTypes": ["Data", "DataFrame", "Message"],
             "type": "other"
           }
         },
@@ -258,9 +220,7 @@
         "data": {
           "id": "ChatInput-JpNZb",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -307,9 +267,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -410,10 +368,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -431,9 +386,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -454,9 +407,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -517,9 +468,7 @@
         "data": {
           "id": "TextInput-i5Z2Y",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -527,9 +476,7 @@
             "display_name": "Content Guidelines",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "input_value"
-            ],
+            "field_order": ["input_value"],
             "frozen": false,
             "icon": "type",
             "legacy": true,
@@ -558,9 +505,7 @@
                 "name": "text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -591,9 +536,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Text to be passed as input.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -636,9 +579,7 @@
           "display_name": "Chat Output",
           "id": "ChatOutput-GgTGu",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -694,9 +635,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -745,9 +684,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -768,11 +705,7 @@
                 "display_name": "Inputs",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
+                "input_types": ["Data", "DataFrame", "Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_value",
@@ -793,10 +726,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -814,9 +744,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -837,9 +765,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -901,9 +827,7 @@
         "data": {
           "id": "TextInput-OAt8o",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -911,9 +835,7 @@
             "display_name": "Output Format",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "input_value"
-            ],
+            "field_order": ["input_value"],
             "frozen": false,
             "icon": "type",
             "legacy": true,
@@ -942,9 +864,7 @@
                 "name": "text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -975,9 +895,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Text to be passed as input.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1018,9 +936,7 @@
         "data": {
           "id": "TextInput-58oH9",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1028,9 +944,7 @@
             "display_name": "Output Language",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "input_value"
-            ],
+            "field_order": ["input_value"],
             "frozen": false,
             "icon": "type",
             "legacy": true,
@@ -1059,9 +973,7 @@
                 "name": "text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1092,9 +1004,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Text to be passed as input.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1135,9 +1045,7 @@
         "data": {
           "id": "TextInput-3nKXg",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1145,9 +1053,7 @@
             "display_name": "Profile Details",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "input_value"
-            ],
+            "field_order": ["input_value"],
             "frozen": false,
             "icon": "type",
             "legacy": true,
@@ -1176,9 +1082,7 @@
                 "name": "text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1209,9 +1113,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Text to be passed as input.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1252,9 +1154,7 @@
         "data": {
           "id": "TextInput-rIJMY",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1262,9 +1162,7 @@
             "display_name": "Tone And Style",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "input_value"
-            ],
+            "field_order": ["input_value"],
             "frozen": false,
             "icon": "type",
             "legacy": true,
@@ -1293,9 +1191,7 @@
                 "name": "text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1326,9 +1222,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Text to be passed as input.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1369,9 +1263,7 @@
         "data": {
           "id": "TextInput-MlxGC",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1379,9 +1271,7 @@
             "display_name": "Profile Type",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "input_value"
-            ],
+            "field_order": ["input_value"],
             "frozen": false,
             "icon": "type",
             "legacy": true,
@@ -1410,9 +1300,7 @@
                 "name": "text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1443,9 +1331,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Text to be passed as input.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1525,9 +1411,7 @@
           "display_name": "Prompt",
           "id": "Prompt-JXzxV",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
@@ -1544,10 +1428,7 @@
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "template",
-              "tool_placeholder"
-            ],
+            "field_order": ["template", "tool_placeholder"],
             "frozen": false,
             "icon": "braces",
             "legacy": false,
@@ -1567,9 +1448,7 @@
                 "name": "prompt",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1583,9 +1462,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1605,9 +1482,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1627,9 +1502,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1649,9 +1522,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1671,9 +1542,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1693,9 +1562,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1751,9 +1618,7 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1796,10 +1661,7 @@
         "data": {
           "id": "LanguageModelComponent-URKKz",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1862,9 +1724,7 @@
                 "name": "text_output",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1876,9 +1736,7 @@
                 "name": "model_output",
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1928,9 +1786,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input text to send to the model",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1995,11 +1851,7 @@
                 "dynamic": false,
                 "info": "Select the model provider",
                 "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
-                ],
+                "options": ["OpenAI", "Anthropic", "Google"],
                 "options_metadata": [
                   {
                     "icon": "OpenAI"
@@ -2047,9 +1899,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2125,8 +1975,5 @@
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Twitter Thread Generator",
-  "tags": [
-    "chatbots",
-    "content-generation"
-  ]
+  "tags": ["chatbots", "content-generation"]
 }

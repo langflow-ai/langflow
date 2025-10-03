@@ -8,18 +8,12 @@
             "dataType": "KnowledgeRetrieval",
             "id": "KnowledgeRetrieval-kgwih",
             "name": "retrieve_data",
-            "output_types": [
-              "DataFrame"
-            ]
+            "output_types": ["DataFrame"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-OG4M9",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
+            "inputTypes": ["Data", "DataFrame", "Message"],
             "type": "other"
           }
         },
@@ -36,16 +30,12 @@
             "dataType": "TextInput",
             "id": "TextInput-k48NL",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "search_query",
             "id": "KnowledgeRetrieval-kgwih",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -88,9 +78,7 @@
         "data": {
           "id": "TextInput-k48NL",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -98,9 +86,7 @@
             "display_name": "Text Input",
             "documentation": "https://docs.langflow.org/components-io#text-input",
             "edited": false,
-            "field_order": [
-              "input_value"
-            ],
+            "field_order": ["input_value"],
             "frozen": false,
             "icon": "type",
             "legacy": true,
@@ -130,9 +116,7 @@
                 "name": "text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -164,9 +148,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Text to be passed as input.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -205,9 +187,7 @@
         "data": {
           "id": "ChatOutput-OG4M9",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -264,9 +244,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -315,9 +293,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -338,11 +314,7 @@
                 "display_name": "Inputs",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
+                "input_types": ["Data", "DataFrame", "Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_value",
@@ -363,10 +335,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -384,9 +353,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -407,9 +374,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -465,9 +430,7 @@
         "data": {
           "id": "KnowledgeRetrieval-kgwih",
           "node": {
-            "base_classes": [
-              "DataFrame"
-            ],
+            "base_classes": ["DataFrame"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -540,9 +503,7 @@
                 "name": "retrieve_data",
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": [
-                  "DataFrame"
-                ],
+                "types": ["DataFrame"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -649,9 +610,7 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "Optional search query to filter knowledge base data.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
