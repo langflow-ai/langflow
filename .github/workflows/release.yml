@@ -33,11 +33,6 @@ on:
         required: true
         type: boolean
         default: false
-      build_docker_ep:
-        description: "Build Docker Image for Langflow with Entrypoint"
-        required: false
-        type: boolean
-        default: false
       pre_release:
         description: "Pre-release"
         required: false
@@ -47,7 +42,7 @@ on:
         description: "Whether to create a gh release"
         required: false
         type: boolean
-        default: true
+        default: false
       dry_run:
         description: "Dry run mode - disables all pushes to external services (PyPI, Docker, GitHub releases)"
         required: false
@@ -69,7 +64,6 @@ jobs:
           echo "release_lfx: ${{ inputs.release_lfx }}"
           echo "build_docker_base: ${{ inputs.build_docker_base }}"
           echo "build_docker_main: ${{ inputs.build_docker_main }}"
-          echo "build_docker_ep: ${{ inputs.build_docker_ep }}"
           echo "pre_release: ${{ inputs.pre_release }}"
           echo "create_release: ${{ inputs.create_release }}"
           echo "dry_run: ${{ inputs.dry_run }}"
@@ -103,7 +97,7 @@ jobs:
   validate-dependencies:
     name: Validate Release Dependencies
     runs-on: ubuntu-latest
-    if: ${{ inputs.release_package_base || inputs.release_package_main || inputs.release_lfx || inputs.build_docker_base || inputs.build_docker_main || inputs.build_docker_ep }}
+    if: ${{ inputs.release_package_base || inputs.release_package_main || inputs.release_lfx || inputs.build_docker_base || inputs.build_docker_main }}
     needs: [validate-tag]
     steps:
       - name: Validate that build-base is enabled if build-main is enabled
@@ -449,18 +443,6 @@ jobs:
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
 
-  call_docker_build_main_ep:
-    name: Call Docker Build Workflow for Langflow with Entrypoint
-    if: ${{ inputs.build_docker_ep }}
-    needs: [ci]
-    uses: ./.github/workflows/docker-build-v2.yml
-    with:
-      ref: ${{ inputs.release_tag }}
-      release_type: main-ep
-      pre_release: False
-      push_to_registry: ${{ !inputs.dry_run }}
-    secrets: inherit
-
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
     if: ${{ inputs.build_docker_main }}
@@ -469,6 +451,18 @@ jobs:
     with:
       ref: ${{ inputs.release_tag }}
       release_type: main
+      pre_release: ${{ inputs.pre_release }}
+      push_to_registry: ${{ !inputs.dry_run }}
+    secrets: inherit
+
+  call_docker_build_main_ep:
+    name: Call Docker Build Workflow for Langflow with Entrypoint
+    if: ${{ inputs.build_docker_main }}
+    needs: [ci]
+    uses: ./.github/workflows/docker-build-v2.yml
+    with:
+      ref: ${{ inputs.release_tag }}
+      release_type: main-ep
       pre_release: ${{ inputs.pre_release }}
       push_to_registry: ${{ !inputs.dry_run }}
     secrets: inherit
