@@ -18,6 +18,11 @@ on:
         required: true
         type: boolean
         default: false
+      release_lfx:
+        description: "Release LFX"
+        required: true
+        type: boolean
+        default: false
       build_docker_base:
         description: "Build Docker Image for Langflow Base"
         required: true
@@ -43,11 +48,6 @@ on:
         required: false
         type: boolean
         default: true
-      release_lfx:
-        description: "Release LFX"
-        required: false
-        type: boolean
-        default: false
       dry_run:
         description: "Dry run mode - disables all pushes to external services (PyPI, Docker, GitHub releases)"
         required: false
@@ -66,6 +66,7 @@ jobs:
           echo "release_tag: ${{ inputs.release_tag }}"
           echo "release_package_base: ${{ inputs.release_package_base }}"
           echo "release_package_main: ${{ inputs.release_package_main }}"
+          echo "release_lfx: ${{ inputs.release_lfx }}"
           echo "build_docker_base: ${{ inputs.build_docker_base }}"
           echo "build_docker_main: ${{ inputs.build_docker_main }}"
           echo "build_docker_ep: ${{ inputs.build_docker_ep }}"
@@ -102,7 +103,7 @@ jobs:
   validate-dependencies:
     name: Validate Release Dependencies
     runs-on: ubuntu-latest
-    if: ${{ inputs.release_package_base || inputs.release_package_main || inputs.build_docker_base || inputs.build_docker_main || inputs.build_docker_ep }}
+    if: ${{ inputs.release_package_base || inputs.release_package_main || inputs.release_lfx || inputs.build_docker_base || inputs.build_docker_main || inputs.build_docker_ep }}
     needs: [validate-tag]
     steps:
       - name: Validate that build-base is enabled if build-main is enabled
@@ -290,7 +291,7 @@ jobs:
     with:
       base-artifact-name: "dist-base"
       main-artifact-name: "dist-main"
-      lfx-artifact-name: ""
+      lfx-artifact-name: "${{ inputs.release_lfx && 'dist-lfx' || '' }}"
 
 
   publish-base:
@@ -495,6 +496,7 @@ jobs:
       !cancelled() &&
       !inputs.dry_run &&
       inputs.create_release &&
+      needs.build-main.result == 'success' &&
       needs.publish-main.result == 'success'
     steps:
       - uses: actions/download-artifact@v4
