@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import aiofiles
 
 from lfx.log.logger import logger
+from lfx.services.base import Service
 from lfx.services.storage.service import StorageService
 
 if TYPE_CHECKING:
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 EXPECTED_PATH_PARTS = 2  # Path format: "flow_id/filename"
 
 
-class LocalStorageService(StorageService):
+class LocalStorageService(StorageService, Service):
     """A service class for handling local file storage operations."""
 
     def __init__(
@@ -52,6 +53,10 @@ class LocalStorageService(StorageService):
 
         flow_id, file_name = parts
         return self.build_full_path(flow_id, file_name)
+
+    async def teardown(self) -> None:
+        """Teardown the storage service."""
+        # No cleanup needed for local storage
 
     def build_full_path(self, flow_id: str, file_name: str) -> str:
         """Build the full path of a file in the local storage."""
