@@ -323,7 +323,7 @@ def test_settings_from_env(monkeypatch):
     monkeypatch.setenv("LANGFLOW_MAX_VERTEX_BUILDS_TO_KEEP", "10")
     monkeypatch.setenv("LANGFLOW_MAX_VERTEX_BUILDS_PER_VERTEX", "5")
     monkeypatch.setenv("LANGFLOW_VERTEX_BUILDS_STORAGE_ENABLED", "false")
-    monkeypatch.setenv("LANGLFOW_DATABASE_URL", "sqlite:///test.db")
+    monkeypatch.setenv("LANGFLOW_DATABASE_URL", "sqlite:///test.db")
 
     from lfx.services.settings.service import SettingsService
 
