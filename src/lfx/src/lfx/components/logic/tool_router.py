@@ -75,7 +75,7 @@ class ToolRouterComponent(Component):
             print(f"DEBUG: Found {len(tools)} tools in _setup_dynamic_outputs")
             # Clear existing outputs
             self.outputs = []
-            
+
             # Add outputs for each tool
             for i, tool in enumerate(tools):
                 tool_name = getattr(tool, "name", f"Tool {i + 1}")
@@ -88,7 +88,7 @@ class ToolRouterComponent(Component):
                         group_outputs=True,
                     )
                 )
-            
+
             # Add else output if enabled
             enable_else = getattr(self, "enable_else_output", False)
             if enable_else:
@@ -144,7 +144,7 @@ class ToolRouterComponent(Component):
         """Process all tools using LLM categorization and execute the matching tool."""
         # Ensure dynamic outputs are set up
         self._setup_dynamic_outputs()
-        
+
         # Clear any previous match state
         self._matched_tool = None
 
