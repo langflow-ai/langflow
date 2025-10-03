@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from lfx.log.logger import logger
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
+from lfx.log.logger import logger
 from lfx.services.base import Service
 from lfx.services.settings.auth import AuthSettings
 from lfx.services.settings.base import Settings
@@ -16,6 +17,7 @@ if not os.environ.get("_LANGFLOW_DOTENV_LOADED"):
     if env_file.exists():
         load_dotenv(env_file, override=False)
         os.environ["_LANGFLOW_DOTENV_LOADED"] = "1"
+
 
 class SettingsService(Service):
     name = "settings_service"

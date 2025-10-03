@@ -20,6 +20,7 @@ from lfx.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from lfx.utils.util_strings import is_valid_database_url
 
+
 def is_list_of_any(field: FieldInfo) -> bool:
     """Check if the given field is a list or an optional list of any type.
 
