@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
 from lfx.log.logger import logger
 from lfx.services.base import Service
@@ -12,8 +12,8 @@ from lfx.services.settings.base import Settings
 
 # Load .env file if it exists
 if not os.environ.get("_LANGFLOW_DOTENV_LOADED"):
-    env_file = Path.cwd() / ".env"
-    if env_file.exists():
+    env_file = find_dotenv()
+    if env_file:
         logger.debug("Loading .env file inside lfx settings service")
         load_dotenv(env_file, override=False)
         os.environ["_LANGFLOW_DOTENV_LOADED"] = "true"
