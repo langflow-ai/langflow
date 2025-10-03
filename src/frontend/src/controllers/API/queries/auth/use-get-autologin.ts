@@ -107,6 +107,7 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
 
   const queryResult = query(["useGetAutoLogin"], getAutoLoginFn, {
     refetchOnWindowFocus: false,
+    retry: false,
     ...options,
   });
 

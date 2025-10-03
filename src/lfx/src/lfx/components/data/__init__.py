@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     from lfx.components.data.json_to_data import JSONToDataComponent
     from lfx.components.data.news_search import NewsSearchComponent
     from lfx.components.data.rss import RSSReaderComponent
-    from lfx.components.data.save_file import SaveToFileComponent
     from lfx.components.data.sql_executor import SQLComponent
     from lfx.components.data.url import URLComponent
     from lfx.components.data.web_search import WebSearchComponent
@@ -24,13 +23,12 @@ _dynamic_imports = {
     "DirectoryComponent": "directory",
     "FileComponent": "file",
     "JSONToDataComponent": "json_to_data",
-    "NewsSearchComponent": "news_search",
-    "RSSReaderComponent": "rss",
     "SQLComponent": "sql_executor",
-    "SaveToFileComponent": "save_file",
     "URLComponent": "url",
     "WebSearchComponent": "web_search",
     "WebhookComponent": "webhook",
+    "NewsSearchComponent": "news_search",
+    "RSSReaderComponent": "rss",
 }
 
 __all__ = [
@@ -42,7 +40,6 @@ __all__ = [
     "NewsSearchComponent",
     "RSSReaderComponent",
     "SQLComponent",
-    "SaveToFileComponent",
     "URLComponent",
     "WebSearchComponent",
     "WebhookComponent",

@@ -3,6 +3,7 @@ import operator
 from textwrap import dedent
 
 import pytest
+
 from lfx.components.data import FileComponent
 from lfx.components.datastax import AstraDBVectorStoreComponent
 from lfx.components.input_output import ChatInput, ChatOutput
