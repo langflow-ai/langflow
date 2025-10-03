@@ -315,6 +315,7 @@ async def test_concurrent_log_vertex_build(vertex_build_data, mock_settings):
             count = await session.scalar(select(func.count()).select_from(VertexBuildTable))
             assert count <= mock_settings.max_vertex_builds_to_keep
 
+
 # write an unit test that verifies settings are fetched from .env file
 def test_settings_from_env(monkeypatch):
     """Test that settings are correctly fetched from .env file."""
