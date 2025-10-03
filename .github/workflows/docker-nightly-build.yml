@@ -72,7 +72,7 @@ jobs:
         id: version
         run: |
           echo "Extracting base version from pyproject.toml"
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
+          version=$(uv tree | grep 'langflow-base' | awk '{print $2}' | sed 's/^v//' | head -n 1)
 
           # Verify nightly tag format
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+$ ]]; then
@@ -119,6 +119,7 @@ jobs:
           file: ./docker/build_and_push_base.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -130,6 +131,7 @@ jobs:
           file: ./docker/build_and_push_base.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -210,6 +212,7 @@ jobs:
           file: ./docker/build_and_push.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -221,6 +224,7 @@ jobs:
           file: ./docker/build_and_push.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -301,6 +305,7 @@ jobs:
           file: ./docker/build_and_push_with_extras.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -312,6 +317,7 @@ jobs:
           file: ./docker/build_and_push_with_extras.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -338,7 +344,7 @@ jobs:
         id: version
         run: |
           if [[ "${{ inputs.release_type }}" == "nightly-base" ]]; then
-            version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
+            version=$(uv tree | grep 'langflow-base' | awk '{print $2}' | sed 's/^v//' | head -n 1)
           else
             version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//' | head -n 1)
           fi
