@@ -4,9 +4,9 @@ import asyncio
 import contextlib
 from typing import TYPE_CHECKING
 
+from lfx.log.logger import logger
 from sqlmodel import col, delete, select
 
-from langflow.logging.logger import logger
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable

@@ -5,21 +5,21 @@ from uuid import UUID
 import orjson
 import pytest
 from httpx import AsyncClient
-from langflow.components.data.url import URLComponent
-from langflow.components.input_output import ChatOutput
-from langflow.components.logic import LoopComponent
-from langflow.components.openai.openai_chat_model import OpenAIModelComponent
-from langflow.components.processing import (
+from langflow.memory import aget_messages
+from langflow.services.database.models.flow import FlowCreate
+
+from lfx.components.data.url import URLComponent
+from lfx.components.input_output import ChatOutput
+from lfx.components.logic import LoopComponent
+from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+from lfx.components.processing import (
     ParserComponent,
     PromptComponent,
     SplitTextComponent,
     StructuredOutputComponent,
 )
-from langflow.graph import Graph
-from langflow.memory import aget_messages
-from langflow.schema.data import Data
-from langflow.services.database.models.flow import FlowCreate
-
+from lfx.graph import Graph
+from lfx.schema.data import Data
 from tests.base import ComponentTestBaseWithClient
 from tests.unit.build_utils import build_flow, get_build_events
 

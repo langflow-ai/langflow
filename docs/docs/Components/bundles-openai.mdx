@@ -4,8 +4,9 @@ slug: /bundles-openai
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
-[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
 This page describes the components that are available in the **OpenAI** bundle.
 
@@ -19,14 +20,13 @@ It provides access to the same OpenAI models that are available in the core **La
 
 It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
 
-Use the **Language Model** output when you want to use a specific OpenAI model configuration as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+Use the **Language Model** output when you want to use a specific OpenAI model configuration as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
 
-For more information, see [**Language Model** components](/components-models).
+For more information, see [Language model components](/components-models).
 
 ### OpenAI text generation parameters
 
-Many **OpenAI** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -44,12 +44,11 @@ The **OpenAI Embeddings** component uses [OpenAI embedding models](https://platf
 
 It provides access to the same OpenAI models that are available in the core **Embedding Model** component, but the **OpenAI Embeddings** component provides additional parameters for customizing the request to the OpenAI embedding API.
 
-For more information about using embedding model components in flows, see [**Embedding Model** components](/components-embedding-models).
+For more information about using embedding model components in flows, see [Embedding model components](/components-embedding-models).
 
 ### OpenAI Embeddings parameters
 
-Many **OpenAI Embeddings** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -71,9 +70,9 @@ You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden
 | OpenAI Organization | String | Input parameter. The organization associated with the API key. |
 | OpenAI Proxy | String | Input parameter. The proxy server for the requests. |
 | Request Timeout | Float | Input parameter. The timeout for the HTTP requests. |
-| Show Progress Bar | Boolean | Input parameter. Whether to show a progress bar for processing. Default: false. |
-| Skip Empty | Boolean | Input parameter. Whether to skip empty inputs. Default: false. |
-| TikToken Enable | Boolean | Input parameter. Whether to enable TikToken. Default: true. |
+| Show Progress Bar | Boolean | Input parameter. Whether to show a progress bar for processing. Default: `false`. |
+| Skip Empty | Boolean | Input parameter. Whether to skip empty inputs. Default: `false`. |
+| TikToken Enable | Boolean | Input parameter. Whether to enable TikToken. Default: `true`. |
 | TikToken Model Name | String | Input parameter. The name of the TikToken model. |
 
 ## See also

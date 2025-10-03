@@ -4,8 +4,9 @@ slug: /bundles-huggingface
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
-[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
 The components in the **Hugging Face** bundle require access to Hugging Face APIs.
 
@@ -17,16 +18,15 @@ The **Hugging Face** component generates text using a specified model by sending
 Authentication is required.
 
 This component can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
-Specifically, the **Language Model** output is an instance of [`HuggingFaceHub`](https://python.langchain.com/docs/integrations/providers/huggingface/) configured according to the component's parameters.
+Specifically, the **Language Model** output is an instance of [`ChatHuggingFace`](https://docs.langchain.com/oss/python/integrations/chat/huggingface) configured according to the component's parameters.
 
-Use the **Language Model** output when you want to use a Hugging Face model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+Use the **Language Model** output when you want to use a Hugging Face model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
 
-For more information, see [**Language Model** components](/components-models).
+For more information, see [Language model components](/components-models).
 
 ### Hugging Face text generation parameters
 
-Many **Hugging Face** component input parameters are hidden by default in the visual editor.
-You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+<PartialParams />
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -45,15 +45,15 @@ Use the **Hugging Face Embeddings Inference** component to create embeddings wit
 The component generates embeddings using [Hugging Face Inference API models](https://huggingface.co/models).
 Authentication is required when not using a local model.
 
-For more information about using embedding model components in flows, see [**Embedding Model** components](/components-embedding-models) and [Use a local Hugging Face embeddings model](#local-hugging-face-model).
+For more information about using embedding model components in flows, see [Embedding model components](/components-embedding-models) and [Use a local Hugging Face embeddings model](#local-hugging-face-model).
 
 ### Hugging Face Embeddings Inference parameters
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| API Key | API Key | Input parameter. Your [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) for accessing the Hugging Face Inference API, if required. Local inference models don't require an API key. |
-| API URL | API URL | Input parameter. The URL of the Hugging Face Inference API. |
-| Model Name | Model Name | Input parameter. The name of the model to use for embeddings. |
+| api_key | API Key | Input parameter. Your [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) for accessing the Hugging Face Inference API, if required. Local inference models don't require an API key. |
+| api_url | API URL | Input parameter. The URL of the Hugging Face Inference API. |
+| model_name | Model Name | Input parameter. The name of the model to use for embeddings. |
 
 ### Use a local Hugging Face embeddings model {#local-hugging-face-model}
 
@@ -65,9 +65,9 @@ To connect the local Hugging Face model to the **Hugging Face Embeddings Inferen
 
 3. Replace the two **OpenAI Embeddings** components with **Hugging Face Embeddings Inference** components.
 
-    Make sure to reconnect the **Embedding Model** ports from each **Embeddings Inference** component to its corresponding **Astra DB** vector store component.
+    Make sure to reconnect the **Embedding Model** ports from each **Embeddings Inference** component to its corresponding **Astra DB** component.
 
-4. Configure the **Astra DB** vector store components to connect to your Astra organization, or replace both **Astra DB** vector store components with other [**Vector Store** components](/components-vector-stores).
+4. Configure the **Astra DB** components to connect to your Astra organization, or replace both **Astra DB** components with other vector store components.
 
 5. Connect each **Hugging Face Embeddings Inference** component to your local inference model:
 

@@ -7,39 +7,41 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
+import orjson
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
+from lfx.custom.custom_component.component import Component
+from lfx.custom.utils import (
+    add_code_field_to_build_config,
+    build_custom_component_template,
+    get_instance_name,
+    update_component_build_config,
+)
+from lfx.graph.graph.base import Graph
+from lfx.graph.schema import RunOutputs
+from lfx.log.logger import logger
+from lfx.schema.schema import InputValueRequest
+from lfx.services.settings.service import SettingsService
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
+from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
     CustomComponentResponse,
-    InputValueRequest,
     RunResponse,
     SimplifiedAPIRequest,
     TaskStatusResponse,
     UpdateCustomComponentRequest,
     UploadFileResponse,
 )
-from langflow.custom.custom_component.component import Component
-from langflow.custom.utils import (
-    add_code_field_to_build_config,
-    build_custom_component_template,
-    get_instance_name,
-    update_component_build_config,
-)
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
-from langflow.graph.graph.base import Graph
-from langflow.graph.schema import RunOutputs
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
-from langflow.logging.logger import logger
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user, get_webhook_user
@@ -54,9 +56,31 @@ from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
-    from langflow.services.settings.service import SettingsService
 
 router = APIRouter(tags=["Base"])
+
+
+async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIRequest:
+    """Parse SimplifiedAPIRequest from HTTP request body.
+
+    This function handles the case where FastAPI can't automatically parse the request body
+    due to the presence of a Request parameter in the endpoint signature.
+
+    Args:
+        http_request: The FastAPI Request object
+
+    Returns:
+        SimplifiedAPIRequest: Parsed request or default instance if parsing fails
+    """
+    try:
+        body = await http_request.body()
+        if body:
+            body_data = orjson.loads(body)
+            return SimplifiedAPIRequest(**body_data)
+        return SimplifiedAPIRequest()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Failed to parse request body: {exc}")
+        return SimplifiedAPIRequest()
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
@@ -283,6 +307,8 @@ async def simplified_run_flow(
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
+    context: dict | None = None,
+    http_request: Request,
 ):
     """Executes a specified flow by ID with support for streaming and telemetry.
 
@@ -295,7 +321,8 @@ async def simplified_run_flow(
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
         api_key_user (UserRead): Authenticated user from API key
-        request (Request): The incoming HTTP request
+        context (dict | None): Optional context to pass to the flow
+        http_request (Request): The incoming HTTP request for extracting global variables
 
     Returns:
         Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results
@@ -310,15 +337,34 @@ async def simplified_run_flow(
         - Tracks execution time and success/failure via telemetry
         - Handles graceful client disconnection in streaming mode
         - Provides detailed error handling with appropriate HTTP status codes
+        - Extracts global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+        - Merges extracted variables with the context parameter as "request_variables"
         - In streaming mode, uses EventManager to handle events:
             - "add_message": New messages during execution
             - "token": Individual tokens during streaming
             - "end": Final execution result
     """
     telemetry_service = get_telemetry_service()
-    input_request = input_request if input_request is not None else SimplifiedAPIRequest()
+
+    # If input_request is None, manually parse the request body
+    # This happens when FastAPI can't automatically parse it due to the Request parameter
+    if input_request is None:
+        input_request = await parse_input_request_from_body(http_request)
+
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
+
+    # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+    request_variables = extract_global_variables_from_headers(http_request.headers)
+
+    # Merge request variables with existing context
+    if request_variables:
+        if context is None:
+            context = {"request_variables": request_variables}
+        else:
+            context = context.copy()  # Don't modify the original context
+            context["request_variables"] = request_variables
+
     start_time = time.perf_counter()
 
     if stream:
@@ -332,6 +378,7 @@ async def simplified_run_flow(
                 api_key_user=api_key_user,
                 event_manager=event_manager,
                 client_consumed_queue=asyncio_queue_client_consumed,
+                context=context,
             )
         )
 
@@ -347,10 +394,7 @@ async def simplified_run_flow(
 
     try:
         result = await simple_run_flow(
-            flow=flow,
-            input_request=input_request,
-            stream=stream,
-            api_key_user=api_key_user,
+            flow=flow, input_request=input_request, stream=stream, api_key_user=api_key_user, context=context
         )
         end_time = time.perf_counter()
         background_tasks.add_task(
@@ -723,9 +767,9 @@ async def custom_component_update(
                 for field_name, field_dict in template.items()
                 if isinstance(field_dict, dict) and field_dict.get("load_from_db") and field_dict.get("value")
             ]
-
-            params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
-            cc_instance.set_attributes(params)
+            if isinstance(cc_instance, Component):
+                params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
+                cc_instance.set_attributes(params)
         updated_build_config = code_request.get_template()
         await update_component_build_config(
             cc_instance,

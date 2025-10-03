@@ -10,16 +10,16 @@ from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, Request, Security, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
+from lfx.log.logger import logger
+from lfx.services.settings.service import SettingsService
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette.websockets import WebSocket
 
-from langflow.logging.logger import logger
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_db_service, get_session, get_settings_service
-from langflow.services.settings.service import SettingsService
+from langflow.services.deps import get_db_service, get_session, get_settings_service, session_scope
 
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
@@ -32,7 +32,7 @@ api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
 MINIMUM_KEY_LENGTH = 32
-AUTO_LOGIN_WARNING = "In v1.6 LANGFLOW_SKIP_AUTH_AUTO_LOGIN will be removed. Please update your authentication method."
+AUTO_LOGIN_WARNING = "In v2.0, LANGFLOW_SKIP_AUTH_AUTO_LOGIN will be removed. Please update your authentication method."
 AUTO_LOGIN_ERROR = (
     "Since v1.5, LANGFLOW_AUTO_LOGIN requires a valid API key. "
     "Set LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true to skip this check. "
@@ -48,7 +48,7 @@ async def api_key_security(
     settings_service = get_settings_service()
     result: ApiKey | User | None
 
-    async with get_db_service().with_session() as db:
+    async with session_scope() as db:
         if settings_service.auth_settings.AUTO_LOGIN:
             # Get the first user
             if not settings_service.auth_settings.SUPERUSER:
@@ -93,7 +93,7 @@ async def ws_api_key_security(
     api_key: str | None,
 ) -> UserRead:
     settings = get_settings_service()
-    async with get_db_service().with_session() as db:
+    async with session_scope() as db:
         if settings.auth_settings.AUTO_LOGIN:
             if not settings.auth_settings.SUPERUSER:
                 # internal server misconfiguration
@@ -394,9 +394,21 @@ async def create_super_user(
 
 async def create_user_longterm_token(db: AsyncSession) -> tuple[UUID, dict]:
     settings_service = get_settings_service()
+    if not settings_service.auth_settings.AUTO_LOGIN:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Auto login required to create a long-term token"
+        )
 
+    # Prefer configured username; fall back to default or any existing superuser
+    # NOTE: This user name cannot be a dynamic current user name since it is only used when autologin is True
     username = settings_service.auth_settings.SUPERUSER
     super_user = await get_user_by_username(db, username)
+    if not super_user:
+        from langflow.services.database.models.user.crud import get_all_superusers
+
+        superusers = await get_all_superusers(db)
+        super_user = superusers[0] if superusers else None
+
     if not super_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Super user hasn't been created")
     access_token_expires_longterm = timedelta(days=365)
@@ -473,13 +485,17 @@ async def create_refresh_token(refresh_token: str, db: AsyncSession):
         user_id: UUID = payload.get("sub")  # type: ignore[assignment]
         token_type: str = payload.get("type")  # type: ignore[assignment]
 
-        if user_id is None or token_type == "":
+        if user_id is None or token_type != "refresh":  # noqa: S105
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
         user_exists = await get_user_by_id(db, user_id)
 
         if user_exists is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+        # Security: Check if user is still active
+        if not user_exists.is_active:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account is inactive")
 
         return await create_user_tokens(user_id, db)
 

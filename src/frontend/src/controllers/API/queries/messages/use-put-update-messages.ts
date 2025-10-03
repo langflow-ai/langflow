@@ -1,6 +1,6 @@
 import type { UseMutationResult } from "@tanstack/react-query";
+import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
 import useFlowStore from "@/stores/flowStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { useMutationFunctionType } from "@/types/api";
 import type { Message } from "@/types/messages";
 import { api } from "../../api";
@@ -18,9 +18,10 @@ export const useUpdateMessage: useMutationFunctionType<
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
+  const flowId = useGetFlowId();
+
   const updateMessageApi = async (data: UpdateMessageParams) => {
     const isPlayground = useFlowStore.getState().playgroundPage;
-    const flowId = useFlowsManagerStore.getState().currentFlowId;
     const message = data.message;
     if (message.files && typeof message.files === "string") {
       message.files = JSON.parse(message.files);
@@ -30,11 +31,12 @@ export const useUpdateMessage: useMutationFunctionType<
       const messageIndex = messages.findIndex(
         (m: Message) => m.id === message.id,
       );
-      messages[messageIndex] = message;
-      sessionStorage.setItem(flowId, JSON.stringify(messages));
-      return {
-        data: message,
+      messages[messageIndex] = {
+        ...messages[messageIndex],
+        ...message,
+        flow_id: flowId,
       };
+      sessionStorage.setItem(flowId, JSON.stringify(messages));
     } else {
       const result = await api.put(
         `${getURL("MESSAGES")}/${message.id}`,
@@ -50,7 +52,6 @@ export const useUpdateMessage: useMutationFunctionType<
     {
       ...options,
       onSettled: (_, __, params, ___) => {
-        const flowId = useFlowsManagerStore.getState().currentFlowId;
         //@ts-ignore
         if (params?.refetch && flowId) {
           queryClient.refetchQueries({

@@ -7,7 +7,7 @@ import tempfile
 from collections.abc import AsyncGenerator
 from contextlib import suppress
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import anyio
 import orjson
@@ -17,10 +17,7 @@ from blockbuster import blockbuster_ctx
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from langflow.components.input_output import ChatInput
-from langflow.graph import Graph
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
-from langflow.logging.logger import logger
 from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
@@ -38,6 +35,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
+from lfx.components.input_output import ChatInput
+from lfx.graph import Graph
+from lfx.log.logger import logger
 from tests.api_keys import get_openai_api_key
 
 load_dotenv()
@@ -150,6 +150,17 @@ def get_text():
         pytest.LOOP_TEST,
     ]:
         assert path.exists(), f"File {path} does not exist. Available files: {list(data_path.iterdir())}"
+
+
+def pytest_collection_modifyitems(config, items):  # noqa: ARG001
+    """Automatically add markers based on test file location."""
+    for item in items:
+        if "tests/unit/" in str(item.fspath):
+            item.add_marker(pytest.mark.unit)
+        elif "tests/integration/" in str(item.fspath):
+            item.add_marker(pytest.mark.integration)
+        elif "tests/slow/" in str(item.fspath):
+            item.add_marker(pytest.mark.slow)
 
 
 async def delete_transactions_by_flow_id(db: AsyncSession, flow_id: UUID):
@@ -368,7 +379,7 @@ def deactivate_tracing(monkeypatch):
 def use_noop_session(monkeypatch):
     monkeypatch.setenv("LANGFLOW_USE_NOOP_DATABASE", "1")
     # Optionally patch the Settings object if needed
-    # from langflow.services.settings.base import Settings
+    # from lfx.services.settings.base import Settings
     # monkeypatch.setattr(Settings, "use_noop_database", True)
     yield
     monkeypatch.undo()
@@ -398,10 +409,10 @@ async def client_fixture(
                 monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
                 monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
             # Clear the services cache
-            from langflow.services.manager import service_manager
+            from lfx.services.manager import get_service_manager
 
-            service_manager.factories.clear()
-            service_manager.services.clear()  # Clear the services cache
+            get_service_manager().factories.clear()
+            get_service_manager().services.clear()  # Clear the services cache
             app = create_app()
             db_service = get_db_service()
             db_service.database_url = f"sqlite:///{db_path}"
@@ -660,6 +671,73 @@ async def created_api_key(active_user):
         # Clean up
         await session.delete(api_key)
         await session.commit()
+
+
+@pytest.fixture
+def user_one_api_key(created_api_key: ApiKey) -> str:
+    """Provides the API key for user_one."""
+    return created_api_key.api_key
+
+
+@pytest.fixture
+async def user_two(
+    client: AsyncClient,  # noqa: ARG001
+) -> AsyncGenerator[User, None]:
+    """Creates a second user for multi-user access tests."""
+    user_id = uuid4()
+    async with session_scope() as session:
+        user = User(
+            id=user_id,
+            username=f"test_user_two_{user_id}",
+            password=get_password_hash("hashed_password"),
+            is_active=True,
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+
+        yield user
+
+        # Cleanup related API keys first
+        keys_to_delete = (await session.exec(select(ApiKey).where(ApiKey.user_id == user.id))).all()
+        for key in keys_to_delete:
+            await session.delete(key)
+
+        # Cleanup the user
+        user_to_delete = await session.get(User, user.id)
+        if user_to_delete:
+            await session.delete(user_to_delete)
+            await session.commit()
+
+
+@pytest.fixture
+async def created_user_two_api_key(user_two: User) -> AsyncGenerator[ApiKey, None]:
+    """Creates and yields an API key for the second user."""
+    raw_key = f"user-two-key-{uuid4()}"
+    hashed_key = get_password_hash(raw_key)
+    api_key = ApiKey(
+        user_id=user_two.id,
+        name="Test API Key for User Two",
+        api_key=raw_key,
+        hashed_api_key=hashed_key,
+    )
+
+    async with session_scope() as session:
+        session.add(api_key)
+        await session.commit()
+        await session.refresh(api_key)
+
+        yield api_key
+
+        # Cleanup
+        await session.delete(api_key)
+        await session.commit()
+
+
+@pytest.fixture
+def user_two_api_key(created_user_two_api_key: ApiKey) -> str:
+    """Provides the API key string for the second user."""
+    return created_user_two_api_key.api_key
 
 
 @pytest.fixture(name="simple_api_test")

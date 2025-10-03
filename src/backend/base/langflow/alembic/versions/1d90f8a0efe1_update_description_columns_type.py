@@ -6,19 +6,18 @@ Create Date: 2024-08-20 11:46:56.266061
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.engine.reflection import Inspector
 
 from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = "4522eb831f5c"
-down_revision: Union[str, None] = "0d60fcbd4e8e"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "0d60fcbd4e8e"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
