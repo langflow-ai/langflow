@@ -58,3 +58,44 @@ class TestFileComponentDynamicOutputs:
         result = component.update_outputs(frontend_node, "other_field", "value")
 
         assert result["outputs"] == original_outputs
+
+    def test_update_outputs_advanced_mode_enabled(self):
+        """Test advanced mode enabled shows advanced outputs."""
+        component = FileComponent()
+        frontend_node = {
+            "outputs": [],
+            "template": {
+                "path": {"file_path": ["document.pdf"]},
+                "advanced_mode": {"value": True},
+            },
+        }
+
+        result = component.update_outputs(frontend_node, "advanced_mode", True)
+
+        assert len(result["outputs"]) == 3
+        output_names = [output.name for output in result["outputs"]]
+        assert "advanced_dataframe" in output_names  # Structured Output
+        assert "advanced_markdown" in output_names  # Markdown
+        assert "path" in output_names  # File Path
+
+
+    def test_update_outputs_advanced_mode_vlm_pipeline(self):
+        """Test advanced mode with VLM pipeline shows advanced outputs."""
+        component = FileComponent()
+        frontend_node = {
+            "outputs": [],
+            "template": {
+                "path": {"file_path": ["image.png"]},
+                "advanced_mode": {"value": True},
+                "pipeline": {"value": "vlm"},
+                "ocr_engine": {"value": "None"},
+            },
+        }
+
+        result = component.update_outputs(frontend_node, "advanced_mode", True)
+
+        assert len(result["outputs"]) == 3
+        output_names = [output.name for output in result["outputs"]]
+        assert "advanced_dataframe" in output_names  # Structured Output
+        assert "advanced_markdown" in output_names  # Markdown
+        assert "path" in output_names  # File Path
