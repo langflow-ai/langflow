@@ -1,8 +1,7 @@
 from typing import Any
 
 from lfx.custom import Component
-from lfx.io import BoolInput, MessageInput, MessageTextInput, MultilineInput, Output
-from lfx.inputs import ToolsInput
+from lfx.io import BoolInput, HandleInput, MessageInput, MessageTextInput, MultilineInput, Output
 from lfx.schema.message import Message
 
 
@@ -31,11 +30,14 @@ class ToolRouterComponent(Component):
             info="The primary text input for tool selection.",
             required=True,
         ),
-        ToolsInput(
+        HandleInput(
             name="tools",
             display_name="Tools",
-            info="Tools that can be selected based on the input categorization.",
+            input_types=["Tool"],
+            is_list=True,
             required=True,
+            info="Tools that can be selected based on the input categorization.",
+            real_time_refresh=True,
         ),
         MessageInput(
             name="message",
