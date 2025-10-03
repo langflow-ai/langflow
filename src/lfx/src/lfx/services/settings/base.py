@@ -381,6 +381,8 @@ class Settings(BaseSettings):
 
         if isinstance(value, str):
             value = Path(value)
+        # Resolve to absolute path to handle relative paths correctly
+        value = value.resolve()
         if not value.exists():
             value.mkdir(parents=True, exist_ok=True)
 
