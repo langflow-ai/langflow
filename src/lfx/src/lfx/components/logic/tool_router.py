@@ -41,10 +41,7 @@ class ToolRouterComponent(Component):
         MessageInput(
             name="message",
             display_name="Override Output",
-            info=(
-                "Optional override message that will replace the tool output "
-                "for all routes when filled."
-            ),
+            info=("Optional override message that will replace the tool output for all routes when filled."),
             required=False,
             advanced=True,
         ),
@@ -89,7 +86,7 @@ class ToolRouterComponent(Component):
                             group_outputs=True,
                         )
                     )
-            
+
             # Add default output only if enabled
             if field_name == "enable_else_output":
                 enable_else = field_value
@@ -124,7 +121,7 @@ class ToolRouterComponent(Component):
                     tool_info.append(f'"{tool_name}": {tool_desc}')
                 else:
                     tool_info.append(f'"{tool_name}"')
-            
+
             tools_text = "\n".join([f"- {info}" for info in tool_info if info])
 
             # Create base prompt
@@ -144,8 +141,9 @@ class ToolRouterComponent(Component):
                 self.status = "Using custom prompt as additional instructions"
                 # Format custom prompt with variables
                 # For the tools variable, create a simpler format for custom prompt usage
-                simple_tools = ", ".join([f'"{getattr(tool, "name", f"Tool {i + 1}")}"' 
-                                         for i, tool in enumerate(tools)])
+                simple_tools = ", ".join(
+                    [f'"{getattr(tool, "name", f"Tool {i + 1}")}"' for i, tool in enumerate(tools)]
+                )
                 formatted_custom = custom_prompt.format(input_text=input_text, tools=simple_tools)
                 # Combine base prompt with custom instructions
                 prompt = f"{base_prompt}\n\nAdditional Instructions:\n{formatted_custom}"
@@ -175,9 +173,7 @@ class ToolRouterComponent(Component):
                     tool_name = getattr(tool, "name", "")
 
                     # Log each comparison attempt
-                    self.status = (
-                        f"Comparing '{categorization}' with tool {i + 1}: name='{tool_name}'"
-                    )
+                    self.status = f"Comparing '{categorization}' with tool {i + 1}: name='{tool_name}'"
 
                     if categorization.lower() == tool_name.lower():
                         matched_tool_index = i
@@ -235,17 +231,17 @@ class ToolRouterComponent(Component):
                     result = matched_tool(input_text)
                 else:
                     result = f"Tool {tool_name} executed with input: {input_text}"
-                
+
                 # Convert result to string if it's not already
                 if not isinstance(result, str):
                     result = str(result)
-                
+
                 return Message(text=result)
             except Exception as e:
                 error_msg = f"Error executing tool {tool_name}: {e!s}"
                 self.status = error_msg
                 return Message(text=error_msg)
-        
+
         # No match found, stop all tool outputs
         for i in range(len(tools)):
             self.stop(f"tool_{i + 1}_result")
@@ -278,8 +274,7 @@ class ToolRouterComponent(Component):
         # Check if a match was already found in process_tool
         if hasattr(self, "_matched_tool") and self._matched_tool is not None:
             self.status = (
-                f"Match already found in process_tool (Tool {self._matched_tool + 1}), "
-                "stopping default_response"
+                f"Match already found in process_tool (Tool {self._matched_tool + 1}), stopping default_response"
             )
             self.stop("default_result")
             return Message(text="")
