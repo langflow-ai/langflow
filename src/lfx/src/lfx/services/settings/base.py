@@ -9,6 +9,7 @@ from typing import Any, Literal
 import orjson
 import yaml
 from aiofile import async_open
+from dotenv import load_dotenv
 from pydantic import Field, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
@@ -20,16 +21,13 @@ from lfx.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from lfx.utils.util_strings import is_valid_database_url
 
-import os
-from pathlib import Path
-from dotenv import load_dotenv
-
-if not os.environ.get('_LANGFLOW_DOTENV_LOADED'):
-    env_file = Path.cwd() / '.env'
+if not os.environ.get("_LANGFLOW_DOTENV_LOADED"):
+    env_file = Path.cwd() / ".env"
     if env_file.exists():
         load_dotenv(env_file, override=False)
-        os.environ['_LANGFLOW_DOTENV_LOADED'] = '1'
+        os.environ["_LANGFLOW_DOTENV_LOADED"] = "1"
         print(f"✅ Loaded .env from {env_file}")
+
 
 def is_list_of_any(field: FieldInfo) -> bool:
     """Check if the given field is a list or an optional list of any type.
