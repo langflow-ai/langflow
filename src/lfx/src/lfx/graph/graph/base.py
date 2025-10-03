@@ -876,6 +876,53 @@ class Graph:
             vertex_outputs.append(run_output_object)
         return vertex_outputs
 
+    async def arun_single(
+        self,
+        inputs: dict[str, str] | None = None,
+        *,
+        input_components: list[str] | None = None,
+        input_type: InputType | None = None,
+        outputs: list[str] | None = None,
+        session_id: str | None = None,
+        stream: bool = False,
+        fallback_to_env_vars: bool = False,
+        event_manager: EventManager | None = None,
+    ) -> list[Any]:
+        """Runs the graph with a single input.
+
+        Args:
+            inputs (Optional[Dict[str, str]]): The input values for the graph. Defaults to None.
+            input_components (Optional[list[str]]): Components to run for the input. Defaults to None.
+            input_type (Optional[InputType]): The type of the input. Defaults to "chat".
+            outputs (Optional[list[str]]): The outputs to retrieve from the graph. Defaults to None.
+            session_id (Optional[str]): The session ID for the graph. Defaults to None.
+            stream (bool): Whether to stream the results or not. Defaults to False.
+            fallback_to_env_vars (bool): Whether to fallback to environment variables. Defaults to False.
+            event_manager (EventManager | None): The event manager for the graph.
+
+        Returns:
+            list[Any]: The list of output results from the graph vertices.
+        """
+        if inputs is None:
+            inputs = {}
+        if input_components is None:
+            input_components = []
+        if input_type is None:
+            input_type = "chat"
+        if session_id:
+            self.session_id = session_id
+
+        return await self._run(
+            inputs=inputs,
+            input_components=input_components,
+            input_type=input_type,
+            outputs=outputs or [],
+            stream=stream,
+            session_id=session_id or "",
+            fallback_to_env_vars=fallback_to_env_vars,
+            event_manager=event_manager,
+        )
+
     def next_vertex_to_build(self):
         """Returns the next vertex to be built.
 
