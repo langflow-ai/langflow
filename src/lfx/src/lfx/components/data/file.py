@@ -596,7 +596,7 @@ class FileComponent(BaseFileComponent):
         if not hasattr(result, "text"):
             if hasattr(result, "error"):
                 raise ValueError(result.error[0])
-            msg = "No content generated."
+            msg = "Could not extract content from the provided file(s)."
             raise ValueError(msg)
 
         return result
