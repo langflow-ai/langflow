@@ -16,6 +16,7 @@ from lfx.utils.async_helpers import run_until_complete
 async def astore_message(
     message: Message,
     flow_id: str | UUID | None = None,
+    context: dict | None = None,
 ) -> list[Message]:
     """Store a message in the memory.
 
@@ -23,6 +24,8 @@ async def astore_message(
         message (Message): The message to store.
         flow_id (Optional[str | UUID]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
+        context (Optional[dict]): Optional context dictionary. If context.get("stateless") is True,
+            message storage will be skipped (no-op).
 
     Returns:
         List[Message]: A list containing the stored message.
@@ -33,6 +36,21 @@ async def astore_message(
     if not message:
         logger.warning("No message provided.")
         return []
+
+    # Check if we're in stateless mode
+    if context and context.get("stateless"):
+        logger.debug("Stateless mode: Skipping message storage")
+        # Return the message as if it were stored, but don't actually persist it
+        if not hasattr(message, "id") or not message.id:
+            try:
+                import nanoid
+
+                message.id = nanoid.generate()
+            except ImportError:
+                import uuid
+
+                message.id = str(uuid.uuid4())
+        return [message]
 
     if not message.session_id or not message.sender or not message.sender_name:
         msg = (
@@ -169,6 +187,7 @@ async def aget_messages(
     order: str | None = "DESC",  # noqa: ARG001
     flow_id: UUID | None = None,  # noqa: ARG001
     limit: int | None = None,  # noqa: ARG001
+    context: dict | None = None,
 ) -> list[Message]:
     """Retrieve messages based on the provided filters.
 
@@ -180,10 +199,17 @@ async def aget_messages(
         order (Optional[str]): The order in which to retrieve the messages. Defaults to "DESC".
         flow_id (Optional[UUID]): The flow ID associated with the messages.
         limit (Optional[int]): The maximum number of messages to retrieve.
+        context (Optional[dict]): Optional context dictionary. If context.get("stateless") is True,
+            returns empty list (no messages in stateless mode).
 
     Returns:
         List[Message]: A list of Message objects representing the retrieved messages.
     """
+    # In stateless mode, there are no stored messages
+    if context and context.get("stateless"):
+        logger.debug("Stateless mode: Returning empty message list")
+        return []
+
     async with session_scope() as session:
         try:
             # In a real implementation, this would query the database
