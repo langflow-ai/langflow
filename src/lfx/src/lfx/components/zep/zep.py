@@ -9,10 +9,11 @@ class ZepChatMemory(LCChatMemoryComponent):
     name = "ZepChatMemory"
     icon = "ZepMemory"
     legacy = True
+    replacement = ["helpers.Memory"]
 
     inputs = [
         MessageTextInput(name="url", display_name="Zep URL", info="URL of the Zep instance."),
-        SecretStrInput(name="api_key", display_name="API Key", info="API Key for the Zep instance."),
+        SecretStrInput(name="api_key", display_name="Zep API Key", info="API Key for the Zep instance."),
         DropdownInput(
             name="api_base_path",
             display_name="API Base Path",
