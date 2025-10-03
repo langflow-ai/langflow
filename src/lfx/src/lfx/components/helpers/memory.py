@@ -159,13 +159,23 @@ class MemoryComponent(Component):
             if message.sender:
                 stored_messages = [m for m in stored_messages if m.sender == message.sender]
         else:
-            await astore_message(message, flow_id=self.graph.flow_id)
-            stored_messages = (
-                await aget_messages(
-                    session_id=message.session_id, sender_name=message.sender_name, sender=message.sender
+            # Pass graph context to enable stateless mode if configured
+            context = self.ctx
+
+            # In stateless mode, astore_message returns the message directly
+            stored_messages = await astore_message(message, flow_id=self.graph.flow_id, context=context)
+
+            # Only query for stored messages if not in stateless mode
+            if not context.get("stateless"):
+                stored_messages = (
+                    await aget_messages(
+                        session_id=message.session_id,
+                        sender_name=message.sender_name,
+                        sender=message.sender,
+                        context=context,
+                    )
+                    or []
                 )
-                or []
-            )
 
         if not stored_messages:
             msg = "No messages were stored. Please ensure that the session ID and sender are properly set."
@@ -210,6 +220,9 @@ class MemoryComponent(Component):
                 expected_type = MESSAGE_SENDER_AI if sender_type == MESSAGE_SENDER_AI else MESSAGE_SENDER_USER
                 stored = [m for m in stored if m.type == expected_type]
         else:
+            # Pass graph context to enable stateless mode if configured
+            context = self.ctx
+
             # For internal memory, we always fetch the last N messages by ordering by DESC
             stored = await aget_messages(
                 sender=sender_type,
@@ -217,6 +230,7 @@ class MemoryComponent(Component):
                 session_id=session_id,
                 limit=10000,
                 order=order,
+                context=context,
             )
             if n_messages:
                 stored = stored[-n_messages:]  # Get last N messages

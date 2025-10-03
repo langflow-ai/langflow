@@ -403,15 +403,14 @@ class AgentComponent(ToolCallingAgentComponent):
 
     async def get_memory_data(self):
         # TODO: This is a temporary fix to avoid message duplication. We should develop a function for this.
-        messages = (
-            await MemoryComponent(**self.get_base_args())
-            .set(
-                session_id=self.graph.session_id,
-                order="Ascending",
-                n_messages=self.n_messages,
-            )
-            .retrieve_messages()
-        )
+        memory_component = MemoryComponent(**self.get_base_args())
+        # Pass the context (not the entire graph) so the component can check for stateless mode
+        memory_component.ctx = self.ctx
+        messages = await memory_component.set(
+            session_id=self.graph.session_id,
+            order="Ascending",
+            n_messages=self.n_messages,
+        ).retrieve_messages()
         return [
             message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
         ]
