@@ -282,10 +282,27 @@ class Component(CustomComponent):
 
     @property
     def ctx(self):
-        if not hasattr(self, "graph") or self.graph is None:
-            msg = "Graph not found. Please build the graph first."
-            raise ValueError(msg)
-        return self.graph.context
+        # First try: use the local _ctx if it exists and is not empty
+        if hasattr(self, "_ctx") and self._ctx:
+            return self._ctx
+        # Second try: use the graph context if available
+        if hasattr(self, "graph") and self.graph is not None:
+            return self.graph.context
+        # Fallback: return empty dict instead of raising error
+        # This allows components to work in isolation without a graph
+        return {}
+
+    @ctx.setter
+    def ctx(self, value: dict):
+        """Set the component's local context.
+
+        This allows passing context directly to a component without needing the full graph.
+        Useful for child components that need to inherit context from parent components.
+
+        Args:
+            value (dict): The context dictionary to set.
+        """
+        self._ctx = value
 
     def add_to_ctx(self, key: str, value: Any, *, overwrite: bool = False) -> None:
         """Add a key-value pair to the context.
@@ -1579,10 +1596,12 @@ class Component(CustomComponent):
 
     async def _store_message(self, message: Message) -> Message:
         flow_id: str | None = None
-        if hasattr(self, "graph"):
+        if hasattr(self, "graph") and self.graph:
             # Convert UUID to str if needed
             flow_id = str(self.graph.flow_id) if self.graph.flow_id else None
-        stored_messages = await astore_message(message, flow_id=flow_id)
+        # Get context for stateless mode support (ctx property always returns a dict)
+        context = self.ctx
+        stored_messages = await astore_message(message, flow_id=flow_id, context=context)
         if len(stored_messages) != 1:
             msg = "Only one message can be stored at a time."
             raise ValueError(msg)
