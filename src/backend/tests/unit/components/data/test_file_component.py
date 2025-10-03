@@ -70,7 +70,7 @@ class TestFileComponentDynamicOutputs:
             },
         }
 
-        result = component.update_outputs(frontend_node, "advanced_mode", True)
+        result = component.update_outputs(frontend_node, "advanced_mode", field_value=True)
 
         assert len(result["outputs"]) == 3
         output_names = [output.name for output in result["outputs"]]
@@ -92,7 +92,7 @@ class TestFileComponentDynamicOutputs:
             },
         }
 
-        result = component.update_outputs(frontend_node, "advanced_mode", True)
+        result = component.update_outputs(frontend_node, "advanced_mode", field_value=True)
 
         assert len(result["outputs"]) == 3
         output_names = [output.name for output in result["outputs"]]
