@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 
 import httpx
 from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
@@ -32,7 +33,7 @@ class ChatOllamaComponent(LCModelComponent):
         MessageTextInput(
             name="base_url",
             display_name="Base URL",
-            info="Endpoint of the Ollama API.",
+            info="Endpoint of the Ollama API. Use '/v1' suffix for OpenAI-compatible mode (e.g., http://localhost:11434/v1).",
             value="",
             real_time_refresh=True,
         ),
@@ -157,43 +158,61 @@ class ChatOllamaComponent(LCModelComponent):
             mirostat_tau = self.mirostat_tau
 
         transformed_base_url = transform_localhost_url(self.base_url)
-        # Mapping system settings to their corresponding values
-        llm_params = {
-            "base_url": transformed_base_url,
-            "model": self.model_name,
-            "mirostat": mirostat_value,
-            "format": self.format,
-            "metadata": self.metadata,
-            "tags": self.tags.split(",") if self.tags else None,
-            "mirostat_eta": mirostat_eta,
-            "mirostat_tau": mirostat_tau,
-            "num_ctx": self.num_ctx or None,
-            "num_gpu": self.num_gpu or None,
-            "num_thread": self.num_thread or None,
-            "repeat_last_n": self.repeat_last_n or None,
-            "repeat_penalty": self.repeat_penalty or None,
-            "temperature": self.temperature or None,
-            "stop": self.stop_tokens.split(",") if self.stop_tokens else None,
-            "system": self.system,
-            "tfs_z": self.tfs_z or None,
-            "timeout": self.timeout or None,
-            "top_k": self.top_k or None,
-            "top_p": self.top_p or None,
-            "verbose": self.verbose,
-            "template": self.template,
-        }
 
-        # Remove parameters with None values
-        llm_params = {k: v for k, v in llm_params.items() if v is not None}
+        if transformed_base_url and "/v1" in transformed_base_url:
+            try:
+                output = ChatOpenAI(
+                    base_url=transformed_base_url,
+                    api_key="ollama",  # pragma: allowlist secret
+                    model=self.model_name,
+                    temperature=self.temperature or 0.1,
+                    max_tokens=self.num_ctx or None,
+                    verbose=self.verbose,
+                )
+            except Exception as e:
+                msg = (
+                    "Unable to connect to Ollama's OpenAI-compatible API. ",
+                    "Please verify the base URL includes '/v1', ensure Ollama is running, and try again.",
+                )
+                raise ValueError(msg) from e
+        else:
+            # Mapping system settings to their corresponding values
+            llm_params = {
+                "base_url": transformed_base_url,
+                "model": self.model_name,
+                "mirostat": mirostat_value,
+                "format": self.format,
+                "metadata": self.metadata,
+                "tags": self.tags.split(",") if self.tags else None,
+                "mirostat_eta": mirostat_eta,
+                "mirostat_tau": mirostat_tau,
+                "num_ctx": self.num_ctx or None,
+                "num_gpu": self.num_gpu or None,
+                "num_thread": self.num_thread or None,
+                "repeat_last_n": self.repeat_last_n or None,
+                "repeat_penalty": self.repeat_penalty or None,
+                "temperature": self.temperature or None,
+                "stop": self.stop_tokens.split(",") if self.stop_tokens else None,
+                "system": self.system,
+                "tfs_z": self.tfs_z or None,
+                "timeout": self.timeout or None,
+                "top_k": self.top_k or None,
+                "top_p": self.top_p or None,
+                "verbose": self.verbose,
+                "template": self.template,
+            }
 
-        try:
-            output = ChatOllama(**llm_params)
-        except Exception as e:
-            msg = (
-                "Unable to connect to the Ollama API. ",
-                "Please verify the base URL, ensure the relevant Ollama model is pulled, and try again.",
-            )
-            raise ValueError(msg) from e
+            # Remove parameters with None values
+            llm_params = {k: v for k, v in llm_params.items() if v is not None}
+
+            try:
+                output = ChatOllama(**llm_params)
+            except Exception as e:
+                msg = (
+                    "Unable to connect to the Ollama API. ",
+                    "Please verify the base URL, ensure the relevant Ollama model is pulled, and try again.",
+                )
+                raise ValueError(msg) from e
 
         return output
 
@@ -201,7 +220,13 @@ class ChatOllamaComponent(LCModelComponent):
         try:
             async with httpx.AsyncClient() as client:
                 url = transform_localhost_url(url)
-                return (await client.get(urljoin(url, "api/tags"))).status_code == HTTP_STATUS_OK
+                if not url:
+                    return False
+                # Strip /v1 suffix if present, as Ollama API endpoints are at root level
+                base_url = url.rstrip("/").removesuffix("/v1")
+                if not base_url.endswith("/"):
+                    base_url = base_url + "/"
+                return (await client.get(urljoin(base_url, "api/tags"))).status_code == HTTP_STATUS_OK
         except httpx.RequestError:
             return False
 
@@ -224,9 +249,6 @@ class ChatOllamaComponent(LCModelComponent):
                     build_config["mirostat_eta"]["value"] = 0.1
                     build_config["mirostat_tau"]["value"] = 5
 
-        if field_name in {"base_url", "model_name"} and not await self.is_valid_ollama_url(self.base_url):
-            msg = "Ollama is not running on the provided base URL. Please start Ollama and try again."
-            raise ValueError(msg)
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
             if await self.is_valid_ollama_url(self.base_url):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
@@ -264,8 +286,10 @@ class ChatOllamaComponent(LCModelComponent):
                 names cannot be retrieved.
         """
         try:
-            # Normalize the base URL to avoid the repeated "/" at the end
-            base_url = base_url_value.rstrip("/") + "/"
+            # Strip /v1 suffix if present, as Ollama API endpoints are at root level
+            base_url = base_url_value.rstrip("/").removesuffix("/v1")
+            if not base_url.endswith("/"):
+                base_url = base_url + "/"
             base_url = transform_localhost_url(base_url)
 
             # Ollama REST API to return models
