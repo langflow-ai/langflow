@@ -134,7 +134,7 @@ dependencies = [
     "opencv-python>=4.11,<5.0.0",
     "numpy>=1.26.0,<2.0.0; python_version < '3.12'",
     "numpy>=2.3.3,<3.0.0; python_version >= '3.12'",
-    'mlx-vlm>=0.0.7; sys_platform == "darwin"',
+    'mlx-vlm>=0.1.2,<1.0.0; sys_platform == "darwin"',
 ]
 
 [dependency-groups]
