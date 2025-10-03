@@ -188,6 +188,8 @@ class FileComponent(BaseFileComponent):
             for f in ("pipeline", "ocr_engine", "doc_key", "md_image_placeholder", "md_page_break_placeholder"):
                 if f in build_config:
                     build_config[f]["show"] = bool(field_value)
+                    if f == "pipeline":
+                        build_config[f]["advanced"] = not bool(field_value)
 
         elif field_name == "pipeline":
             if field_value == "standard":
