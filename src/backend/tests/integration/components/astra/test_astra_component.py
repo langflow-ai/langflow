@@ -4,6 +4,7 @@ import pytest
 from astrapy import DataAPIClient
 from langchain_astradb import AstraDBVectorStore, VectorServiceOptions
 from langchain_core.documents import Document
+
 from lfx.components.datastax import AstraDBVectorStoreComponent
 from lfx.components.openai.openai import OpenAIEmbeddingsComponent
 from lfx.schema.data import Data
