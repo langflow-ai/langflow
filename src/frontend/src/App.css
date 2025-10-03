@@ -1,3 +1,4 @@
+@import "./style/custom-ace-overrides.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
