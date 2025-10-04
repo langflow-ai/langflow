@@ -35,6 +35,9 @@
 
 ## ⚡️ Quickstart
 
+> [!NOTE]
+> Already cloned the repo? Check out [DEVELOPMENT.md](./DEVELOPMENT.md) for setup instructions.
+
 Langflow requires [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/) and [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
 1. To install Langflow, run:
