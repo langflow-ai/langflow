@@ -73,7 +73,8 @@ test(
       await page.getByTestId("info-types").hover();
       await expect(
         page.getByText(
-          "adoc, asc, asciidoc, bmp, bz2, docm, docx, dotm, dotx, gz, htm, html, jpeg, js, md, mdx, png, potm, potx, ppsm, ppsx, pptm, pptx, py, sh, sql, tar, tgz, tiff, ts, tsx, txt, webp, xhtml, xls, xlsx, xml, yaml, yml, zip",
+          "adoc, asc, asciidoc, bmp, bz2, docm, docx, dotm, dotx, gz, htm, html, jpeg, jpg, js, md, mdx, png, potm, potx, ppsm, ppsx, pptm, pptx, py, sh, sql, tar, tgz, tiff, ts, tsx, txt, webp, xhtml, xls, xlsx, xml, yaml, yml, zip",
+          { exact: false },
         ),
       ).toBeVisible();
 

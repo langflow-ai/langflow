@@ -17,7 +17,7 @@ export default function McpComponent({
   id = "",
 }: InputProps<string, any>): JSX.Element {
   const [open, setOpen] = useState(false);
-  const { data: mcpServers } = useGetMCPServers({ withCounts: open });
+  const { data: mcpServers } = useGetMCPServers({ withCounts: true });
   const { mutate: addMcpServer } = useAddMCPServer();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const options = useMemo(
