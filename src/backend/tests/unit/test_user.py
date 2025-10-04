@@ -5,8 +5,7 @@ from httpx import AsyncClient
 from langflow.services.auth.utils import create_super_user, get_password_hash
 from langflow.services.database.models.user import UserUpdate
 from langflow.services.database.models.user.model import User
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service, get_settings_service
+from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from lfx.services.settings.constants import DEFAULT_SUPERUSER
 from sqlmodel import select
 
@@ -15,7 +14,7 @@ from sqlmodel import select
 async def super_user(client):  # noqa: ARG001
     settings_manager = get_settings_service()
     auth_settings = settings_manager.auth_settings
-    async with session_getter(get_db_service()) as db:
+    async with session_scope() as db:
         return await create_super_user(
             db=db,
             username=auth_settings.SUPERUSER,
@@ -52,7 +51,7 @@ async def super_user_headers(
 
 @pytest.fixture
 async def deactivated_user(client):  # noqa: ARG001
-    async with session_getter(get_db_service()) as session:
+    async with session_scope() as session:
         user = User(
             username="deactivateduser",
             password=get_password_hash("testpassword"),
@@ -71,7 +70,7 @@ async def test_user_waiting_for_approval(client):
     password = "testpassword"  # noqa: S105
 
     # Debug: Check if the user already exists
-    async with session_getter(get_db_service()) as session:
+    async with session_scope() as session:
         stmt = select(User).where(User.username == username)
         existing_user = (await session.exec(stmt)).first()
         if existing_user:
@@ -80,7 +79,7 @@ async def test_user_waiting_for_approval(client):
             )
 
     # Create a user that is not active and has never logged in
-    async with session_getter(get_db_service()) as session:
+    async with session_scope() as session:
         user = User(
             username=username,
             password=get_password_hash(password),
@@ -96,7 +95,7 @@ async def test_user_waiting_for_approval(client):
     assert response.json()["detail"] == "Waiting for approval"
 
     # Debug: Check if the user still exists after the test
-    async with session_getter(get_db_service()) as session:
+    async with session_scope() as session:
         stmt = select(User).where(User.username == username)
         existing_user = (await session.exec(stmt)).first()
         if existing_user:
@@ -150,7 +149,7 @@ async def test_data_consistency_after_delete(client: AsyncClient, test_user, sup
 @pytest.mark.api_key_required
 async def test_inactive_user(client: AsyncClient):
     # Create a user that is not active and has a last_login_at value
-    async with session_getter(get_db_service()) as session:
+    async with session_scope() as session:
         user = User(
             username="inactiveuser",
             password=get_password_hash("testpassword"),
