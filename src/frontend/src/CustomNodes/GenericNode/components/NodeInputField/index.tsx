@@ -1,4 +1,11 @@
 import { useEffect, useMemo, useRef } from "react";
+
+// Constants for multiple handle positioning
+const HANDLE_BASE_OFFSET = 55; // Base position for first handle (px)
+const HANDLE_VERTICAL_SPACING = 45.8; // Spacing between handles (px)
+const CONTAINER_BASE_HEIGHT = 30; // Base container height (px)
+const CONTAINER_HEIGHT_PER_HANDLE = 20; // Additional height per handle (px)
+const CONTAINER_HEIGHT_PADDING = 10; // Bottom padding for container (px)
 import { useShallow } from "zustand/react/shallow";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import type { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
@@ -108,24 +115,83 @@ export default function NodeInputField({
 
   const isFlexView = FLEX_VIEW_TYPES.includes(type ?? "");
 
-  const Handle = (
-    <HandleRenderComponent
-      left={true}
-      tooltipTitle={tooltipTitle}
-      proxy={proxy}
-      id={id}
-      title={title}
-      myData={myData}
-      colors={colors}
-      setFilterEdge={setFilterEdge}
-      showNode={showNode}
-      testIdComplement={`${data?.type?.toLowerCase()}-${
-        showNode ? "shownode" : "noshownode"
-      }`}
-      nodeId={data.id}
-      colorName={colorName}
-    />
-  );
+  // Check if this is a list input with input_types (should render multiple handles)
+  const isList = data.node?.template[name]?.list || false;
+  const hasInputTypes = (data.node?.template[name]?.input_types?.length || 0) > 0;
+  const shouldRenderMultipleHandles = isList && hasInputTypes && displayHandle;
+  
+  // Get the current value to determine how many handles to show
+  const currentValue = data.node?.template[name]?.value;
+  const listLength = Array.isArray(currentValue) ? Math.max(currentValue.length, 1) : 1; // Default to 1 handle if no value
+  
+  
+  /**
+   * Renders either a single handle or multiple handles for list inputs.
+   * For list inputs with input_types, creates one handle per list item with unique positioning.
+   * 
+   * @returns JSX element containing the handle(s)
+   */
+  const renderHandles = () => {
+    if (!shouldRenderMultipleHandles) {
+      return (
+        <HandleRenderComponent
+          left={true}
+          tooltipTitle={tooltipTitle}
+          proxy={proxy}
+          id={id}
+          title={title}
+          myData={myData}
+          colors={colors}
+          setFilterEdge={setFilterEdge}
+          showNode={showNode}
+          testIdComplement={`${data?.type?.toLowerCase()}-${
+            showNode ? "shownode" : "noshownode"
+          }`}
+          nodeId={data.id}
+          colorName={colorName}
+        />
+      );
+    }
+    
+    // Render multiple handles with simple positioning
+    const handles = [];
+    for (let i = 0; i < listLength; i++) {
+      // Position handles with base offset and consistent spacing
+      const topPosition = i === 0 ? `${HANDLE_BASE_OFFSET}px` : `${HANDLE_BASE_OFFSET + i * HANDLE_VERTICAL_SPACING}px`;
+        
+      handles.push(
+        <div
+          key={`handle-${i}`}
+          className="absolute"
+          style={{
+            left: "0px", // Position at node edge
+            top: topPosition, // Use measured or calculated position
+            transform: "translateX(-50%)", // Center on edge
+          }}
+        >
+          <HandleRenderComponent
+            left={true}
+            tooltipTitle={tooltipTitle}
+            proxy={proxy}
+            id={{...id, id: `${id.id}_${i}`}} // Make handle IDs unique by modifying the id field
+            title={`${title}[${i}]`}
+            myData={myData}
+            colors={colors}
+            setFilterEdge={setFilterEdge}
+            showNode={showNode}
+            testIdComplement={`${data?.type?.toLowerCase()}-${
+              showNode ? "shownode" : "noshownode"
+            }-${i}`}
+            nodeId={data.id}
+            colorName={colorName}
+          />
+        </div>
+      );
+    }
+    return <>{handles}</>;
+  };
+
+  const Handle = renderHandles();
 
   return !showNode ? (
     displayHandle ? (
@@ -143,6 +209,8 @@ export default function NodeInputField({
         (name === "code" && type === "code") || (name.includes("code") && proxy)
           ? "hidden"
           : "",
+        shouldRenderMultipleHandles && 
+          `min-h-[${CONTAINER_BASE_HEIGHT + listLength * CONTAINER_HEIGHT_PER_HANDLE + CONTAINER_HEIGHT_PADDING}px]`, // Adjust height for multiple handles
       )}
     >
       {displayHandle && Handle}
