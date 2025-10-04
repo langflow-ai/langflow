@@ -49,25 +49,24 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     conn = op.get_bind()
-    
-    # Check if the flow table exists
-    inspector = sa.inspect(conn)
-    table_names = inspector.get_table_names()
-    
-    if "flow" not in table_names:
+
+    # Check if the flow table exists using faster query, avoid inspecting all table names
+    flow_exists = conn.dialect.has_table(conn, "flow")
+    if not flow_exists:
         # If flow table doesn't exist, skip this migration
         return
-    
+
     # Revert memory component path from models_agents back to helpers
+    # Direct execution, text() is still necessary for safety
     update_query = sa.text("""
         UPDATE flow
         SET data = REPLACE(data, 'lfx.components.models_agents.memory', 'lfx.components.helpers.memory'),
             updated_at = CURRENT_TIMESTAMP
         WHERE data LIKE '%lfx.components.models_agents.memory%'
     """)
-    
+
     result = conn.execute(update_query)
-    
+
     # Log the number of reverted flows
     if result.rowcount > 0:
         print(f"Reverted {result.rowcount} flows to old memory component path")
