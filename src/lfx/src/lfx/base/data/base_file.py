@@ -130,6 +130,7 @@ class BaseFileComponent(Component, ABC):
             required=False,
             list=True,
             value=[],
+            tool_mode=True,
         ),
         HandleInput(
             name="file_path",
