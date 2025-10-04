@@ -8,6 +8,7 @@ from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from lfx.components.processing.alter_metadata import AlterMetadataComponent
+    from lfx.components.processing.anymize import AnymizeComponent
     from lfx.components.processing.batch_run import BatchRunComponent
     from lfx.components.processing.combine_text import CombineTextComponent
     from lfx.components.processing.converter import TypeConverterComponent
@@ -37,6 +38,7 @@ if TYPE_CHECKING:
     from lfx.components.processing.update_data import UpdateDataComponent
 
 _dynamic_imports = {
+    "AnymizeComponent": "anymize",
     "AlterMetadataComponent": "alter_metadata",
     "BatchRunComponent": "batch_run",
     "CombineTextComponent": "combine_text",
@@ -69,6 +71,7 @@ _dynamic_imports = {
 
 __all__ = [
     "AlterMetadataComponent",
+    "AnymizeComponent",
     "BatchRunComponent",
     "CombineTextComponent",
     "CreateDataComponent",
