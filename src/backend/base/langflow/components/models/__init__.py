@@ -7,13 +7,17 @@ from langflow.components._importing import import_mod
 if TYPE_CHECKING:
     from langflow.components.models.embedding_model import EmbeddingModelComponent
     from langflow.components.models.language_model import LanguageModelComponent
+    from langflow.components.models.autonomize_model import AutonomizeModelComponent
+    from langflow.components.models.autonomize_document_model import AutonomizeDocumentModelComponent
 
 _dynamic_imports = {
     "EmbeddingModelComponent": "embedding_model",
     "LanguageModelComponent": "language_model",
+    "AutonomizeModelComponent": "autonomize_model",
+    "AutonomizeDocumentModelComponent": "autonomize_document_model",
 }
 
-__all__ = ["EmbeddingModelComponent", "LanguageModelComponent"]
+__all__ = ["EmbeddingModelComponent", "LanguageModelComponent", "AutonomizeModelComponent", "AutonomizeDocumentModelComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:

@@ -1,0 +1,1330 @@
+{
+  "data": {
+    "edges": [
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "AzureOpenAIModel",
+            "id": "AzureOpenAIModel-Pk4b0",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "TextInput-8nHuj",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-AzureOpenAIModel-Pk4b0{œdataTypeœ:œAzureOpenAIModelœ,œidœ:œAzureOpenAIModel-Pk4b0œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-TextInput-8nHuj{œfieldNameœ:œinput_valueœ,œidœ:œTextInput-8nHujœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "AzureOpenAIModel-Pk4b0",
+        "sourceHandle": "{œdataTypeœ: œAzureOpenAIModelœ, œidœ: œAzureOpenAIModel-Pk4b0œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "TextInput-8nHuj",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œTextInput-8nHujœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "BlobStorage",
+            "id": "BlobStorage-p8kQL",
+            "name": "file_path",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "url",
+            "id": "azure_ocr-lGcnI",
+            "inputTypes": [
+              "str",
+              "Data",
+              "Message",
+              "list"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-BlobStorage-p8kQL{œdataTypeœ:œBlobStorageœ,œidœ:œBlobStorage-p8kQLœ,œnameœ:œfile_pathœ,œoutput_typesœ:[œDataœ]}-azure_ocr-lGcnI{œfieldNameœ:œurlœ,œidœ:œazure_ocr-lGcnIœ,œinputTypesœ:[œstrœ,œDataœ,œMessageœ,œlistœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "BlobStorage-p8kQL",
+        "sourceHandle": "{œdataTypeœ: œBlobStorageœ, œidœ: œBlobStorage-p8kQLœ, œnameœ: œfile_pathœ, œoutput_typesœ: [œDataœ]}",
+        "target": "azure_ocr-lGcnI",
+        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œazure_ocr-lGcnIœ, œinputTypesœ: [œstrœ, œDataœ, œMessageœ, œlistœ], œtypeœ: œotherœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "azure_ocr",
+            "id": "azure_ocr-lGcnI",
+            "name": "structured_data",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "ParseData-A0hiT",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-azure_ocr-lGcnI{œdataTypeœ:œazure_ocrœ,œidœ:œazure_ocr-lGcnIœ,œnameœ:œstructured_dataœ,œoutput_typesœ:[œDataœ]}-ParseData-A0hiT{œfieldNameœ:œdataœ,œidœ:œParseData-A0hiTœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "azure_ocr-lGcnI",
+        "sourceHandle": "{œdataTypeœ: œazure_ocrœ, œidœ: œazure_ocr-lGcnIœ, œnameœ: œstructured_dataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-A0hiT",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-A0hiTœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ParseData",
+            "id": "ParseData-A0hiT",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "custom_prompt_text",
+            "id": "PromptTemplate-hZehs",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ParseData-A0hiT{œdataTypeœ:œParseDataœ,œidœ:œParseData-A0hiTœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-PromptTemplate-hZehs{œfieldNameœ:œcustom_prompt_textœ,œidœ:œPromptTemplate-hZehsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ParseData-A0hiT",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-A0hiTœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "PromptTemplate-hZehs",
+        "targetHandle": "{œfieldNameœ: œcustom_prompt_textœ, œidœ: œPromptTemplate-hZehsœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "PromptTemplate",
+            "id": "PromptTemplate-hZehs",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "AzureOpenAIModel-Pk4b0",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-PromptTemplate-hZehs{œdataTypeœ:œPromptTemplateœ,œidœ:œPromptTemplate-hZehsœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AzureOpenAIModel-Pk4b0{œfieldNameœ:œinput_valueœ,œidœ:œAzureOpenAIModel-Pk4b0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "PromptTemplate-hZehs",
+        "sourceHandle": "{œdataTypeœ: œPromptTemplateœ, œidœ: œPromptTemplate-hZehsœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AzureOpenAIModel-Pk4b0",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAzureOpenAIModel-Pk4b0œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      }
+    ],
+    "nodes": [
+      {
+        "data": {
+          "id": "AzureOpenAIModel-Pk4b0",
+          "node": {
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Generate text using Azure OpenAI LLMs.",
+            "display_name": "Azure OpenAI",
+            "documentation": "https://python.langchain.com/docs/integrations/llms/azure_openai",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "system_prompt_template",
+              "system_message",
+              "stream",
+              "azure_endpoint",
+              "azure_deployment",
+              "api_key",
+              "api_version",
+              "temperature",
+              "max_tokens"
+            ],
+            "frozen": false,
+            "icon": "Azure",
+            "legacy": false,
+            "lf_version": "1.1.1",
+            "metadata": {
+              "keywords": [
+                "model",
+                "llm",
+                "language model",
+                "large language model"
+              ]
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Model Response",
+                "group_outputs": false,
+                "method": "text_response",
+                "name": "text_output",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Language Model",
+                "group_outputs": false,
+                "method": "build_model",
+                "name": "model_output",
+                "selected": "LanguageModel",
+                "tool_mode": true,
+                "types": [
+                  "LanguageModel"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "Azure Chat OpenAI API Key",
+                "dynamic": false,
+                "info": "",
+                "input_types": [],
+                "load_from_db": false,
+                "name": "api_key",
+                "password": true,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "api_version": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "display_name": "API Version",
+                "dynamic": false,
+                "info": "",
+                "name": "api_version",
+                "options": [
+                  "2025-02-01-preview",
+                  "2025-01-01-preview",
+                  "2024-12-01-preview",
+                  "2024-10-01-preview",
+                  "2024-09-01-preview",
+                  "2024-08-01-preview",
+                  "2024-07-01-preview",
+                  "2024-06-01",
+                  "2024-03-01-preview",
+                  "2024-02-15-preview",
+                  "2023-12-01-preview",
+                  "2023-05-15"
+                ],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "2024-06-01"
+              },
+              "azure_deployment": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Deployment Name",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "azure_deployment",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "GPT316k"
+              },
+              "azure_endpoint": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Azure Endpoint",
+                "dynamic": false,
+                "info": "Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "azure_endpoint",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "https://cog-54p2emd7pu2vu.openai.azure.com/"
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langchain_openai import AzureChatOpenAI\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs.inputs import MessageTextInput\nfrom langflow.io import DropdownInput, IntInput, SecretStrInput, SliderInput\n\n\nclass AzureChatOpenAIComponent(LCModelComponent):\n    display_name: str = \"Azure OpenAI\"\n    description: str = \"Generate text using Azure OpenAI LLMs.\"\n    documentation: str = \"https://python.langchain.com/docs/integrations/llms/azure_openai\"\n    beta = False\n    icon = \"Azure\"\n    name = \"AzureOpenAIModel\"\n\n    AZURE_OPENAI_API_VERSIONS = [\n        \"2024-06-01\",\n        \"2024-07-01-preview\",\n        \"2024-08-01-preview\",\n        \"2024-09-01-preview\",\n        \"2024-10-01-preview\",\n        \"2023-05-15\",\n        \"2023-12-01-preview\",\n        \"2024-02-15-preview\",\n        \"2024-03-01-preview\",\n        \"2024-12-01-preview\",\n        \"2025-01-01-preview\",\n        \"2025-02-01-preview\",\n    ]\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        MessageTextInput(\n            name=\"azure_endpoint\",\n            display_name=\"Azure Endpoint\",\n            info=\"Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`\",\n            required=True,\n        ),\n        MessageTextInput(name=\"azure_deployment\", display_name=\"Deployment Name\", required=True),\n        SecretStrInput(name=\"api_key\", display_name=\"Azure Chat OpenAI API Key\", required=True),\n        DropdownInput(\n            name=\"api_version\",\n            display_name=\"API Version\",\n            options=sorted(AZURE_OPENAI_API_VERSIONS, reverse=True),\n            value=next(\n                (\n                    version\n                    for version in sorted(AZURE_OPENAI_API_VERSIONS, reverse=True)\n                    if not version.endswith(\"-preview\")\n                ),\n                AZURE_OPENAI_API_VERSIONS[0],\n            ),\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.7,\n            range_spec=RangeSpec(min=0, max=2, step=0.01),\n            info=\"Controls randomness. Lower values are more deterministic, higher values are more creative.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        azure_endpoint = self.azure_endpoint\n        azure_deployment = self.azure_deployment\n        api_version = self.api_version\n        api_key = self.api_key\n        temperature = self.temperature\n        max_tokens = self.max_tokens\n        stream = self.stream\n\n        try:\n            output = AzureChatOpenAI(\n                azure_endpoint=azure_endpoint,\n                azure_deployment=azure_deployment,\n                api_version=api_version,\n                api_key=api_key,\n                temperature=temperature,\n                max_tokens=max_tokens or None,\n                streaming=stream,\n            )\n        except Exception as e:\n            msg = f\"Could not connect to AzureOpenAI API: {e}\"\n            raise ValueError(msg) from e\n\n        return output\n"
+              },
+              "input_value": {
+                "_input_type": "MessageInput",
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "input_value",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "max_tokens": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Tokens",
+                "dynamic": false,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "list": false,
+                "name": "max_tokens",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": ""
+              },
+              "stream": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Stream",
+                "dynamic": false,
+                "info": "Stream the response from the model. Streaming works only in Chat.",
+                "list": false,
+                "name": "stream",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "system_message": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "System Message",
+                "dynamic": false,
+                "info": "System message to pass to the model.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "system_message",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "You are a Pharmaceutical Researcher who has extensive experience with clinical trial design. Your job is to simplify the technicalities present in participation criterion of a clinical study for users who don't have a pharmaceutical or medical background. Make sure to provide answers free of medical jargon but that are upto a reading comprehension level of a high-school student. Make sure your response is professional and doesn't change the meaning of the input criterion that you received\"\n        "
+              },
+              "temperature": {
+                "_input_type": "FloatInput",
+                "advanced": true,
+                "display_name": "Temperature",
+                "dynamic": false,
+                "info": "Controls randomness. Lower values are more deterministic, higher values are more creative.",
+                "list": false,
+                "name": "temperature",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "float",
+                "value": 0.7
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "AzureOpenAIModel"
+        },
+        "id": "AzureOpenAIModel-Pk4b0",
+        "measured": {
+          "height": 711,
+          "width": 320
+        },
+        "position": {
+          "x": 2897.465476862704,
+          "y": -486.1431963595753
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "TextInput-8nHuj",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Get user text inputs.",
+            "display_name": "Text Input",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "input_value"
+            ],
+            "frozen": false,
+            "icon": "type",
+            "legacy": false,
+            "lf_version": "1.1.1",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output Text",
+                "group_outputs": false,
+                "method": "text_response",
+                "name": "text",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.io.text import TextComponent\nfrom langflow.io import MultilineInput, Output\nfrom langflow.schema.message import Message\n\n\nclass TextInputComponent(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get user text inputs.\"\n    documentation: str = \"https://docs.langflow.org/components-io#text-input\"\n    icon = \"type\"\n    name = \"TextInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as input.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        return Message(\n            text=self.input_value,\n        )\n"
+              },
+              "input_value": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "Text",
+                "dynamic": false,
+                "info": "Text to be passed as input.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "input_value",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "TextInput"
+        },
+        "id": "TextInput-8nHuj",
+        "measured": {
+          "height": 233,
+          "width": 320
+        },
+        "position": {
+          "x": 3311.5626968839597,
+          "y": -283.136538694538
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "azure_ocr-lGcnI",
+          "node": {
+            "base_classes": [
+              "Data"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Process documents using Azure Form Recognizer OCR capabilities",
+            "display_name": "Form Recognizer",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "url",
+              "file_path",
+              "silent_errors",
+              "delete_server_file_after_processing",
+              "ignore_unsupported_extensions",
+              "ignore_unspecified_files",
+              "model_type",
+              "extract_tables",
+              "include_confidence",
+              "use_multithreading",
+              "concurrency_multithreading"
+            ],
+            "frozen": false,
+            "icon": "Azure",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Structured Data",
+                "hidden": null,
+                "method": "load_files",
+                "name": "structured_data",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "\"\"\"Form Recognizer Component for processing and analyzing form data.\"\"\"\n\nimport asyncio\nimport concurrent.futures\nimport mimetypes\nimport os\nimport tempfile\nfrom pathlib import Path\nfrom urllib.parse import unquote, urlparse\n\nimport aiohttp\nimport requests\nfrom langflow.base.data import BaseFileComponent\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, Output\nfrom langflow.schema import Data\nfrom loguru import logger\n\n\nclass FormRecognizerComponent(BaseFileComponent):\n    \"\"\"Component for recognizing and processing form data.\"\"\"\n\n    display_name = \"Form Recognizer\"\n    description = \"Process documents using Azure Form Recognizer OCR capabilities\"\n    icon = \"Azure\"\n    name = \"azure_ocr\"\n    # legacy = True\n\n    VALID_EXTENSIONS = [\"pdf\", \"jpg\", \"jpeg\", \"png\", \"bmp\", \"tiff\", \"tif\"]\n\n    inputs = [\n        HandleInput(\n            name=\"url\",\n            display_name=\"URL\",\n            info=\"URL to the document to process\",\n            input_types=[\"str\", \"Data\", \"Message\", \"list\"],\n            required=False,\n        ),\n        # Include only the HandleInput and BoolInputs from base_inputs\n        next(\n            input\n            for input in BaseFileComponent._base_inputs\n            if input.name == \"file_path\"\n        ),\n        next(\n            input\n            for input in BaseFileComponent._base_inputs\n            if input.name == \"silent_errors\"\n        ),\n        next(\n            input\n            for input in BaseFileComponent._base_inputs\n            if input.name == \"delete_server_file_after_processing\"\n        ),\n        next(\n            input\n            for input in BaseFileComponent._base_inputs\n            if input.name == \"ignore_unsupported_extensions\"\n        ),\n        next(\n            input\n            for input in BaseFileComponent._base_inputs\n            if input.name == \"ignore_unspecified_files\"\n        ),\n        DropdownInput(\n            name=\"model_type\",\n            display_name=\"Model Type\",\n            options=[\"prebuilt-document\", \"prebuilt-read\", \"prebuilt-layout\"],\n            value=\"prebuilt-document\",\n            info=\"Choose the Form Recognizer model to use\",\n        ),\n        BoolInput(\n            name=\"extract_tables\",\n            display_name=\"Extract Tables\",\n            value=True,\n            info=\"Extract and format tables from the document\",\n        ),\n        BoolInput(\n            name=\"include_confidence\",\n            display_name=\"Include Confidence Scores\",\n            value=False,\n            advanced=True,\n            info=\"Include confidence scores in the extracted text\",\n        ),\n        BoolInput(\n            name=\"use_multithreading\",\n            display_name=\"Use Concurrent Processing\",\n            value=True,\n            info=\"Enable concurrent processing of multiple files\",\n        ),\n        IntInput(\n            name=\"concurrency_multithreading\",\n            display_name=\"Processing Concurrency\",\n            advanced=True,\n            info=\"Number of files to process concurrently\",\n            value=2,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Structured Data\", name=\"structured_data\", method=\"load_files\"\n        ),\n    ]\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n        self.temp_dir = tempfile.mkdtemp()\n        self._downloaded_files = {}\n        self._text_content = \"\"\n\n\n    def get_text_content(self) -> str:\n        \"\"\"Return the concatenated text content from all processed pages.\"\"\"\n        return self._text_content\n\n    def _extract_filename_from_url(self, url: str) -> str:\n        \"\"\"Extract filename from URL or generate a default one.\"\"\"\n        try:\n            logger.debug(f\"Extracting filename from URL: {url}\")\n            parsed_url = urlparse(url)\n            path = unquote(parsed_url.path)\n            filename = os.path.basename(path)\n\n            if filename and \".\" in filename:\n                logger.debug(f\"Found filename in URL path: {filename}\")\n                return filename\n\n            response = requests.head(url, allow_redirects=True)\n            if \"content-disposition\" in response.headers:\n                content_disp = response.headers[\"content-disposition\"]\n                if \"filename=\" in content_disp:\n                    filename = content_disp.split(\"filename=\")[1].strip(\"\\\"'\")\n                    logger.debug(f\"Found filename in content-disposition: {filename}\")\n                    return filename\n\n            if \"content-type\" in response.headers:\n                ext = mimetypes.guess_extension(response.headers[\"content-type\"])\n                if ext:\n                    filename = f\"downloaded{ext}\"\n                    logger.debug(f\"Generated filename from content-type: {filename}\")\n                    return filename\n\n            logger.debug(\"Using default filename: downloaded.pdf\")\n            return \"downloaded.pdf\"\n        except Exception as e:\n            logger.error(f\"Error extracting filename from URL: {e!s}\")\n            return \"downloaded.pdf\"\n\n    async def _download_file_from_url(self, url: str) -> str | None:\n        \"\"\"Download a file from a URL.\"\"\"\n        try:\n            logger.debug(f\"Attempting to download file from URL: {url}\")\n            filename = self._extract_filename_from_url(url)\n            local_path = os.path.join(self.temp_dir, filename)\n            logger.debug(f\"Local path for download: {local_path}\")\n\n            async with aiohttp.ClientSession() as session:\n                async with session.get(url) as response:\n                    response.raise_for_status()\n                    with open(local_path, \"wb\") as f:\n                        while True:\n                            chunk = await response.content.read(8192)\n                            if not chunk:\n                                break\n                            f.write(chunk)\n\n            self._downloaded_files[url] = local_path\n            logger.info(f\"Successfully downloaded file to {local_path}\")\n            return local_path\n\n        except Exception as e:\n            logger.error(f\"Error downloading file from URL: {e!s}\")\n            if not self.silent_errors:\n                raise\n            return None\n\n    def _extract_url_from_input(self, input_data) -> str | None:\n        \"\"\"Extract URL string from various input types.\"\"\"\n        logger.debug(f\"Extracting URL from input data type: {type(input_data)}\")\n\n        # Handle list of Data objects (from blob storage)\n        if isinstance(input_data, list):\n            logger.debug(f\"Processing list input with {len(input_data)} items\")\n            if input_data and isinstance(input_data[0], Data):\n                url = input_data[0].data.get(\"file_path\")\n                logger.debug(f\"Extracted URL from first Data object in list: {url}\")\n                return url\n            return None\n\n        if isinstance(input_data, str):\n            logger.debug(f\"Input is string: {input_data}\")\n            return input_data\n        elif isinstance(input_data, Data):\n            url = (\n                input_data.data.get(\"file_path\")\n                or input_data.data.get(\"url\")\n                or input_data.text\n            )\n            logger.debug(f\"Extracted URL from Data object: {url}\")\n            return url\n        elif hasattr(input_data, \"text\"):\n            logger.debug(f\"Extracted URL from text attribute: {input_data.text}\")\n            return input_data.text\n        elif hasattr(input_data, \"data\"):\n            url = (\n                input_data.data.get(\"file_path\")\n                or input_data.data.get(\"url\")\n                or input_data.text\n            )\n            logger.debug(f\"Extracted URL from data attribute: {url}\")\n            return url\n        logger.debug(\"No URL found in input data\")\n        return None\n\n    def _validate_and_resolve_paths(self) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Handle URLs and local paths.\"\"\"\n        resolved_files = []\n        logger.debug(\"Starting path validation and resolution\")\n\n        # Handle URL input if provided\n        if hasattr(self, \"url\") and self.url:\n            try:\n                logger.debug(f\"Processing URL input: {self.url}\")\n                # Extract URL from different input types\n                url = self._extract_url_from_input(self.url)\n                if not url:\n                    logger.warning(\"No valid URL found in input\")\n                    return resolved_files\n\n                # Create event loop for async download\n                loop = asyncio.new_event_loop()\n                asyncio.set_event_loop(loop)\n                try:\n                    local_path = loop.run_until_complete(\n                        self._download_file_from_url(url)\n                    )\n                finally:\n                    loop.close()\n\n                if local_path:\n                    # Create a new Data object with both the original URL and local path\n                    new_data = Data(\n                        data={\n                            self.SERVER_FILE_PATH_FIELDNAME: local_path,\n                            \"original_url\": url,\n                        }\n                    )\n                    logger.debug(\n                        f\"Created new Data object with local path: {local_path}\"\n                    )\n\n                    resolved_files.append(\n                        BaseFileComponent.BaseFile(\n                            new_data,\n                            Path(local_path),\n                            delete_after_processing=self.delete_server_file_after_processing,\n                        )\n                    )\n            except Exception as e:\n                logger.error(f\"Error processing URL {url}: {e!s}\")\n                if not self.silent_errors:\n                    raise\n\n        # Handle file_path input\n        file_path = self._file_path_as_list()\n        logger.debug(f\"Processing file_path input: {file_path}\")\n        for obj in file_path:\n            server_file_path = obj.data.get(self.SERVER_FILE_PATH_FIELDNAME)\n            logger.debug(f\"Processing server file path: {server_file_path}\")\n\n            if not server_file_path:\n                if not self.ignore_unspecified_files:\n                    msg = f\"Data object missing '{self.SERVER_FILE_PATH_FIELDNAME}' property.\"\n                    if not self.silent_errors:\n                        raise ValueError(msg)\n                continue\n\n            try:\n                # Check if it's a URL\n                if isinstance(server_file_path, str) and server_file_path.startswith(\n                    (\"http://\", \"https://\")\n                ):\n                    logger.debug(f\"Processing URL from file_path: {server_file_path}\")\n                    # Create event loop for async download\n                    loop = asyncio.new_event_loop()\n                    asyncio.set_event_loop(loop)\n                    try:\n                        local_path = loop.run_until_complete(\n                            self._download_file_from_url(server_file_path)\n                        )\n                    finally:\n                        loop.close()\n\n                    if not local_path:\n                        continue\n\n                    # Create a new Data object with both the original URL and local path\n                    new_data = Data(\n                        data={\n                            self.SERVER_FILE_PATH_FIELDNAME: local_path,\n                            \"original_url\": server_file_path,\n                        }\n                    )\n                    logger.debug(\n                        f\"Created new Data object with local path: {local_path}\"\n                    )\n\n                    resolved_files.append(\n                        BaseFileComponent.BaseFile(\n                            new_data,\n                            Path(local_path),\n                            delete_after_processing=self.delete_server_file_after_processing,\n                        )\n                    )\n                else:\n                    # Handle local files\n                    resolved_path = Path(self.resolve_path(str(server_file_path)))\n                    logger.debug(f\"Resolved local file path: {resolved_path}\")\n                    if not resolved_path.exists():\n                        msg = f\"File not found: {server_file_path}\"\n                        if not self.silent_errors:\n                            raise ValueError(msg)\n                        continue\n\n                    resolved_files.append(\n                        BaseFileComponent.BaseFile(\n                            obj,\n                            resolved_path,\n                            delete_after_processing=self.delete_server_file_after_processing,\n                        )\n                    )\n\n            except Exception as e:\n                logger.error(f\"Error processing path {server_file_path}: {e!s}\")\n                if not self.silent_errors:\n                    raise\n                continue\n\n        logger.debug(f\"Resolved {len(resolved_files)} files\")\n        return resolved_files\n\n    async def process_file(\n        self, file_path: str, *, silent_errors: bool = False\n    ) -> tuple[Data, str]:\n        \"\"\"Process a single file using the OCR service.\"\"\"\n        try:\n            from langflow.services.manager import service_manager\n\n            ocr_service = service_manager.get(\"ocr_service\")\n\n            with open(file_path, \"rb\") as file:\n                file_content = file.read()\n\n            extracted_content, plain_text = await ocr_service.process_document(\n                file_content=file_content,\n                model_type=self.model_type,\n                include_confidence=self.include_confidence,\n                extract_tables=self.extract_tables,\n            )\n\n            structured_data = Data(\n                text=plain_text,\n                data={\n                    self.SERVER_FILE_PATH_FIELDNAME: str(file_path),\n                    \"result\": extracted_content,\n                },\n            )\n\n            return structured_data, plain_text\n\n        except Exception as e:\n            logger.error(f\"Error processing file {file_path}: {e!s}\")\n            if not silent_errors:\n                raise\n            return None, \"\"\n\n    def process_files(\n        self, file_list: list[BaseFileComponent.BaseFile]\n    ) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Process multiple files with concurrent processing.\"\"\"\n        if not file_list:\n            msg = \"No files to process.\"\n            raise ValueError(msg)\n\n        concurrency = (\n            1\n            if not self.use_multithreading\n            else max(1, self.concurrency_multithreading)\n        )\n        file_count = len(file_list)\n\n        logger.info(f\"Processing {file_count} files with concurrency: {concurrency}\")\n\n        all_plain_text = []\n        processed_data = []\n\n        if concurrency > 1 and file_count > 1:\n            loop = asyncio.new_event_loop()\n            asyncio.set_event_loop(loop)\n            try:\n                with concurrent.futures.ThreadPoolExecutor(\n                    max_workers=concurrency\n                ) as executor:\n                    future_to_file = {\n                        executor.submit(\n                            lambda path: loop.run_until_complete(\n                                self.process_file(\n                                    str(path), silent_errors=self.silent_errors\n                                )\n                            ),\n                            file.path,\n                        ): file\n                        for file in file_list\n                    }\n                    for future in concurrent.futures.as_completed(future_to_file):\n                        try:\n                            structured_data, plain_text = future.result()\n                            processed_data.append(structured_data)\n                            all_plain_text.append(plain_text)\n                        except Exception as e:\n                            logger.error(f\"Error in concurrent processing: {e!s}\")\n                            if not self.silent_errors:\n                                raise\n                            processed_data.append(None)\n                            all_plain_text.append(\"\")\n            finally:\n                loop.close()\n        else:\n            loop = asyncio.new_event_loop()\n            asyncio.set_event_loop(loop)\n            try:\n                for file in file_list:\n                    try:\n                        structured_data, plain_text = loop.run_until_complete(\n                            self.process_file(\n                                str(file.path), silent_errors=self.silent_errors\n                            )\n                        )\n                        processed_data.append(structured_data)\n                        all_plain_text.append(plain_text)\n                    except Exception as e:\n                        logger.error(f\"Error processing file {file.path}: {e!s}\")\n                        if not self.silent_errors:\n                            raise\n                        processed_data.append(None)\n                        all_plain_text.append(\"\")\n            finally:\n                loop.close()\n\n        # Store concatenated text content\n        self._text_content = \"\\n\\n=== NEW DOCUMENT ===\\n\\n\".join(all_plain_text)\n\n        return self.rollup_data(file_list, processed_data)\n\n    def __del__(self):\n        \"\"\"Cleanup temporary files and directory.\"\"\"\n        try:\n            if hasattr(self, \"temp_dir\") and os.path.exists(self.temp_dir):\n                # Remove downloaded files\n                for file_path in self._downloaded_files.values():\n                    if os.path.exists(file_path):\n                        os.unlink(file_path)\n                # Remove the temporary directory\n                os.rmdir(self.temp_dir)\n        except Exception as e:\n            logger.error(f\"Error cleaning up temporary files: {e!s}\")\n"
+              },
+              "concurrency_multithreading": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Processing Concurrency",
+                "dynamic": false,
+                "info": "Number of files to process concurrently",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "concurrency_multithreading",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 2
+              },
+              "delete_server_file_after_processing": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Delete Server File After Processing",
+                "dynamic": false,
+                "info": "If true, the Server File Path will be deleted after processing.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "delete_server_file_after_processing",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "extract_tables": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Extract Tables",
+                "dynamic": false,
+                "info": "Extract and format tables from the document",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "extract_tables",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "file_path": {
+                "_input_type": "HandleInput",
+                "advanced": true,
+                "display_name": "Server File Path",
+                "dynamic": false,
+                "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
+                "input_types": [
+                  "Data",
+                  "Message"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "file_path",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "ignore_unspecified_files": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Ignore Unspecified Files",
+                "dynamic": false,
+                "info": "If true, Data with no 'file_path' property will be ignored.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "ignore_unspecified_files",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "ignore_unsupported_extensions": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Ignore Unsupported Extensions",
+                "dynamic": false,
+                "info": "If true, files with unsupported extensions will not be processed.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "ignore_unsupported_extensions",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "include_confidence": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Include Confidence Scores",
+                "dynamic": false,
+                "info": "Include confidence scores in the extracted text",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "include_confidence",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "model_type": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Model Type",
+                "dynamic": false,
+                "info": "Choose the Form Recognizer model to use",
+                "name": "model_type",
+                "options": [
+                  "prebuilt-document",
+                  "prebuilt-read",
+                  "prebuilt-layout"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "prebuilt-document"
+              },
+              "silent_errors": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Silent Errors",
+                "dynamic": false,
+                "info": "If true, errors will not raise an exception.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "silent_errors",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "url": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "URL",
+                "dynamic": false,
+                "info": "URL to the document to process",
+                "input_types": [
+                  "str",
+                  "Data",
+                  "Message",
+                  "list"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "url",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "use_multithreading": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Use Concurrent Processing",
+                "dynamic": false,
+                "info": "Enable concurrent processing of multiple files",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_multithreading",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "azure_ocr"
+        },
+        "id": "azure_ocr-lGcnI",
+        "measured": {
+          "height": 393,
+          "width": 320
+        },
+        "position": {
+          "x": 1671.1202487681728,
+          "y": -441.40993493227415
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "BlobStorage-p8kQL",
+          "node": {
+            "base_classes": [
+              "Data"
+            ],
+            "beta": false,
+            "category": "inputs",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Load files from Azure Blob Storage",
+            "display_name": "Blob Storage",
+            "documentation": "http://docs.langflow.org/components/storage",
+            "edited": false,
+            "field_order": [
+              "storage_account",
+              "container_name",
+              "file_name",
+              "return_all_files"
+            ],
+            "frozen": false,
+            "icon": "Autonomize",
+            "key": "BlobStorage",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "File Path",
+                "group_outputs": false,
+                "method": "get_file_paths",
+                "name": "file_path",
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.007568328950209746,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "\"\"\"Blob Storage Component for loading files from Azure Blob Storage.\"\"\"\n\nfrom __future__ import annotations\n\nfrom typing import Any\n\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, DropdownInput, Output, StrInput\nfrom langflow.schema.data import Data\nfrom langflow.custom.genesis.services.deps import get_external_integration_service, get_flexstore_service\nfrom loguru import logger\n\n\nclass BlobStorageComponent(Component):\n    display_name = \"Blob Storage\"\n    category: str = \"input_output\"\n    description = \"Load files from Azure Blob Storage\"\n    documentation = \"http://docs.langflow.org/components/storage\"\n    icon = \"Autonomize\"\n    name = \"BlobStorage\"\n\n    # Match the property name expected by FileComponent\n    FILE_PATH_FIELD = \"file_path\"\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n        self._container_list: list[str] = []\n        self._file_list: list[str] = []\n\n    inputs = [\n        StrInput(\n            name=\"storage_account\",\n            display_name=\"Storage Account\",\n            required=False,\n            info=\"Storage Account name\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"container_name\",\n            display_name=\"Container\",\n            info=\"Select a container from the storage account\",\n            required=True,\n            refresh_button=True,\n        ),\n        DropdownInput(\n            name=\"file_name\",\n            display_name=\"File\",\n            info=\"Select a file from the container\",\n            required=True,\n            refresh_button=True,\n        ),\n        BoolInput(\n            name=\"return_all_files\",\n            display_name=\"Return All Files\",\n            info=\"If true and no specific file is selected, returns all files in the container\",\n            value=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            name=\"file_path\",  # Match the property name expected by FileComponent\n            display_name=\"File Path\",\n            method=\"get_file_paths\",\n        ),\n    ]\n\n    async def update_build_config(\n        self, build_config: dict, field_value: Any, field_name: str | None = None\n    ):\n        \"\"\"Update the build configuration based on field changes.\"\"\"\n        logger.info(f\"update_build_config called with field_name: {field_name}\")\n\n        storage_account = getattr(self, \"storage_account\", None)\n        container_name = getattr(self, \"container_name\", None)\n\n        if field_name == \"container_name\":\n            try:\n                # Load the container options when the field is refreshed\n                service = get_flexstore_service()\n                self._container_list = await service.get_containers(storage_account)\n\n                build_config[\"container_name\"][\"options\"] = self._container_list\n                return build_config\n\n            except Exception as e:\n                logger.exception(f\"Error updating container list: {e!s}\")\n                raise\n\n        elif field_name == \"file_name\" and container_name:\n            try:\n                # Load the file options when the field is refreshed\n                service = get_flexstore_service()\n                self._file_list = await service.get_files(\n                    storage_account, container_name\n                )\n\n                build_config[\"file_name\"][\"options\"] = self._file_list\n                return build_config\n\n            except Exception as e:\n                logger.exception(f\"Error updating file list: {e!s}\")\n                raise\n\n        return build_config\n\n    async def get_file_paths(self) -> list[Data]:\n        \"\"\"Get file paths for the FileComponent to process.\"\"\"\n        try:\n            if not self.container_name:\n                logger.warning(\"Container name is required.\")\n                return []\n\n            service = get_flexstore_service()\n            file_paths = []\n\n            # If a specific file is selected\n            if self.file_name:\n                signed_url = await service.get_signed_url(\n                    self.storage_account, self.container_name, self.file_name\n                )\n                if signed_url:\n                    file_paths = [Data(data={self.FILE_PATH_FIELD: signed_url})]\n            # If no specific file is selected and return_all_files is True\n            elif self.return_all_files:\n                files = await service.get_files(\n                    self.storage_account, self.container_name\n                )\n                for file in files:\n                    signed_url = await service.get_signed_url(\n                        self.storage_account, self.container_name, file\n                    )\n                    if signed_url:\n                        file_paths.append(Data(data={self.FILE_PATH_FIELD: signed_url}))\n\n            if file_paths:\n                self.status = file_paths\n                logger.info(f\"Generated {len(file_paths)} file paths\")\n                for path in file_paths:\n                    logger.debug(f\"File path: {path.data.get(self.FILE_PATH_FIELD)}\")\n            else:\n                logger.warning(\"No file paths generated\")\n\n            return file_paths\n\n        except Exception as e:\n            logger.error(f\"Error in get_file_paths: {e!s}\")\n            return []\n"
+              },
+              "container_name": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Container",
+                "dynamic": false,
+                "info": "Select a container from the storage account",
+                "name": "container_name",
+                "options": [],
+                "options_metadata": [],
+                "placeholder": "",
+                "refresh_button": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "genesis-container"
+              },
+              "file_name": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "File",
+                "dynamic": false,
+                "info": "Select a file from the container",
+                "name": "file_name",
+                "options": [],
+                "options_metadata": [],
+                "placeholder": "",
+                "refresh_button": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "0108_Subject199.pdf"
+              },
+              "return_all_files": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Return All Files",
+                "dynamic": false,
+                "info": "If true and no specific file is selected, returns all files in the container",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "return_all_files",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "storage_account": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Storage Account",
+                "dynamic": false,
+                "info": "Storage Account name",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "storage_account",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "BlobStorage"
+        },
+        "id": "BlobStorage-p8kQL",
+        "measured": {
+          "height": 365,
+          "width": 320
+        },
+        "position": {
+          "x": 1275,
+          "y": -720
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ParseData-A0hiT",
+          "node": {
+            "base_classes": [
+              "Data",
+              "Dict",
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Convert Data objects into Messages using any {field_name} from input data.",
+            "display_name": "Parse Data",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "data",
+              "template",
+              "sep"
+            ],
+            "frozen": false,
+            "icon": "message-square",
+            "legacy": true,
+            "metadata": {
+              "legacy_name": "Parse Data"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Message",
+                "group_outputs": false,
+                "method": "parse_data",
+                "name": "text",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Data List",
+                "group_outputs": false,
+                "method": "parse_data_as_list",
+                "name": "data_list",
+                "selected": "Dict",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.custom.custom_component.component import Component\nfrom langflow.helpers.data import data_to_text, data_to_text_list\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema.data import Data\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Data to Message\"\n    description = \"Convert Data objects into Messages using any {field_name} from input data.\"\n    icon = \"message-square\"\n    name = \"ParseData\"\n    legacy = True\n    replacement = [\"processing.DataOperations\", \"processing.TypeConverterComponent\"]\n    metadata = {\n        \"legacy_name\": \"Parse Data\",\n    }\n\n    inputs = [\n        DataInput(\n            name=\"data\",\n            display_name=\"Data\",\n            info=\"The data to convert to text.\",\n            is_list=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n            required=True,\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"text\",\n            info=\"Data as a single Message, with each input Data separated by Separator\",\n            method=\"parse_data\",\n        ),\n        Output(\n            display_name=\"Data List\",\n            name=\"data_list\",\n            info=\"Data as a list of new Data, each having `text` formatted by Template\",\n            method=\"parse_data_as_list\",\n        ),\n    ]\n\n    def _clean_args(self) -> tuple[list[Data], str, str]:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n        sep = self.sep\n        return data, template, sep\n\n    def parse_data(self) -> Message:\n        data, template, sep = self._clean_args()\n        result_string = data_to_text(template, data, sep)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def parse_data_as_list(self) -> list[Data]:\n        data, template, _ = self._clean_args()\n        text_list, data_list = data_to_text_list(template, data)\n        for item, text in zip(data_list, text_list, strict=True):\n            item.set_text(text)\n        self.status = data_list\n        return data_list\n"
+              },
+              "data": {
+                "_input_type": "DataInput",
+                "advanced": false,
+                "display_name": "Data",
+                "dynamic": false,
+                "info": "The data to convert to text.",
+                "input_types": [
+                  "Data"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "data",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "sep": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Separator",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sep",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "\n"
+              },
+              "template": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "copy_field": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "template",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "{text}"
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "ParseData"
+        },
+        "id": "ParseData-A0hiT",
+        "measured": {
+          "height": 397,
+          "width": 320
+        },
+        "position": {
+          "x": 2099.88777078647,
+          "y": -90.99586871427516
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "PromptTemplate-hZehs",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Select or edit prompt templates.",
+            "display_name": "Prompt Template",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "saved_prompt",
+              "custom_prompt_text"
+            ],
+            "frozen": false,
+            "icon": "Autonomize",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Prompt Message",
+                "group_outputs": false,
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import re\nfrom textwrap import dedent\n\n# from langflow.custom import Component\nfrom langflow.components.processing.prompt import PromptComponent\nfrom langflow.io import DropdownInput, Output\nfrom langflow.schema.message import Message\nfrom loguru import logger\n\nfrom langflow.custom.genesis.services.deps import get_prompt_service\n\n\nclass PromptTemplateComponent(PromptComponent):\n    display_name = \"Prompt Template\"\n    description = \"Select or edit prompt templates.\"\n    icon = \"Autonomize\"\n    name = \"PromptTemplate\"\n\n    inputs = [\n        DropdownInput(\n            name=\"saved_prompt\",\n            display_name=\"Choose from Templates\",\n            info=\"Select a Template\",\n            refresh_button=True,\n            real_time_refresh=True,\n        ),\n        *PromptComponent.inputs,\n    ]\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    def __init__(self, **data):\n        super().__init__(**data)\n        self.prompt_service = get_prompt_service()\n        self._selected_prompt_name = None  # Track the selected prompt name\n        self._attributes[\"template\"] = dedent(\n            \"\"\"\n            Given the following context, answer the question.\n            Context: {context}\n\n            Question: {question}\n            Answer:\"\"\"\n        )\n\n    @staticmethod\n    def _extract_template_content(selected_prompt: dict) -> str:\n        \"\"\"Extract template content from the actual API response structure\"\"\"\n        logger.info(\n            f\"Processing selected_prompt: {selected_prompt.get('name', 'Unknown')}\"\n        )\n\n        # Based on the actual structure, template is in:\n        # latest_versions[0]['template'][0]['content']['text']\n\n        try:\n            # Check if latest_versions exists\n            if \"latest_versions\" in selected_prompt:\n                latest_versions = selected_prompt[\"latest_versions\"]\n                logger.info(f\"Found latest_versions with {len(latest_versions)} items\")\n\n                if latest_versions and len(latest_versions) > 0:\n                    first_version = latest_versions[0]\n                    logger.info(f\"First version keys: {list(first_version.keys())}\")\n\n                    # Check if template exists in the first version\n                    if \"template\" in first_version:\n                        template_list = first_version[\"template\"]\n                        logger.info(\n                            f\"Found template list with {len(template_list)} items\"\n                        )\n\n                        if template_list and len(template_list) > 0:\n                            first_template = template_list[0]\n                            logger.info(\n                                f\"First template item keys: {list(first_template.keys())}\"\n                            )\n\n                            # Check for content structure\n                            if \"content\" in first_template:\n                                content = first_template[\"content\"]\n                                logger.info(f\"Found content: {content}\")\n\n                                if isinstance(content, dict) and \"text\" in content:\n                                    result = content[\"text\"]\n                                    if result and result.strip():\n                                        logger.info(\n                                            f\"Successfully extracted template text: {result[:100]}...\"\n                                        )\n                                        return result\n                                    else:\n                                        logger.warning(\"Template text is empty\")\n                                else:\n                                    logger.warning(\n                                        f\"Content structure unexpected: {content}\"\n                                    )\n                            else:\n                                logger.warning(\"No 'content' field in template item\")\n                        else:\n                            logger.warning(\"Template list is empty\")\n                    else:\n                        logger.warning(\"No 'template' field in first version\")\n                else:\n                    logger.warning(\"latest_versions is empty\")\n            else:\n                logger.warning(\"No 'latest_versions' field found\")\n\n                # Fallback: try direct template field (for backward compatibility)\n                if \"template\" in selected_prompt:\n                    template = selected_prompt[\"template\"]\n                    logger.info(f\"Trying fallback direct template: {template}\")\n\n                    if isinstance(template, str) and template.strip():\n                        return template\n                    elif isinstance(template, list) and template:\n                        first_item = template[0]\n                        if isinstance(first_item, dict) and \"content\" in first_item:\n                            content = first_item[\"content\"]\n                            if isinstance(content, dict) and \"text\" in content:\n                                return content[\"text\"]\n\n        except Exception as e:\n            logger.error(f\"Error extracting template content: {e}\")\n            logger.exception(\"Full error details:\")\n\n        logger.error(\"Failed to extract template content from any expected location\")\n        return \"\"\n\n    @staticmethod\n    def _extract_variables(template: str) -> list[str]:\n        \"\"\"Extract variables from template - supports both {var} and {{ var }} formats\"\"\"\n        # Your templates use {{ var }} format based on the seed data\n        vars_double = re.findall(r\"\\{\\{\\s*(\\w+)\\s*\\}\\}\", template)\n        vars_single = re.findall(r\"\\{(\\w+)\\}\", template)\n\n        # Combine and deduplicate\n        variables = list(set(vars_double + vars_single))\n        logger.info(f\"Extracted variables from template: {variables}\")\n        logger.info(\n            f\"Template used for extraction: {template[:200]}...\"\n        )  # First 200 chars\n\n        return variables\n\n    async def _validate_and_refresh_template(self) -> bool:\n        \"\"\"Validate that the selected template is still available, if not fetch and re-add it\"\"\"\n        if not self._selected_prompt_name:\n            logger.info(\"No template selected, validation skipped\")\n            return True\n\n        try:\n            criteria = {\"max_results\": 100}\n            prompts = await self.prompt_service.get_prompts(criteria)\n            prompt_list = prompts.get(\"prompts\", [])\n\n            # Check if the selected template still exists\n            available_names = [\n                p.get(\"name\") for p in prompt_list if isinstance(p, dict)\n            ]\n\n            if self._selected_prompt_name in available_names:\n                logger.info(\n                    f\"Template '{self._selected_prompt_name}' is still available\"\n                )\n                return True\n            else:\n                logger.warning(\n                    f\"Template '{self._selected_prompt_name}' is no longer available, attempting to refresh...\"\n                )\n\n                # Try to find the template again and refresh it\n                selected_prompt = next(\n                    (\n                        p\n                        for p in prompt_list\n                        if p.get(\"name\") == self._selected_prompt_name\n                    ),\n                    None,\n                )\n\n                if selected_prompt:\n                    logger.info(\n                        f\"Found template '{self._selected_prompt_name}' in fresh fetch, refreshing content...\"\n                    )\n\n                    # Re-extract and update the template content\n                    template_content = self._extract_template_content(selected_prompt)\n\n                    if template_content:\n                        self._attributes[\"template\"] = template_content\n                        if hasattr(self, \"template\"):\n                            self.template = template_content\n                        logger.info(\n                            f\"Successfully refreshed template content: {template_content[:100]}...\"\n                        )\n                        return True\n                    else:\n                        logger.error(\n                            f\"Failed to extract content from refreshed template '{self._selected_prompt_name}'\"\n                        )\n                        return False\n                else:\n                    logger.error(\n                        f\"Template '{self._selected_prompt_name}' not found even after refresh\"\n                    )\n                    logger.info(f\"Available templates: {available_names}\")\n                    return False\n\n        except Exception as e:\n            logger.error(f\"Error validating/refreshing selected template: {e}\")\n            logger.exception(\"Full error details:\")\n            # If we can't validate, assume it's still valid to avoid breaking the flow\n            return True\n\n    async def build_prompt(self) -> Message:\n        # Validate and refresh the selected template if needed\n        if self._selected_prompt_name:\n            is_valid = await self._validate_and_refresh_template()\n            if not is_valid:\n                error_message = f\"Error: Selected template '{self._selected_prompt_name}' is no longer available and could not be refreshed. Please select a different template.\"\n                logger.error(error_message)\n                return Message(text=error_message)\n\n        template = self._attributes.get(\"template\", \"\")\n        variables = self._extract_variables(template)\n\n        for var in variables:\n            # Try different case variations\n            value = (\n                self._attributes.get(var)\n                or self._attributes.get(var.lower())\n                or self._attributes.get(var.title())\n                or \"\"\n            )\n\n            # Replace both {{ var }} and {var} formats\n            template = re.sub(\n                rf\"\\{{\\{{\\s*{re.escape(var)}\\s*\\}}\\}}\", str(value), template\n            )\n            template = re.sub(rf\"\\{{{re.escape(var)}\\}}\", str(value), template)\n\n        return Message(text=template)\n\n    async def update_build_config(\n        self, build_config, field_value, field_name=None\n    ) -> dict:\n        if field_name == \"saved_prompt\":\n            try:\n                criteria = {\"max_results\": 100}\n                prompts = await self.prompt_service.get_prompts(criteria)\n                prompt_list = prompts.get(\"prompts\", [])\n\n                logger.info(f\"Retrieved {len(prompt_list)} prompts from service\")\n\n                # Extract template names for dropdown\n                template_names = [\n                    p.get(\"name\", \"Unnamed Template\")\n                    for p in prompt_list\n                    if isinstance(p, dict)\n                ]\n                build_config[\"saved_prompt\"][\"options\"] = template_names\n                logger.info(f\"Available template names: {template_names}\")\n\n                if field_value:\n                    logger.info(f\"Processing selected prompt: {field_value}\")\n\n                    # Store the selected prompt name for validation during build\n                    self._selected_prompt_name = field_value\n\n                    # Find the selected prompt\n                    selected_prompt = next(\n                        (p for p in prompt_list if p.get(\"name\") == field_value), None\n                    )\n\n                    if selected_prompt:\n                        logger.info(f\"Found prompt with name: {field_value}\")\n\n                        # Extract template content using the correct SDK format\n                        template_content = self._extract_template_content(\n                            selected_prompt\n                        )\n\n                        if not template_content:\n                            logger.error(\"Failed to extract template content\")\n                            return build_config\n\n                        logger.info(\n                            f\"Successfully extracted template: {template_content[:100]}...\"\n                        )\n\n                        # Update the template in the component\n                        self._attributes[\"template\"] = template_content\n                        if hasattr(self, \"template\"):\n                            self.template = template_content\n                        build_config[\"template\"][\"value\"] = template_content\n\n                        # Extract variables from the template\n                        parameters = self._extract_variables(template_content)\n\n                        if not parameters:\n                            logger.info(\n                                \"No variables found in template - no dynamic fields needed\"\n                            )\n                            return build_config\n\n                        logger.info(f\"Found {len(parameters)} parameters: {parameters}\")\n\n                        # Remove existing dynamic fields\n                        fields_to_remove = [\n                            key\n                            for key in list(build_config.keys())\n                            if isinstance(build_config.get(key, {}), dict)\n                            and build_config[key].get(\"is_custom_field\", False)\n                        ]\n\n                        for key in fields_to_remove:\n                            build_config.pop(key, None)\n                            logger.info(f\"Removed existing dynamic field: {key}\")\n\n                        # Create new dynamic fields for each parameter\n                        for param in parameters:\n                            param_name = param.strip()\n                            if not param_name:\n                                continue\n\n                            display_name = param_name.replace(\"_\", \" \").title()\n\n                            build_config[param_name] = {\n                                \"is_custom_field\": True,\n                                \"name\": param_name,\n                                \"display_name\": display_name,\n                                \"value\": \"\",\n                                \"info\": f\"Enter value for {display_name}\",\n                                \"required\": True,\n                                \"show\": True,\n                                \"multiline\": True,\n                                \"dynamic\": True,\n                                \"placeholder\": f\"Enter {display_name.lower()}...\",\n                                \"advanced\": False,\n                                \"field_type\": \"str\",\n                                \"fileTypes\": [],\n                                \"file_path\": \"\",\n                                \"input_types\": [\"Message\", \"Text\"],\n                                \"list\": False,\n                                \"load_from_db\": False,\n                                \"title_case\": False,\n                                \"type\": \"str\",\n                            }\n\n                            logger.info(\n                                f\"Created dynamic field: {param_name} -> {display_name}\"\n                            )\n\n                        logger.info(\n                            f\"Successfully created {len(parameters)} dynamic fields\"\n                        )\n\n                    else:\n                        logger.warning(\n                            f\"Prompt '{field_value}' not found in available prompts\"\n                        )\n                        logger.info(\n                            f\"Available prompts: {[p.get('name') for p in prompt_list]}\"\n                        )\n\n                else:\n                    # Clear the selected prompt name if no value is selected\n                    self._selected_prompt_name = None\n\n            except Exception as e:\n                logger.error(f\"Error in update_build_config: {e}\")\n                logger.exception(\"Full error details:\")\n                build_config[\"saved_prompt\"][\"options\"] = []\n\n        return build_config\n"
+              },
+              "saved_prompt": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Choose from Templates",
+                "dynamic": false,
+                "info": "Select a Template",
+                "load_from_db": false,
+                "name": "saved_prompt",
+                "options": [],
+                "options_metadata": [],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "refresh_button": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "ie-criteria-system-prompt"
+              },
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": ""
+              },
+              "tool_placeholder": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Tool Placeholder",
+                "dynamic": false,
+                "info": "A placeholder input for tool mode.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "tool_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "PromptTemplate"
+        },
+        "id": "PromptTemplate-hZehs",
+        "measured": {
+          "height": 319,
+          "width": 320
+        },
+        "position": {
+          "x": 2348.0070474874133,
+          "y": -537.1752697993049
+        },
+        "selected": false,
+        "type": "genericNode"
+      }
+    ],
+    "viewport": {
+      "x": -494.47510642735915,
+      "y": 379.2420759448787,
+      "zoom": 0.4951714359665118
+    }
+  },
+  "description": "The IE Criteria Structuring Agent organizes and transforms clinical trial eligibility criteria into a structured, standardized format, enabling efficient participant screening and data analysis for patient recruitment.",
+  "endpoint_name": null,
+  "is_component": false,
+  "last_tested_version": "1.4.3",
+  "name": "IE Criteria Simplification",
+  "tags": [
+    "document-qa"
+  ]
+}

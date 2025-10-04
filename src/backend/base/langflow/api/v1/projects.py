@@ -79,8 +79,16 @@ async def create_project(
 
         settings_service = get_settings_service()
 
-        # If AUTO_LOGIN is false, automatically enable API key authentication
-        if not settings_service.auth_settings.AUTO_LOGIN and not new_project.auth_settings:
+        # If AUTO_LOGIN is false and Genesis auth is not enabled, automatically enable API key authentication
+        genesis_auth_enabled = False
+        try:
+            from langflow.custom.genesis.core.config import settings as genesis_settings
+            genesis_auth_enabled = genesis_settings.GENESIS_AUTH_ENABLED
+        except ImportError:
+            # Genesis auth not available, fallback to standard behavior
+            pass
+
+        if not settings_service.auth_settings.AUTO_LOGIN and not new_project.auth_settings and not genesis_auth_enabled:
             default_auth = {"auth_type": "apikey"}
             new_project.auth_settings = encrypt_auth_settings(default_auth)
             await logger.adebug(
@@ -118,6 +126,10 @@ async def read_projects(
     current_user: CurrentActiveUser,
 ):
     try:
+        # Ensure user has a default project before listing
+        from langflow.initial_setup.setup import get_or_create_default_folder
+        await get_or_create_default_folder(session, current_user.id)
+
         projects = (
             await session.exec(
                 select(Folder).where(

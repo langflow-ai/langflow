@@ -2,40 +2,35 @@
   "data": {
     "edges": [
       {
-        "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-kPnuV",
-            "name": "text_output",
+            "dataType": "Prompt",
+            "id": "Prompt-nzyqU",
+            "name": "prompt",
             "output_types": [
               "Message"
             ]
           },
           "targetHandle": {
-            "fieldName": "input_value",
-            "id": "LanguageModelComponent-k0SIV",
+            "fieldName": "system_message",
+            "id": "AzureOpenAIModel-4dghO",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-kPnuV{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-kPnuVœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-k0SIV{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-k0SIVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "LanguageModelComponent-kPnuV",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-kPnuVœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-k0SIV",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-k0SIVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__Prompt-nzyqU{œdataTypeœ:œPromptœ,œidœ:œPrompt-nzyqUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AzureOpenAIModel-4dghO{œfieldNameœ:œsystem_messageœ,œidœ:œAzureOpenAIModel-4dghOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-nzyqU",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-nzyqUœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AzureOpenAIModel-4dghO",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œAzureOpenAIModel-4dghOœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-k0SIV",
+            "dataType": "AzureOpenAIModel",
+            "id": "AzureOpenAIModel-CbB7s",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -43,7 +38,32 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-mc2Rz",
+            "id": "AzureOpenAIModel-4dghO",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__AzureOpenAIModel-CbB7s{œdataTypeœ:œAzureOpenAIModelœ,œidœ:œAzureOpenAIModel-CbB7sœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-AzureOpenAIModel-4dghO{œfieldNameœ:œinput_valueœ,œidœ:œAzureOpenAIModel-4dghOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "AzureOpenAIModel-CbB7s",
+        "sourceHandle": "{œdataTypeœ: œAzureOpenAIModelœ, œidœ: œAzureOpenAIModel-CbB7sœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AzureOpenAIModel-4dghO",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAzureOpenAIModel-4dghOœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "AzureOpenAIModel",
+            "id": "AzureOpenAIModel-4dghO",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-JUsX6",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -52,48 +72,42 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-k0SIV{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-k0SIVœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-mc2Rz{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-mc2Rzœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "LanguageModelComponent-k0SIV",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-k0SIVœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-mc2Rz",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-mc2Rzœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__AzureOpenAIModel-4dghO{œdataTypeœ:œAzureOpenAIModelœ,œidœ:œAzureOpenAIModel-4dghOœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-JUsX6{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JUsX6œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "AzureOpenAIModel-4dghO",
+        "sourceHandle": "{œdataTypeœ: œAzureOpenAIModelœ, œidœ: œAzureOpenAIModel-4dghOœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-JUsX6",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-JUsX6œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-B7vXK",
-            "name": "message",
+            "dataType": "Prompt",
+            "id": "Prompt-Mannb",
+            "name": "prompt",
             "output_types": [
               "Message"
             ]
           },
           "targetHandle": {
-            "fieldName": "input_value",
-            "id": "LanguageModelComponent-sPFGT",
+            "fieldName": "system_message",
+            "id": "AzureOpenAIModel-CbB7s",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-B7vXK{œdataTypeœ:œChatInputœ,œidœ:œChatInput-B7vXKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-sPFGT{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-sPFGTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-B7vXK",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-B7vXKœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-sPFGT",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-sPFGTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__Prompt-Mannb{œdataTypeœ:œPromptœ,œidœ:œPrompt-Mannbœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AzureOpenAIModel-CbB7s{œfieldNameœ:œsystem_messageœ,œidœ:œAzureOpenAIModel-CbB7sœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-Mannb",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Mannbœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AzureOpenAIModel-CbB7s",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œAzureOpenAIModel-CbB7sœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-sPFGT",
+            "dataType": "AzureOpenAIModel",
+            "id": "AzureOpenAIModel-NuTGy",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -101,27 +115,49 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-kPnuV",
+            "id": "AzureOpenAIModel-CbB7s",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-sPFGT{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-sPFGTœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-kPnuV{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-kPnuVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "LanguageModelComponent-sPFGT",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-sPFGTœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-kPnuV",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-kPnuVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__AzureOpenAIModel-NuTGy{œdataTypeœ:œAzureOpenAIModelœ,œidœ:œAzureOpenAIModel-NuTGyœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-AzureOpenAIModel-CbB7s{œfieldNameœ:œinput_valueœ,œidœ:œAzureOpenAIModel-CbB7sœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "AzureOpenAIModel-NuTGy",
+        "sourceHandle": "{œdataTypeœ: œAzureOpenAIModelœ, œidœ: œAzureOpenAIModel-NuTGyœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AzureOpenAIModel-CbB7s",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAzureOpenAIModel-CbB7sœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "animated": false,
-        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-8n8za",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "AzureOpenAIModel-NuTGy",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__ChatInput-8n8za{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8n8zaœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AzureOpenAIModel-NuTGy{œfieldNameœ:œinput_valueœ,œidœ:œAzureOpenAIModel-NuTGyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-8n8za",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8n8zaœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AzureOpenAIModel-NuTGy",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAzureOpenAIModel-NuTGyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-gxyFu",
+            "id": "Prompt-N9kah",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -129,75 +165,18 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "LanguageModelComponent-kPnuV",
+            "id": "AzureOpenAIModel-NuTGy",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-gxyFu{œdataTypeœ:œPromptœ,œidœ:œPrompt-gxyFuœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-kPnuV{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-kPnuVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-gxyFu",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-gxyFuœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-kPnuV",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-kPnuVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-7PuDH",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_message",
-            "id": "LanguageModelComponent-k0SIV",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__Prompt-7PuDH{œdataTypeœ:œPromptœ,œidœ:œPrompt-7PuDHœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-k0SIV{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-k0SIVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-7PuDH",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-7PuDHœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-k0SIV",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-k0SIVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-RcCgD",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_message",
-            "id": "LanguageModelComponent-sPFGT",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__Prompt-RcCgD{œdataTypeœ:œPromptœ,œidœ:œPrompt-RcCgDœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-sPFGT{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-sPFGTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-RcCgD",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-RcCgDœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-sPFGT",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-sPFGTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__Prompt-N9kah{œdataTypeœ:œPromptœ,œidœ:œPrompt-N9kahœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AzureOpenAIModel-NuTGy{œfieldNameœ:œsystem_messageœ,œidœ:œAzureOpenAIModel-NuTGyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-N9kah",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-N9kahœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AzureOpenAIModel-NuTGy",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œAzureOpenAIModel-NuTGyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -205,7 +184,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-gxyFu",
+          "id": "Prompt-Mannb",
           "node": {
             "base_classes": [
               "Message"
@@ -223,21 +202,18 @@
               "template"
             ],
             "frozen": false,
-            "icon": "braces",
+            "icon": "Autonomize",
             "legacy": false,
-            "lf_version": "1.5.0",
+            "lf_version": "1.0.19.post2",
             "metadata": {},
             "output_types": [],
             "outputs": [
               {
-                "allows_loop": false,
                 "cache": true,
-                "display_name": "Prompt",
-                "group_outputs": false,
+                "display_name": "Prompt Message",
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
-                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -263,7 +239,79 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"braces\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"Autonomize\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(\n        self, new_frontend_node: dict, current_frontend_node: dict\n    ):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(\n            new_frontend_node, current_frontend_node\n        )\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(\n            new_template=frontend_node,\n            previous_template=current_frontend_node[\"template\"],\n        )\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "description": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "Description",
+                "dynamic": false,
+                "info": "Description of the prompt",
+                "list": false,
+                "load_from_db": false,
+                "name": "description",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "prompt_name": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "New Prompt Name",
+                "dynamic": false,
+                "info": "Name for saving the new prompt",
+                "list": false,
+                "load_from_db": false,
+                "name": "prompt_name",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "save_prompt": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Save Prompt",
+                "dynamic": false,
+                "info": "Save this prompt to the library",
+                "list": false,
+                "name": "save_prompt",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "saved_prompt": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "display_name": "Choose your Template",
+                "dynamic": false,
+                "info": "Choose your Template",
+                "name": "saved_prompt",
+                "options": [],
+                "placeholder": "",
+                "refresh_button": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
               },
               "template": {
                 "_input_type": "PromptInput",
@@ -308,19 +356,18 @@
             },
             "tool_mode": false
           },
-          "selected_output": "prompt",
           "type": "Prompt"
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-gxyFu",
+        "id": "Prompt-Mannb",
         "measured": {
           "height": 260,
           "width": 320
         },
         "position": {
-          "x": 1962.3374859019868,
-          "y": 1019.10858285748
+          "x": 1921.9168573384,
+          "y": 1162.4082184281983
         },
         "positionAbsolute": {
           "x": 1921.9168573384,
@@ -332,7 +379,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-B7vXK",
+          "id": "ChatInput-8n8za",
           "node": {
             "base_classes": [
               "Message"
@@ -360,7 +407,7 @@
             "icon": "MessagesSquare",
             "key": "ChatInput",
             "legacy": false,
-            "lf_version": "1.5.0",
+            "lf_version": "1.0.19.post2",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -437,7 +484,6 @@
                 "placeholder": "",
                 "required": false,
                 "show": true,
-                "temp_file": true,
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "file",
@@ -543,19 +589,18 @@
               }
             }
           },
-          "selected_output": "message",
           "type": "ChatInput"
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-B7vXK",
+        "id": "ChatInput-8n8za",
         "measured": {
           "height": 234,
           "width": 320
         },
         "position": {
-          "x": 1529.0771385757494,
-          "y": 435.05894080249993
+          "x": 1178.0239685549568,
+          "y": 879.9087836229152
         },
         "positionAbsolute": {
           "x": 1178.0239685549568,
@@ -569,7 +614,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-mc2Rz",
+          "id": "ChatOutput-JUsX6",
           "node": {
             "base_classes": [
               "Message"
@@ -595,7 +640,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.5.0",
+            "lf_version": "1.0.19.post2",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -768,14 +813,14 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-mc2Rz",
+        "id": "ChatOutput-JUsX6",
         "measured": {
           "height": 234,
           "width": 320
         },
         "position": {
-          "x": 3253.3744656309145,
-          "y": 1265.5039601160156
+          "x": 3363.868906129255,
+          "y": 1189.5351768654318
         },
         "positionAbsolute": {
           "x": 3363.868906129255,
@@ -789,7 +834,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-7PuDH",
+          "id": "Prompt-nzyqU",
           "node": {
             "base_classes": [
               "Message"
@@ -807,21 +852,18 @@
               "template"
             ],
             "frozen": false,
-            "icon": "braces",
+            "icon": "Autonomize",
             "legacy": false,
-            "lf_version": "1.5.0",
+            "lf_version": "1.0.19.post2",
             "metadata": {},
             "output_types": [],
             "outputs": [
               {
-                "allows_loop": false,
                 "cache": true,
-                "display_name": "Prompt",
-                "group_outputs": false,
+                "display_name": "Prompt Message",
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
-                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -847,7 +889,79 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"braces\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"Autonomize\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(\n        self, new_frontend_node: dict, current_frontend_node: dict\n    ):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(\n            new_frontend_node, current_frontend_node\n        )\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(\n            new_template=frontend_node,\n            previous_template=current_frontend_node[\"template\"],\n        )\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "description": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "Description",
+                "dynamic": false,
+                "info": "Description of the prompt",
+                "list": false,
+                "load_from_db": false,
+                "name": "description",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "prompt_name": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "New Prompt Name",
+                "dynamic": false,
+                "info": "Name for saving the new prompt",
+                "list": false,
+                "load_from_db": false,
+                "name": "prompt_name",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "save_prompt": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Save Prompt",
+                "dynamic": false,
+                "info": "Save this prompt to the library",
+                "list": false,
+                "name": "save_prompt",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "saved_prompt": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "display_name": "Choose your Template",
+                "dynamic": false,
+                "info": "Choose your Template",
+                "name": "saved_prompt",
+                "options": [],
+                "placeholder": "",
+                "refresh_button": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
               },
               "template": {
                 "_input_type": "PromptInput",
@@ -892,19 +1006,18 @@
             },
             "tool_mode": false
           },
-          "selected_output": "prompt",
           "type": "Prompt"
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-7PuDH",
+        "id": "Prompt-nzyqU",
         "measured": {
           "height": 260,
           "width": 320
         },
         "position": {
-          "x": 2403.3031998597485,
-          "y": 1283.0725170451763
+          "x": 2647.8305106628454,
+          "y": 1002.877385979855
         },
         "positionAbsolute": {
           "x": 2647.8305106628454,
@@ -918,7 +1031,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-RcCgD",
+          "id": "Prompt-N9kah",
           "node": {
             "base_classes": [
               "Message"
@@ -936,21 +1049,18 @@
               "template"
             ],
             "frozen": false,
-            "icon": "braces",
+            "icon": "Autonomize",
             "legacy": false,
-            "lf_version": "1.5.0",
+            "lf_version": "1.0.19.post2",
             "metadata": {},
             "output_types": [],
             "outputs": [
               {
-                "allows_loop": false,
                 "cache": true,
-                "display_name": "Prompt",
-                "group_outputs": false,
+                "display_name": "Prompt Message",
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
-                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -976,7 +1086,79 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"braces\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"Autonomize\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(\n        self, new_frontend_node: dict, current_frontend_node: dict\n    ):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(\n            new_frontend_node, current_frontend_node\n        )\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(\n            new_template=frontend_node,\n            previous_template=current_frontend_node[\"template\"],\n        )\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "description": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "Description",
+                "dynamic": false,
+                "info": "Description of the prompt",
+                "list": false,
+                "load_from_db": false,
+                "name": "description",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "prompt_name": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "New Prompt Name",
+                "dynamic": false,
+                "info": "Name for saving the new prompt",
+                "list": false,
+                "load_from_db": false,
+                "name": "prompt_name",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "save_prompt": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Save Prompt",
+                "dynamic": false,
+                "info": "Save this prompt to the library",
+                "list": false,
+                "name": "save_prompt",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "saved_prompt": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "display_name": "Choose your Template",
+                "dynamic": false,
+                "info": "Choose your Template",
+                "name": "saved_prompt",
+                "options": [],
+                "placeholder": "",
+                "refresh_button": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
               },
               "template": {
                 "_input_type": "PromptInput",
@@ -1021,19 +1203,18 @@
             },
             "tool_mode": false
           },
-          "selected_output": "prompt",
           "type": "Prompt"
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-RcCgD",
+        "id": "Prompt-N9kah",
         "measured": {
           "height": 260,
           "width": 320
         },
         "position": {
-          "x": 1518.9507061981496,
-          "y": 719.6649516157374
+          "x": 1178.7099500302636,
+          "y": 1167.8586867404465
         },
         "positionAbsolute": {
           "x": 1178.7099500302636,
@@ -1045,7 +1226,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-kPnuV",
+          "id": "AzureOpenAIModel-NuTGy",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1054,613 +1235,24 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Runs a language model given a specified provider. ",
-            "display_name": "Language Model",
-            "documentation": "",
+            "description": "Generate text using Azure OpenAI LLMs.",
+            "display_name": "Azure OpenAI",
+            "documentation": "https://python.langchain.com/docs/integrations/llms/azure_openai",
             "edited": false,
             "field_order": [
-              "provider",
-              "model_name",
-              "api_key",
               "input_value",
+              "system_prompt_template",
               "system_message",
               "stream",
-              "temperature"
-            ],
-            "frozen": false,
-            "icon": "brain-circuit",
-            "legacy": false,
-            "lf_version": "1.5.0",
-            "metadata": {
-              "keywords": [
-                "model",
-                "llm",
-                "language model",
-                "large language model"
-              ]
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Model Response",
-                "group_outputs": false,
-                "hidden": null,
-                "method": "text_response",
-                "name": "text_output",
-                "options": null,
-                "required_inputs": null,
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Language Model",
-                "group_outputs": false,
-                "hidden": null,
-                "method": "build_model",
-                "name": "model_output",
-                "options": null,
-                "required_inputs": null,
-                "selected": "LanguageModel",
-                "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "priority": 0,
-            "template": {
-              "_type": "Component",
-              "api_key": {
-                "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "OpenAI API Key",
-                "dynamic": false,
-                "info": "Model Provider API key",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "OPENAI_API_KEY"
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from typing import Any\n\nfrom langchain_anthropic import ChatAnthropic\nfrom langchain_google_genai import ChatGoogleGenerativeAI\nfrom langchain_openai import ChatOpenAI\n\nfrom langflow.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageInput, MultilineInput, SecretStrInput, SliderInput\nfrom langflow.schema.dotdict import dotdict\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-models\"\n    icon = \"brain-circuit\"\n    category = \"models\"\n    priority = 0  # Set priority to 0 to make it appear first\n\n    inputs = [\n        DropdownInput(\n            name=\"provider\",\n            display_name=\"Model Provider\",\n            options=[\"OpenAI\", \"Anthropic\", \"Google\"],\n            value=\"OpenAI\",\n            info=\"Select the model provider\",\n            real_time_refresh=True,\n            options_metadata=[{\"icon\": \"OpenAI\"}, {\"icon\": \"Anthropic\"}, {\"icon\": \"GoogleGenerativeAI\"}],\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES,\n            value=OPENAI_CHAT_MODEL_NAMES[0],\n            info=\"Select the model to use\",\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"Model Provider API key\",\n            required=False,\n            show=True,\n            real_time_refresh=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=False,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        provider = self.provider\n        model_name = self.model_name\n        temperature = self.temperature\n        stream = self.stream\n\n        if provider == \"OpenAI\":\n            if not self.api_key:\n                msg = \"OpenAI API key is required when using OpenAI provider\"\n                raise ValueError(msg)\n\n            if model_name in OPENAI_REASONING_MODEL_NAMES:\n                # reasoning models do not support temperature (yet)\n                temperature = None\n\n            return ChatOpenAI(\n                model_name=model_name,\n                temperature=temperature,\n                streaming=stream,\n                openai_api_key=self.api_key,\n            )\n        if provider == \"Anthropic\":\n            if not self.api_key:\n                msg = \"Anthropic API key is required when using Anthropic provider\"\n                raise ValueError(msg)\n            return ChatAnthropic(\n                model=model_name,\n                temperature=temperature,\n                streaming=stream,\n                anthropic_api_key=self.api_key,\n            )\n        if provider == \"Google\":\n            if not self.api_key:\n                msg = \"Google API key is required when using Google provider\"\n                raise ValueError(msg)\n            return ChatGoogleGenerativeAI(\n                model=model_name,\n                temperature=temperature,\n                streaming=stream,\n                google_api_key=self.api_key,\n            )\n        msg = f\"Unknown provider: {provider}\"\n        raise ValueError(msg)\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        if field_name == \"provider\":\n            if field_value == \"OpenAI\":\n                build_config[\"model_name\"][\"options\"] = OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES\n                build_config[\"model_name\"][\"value\"] = OPENAI_CHAT_MODEL_NAMES[0]\n                build_config[\"api_key\"][\"display_name\"] = \"OpenAI API Key\"\n            elif field_value == \"Anthropic\":\n                build_config[\"model_name\"][\"options\"] = ANTHROPIC_MODELS\n                build_config[\"model_name\"][\"value\"] = ANTHROPIC_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"Anthropic API Key\"\n            elif field_value == \"Google\":\n                build_config[\"model_name\"][\"options\"] = GOOGLE_GENERATIVE_AI_MODELS\n                build_config[\"model_name\"][\"value\"] = GOOGLE_GENERATIVE_AI_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"Google API Key\"\n        elif field_name == \"model_name\" and field_value.startswith(\"o1\") and self.provider == \"OpenAI\":\n            # Hide system_message for o1 models - currently unsupported\n            if \"system_message\" in build_config:\n                build_config[\"system_message\"][\"show\"] = False\n        elif field_name == \"model_name\" and not field_value.startswith(\"o1\") and \"system_message\" in build_config:\n            build_config[\"system_message\"][\"show\"] = True\n        return build_config\n"
-              },
-              "input_value": {
-                "_input_type": "MessageInput",
-                "advanced": false,
-                "display_name": "Input",
-                "dynamic": false,
-                "info": "The input text to send to the model",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "input_value",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "model_name": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Name",
-                "dynamic": false,
-                "info": "Select the model to use",
-                "name": "model_name",
-                "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4.1",
-                  "gpt-4.1-mini",
-                  "gpt-4.1-nano",
-                  "gpt-4.5-preview",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "gpt-4.1"
-              },
-              "provider": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Provider",
-                "dynamic": false,
-                "info": "Select the model provider",
-                "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
-                ],
-                "options_metadata": [
-                  {
-                    "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "Anthropic"
-                  },
-                  {
-                    "icon": "GoogleGenerativeAI"
-                  }
-                ],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "OpenAI"
-              },
-              "stream": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Stream",
-                "dynamic": false,
-                "info": "Whether to stream the response",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "stream",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "system_message": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "copy_field": false,
-                "display_name": "System Message",
-                "dynamic": false,
-                "info": "A system message that helps set the behavior of the assistant",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "system_message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "temperature": {
-                "_input_type": "SliderInput",
-                "advanced": true,
-                "display_name": "Temperature",
-                "dynamic": false,
-                "info": "Controls randomness in responses",
-                "max_label": "",
-                "max_label_icon": "",
-                "min_label": "",
-                "min_label_icon": "",
-                "name": "temperature",
-                "placeholder": "",
-                "range_spec": {
-                  "max": 1,
-                  "min": 0,
-                  "step": 0.01,
-                  "step_type": "float"
-                },
-                "required": false,
-                "show": true,
-                "slider_buttons": false,
-                "slider_buttons_options": [],
-                "slider_input": false,
-                "title_case": false,
-                "tool_mode": false,
-                "type": "slider",
-                "value": 0.1
-              }
-            },
-            "tool_mode": false
-          },
-          "selected_output": "text_output",
-          "showNode": true,
-          "type": "LanguageModelComponent"
-        },
-        "dragging": false,
-        "id": "LanguageModelComponent-kPnuV",
-        "measured": {
-          "height": 534,
-          "width": 320
-        },
-        "position": {
-          "x": 2401.6016531029886,
-          "y": 690.864550385179
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "LanguageModelComponent-k0SIV",
-          "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Runs a language model given a specified provider. ",
-            "display_name": "Language Model",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "provider",
-              "model_name",
+              "azure_endpoint",
+              "azure_deployment",
               "api_key",
-              "input_value",
-              "system_message",
-              "stream",
-              "temperature"
+              "api_version",
+              "temperature",
+              "max_tokens"
             ],
             "frozen": false,
-            "icon": "brain-circuit",
-            "legacy": false,
-            "lf_version": "1.5.0",
-            "metadata": {
-              "keywords": [
-                "model",
-                "llm",
-                "language model",
-                "large language model"
-              ]
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Model Response",
-                "group_outputs": false,
-                "hidden": null,
-                "method": "text_response",
-                "name": "text_output",
-                "options": null,
-                "required_inputs": null,
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Language Model",
-                "group_outputs": false,
-                "hidden": null,
-                "method": "build_model",
-                "name": "model_output",
-                "options": null,
-                "required_inputs": null,
-                "selected": "LanguageModel",
-                "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "priority": 0,
-            "template": {
-              "_type": "Component",
-              "api_key": {
-                "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "OpenAI API Key",
-                "dynamic": false,
-                "info": "Model Provider API key",
-                "input_types": [],
-                "load_from_db": true,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "OPENAI_API_KEY"
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from typing import Any\n\nfrom langchain_anthropic import ChatAnthropic\nfrom langchain_google_genai import ChatGoogleGenerativeAI\nfrom langchain_openai import ChatOpenAI\n\nfrom langflow.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageInput, MultilineInput, SecretStrInput, SliderInput\nfrom langflow.schema.dotdict import dotdict\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-models\"\n    icon = \"brain-circuit\"\n    category = \"models\"\n    priority = 0  # Set priority to 0 to make it appear first\n\n    inputs = [\n        DropdownInput(\n            name=\"provider\",\n            display_name=\"Model Provider\",\n            options=[\"OpenAI\", \"Anthropic\", \"Google\"],\n            value=\"OpenAI\",\n            info=\"Select the model provider\",\n            real_time_refresh=True,\n            options_metadata=[{\"icon\": \"OpenAI\"}, {\"icon\": \"Anthropic\"}, {\"icon\": \"GoogleGenerativeAI\"}],\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES,\n            value=OPENAI_CHAT_MODEL_NAMES[0],\n            info=\"Select the model to use\",\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"Model Provider API key\",\n            required=False,\n            show=True,\n            real_time_refresh=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=False,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        provider = self.provider\n        model_name = self.model_name\n        temperature = self.temperature\n        stream = self.stream\n\n        if provider == \"OpenAI\":\n            if not self.api_key:\n                msg = \"OpenAI API key is required when using OpenAI provider\"\n                raise ValueError(msg)\n\n            if model_name in OPENAI_REASONING_MODEL_NAMES:\n                # reasoning models do not support temperature (yet)\n                temperature = None\n\n            return ChatOpenAI(\n                model_name=model_name,\n                temperature=temperature,\n                streaming=stream,\n                openai_api_key=self.api_key,\n            )\n        if provider == \"Anthropic\":\n            if not self.api_key:\n                msg = \"Anthropic API key is required when using Anthropic provider\"\n                raise ValueError(msg)\n            return ChatAnthropic(\n                model=model_name,\n                temperature=temperature,\n                streaming=stream,\n                anthropic_api_key=self.api_key,\n            )\n        if provider == \"Google\":\n            if not self.api_key:\n                msg = \"Google API key is required when using Google provider\"\n                raise ValueError(msg)\n            return ChatGoogleGenerativeAI(\n                model=model_name,\n                temperature=temperature,\n                streaming=stream,\n                google_api_key=self.api_key,\n            )\n        msg = f\"Unknown provider: {provider}\"\n        raise ValueError(msg)\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        if field_name == \"provider\":\n            if field_value == \"OpenAI\":\n                build_config[\"model_name\"][\"options\"] = OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES\n                build_config[\"model_name\"][\"value\"] = OPENAI_CHAT_MODEL_NAMES[0]\n                build_config[\"api_key\"][\"display_name\"] = \"OpenAI API Key\"\n            elif field_value == \"Anthropic\":\n                build_config[\"model_name\"][\"options\"] = ANTHROPIC_MODELS\n                build_config[\"model_name\"][\"value\"] = ANTHROPIC_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"Anthropic API Key\"\n            elif field_value == \"Google\":\n                build_config[\"model_name\"][\"options\"] = GOOGLE_GENERATIVE_AI_MODELS\n                build_config[\"model_name\"][\"value\"] = GOOGLE_GENERATIVE_AI_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"Google API Key\"\n        elif field_name == \"model_name\" and field_value.startswith(\"o1\") and self.provider == \"OpenAI\":\n            # Hide system_message for o1 models - currently unsupported\n            if \"system_message\" in build_config:\n                build_config[\"system_message\"][\"show\"] = False\n        elif field_name == \"model_name\" and not field_value.startswith(\"o1\") and \"system_message\" in build_config:\n            build_config[\"system_message\"][\"show\"] = True\n        return build_config\n"
-              },
-              "input_value": {
-                "_input_type": "MessageInput",
-                "advanced": false,
-                "display_name": "Input",
-                "dynamic": false,
-                "info": "The input text to send to the model",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "input_value",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "model_name": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Name",
-                "dynamic": false,
-                "info": "Select the model to use",
-                "name": "model_name",
-                "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4.1",
-                  "gpt-4.1-mini",
-                  "gpt-4.1-nano",
-                  "gpt-4.5-preview",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "gpt-4.1"
-              },
-              "provider": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Provider",
-                "dynamic": false,
-                "info": "Select the model provider",
-                "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
-                ],
-                "options_metadata": [
-                  {
-                    "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "Anthropic"
-                  },
-                  {
-                    "icon": "GoogleGenerativeAI"
-                  }
-                ],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "OpenAI"
-              },
-              "stream": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Stream",
-                "dynamic": false,
-                "info": "Whether to stream the response",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "stream",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "system_message": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "copy_field": false,
-                "display_name": "System Message",
-                "dynamic": false,
-                "info": "A system message that helps set the behavior of the assistant",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "system_message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "temperature": {
-                "_input_type": "SliderInput",
-                "advanced": true,
-                "display_name": "Temperature",
-                "dynamic": false,
-                "info": "Controls randomness in responses",
-                "max_label": "",
-                "max_label_icon": "",
-                "min_label": "",
-                "min_label_icon": "",
-                "name": "temperature",
-                "placeholder": "",
-                "range_spec": {
-                  "max": 1,
-                  "min": 0,
-                  "step": 0.01,
-                  "step_type": "float"
-                },
-                "required": false,
-                "show": true,
-                "slider_buttons": false,
-                "slider_buttons_options": [],
-                "slider_input": false,
-                "title_case": false,
-                "tool_mode": false,
-                "type": "slider",
-                "value": 0.1
-              }
-            },
-            "tool_mode": false
-          },
-          "selected_output": "text_output",
-          "showNode": true,
-          "type": "LanguageModelComponent"
-        },
-        "dragging": false,
-        "id": "LanguageModelComponent-k0SIV",
-        "measured": {
-          "height": 534,
-          "width": 320
-        },
-        "position": {
-          "x": 2836.5657382114464,
-          "y": 950.0578222812694
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "LanguageModelComponent-sPFGT",
-          "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Runs a language model given a specified provider. ",
-            "display_name": "Language Model",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "provider",
-              "model_name",
-              "api_key",
-              "input_value",
-              "system_message",
-              "stream",
-              "temperature"
-            ],
-            "frozen": false,
-            "icon": "brain-circuit",
+            "icon": "Azure",
             "legacy": false,
             "metadata": {
               "keywords": [
@@ -1678,11 +1270,8 @@
                 "cache": true,
                 "display_name": "Model Response",
                 "group_outputs": false,
-                "hidden": null,
                 "method": "text_response",
                 "name": "text_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1695,11 +1284,8 @@
                 "cache": true,
                 "display_name": "Language Model",
                 "group_outputs": false,
-                "hidden": null,
                 "method": "build_model",
                 "name": "model_output",
-                "options": null,
-                "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1709,26 +1295,99 @@
               }
             ],
             "pinned": false,
-            "priority": 0,
             "template": {
               "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "OpenAI API Key",
+                "advanced": true,
+                "display_name": "Azure Chat OpenAI API Key",
                 "dynamic": false,
-                "info": "Model Provider API key",
+                "info": "",
                 "input_types": [],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
+              },
+              "api_version": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "display_name": "API Version",
+                "dynamic": false,
+                "info": "",
+                "name": "api_version",
+                "options": [
+                  "2025-02-01-preview",
+                  "2025-01-01-preview",
+                  "2024-12-01-preview",
+                  "2024-10-01-preview",
+                  "2024-09-01-preview",
+                  "2024-08-01-preview",
+                  "2024-07-01-preview",
+                  "2024-06-01",
+                  "2024-03-01-preview",
+                  "2024-02-15-preview",
+                  "2023-12-01-preview",
+                  "2023-05-15"
+                ],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "2024-06-01"
+              },
+              "azure_deployment": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Deployment Name",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "azure_deployment",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "azure_endpoint": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Azure Endpoint",
+                "dynamic": false,
+                "info": "Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "azure_endpoint",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1746,19 +1405,18 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Any\n\nfrom langchain_anthropic import ChatAnthropic\nfrom langchain_google_genai import ChatGoogleGenerativeAI\nfrom langchain_openai import ChatOpenAI\n\nfrom langflow.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageInput, MultilineInput, SecretStrInput, SliderInput\nfrom langflow.schema.dotdict import dotdict\n\n\nclass LanguageModelComponent(LCModelComponent):\n    display_name = \"Language Model\"\n    description = \"Runs a language model given a specified provider.\"\n    documentation: str = \"https://docs.langflow.org/components-models\"\n    icon = \"brain-circuit\"\n    category = \"models\"\n    priority = 0  # Set priority to 0 to make it appear first\n\n    inputs = [\n        DropdownInput(\n            name=\"provider\",\n            display_name=\"Model Provider\",\n            options=[\"OpenAI\", \"Anthropic\", \"Google\"],\n            value=\"OpenAI\",\n            info=\"Select the model provider\",\n            real_time_refresh=True,\n            options_metadata=[{\"icon\": \"OpenAI\"}, {\"icon\": \"Anthropic\"}, {\"icon\": \"GoogleGenerativeAI\"}],\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES,\n            value=OPENAI_CHAT_MODEL_NAMES[0],\n            info=\"Select the model to use\",\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"Model Provider API key\",\n            required=False,\n            show=True,\n            real_time_refresh=True,\n        ),\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input text to send to the model\",\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"A system message that helps set the behavior of the assistant\",\n            advanced=False,\n        ),\n        BoolInput(\n            name=\"stream\",\n            display_name=\"Stream\",\n            info=\"Whether to stream the response\",\n            value=False,\n            advanced=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Controls randomness in responses\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:\n        provider = self.provider\n        model_name = self.model_name\n        temperature = self.temperature\n        stream = self.stream\n\n        if provider == \"OpenAI\":\n            if not self.api_key:\n                msg = \"OpenAI API key is required when using OpenAI provider\"\n                raise ValueError(msg)\n\n            if model_name in OPENAI_REASONING_MODEL_NAMES:\n                # reasoning models do not support temperature (yet)\n                temperature = None\n\n            return ChatOpenAI(\n                model_name=model_name,\n                temperature=temperature,\n                streaming=stream,\n                openai_api_key=self.api_key,\n            )\n        if provider == \"Anthropic\":\n            if not self.api_key:\n                msg = \"Anthropic API key is required when using Anthropic provider\"\n                raise ValueError(msg)\n            return ChatAnthropic(\n                model=model_name,\n                temperature=temperature,\n                streaming=stream,\n                anthropic_api_key=self.api_key,\n            )\n        if provider == \"Google\":\n            if not self.api_key:\n                msg = \"Google API key is required when using Google provider\"\n                raise ValueError(msg)\n            return ChatGoogleGenerativeAI(\n                model=model_name,\n                temperature=temperature,\n                streaming=stream,\n                google_api_key=self.api_key,\n            )\n        msg = f\"Unknown provider: {provider}\"\n        raise ValueError(msg)\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        if field_name == \"provider\":\n            if field_value == \"OpenAI\":\n                build_config[\"model_name\"][\"options\"] = OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES\n                build_config[\"model_name\"][\"value\"] = OPENAI_CHAT_MODEL_NAMES[0]\n                build_config[\"api_key\"][\"display_name\"] = \"OpenAI API Key\"\n            elif field_value == \"Anthropic\":\n                build_config[\"model_name\"][\"options\"] = ANTHROPIC_MODELS\n                build_config[\"model_name\"][\"value\"] = ANTHROPIC_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"Anthropic API Key\"\n            elif field_value == \"Google\":\n                build_config[\"model_name\"][\"options\"] = GOOGLE_GENERATIVE_AI_MODELS\n                build_config[\"model_name\"][\"value\"] = GOOGLE_GENERATIVE_AI_MODELS[0]\n                build_config[\"api_key\"][\"display_name\"] = \"Google API Key\"\n        elif field_name == \"model_name\" and field_value.startswith(\"o1\") and self.provider == \"OpenAI\":\n            # Hide system_message for o1 models - currently unsupported\n            if \"system_message\" in build_config:\n                build_config[\"system_message\"][\"show\"] = False\n        elif field_name == \"model_name\" and not field_value.startswith(\"o1\") and \"system_message\" in build_config:\n            build_config[\"system_message\"][\"show\"] = True\n        return build_config\n"
+                "value": "from langchain_openai import AzureChatOpenAI\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs.inputs import MessageTextInput\nfrom langflow.io import DropdownInput, IntInput, SecretStrInput, SliderInput\n\n\nclass AzureChatOpenAIComponent(LCModelComponent):\n    display_name: str = \"Azure OpenAI\"\n    description: str = \"Generate text using Azure OpenAI LLMs.\"\n    documentation: str = \"https://python.langchain.com/docs/integrations/llms/azure_openai\"\n    beta = False\n    icon = \"Azure\"\n    name = \"AzureOpenAIModel\"\n\n    AZURE_OPENAI_API_VERSIONS = [\n        \"2024-06-01\",\n        \"2024-07-01-preview\",\n        \"2024-08-01-preview\",\n        \"2024-09-01-preview\",\n        \"2024-10-01-preview\",\n        \"2023-05-15\",\n        \"2023-12-01-preview\",\n        \"2024-02-15-preview\",\n        \"2024-03-01-preview\",\n        \"2024-12-01-preview\",\n        \"2025-01-01-preview\",\n        \"2025-02-01-preview\",\n    ]\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        MessageTextInput(\n            name=\"azure_endpoint\",\n            display_name=\"Azure Endpoint\",\n            info=\"Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`\",\n            required=True,\n        ),\n        MessageTextInput(name=\"azure_deployment\", display_name=\"Deployment Name\", required=True),\n        SecretStrInput(name=\"api_key\", display_name=\"Azure Chat OpenAI API Key\", required=True),\n        DropdownInput(\n            name=\"api_version\",\n            display_name=\"API Version\",\n            options=sorted(AZURE_OPENAI_API_VERSIONS, reverse=True),\n            value=next(\n                (\n                    version\n                    for version in sorted(AZURE_OPENAI_API_VERSIONS, reverse=True)\n                    if not version.endswith(\"-preview\")\n                ),\n                AZURE_OPENAI_API_VERSIONS[0],\n            ),\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.7,\n            range_spec=RangeSpec(min=0, max=2, step=0.01),\n            info=\"Controls randomness. Lower values are more deterministic, higher values are more creative.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        azure_endpoint = self.azure_endpoint\n        azure_deployment = self.azure_deployment\n        api_version = self.api_version\n        api_key = self.api_key\n        temperature = self.temperature\n        max_tokens = self.max_tokens\n        stream = self.stream\n\n        try:\n            output = AzureChatOpenAI(\n                azure_endpoint=azure_endpoint,\n                azure_deployment=azure_deployment,\n                api_version=api_version,\n                api_key=api_key,\n                temperature=temperature,\n                max_tokens=max_tokens or None,\n                streaming=stream,\n            )\n        except Exception as e:\n            msg = f\"Could not connect to AzureOpenAI API: {e}\"\n            raise ValueError(msg) from e\n\n        return output\n"
               },
               "input_value": {
                 "_input_type": "MessageInput",
                 "advanced": false,
                 "display_name": "Input",
                 "dynamic": false,
-                "info": "The input text to send to the model",
+                "info": "",
                 "input_types": [
                   "Message"
                 ],
                 "list": false,
-                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
@@ -1771,82 +1429,30 @@
                 "type": "str",
                 "value": ""
               },
-              "model_name": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Name",
+              "max_tokens": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Tokens",
                 "dynamic": false,
-                "info": "Select the model to use",
-                "name": "model_name",
-                "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4.1",
-                  "gpt-4.1-mini",
-                  "gpt-4.1-nano",
-                  "gpt-4.5-preview",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo"
-                ],
-                "options_metadata": [],
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "list": false,
+                "name": "max_tokens",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "toggle": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
-                "type": "str",
-                "value": "gpt-4.1"
-              },
-              "provider": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Provider",
-                "dynamic": false,
-                "info": "Select the model provider",
-                "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
-                ],
-                "options_metadata": [
-                  {
-                    "icon": "OpenAI"
-                  },
-                  {
-                    "icon": "Anthropic"
-                  },
-                  {
-                    "icon": "GoogleGenerativeAI"
-                  }
-                ],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "OpenAI"
+                "type": "int",
+                "value": ""
               },
               "stream": {
                 "_input_type": "BoolInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Stream",
                 "dynamic": false,
-                "info": "Whether to stream the response",
+                "info": "Stream the response from the model. Streaming works only in Chat.",
                 "list": false,
-                "list_add_label": "Add More",
                 "name": "stream",
                 "placeholder": "",
                 "required": false,
@@ -1860,15 +1466,13 @@
               "system_message": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
-                "copy_field": false,
                 "display_name": "System Message",
                 "dynamic": false,
-                "info": "A system message that helps set the behavior of the assistant",
+                "info": "System message to pass to the model.",
                 "input_types": [
                   "Message"
                 ],
                 "list": false,
-                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "system_message",
@@ -1883,94 +1487,648 @@
                 "value": ""
               },
               "temperature": {
-                "_input_type": "SliderInput",
-                "advanced": true,
+                "_input_type": "FloatInput",
+                "advanced": false,
                 "display_name": "Temperature",
                 "dynamic": false,
-                "info": "Controls randomness in responses",
-                "max_label": "",
-                "max_label_icon": "",
-                "min_label": "",
-                "min_label_icon": "",
+                "info": "Controls randomness. Lower values are more deterministic, higher values are more creative.",
+                "list": false,
                 "name": "temperature",
                 "placeholder": "",
-                "range_spec": {
-                  "max": 1,
-                  "min": 0,
-                  "step": 0.01,
-                  "step_type": "float"
-                },
                 "required": false,
                 "show": true,
-                "slider_buttons": false,
-                "slider_buttons_options": [],
-                "slider_input": false,
                 "title_case": false,
                 "tool_mode": false,
-                "type": "slider",
-                "value": 0.1
+                "trace_as_metadata": true,
+                "type": "float",
+                "value": 0.7
               }
             },
             "tool_mode": false
           },
-          "selected_output": "text_output",
           "showNode": true,
-          "type": "LanguageModelComponent"
+          "type": "AzureOpenAIModel"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-sPFGT",
+        "id": "AzureOpenAIModel-NuTGy",
         "measured": {
-          "height": 534,
+          "height": 934,
           "width": 320
         },
         "position": {
-          "x": 1957.3510719326769,
-          "y": 406.3911300579277
+          "x": 1555.5892898582445,
+          "y": 788.9721376804907
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "note-7A8gW",
+          "id": "AzureOpenAIModel-CbB7s",
           "node": {
-            "description": "# Prompt chaining\n\nThis flow demonstrates chaining three prompts and three language models.\nEach prompt is specifically designed to process previous output, with each LLM call building upon previous results\n\n\n## Prerequisites\n\n* [OpenAI API Key](https://platform.openai.com/)\n\n## Quickstart\n\n1. In all **Language Model** components, add your OpenAI API key.\n2. To run the flow, open the **Playground*. An example input is provided, with other suggestions listed below.\n\n    \"The increasing need for secure and user-friendly decentralized finance (DeFi) platforms that make cryptocurrency investments accessible to non-tech-savvy users.\"\n\n    \"The rising popularity of immersive, augmented reality (AR) experiences for remote collaboration and virtual team-building in distributed workforces.\"\n\n    \"The expanding market for smart, IoT-enabled urban farming solutions that allow city dwellers to grow their own food efficiently in small spaces.\"\n\n    \"The emerging demand for AI-powered personal styling and shopping assistants that consider sustainability, body positivity, and individual style preferences.\"\n\n",
-            "display_name": "",
-            "documentation": "",
-            "template": {}
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Generate text using Azure OpenAI LLMs.",
+            "display_name": "Azure OpenAI",
+            "documentation": "https://python.langchain.com/docs/integrations/llms/azure_openai",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "system_prompt_template",
+              "system_message",
+              "stream",
+              "azure_endpoint",
+              "azure_deployment",
+              "api_key",
+              "api_version",
+              "temperature",
+              "max_tokens"
+            ],
+            "frozen": false,
+            "icon": "Azure",
+            "legacy": false,
+            "metadata": {
+              "keywords": [
+                "model",
+                "llm",
+                "language model",
+                "large language model"
+              ]
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Model Response",
+                "group_outputs": false,
+                "method": "text_response",
+                "name": "text_output",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Language Model",
+                "group_outputs": false,
+                "method": "build_model",
+                "name": "model_output",
+                "selected": "LanguageModel",
+                "tool_mode": true,
+                "types": [
+                  "LanguageModel"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": true,
+                "display_name": "Azure Chat OpenAI API Key",
+                "dynamic": false,
+                "info": "",
+                "input_types": [],
+                "load_from_db": true,
+                "name": "api_key",
+                "password": true,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "api_version": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "display_name": "API Version",
+                "dynamic": false,
+                "info": "",
+                "name": "api_version",
+                "options": [
+                  "2025-02-01-preview",
+                  "2025-01-01-preview",
+                  "2024-12-01-preview",
+                  "2024-10-01-preview",
+                  "2024-09-01-preview",
+                  "2024-08-01-preview",
+                  "2024-07-01-preview",
+                  "2024-06-01",
+                  "2024-03-01-preview",
+                  "2024-02-15-preview",
+                  "2023-12-01-preview",
+                  "2023-05-15"
+                ],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "2024-06-01"
+              },
+              "azure_deployment": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Deployment Name",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "azure_deployment",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "azure_endpoint": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Azure Endpoint",
+                "dynamic": false,
+                "info": "Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "azure_endpoint",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langchain_openai import AzureChatOpenAI\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs.inputs import MessageTextInput\nfrom langflow.io import DropdownInput, IntInput, SecretStrInput, SliderInput\n\n\nclass AzureChatOpenAIComponent(LCModelComponent):\n    display_name: str = \"Azure OpenAI\"\n    description: str = \"Generate text using Azure OpenAI LLMs.\"\n    documentation: str = \"https://python.langchain.com/docs/integrations/llms/azure_openai\"\n    beta = False\n    icon = \"Azure\"\n    name = \"AzureOpenAIModel\"\n\n    AZURE_OPENAI_API_VERSIONS = [\n        \"2024-06-01\",\n        \"2024-07-01-preview\",\n        \"2024-08-01-preview\",\n        \"2024-09-01-preview\",\n        \"2024-10-01-preview\",\n        \"2023-05-15\",\n        \"2023-12-01-preview\",\n        \"2024-02-15-preview\",\n        \"2024-03-01-preview\",\n        \"2024-12-01-preview\",\n        \"2025-01-01-preview\",\n        \"2025-02-01-preview\",\n    ]\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        MessageTextInput(\n            name=\"azure_endpoint\",\n            display_name=\"Azure Endpoint\",\n            info=\"Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`\",\n            required=True,\n        ),\n        MessageTextInput(name=\"azure_deployment\", display_name=\"Deployment Name\", required=True),\n        SecretStrInput(name=\"api_key\", display_name=\"Azure Chat OpenAI API Key\", required=True),\n        DropdownInput(\n            name=\"api_version\",\n            display_name=\"API Version\",\n            options=sorted(AZURE_OPENAI_API_VERSIONS, reverse=True),\n            value=next(\n                (\n                    version\n                    for version in sorted(AZURE_OPENAI_API_VERSIONS, reverse=True)\n                    if not version.endswith(\"-preview\")\n                ),\n                AZURE_OPENAI_API_VERSIONS[0],\n            ),\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.7,\n            range_spec=RangeSpec(min=0, max=2, step=0.01),\n            info=\"Controls randomness. Lower values are more deterministic, higher values are more creative.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        azure_endpoint = self.azure_endpoint\n        azure_deployment = self.azure_deployment\n        api_version = self.api_version\n        api_key = self.api_key\n        temperature = self.temperature\n        max_tokens = self.max_tokens\n        stream = self.stream\n\n        try:\n            output = AzureChatOpenAI(\n                azure_endpoint=azure_endpoint,\n                azure_deployment=azure_deployment,\n                api_version=api_version,\n                api_key=api_key,\n                temperature=temperature,\n                max_tokens=max_tokens or None,\n                streaming=stream,\n            )\n        except Exception as e:\n            msg = f\"Could not connect to AzureOpenAI API: {e}\"\n            raise ValueError(msg) from e\n\n        return output\n"
+              },
+              "input_value": {
+                "_input_type": "MessageInput",
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "input_value",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "max_tokens": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Tokens",
+                "dynamic": false,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "list": false,
+                "name": "max_tokens",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": ""
+              },
+              "stream": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Stream",
+                "dynamic": false,
+                "info": "Stream the response from the model. Streaming works only in Chat.",
+                "list": false,
+                "name": "stream",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "system_message": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "System Message",
+                "dynamic": false,
+                "info": "System message to pass to the model.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "system_message",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "temperature": {
+                "_input_type": "FloatInput",
+                "advanced": false,
+                "display_name": "Temperature",
+                "dynamic": false,
+                "info": "Controls randomness. Lower values are more deterministic, higher values are more creative.",
+                "list": false,
+                "name": "temperature",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "float",
+                "value": 0.7
+              }
+            },
+            "tool_mode": false
           },
-          "type": "note"
+          "showNode": true,
+          "type": "AzureOpenAIModel"
         },
-        "dragging": false,
-        "height": 920,
-        "id": "note-7A8gW",
+        "dragging": true,
+        "id": "AzureOpenAIModel-CbB7s",
         "measured": {
-          "height": 920,
-          "width": 521
+          "height": 934,
+          "width": 320
         },
         "position": {
-          "x": 845.3254638400961,
-          "y": 367.1115872280161
+          "x": 2307.0443188395857,
+          "y": 773.7277318836947
         },
-        "resizing": false,
+        "selected": true,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "AzureOpenAIModel-4dghO",
+          "node": {
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Generate text using Azure OpenAI LLMs.",
+            "display_name": "Azure OpenAI",
+            "documentation": "https://python.langchain.com/docs/integrations/llms/azure_openai",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "system_prompt_template",
+              "system_message",
+              "stream",
+              "azure_endpoint",
+              "azure_deployment",
+              "api_key",
+              "api_version",
+              "temperature",
+              "max_tokens"
+            ],
+            "frozen": false,
+            "icon": "Azure",
+            "legacy": false,
+            "metadata": {
+              "keywords": [
+                "model",
+                "llm",
+                "language model",
+                "large language model"
+              ]
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Model Response",
+                "group_outputs": false,
+                "method": "text_response",
+                "name": "text_output",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Language Model",
+                "group_outputs": false,
+                "method": "build_model",
+                "name": "model_output",
+                "selected": "LanguageModel",
+                "tool_mode": true,
+                "types": [
+                  "LanguageModel"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": true,
+                "display_name": "Azure Chat OpenAI API Key",
+                "dynamic": false,
+                "info": "",
+                "input_types": [],
+                "load_from_db": true,
+                "name": "api_key",
+                "password": true,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "api_version": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "display_name": "API Version",
+                "dynamic": false,
+                "info": "",
+                "name": "api_version",
+                "options": [
+                  "2025-02-01-preview",
+                  "2025-01-01-preview",
+                  "2024-12-01-preview",
+                  "2024-10-01-preview",
+                  "2024-09-01-preview",
+                  "2024-08-01-preview",
+                  "2024-07-01-preview",
+                  "2024-06-01",
+                  "2024-03-01-preview",
+                  "2024-02-15-preview",
+                  "2023-12-01-preview",
+                  "2023-05-15"
+                ],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "2024-06-01"
+              },
+              "azure_deployment": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Deployment Name",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "azure_deployment",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "azure_endpoint": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Azure Endpoint",
+                "dynamic": false,
+                "info": "Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "azure_endpoint",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langchain_openai import AzureChatOpenAI\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs.inputs import MessageTextInput\nfrom langflow.io import DropdownInput, IntInput, SecretStrInput, SliderInput\n\n\nclass AzureChatOpenAIComponent(LCModelComponent):\n    display_name: str = \"Azure OpenAI\"\n    description: str = \"Generate text using Azure OpenAI LLMs.\"\n    documentation: str = \"https://python.langchain.com/docs/integrations/llms/azure_openai\"\n    beta = False\n    icon = \"Azure\"\n    name = \"AzureOpenAIModel\"\n\n    AZURE_OPENAI_API_VERSIONS = [\n        \"2024-06-01\",\n        \"2024-07-01-preview\",\n        \"2024-08-01-preview\",\n        \"2024-09-01-preview\",\n        \"2024-10-01-preview\",\n        \"2023-05-15\",\n        \"2023-12-01-preview\",\n        \"2024-02-15-preview\",\n        \"2024-03-01-preview\",\n        \"2024-12-01-preview\",\n        \"2025-01-01-preview\",\n        \"2025-02-01-preview\",\n    ]\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        MessageTextInput(\n            name=\"azure_endpoint\",\n            display_name=\"Azure Endpoint\",\n            info=\"Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`\",\n            required=True,\n        ),\n        MessageTextInput(name=\"azure_deployment\", display_name=\"Deployment Name\", required=True),\n        SecretStrInput(name=\"api_key\", display_name=\"Azure Chat OpenAI API Key\", required=True),\n        DropdownInput(\n            name=\"api_version\",\n            display_name=\"API Version\",\n            options=sorted(AZURE_OPENAI_API_VERSIONS, reverse=True),\n            value=next(\n                (\n                    version\n                    for version in sorted(AZURE_OPENAI_API_VERSIONS, reverse=True)\n                    if not version.endswith(\"-preview\")\n                ),\n                AZURE_OPENAI_API_VERSIONS[0],\n            ),\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.7,\n            range_spec=RangeSpec(min=0, max=2, step=0.01),\n            info=\"Controls randomness. Lower values are more deterministic, higher values are more creative.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        azure_endpoint = self.azure_endpoint\n        azure_deployment = self.azure_deployment\n        api_version = self.api_version\n        api_key = self.api_key\n        temperature = self.temperature\n        max_tokens = self.max_tokens\n        stream = self.stream\n\n        try:\n            output = AzureChatOpenAI(\n                azure_endpoint=azure_endpoint,\n                azure_deployment=azure_deployment,\n                api_version=api_version,\n                api_key=api_key,\n                temperature=temperature,\n                max_tokens=max_tokens or None,\n                streaming=stream,\n            )\n        except Exception as e:\n            msg = f\"Could not connect to AzureOpenAI API: {e}\"\n            raise ValueError(msg) from e\n\n        return output\n"
+              },
+              "input_value": {
+                "_input_type": "MessageInput",
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "input_value",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "max_tokens": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Tokens",
+                "dynamic": false,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "list": false,
+                "name": "max_tokens",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": ""
+              },
+              "stream": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Stream",
+                "dynamic": false,
+                "info": "Stream the response from the model. Streaming works only in Chat.",
+                "list": false,
+                "name": "stream",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "system_message": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "System Message",
+                "dynamic": false,
+                "info": "System message to pass to the model.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "system_message",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "temperature": {
+                "_input_type": "FloatInput",
+                "advanced": false,
+                "display_name": "Temperature",
+                "dynamic": false,
+                "info": "Controls randomness. Lower values are more deterministic, higher values are more creative.",
+                "list": false,
+                "name": "temperature",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "float",
+                "value": 0.7
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "AzureOpenAIModel"
+        },
+        "dragging": false,
+        "id": "AzureOpenAIModel-4dghO",
+        "measured": {
+          "height": 934,
+          "width": 320
+        },
+        "position": {
+          "x": 3023.216108691238,
+          "y": 596.1946014505172
+        },
         "selected": false,
-        "type": "noteNode",
-        "width": 521
+        "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -277.2451206894975,
-      "y": 97.74227843275781,
-      "zoom": 0.3918551313771338
+      "x": -173.0026834630812,
+      "y": -67.24769207804357,
+      "zoom": 0.3536348796768403
     }
   },
   "description": "Connect multiple prompts in sequence where each output becomes the next stage's input, enabling step-by-step text processing.",
   "endpoint_name": null,
-  "id": "e1d24fdb-ce84-44ec-937f-1672d8609a35",
+  "id": "ee13ed2a-46a2-4b5e-af98-8135c27daf5e",
   "is_component": false,
-  "last_tested_version": "1.5.0",
-  "name": "Basic Prompt Chaining",
-  "tags": [
-    "chatbots"
-  ]
+  "last_tested_version": "1.1.1",
+  "name": "Prompt Chaining"
 }

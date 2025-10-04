@@ -161,6 +161,27 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
+            # Initialize Genesis Studio Extensions
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Initializing Genesis Studio Extensions")
+            try:
+                from langflow.custom.genesis.integration import initialize_genesis_extensions, is_genesis_extensions_enabled
+
+                if is_genesis_extensions_enabled():
+                    success = initialize_genesis_extensions(_app)
+                    if success:
+                        await logger.adebug(f"Genesis Extensions initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
+                    else:
+                        await logger.awarning(f"Genesis Extensions failed to initialize in {asyncio.get_event_loop().time() - current_time:.2f}s")
+                else:
+                    await logger.adebug("Genesis Extensions disabled via environment variable")
+            except ImportError:
+                await logger.adebug("Genesis Extensions not available")
+            except Exception as e:
+                await logger.aerror(f"Genesis Extensions initialization failed: {e}")
+                # Don't fail startup if Genesis fails
+                pass
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Setting up LLM caching")
             setup_llm_caching()
@@ -379,6 +400,15 @@ def create_app():
         allow_headers=settings.cors_allow_headers,
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
+
+    # Genesis middleware disabled - authentication handled by genesis-bff gateway
+    # try:
+    #     from langflow.custom.genesis.integration import setup_genesis_middleware, is_genesis_extensions_enabled
+    #     if is_genesis_extensions_enabled():
+    #         setup_genesis_middleware(app)
+    # except ImportError:
+    #     # Genesis extensions not available
+    #     pass
 
     @app.middleware("http")
     async def check_boundary(request: Request, call_next):

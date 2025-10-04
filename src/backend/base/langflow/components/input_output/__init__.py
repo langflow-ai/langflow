@@ -9,15 +9,21 @@ if TYPE_CHECKING:
     from langflow.components.input_output.chat_output import ChatOutput
     from langflow.components.input_output.text import TextInputComponent
     from langflow.components.input_output.text_output import TextOutputComponent
+    from langflow.components.input_output.knowledge_hub import KnowledgeHub
+    from langflow.components.input_output.blob_storage import BlobStorageComponent
+    from langflow.components.input_output.file_path import FilePathComponent
 
 _dynamic_imports = {
     "ChatInput": "chat",
     "ChatOutput": "chat_output",
     "TextInputComponent": "text",
     "TextOutputComponent": "text_output",
+    "KnowledgeHub": "knowledge_hub",
+    "BlobStorageComponent": "blob_storage",
+    "FilePathComponent": "file_path",
 }
 
-__all__ = ["ChatInput", "ChatOutput", "TextInputComponent", "TextOutputComponent"]
+__all__ = ["ChatInput", "ChatOutput", "TextInputComponent", "TextOutputComponent", "KnowledgeHub", "BlobStorageComponent", "FilePathComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:
