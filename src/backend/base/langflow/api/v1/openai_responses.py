@@ -572,6 +572,7 @@ async def create_response(
                     run_seconds=int(end_time - start_time),
                     run_success=True,
                     run_error_message="",
+                    run_id=None,  # OpenAI endpoint doesn't use simple_run_flow
                 ),
             )
 
@@ -586,6 +587,7 @@ async def create_response(
                 run_seconds=int(time.perf_counter() - start_time),
                 run_success=False,
                 run_error_message=str(exc),
+                run_id=None,  # OpenAI endpoint doesn't use simple_run_flow
             ),
         )
 

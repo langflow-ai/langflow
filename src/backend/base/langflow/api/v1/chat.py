@@ -85,6 +85,7 @@ async def retrieve_vertices_order(
     telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
     components_count = None
+    run_id = str(uuid.uuid4())
     try:
         # First, we need to check if the flow_id is in the cache
         if not data:
@@ -94,6 +95,7 @@ async def retrieve_vertices_order(
                 flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
             )
         graph = graph.prepare(stop_component_id, start_component_id)
+        graph.set_run_id(run_id)
 
         # Now vertices is a list of lists
         # We need to get the id of each vertex
@@ -107,6 +109,7 @@ async def retrieve_vertices_order(
                 playground_seconds=int(time.perf_counter() - start_time),
                 playground_component_count=components_count,
                 playground_success=True,
+                playground_run_id=run_id,
             ),
         )
         return VerticesOrderResponse(ids=graph.first_layer, run_id=graph.run_id, vertices_to_run=vertices_to_run)
@@ -118,6 +121,7 @@ async def retrieve_vertices_order(
                 playground_component_count=components_count,
                 playground_success=False,
                 playground_error_message=str(exc),
+                playground_run_id=run_id,
             ),
         )
         if "stream or streaming set to True" in str(exc):
@@ -383,6 +387,7 @@ async def build_vertex(
                 component_seconds=int(time.perf_counter() - start_time),
                 component_success=valid,
                 component_error_message=error_message,
+                component_run_id=graph.run_id,
             ),
         )
     except Exception as exc:
@@ -393,6 +398,7 @@ async def build_vertex(
                 component_seconds=int(time.perf_counter() - start_time),
                 component_success=False,
                 component_error_message=str(exc),
+                component_run_id=graph.run_id,
             ),
         )
         await logger.aexception("Error building Component")
