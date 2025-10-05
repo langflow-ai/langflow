@@ -10,7 +10,12 @@ import {
 } from "@clerk/clerk-react";
 import { useContext, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { backendLogin, createOrganisation, ensureLangflowUser } from "./auth";
+import {
+  backendLogin,
+  createOrganisation,
+  ensureLangflowUser,
+  setStoredActiveOrgId,
+} from "./auth";
 
 export default function OrganizationSwitcherPage() {
   const { getToken } = useAuth();
@@ -32,6 +37,7 @@ export default function OrganizationSwitcherPage() {
 
     bootstrapped.current = true;
     setIsBootstrapping(true);
+    const activeOrgId = organization.id;
 
     (async () => {
       console.log("[OrgSwitcherPage] Starting bootstrap flow...");
@@ -65,6 +71,7 @@ export default function OrganizationSwitcherPage() {
         // Step 5: Only now mark org as selected
         authStore.getState().setIsOrgSelected(true);
         sessionStorage.setItem("isOrgSelected", "true");
+        setStoredActiveOrgId(activeOrgId);
         console.debug("[OrgSwitcherPage] Org selection state marked");
 
         // Step 6: Navigate to /flows
