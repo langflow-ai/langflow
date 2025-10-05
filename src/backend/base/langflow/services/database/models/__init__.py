@@ -6,18 +6,13 @@ from .message import MessageTable
 from .transactions import TransactionTable
 from .user import User
 from .variable import Variable
-from .specification import AgentSpecification, SpecificationComponent, SpecificationUsage, ComponentRelationship
 
 __all__ = [
-    "AgentSpecification",
     "ApiKey",
-    "ComponentRelationship",
     "File",
     "Flow",
     "Folder",
     "MessageTable",
-    "SpecificationComponent",
-    "SpecificationUsage",
     "TransactionTable",
     "User",
     "Variable",
