@@ -399,7 +399,7 @@ class Settings(BaseSettings):
                 raise ValueError(msg)
             logger.debug(f"Using provided database_url: {value}")
             return value
-        
+
         # Fallback: check os.environ directly (for load_dotenv() loaded vars)
         logger.debug("No database_url provided, checking LANGFLOW_DATABASE_URL env variable")
         if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):
@@ -408,7 +408,7 @@ class Settings(BaseSettings):
                 msg = f"Invalid database_url in LANGFLOW_DATABASE_URL: '{langflow_database_url}'"
                 raise ValueError(msg)
             return langflow_database_url
-        
+
         # No database_url found, create default SQLite database
         logger.debug("No database_url found, using default SQLite database")
         # Originally, we used sqlite:///./langflow.db
@@ -575,7 +575,7 @@ class Settings(BaseSettings):
         # 2. MyCustomSource - replaces env_settings with comma-separated list parsing
         # 3. dotenv_settings - auto-loads from .env file
         # 4. file_secret_settings - loads from Docker/K8s secrets
-        # 
+        #
         # MyCustomSource extends EnvSettingsSource to add list parsing while still
         # reading from os.environ (which includes vars from --env-file via load_dotenv)
         return (

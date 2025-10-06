@@ -5,7 +5,6 @@ from langflow.services.settings.service import SettingsService
 
 
 class SettingsServiceFactory(ServiceFactory):
-    
     _instance = None
 
     def __new__(cls):
