@@ -1,0 +1,291 @@
+"""Component Mapper for Genesis to Langflow components."""
+
+from typing import Dict, Any, Optional, Tuple
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class ComponentMapper:
+    """Maps Genesis specification types to AI Studio (Langflow) components."""
+
+    def __init__(self):
+        """Initialize component mapper with mappings."""
+        self._init_mappings()
+
+    def _init_mappings(self):
+        """Initialize all component mappings."""
+        # AutonomizeModel variants - all clinical models unified
+        self.AUTONOMIZE_MODELS = {
+            "genesis:rxnorm": {
+                "component": "AutonomizeModel",
+                "config": {"selected_model": "RxNorm Code"}
+            },
+            "genesis:icd10": {
+                "component": "AutonomizeModel",
+                "config": {"selected_model": "ICD-10 Code"}
+            },
+            "genesis:cpt_code": {
+                "component": "AutonomizeModel",
+                "config": {"selected_model": "CPT Code"}
+            },
+            "genesis:cpt": {  # Alias
+                "component": "AutonomizeModel",
+                "config": {"selected_model": "CPT Code"}
+            },
+            "genesis:clinical_llm": {
+                "component": "AutonomizeModel",
+                "config": {"selected_model": "Clinical LLM"}
+            },
+            "genesis:clinical_note_classifier": {
+                "component": "AutonomizeModel",
+                "config": {"selected_model": "Clinical Note Classifier"}
+            },
+            "genesis:combined_entity_linking": {
+                "component": "AutonomizeModel",
+                "config": {"selected_model": "Combined Entity Linking"}
+            }
+        }
+
+        # MCP components
+        self.MCP_MAPPINGS = {
+            "genesis:mcp_tool": {
+                "component": "MCPTool",
+                "config": {}
+            },
+            "genesis:mcp_client": {
+                "component": "MCPClient",
+                "config": {}
+            },
+            "genesis:mcp_server": {
+                "component": "MCPServer",
+                "config": {}
+            }
+        }
+
+        # Standard component mappings
+        self.STANDARD_MAPPINGS = {
+            # Agents
+            "genesis:agent": {"component": "Agent", "config": {}},
+            "genesis:autonomize_agent": {"component": "AutonomizeAgent", "config": {}},
+
+            # Input/Output
+            "genesis:chat_input": {"component": "ChatInput", "config": {}},
+            "genesis:chat_output": {"component": "ChatOutput", "config": {}},
+            "genesis:json_input": {"component": "JSONInput", "config": {}},
+            "genesis:json_output": {"component": "ParseData", "config": {}},
+            "genesis:file_input": {"component": "FileInput", "config": {}},
+
+            # Prompts
+            "genesis:prompt": {"component": "Prompt", "config": {}},
+            "genesis:prompt_template": {"component": "GenesisPromptComponent", "config": {}},
+            "genesis:genesis_prompt": {"component": "GenesisPromptComponent", "config": {}},
+
+            # Memory
+            "genesis:memory": {"component": "Memory", "config": {}},
+            "genesis:conversation_memory": {"component": "ConversationMemory", "config": {}},
+
+            # Tools - map to actual component classes
+            "genesis:knowledge_hub_search": {"component": "KnowledgeHubSearchComponent", "config": {}},
+            "genesis:pa_lookup": {"component": "CustomComponent", "config": {}},
+            "genesis:eligibility_component": {"component": "CustomComponent", "config": {}},
+            "genesis:encoder_pro": {"component": "EncoderProTool", "config": {}},
+            "genesis:qnext_auth_history": {"component": "CustomComponent", "config": {}},
+            "genesis:api_component": {"component": "CustomComponent", "config": {}},
+            "genesis:form_recognizer": {"component": "CustomComponent", "config": {}},
+            "genesis:calculator": {"component": "Calculator", "config": {}},
+
+            # Vector stores
+            "genesis:vector_store": {"component": "QdrantVectorStore", "config": {}},
+            "genesis:qdrant": {"component": "QdrantVectorStore", "config": {}},
+            "genesis:faiss": {"component": "FAISS", "config": {}},
+
+            # LLMs
+            "genesis:openai": {"component": "OpenAIModel", "config": {}},
+            "genesis:azure_openai": {"component": "AzureOpenAIModel", "config": {}},
+            "genesis:anthropic": {"component": "AnthropicModel", "config": {}},
+
+            # CrewAI
+            "genesis:sequential_crew": {"component": "CrewAIAgent", "config": {}},
+            "genesis:hierarchical_crew": {"component": "HierarchicalCrew", "config": {}}
+        }
+
+    def map_component(self, spec_type: str) -> Dict[str, Any]:
+        """
+        Map a Genesis specification type to Langflow component.
+
+        Args:
+            spec_type: Component type from specification (e.g., "genesis:rxnorm")
+
+        Returns:
+            Dictionary with component name and configuration
+        """
+        # Check AutonomizeModel mappings first
+        if spec_type in self.AUTONOMIZE_MODELS:
+            return self.AUTONOMIZE_MODELS[spec_type].copy()
+
+        # Check MCP mappings
+        if spec_type in self.MCP_MAPPINGS:
+            return self.MCP_MAPPINGS[spec_type].copy()
+
+        # Check standard mappings
+        if spec_type in self.STANDARD_MAPPINGS:
+            return self.STANDARD_MAPPINGS[spec_type].copy()
+
+        # Try to handle unknown types intelligently
+        return self._handle_unknown_type(spec_type)
+
+    def _handle_unknown_type(self, spec_type: str) -> Dict[str, Any]:
+        """Handle unknown component types with intelligent fallbacks."""
+        # Remove genesis: prefix if present
+        base_type = spec_type.replace("genesis:", "") if spec_type.startswith("genesis:") else spec_type
+
+        # Pattern-based fallbacks
+        if "model" in base_type.lower() or "llm" in base_type.lower():
+            # Check if it's a clinical model
+            if any(term in base_type.lower() for term in ["clinical", "rxnorm", "icd", "cpt", "medical"]):
+                logger.warning(f"Unknown clinical model type '{spec_type}', using AutonomizeModel")
+                return {"component": "AutonomizeModel", "config": {}}
+            else:
+                logger.warning(f"Unknown LLM type '{spec_type}', using OpenAIModel")
+                return {"component": "OpenAIModel", "config": {}}
+
+        elif "agent" in base_type.lower():
+            logger.warning(f"Unknown agent type '{spec_type}', using Agent")
+            return {"component": "Agent", "config": {}}
+
+        elif "tool" in base_type.lower() or "component" in base_type.lower():
+            logger.warning(f"Unknown tool/component type '{spec_type}', using MCPTool as fallback")
+            return {"component": "MCPTool", "config": {}}
+
+        elif "memory" in base_type.lower():
+            logger.warning(f"Unknown memory type '{spec_type}', using Memory")
+            return {"component": "Memory", "config": {}}
+
+        elif "prompt" in base_type.lower():
+            logger.warning(f"Unknown prompt type '{spec_type}', using Prompt")
+            return {"component": "Prompt", "config": {}}
+
+        elif "input" in base_type.lower():
+            logger.warning(f"Unknown input type '{spec_type}', using ChatInput")
+            return {"component": "ChatInput", "config": {}}
+
+        elif "output" in base_type.lower():
+            logger.warning(f"Unknown output type '{spec_type}', using ChatOutput")
+            return {"component": "ChatOutput", "config": {}}
+
+        else:
+            # Default to MCPTool for complete unknowns - better than CustomComponent
+            logger.warning(f"Completely unknown type '{spec_type}', using MCPTool as fallback")
+            return {"component": "MCPTool", "config": {}}
+
+    def get_component_io_mapping(self, component_type: str) -> Dict[str, Any]:
+        """
+        Get input/output field mappings for a component type.
+
+        Returns dictionary with:
+        - input_field: The field name for inputs
+        - output_field: The field name for outputs
+        - output_types: Expected output types
+        """
+        io_mappings = {
+            "AutonomizeModel": {
+                "input_field": "search_query",  # AutonomizeModel uses search_query
+                "output_field": "prediction",   # Outputs prediction
+                "output_types": ["Data"]
+            },
+            "ChatInput": {
+                "input_field": None,
+                "output_field": "message",
+                "output_types": ["Message"]
+            },
+            "ChatOutput": {
+                "input_field": "input_value",
+                "output_field": "message",
+                "output_types": ["Message"]
+            },
+            "Agent": {
+                "input_field": "input_value",
+                "output_field": "response",  # Most agents use response
+                "output_types": ["Message"]
+            },
+            "AutonomizeAgent": {
+                "input_field": "input_value",
+                "output_field": "response",
+                "output_types": ["Message"]
+            },
+            "Prompt": {
+                "input_field": "template",
+                "output_field": "prompt",
+                "output_types": ["Message"]
+            },
+            "GenesisPromptComponent": {
+                "input_field": "template",
+                "output_field": "prompt",
+                "output_types": ["Message"]
+            },
+            "MCPTool": {
+                "input_field": None,
+                "output_field": "component_as_tool",
+                "output_types": ["Tool"]
+            },
+            "CustomComponent": {
+                "input_field": "input_value",
+                "output_field": "output",
+                "output_types": ["Any"]
+            },
+            "Memory": {
+                "input_field": "input_value",
+                "output_field": "memory",
+                "output_types": ["Message"]
+            },
+            "OpenAIModel": {
+                "input_field": "input_value",
+                "output_field": "text_output",
+                "output_types": ["Message"]
+            },
+            "AzureOpenAIModel": {
+                "input_field": "input_value",
+                "output_field": "text_output",
+                "output_types": ["Message"]
+            },
+            "KnowledgeHubSearchComponent": {
+                "input_field": "search_query",
+                "output_field": "query_results",
+                "output_types": ["Data"]
+            },
+            "EncoderProTool": {
+                "input_field": "default_service_code",
+                "output_field": "component_as_tool",
+                "output_types": ["Tool"]
+            },
+            "GenesisPromptComponent": {
+                "input_field": "template",
+                "output_field": "prompt",
+                "output_types": ["Message"]
+            }
+        }
+
+        return io_mappings.get(component_type, {
+            "input_field": "input_value",
+            "output_field": "output",
+            "output_types": ["Any"]
+        })
+
+    def is_tool_component(self, spec_type: str) -> bool:
+        """Check if a component type should be used as a tool."""
+        # MCP components are always tools
+        if spec_type in self.MCP_MAPPINGS:
+            return True
+
+        # Check if it's a known tool type
+        tool_types = [
+            "genesis:knowledge_hub_search",
+            "genesis:pa_lookup",
+            "genesis:eligibility_component",
+            "genesis:encoder_pro",
+            "genesis:calculator",
+            "genesis:api_component"
+        ]
+
+        return spec_type in tool_types
