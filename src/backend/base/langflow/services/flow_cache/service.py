@@ -7,7 +7,8 @@ from loguru import logger
 from langflow.services.cache.service import AsyncInMemoryCache
 
 if TYPE_CHECKING:
-    from langflow.graph.graph.base import Graph
+    from lfx.graph.graph.base import Graph
+
     from langflow.services.database.models.flow import Flow
 
 
@@ -30,7 +31,7 @@ class FlowCacheService(AsyncInMemoryCache):
             logger.warning(f"Flow {flow.id} has no data, skipping cache")
             return
 
-        from langflow.graph.graph.base import Graph
+        from lfx.graph.graph.base import Graph
 
         flow_id_str = str(flow.id)
         graph_data = flow.data.copy()
