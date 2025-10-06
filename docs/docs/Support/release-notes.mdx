@@ -69,7 +69,13 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     The [**Data Operations** component](components-processing#data-operations) now includes two operations for advanced JSON data manipulation.
     The **Path Selection** operation extracts values from nested JSON structures, and the **JQ Expression** operation uses the [`jq`](https://jqlang.org/) query language to perform advanced JSON filtering, projections, and transformations.
 
-- New integrations and bundles:
+- Changes to read/write file components
+
+    The **Save File** component was renamed to **Write File**, and it can now save to S3 and Google Drive.
+    The **Read File** component was renamed to **Read File**.
+    Both components support **Tool Mode**.
+
+- New integrations, bundles, and components:
 
 ### Deprecations
 
@@ -141,9 +147,9 @@ This is expected behavior.
 
 - Advanced document parsing with built-in Docling support
 
-  The **File** component supports advanced parsing with the Docling library.
+  The **Read File** component supports advanced parsing with the Docling library.
 
-  To make it easier to use the [**Docling** components](/bundles-docling) and the **File** component's new advanced parsing feature, the Docling dependency is now included with Langflow for all operating systems except macOS Intel (x86_64).
+  To make it easier to use the [**Docling** components](/bundles-docling) and the **Read File** component's new advanced parsing feature, the Docling dependency is now included with Langflow for all operating systems except macOS Intel (x86_64).
 
   For more information, see [Advanced parsing](/components-data#advanced-parsing).
 
