@@ -1,6 +1,5 @@
 import os
-import tempfile
-from dotenv import set_key
+
 import pytest
 from langflow.services.deps import get_settings_service
 
@@ -101,10 +100,12 @@ def test_env_var_loading(tmp_path, monkeypatch):
 
     # Patch load_dotenv to actually load our temp .env file
     from dotenv import load_dotenv
+
     monkeypatch.setattr("langflow.services.settings.factory.load_dotenv", load_dotenv)
 
     # Trigger settings initialization (should load env file)
     from langflow.services.settings.factory import SettingsServiceFactory
+
     factory = SettingsServiceFactory()
     factory._check_env_loaded()
 

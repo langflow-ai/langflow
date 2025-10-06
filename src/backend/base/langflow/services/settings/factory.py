@@ -2,10 +2,10 @@ from dotenv import find_dotenv
 from flask.cli import load_dotenv
 from typing_extensions import override
 
+from langflow.logging.logger import logger
 from langflow.services.factory import ServiceFactory
 from langflow.services.settings.service import SettingsService
-from langflow.logging.logger import logger
-import os
+
 
 class SettingsServiceFactory(ServiceFactory):
     _instance = None
