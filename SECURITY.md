@@ -42,6 +42,19 @@ We appreciate your efforts in helping us maintain a secure platform and look for
 
 ## Known Vulnerabilities
 
+### Environment Variable Loading Bug (Fixed in 1.6.4)
+
+Langflow versions `1.6.0` through `1.6.3` have a critical bug where environment variables from `.env` files are not being read. This affects all deployments using environment variables for configuration, including security settings.
+
+**Potential security impact:**
+- Environment variables from `.env` files are completely ignored,
+- Security configurations like `AUTO_LOGIN=false` may not be applied, potentially giving all users superuser access,
+- Database credentials, API keys, and other sensitive configuration may not be loaded,
+
+**DO NOT** upgrade to Langflow versions `1.6.0` through `1.6.3` if you use `.env` files for configuration. Instead, upgrade to `1.6.4`, which includes a fix for this bug.
+
+**Fixed in**: Langflow >= 1.6.4
+
 ### Code Execution Vulnerability (Fixed in 1.3.0)
 
 Langflow allows users to define and run **custom code components** through endpoints like `/api/v1/validate/code`. In versions < 1.3.0, this endpoint did not enforce authentication or proper sandboxing, allowing **unauthenticated arbitrary code execution**.
@@ -97,6 +110,6 @@ export LANGFLOW_AUTO_LOGIN=false
 export LANGFLOW_ENABLE_SUPERUSER_CLI=false
 export LANGFLOW_SUPERUSER="<your-superuser-username>"
 export LANGFLOW_SUPERUSER_PASSWORD="<your-superuser-password>"
-export LANGFLOW_DATABASE_URL="<your-production-database-url>" # e.g. "postgresql+psycopg://langflow:secure_pass@db.internal:5432/langflow"
-export LANGFLOW_SECRET_KEY="your-strong-random-secret-key"
+export LANGFLOW_DATABASE_URL="<your-production-database-url>" # pragma: allowlist secret # e.g. "postgresql+psycopg://langflow:secure_pass@db.internal:5432/langflow"
+export LANGFLOW_SECRET_KEY="your-strong-random-secret-key" # pragma: allowlist secret
 ```

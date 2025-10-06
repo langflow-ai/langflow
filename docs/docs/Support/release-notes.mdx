@@ -52,6 +52,16 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 Highlights of this release include the following changes.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
 
+### Known issue: .env file not loading {#env-file-bug}
+
+Langflow versions `1.6.0` through `1.6.3` have a critical bug where environment variables from `.env` files are not being read. This affects all deployments using environment variables for configuration, including security settings.
+
+**Potential Security Impact:**
+If you deployed with `AUTO_LOGIN=false` in your `.env` file, upgrading to these versions will cause Langflow to fall back to default settings, potentially giving all users superuser access.
+Database credentials, API keys, and other sensitive configuration may not be loaded from `.env` files.
+
+**DO NOT** upgrade to Langflow versions `1.6.0` through `1.6.3` if you use `.env` files for configuration. Instead, upgrade to `1.6.4`, which includes a fix for this bug.
+
 ### Known issue: Don't auto-upgrade Windows Desktop {#windows-desktop-update-issue}
 
 :::warning
