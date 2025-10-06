@@ -124,18 +124,8 @@ def get_settings_service() -> SettingsService:
     Raises:
         ValueError: If the service cannot be retrieved or initialized.
     """
-    import os
-
     from langflow.services.settings.factory import SettingsServiceFactory
-    # Ensure that environment variables are loaded before initializing the settings service
 
-    # Creating a hacky variable do_initialize, which we pass to the get_settings_service(). That would then let us know we should re-initialize the SettingsService class. So in this way, we ensure that even if the class is created prior to the load_dotenv, we're still going to re-init it after we've loaded in the env file.
-    do_initialize = os.getenv("LANGFLOW_DO_SETTINGS_INITIALIZE", "0") == "1"
-    if do_initialize:
-        # Remove the env var to avoid re-initializing again
-        os.environ.pop("LANGFLOW_DO_SETTINGS_INITIALIZE", None)
-        # Force re-initialization by resetting the singleton instance
-        SettingsServiceFactory._instance = None
     return get_service(ServiceType.SETTINGS_SERVICE, SettingsServiceFactory())
 
 
