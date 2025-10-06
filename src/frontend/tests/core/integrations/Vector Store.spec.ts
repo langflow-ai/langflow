@@ -1,7 +1,7 @@
-import { expect, test } from "@playwright/test";
 import path from "path";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
@@ -29,11 +29,9 @@ withEventDeliveryModes(
       .getByRole("heading", { name: "Vector Store RAG" })
       .first()
       .click();
-    await page.waitForSelector('[title="fit view"]', {
-      timeout: 20000,
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 100000,
     });
-
-    await page.getByTestId("fit_view").click();
 
     await initialGPTsetup(page);
 
@@ -42,7 +40,8 @@ withEventDeliveryModes(
     });
 
     await page.waitForTimeout(500);
-    await page.getByTestId("fit_view").click();
+
+    adjustScreenView(page);
 
     // Astra DB tokens
     await page
@@ -243,18 +242,13 @@ withEventDeliveryModes(
     await page.waitForSelector("text=built successfully", {
       timeout: 60000 * 2,
     });
-    await page.getByText("built successfully").last().click({
-      timeout: 30000,
-    });
+
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", {
       timeout: 60000 * 2,
     });
-    await page.getByText("built successfully").last().click({
-      timeout: 30000,
-    });
 
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 60000,
     });

@@ -1,5 +1,6 @@
+import { customRefreshLatestVersion } from "@/customization/utils/custom-refresh-latest-version";
 import { useDarkStore } from "@/stores/darkStore";
-import { useQueryFunctionType } from "@/types/api";
+import type { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -23,9 +24,10 @@ export const useGetVersionQuery: useQueryFunctionType<
   const responseFn = async () => {
     const { data } = await getVersionFn();
     const refreshVersion = useDarkStore.getState().refreshVersion;
-    const refreshLatestVersion = useDarkStore.getState().refreshLatestVersion;
     refreshVersion(data.version);
-    refreshLatestVersion(data.main_version);
+
+    customRefreshLatestVersion(data.main_version);
+
     return data;
   };
 

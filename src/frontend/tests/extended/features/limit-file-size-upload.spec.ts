@@ -1,7 +1,7 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import { readFileSync } from "fs";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
@@ -44,7 +44,7 @@ test(
     await page.getByTestId("edit-button-modal").last().click();
     await page.getByText("Close").last().click();
 
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     // Read the image file as a binary string
     const filePath = "tests/assets/chain.png";
@@ -83,7 +83,9 @@ test(
 
     await expect(
       page.getByText(
-        `The file size is too large. Please select a file smaller than ${(maxFileSizeUpload * 1024).toFixed(2)} KB`,
+        `The file size is too large. Please select a file smaller than ${(
+          maxFileSizeUpload * 1024
+        ).toFixed(2)} KB`,
       ),
     ).toBeVisible();
   },

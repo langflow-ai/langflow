@@ -1,0 +1,60 @@
+---
+title: Qdrant
+slug: /bundles-qdrant
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Qdrant** bundle.
+
+## Qdrant vector store
+
+The **Qdrant** component reads and writes to Qdrant vector stores using an instance of `QdrantVectorStore`.
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+<PartialVectorSearchResults />
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
+
+### Qdrant vector store parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Qdrant documentation](https://qdrant.tech/documentation/) or inspect [component code](/concepts-components#component-code).
+
+| Name                 | Type         | Description                               |
+| -------------------- | ------------ | ----------------------------------------- |
+| collection_name      | String       | Input parameter. The name of the Qdrant collection.             |
+| host                 | String       | Input parameter. The Qdrant server host.                        |
+| port                 | Integer      | Input parameter. The Qdrant server port.                        |
+| grpc_port            | Integer      | Input parameter. The Qdrant gRPC port.                          |
+| api_key              | SecretString | Input parameter. The API key for Qdrant.                        |
+| prefix               | String       | Input parameter. The prefix for Qdrant.                         |
+| timeout              | Integer      | Input parameter. The timeout for Qdrant operations.             |
+| path                 | String       | Input parameter. The path for Qdrant.                           |
+| url                  | String       | Input parameter. The URL for Qdrant.                            |
+| distance_func        | String       | Input parameter. The distance function for vector similarity.   |
+| content_payload_key  | String       | Input parameter. The content payload key.                       |
+| metadata_payload_key | String       | Input parameter. The metadata payload key.                      |
+| search_query         | String       | Input parameter. The query for similarity search.               |
+| ingest_data          | Data         | Input parameter. The data to be ingested into the vector store. |
+| embedding            | Embeddings   | Input parameter. The embedding function to use.                 |
+| number_of_results    | Integer      | Input parameter. The number of results to return in search.     |

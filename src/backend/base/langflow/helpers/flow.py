@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from fastapi import HTTPException
-from loguru import logger
+from lfx.log.logger import logger
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import select
 
@@ -16,10 +16,11 @@ from langflow.services.deps import get_flow_cache_service, get_settings_service,
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
-    from langflow.graph.graph.base import Graph
-    from langflow.graph.schema import RunOutputs
-    from langflow.graph.vertex.base import Vertex
-    from langflow.schema import Data
+    from lfx.graph.graph.base import Graph
+    from lfx.graph.schema import RunOutputs
+    from lfx.graph.vertex.base import Vertex
+
+    from langflow.schema.data import Data
 
 INPUT_TYPE_MAP = {
     "ChatInput": {"type_hint": "Optional[str]", "default": '""'},
@@ -47,7 +48,8 @@ async def list_flows(*, user_id: str | None = None) -> list[Data]:
 async def load_flow(
     user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
 ) -> Graph:
-    from langflow.graph.graph.base import Graph
+    from lfx.graph.graph.base import Graph
+
     from langflow.processing.process import process_tweaks
 
     if not flow_id and not flow_name:
@@ -181,7 +183,7 @@ async def flow_function({func_args}):
     tweaks = {{ {arg_mappings} }}
     from langflow.helpers.flow import run_flow
     from langchain_core.tools import ToolException
-    from langflow.base.flow_processing.utils import build_data_from_result_data, format_flow_output_data
+    from lfx.base.flow_processing.utils import build_data_from_result_data, format_flow_output_data
     try:
         run_outputs = await run_flow(
             tweaks={{key: {{'input_value': value}} for key, value in tweaks.items()}},
@@ -329,7 +331,7 @@ async def generate_unique_flow_name(flow_name, user_id, session):
 
 def json_schema_from_flow(flow: Flow) -> dict:
     """Generate JSON schema from flow input nodes."""
-    from langflow.graph.graph.base import Graph
+    from lfx.graph.graph.base import Graph
 
     # Get the flow's data which contains the nodes and their configurations
     flow_data = flow.data or {}

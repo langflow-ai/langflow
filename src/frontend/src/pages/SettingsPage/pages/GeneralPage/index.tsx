@@ -1,3 +1,6 @@
+import { cloneDeep } from "lodash";
+import { useContext, useState } from "react";
+import { useParams } from "react-router-dom";
 import {
   EDIT_PASSWORD_ALERT_LIST,
   EDIT_PASSWORD_ERROR_ALERT,
@@ -10,16 +13,14 @@ import {
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
 import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
+import { CustomTermsLinks } from "@/customization/components/custom-terms-links";
 import { ENABLE_PROFILE_ICONS } from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
-import { cloneDeep } from "lodash";
-import { useContext, useState } from "react";
-import { useParams } from "react-router-dom";
 import { CONTROL_PATCH_USER_STATE } from "../../../../constants/constants";
 import { AuthContext } from "../../../../contexts/authContext";
 import useAlertStore from "../../../../stores/alertStore";
 import { useStoreStore } from "../../../../stores/storeStore";
-import {
+import type {
   inputHandlerEventType,
   patchUserInputStateType,
 } from "../../../../types/components";
@@ -86,7 +87,7 @@ export const GeneralPage = () => {
         { user_id: userData!.id, user: { profile_image: profile_picture } },
         {
           onSuccess: () => {
-            let newUserData = cloneDeep(userData);
+            const newUserData = cloneDeep(userData);
             newUserData!.profile_image = profile_picture;
             setUserData(newUserData);
             setSuccessData({ title: SAVE_SUCCESS_ALERT });
@@ -123,7 +124,7 @@ export const GeneralPage = () => {
     },
   });
 
-  const handleSaveKey = (apikey: string) => {
+  const _handleSaveKey = (apikey: string) => {
     if (apikey) {
       mutate({ key: apikey });
       storeApiKey(apikey);
@@ -160,6 +161,8 @@ export const GeneralPage = () => {
           />
         )}
       </div>
+
+      <CustomTermsLinks />
     </div>
   );
 };

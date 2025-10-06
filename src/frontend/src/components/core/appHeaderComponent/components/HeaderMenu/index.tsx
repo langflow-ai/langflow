@@ -1,3 +1,5 @@
+import { ChevronsUpDown } from "lucide-react";
+import type React from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   DropdownMenu,
@@ -7,8 +9,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/utils/utils";
-import { ChevronsUpDown } from "lucide-react";
-import React from "react";
 
 export const HeaderMenu = ({ children }) => (
   <DropdownMenu>{children}</DropdownMenu>
@@ -16,7 +16,7 @@ export const HeaderMenu = ({ children }) => (
 
 export const HeaderMenuToggle = ({ children }) => (
   <DropdownMenuTrigger
-    className="inline-flex w-full items-center justify-center rounded-md pl-4 pr-1"
+    className="inline-flex w-full items-center justify-center rounded-md pl-1 pr-1"
     data-testid="user_menu_button"
     id="user_menu_button"
   >
@@ -45,7 +45,7 @@ export const HeaderMenuItemLink = ({
       {icon && (
         <ForwardedIconComponent
           name={icon}
-          className="side-bar-button-size mr-3 h-[18px] w-[18px] opacity-0 transition-all duration-300 group-hover:translate-x-3 group-hover:opacity-100 group-focus-visible:translate-x-3 group-focus-visible:opacity-100"
+          className="side-bar-button-size h-[18px] w-[18px] opacity-0 group-hover:opacity-100  group-focus-visible:opacity-100"
         />
       )}
     </a>

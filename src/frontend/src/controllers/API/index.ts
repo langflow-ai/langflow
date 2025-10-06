@@ -1,13 +1,17 @@
-import { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
-import { AxiosRequestConfig, AxiosResponse } from "axios";
+import type { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
+import type { AxiosRequestConfig, AxiosResponse } from "axios";
+import {
+  customGetAppVersions,
+  customGetLatestVersion,
+} from "@/customization/utils/custom-get-app-latest-version";
 import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
-import {
+import type {
   VertexBuildTypeAPI,
   VerticesOrderTypeAPI,
 } from "../../types/api/index";
-import { FlowStyleType, FlowType } from "../../types/flow";
-import { StoreComponentResponse } from "../../types/store";
+import type { FlowStyleType, FlowType } from "../../types/flow";
+import type { StoreComponentResponse } from "../../types/store";
 
 const GITHUB_API_URL = "https://api.github.com";
 const DISCORD_API_URL =
@@ -32,6 +36,10 @@ export async function getDiscordCount() {
     return null;
   }
 }
+
+export const getAppVersions = customGetAppVersions;
+export const getLatestVersion = customGetLatestVersion;
+
 export async function createApiKey(name: string) {
   try {
     const res = await api.post(`${BASE_URL_API}api_key/`, { name });
@@ -281,7 +289,7 @@ export async function postBuildVertex(
   files?: string[],
 ): Promise<AxiosResponse<VertexBuildTypeAPI>> {
   // input_value is optional and is a query parameter
-  let data = {};
+  const data = {};
   if (typeof input_value !== "undefined") {
     data["inputs"] = { input_value: input_value };
   }

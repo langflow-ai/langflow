@@ -1,5 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { renameFlow } from "../../utils/rename-flow";
 
 test(
   "should be able to move flow from folder, rename it and be displayed on correct folder",
@@ -19,16 +21,15 @@ test(
       .getByRole("heading", { name: "Vector Store RAG" })
       .first()
       .click();
-    await page.waitForSelector('[data-testid="fit_view"]', {
+
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
 
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details").click();
-    await page.getByPlaceholder("Flow name").fill(randomName);
-    await page.getByText("Save").last().click();
+    await renameFlow(page, { flowName: randomName });
+
     await page.getByTestId("icon-ChevronLeft").last().click();
 
     await page.getByTestId("add-project-button").click();
@@ -72,10 +73,8 @@ test(
 
     await page.getByTestId(`card-${randomName}`).first().click();
 
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details").click();
-    await page.getByPlaceholder("Flow name").fill(secondRandomName);
-    await page.getByText("Save").last().click();
+    await renameFlow(page, { flowName: secondRandomName });
+
     await page.getByTestId("icon-ChevronLeft").last().click();
 
     await page.waitForTimeout(3000);

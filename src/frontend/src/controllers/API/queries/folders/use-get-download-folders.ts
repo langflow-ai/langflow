@@ -1,5 +1,6 @@
-import { useMutationFunctionType } from "@/types/api";
-import { UseMutationResult } from "@tanstack/react-query";
+import type { UseMutationResult } from "@tanstack/react-query";
+import { customGetDownloadTypeFolders } from "@/customization/utils/custom-get-download-folders";
+import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -19,12 +20,7 @@ export const useGetDownloadFolders: useMutationFunctionType<
   ): Promise<any> => {
     const response = await api.get<any>(
       `${getURL("PROJECTS")}/download/${payload.folderId}`,
-      {
-        responseType: "blob",
-        headers: {
-          Accept: "application/x-zip-compressed",
-        },
-      },
+      customGetDownloadTypeFolders(),
     );
     return response;
   };

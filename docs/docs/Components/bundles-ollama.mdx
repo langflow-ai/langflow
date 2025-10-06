@@ -1,0 +1,66 @@
+---
+title: Ollama
+slug: /bundles-ollama
+---
+
+import Icon from "@site/src/components/icon";
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Ollama** bundle.
+
+For more information about Ollama features and functionality used by Ollama components, see the [Ollama documentation](https://ollama.com/).
+
+## Ollama text generation
+
+This component generates text using [Ollama's language models](https://ollama.com/library).
+
+To use the **Ollama** component in a flow, connect Langflow to your locally running Ollama server and select a model:
+
+1. Add the **Ollama** component to your flow.
+
+2. In the **Base URL** field, enter the address for your locally running Ollama server.
+
+    This value is set as the `OLLAMA_HOST` environment variable in Ollama.
+    The default base URL is `http://127.0.0.1:11434`.
+
+3. Once the connection is established, select a model in the **Model Name** field, such as `llama3.2:latest`.
+
+    To refresh the server's list of models, click <Icon name="RefreshCw" aria-hidden="true"/> **Refresh**.
+
+4. Optional: To configure additional parameters, such as temperature or max tokens, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+5. Connect the **Ollama** component to other components in the flow, depending on how you want to use the model.
+
+    Language model components can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)). Use the **Language Model** output when you want to use an Ollama model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component. For more information, see [Language model components](/components-models).
+
+    In the following example, the flow uses `LanguageModel` output to use an Ollama model as the LLM for an [**Agent** component](/components-agents).
+
+    ![Ollama component used as the LLM in an agent flow](/img/component-ollama-model.png)
+
+## Ollama Embeddings
+
+The **Ollama Embeddings** component generates embeddings using [Ollama embedding models](https://ollama.com/search?c=embedding).
+
+To use this component in a flow, connect Langflow to your locally running Ollama server and select an embeddings model:
+
+1. Add the **Ollama Embeddings** component to your flow.
+
+2. In the **Ollama Base URL** field, enter the address for your locally running Ollama server.
+
+    This value is set as the `OLLAMA_HOST` environment variable in Ollama.
+    The default base URL is `http://127.0.0.1:11434`.
+
+3. Once the connection is established, select a model in the **Ollama Model** field, such as `all-minilm:latest`.
+
+    To refresh the server's list of models, click <Icon name="RefreshCw" aria-hidden="true"/> **Refresh**.
+
+4. Optional: To configure additional parameters, such as temperature or max tokens, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+Available parameters depend on the selected model.
+
+5. Connect the **Ollama Embeddings** component to other components in the flow.
+For more information about using embedding model components in flows, see [Embedding model components](/components-embedding-models).
+
+    This example connects the **Ollama Embeddings** component to generate embeddings for text chunks extracted from a PDF file, and then stores the embeddings and chunks in a Chroma DB vector store.
+
+    ![Ollama Embeddings component in an embedding generation flow](/img/component-ollama-embeddings-chromadb.png)

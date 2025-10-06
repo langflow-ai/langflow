@@ -1,8 +1,9 @@
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from fastapi import status
+from fastapi import HTTPException, status
 from httpx import AsyncClient
 from langflow.api.v1.mcp_projects import (
     get_project_mcp_server,
@@ -11,13 +12,13 @@ from langflow.api.v1.mcp_projects import (
     project_mcp_servers,
     project_sse_transports,
 )
-from langflow.services.auth.utils import get_password_hash
+from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
-from langflow.services.database.models.user import User
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from mcp.server.sse import SseServerTransport
+from sqlmodel import select
 
 # Mark all tests in this module as asyncio
 pytestmark = pytest.mark.asyncio
@@ -63,6 +64,7 @@ class AsyncContextManagerMock:
         return (MagicMock(), MagicMock())
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        # No teardown required for this mock context manager in tests
         pass
 
 
@@ -100,8 +102,7 @@ def mock_current_project_ctx(mock_project):
 async def other_test_user():
     """Fixture for creating another test user."""
     user_id = uuid4()
-    db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         user = User(
             id=user_id,
             username="other_test_user",
@@ -114,7 +115,7 @@ async def other_test_user():
         await session.refresh(user)
     yield user
     # Clean up
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         user = await session.get(User, user_id)
         if user:
             await session.delete(user)
@@ -125,50 +126,78 @@ async def other_test_user():
 async def other_test_project(other_test_user):
     """Fixture for creating a project for another test user."""
     project_id = uuid4()
-    db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         project = Folder(id=project_id, name="Other Test Project", user_id=other_test_user.id)
         session.add(project)
         await session.commit()
         await session.refresh(project)
     yield project
     # Clean up
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         project = await session.get(Folder, project_id)
         if project:
             await session.delete(project)
             await session.commit()
 
 
+@pytest.fixture(autouse=True)
+def disable_mcp_composer_by_default():
+    """Auto-fixture to disable MCP Composer for all tests by default."""
+    with patch("langflow.api.v1.mcp_projects.get_settings_service") as mock_get_settings:
+        from langflow.services.deps import get_settings_service
+
+        real_service = get_settings_service()
+
+        # Create a mock that returns False for mcp_composer_enabled but delegates everything else
+        mock_service = MagicMock()
+        mock_service.settings = MagicMock()
+        mock_service.settings.mcp_composer_enabled = False
+
+        # Copy any other settings that might be needed
+        mock_service.auth_settings = real_service.auth_settings
+
+        mock_get_settings.return_value = mock_service
+        yield
+
+
+@pytest.fixture
+def enable_mcp_composer():
+    """Fixture to explicitly enable MCP Composer for specific tests."""
+    with patch("langflow.api.v1.mcp_projects.get_settings_service") as mock_get_settings:
+        from langflow.services.deps import get_settings_service
+
+        real_service = get_settings_service()
+
+        mock_service = MagicMock()
+        mock_service.settings = MagicMock()
+        mock_service.settings.mcp_composer_enabled = True
+
+        # Copy any other settings that might be needed
+        mock_service.auth_settings = real_service.auth_settings
+
+        mock_get_settings.return_value = mock_service
+        yield True
+
+
 async def test_handle_project_messages_success(
-    client: AsyncClient, mock_project, mock_sse_transport, logged_in_headers
+    client: AsyncClient, user_test_project, mock_sse_transport, logged_in_headers
 ):
     """Test successful handling of project messages."""
-    with patch("langflow.api.v1.mcp_projects.get_db_service") as mock_db:
-        mock_session = AsyncMock()
-        mock_db.return_value.with_session.return_value.__aenter__.return_value = mock_session
-        mock_session.exec.return_value.first.return_value = mock_project
-
-        response = await client.post(
-            f"api/v1/mcp/project/{mock_project.id}",
-            headers=logged_in_headers,
-            json={"type": "test", "content": "message"},
-        )
-        assert response.status_code == status.HTTP_200_OK
-        mock_sse_transport.handle_post_message.assert_called_once()
+    response = await client.post(
+        f"api/v1/mcp/project/{user_test_project.id}",
+        headers=logged_in_headers,
+        json={"type": "test", "content": "message"},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    mock_sse_transport.handle_post_message.assert_called_once()
 
 
-async def test_update_project_mcp_settings_invalid_json(client: AsyncClient, mock_project, logged_in_headers):
+async def test_update_project_mcp_settings_invalid_json(client: AsyncClient, user_test_project, logged_in_headers):
     """Test updating MCP settings with invalid JSON."""
-    with patch("langflow.api.v1.mcp_projects.get_db_service") as mock_db:
-        mock_session = AsyncMock()
-        mock_db.return_value.with_session.return_value.__aenter__.return_value = mock_session
-        mock_session.exec.return_value.first.return_value = mock_project
-
-        response = await client.patch(
-            f"api/v1/mcp/project/{mock_project.id}", headers=logged_in_headers, json="invalid"
-        )
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    response = await client.patch(
+        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json="invalid"
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 @pytest.fixture
@@ -187,8 +216,7 @@ async def test_flow_for_update(active_user, user_test_project):
     }
 
     # Create the flow in the database
-    db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         flow = Flow(**flow_data)
         session.add(flow)
         await session.commit()
@@ -197,7 +225,8 @@ async def test_flow_for_update(active_user, user_test_project):
     yield flow
 
     # Clean up
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
+        # Get the flow from the database
         flow = await session.get(Flow, flow_id)
         if flow:
             await session.delete(flow)
@@ -209,20 +238,30 @@ async def test_update_project_mcp_settings_success(
 ):
     """Test successful update of MCP settings using real database."""
     # Create settings for updating the flow
-    settings = [
-        {
-            "id": str(test_flow_for_update.id),
-            "action_name": "updated_action",
-            "action_description": "Updated description",
-            "mcp_enabled": False,
-            "name": test_flow_for_update.name,
-            "description": test_flow_for_update.description,
-        }
-    ]
+    json_payload = {
+        "settings": [
+            {
+                "id": str(test_flow_for_update.id),
+                "action_name": "updated_action",
+                "action_description": "Updated description",
+                "mcp_enabled": False,
+                "name": test_flow_for_update.name,
+                "description": test_flow_for_update.description,
+            }
+        ],
+        "auth_settings": {
+            "auth_type": "none",
+            "api_key": None,
+            "iam_endpoint": None,
+            "username": None,
+            "password": None,
+            "bearer_token": None,
+        },
+    }
 
     # Make the real PATCH request
     response = await client.patch(
-        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json=settings
+        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json=json_payload
     )
 
     # Assert response
@@ -230,7 +269,7 @@ async def test_update_project_mcp_settings_success(
     assert "Updated MCP settings for 1 flows" in response.json()["message"]
 
     # Verify the flow was actually updated in the database
-    async with session_getter(get_db_service()) as session:
+    async with session_scope() as session:
         updated_flow = await session.get(Flow, test_flow_for_update.id)
         assert updated_flow is not None
         assert updated_flow.action_name == "updated_action"
@@ -257,6 +296,7 @@ async def test_update_project_mcp_settings_other_user_project(
 ):
     """Test accessing a project belonging to another user."""
     # We're using the GET endpoint since it works correctly and tests the same security constraints
+    # This test disables MCP Composer to test JWT token-based access control
 
     # Try to access the other user's project using active_user's credentials
     response = await client.get(f"api/v1/mcp/project/{other_test_project.id}/sse", headers=logged_in_headers)
@@ -266,16 +306,41 @@ async def test_update_project_mcp_settings_other_user_project(
     assert response.json()["detail"] == "Project not found"
 
 
+async def test_update_project_mcp_settings_other_user_project_with_composer(
+    client: AsyncClient, other_test_project, logged_in_headers, enable_mcp_composer
+):
+    """Test accessing a project belonging to another user when MCP Composer is enabled."""
+    # When MCP Composer is enabled, JWT tokens are not accepted for MCP endpoints
+    assert enable_mcp_composer  # Fixture ensures MCP Composer is enabled
+
+    # Try to access the other user's project using active_user's JWT credentials
+    response = await client.get(f"api/v1/mcp/project/{other_test_project.id}/sse", headers=logged_in_headers)
+
+    # Verify the response - should get 401 because JWT tokens aren't accepted
+    assert response.status_code == 401
+    assert "API key required" in response.json()["detail"]
+
+
 async def test_update_project_mcp_settings_empty_settings(client: AsyncClient, user_test_project, logged_in_headers):
     """Test updating MCP settings with empty settings list."""
     # Use real database objects instead of mocks to avoid the coroutine issue
 
     # Empty settings list
-    settings = []
+    json_payload = {
+        "settings": [],
+        "auth_settings": {
+            "auth_type": "none",
+            "api_key": None,
+            "iam_endpoint": None,
+            "username": None,
+            "password": None,
+            "bearer_token": None,
+        },
+    }
 
     # Make the request to the actual endpoint
     response = await client.patch(
-        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json=settings
+        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json=json_payload
     )
 
     # Verify response - the real endpoint should handle empty settings correctly
@@ -300,7 +365,7 @@ async def test_user_data_isolation_with_real_db(
     second_flow_id = uuid4()
 
     # Use real database session just for flow creation and cleanup
-    async with session_getter(get_db_service()) as session:
+    async with session_scope() as session:
         # Create a flow in the other user's project
         second_flow = Flow(
             id=second_flow_id,
@@ -331,7 +396,7 @@ async def test_user_data_isolation_with_real_db(
 
     finally:
         # Clean up flow
-        async with session_getter(get_db_service()) as session:
+        async with session_scope() as session:
             second_flow = await session.get(Flow, second_flow_id)
             if second_flow:
                 await session.delete(second_flow)
@@ -342,15 +407,14 @@ async def test_user_data_isolation_with_real_db(
 async def user_test_project(active_user):
     """Fixture for creating a project for the active user."""
     project_id = uuid4()
-    db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         project = Folder(id=project_id, name="User Test Project", user_id=active_user.id)
         session.add(project)
         await session.commit()
         await session.refresh(project)
     yield project
     # Clean up
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         project = await session.get(Folder, project_id)
         if project:
             await session.delete(project)
@@ -361,8 +425,7 @@ async def user_test_project(active_user):
 async def user_test_flow(active_user, user_test_project):
     """Fixture for creating a flow for the active user."""
     flow_id = uuid4()
-    db_manager = get_db_service()
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         flow = Flow(
             id=flow_id,
             name="User Test Flow",
@@ -378,7 +441,7 @@ async def user_test_flow(active_user, user_test_project):
         await session.refresh(flow)
     yield flow
     # Clean up
-    async with db_manager.with_session() as session:
+    async with session_scope() as session:
         flow = await session.get(Flow, flow_id)
         if flow:
             await session.delete(flow)
@@ -390,20 +453,30 @@ async def test_user_can_update_own_flow_mcp_settings(
 ):
     """Test that a user can update MCP settings for their own flows using real database."""
     # User attempts to update their own flow settings
-    updated_settings = [
-        {
-            "id": str(user_test_flow.id),
-            "action_name": "updated_user_action",
-            "action_description": "Updated user action description",
-            "mcp_enabled": False,
-            "name": "User Test Flow",
-            "description": "This flow belongs to the active user",
-        }
-    ]
+    json_payload = {
+        "settings": [
+            {
+                "id": str(user_test_flow.id),
+                "action_name": "updated_user_action",
+                "action_description": "Updated user action description",
+                "mcp_enabled": False,
+                "name": "User Test Flow",
+                "description": "This flow belongs to the active user",
+            }
+        ],
+        "auth_settings": {
+            "auth_type": "none",
+            "api_key": None,
+            "iam_endpoint": None,
+            "username": None,
+            "password": None,
+            "bearer_token": None,
+        },
+    }
 
     # Make the PATCH request to update settings
     response = await client.patch(
-        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json=updated_settings
+        f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json=json_payload
     )
 
     # Should succeed as the user owns this project and flow
@@ -411,12 +484,87 @@ async def test_user_can_update_own_flow_mcp_settings(
     assert "Updated MCP settings for 1 flows" in response.json()["message"]
 
     # Verify the flow was actually updated in the database
-    async with session_getter(get_db_service()) as session:
+    async with session_scope() as session:
         updated_flow = await session.get(Flow, user_test_flow.id)
         assert updated_flow is not None
         assert updated_flow.action_name == "updated_user_action"
         assert updated_flow.action_description == "Updated user action description"
         assert updated_flow.mcp_enabled is False
+
+
+async def test_update_project_auth_settings_encryption(
+    client: AsyncClient, user_test_project, test_flow_for_update, logged_in_headers
+):
+    """Test that sensitive auth_settings fields are encrypted when stored."""
+    # Create settings with sensitive data
+    json_payload = {
+        "settings": [
+            {
+                "id": str(test_flow_for_update.id),
+                "action_name": "test_action",
+                "action_description": "Test description",
+                "mcp_enabled": True,
+                "name": test_flow_for_update.name,
+                "description": test_flow_for_update.description,
+            }
+        ],
+        "auth_settings": {
+            "auth_type": "oauth",
+            "oauth_host": "localhost",
+            "oauth_port": "3000",
+            "oauth_server_url": "http://localhost:3000",
+            "oauth_callback_path": "/callback",
+            "oauth_client_id": "test-client-id",
+            "oauth_client_secret": "test-oauth-secret-value-456",
+            "oauth_auth_url": "https://oauth.example.com/auth",
+            "oauth_token_url": "https://oauth.example.com/token",
+            "oauth_mcp_scope": "read write",
+            "oauth_provider_scope": "user:email",
+        },
+    }
+
+    # Send the update request
+    response = await client.patch(
+        f"/api/v1/mcp/project/{user_test_project.id}",
+        json=json_payload,
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 200
+
+    # Verify the sensitive data is encrypted in the database
+    async with session_scope() as session:
+        updated_project = await session.get(Folder, user_test_project.id)
+        assert updated_project is not None
+        assert updated_project.auth_settings is not None
+
+        # Check that sensitive field is encrypted (not plaintext)
+        stored_value = updated_project.auth_settings.get("oauth_client_secret")
+        assert stored_value is not None
+        assert stored_value != "test-oauth-secret-value-456"  # Should be encrypted
+
+        # The encrypted value should be a base64-like string (Fernet token)
+        assert len(stored_value) > 50  # Encrypted values are longer
+
+    # Now test that the GET endpoint returns the data (SecretStr will be masked)
+    response = await client.get(
+        f"/api/v1/mcp/project/{user_test_project.id}",
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # SecretStr fields are masked in the response for security
+    assert data["auth_settings"]["oauth_client_secret"] == "**********"  # noqa: S105
+    assert data["auth_settings"]["oauth_client_id"] == "test-client-id"
+    assert data["auth_settings"]["auth_type"] == "oauth"
+
+    # Verify that decryption is working by checking the actual decrypted value in the backend
+    from langflow.services.auth.mcp_encryption import decrypt_auth_settings
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        decrypted_settings = decrypt_auth_settings(project.auth_settings)
+        assert decrypted_settings["oauth_client_secret"] == "test-oauth-secret-value-456"  # noqa: S105
 
 
 async def test_project_sse_creation(user_test_project):
@@ -456,6 +604,8 @@ async def test_project_sse_creation(user_test_project):
 
     assert sse_transport2 is sse_transport
     assert mcp_server2 is mcp_server
+    # Yield control to the event loop to satisfy async usage in this test
+    await asyncio.sleep(0)
 
 
 async def test_init_mcp_servers(user_test_project, other_test_project):
@@ -507,3 +657,26 @@ async def test_init_mcp_servers_error_handling():
     with patch("langflow.api.v1.mcp_projects.get_project_sse", side_effect=mock_get_project_sse):
         # This should not raise any exception, as the error should be caught
         await init_mcp_servers()
+
+
+@pytest.mark.asyncio
+async def test_mcp_longterm_token_fails_without_superuser():
+    """When AUTO_LOGIN is false and no superuser exists, creating a long-term token should raise 400.
+
+    This simulates a clean DB with AUTO_LOGIN disabled and without provisioning a superuser.
+    """
+    settings_service = get_settings_service()
+    settings_service.auth_settings.AUTO_LOGIN = False
+
+    # Ensure no superuser exists in DB
+    async with get_db_service().with_session() as session:
+        result = await session.exec(select(User).where(User.is_superuser == True))  # noqa: E712
+        users = result.all()
+        for user in users:
+            await session.delete(user)
+        await session.commit()
+
+    # Now attempt to create long-term token -> expect HTTPException 400
+    async with get_db_service().with_session() as session:
+        with pytest.raises(HTTPException, match="Auto login required to create a long-term token"):
+            await create_user_longterm_token(session)

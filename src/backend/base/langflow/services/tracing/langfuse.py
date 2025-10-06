@@ -5,7 +5,7 @@ from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
+from lfx.log.logger import logger
 from typing_extensions import override
 
 from langflow.serialization.serialization import serialize
@@ -16,8 +16,8 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
+    from lfx.graph.vertex.base import Vertex
 
-    from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
 
 
@@ -151,7 +151,6 @@ class LangFuseTracer(BaseTracer):
             "metadata": metadata,
         }
         self.trace.update(**serialize(content_update))
-        self._client.flush()
 
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         if not self._ready:

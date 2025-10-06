@@ -1,5 +1,5 @@
 import { Switch } from "../../../../ui/switch";
-import { InputProps, ToggleComponentType } from "../../types";
+import type { InputProps, ToggleComponentType } from "../../types";
 
 export default function ToggleShadComponent({
   value,

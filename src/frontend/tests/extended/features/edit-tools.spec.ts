@@ -1,5 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 test(
   "user should be able to edit tools",
   { tag: ["@release", "@components"] },
@@ -9,17 +10,17 @@ test(
     await page.getByTestId("blank-flow").click();
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("api request");
+    await page.getByTestId("sidebar-search-input").fill("url");
 
-    await page.waitForSelector('[data-testid="dataAPI Request"]', {
+    await page.waitForSelector('[data-testid="dataURL"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("dataAPI Request")
+      .getByTestId("dataURL")
       .hover()
       .then(async () => {
-        await page.getByTestId("add-component-button-api-request").click();
+        await page.getByTestId("add-component-button-url").click();
       });
 
     await page.waitForSelector(
@@ -40,15 +41,15 @@ test(
       state: "visible",
     });
 
-    await page.waitForSelector("text=actions", { timeout: 30000 });
+    await page.waitForSelector("text=tools", { timeout: 30000 });
 
     await page.getByTestId("button_open_actions").click();
 
-    await page.waitForSelector("text=API Request", { timeout: 30000 });
+    await page.waitForSelector("text=URL", { timeout: 30000 });
 
     const rowsCount = await page.getByRole("gridcell").count();
 
-    expect(rowsCount).toBeGreaterThan(3);
+    expect(rowsCount).toBeGreaterThan(2);
 
     expect(
       await page.locator('input[data-ref="eInput"]').nth(0).isChecked(),
@@ -58,20 +59,12 @@ test(
       await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
     ).toBe(true);
 
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
-    ).toBe(true);
-
     await page.locator('input[data-ref="eInput"]').nth(0).click();
 
     await page.waitForTimeout(500);
 
     expect(
       await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
-    ).toBe(false);
-
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
     ).toBe(false);
 
     await page.locator('input[data-ref="eInput"]').nth(0).click();
@@ -143,17 +136,7 @@ test(
       await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
     ).toBe(true);
 
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
-    ).toBe(true);
-
-    await page.locator('input[data-ref="eInput"]').nth(4).click();
-
     await page.waitForTimeout(500);
-
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(4).isChecked(),
-    ).toBe(false);
 
     await page.getByRole("gridcell").nth(0).click();
 
@@ -197,10 +180,18 @@ test(
 
     await page.waitForTimeout(500);
 
+    await page.getByTestId("btn_close_tools_modal").click();
+
+    await page.waitForTimeout(500);
+
+    await expect(page.getByTestId("btn_close_tools_modal")).not.toBeInViewport({
+      timeout: 3000,
+    });
+
     await page.getByText("Close").last().click();
 
     expect(
-      await page.locator('[data-testid="tool_make_requests"]').isVisible(),
+      await page.locator('[data-testid="tool_fetch_content"]').isVisible(),
     ).toBe(true);
   },
 );

@@ -35,11 +35,11 @@ def test_result_data_response_truncation(long_string):
 @given(
     st.uuids(),
     st.datetimes(timezones=st.just(timezone.utc)),
-    st.decimals(min_value="-1e6", max_value="1e6"),
-    st.text(min_size=1),
-    st.integers(),
+    st.decimals(min_value=-1000, max_value=1000, places=2),
+    st.text(min_size=1, max_size=10),
+    st.integers(min_value=-1000, max_value=1000),
 )
-@settings(max_examples=10)
+@settings(max_examples=10, suppress_health_check=[HealthCheck.too_slow])
 def test_result_data_response_special_types(uuid, dt, decimal, name, value):
     """Test that ResultDataResponse properly handles special data types."""
     test_model = SampleBaseModel(name=name, value=value)

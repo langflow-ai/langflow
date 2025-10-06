@@ -1,197 +1,88 @@
 const SvgMistralIcon = (props) => (
   <svg
+    viewBox="0 0 129 91"
     version="1.1"
-    width="32px"
-    height="32px"
-    viewBox="0 0 256 233"
+    style={{
+      fillRule: "evenodd",
+      clipRule: "evenodd",
+      strokeLinejoin: "round",
+      strokeMiterlimit: 2,
+    }}
     xmlns="http://www.w3.org/2000/svg"
     preserveAspectRatio="xMidYMid"
     {...props}
   >
-    <title>Mistral AI</title>
     <g>
       <rect
-        fill="#000000"
-        x="186.181818"
+        x="18.292"
         y="0"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
+        width="18.293"
+        height="18.123"
+        style={{ fill: "#ffd800", fillRule: "nonzero" }}
+      />
       <rect
-        fill="#F7D046"
-        x="209.454545"
+        x="91.473"
         y="0"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
+        width="18.293"
+        height="18.123"
+        style={{ fill: "#ffd800", fillRule: "nonzero" }}
+      />
       <rect
-        fill="#000000"
+        x="18.292"
+        y="18.121"
+        width="36.586"
+        height="18.123"
+        style={{ fill: "#ffaf00", fillRule: "nonzero" }}
+      />
+      <rect
+        x="73.181"
+        y="18.121"
+        width="36.586"
+        height="18.123"
+        style={{ fill: "#ffaf00", fillRule: "nonzero" }}
+      />
+      <rect
+        x="18.292"
+        y="36.243"
+        width="91.476"
+        height="18.122"
+        style={{ fill: "#ff8205", fillRule: "nonzero" }}
+      />
+      <rect
+        x="18.292"
+        y="54.37"
+        width="18.293"
+        height="18.123"
+        style={{ fill: "#fa500f", fillRule: "nonzero" }}
+      />
+      <rect
+        x="54.883"
+        y="54.37"
+        width="18.293"
+        height="18.123"
+        style={{ fill: "#fa500f", fillRule: "nonzero" }}
+      />
+      <rect
+        x="91.473"
+        y="54.37"
+        width="18.293"
+        height="18.123"
+        style={{ fill: "#fa500f", fillRule: "nonzero" }}
+      />
+      <rect
         x="0"
-        y="0"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
+        y="72.504"
+        width="54.89"
+        height="18.123"
+        style={{ fill: "#e10500", fillRule: "nonzero" }}
+      />
       <rect
-        fill="#000000"
-        x="0"
-        y="46.5454545"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#000000"
-        x="0"
-        y="93.0909091"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#000000"
-        x="0"
-        y="139.636364"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#000000"
-        x="0"
-        y="186.181818"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#F7D046"
-        x="23.2727273"
-        y="0"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#F2A73B"
-        x="209.454545"
-        y="46.5454545"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#F2A73B"
-        x="23.2727273"
-        y="46.5454545"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#000000"
-        x="139.636364"
-        y="46.5454545"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#F2A73B"
-        x="162.909091"
-        y="46.5454545"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#F2A73B"
-        x="69.8181818"
-        y="46.5454545"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#EE792F"
-        x="116.363636"
-        y="93.0909091"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#EE792F"
-        x="162.909091"
-        y="93.0909091"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#EE792F"
-        x="69.8181818"
-        y="93.0909091"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#000000"
-        x="93.0909091"
-        y="139.636364"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#EB5829"
-        x="116.363636"
-        y="139.636364"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#EE792F"
-        x="209.454545"
-        y="93.0909091"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#EE792F"
-        x="23.2727273"
-        y="93.0909091"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#000000"
-        x="186.181818"
-        y="139.636364"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#EB5829"
-        x="209.454545"
-        y="139.636364"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#000000"
-        x="186.181818"
-        y="186.181818"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#EB5829"
-        x="23.2727273"
-        y="139.636364"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#EA3326"
-        x="209.454545"
-        y="186.181818"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
-      <rect
-        fill="#EA3326"
-        x="23.2727273"
-        y="186.181818"
-        width="46.5454545"
-        height="46.5454545"
-      ></rect>
+        x="73.181"
+        y="72.504"
+        width="54.89"
+        height="18.123"
+        style={{ fill: "#e10500", fillRule: "nonzero" }}
+      />
     </g>
   </svg>
 );

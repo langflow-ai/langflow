@@ -1,9 +1,9 @@
-import { expect, test } from "@playwright/test";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { expect, test } from "../../fixtures";
+import { renameFlow } from "../../utils/rename-flow";
 
 test(
   "flow state should be properly cleaned up between user sessions",
-  { tag: ["@bug-fix", "@api", "@database"] },
+  { tag: ["@release", "@api", "@database"] },
   async ({ page }) => {
     // Disable auto login
     await page.route("**/api/v1/auto_login", (route) => {
@@ -89,10 +89,9 @@ test(
     // Check that User A starts with an empty flows list
     expect(
       (
-        await page.waitForSelector(
-          "text=Begin with a template, or start from scratch.",
-          { timeout: 30000 },
-        )
+        await page.waitForSelector("text=Welcome to LangFlow", {
+          timeout: 30000,
+        })
       ).isVisible(),
     );
 
@@ -102,22 +101,20 @@ test(
 
     try {
       await page.getByTestId("new_project_btn_empty_page").click();
-    } catch (error) {
-      await page.getByText("New Flow", { exact: true }).click();
+    } catch (_error) {
+      await page.getByTestId("new-project-btn").click();
     }
 
     await page.waitForSelector('[data-testid="modal-title"]', {
       timeout: 3000,
     });
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForSelector('[data-testid="fit_view"]', { timeout: 30000 });
-    await page.getByTestId("flow_menu_trigger").click();
-    await page.getByText("Edit Details", { exact: true }).last().click();
-    await page.getByPlaceholder("Flow Name").fill(userAFlowName);
-    await page.getByText("Save", { exact: true }).click();
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 30000,
     });
+
+    await renameFlow(page, { flowName: userAFlowName });
+
     await page.getByTestId("icon-ChevronLeft").first().click();
 
     // Verify User A can see their flow

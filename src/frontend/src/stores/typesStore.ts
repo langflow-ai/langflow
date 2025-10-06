@@ -1,8 +1,8 @@
 import { create } from "zustand";
-import { APIDataType } from "../types/api";
-import { TypesStoreType } from "../types/zustand/types";
+import type { APIDataType } from "../types/api";
+import type { TypesStoreType } from "../types/zustand/types";
 import {
-  extractFieldsFromComponenents,
+  extractSecretFieldsFromComponents,
   templatesGenerator,
   typesGenerator,
 } from "../utils/reactflowUtils";
@@ -22,7 +22,7 @@ export const useTypesStore = create<TypesStoreType>((set, get) => ({
     set((old) => ({
       types: typesGenerator(data),
       data: { ...old.data, ...data },
-      ComponentFields: extractFieldsFromComponenents({
+      ComponentFields: extractSecretFieldsFromComponents({
         ...old.data,
         ...data,
       }),
@@ -33,8 +33,9 @@ export const useTypesStore = create<TypesStoreType>((set, get) => ({
     set({ templates: newState });
   },
   setData: (change: APIDataType | ((old: APIDataType) => APIDataType)) => {
-    let newChange = typeof change === "function" ? change(get().data) : change;
+    const newChange =
+      typeof change === "function" ? change(get().data) : change;
     set({ data: newChange });
-    get().setComponentFields(extractFieldsFromComponenents(newChange));
+    get().setComponentFields(extractSecretFieldsFromComponents(newChange));
   },
 }));

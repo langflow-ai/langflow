@@ -1,0 +1,206 @@
+# Frontend-specific Makefile for Langflow
+# This file contains all frontend-related targets
+
+# Variables
+FRONTEND_DIR = src/frontend
+NPM = npm
+
+.PHONY: install_frontend install_frontendci install_frontendc frontend_deps_check build_frontend run_frontend frontend frontendc format_frontend tests_frontend test_frontend test_frontend_watch test_frontend_coverage test_frontend_verbose test_frontend_ci test_frontend_clean test_frontend_file test_frontend_pattern test_frontend_snapshots test_frontend_config test_frontend_bail test_frontend_silent test_frontend_coverage_open help_frontend
+
+######################
+# FRONTEND DEPENDENCIES
+######################
+
+install_frontend: ## install the frontend dependencies
+	@echo 'Installing frontend dependencies'
+	@cd $(FRONTEND_DIR) && npm install > /dev/null 2>&1
+
+install_frontendci:
+	@cd $(FRONTEND_DIR) && npm ci > /dev/null 2>&1
+
+install_frontendc:
+	@cd $(FRONTEND_DIR) && $(call CLEAR_DIRS,node_modules) && rm -f package-lock.json && npm install > /dev/null 2>&1
+
+# Check if frontend dependencies are installed
+frontend_deps_check:
+	@if [ ! -d "$(FRONTEND_DIR)/node_modules" ]; then \
+		echo "Frontend dependencies not found. Installing..."; \
+		$(MAKE) install_frontend; \
+	fi
+
+######################
+# FRONTEND BUILD
+######################
+
+build_frontend: ## build the frontend static files
+	@echo '==== Starting frontend build ===='
+	@echo 'Current directory: $$(pwd)'
+	@echo 'Checking if $(FRONTEND_DIR) exists...'
+	@ls -la $(FRONTEND_DIR) || true
+	@echo 'Building frontend static files...'
+	@cd $(FRONTEND_DIR) && CI='' npm run build 2>&1 || { echo "\nBuild failed! Error output above ☝️"; exit 1; }
+	@echo 'Clearing destination directory...'
+	$(call CLEAR_DIRS,src/backend/base/langflow/frontend)
+	@echo 'Copying build files...'
+	@cp -r $(FRONTEND_DIR)/build/. src/backend/base/langflow/frontend
+	@echo '==== Frontend build complete ===='
+
+######################
+# FRONTEND DEVELOPMENT
+######################
+
+run_frontend: ## run the frontend
+	@-kill -9 `lsof -t -i:3000`
+	@cd $(FRONTEND_DIR) && npm start $(if $(FRONTEND_START_FLAGS),-- $(FRONTEND_START_FLAGS))
+
+frontend: install_frontend ## run the frontend in development mode
+	make run_frontend
+
+frontendc: install_frontendc
+	make run_frontend
+
+######################
+# FRONTEND CODE QUALITY
+######################
+
+format_frontend: ## frontend code formatters
+	@cd $(FRONTEND_DIR) && npm run format
+
+######################
+# FRONTEND E2E TESTS (PLAYWRIGHT)
+######################
+
+tests_frontend: ## run frontend tests
+ifeq ($(UI), true)
+	@cd $(FRONTEND_DIR) && npx playwright test --ui --project=chromium
+else
+	@cd $(FRONTEND_DIR) && npx playwright test --project=chromium
+endif
+
+######################
+# FRONTEND UNIT TESTS (JEST)
+######################
+
+# Run all frontend Jest unit tests
+test_frontend: frontend_deps_check ## run all frontend Jest unit tests
+	@echo "Running all frontend Jest unit tests..."
+	@cd $(FRONTEND_DIR) && $(NPM) test
+
+# Run frontend tests in watch mode
+test_frontend_watch: frontend_deps_check ## run frontend tests in watch mode
+	@echo "Running frontend tests in watch mode..."
+	@cd $(FRONTEND_DIR) && $(NPM) run test:watch
+
+# Run frontend tests with coverage report
+test_frontend_coverage: frontend_deps_check ## run frontend tests with coverage report
+	@echo "Running frontend tests with coverage report..."
+	@cd $(FRONTEND_DIR) && npx jest --coverage
+
+# Run frontend tests with verbose output
+test_frontend_verbose: frontend_deps_check ## run frontend tests with verbose output
+	@echo "Running frontend tests with verbose output..."
+	@cd $(FRONTEND_DIR) && npx jest --verbose
+
+# Run frontend tests in CI mode (no watch, with coverage)
+test_frontend_ci: frontend_deps_check ## run frontend tests in CI mode
+	@echo "Running frontend tests in CI mode..."
+	@cd $(FRONTEND_DIR) && CI=true npx jest --ci --coverage --watchAll=false
+
+# Clean test cache and run tests
+test_frontend_clean: frontend_deps_check ## clean test cache and run tests
+	@echo "Cleaning Jest cache and running tests..."
+	@cd $(FRONTEND_DIR) && npx jest --clearCache && npx jest
+
+# Run tests for a specific file
+test_frontend_file: frontend_deps_check ## run tests for a specific file (usage: make test_frontend_file path/to/test.ts)
+	$(eval file := $(word 2,$(MAKECMDGOALS)))
+	@if [ -z "$(file)" ]; then \
+		echo "Usage: make test_frontend_file path/to/test.ts"; \
+		exit 1; \
+	fi
+	@echo "Running tests for file: $(file)"
+	@cd $(FRONTEND_DIR) && npx jest $(file)
+
+# Prevent make from treating the file argument as another target
+%:
+	@:
+
+# Run tests matching a pattern
+test_frontend_pattern: frontend_deps_check ## run tests matching a pattern (usage: make test_frontend_pattern pattern)
+	$(eval pattern := $(word 2,$(MAKECMDGOALS)))
+	@if [ -z "$(pattern)" ]; then \
+		echo "Usage: make test_frontend_pattern pattern"; \
+		exit 1; \
+	fi
+	@echo "Running tests matching pattern: $(pattern)"
+	@cd $(FRONTEND_DIR) && npx jest --testNamePattern="$(pattern)"
+
+# Update test snapshots
+test_frontend_snapshots: frontend_deps_check ## update Jest snapshots
+	@echo "Updating Jest snapshots..."
+	@cd $(FRONTEND_DIR) && npx jest --updateSnapshot
+
+# Show test configuration
+test_frontend_config: ## show Jest configuration
+	@echo "Jest configuration:"
+	@cd $(FRONTEND_DIR) && npx jest --showConfig
+
+# Run Jest tests with bail (stop on first failure)
+test_frontend_bail: frontend_deps_check ## run tests with bail (stop on first failure)
+	@echo "Running Jest tests with bail (stop on first failure)..."
+	@cd $(FRONTEND_DIR) && npx jest --bail
+
+# Run Jest tests silently (minimal output)
+test_frontend_silent: frontend_deps_check ## run tests silently (minimal output)
+	@echo "Running Jest tests silently..."
+	@cd $(FRONTEND_DIR) && npx jest --silent
+
+# Run Jest tests and open coverage report in browser
+test_frontend_coverage_open: test_frontend_coverage ## run tests with coverage and open report in browser
+	@echo "Opening coverage report in browser..."
+	@if command -v open >/dev/null 2>&1; then \
+		open $(FRONTEND_DIR)/coverage/lcov-report/index.html; \
+	elif command -v xdg-open >/dev/null 2>&1; then \
+		xdg-open $(FRONTEND_DIR)/coverage/lcov-report/index.html; \
+	else \
+		echo "Coverage report generated at: $(FRONTEND_DIR)/coverage/lcov-report/index.html"; \
+	fi
+
+######################
+# FRONTEND HELP
+######################
+
+help_frontend: ## show frontend help
+	@echo "Frontend Commands:"
+	@echo ""
+	@echo "Dependencies:"
+	@echo "  install_frontend     - Install frontend dependencies"
+	@echo "  install_frontendci   - Install frontend dependencies with npm ci"
+	@echo "  install_frontendc    - Clean install frontend dependencies"
+	@echo ""
+	@echo "Build & Development:"
+	@echo "  build_frontend       - Build frontend static files"
+	@echo "  run_frontend         - Run the frontend development server"
+	@echo "  frontend             - Install dependencies and run frontend in dev mode"
+	@echo "  frontendc            - Clean install dependencies and run frontend"
+	@echo ""
+	@echo "Code Quality:"
+	@echo "  format_frontend      - Format frontend code"
+	@echo ""
+	@echo "Testing:"
+	@echo "  tests_frontend       - Run frontend Playwright e2e tests"
+	@echo "  test_frontend        - Run frontend Jest unit tests"
+	@echo "  test_frontend_watch  - Run unit tests in watch mode"
+	@echo "  test_frontend_coverage - Run unit tests with coverage"
+	@echo "  test_frontend_coverage_open - Run coverage and open report"
+	@echo "  test_frontend_verbose - Run unit tests with verbose output"
+	@echo "  test_frontend_ci     - Run unit tests in CI mode"
+	@echo "  test_frontend_clean  - Clean cache and run unit tests"
+	@echo "  test_frontend_bail   - Run unit tests with bail"
+	@echo "  test_frontend_silent - Run unit tests silently"
+	@echo ""
+	@echo "Targeted Testing:"
+	@echo "  test_frontend_file path         - Run tests for specific file"
+	@echo "  test_frontend_pattern pattern   - Run tests matching pattern"
+	@echo "  test_frontend_snapshots         - Update Jest snapshots"
+	@echo "  test_frontend_config            - Show Jest configuration"

@@ -1,0 +1,37 @@
+---
+title: OpenRouter
+slug: /bundles-openrouter
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **OpenRouter** bundle.
+
+For more information about OpenRouter features and functionality used by OpenRouter components, see the [OpenRouter documentation](https://openrouter.ai/docs).
+
+## OpenRouter text generation
+
+This component generates text using OpenRouter's unified API for multiple AI models from different providers.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use an OpenRouter model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
+
+For more information, see [Language model components](/components-models).
+
+### OpenRouter text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your OpenRouter API key for authentication. |
+| site_url | String | Input parameter. Your site URL for OpenRouter rankings. |
+| app_name | String | Input parameter. Your app name for OpenRouter rankings. |
+| provider | String | Input parameter. The AI model provider to use. |
+| model_name | String | Input parameter. The specific model to use for chat completion. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: [0.0, 2.0]. Default: 0.7. |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. |

@@ -1,17 +1,8 @@
 body {
   margin: 0;
   font-family:
-    "Inter",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    "Roboto",
-    "Oxygen",
-    "Ubuntu",
-    "Cantarell",
-    "Fira Sans",
-    "Droid Sans",
-    "Helvetica Neue",
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -393,6 +384,11 @@ input[type="search"]::-webkit-search-cancel-button {
   padding-top: 0.25rem !important;
   padding-bottom: 0.25rem !important;
   height: 38px !important;
+}
+
+.cm-selectionLayer {
+  z-index: 1 !important;
+  pointer-events: none !important;
 }
 
 .cm-button:hover {

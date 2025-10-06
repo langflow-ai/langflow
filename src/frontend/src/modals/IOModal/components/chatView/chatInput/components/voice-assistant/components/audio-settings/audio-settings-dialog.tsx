@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
@@ -9,13 +10,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { usePatchGlobalVariables } from "@/controllers/API/queries/variables";
 import { useGetVoiceList } from "@/controllers/API/queries/voice/use-get-voice-list";
+import { useDebounce } from "@/hooks/use-debounce";
 import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
 import GeneralGlobalVariableModal from "@/shared/components/global-variable-modal";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
-import { useEffect, useRef, useState } from "react";
 import AudioSettingsHeader from "./components/header";
 import LanguageSelect from "./components/language-select";
 import MicrophoneSelect from "./components/microphone-select";
@@ -69,13 +71,18 @@ const SettingsVoiceModal = ({
     (state) => state.globalVariablesEntries,
   );
 
+  const globalVariablesEntities = useGlobalVariablesStore(
+    (state) => state.globalVariablesEntities,
+  );
+
   const openaiVoices = useVoiceStore((state) => state.openaiVoices);
-  const [allVoices, setAllVoices] = useState<
-    {
-      name: string;
-      value: string;
-    }[]
-  >(openaiVoices);
+  const [allVoices, setAllVoices] =
+    useState<
+      {
+        name: string;
+        value: string;
+      }[]
+    >(openaiVoices);
 
   const saveButtonClicked = useRef(false);
 
@@ -83,7 +90,7 @@ const SettingsVoiceModal = ({
     data: voiceList,
     isFetched,
     refetch,
-  } = useGetVoiceList({
+  } = useGetVoiceList(elevenLabsApiKey, {
     enabled: shouldFetchVoices,
     refetchOnMount: shouldFetchVoices,
     refetchOnWindowFocus: shouldFetchVoices,
@@ -158,6 +165,8 @@ const SettingsVoiceModal = ({
     return globalVariables?.map((variable) => variable).includes(variable);
   };
 
+  const { mutate: updateVariable } = usePatchGlobalVariables();
+
   const handleSetMicrophone = (deviceId: string) => {
     setSelectedMicrophone(deviceId);
     localStorage.setItem("lf_selected_microphone", deviceId);
@@ -210,7 +219,6 @@ const SettingsVoiceModal = ({
   };
 
   const handleOpenAIKeyChange = (value: string) => {
-    if (!value) return;
     setOpenaiApiKey(value);
   };
 
@@ -227,6 +235,25 @@ const SettingsVoiceModal = ({
   const showAddOpenAIKeyButton = !hasOpenAIAPIKey || isEditingOpenAIKey;
   const showAllSettings = hasOpenAIAPIKey && !isEditingOpenAIKey;
 
+  const debouncedSetElevenLabsApiKey = useDebounce((value: string) => {
+    const globalVariable = globalVariablesEntities?.find(
+      (variable) => variable.name === "ELEVENLABS_API_KEY",
+    );
+
+    if (globalVariable) {
+      updateVariable({
+        name: "ELEVENLABS_API_KEY",
+        value: value,
+        id: globalVariable.id,
+      });
+    }
+  }, 2000);
+
+  const handleSetElevenLabsApiKey = (value: string) => {
+    setElevenLabsApiKey(value);
+    debouncedSetElevenLabsApiKey(value);
+  };
+
   return (
     <>
       <DropdownMenu open={open} onOpenChange={onOpenChangeDropdownMenu}>
@@ -236,7 +263,7 @@ const SettingsVoiceModal = ({
         <DropdownMenuContent
           className="w-[324px] rounded-xl shadow-lg"
           sideOffset={18}
-          alignOffset={-54}
+          alignOffset={-60}
           align="end"
         >
           <div ref={popupRef} className="rounded-3xl">
@@ -264,7 +291,7 @@ const SettingsVoiceModal = ({
                     <>
                       <InputComponent
                         isObjectOption={false}
-                        password={false}
+                        password
                         nodeStyle
                         popoverWidth="16rem"
                         placeholder={getPlaceholder(
@@ -372,9 +399,7 @@ const SettingsVoiceModal = ({
                           />
                         )}
                         value={elevenLabsApiKey}
-                        onChange={(value) => {
-                          setElevenLabsApiKey(value);
-                        }}
+                        onChange={handleSetElevenLabsApiKey}
                         selectedOption={
                           checkIfGlobalVariableExists(elevenLabsApiKey)
                             ? elevenLabsApiKey

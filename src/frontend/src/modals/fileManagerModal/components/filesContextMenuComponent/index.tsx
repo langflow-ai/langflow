@@ -1,3 +1,4 @@
+import { type ReactNode, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   DropdownMenu,
@@ -5,13 +6,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useGetDownloadFileV2 } from "@/controllers/API/queries/file-management";
 import { useDeleteFileV2 } from "@/controllers/API/queries/file-management/use-delete-file";
 import { useDuplicateFileV2 } from "@/controllers/API/queries/file-management/use-duplicate-file";
+import { useCustomHandleSingleFileDownload } from "@/customization/hooks/use-custom-handle-single-file-download";
 import ConfirmationModal from "@/modals/confirmationModal";
 import useAlertStore from "@/stores/alertStore";
-import { FileType } from "@/types/file_management";
-import { ReactNode, useState } from "react";
+import type { FileType } from "@/types/file_management";
 
 export default function FilesContextMenuComponent({
   children,
@@ -29,11 +29,7 @@ export default function FilesContextMenuComponent({
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
-  const { mutate: downloadFile } = useGetDownloadFileV2({
-    id: file.id,
-    filename: file.name,
-    type: file.path.split(".").pop() || "",
-  });
+  const { handleSingleDownload } = useCustomHandleSingleFileDownload(file);
 
   const { mutate: deleteFile } = useDeleteFileV2({
     id: file.id,
@@ -51,10 +47,11 @@ export default function FilesContextMenuComponent({
         handleRename(file.id, file.name);
         break;
       case "replace":
-        console.log("replace");
+        // TODO: Implement replace file
+        console.warn("replace");
         break;
       case "download":
-        downloadFile();
+        handleSingleDownload();
         break;
       case "delete":
         setShowDeleteConfirmation(true);

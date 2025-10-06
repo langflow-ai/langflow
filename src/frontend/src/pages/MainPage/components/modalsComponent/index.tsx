@@ -28,9 +28,7 @@ const ModalsComponent = ({
           setOpenDeleteFolderModal(false);
         }}
         description="folder"
-        note={
-          "Deleting the selected project will remove all associated flows and components."
-        }
+        note={"and all associated flows and components"}
       >
         <></>
       </DeleteConfirmationModal>

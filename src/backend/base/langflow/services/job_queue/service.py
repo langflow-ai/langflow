@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import asyncio
 
-from loguru import logger
+from lfx.log.logger import logger
 
-from langflow.events.event_manager import EventManager, create_default_event_manager
+from langflow.events.event_manager import EventManager
 from langflow.services.base import Service
 
 
@@ -117,7 +117,7 @@ class JobQueueService(Service):
         # Clean up each registered job queue.
         for job_id in list(self._queues.keys()):
             await self.cleanup_job(job_id)
-        logger.info("JobQueueService stopped: all job queues have been cleaned up.")
+        await logger.adebug("JobQueueService stopped: all job queues have been cleaned up.")
 
     async def teardown(self) -> None:
         await self.stop()
@@ -133,18 +133,17 @@ class JobQueueService(Service):
                 - The asyncio.Queue instance for handling the job's tasks or messages.
                 - The EventManager instance for event handling tied to the queue.
         """
-        if job_id in self._queues:
-            msg = f"Queue for job_id {job_id} already exists"
-            logger.error(msg)
-            raise ValueError(msg)
-
         if self._closed:
             msg = "Queue service is closed"
-            logger.error(msg)
             raise RuntimeError(msg)
 
+        existing_queue = self._queues.get(job_id)
+        if existing_queue:
+            msg = f"Queue for job_id {job_id} already exists"
+            raise ValueError(msg)
+
         main_queue: asyncio.Queue = asyncio.Queue()
-        event_manager = create_default_event_manager(main_queue)
+        event_manager: EventManager = self._create_default_event_manager(main_queue)
 
         # Register the queue without an active task.
         self._queues[job_id] = (main_queue, event_manager, None, None)
@@ -222,21 +221,21 @@ class JobQueueService(Service):
             job_id (str): Unique identifier for the job to be cleaned up.
         """
         if job_id not in self._queues:
-            logger.debug(f"No queue found for job_id {job_id} during cleanup.")
+            await logger.adebug(f"No queue found for job_id {job_id} during cleanup.")
             return
 
-        logger.info(f"Commencing cleanup for job_id {job_id}")
+        await logger.adebug(f"Commencing cleanup for job_id {job_id}")
         main_queue, _event_manager, task, _ = self._queues[job_id]
 
         # Cancel the associated task if it is still running.
         if task and not task.done():
-            logger.debug(f"Cancelling active task for job_id {job_id}")
+            await logger.adebug(f"Cancelling active task for job_id {job_id}")
             task.cancel()
             await asyncio.wait([task])
             # Log any exceptions that occurred during the task's execution.
             if exc := task.exception():
-                logger.error(f"Error in task for job_id {job_id}: {exc}")
-            logger.debug(f"Task cancellation complete for job_id {job_id}")
+                await logger.aerror(f"Error in task for job_id {job_id}: {exc}")
+            await logger.adebug(f"Task cancellation complete for job_id {job_id}")
 
         # Clear the queue since we just cancelled the task or it has completed
         items_cleared = 0
@@ -247,10 +246,10 @@ class JobQueueService(Service):
             except asyncio.QueueEmpty:
                 break
 
-        logger.debug(f"Removed {items_cleared} items from queue for job_id {job_id}")
+        await logger.adebug(f"Removed {items_cleared} items from queue for job_id {job_id}")
         # Remove the job entry from the registry
         self._queues.pop(job_id, None)
-        logger.info(f"Cleanup successful for job_id {job_id}: resources have been released.")
+        await logger.adebug(f"Cleanup successful for job_id {job_id}: resources have been released.")
 
     async def _periodic_cleanup(self) -> None:
         """Execute a periodic task that cleans up completed or cancelled job queues.
@@ -267,10 +266,10 @@ class JobQueueService(Service):
                 await asyncio.sleep(60)  # Sleep for 60 seconds before next cleanup attempt.
                 await self._cleanup_old_queues()
             except asyncio.CancelledError:
-                logger.debug("Periodic cleanup task received cancellation signal.")
+                await logger.adebug("Periodic cleanup task received cancellation signal.")
                 raise
             except Exception as exc:  # noqa: BLE001
-                logger.error(f"Exception encountered during periodic cleanup: {exc}")
+                await logger.aerror(f"Exception encountered during periodic cleanup: {exc}")
 
     async def _cleanup_old_queues(self) -> None:
         """Scan all registered job queues and clean up those with completed or failed tasks."""
@@ -279,7 +278,7 @@ class JobQueueService(Service):
         for job_id in list(self._queues.keys()):
             _, _, task, cleanup_time = self._queues[job_id]
             if task:
-                logger.debug(
+                await logger.adebug(
                     f"Queue {job_id} status - Done: {task.done()}, "
                     f"Cancelled: {task.cancelled()}, "
                     f"Has exception: {task.exception() is not None if task.done() else 'N/A'}"
@@ -295,8 +294,36 @@ class JobQueueService(Service):
                             self._queues[job_id][2],
                             current_time,
                         )
-                        logger.debug(f"Job queue for job_id {job_id} marked for cleanup - Task cancelled or failed")
+                        await logger.adebug(
+                            f"Job queue for job_id {job_id} marked for cleanup - Task cancelled or failed"
+                        )
                     elif current_time - cleanup_time >= self.CLEANUP_GRACE_PERIOD:
                         # Enough time has passed, perform the actual cleanup
-                        logger.debug(f"Cleaning up job_id {job_id} after grace period")
+                        await logger.adebug(f"Cleaning up job_id {job_id} after grace period")
                         await self.cleanup_job(job_id)
+
+    def _create_default_event_manager(self, queue: asyncio.Queue) -> EventManager:
+        """Creates the default event manager with predefined events.
+
+        Args:
+            queue (asyncio.Queue): The queue to be associated with the event manager.
+
+        Returns:
+            EventManager: The configured EventManager instance.
+        """
+        manager = EventManager(queue)
+        # Registering predefined events
+        event_names_types = [
+            ("on_token", "token"),
+            ("on_vertices_sorted", "vertices_sorted"),
+            ("on_error", "error"),
+            ("on_end", "end"),
+            ("on_message", "add_message"),
+            ("on_remove_message", "remove_message"),
+            ("on_end_vertex", "end_vertex"),
+            ("on_build_start", "build_start"),
+            ("on_build_end", "build_end"),
+        ]
+        for name, event_type in event_names_types:
+            manager.register_event(name, event_type)
+        return manager
