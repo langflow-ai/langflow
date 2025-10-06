@@ -1,5 +1,6 @@
 import os
-
+import tempfile
+from dotenv import set_key
 import pytest
 from langflow.services.deps import get_settings_service
 
@@ -82,3 +83,35 @@ async def test_load_flows():
     await load_flows_from_directory()
     settings_service = get_settings_service()
     assert "test_performance.db" in settings_service.settings.database_url
+
+
+def test_env_var_loading(tmp_path, monkeypatch):
+    """Test that environment variables from .env are loaded before settings initialization."""
+    # Create a temporary .env file
+    env_file = tmp_path / ".env"
+    env_var_name = "LANGFLOW_TEST_ENV_VAR"
+    env_var_value = "test_value_123"
+    env_file.write_text(f"{env_var_name}={env_var_value}\n")
+
+    # Ensure the variable is not set before
+    monkeypatch.delenv(env_var_name, raising=False)
+
+    # Patch find_dotenv to return our temp .env file
+    monkeypatch.setattr("langflow.services.settings.factory.find_dotenv", lambda: str(env_file))
+
+    # Patch load_dotenv to actually load our temp .env file
+    from dotenv import load_dotenv
+    monkeypatch.setattr("langflow.services.settings.factory.load_dotenv", load_dotenv)
+
+    # Trigger settings initialization (should load env file)
+    from langflow.services.settings.factory import SettingsServiceFactory
+    factory = SettingsServiceFactory()
+    factory._check_env_loaded()
+
+    # Assert env var is now in os.environ
+    assert os.getenv(env_var_name) == env_var_value
+
+    # Optionally, check if settings service can access it (if relevant)
+    settings_service = get_settings_service()
+    # If your settings service exposes env vars, check here
+    # assert settings_service.settings.test_env_var == env_var_value  # Uncomment if applicable
