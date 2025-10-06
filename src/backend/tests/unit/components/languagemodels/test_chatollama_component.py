@@ -343,34 +343,37 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert call_args["base_url"] == "http://host.docker.internal:11434"
         assert model == mock_model
 
-    @patch("lfx.components.ollama.ollama.ChatOpenAI")
-    def test_build_model_uses_chatopenai_with_v1_suffix(self, mock_chat_openai):
-        """Test that /v1 suffix triggers ChatOpenAI instead of ChatOllama."""
+    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch("lfx.components.ollama.ollama.logger")
+    def test_build_model_strips_v1_suffix_and_logs_warning(self, mock_logger, mock_chat_ollama):
+        """Test that /v1 suffix is automatically stripped and a warning is logged."""
         mock_model = MagicMock()
-        mock_chat_openai.return_value = mock_model
+        mock_chat_ollama.return_value = mock_model
 
         component = ChatOllamaComponent()
         component.base_url = "http://localhost:11434/v1"
         component.model_name = "llama3.1"
-        component.temperature = 0.7
         component.mirostat = "Disabled"
 
         model = component.build_model()
 
-        # Verify ChatOpenAI was called with /v1 URL
-        mock_chat_openai.assert_called_once()
-        call_args = mock_chat_openai.call_args[1]
-        assert call_args["base_url"] == "http://localhost:11434/v1"
-        assert call_args["api_key"] == "ollama"  # pragma: allowlist secret
-        assert call_args["model"] == "llama3.1"
-        assert call_args["temperature"] == 0.7
+        # Verify warning was logged
+        mock_logger.warning.assert_called_once()
+        warning_message = mock_logger.warning.call_args[0][0]
+        assert "Detected '/v1' suffix in base URL" in warning_message
+        assert "https://docs.ollama.com/openai#openai-compatibility" in warning_message
+
+        # Verify ChatOllama was called without /v1
+        call_args = mock_chat_ollama.call_args[1]
+        assert call_args["base_url"] == "http://localhost:11434"
         assert model == mock_model
 
-    @patch("lfx.components.ollama.ollama.ChatOpenAI")
-    def test_build_model_uses_chatopenai_with_v1_trailing_slash(self, mock_chat_openai):
-        """Test that /v1/ suffix also triggers ChatOpenAI."""
+    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch("lfx.components.ollama.ollama.logger")
+    def test_build_model_strips_v1_trailing_slash(self, mock_logger, mock_chat_ollama):
+        """Test that /v1/ suffix is also automatically stripped."""
         mock_model = MagicMock()
-        mock_chat_openai.return_value = mock_model
+        mock_chat_ollama.return_value = mock_model
 
         component = ChatOllamaComponent()
         component.base_url = "http://localhost:11434/v1/"
@@ -379,10 +382,12 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
 
         model = component.build_model()
 
-        # Verify ChatOpenAI was called
-        mock_chat_openai.assert_called_once()
-        call_args = mock_chat_openai.call_args[1]
-        assert "/v1" in call_args["base_url"]
+        # Verify warning was logged
+        mock_logger.warning.assert_called_once()
+
+        # Verify ChatOllama was called without /v1
+        call_args = mock_chat_ollama.call_args[1]
+        assert call_args["base_url"] == "http://localhost:11434"
         assert model == mock_model
 
     @pytest.mark.asyncio
