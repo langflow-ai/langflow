@@ -1,0 +1,69 @@
+name: "EOC Check Agent"
+description: "Agent for eligibility and coverage checks using knowledge hub search and MCP tools"
+version: "1.0.0"
+
+components:
+  eoc-prompt:
+    type: "genesis:genesis_prompt"
+    config:
+      template: |
+        You are an EOC (Eligibility of Coverage) specialist. Your task is to help determine patient eligibility and coverage for medical procedures.
+
+        Patient Information: {patient_info}
+        Procedure: {procedure}
+
+        Please analyze the eligibility requirements and provide comprehensive coverage information.
+
+  eoc-request:
+    type: "genesis:chat_input"
+    config:
+      input_value: "Please check EOC for the given patient and procedure"
+
+  eoc-search:
+    type: "genesis:knowledge_hub_search"
+    config:
+      search_query: "{patient_info} {procedure} eligibility coverage"
+      selected_hubs: ["medical_policies", "coverage_guidelines"]
+    provides:
+      - useAs: "tools"
+        in: "eoc-agent"
+
+  service-validator:
+    type: "genesis:mcp_tool"
+    config:
+      mcp_server: "eligibility_service"
+      tool: "validate_coverage"
+    provides:
+      - useAs: "tools"
+        in: "eoc-agent"
+
+  eoc-agent:
+    type: "genesis:agent"
+    config:
+      system_prompt: |
+        You are an EOC (Eligibility of Coverage) specialist with access to knowledge bases and validation tools.
+        Use the knowledge hub search to find relevant coverage policies and the MCP validation tool to check real-time eligibility.
+        Provide comprehensive and accurate coverage determinations.
+      model_provider: "OpenAI"
+      model_name: "gpt-4"
+
+  eoc-formatter:
+    type: "genesis:chat_output"
+    config:
+      sender: "Machine"
+      sender_name: "EOC Agent"
+
+connections:
+  - from: "eoc-request"
+    to: "eoc-agent"
+    field: "input_value"
+
+  - from: "eoc-prompt"
+    to: "eoc-agent"
+    field: "system_prompt"
+
+  - from: "eoc-agent"
+    to: "eoc-formatter"
+    field: "input_value"
+
+# Tool connections are handled automatically via provides declarations

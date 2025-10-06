@@ -105,7 +105,9 @@ class FlowConverter:
         # Map component type
         mapping = self.mapper.map_component(component.type)
         component_type = mapping["component"]
-        logger.debug(f"Mapped {component.type} → {component_type}")
+        # Use dataType for edge creation if specified, otherwise use component_type
+        data_type = mapping.get("dataType", component_type)
+        logger.debug(f"Mapped {component.type} → {component_type} (dataType: {data_type})")
 
         # Get component template (this would come from component registry in real implementation)
         template = await self._get_component_template(component_type)
@@ -152,7 +154,7 @@ class FlowConverter:
             "position": position,
             "data": {
                 "id": component.id,
-                "type": component_type,
+                "type": data_type,
                 "description": component.description or "",
                 "display_name": component.name,
                 "node": node_data,
@@ -311,11 +313,16 @@ class FlowConverter:
             "type": handle_type
         }
 
-        # CRITICAL FIX: Use original JSON encoding format (no spaces)
-        source_handle_encoded = json.dumps(source_handle, separators=(",", ":")).replace('"', "œ")
-        target_handle_encoded = json.dumps(target_handle, separators=(",", ":")).replace('"', "œ")
+        # CRITICAL FIX: Different JSON encoding for edge ID vs handle strings
+        # Edge ID: Use compact format (no spaces) - for the ID string
+        source_handle_id = json.dumps(source_handle, separators=(",", ":")).replace('"', "œ")
+        target_handle_id = json.dumps(target_handle, separators=(",", ":")).replace('"', "œ")
 
-        # CRITICAL FIX: Use original working edge ID format
+        # Handle strings: Use spaced format - for sourceHandle/targetHandle fields
+        source_handle_encoded = json.dumps(source_handle, separators=(", ", ": ")).replace('"', "œ")
+        target_handle_encoded = json.dumps(target_handle, separators=(", ", ": ")).replace('"', "œ")
+
+        # CRITICAL FIX: Use original working edge ID format with compact encoding
         edge = {
             "className": "",
             "data": {
@@ -323,7 +330,7 @@ class FlowConverter:
                 "targetHandle": target_handle,
                 "label": getattr(provide, 'description', '') or ""
             },
-            "id": f"reactflow__edge-{source_id}{source_handle_encoded}-{target_id}{target_handle_encoded}",
+            "id": f"reactflow__edge-{source_id}{source_handle_id}-{target_id}{target_handle_id}",
             "selected": False,
             "source": source_id,
             "sourceHandle": source_handle_encoded,

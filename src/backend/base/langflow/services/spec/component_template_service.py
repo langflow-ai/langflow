@@ -105,11 +105,11 @@ class ComponentTemplateService:
                         "display_name": "Input",
                         "info": "Input for the agent."
                     },
-                    "system_message": {
+                    "system_prompt": {
                         "input_types": ["Message"],
                         "type": "str",
-                        "display_name": "System Message",
-                        "info": "System message for the agent."
+                        "display_name": "System Prompt",
+                        "info": "System prompt for the agent."
                     },
                     "tools": {
                         "input_types": ["Tool"],

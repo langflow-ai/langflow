@@ -78,18 +78,18 @@ class ComponentMapper:
 
             # Prompts
             "genesis:prompt": {"component": "Prompt", "config": {}},
-            "genesis:prompt_template": {"component": "GenesisPromptComponent", "config": {}},
-            "genesis:genesis_prompt": {"component": "GenesisPromptComponent", "config": {}},
+            "genesis:prompt_template": {"component": "GenesisPromptComponent", "config": {}, "dataType": "Prompt"},
+            "genesis:genesis_prompt": {"component": "GenesisPromptComponent", "config": {}, "dataType": "Prompt"},
 
             # Memory
             "genesis:memory": {"component": "Memory", "config": {}},
             "genesis:conversation_memory": {"component": "ConversationMemory", "config": {}},
 
             # Tools - map to actual component classes
-            "genesis:knowledge_hub_search": {"component": "KnowledgeHubSearchComponent", "config": {}},
-            "genesis:pa_lookup": {"component": "CustomComponent", "config": {}},
-            "genesis:eligibility_component": {"component": "CustomComponent", "config": {}},
-            "genesis:encoder_pro": {"component": "EncoderProTool", "config": {}},
+            "genesis:knowledge_hub_search": {"component": "KnowledgeHubSearchComponent", "config": {}, "dataType": "KnowledgeHubSearchComponent"},
+            "genesis:pa_lookup": {"component": "CustomComponent", "config": {}, "dataType": "CustomComponent"},
+            "genesis:eligibility_component": {"component": "CustomComponent", "config": {}, "dataType": "CustomComponent"},
+            "genesis:encoder_pro": {"component": "EncoderProTool", "config": {}, "dataType": "EncoderProTool"},
             "genesis:qnext_auth_history": {"component": "CustomComponent", "config": {}},
             "genesis:api_component": {"component": "CustomComponent", "config": {}},
             "genesis:form_recognizer": {"component": "CustomComponent", "config": {}},
