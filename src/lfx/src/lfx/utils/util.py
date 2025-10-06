@@ -4,6 +4,8 @@ import inspect
 import json
 import os
 import re
+import socket
+import struct
 from functools import wraps
 from pathlib import Path
 from typing import Any
@@ -55,8 +57,6 @@ def get_container_host() -> str | None:
     Returns:
         The hostname or IP to use, or None if not in a container.
     """
-    import socket
-
     # Check if we're in a container first
     container_type = detect_container_environment()
     if not container_type:
@@ -99,16 +99,17 @@ def get_container_host() -> str | None:
     # Fallback: try to get gateway IP from routing table (Linux containers)
     try:
         with Path("/proc/net/route").open() as f:
+            # Skip header
+            next(f)
             for line in f:
                 fields = line.strip().split()
                 min_field_count = 3  # Minimum fields needed: interface, destination, gateway
                 if len(fields) >= min_field_count and fields[1] == "00000000":  # Default route
                     # Gateway is in hex format (little-endian)
                     gateway_hex = fields[2]
-                    # Convert hex to IP address
-                    # The hex is in little-endian format, so we read it backwards in pairs
-                    octets = [gateway_hex[i : i + 2] for i in range(0, 8, 2)]
-                    return ".".join(str(int(octet, 16)) for octet in reversed(octets))
+                    # Convert little-endian hex to dotted IPv4
+                    gw_int = int(gateway_hex, 16)
+                    return socket.inet_ntoa(struct.pack("<L", gw_int))
     except (FileNotFoundError, PermissionError, IndexError, ValueError):
         pass
 
