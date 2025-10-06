@@ -17,4 +17,6 @@ class SettingsServiceFactory(ServiceFactory):
 
     @override
     def create(self):
+        # Here you would have logic to create and configure a SettingsService
+
         return SettingsService.initialize()
