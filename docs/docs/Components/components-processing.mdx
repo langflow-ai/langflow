@@ -15,7 +15,7 @@ They have many uses, including:
 * Feed instructions and context to your LLMs and agents with the [**Prompt Template** component](#prompt-template).
 * Extract content from larger chunks of data with a [**Parser** component](#parser).
 * Filter data with natural language with the [**Smart Transform** component](#smart-transform).
-* Perform advanced JSON queries with the [**Data Operations** component](#data-operations) using JQ Expression.
+* Perform advanced JSON queries with the [**Data Operations** component](#data-operations) using `jq` expressions.
 * Save data to your local machine with the [**Save File** component](#save-file).
 * Transform data into a different data type with the [**Type Convert** component](#type-convert) to pass it between incompatible components.
 
@@ -166,9 +166,9 @@ Many parameters are conditional based on the selected **Operation** (`operation`
 | append_update_data | Append or Update | Input parameter. The data to append or update the existing data with. |
 | remove_keys_input | Remove Keys | Input parameter. A list of keys to remove from the data. |
 | rename_keys_input | Rename Keys | Input parameter. A list of keys to rename in the data. |
-| mapped_json_display | JSON to Map | Input parameter. JSON structure to explore for path selection. Used by Path Selection operation. |
-| query | JQ Expression | Input parameter. The jq query expression for advanced JSON filtering and transformation. Used by JQ Expression operation. |
-| selected_key | Select Path | Input parameter. The JSON path expression to extract values. Used by Path Selection operation. |
+| mapped_json_display | JSON to Map | Input parameter. JSON structure to explore for path selection. Only applies to the **Path Selection** operation. For more information, see [Path Selection operation examples](#path-selection-operation-examples). |
+| selected_key | Select Path | Input parameter. The JSON path expression to extract values. Only applies to the **Path Selection** operation. For more information, see [Path Selection operation examples](#path-selection-operation-examples). |
+| query | JQ Expression | Input parameter. The [`jq`](https://jqlang.org/manual/) expression for advanced JSON filtering and transformation. Only applies to the **JQ Expression** operation. For more information, see [JQ Expression operation examples](#jq-expression-operation-examples). |
 
 #### Available data operations
 
@@ -185,7 +185,7 @@ All operations act on an incoming `Data` object.
 | Remove Keys | `remove_keys_input` | Removes specified keys from the data. |
 | Rename Keys | `rename_keys_input` | Renames keys in the data. |
 | Path Selection | `mapped_json_display`, `selected_key` | Extracts values from nested JSON structures using path expressions. |
-| JQ Expression | `query` | Performs advanced JSON queries using jq syntax for filtering, projections, and transformations. |
+| JQ Expression | `query` | Performs advanced JSON queries using [`jq`](https://jqlang.org/manual/) syntax for filtering, projections, and transformations. |
 
 ### Path Selection operation examples
 
@@ -216,7 +216,7 @@ Use the Path Selection operation to extract values from nested JSON structures w
 
 Use the **JQ Expressions** operation to use the [jq](https://jqlang.org/) query language to perform more advanced JSON filtering.
 1. In the **Operations** dropdown, select **JQ Expression**.
-2. In the **JQ Expression** field, enter a jq query expression to query against the **Data Operations** component's Data input.
+2. In the **JQ Expression** field, enter a `jq` filter to query against the **Data Operations** component's Data input.
 
     For this example JSON structure, enter expressions like `.user.profile.name` to extract "John Doe", `.user.profile | {name, email}` to project fields to a new object, or `.user.profile | tostring` to convert the field to a string.
     ```json

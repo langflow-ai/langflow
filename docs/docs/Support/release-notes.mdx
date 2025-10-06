@@ -56,18 +56,17 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 - Webhook authentication
 
-    Added the `LANGFLOW_WEBHOOK_AUTH_ENABLE` environment variable for authenticating requests to the [/webhook endpoint](/api-flows-run#webhook-run-flow). When `LANGFLOW_WEBHOOK_AUTH_ENABLE=TRUE`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `FALSE`, no Langflow API key is required.
+    Added the `LANGFLOW_WEBHOOK_AUTH_ENABLE` environment variable for authenticating requests to the [`/webhook` endpoint](/api-flows-run#webhook-run-flow). When `LANGFLOW_WEBHOOK_AUTH_ENABLE=TRUE`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `FALSE`, no Langflow API key is required and all requests to the webhook endpoint are treated as being sent by the flow owner.
 
-- DataFrame Operations component enhancements
+- New filter operator for **DataFrame Operations** component
 
     The [**DataFrame Operations** component](components-processing#dataframe-operations) now includes a `not contains` filter operator.
     Use it to clean data by keeping only records that don't contain specific values, such as filtering out invalid email addresses that don't contain `@`.
 
-- Data Operations component enhancements
+- New JSON operations for **Data Operations** component
 
-    The [**Data Operations** component](components-processing#data-operations) now includes two new operations for advanced JSON data manipulation.
-    The Path Selection operations extracts values from nested JSON structures, and the JQ Expression operation uses the [jq](https://jqlang.org/) query language to perform advanced JSON filtering, projections, and transformations.
-
+    The [**Data Operations** component](components-processing#data-operations) now includes two operations for advanced JSON data manipulation.
+    The **Path Selection** operation extracts values from nested JSON structures, and the **JQ Expression** operation uses the [`jq`](https://jqlang.org/) query language to perform advanced JSON filtering, projections, and transformations.
 
 - New integrations and bundles:
 
