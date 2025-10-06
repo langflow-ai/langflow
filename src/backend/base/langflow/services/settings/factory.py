@@ -18,7 +18,7 @@ class SettingsServiceFactory(ServiceFactory):
     def __init__(self) -> None:
         super().__init__(SettingsService)
 
-    def _check_env_loaded(self) -> bool:
+    def _load_env_vars(self) -> bool:
         env_file = find_dotenv()
         if env_file:
             logger.debug(f"Loading environment variables from {env_file}")
@@ -29,5 +29,5 @@ class SettingsServiceFactory(ServiceFactory):
     def create(self):
         # Here you would have logic to create and configure a SettingsService
         # Try to load env file if not already loaded
-        self._check_env_loaded()
+        self._load_env_vars()
         return SettingsService.initialize()
