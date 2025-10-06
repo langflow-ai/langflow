@@ -31,7 +31,12 @@ from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_chat_service, get_telemetry_service, session_scope
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
-from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
+from langflow.services.telemetry.schema import (
+    ComponentInputsPayload,
+    ComponentPayload,
+    PlaygroundPayload,
+    serialize_input_values,
+)
 
 
 async def start_flow_build(
@@ -372,23 +377,68 @@ async def generate_flow_events(
                 id=vertex.id,
                 data=result_data_response,
             )
+
+            # Generate run_id for this component execution
+            component_run_id = str(uuid.uuid4())
+
+            # Extract and send component input telemetry (separate payload)
+            if hasattr(vertex, "custom_component") and vertex.custom_component:
+                inputs_dict = vertex.custom_component.get_telemetry_input_values()
+                inputs_json = serialize_input_values(inputs_dict)
+
+                if inputs_json:
+                    background_tasks.add_task(
+                        telemetry_service.log_package_component_inputs,
+                        ComponentInputsPayload(
+                            component_run_id=component_run_id,
+                            component_id=vertex_id,
+                            component_name=vertex_id.split("-")[0],
+                            component_inputs=inputs_json,
+                        ),
+                    )
+
+            # Send component execution telemetry
             background_tasks.add_task(
                 telemetry_service.log_package_component,
                 ComponentPayload(
                     component_name=vertex_id.split("-")[0],
+                    component_id=vertex_id,
                     component_seconds=int(time.perf_counter() - start_time),
                     component_success=valid,
                     component_error_message=error_message,
+                    component_run_id=component_run_id,
                 ),
             )
         except Exception as exc:
+            # Generate run_id for this component execution (error case)
+            component_run_id = str(uuid.uuid4())
+
+            # Extract and send component input telemetry even on error (separate payload)
+            if hasattr(vertex, "custom_component") and vertex.custom_component:
+                inputs_dict = vertex.custom_component.get_telemetry_input_values()
+                inputs_json = serialize_input_values(inputs_dict)
+
+                if inputs_json:
+                    background_tasks.add_task(
+                        telemetry_service.log_package_component_inputs,
+                        ComponentInputsPayload(
+                            component_run_id=component_run_id,
+                            component_id=vertex_id,
+                            component_name=vertex_id.split("-")[0],
+                            component_inputs=inputs_json,
+                        ),
+                    )
+
+            # Send component execution telemetry (error case)
             background_tasks.add_task(
                 telemetry_service.log_package_component,
                 ComponentPayload(
                     component_name=vertex_id.split("-")[0],
+                    component_id=vertex_id,
                     component_seconds=int(time.perf_counter() - start_time),
                     component_success=False,
                     component_error_message=str(exc),
+                    component_run_id=component_run_id,
                 ),
             )
             await logger.aexception("Error building Component")
