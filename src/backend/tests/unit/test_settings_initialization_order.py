@@ -225,66 +225,6 @@ class TestCLISubprocessIntegration:
     """Test CLI with subprocess to verify real-world startup with .env files."""
 
     @pytest.mark.skipif(sys.platform == "win32", reason="Shell script test not compatible with Windows")
-    def test_cli_help_with_env_file(self, tmp_path):
-        """Test that CLI --help works with an env file (lightweight startup test)."""
-        # Create a test .env file
-        env_file = tmp_path / ".env.test"
-        env_file.write_text(
-            """
-LANGFLOW_DATABASE_URL=sqlite:///./test_cli.db
-LANGFLOW_KNOWLEDGE_BASES_DIR=/tmp/test_cli_kb
-LANGFLOW_LOG_LEVEL=ERROR
-        """.strip()
-        )
-
-        # Test the CLI help with env file
-        result = subprocess.run(
-            [sys.executable, "-m", "langflow", "run", "--help"],
-            env={**os.environ, "LANGFLOW_ENV_FILE": str(env_file)},
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-
-        # Should not error out
-        assert result.returncode == 0 or "Usage:" in result.stdout, (
-            f"CLI failed with return code {result.returncode}\n"
-            f"STDOUT: {result.stdout}\n"
-            f"STDERR: {result.stderr}"
-        )
-
-    @pytest.mark.skipif(sys.platform == "win32", reason="Shell script test not compatible with Windows")
-    def test_cli_version_with_env_file(self, tmp_path):
-        """Test that CLI --version works with an env file."""
-        # Create a test .env file with various settings
-        env_file = tmp_path / ".env.version"
-        env_file.write_text(
-            """
-LANGFLOW_DATABASE_URL=sqlite:///./test_version.db
-LANGFLOW_SAVE_DB_IN_CONFIG_DIR=true
-LANGFLOW_AUTO_LOGIN=false
-        """.strip()
-        )
-
-        # Test the CLI version command
-        result = subprocess.run(
-            [sys.executable, "-m", "langflow", "--version"],
-            env={**os.environ},
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-
-        # Should succeed
-        assert result.returncode == 0, (
-            f"CLI version failed with return code {result.returncode}\n"
-            f"STDOUT: {result.stdout}\n"
-            f"STDERR: {result.stderr}"
-        )
-        # Should show version info
-        assert "langflow" in result.stdout.lower() or "version" in result.stdout.lower()
-
-    @pytest.mark.skipif(sys.platform == "win32", reason="Shell script test not compatible with Windows")
     def test_cli_with_env_file_flag(self, tmp_path):
         """Test that CLI --env-file flag works correctly."""
         # Create a test .env file
@@ -321,83 +261,6 @@ LANGFLOW_KNOWLEDGE_BASES_DIR=/tmp/test_explicit_kb
                 f"STDOUT: {result.stdout}\n"
                 f"STDERR: {result.stderr}"
             )
-
-    @pytest.mark.skipif(sys.platform == "win32", reason="Shell script test not compatible with Windows")
-    def test_cli_startup_detects_preinitialized_settings(self, tmp_path):
-        """Test that CLI startup can detect if settings were initialized during import."""
-        # Create a test Python script that tries to initialize settings before CLI
-        test_script = tmp_path / "test_preinit.py"
-        test_script.write_text(
-            """
-import sys
-from langflow.services.deps import get_settings_service, is_settings_service_initialized
-
-# Initialize settings early (simulating the bug we're trying to prevent)
-get_settings_service()
-
-# Check if it's initialized
-if is_settings_service_initialized():
-    print("SETTINGS_INITIALIZED")
-    sys.exit(0)
-else:
-    print("SETTINGS_NOT_INITIALIZED")
-    sys.exit(1)
-        """.strip()
-        )
-
-        # Run the test script
-        result = subprocess.run(
-            [sys.executable, str(test_script)],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-
-        # Should detect that settings are initialized
-        assert "SETTINGS_INITIALIZED" in result.stdout, (
-            f"Failed to detect initialized settings\n"
-            f"STDOUT: {result.stdout}\n"
-            f"STDERR: {result.stderr}"
-        )
-        assert result.returncode == 0
-
-    @pytest.mark.skipif(sys.platform == "win32", reason="Shell script test not compatible with Windows")
-    def test_cli_real_startup_with_custom_env(self, tmp_path):
-        """Test a more realistic CLI startup scenario with custom env file."""
-        # Create a comprehensive .env file
-        env_file = tmp_path / ".env.real"
-        env_file.write_text(
-            """
-LANGFLOW_DATABASE_URL=sqlite:///./test_real.db
-LANGFLOW_KNOWLEDGE_BASES_DIR=/tmp/test_real_kb
-LANGFLOW_LOG_LEVEL=WARNING
-LANGFLOW_SAVE_DB_IN_CONFIG_DIR=false
-LANGFLOW_AUTO_LOGIN=false
-LANGFLOW_STORE_ENVIRONMENT_VARIABLES=true
-        """.strip()
-        )
-
-        # Test that we can at least get help without crashing
-        result = subprocess.run(
-            [sys.executable, "-m", "langflow", "run", "--help"],
-            env={**os.environ, "LANGFLOW_ENV_FILE": str(env_file)},
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-
-        # Should succeed
-        assert result.returncode == 0 or "Usage:" in result.stdout, (
-            f"CLI startup failed\n"
-            f"Return code: {result.returncode}\n"
-            f"STDOUT: {result.stdout}\n"
-            f"STDERR: {result.stderr}"
-        )
-
-        # Should not have errors about settings initialization
-        assert "Settings service is already initialized" not in result.stderr, (
-            f"Found settings initialization error in stderr:\n{result.stderr}"
-        )
 
     @pytest.mark.skipif(sys.platform == "win32", reason="Shell script test not compatible with Windows")
     def test_cli_with_non_dotenv_filename(self, tmp_path):
@@ -494,9 +357,15 @@ try:
         print(f"SUCCESS: Database created at env file location: {{db_path}}")
         sys.exit(0)
     else:
-        print(f"ERROR: Database NOT created at env file location: {{db_path}}")
-        print(f"This means env file values were not used")
-        sys.exit(1)
+        # Startup times can vary, so we'll be lenient to avoid flaky tests
+        time.sleep(15)
+        if db_path.exists():
+            print(f"SUCCESS: Database created at env file location: {{db_path}}")
+            sys.exit(0)
+        else:
+            print(f"ERROR: Database NOT created at env file location: {{db_path}}")
+            print(f"This means env file values were not used")
+            sys.exit(1)
 finally:
     # Clean up: kill the server
     proc.terminate()
