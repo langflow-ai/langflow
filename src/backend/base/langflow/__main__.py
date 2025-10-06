@@ -37,6 +37,7 @@ from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPE
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
+from langflow.services.deps import is_settings_service_initialized
 
 # Initialize console with Windows-safe settings
 console = Console(legacy_windows=True, emoji=False) if platform.system() == "Windows" else Console()
@@ -254,6 +255,12 @@ def run(
 ) -> None:
     """Run Langflow."""
     if env_file:
+        if is_settings_service_initialized():
+            err = ("Settings service is already initialized. This indicates potential race conditions "
+                  "with settings initialization. Ensure the settings service is not created during "
+                  "module loading.")
+            # i.e. ensures the env file is loaded before the settings service is initialized
+            raise ValueError(err)
         load_dotenv(env_file, override=True)
 
     # Set default log level if not provided
