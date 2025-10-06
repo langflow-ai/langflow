@@ -3,8 +3,8 @@ name: CI
 on:
   workflow_call:
     inputs:
-      branch:
-        description: "(Optional) Branch to checkout"
+      ref:
+        description: "(Optional) Ref to checkout"
         required: false
         type: string
       python-versions:
@@ -22,6 +22,11 @@ on:
         required: false
         type: boolean
         default: false
+      run-all-tests:
+        description: "Run all tests regardless of file changes (skips path filtering)"
+        required: false
+        type: boolean
+        default: false
       runs-on:
         description: "Runner to use for the tests"
         required: false
@@ -29,8 +34,8 @@ on:
         default: "ubuntu-latest"
   workflow_dispatch:
     inputs:
-      branch:
-        description: "(Optional) Branch to checkout"
+      ref:
+        description: "(Optional) Ref to checkout"
         required: false
         type: string
       openai_api_key:
@@ -69,6 +74,20 @@ env:
   TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
 jobs:
+  echo-inputs:
+    name: Echo Inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo inputs
+        run: |
+          echo "Inputs:"
+          echo "  ref: ${{ inputs.ref }}"
+          echo "  python-versions: ${{ inputs.python-versions }}"
+          echo "  frontend-tests-folder: ${{ inputs.frontend-tests-folder }}"
+          echo "  release: ${{ inputs.release }}"
+          echo "  run-all-tests: ${{ inputs.run-all-tests }}"
+          echo "  runs-on: ${{ inputs.runs-on }}"
+
   check-nightly-status:
     name: Check PyPI Version Update
     runs-on: ubuntu-latest
@@ -151,7 +170,7 @@ jobs:
 
   path-filter:
     needs: set-ci-condition
-    if: ${{ needs.set-ci-condition.outputs.should-run-ci == 'true' }}
+    if: ${{ needs.set-ci-condition.outputs.should-run-ci == 'true' && !inputs.run-all-tests }}
     name: Filter Paths
     runs-on: ubuntu-latest
     outputs:
@@ -184,7 +203,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.branch || github.ref }}
+          ref: ${{ inputs.ref || github.ref }}
       - name: Filter Paths
         id: filter
         uses: dorny/paths-filter@v3
@@ -194,11 +213,16 @@ jobs:
   test-backend:
     needs: [path-filter, set-ci-condition]
     name: Run Backend Tests
-    if: ${{ needs.path-filter.outputs.python == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (inputs.run-all-tests || needs.path-filter.outputs.python == 'true')
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
       runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+      ref: ${{ inputs.ref || github.ref }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
@@ -207,20 +231,31 @@ jobs:
   test-frontend-unit:
     needs: [path-filter, set-ci-condition]
     name: Run Frontend Unit Tests
-    if: ${{ needs.path-filter.outputs.frontend == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (inputs.run-all-tests || needs.path-filter.outputs.frontend == 'true')
     uses: ./.github/workflows/jest_test.yml
+    with:
+      ref: ${{ inputs.ref || github.ref }}
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
 
   test-frontend:
     needs: [path-filter, set-ci-condition]
     name: Run Frontend Tests
-    if: ${{ (needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.frontend-tests == 'true' || needs.path-filter.outputs.components-changes == 'true' || needs.path-filter.outputs.starter-projects-changes == 'true' || needs.path-filter.outputs.starter-projects == 'true' || needs.path-filter.outputs.components == 'true' || needs.path-filter.outputs.workspace == 'true' || needs.path-filter.outputs.api == 'true' || needs.path-filter.outputs.database == 'true') && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (inputs.run-all-tests || needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.frontend-tests == 'true' || needs.path-filter.outputs.components-changes == 'true' || needs.path-filter.outputs.starter-projects-changes == 'true' || needs.path-filter.outputs.starter-projects == 'true' || needs.path-filter.outputs.components == 'true' || needs.path-filter.outputs.workspace == 'true' || needs.path-filter.outputs.api == 'true' || needs.path-filter.outputs.database == 'true')
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}
       release: ${{ inputs.release || false }}
       runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+      ref: ${{ inputs.ref || github.ref }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
@@ -229,26 +264,36 @@ jobs:
 
   lint-backend:
     needs: path-filter
-    if: ${{ needs.path-filter.outputs.python == 'true'}}
+    if: |
+      always() &&
+      !cancelled() &&
+      (inputs.run-all-tests || needs.path-filter.outputs.python == 'true')
     name: Lint Backend
     uses: ./.github/workflows/lint-py.yml
 
   test-docs-build:
     needs: path-filter
-    if: ${{ needs.path-filter.outputs.docs == 'true' }}
+    if: |
+      always() &&
+      !cancelled() &&
+      (inputs.run-all-tests || needs.path-filter.outputs.docs == 'true')
     name: Test Docs Build
     uses: ./.github/workflows/docs_test.yml
 
   test-templates:
     needs: [path-filter, set-ci-condition]
     name: Test Starter Templates
-    if: ${{ (needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true') && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (inputs.run-all-tests || needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.branch || github.ref }}
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -284,7 +329,7 @@ jobs:
         check-nightly-status
       ]
 
-    if: always()
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     env:
       JOBS_JSON: ${{ toJSON(needs) }}
