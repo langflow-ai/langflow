@@ -63,8 +63,8 @@ class Edge:
             # target_param is documents
             if isinstance(self._target_handle, str):
                 self.target_param = self._target_handle.split("|")[1]
-                self.source_handle = None
-                self.target_handle = None
+                self.source_handle = None  # type: ignore[assignment]
+                self.target_handle = None  # type: ignore[assignment]
             else:
                 msg = "Target handle is not a string"
                 raise ValueError(msg)
