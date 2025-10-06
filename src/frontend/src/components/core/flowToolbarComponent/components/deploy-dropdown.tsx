@@ -85,6 +85,41 @@ export default function PublishDropdown({
     );
   };
 
+  const handleDeployedSwitch = async (checked: boolean) => {
+    mutateAsync(
+      {
+        id: flowId ?? "",
+        status: checked ? "DRAFT" : "DEPLOYED",
+      },
+      {
+        onSuccess: (updatedFlow) => {
+          if (flows) {
+            setFlows(
+              flows.map((flow) => {
+                if (flow.id === updatedFlow.id) {
+                  return updatedFlow;
+                }
+                return flow;
+              }),
+            );
+            setCurrentFlow(updatedFlow);
+          } else {
+            setErrorData({
+              title: "Failed to save flow",
+              list: ["Flows variable undefined"],
+            });
+          }
+        },
+        onError: (e) => {
+          setErrorData({
+            title: "Failed to save flow",
+            list: [e.message],
+          });
+        },
+      },
+    );
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -150,63 +185,112 @@ export default function PublishDropdown({
           )}
 
           {ENABLE_PUBLISH && (
-            <DropdownMenuItem
-              className="deploy-dropdown-item group"
-              disabled={!hasIO}
-              onClick={() => {}}
-              data-testid="shareable-playground"
-            >
-              <div className="flex w-full items-center justify-between">
-                <div className="flex items-center">
-                  <ShadTooltipComponent
-                    styleClasses="truncate"
-                    side="left"
-                    content={
-                      hasIO
-                        ? isPublished
-                          ? encodeURI(`${domain}/playground/${flowId}`)
-                          : "Activate to share a public version of this Playground"
-                        : "Add a Chat Input or Chat Output to access your flow"
-                    }
-                  >
-                    <div className="flex items-center">
-                      <IconComponent
-                        name="Globe"
-                        className={cn(
-                          `icon-size mr-2`,
-                          !isPublished && "opacity-50",
-                        )}
-                      />
+            <>
+              <DropdownMenuItem
+                className="deploy-dropdown-item group"
+                disabled={!hasIO}
+                onClick={() => {}}
+                data-testid="shareable-playground"
+              >
+                <div className="flex w-full items-center justify-between">
+                  <div className="flex items-center">
+                    <ShadTooltipComponent
+                      styleClasses="truncate"
+                      side="left"
+                      content={
+                        hasIO
+                          ? isPublished
+                            ? encodeURI(`${domain}/playground/${flowId}`)
+                            : "Activate to share a public version of this Playground"
+                          : "Add a Chat Input or Chat Output to access your flow"
+                      }
+                    >
+                      <div className="flex items-center">
+                        <IconComponent
+                          name="Globe"
+                          className={cn(
+                            `icon-size mr-2`,
+                            !isPublished && "opacity-50",
+                          )}
+                        />
 
-                      {isPublished ? (
-                        <CustomLink
-                          className="flex-1"
-                          to={`/playground/${flowId}`}
-                          target="_blank"
-                        >
-                          <span>Shareable Playground</span>
-                        </CustomLink>
-                      ) : (
-                        <span className={cn(!isPublished && "opacity-50")}>
-                          Shareable Playground
-                        </span>
-                      )}
-                    </div>
-                  </ShadTooltipComponent>
+                        {isPublished ? (
+                          <CustomLink
+                            className="flex-1"
+                            to={`/playground/${flowId}`}
+                            target="_blank"
+                          >
+                            <span>Shareable Playground</span>
+                          </CustomLink>
+                        ) : (
+                          <span className={cn(!isPublished && "opacity-50")}>
+                            Shareable Playground
+                          </span>
+                        )}
+                      </div>
+                    </ShadTooltipComponent>
+                  </div>
+                  <Switch
+                    data-testid="publish-switch"
+                    className="scale-[85%]"
+                    checked={isPublished}
+                    disabled={!hasIO}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handlePublishedSwitch(isPublished);
+                    }}
+                  />
                 </div>
-                <Switch
-                  data-testid="publish-switch"
-                  className="scale-[85%]"
-                  checked={isPublished}
-                  disabled={!hasIO}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handlePublishedSwitch(isPublished);
-                  }}
-                />
-              </div>
-            </DropdownMenuItem>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className="deploy-dropdown-item group"
+                disabled={!hasIO}
+                onClick={() => {}}
+                data-testid="deployed-status"
+              >
+                <div className="flex w-full items-center justify-between">
+                  <div className="flex items-center">
+                    <ShadTooltipComponent
+                      styleClasses="truncate"
+                      side="left"
+                      content={
+                        hasIO
+                          ? isDeployed
+                            ? "Flow is currently deployed"
+                            : "Deploy this flow to make it available"
+                          : "Add a Chat Input or Chat Output to deploy your flow"
+                      }
+                    >
+                      <div className="flex items-center">
+                        <IconComponent
+                          name="Rocket"
+                          className={cn(
+                            `icon-size mr-2`,
+                            !isDeployed && "opacity-50",
+                          )}
+                        />
+                        <span className={cn(!isDeployed && "opacity-50")}>
+                          Deployed Status
+                        </span>
+                      </div>
+                    </ShadTooltipComponent>
+                  </div>
+                  <Switch
+                    data-testid="deploy-switch"
+                    className="scale-[85%]"
+                    checked={isDeployed}
+                    disabled={!hasIO}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDeployedSwitch(isDeployed);
+                    }}
+                  />
+                </div>
+              </DropdownMenuItem>
+            </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
