@@ -401,14 +401,18 @@ def create_app():
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
 
-    # Genesis middleware disabled - authentication handled by genesis-bff gateway
-    # try:
-    #     from langflow.custom.genesis.integration import setup_genesis_middleware, is_genesis_extensions_enabled
-    #     if is_genesis_extensions_enabled():
-    #         setup_genesis_middleware(app)
-    # except ImportError:
-    #     # Genesis extensions not available
-    #     pass
+    # Enable Genesis middleware for BFF authentication
+    try:
+        from langflow.custom.genesis.integration import setup_genesis_middleware, is_genesis_extensions_enabled
+        if is_genesis_extensions_enabled():
+            setup_genesis_middleware(app)
+            logger.info("✅ Genesis BFF authentication middleware enabled")
+        else:
+            logger.info("ℹ️ Genesis extensions disabled via environment variable")
+    except ImportError:
+        logger.warning("⚠️ Genesis extensions not available")
+    except Exception as e:
+        logger.error(f"❌ Failed to setup Genesis middleware: {e}")
 
     @app.middleware("http")
     async def check_boundary(request: Request, call_next):

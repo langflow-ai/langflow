@@ -137,12 +137,29 @@ class AgentSpec(BaseModel):
             import uuid
             data["id"] = str(uuid.uuid4())
 
-        # Handle components
-        if "components" in data and isinstance(data["components"], list):
-            data["components"] = [
-                cls._create_component_from_dict(comp) if isinstance(comp, dict) else comp
-                for comp in data["components"]
-            ]
+        # Handle components - support both list and dict formats
+        if "components" in data:
+            if isinstance(data["components"], list):
+                # List format: components are already in list form
+                data["components"] = [
+                    cls._create_component_from_dict(comp) if isinstance(comp, dict) else comp
+                    for comp in data["components"]
+                ]
+            elif isinstance(data["components"], dict):
+                # Dict format: components are keyed by ID (YAML format)
+                components_list = []
+                for comp_id, comp_data in data["components"].items():
+                    if isinstance(comp_data, dict):
+                        # Add the ID to the component data
+                        comp_dict = dict(comp_data)
+                        comp_dict["id"] = comp_id
+                        # Add name if not present (use ID as fallback)
+                        if "name" not in comp_dict:
+                            comp_dict["name"] = comp_id
+                        components_list.append(cls._create_component_from_dict(comp_dict))
+                    else:
+                        components_list.append(comp_data)
+                data["components"] = components_list
 
         # Handle variables
         if "variables" in data and isinstance(data["variables"], list):

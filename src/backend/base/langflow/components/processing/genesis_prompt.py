@@ -15,7 +15,7 @@ class GenesisPromptComponent(PromptComponent):
     description = "Select or edit prompt templates."
     icon = "braces"
     trace_type = "genesis_prompt"
-    name = "Genesis Prompt Template"
+    name = "GenesisPromptComponent"
 
     inputs = [
         DropdownInput(
@@ -28,7 +28,7 @@ class GenesisPromptComponent(PromptComponent):
         *PromptComponent.inputs,
     ]
     outputs = [
-        Output(display_name="Prompt Message", name="prompt", method="build_prompt"),
+        Output(display_name="Prompt Message", name="prompt", method="build_prompt", type_=Message),
     ]
 
     def __init__(self, **data):

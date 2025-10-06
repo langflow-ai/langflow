@@ -1,12 +1,9 @@
-"""Custom authentication middleware for Langflow service."""
+"""Custom authentication middleware for Langflow service - BFF Mode."""
 
-import asyncio
 import logging
-import os
-from functools import partial
 from typing import Any
 
-import requests
+import jwt
 from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -47,10 +44,13 @@ class LangflowUser:
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
-    """Authentication middleware adapted for Langflow."""
+    """Authentication middleware for BFF mode - trusts JWT tokens from BFF."""
 
     def __init__(self, app) -> None:
         super().__init__(app)
+        # Always BFF mode - authentication handled by genesis-bff
+        logger.info("🔄 AuthMiddleware: BFF mode enabled (always)")
+
         # Langflow-specific public routes
         self.public_routes = [
             "/health_check",
@@ -60,75 +60,50 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/redoc",
             "/openapi.json",
             "/api/v1/auto_login",
-            "/api/v1/config",  # Langflow's auto-login if needed
+            "/api/v1/config",
+            "/api/v1/spec/",  # Allow spec endpoints to use Langflow auth
+            "/api/v1/api_key/",  # Allow API key endpoints
             # Add other public endpoints as needed
         ]
-        self.client_id = os.getenv("GENESIS_CLIENT_ID")
-        auth_base_url = os.getenv("GENESIS_SERVICE_AUTH_URL")
+        self.client_id = "genesis-bff"  # Fixed client ID for BFF mode
 
-        if not auth_base_url:
-            error_msg = "GENESIS_SERVICE_AUTH_URL environment variable is not set"
-            raise ValueError(error_msg)
-        if not self.client_id:
-            error_msg = "GENESIS_CLIENT_ID environment variable is not set"
-            raise ValueError(error_msg)
-
-        self.auth_service_url = f"{auth_base_url}/auth/api/v1"
-
-    def _make_request(self, access_token: str) -> dict[str, Any]:
-        """Make synchronous request to validate token."""
+    def _extract_user_from_jwt(self, access_token: str) -> dict[str, Any]:
+        """Extract user from JWT payload without validation (BFF already validated)."""
         try:
-            response = requests.get(
-                f"{self.auth_service_url}/validate/token",
-                headers={"Authorization": access_token},
-                timeout=10,
-            )
+            # Remove Bearer prefix if present
+            token = access_token
+            if token.startswith("Bearer "):
+                token = token[7:]
+            elif token.startswith("bearer "):
+                token = token[7:]
 
-            # Get the response content
-            response_data = response.json()
+            # Decode JWT without signature verification - BFF already validated
+            payload = jwt.decode(token, options={"verify_signature": False})
 
-            # If the request was not successful, raise an exception with the error details
-            if response.status_code != status.HTTP_200_OK:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=response_data.get("message", "Authentication failed"),
-                )
+            # Extract user information from JWT claims
+            user_id = payload.get("sub")
+            if not user_id:
+                raise ValueError("Missing 'sub' claim in JWT")
 
-            return response_data["data"]
-
-        except requests.exceptions.RequestException as e:
-            # Handle network/timeout errors - log but don't crash the whole service
-            logger.warning("Genesis auth service unavailable: %s", e)
-            # In development, you might want to allow access when auth service is down
-            # In production, this should be strict
-            if os.getenv("GENESIS_AUTH_FAIL_OPEN", "false").lower() == "true":
-                logger.info("Allowing access due to GENESIS_AUTH_FAIL_OPEN=true")
-                return {"id": "dev-user", "username": "dev-user", "email": "dev@genesis.local", "is_active": True}
+            return {
+                "id": user_id,
+                "username": payload.get("preferred_username", payload.get("email", f"user_{user_id}")),
+                "email": payload.get("email", ""),
+                "is_active": True,  # Trust BFF validation
+                "is_admin": payload.get("is_admin", False),
+                "user_data": {
+                    "id": user_id,
+                    "username": payload.get("preferred_username", payload.get("email", f"user_{user_id}")),
+                    "email": payload.get("email", ""),
+                    "is_active": True,
+                    "is_admin": payload.get("is_admin", False),
+                }
+            }
+        except Exception as e:
+            logger.error(f"Failed to extract user from JWT: {e}")
             raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="User service unavailable",
-            ) from e
-        except ValueError as e:
-            # Handle JSON decode errors
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Invalid response from authentication service",
-            ) from e
-
-    async def _validate_user(self, access_token: str) -> dict[str, Any]:
-        """Validate the access token with the user management service."""
-        try:
-            # Run the synchronous request in a thread pool
-            loop = asyncio.get_running_loop()
-            return await loop.run_in_executor(None, partial(self._make_request, access_token))
-
-        except HTTPException:
-            # Re-raise HTTP exceptions as they contain the correct status code
-            raise
-        except (ValueError, RuntimeError, ConnectionError) as e:
-            # Handle any unexpected errors
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token format"
             ) from e
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
@@ -142,36 +117,42 @@ class AuthMiddleware(BaseHTTPMiddleware):
             if any(route in request.url.path for route in self.public_routes):
                 return await call_next(request)
 
-            # Get access token
+            # Check for authentication headers
             access_token = request.headers.get("authorization")
-            if not access_token:
-                return JSONResponse(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    content={"message": "Authorization header missing"},
-                )
+            api_key = request.headers.get("x-api-key")
 
-            try:
-                # Validate token and get user data
-                user_data = await self._validate_user(access_token)
-
-                # Add user info to request state
-                user = LangflowUser(
-                    genesis_user_id=user_data["id"],
-                    client_id=self.client_id,
-                    access_token=access_token,
-                    user_data=user_data.get("user_data", user_data),
-                )
-                request.state.user = user
-
-                # Proceed with the request
+            # If API key is provided, skip Genesis auth and let Langflow handle it
+            if api_key and not access_token:
+                logger.debug("API key detected, delegating to Langflow authentication")
                 return await call_next(request)
 
-            except HTTPException as auth_error:
-                # Return the exact error from the authentication service
-                return JSONResponse(
-                    status_code=auth_error.status_code,
-                    content={"message": auth_error.detail},
-                )
+            # If no authentication headers at all, let Langflow handle the error
+            if not access_token and not api_key:
+                logger.debug("No auth headers found, delegating to Langflow authentication")
+                return await call_next(request)
+
+            # Handle JWT Bearer tokens with Genesis authentication
+            if access_token:
+                try:
+                    # Extract user from JWT payload (BFF already validated)
+                    user_data = self._extract_user_from_jwt(access_token)
+
+                    # Add user info to request state
+                    user = LangflowUser(
+                        genesis_user_id=user_data["id"],
+                        client_id=self.client_id,
+                        access_token=access_token,
+                        user_data=user_data.get("user_data", user_data),
+                    )
+                    request.state.user = user
+
+                    # Proceed with the request
+                    return await call_next(request)
+
+                except HTTPException as auth_error:
+                    # If JWT fails, also delegate to Langflow (might be Langflow's own JWT)
+                    logger.debug(f"Genesis JWT auth failed: {auth_error.detail}, delegating to Langflow")
+                    return await call_next(request)
 
         except (ValueError, RuntimeError, ConnectionError) as e:
             # Handle any unexpected errors

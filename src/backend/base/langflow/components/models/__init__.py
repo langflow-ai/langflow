@@ -9,15 +9,17 @@ if TYPE_CHECKING:
     from langflow.components.models.language_model import LanguageModelComponent
     from langflow.components.models.autonomize_model import AutonomizeModelComponent
     from langflow.components.models.autonomize_document_model import AutonomizeDocumentModelComponent
+    from langflow.components.models.document_intelligence import AzureDocumentIntelligenceComponent
 
 _dynamic_imports = {
     "EmbeddingModelComponent": "embedding_model",
     "LanguageModelComponent": "language_model",
     "AutonomizeModelComponent": "autonomize_model",
     "AutonomizeDocumentModelComponent": "autonomize_document_model",
+    "AzureDocumentIntelligenceComponent": "document_intelligence",
 }
 
-__all__ = ["EmbeddingModelComponent", "LanguageModelComponent", "AutonomizeModelComponent", "AutonomizeDocumentModelComponent"]
+__all__ = ["EmbeddingModelComponent", "LanguageModelComponent", "AutonomizeModelComponent", "AutonomizeDocumentModelComponent", "AzureDocumentIntelligenceComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:

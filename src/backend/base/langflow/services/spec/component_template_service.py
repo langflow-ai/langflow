@@ -188,20 +188,48 @@ class ComponentTemplateService:
                 "description": "Calculator tool for mathematical operations.",
                 "display_name": "Calculator"
             },
-            "MCPTool": {
-                "template": {},
+            "MCPToolsComponent": {
+                "template": {
+                    "mcp_server": {
+                        "input_types": [],
+                        "type": "str",
+                        "display_name": "MCP Server",
+                        "info": "Select the MCP Server that will be used by this component",
+                        "real_time_refresh": True
+                    },
+                    "tool": {
+                        "input_types": [],
+                        "type": "str",
+                        "display_name": "Tool",
+                        "info": "Select the tool to execute",
+                        "options": [],
+                        "value": "",
+                        "show": False,
+                        "required": True,
+                        "real_time_refresh": True
+                    },
+                    "tool_placeholder": {
+                        "input_types": [],
+                        "type": "str",
+                        "display_name": "Tool Placeholder",
+                        "info": "Placeholder for the tool",
+                        "value": "",
+                        "show": False,
+                        "tool_mode": False
+                    }
+                },
                 "outputs": [
                     {
-                        "types": ["Tool"],
-                        "selected": "Tool",
-                        "name": "component_as_tool",
-                        "display_name": "Tool",
-                        "method": "build_tool"
+                        "types": ["DataFrame"],
+                        "selected": "DataFrame",
+                        "name": "response",
+                        "display_name": "Response",
+                        "method": "build_output"
                     }
                 ],
-                "base_classes": ["MCPTool"],
-                "description": "Model Context Protocol tool component.",
-                "display_name": "MCP Tool"
+                "base_classes": ["MCPToolsComponent"],
+                "description": "Connect to an MCP server to use its tools.",
+                "display_name": "MCP Tools"
             },
             "GenesisPromptComponent": {
                 "template": {
@@ -236,23 +264,15 @@ class ComponentTemplateService:
                         "input_types": ["Message", "Text"],
                         "type": "str",
                         "display_name": "Search Query",
-                        "info": "Query to search in knowledge hub."
+                        "info": "Query to search in knowledge hub.",
+                        "tool_mode": True
                     },
-                    "collections": {
+                    "selected_hubs": {
                         "type": "list",
-                        "display_name": "Collections",
-                        "info": "Knowledge hub collections to search."
-                    },
-                    "search_type": {
-                        "type": "str",
-                        "display_name": "Search Type",
-                        "options": ["similarity", "keyword", "hybrid"],
-                        "value": "similarity"
-                    },
-                    "top_k": {
-                        "type": "int",
-                        "display_name": "Top K Results",
-                        "value": 10
+                        "display_name": "Data Sources",
+                        "info": "Select knowledge hub data sources to search.",
+                        "value": [],
+                        "refresh_button": True
                     }
                 },
                 "outputs": [
@@ -260,61 +280,13 @@ class ComponentTemplateService:
                         "types": ["Data"],
                         "selected": "Data",
                         "name": "query_results",
-                        "display_name": "Search Results",
-                        "method": "search"
-                    },
-                    {
-                        "types": ["Tool"],
-                        "selected": "Tool",
-                        "name": "component_as_tool",
-                        "display_name": "Search Tool",
-                        "method": "to_toolkit",
-                        "tool_mode": True
+                        "display_name": "Query Results",
+                        "method": "build_output"
                     }
                 ],
                 "base_classes": ["KnowledgeHubSearchComponent"],
-                "description": "Search component for knowledge hub documents.",
+                "description": "This component is used to search for information in the knowledge hub.",
                 "display_name": "Knowledge Hub Search"
-            },
-            "EncoderProTool": {
-                "template": {
-                    "default_service_code": {
-                        "input_types": ["Text"],
-                        "type": "str",
-                        "display_name": "Service Code",
-                        "info": "Default service code for encoding."
-                    },
-                    "include_descriptions": {
-                        "type": "bool",
-                        "display_name": "Include Descriptions",
-                        "value": True
-                    },
-                    "validate_codes": {
-                        "type": "bool",
-                        "display_name": "Validate Codes",
-                        "value": True
-                    }
-                },
-                "outputs": [
-                    {
-                        "types": ["Data"],
-                        "selected": "Data",
-                        "name": "encoded_result",
-                        "display_name": "Encoded Result",
-                        "method": "encode"
-                    },
-                    {
-                        "types": ["Tool"],
-                        "selected": "Tool",
-                        "name": "component_as_tool",
-                        "display_name": "Encoder Tool",
-                        "method": "to_toolkit",
-                        "tool_mode": True
-                    }
-                ],
-                "base_classes": ["EncoderProTool"],
-                "description": "Service code encoding and validation tool.",
-                "display_name": "Encoder Pro"
             },
             "CustomComponent": {
                 "template": {
@@ -412,11 +384,11 @@ class ComponentTemplateService:
                     "inputs": ["input_value"],
                     "outputs": ["output"]
                 },
-                "MCPTool": {
+                "MCPToolsComponent": {
                     "type": "tools",
-                    "description": "Model Context Protocol tool component",
-                    "inputs": [],
-                    "outputs": ["component_as_tool"]
+                    "description": "Connect to an MCP server to use its tools",
+                    "inputs": ["mcp_server", "tool", "tool_placeholder"],
+                    "outputs": ["response"]
                 },
                 "GenesisPromptComponent": {
                     "type": "prompts",
@@ -425,17 +397,17 @@ class ComponentTemplateService:
                     "outputs": ["prompt"]
                 },
                 "KnowledgeHubSearchComponent": {
-                    "type": "tools",
-                    "description": "Search component for knowledge hub documents",
-                    "inputs": ["search_query", "collections", "search_type", "top_k"],
-                    "outputs": ["query_results", "component_as_tool"]
+                    "type": "knowledge_bases",
+                    "description": "This component is used to search for information in the knowledge hub",
+                    "inputs": ["search_query", "selected_hubs"],
+                    "outputs": ["query_results"]
                 },
-                "EncoderProTool": {
-                    "type": "tools",
-                    "description": "Service code encoding and validation tool",
-                    "inputs": ["default_service_code", "include_descriptions", "validate_codes"],
-                    "outputs": ["encoded_result", "component_as_tool"]
-                }
+                "AzureDocumentIntelligenceComponent": {
+                    "type": "models",
+                    "description": "Process documents using Azure Document Intelligence for OCR, form extraction, and document analysis",
+                    "inputs": ["url", "file_path", "model_type", "extract_tables", "extract_key_value_pairs", "include_confidence"],
+                    "outputs": ["document_analysis"]
+                },
             }
 
         # Extract basic info from loaded templates

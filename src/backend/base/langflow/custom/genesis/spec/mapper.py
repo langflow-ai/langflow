@@ -17,6 +17,10 @@ class ComponentMapper:
         """Initialize all component mappings."""
         # AutonomizeModel variants - all clinical models unified
         self.AUTONOMIZE_MODELS = {
+            "genesis:autonomize_model": {
+                "component": "AutonomizeModel",
+                "config": {"selected_model": "Clinical LLM"}  # Default model
+            },
             "genesis:rxnorm": {
                 "component": "AutonomizeModel",
                 "config": {"selected_model": "RxNorm Code"}
@@ -50,8 +54,9 @@ class ComponentMapper:
         # MCP components
         self.MCP_MAPPINGS = {
             "genesis:mcp_tool": {
-                "component": "MCPTool",
-                "config": {}
+                "component": "MCPTools",
+                "config": {},
+                "dataType": "MCPTools"
             },
             "genesis:mcp_client": {
                 "component": "MCPClient",
@@ -83,17 +88,25 @@ class ComponentMapper:
 
             # Memory
             "genesis:memory": {"component": "Memory", "config": {}},
-            "genesis:conversation_memory": {"component": "ConversationMemory", "config": {}},
+            "genesis:conversation_memory": {"component": "ConversationChain", "config": {}},
+            "genesis:conversation_chain": {"component": "ConversationChain", "config": {}},
 
-            # Tools - map to actual component classes
-            "genesis:knowledge_hub_search": {"component": "KnowledgeHubSearchComponent", "config": {}, "dataType": "KnowledgeHubSearchComponent"},
-            "genesis:pa_lookup": {"component": "CustomComponent", "config": {}, "dataType": "CustomComponent"},
-            "genesis:eligibility_component": {"component": "CustomComponent", "config": {}, "dataType": "CustomComponent"},
-            "genesis:encoder_pro": {"component": "EncoderProTool", "config": {}, "dataType": "EncoderProTool"},
-            "genesis:qnext_auth_history": {"component": "CustomComponent", "config": {}},
-            "genesis:api_component": {"component": "CustomComponent", "config": {}},
-            "genesis:form_recognizer": {"component": "CustomComponent", "config": {}},
+            # Tools - Infrastructure components (keep) + MCP fallbacks for domain-specific ones
+            "genesis:knowledge_hub_search": {"component": "KnowledgeHubSearch", "config": {}, "dataType": "KnowledgeHubSearch"},
             "genesis:calculator": {"component": "Calculator", "config": {}},
+
+            # Domain-specific tools -> MCP Tools Component (simplified approach)
+            "genesis:encoder_pro": {"component": "MCPTools", "config": {"tool_name": "encoder_pro", "description": "Medical coding and validation tool"}, "dataType": "MCPTools"},
+            "genesis:pa_lookup": {"component": "MCPTools", "config": {"tool_name": "pa_lookup", "description": "Prior authorization lookup tool"}, "dataType": "MCPTools"},
+            "genesis:eligibility_component": {"component": "MCPTools", "config": {"tool_name": "eligibility_check", "description": "Member eligibility validation tool"}, "dataType": "MCPTools"},
+            "genesis:qnext_auth_history": {"component": "MCPTools", "config": {"tool_name": "qnext_auth_history", "description": "QNext authorization history tool"}, "dataType": "MCPTools"},
+            "genesis:api_component": {"component": "MCPTools", "config": {"tool_name": "api_component", "description": "Generic API integration tool"}, "dataType": "MCPTools"},
+            # Azure Document Intelligence (Form Recognizer) component
+            "genesis:form_recognizer": {"component": "AzureDocumentIntelligenceComponent", "config": {}, "dataType": "AzureDocumentIntelligenceComponent"},
+            "genesis:document_intelligence": {"component": "AzureDocumentIntelligenceComponent", "config": {}, "dataType": "AzureDocumentIntelligenceComponent"},
+
+            # Data processing tools
+            "genesis:data_transformer": {"component": "MCPTools", "config": {"tool_name": "data_transformer", "description": "Data transformation and standardization tool"}, "dataType": "MCPTools"},
 
             # Vector stores
             "genesis:vector_store": {"component": "QdrantVectorStore", "config": {}},
@@ -155,8 +168,8 @@ class ComponentMapper:
             return {"component": "Agent", "config": {}}
 
         elif "tool" in base_type.lower() or "component" in base_type.lower():
-            logger.warning(f"Unknown tool/component type '{spec_type}', using MCPTool as fallback")
-            return {"component": "MCPTool", "config": {}}
+            logger.warning(f"Unknown tool/component type '{spec_type}', using MCPTools as fallback")
+            return {"component": "MCPTools", "config": {}}
 
         elif "memory" in base_type.lower():
             logger.warning(f"Unknown memory type '{spec_type}', using Memory")
@@ -175,9 +188,9 @@ class ComponentMapper:
             return {"component": "ChatOutput", "config": {}}
 
         else:
-            # Default to MCPTool for complete unknowns - better than CustomComponent
-            logger.warning(f"Completely unknown type '{spec_type}', using MCPTool as fallback")
-            return {"component": "MCPTool", "config": {}}
+            # Default to MCPTools for complete unknowns - better than CustomComponent
+            logger.warning(f"Completely unknown type '{spec_type}', using MCPTools as fallback")
+            return {"component": "MCPTools", "config": {}}
 
     def get_component_io_mapping(self, component_type: str) -> Dict[str, Any]:
         """
@@ -224,10 +237,10 @@ class ComponentMapper:
                 "output_field": "prompt",
                 "output_types": ["Message"]
             },
-            "MCPTool": {
+            "MCPTools": {
                 "input_field": None,
-                "output_field": "component_as_tool",
-                "output_types": ["Tool"]
+                "output_field": "response",
+                "output_types": ["DataFrame"]
             },
             "CustomComponent": {
                 "input_field": "input_value",
@@ -249,7 +262,7 @@ class ComponentMapper:
                 "output_field": "text_output",
                 "output_types": ["Message"]
             },
-            "KnowledgeHubSearchComponent": {
+            "KnowledgeHubSearch": {
                 "input_field": "search_query",
                 "output_field": "query_results",
                 "output_types": ["Data"]

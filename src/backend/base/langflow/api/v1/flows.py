@@ -34,7 +34,7 @@ from langflow.services.database.models.flow.model import (
 )
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
-from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.folder.model import Folder, FolderCreate
 from langflow.services.deps import get_settings_service
 from langflow.utils.compression import compress_response
 
@@ -51,11 +51,93 @@ async def _verify_fs_path(path: str | None) -> None:
 
 async def _save_flow_to_fs(flow: Flow) -> None:
     if flow.fs_path:
-        async with async_open(flow.fs_path, "w") as f:
-            try:
-                await f.write(flow.model_dump_json())
-            except OSError:
-                await logger.aexception("Failed to write flow %s to path %s", flow.name, flow.fs_path)
+        try:
+            # First test model serialization separately to catch Pydantic issues
+            flow_json = flow.model_dump_json()
+            logger.debug(f"Flow {flow.name} serialized successfully, size: {len(flow_json)} chars")
+
+            async with async_open(flow.fs_path, "w") as f:
+                await f.write(flow_json)
+                logger.debug(f"Flow {flow.name} written to {flow.fs_path} successfully")
+
+        except Exception as e:
+            # Enhanced error logging with specific error types
+            error_type = type(e).__name__
+            logger.error(f"Failed to save flow {flow.name} to filesystem: {error_type}: {str(e)}")
+
+            if "ValidationError" in error_type or "ValueError" in error_type:
+                logger.error(f"Flow data validation failed for {flow.name}")
+                logger.error(f"Flow data keys: {list(flow.data.keys()) if flow.data else 'None'}")
+                if flow.data:
+                    logger.error(f"Nodes count: {len(flow.data.get('nodes', []))}")
+                    logger.error(f"Edges count: {len(flow.data.get('edges', []))}")
+
+            elif "OSError" in error_type or "IOError" in error_type:
+                logger.error(f"File system error for {flow.name}: path={flow.fs_path}")
+
+            elif "UnicodeError" in error_type or "JSONDecodeError" in error_type:
+                logger.error(f"Encoding/JSON error for {flow.name}")
+                if flow.data and "edges" in flow.data:
+                    edge_count = len(flow.data["edges"])
+                    logger.error(f"Flow has {edge_count} edges, checking for encoding issues")
+                    for i, edge in enumerate(flow.data["edges"][:3]):  # Log first 3 edges
+                        logger.error(f"Edge {i}: {edge.get('id', 'no-id')}")
+
+            await logger.aexception("Detailed traceback for flow %s save failure", flow.name)
+            # Re-raise the exception to maintain original behavior
+            raise
+
+
+async def _resolve_project_folder(
+    *,
+    session: AsyncSession,
+    project_name: str | None,
+    user_id: UUID,
+) -> UUID | None:
+    """
+    Resolve project name to folder ID, creating folder if needed.
+
+    Args:
+        session: Database session
+        project_name: Name of project to find or create. If None, uses default project.
+        user_id: Current user ID
+
+    Returns:
+        Folder ID to use for flow creation
+    """
+    if not project_name:
+        # This should not happen with the updated logic, but handle gracefully
+        project_name = "My Projects"
+
+    # Look for existing folder with matching name (case-insensitive)
+    existing_folder = (
+        await session.exec(
+            select(Folder).where(
+                Folder.name.ilike(project_name),  # Case-insensitive search
+                Folder.user_id == user_id
+            )
+        )
+    ).first()
+
+    if existing_folder:
+        await logger.ainfo(f"Found existing project '{project_name}' with ID: {existing_folder.id}")
+        return existing_folder.id
+
+    # Project not found, create it
+    await logger.ainfo(f"Project '{project_name}' not found, creating new project")
+    new_folder = FolderCreate(
+        name=project_name,
+        description=f"Project created for {project_name}",
+        user_id=user_id
+    )
+
+    db_folder = Folder.model_validate(new_folder, from_attributes=True)
+    session.add(db_folder)
+    await session.commit()
+    await session.refresh(db_folder)
+
+    await logger.ainfo(f"Created new project '{project_name}' with ID: {db_folder.id}")
+    return db_folder.id
 
 
 async def _new_flow(
@@ -157,8 +239,21 @@ async def create_flow(
     session: DbSession,
     flow: FlowCreate,
     current_user: CurrentActiveUser,
+    project_name: str | None = None,
 ):
     try:
+        # Resolve project folder - always assign flows to a project
+        if flow.folder_id is None:
+            # Use provided project_name or default to "My Projects"
+            default_project_name = project_name or "My Projects"
+            resolved_folder_id = await _resolve_project_folder(
+                session=session,
+                project_name=default_project_name,
+                user_id=current_user.id
+            )
+            if resolved_folder_id:
+                flow.folder_id = resolved_folder_id
+
         db_flow = await _new_flow(session=session, flow=flow, user_id=current_user.id)
         await session.commit()
         await session.refresh(db_flow)

@@ -204,24 +204,41 @@ class SpecService:
             if field not in spec_dict:
                 errors.append(f"Missing required field: {field}")
 
-        # Validate components structure
+        # Validate components structure - support both list and dict formats
         if "components" in spec_dict:
             components = spec_dict["components"]
-            if not isinstance(components, list):
-                errors.append("Components must be a list")
-            elif not components:
-                errors.append("At least one component is required")
-            else:
-                for i, comp in enumerate(components):
-                    if not isinstance(comp, dict):
-                        errors.append(f"Component {i} must be an object")
-                        continue
+            if isinstance(components, dict):
+                # Dict format (YAML style) - validate each component
+                if not components:
+                    errors.append("At least one component is required")
+                else:
+                    for comp_id, comp in components.items():
+                        if not isinstance(comp, dict):
+                            errors.append(f"Component '{comp_id}' must be an object")
+                            continue
 
-                    # Required component fields
-                    comp_required = ["id", "type"]
-                    for field in comp_required:
-                        if field not in comp:
-                            errors.append(f"Component {i} missing required field: {field}")
+                        # Required component fields (id is optional for dict format since it's the key)
+                        comp_required = ["type"]
+                        for field in comp_required:
+                            if field not in comp:
+                                errors.append(f"Component '{comp_id}' missing required field: {field}")
+            elif isinstance(components, list):
+                # List format - validate each component
+                if not components:
+                    errors.append("At least one component is required")
+                else:
+                    for i, comp in enumerate(components):
+                        if not isinstance(comp, dict):
+                            errors.append(f"Component {i} must be an object")
+                            continue
+
+                        # Required component fields
+                        comp_required = ["id", "type"]
+                        for field in comp_required:
+                            if field not in comp:
+                                errors.append(f"Component {i} missing required field: {field}")
+            else:
+                errors.append("Components must be a list or dictionary")
 
         return {
             "valid": len(errors) == 0,
@@ -229,11 +246,20 @@ class SpecService:
             "warnings": warnings
         }
 
-    def _validate_components(self, components: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _validate_components(self, components) -> Dict[str, Any]:
         """Validate component types and configurations."""
         warnings = []
 
-        for comp in components:
+        # Handle both dict and list formats
+        component_items = []
+        if isinstance(components, dict):
+            # Dict format: convert to list of (id, component) tuples
+            component_items = [(comp_id, comp) for comp_id, comp in components.items()]
+        elif isinstance(components, list):
+            # List format: convert to list of (id, component) tuples
+            component_items = [(comp.get('id', f'component_{i}'), comp) for i, comp in enumerate(components)]
+
+        for comp_id, comp in component_items:
             comp_type = comp.get("type", "")
 
             # Check if component type is known
@@ -245,11 +271,11 @@ class SpecService:
             if "provides" in comp:
                 for provide in comp["provides"]:
                     if not isinstance(provide, dict):
-                        warnings.append(f"Invalid provides declaration in component {comp.get('id', 'unknown')}")
+                        warnings.append(f"Invalid provides declaration in component {comp_id}")
                         continue
 
                     if "useAs" not in provide or "in" not in provide:
-                        warnings.append(f"Provides declaration missing useAs or in field in component {comp.get('id', 'unknown')}")
+                        warnings.append(f"Provides declaration missing useAs or in field in component {comp_id}")
 
         return {"warnings": warnings}
 

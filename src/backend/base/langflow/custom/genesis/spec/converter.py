@@ -130,15 +130,15 @@ class FlowConverter:
         # Handle tool mode
         if is_tool:
             node_data["tool_mode"] = True
-            # Ensure api_build_tool output exists (this is the correct name used by real Langflow)
+            # Ensure component_as_tool output exists
             if "outputs" in node_data:
-                has_tool_output = any(o.get("name") == "api_build_tool"
+                has_tool_output = any(o.get("name") == "component_as_tool"
                                     for o in node_data["outputs"])
                 if not has_tool_output:
                     node_data["outputs"].append({
                         "types": ["Tool"],
                         "selected": "Tool",
-                        "name": "api_build_tool",
+                        "name": "component_as_tool",
                         "display_name": "Tool",
                         "method": "build_tool",
                         "value": "__UNDEFINED__",
@@ -357,8 +357,8 @@ class FlowConverter:
             if outputs:
                 for output in outputs:
                     if "Tool" in output.get("types", []):
-                        return output.get("name", "api_build_tool")
-            return "api_build_tool"
+                        return output.get("name", "component_as_tool")
+            return "component_as_tool"
 
         if outputs:
             # For single output, use it
@@ -428,7 +428,7 @@ class FlowConverter:
                                source_type: str) -> List[str]:
         """FIXED output types determination."""
         # Special cases
-        if output_field == "api_build_tool":
+        if output_field == "component_as_tool":
             return ["Tool"]
 
         # Check actual outputs
@@ -570,11 +570,16 @@ class FlowConverter:
         return heights.get(kind, 350)
 
     def _is_component_used_as_tool(self, component: Component) -> bool:
-        """Check if component is used as a tool."""
-        if not component.provides:
-            return False
+        """Check if component is used as a tool based on provides declarations and asTools flag."""
+        # Check asTools flag first
+        if hasattr(component, 'asTools') and component.asTools:
+            return True
 
-        return any(p.useAs in ["tool", "tools"] for p in component.provides)
+        # Check provides declarations
+        if component.provides:
+            return any(p.useAs in ["tool", "tools"] for p in component.provides)
+
+        return False
 
     async def _get_component_template(self, component_type: str) -> Optional[Dict[str, Any]]:
         """Get real component template from Langflow component registry."""
@@ -628,7 +633,7 @@ class FlowConverter:
             }
         elif "Tool" in component_type or "MCP" in component_type:
             return {
-                "outputs": [{"name": "api_build_tool", "types": ["Tool"]}],
+                "outputs": [{"name": "component_as_tool", "types": ["Tool"]}],
                 "template": {},
                 "base_classes": [component_type],
                 "description": f"Tool component: {component_type}",

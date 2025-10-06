@@ -5,10 +5,16 @@ into Langflow 1.6.0, including components, services, auth, and startup hooks.
 """
 
 import os
-from typing import Optional
+from typing import Annotated, Optional
+from uuid import UUID
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException, Request
+from sqlmodel import select
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_session
 from langflow.services.manager import ServiceManager
+from langflow.services.auth.utils import get_current_active_user
+from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
 from .services import register_genesis_services
@@ -130,18 +136,43 @@ def _setup_auth_dependency_overrides(app):
         request: Request,
         db: Annotated[AsyncSession, Depends(get_session)]
     ) -> User:
-        """Override Langflow's get_current_user to use Genesis authentication.
+        """Override Langflow's get_current_user to use Genesis authentication or fall back to Langflow auth.
 
         This function:
-        1. Gets the user from request.state (set by Genesis AuthMiddleware)
-        2. Creates or updates the user in Langflow's database
-        3. Returns a Langflow User object
+        1. Gets the user from request.state (set by Genesis AuthMiddleware) for JWT auth
+        2. Falls back to Langflow's original authentication for API keys
+        3. Creates or updates the user in Langflow's database
+        4. Returns a Langflow User object
         """
-        # Check if Genesis AuthMiddleware set the user
+        # Check if Genesis AuthMiddleware set the user (JWT authentication)
         if not hasattr(request.state, "user"):
+            # No Genesis user set - check for API key or other auth
+            api_key = request.headers.get("x-api-key") or request.query_params.get("x-api-key")
+            auth_header = request.headers.get("authorization")
+
+            if api_key:
+                # Use Langflow's original API key authentication
+                from langflow.services.auth.utils import api_key_security as original_api_key_security
+                user_read = await original_api_key_security(
+                    query_param=request.query_params.get("x-api-key", ""),
+                    header_param=request.headers.get("x-api-key", "")
+                )
+                # Convert UserRead back to User (they should have the same fields)
+                stmt = select(User).where(User.id == user_read.id)
+                user = (await db.exec(stmt)).first()
+                if user:
+                    return user
+                else:
+                    raise HTTPException(status_code=401, detail="User not found")
+
+            elif auth_header:
+                # Use Langflow's original JWT authentication
+                from langflow.services.auth.utils import get_current_user_by_jwt
+                return await get_current_user_by_jwt(auth_header.replace("Bearer ", ""), db)
+
             # If auth is disabled or user not set, create a default user
             # This handles cases where auth is disabled for development
-            if os.getenv("GENESIS_AUTH_ENABLED", "true").lower() == "false":
+            elif os.getenv("GENESIS_AUTH_ENABLED", "true").lower() == "false":
                 # Create or get a default development user
                 username = "genesis_dev_user"
                 stmt = select(User).where(User.username == username)
@@ -160,15 +191,30 @@ def _setup_auth_dependency_overrides(app):
                     await db.commit()
                     await db.refresh(dev_user)
                     return dev_user
-
-            # Auth is enabled but user not set - this is an error
-            raise HTTPException(
-                status_code=401,
-                detail="Could not validate credentials"
-            )
+            else:
+                # Auth is enabled but no valid auth found
+                raise HTTPException(
+                    status_code=401,
+                    detail="Could not validate credentials"
+                )
 
         # Get the Genesis user from request state
         genesis_user = request.state.user
+
+        # Get the user ID from Genesis user (this should be the JWT sub claim)
+        user_id = None
+        if hasattr(genesis_user, 'id'):
+            user_id = genesis_user.id
+        elif hasattr(genesis_user, 'genesis_user_id'):
+            user_id = genesis_user.genesis_user_id
+
+        # Convert to UUID if it's a string
+        if user_id and isinstance(user_id, str):
+            try:
+                user_id = UUID(user_id)
+            except ValueError:
+                logger.warning(f"Invalid UUID format for user_id: {user_id}")
+                user_id = None
 
         # Get the username (handle different user object structures)
         if hasattr(genesis_user, 'username'):
@@ -178,8 +224,11 @@ def _setup_auth_dependency_overrides(app):
         else:
             username = "genesis_user"
 
-        # Check if user exists in Langflow's database
-        stmt = select(User).where(User.username == username)
+        # Check if user exists in Langflow's database using the actual user ID
+        if user_id:
+            stmt = select(User).where(User.id == user_id)
+        else:
+            stmt = select(User).where(User.username == username)
         existing_user = (await db.exec(stmt)).first()
 
         if existing_user:
@@ -213,6 +262,10 @@ def _setup_auth_dependency_overrides(app):
                 is_superuser=is_superuser,
                 password="",  # Using external auth, no password needed
             )
+
+            # Set the user ID to match the JWT sub claim if available
+            if user_id:
+                langflow_user.id = user_id
             db.add(langflow_user)
             await db.commit()
             await db.refresh(langflow_user)
@@ -234,15 +287,22 @@ def _setup_auth_dependency_overrides(app):
         request: Request,
         db: Annotated[AsyncSession, Depends(get_session)]
     ) -> UserRead:
-        """Override api_key_security to use Genesis authentication.
+        """Override api_key_security to use Genesis authentication or fall back to Langflow API key auth.
 
         This is used by flow execution endpoints and needs to return a UserRead object.
         """
-        # Get the actual User object from our override
-        user = await get_current_user_override(request, db)
+        # Check if Genesis middleware set a user (JWT authentication)
+        if hasattr(request.state, "user"):
+            # Get the actual User object from our override
+            user = await get_current_user_override(request, db)
+            return UserRead.model_validate(user, from_attributes=True)
 
-        # Convert to UserRead for compatibility with flow execution
-        return UserRead.model_validate(user, from_attributes=True)
+        # Fall back to Langflow's original API key authentication
+        from langflow.services.auth.utils import api_key_security as original_api_key_security
+        return await original_api_key_security(
+            query_param=request.query_params.get("x-api-key", ""),
+            header_param=request.headers.get("x-api-key", "")
+        )
 
     # Override the dependencies
     app.dependency_overrides[get_current_user] = get_current_user_override

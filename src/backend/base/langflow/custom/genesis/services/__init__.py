@@ -60,6 +60,16 @@ def register_genesis_services():
         except (ImportError, ValueError, AttributeError) as e:
             failed_services.append(f"OCRService: {e}")
 
+        # Try to register Document Intelligence Service (from main services, not Genesis)
+        try:
+            from langflow.services.document_intelligence.factory import DocumentIntelligenceServiceFactory
+
+            factory = DocumentIntelligenceServiceFactory()
+            service_manager.register_factory(factory)
+            registered_services.append(factory.service_class.__name__)
+        except (ImportError, ValueError, AttributeError) as e:
+            failed_services.append(f"DocumentIntelligenceService: {e}")
+
         # Try to register Knowledge Service
         try:
             from .knowledge.factory import KnowledgeServiceFactory
