@@ -129,23 +129,47 @@ class FlowConverter:
 
         # Handle tool mode
         if is_tool:
+            logger.info(f"🔨 Setting up tool mode for {component.id} (type: {component.type})")
             node_data["tool_mode"] = True
-            # Ensure component_as_tool output exists
-            if "outputs" in node_data:
+
+            # Initialize outputs if not present
+            if "outputs" not in node_data:
+                node_data["outputs"] = []
+
+            # For tool mode, ensure component_as_tool is the FIRST output
+            # Remove any existing non-tool outputs if this is being used as a tool
+            if is_tool:
+                # Check if component_as_tool already exists
                 has_tool_output = any(o.get("name") == "component_as_tool"
                                     for o in node_data["outputs"])
+
                 if not has_tool_output:
-                    node_data["outputs"].append({
+                    logger.info(f"  Adding component_as_tool output to {component.id}")
+                    # Insert as first output for tools
+                    node_data["outputs"].insert(0, {
                         "types": ["Tool"],
                         "selected": "Tool",
                         "name": "component_as_tool",
-                        "display_name": "Tool",
-                        "method": "build_tool",
+                        "display_name": "Toolset",
+                        "method": "to_toolkit",
                         "value": "__UNDEFINED__",
                         "cache": True,
                         "allows_loop": False,
-                        "tool_mode": True
+                        "tool_mode": True,
+                        "hidden": None,
+                        "required_inputs": None
                     })
+                else:
+                    logger.info(f"  Component {component.id} already has tool output")
+
+                # Special handling for KnowledgeHubSearch and MCPTools - ensure they output Tool when used as tool
+                if "KnowledgeHubSearch" in data_type or "MCPTools" in data_type:
+                    logger.info(f"  Special handling for {data_type} as tool")
+                    # Make sure the tool output is primary
+                    for output in node_data["outputs"]:
+                        if output.get("name") == "component_as_tool":
+                            output["types"] = ["Tool"]
+                            output["selected"] = "Tool"
 
         # Build node structure
         node = {
@@ -286,15 +310,37 @@ class FlowConverter:
         input_types = self._get_input_types_fixed(target_node, input_field)
         logger.debug(f"Input types: {input_types}")
 
-        # Validate type compatibility
-        if not self._validate_type_compatibility_fixed(
+        # Validate type compatibility with enhanced logging for tool connections
+        is_tool_connection = (use_as == "tools" or "Tool" in output_types)
+
+        if is_tool_connection:
+            logger.info(f"🔧 Tool Connection Attempt:")
+            logger.info(f"  Source: {source_type} ({source_id})")
+            logger.info(f"  Target: {target_type} ({target_id})")
+            logger.info(f"  UseAs: {use_as}")
+            logger.info(f"  Output field: {output_field}")
+            logger.info(f"  Output types: {output_types}")
+            logger.info(f"  Input field: {input_field}")
+            logger.info(f"  Input types: {input_types}")
+
+        validation_result = self._validate_type_compatibility_fixed(
             output_types, input_types, source_type, target_type
-        ):
-            logger.warning(
-                f"Type mismatch: {source_type}.{output_field} ({output_types}) "
-                f"-> {target_type}.{input_field} ({input_types})"
-            )
+        )
+
+        if not validation_result:
+            if is_tool_connection:
+                logger.error(f"❌ Tool Connection FAILED: {source_type}.{output_field} ({output_types}) "
+                           f"-> {target_type}.{input_field} ({input_types})")
+                logger.error(f"  Validation details: output_types={output_types}, input_types={input_types}")
+            else:
+                logger.warning(
+                    f"Type mismatch: {source_type}.{output_field} ({output_types}) "
+                    f"-> {target_type}.{input_field} ({input_types})"
+                )
             return None
+
+        if is_tool_connection:
+            logger.info(f"✅ Tool Connection PASSED validation")
 
         # FIXED: Determine handle type correctly
         handle_type = self._determine_handle_type_fixed(input_field, input_types)
@@ -427,8 +473,13 @@ class FlowConverter:
     def _get_output_types_fixed(self, node: Dict[str, Any], output_field: str,
                                source_type: str) -> List[str]:
         """FIXED output types determination."""
-        # Special cases
+        # Special cases - ALWAYS return Tool for component_as_tool
         if output_field == "component_as_tool":
+            return ["Tool"]
+
+        # Check if node is in tool mode - if so, and we're looking at component_as_tool, return Tool
+        node_data = node.get("data", {})
+        if node_data.get("node", {}).get("tool_mode") and output_field == "component_as_tool":
             return ["Tool"]
 
         # Check actual outputs
@@ -505,17 +556,30 @@ class FlowConverter:
     def _validate_type_compatibility_fixed(self, output_types: List[str],
                                           input_types: List[str],
                                           source_type: str, target_type: str) -> bool:
-        """FIXED type compatibility validation."""
+        """FIXED type compatibility validation with detailed logging."""
+        # Log validation attempt
+        is_tool_validation = "Tool" in output_types or "Tool" in input_types
+        if is_tool_validation:
+            logger.debug(f"🔍 Validating Tool compatibility:")
+            logger.debug(f"   Output types: {output_types}")
+            logger.debug(f"   Input types: {input_types}")
+
         # Tool connections
         if "Tool" in output_types and "Tool" in input_types:
+            if is_tool_validation:
+                logger.debug(f"   ✓ Tool-to-Tool match found")
             return True
 
         # Direct type matches
         if any(otype in input_types for otype in output_types):
+            if is_tool_validation:
+                logger.debug(f"   ✓ Direct type match found")
             return True
 
         # AutonomizeModel Data -> input_value compatibility
         if "Data" in output_types and "input_value" in str(input_types):
+            if is_tool_validation:
+                logger.debug(f"   ✓ Data-to-input_value compatibility")
             return True
 
         # Compatible conversions
@@ -529,11 +593,19 @@ class FlowConverter:
         for otype in output_types:
             if otype in compatible:
                 if any(ctype in input_types for ctype in compatible[otype]):
+                    if is_tool_validation:
+                        logger.debug(f"   ✓ Compatible conversion: {otype} -> {[c for c in compatible[otype] if c in input_types]}")
                     return True
 
         # Accept any/object inputs
         if "any" in input_types or "object" in input_types:
+            if is_tool_validation:
+                logger.debug(f"   ✓ Any/object input accepts all")
             return True
+
+        if is_tool_validation:
+            logger.debug(f"   ✗ No compatibility found")
+            logger.debug(f"   Checked: Tool match, Direct match, Data compatibility, Conversions, Any/object")
 
         return False
 
