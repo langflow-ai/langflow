@@ -213,7 +213,7 @@ async def test_read_flows_user_isolation(client: AsyncClient, logged_in_headers,
         await session.refresh(other_user)
 
     # Login as the other user to get headers
-    login_data = {"username": "other_test_user", "password": "testpassword"}
+    login_data = {"username": "other_test_user", "password": "testpassword"}  # pragma: allowlist secret
     response = await client.post("api/v1/login", data=login_data)
     assert response.status_code == 200
     tokens = response.json()
@@ -322,3 +322,115 @@ async def test_read_flows_user_isolation(client: AsyncClient, logged_in_headers,
         if user:
             await session.delete(user)
             await session.commit()
+
+
+async def test_update_flow_deployment_status(client: AsyncClient, logged_in_headers):
+    """Test updating flow deployment status from DRAFT to DEPLOYED."""
+    # Create a flow
+    basic_case = {
+        "name": "deployment_test_flow",
+        "description": "Test deployment status",
+        "icon": "string",
+        "icon_bg_color": "#ff00ff",
+        "gradient": "string",
+        "data": {},
+        "is_component": False,
+        "webhook": False,
+        "endpoint_name": "deployment_test",
+        "tags": ["test"],
+        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    }
+    response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    flow_data = response.json()
+    flow_id = flow_data["id"]
+
+    # Verify initial status is DRAFT
+    assert "status" in flow_data
+    assert flow_data["status"] == "DRAFT"
+
+    # Update flow status to DEPLOYED
+    update_payload = {"status": "DEPLOYED"}
+    response = await client.patch(f"api/v1/flows/{flow_id}", json=update_payload, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    updated_flow = response.json()
+
+    # Verify status was updated
+    assert updated_flow["status"] == "DEPLOYED"
+    assert updated_flow["id"] == flow_id
+
+    # Update back to DRAFT
+    update_payload = {"status": "DRAFT"}
+    response = await client.patch(f"api/v1/flows/{flow_id}", json=update_payload, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    updated_flow = response.json()
+
+    # Verify status was updated back to DRAFT
+    assert updated_flow["status"] == "DRAFT"
+
+
+async def test_deployed_flow_locked_status(client: AsyncClient, logged_in_headers):
+    """Test that deployed flows are automatically locked."""
+    # Create a flow
+    basic_case = {
+        "name": "locked_test_flow",
+        "description": "Test locked status",
+        "icon": "string",
+        "icon_bg_color": "#ff00ff",
+        "gradient": "string",
+        "data": {},
+        "is_component": False,
+        "webhook": False,
+        "endpoint_name": "locked_test",
+        "tags": ["test"],
+        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    }
+    response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    flow_data = response.json()
+    flow_id = flow_data["id"]
+
+    # Deploy the flow
+    update_payload = {"status": "DEPLOYED"}
+    response = await client.patch(f"api/v1/flows/{flow_id}", json=update_payload, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    deployed_flow = response.json()
+
+    # Verify flow is locked when deployed
+    assert deployed_flow["status"] == "DEPLOYED"
+    assert deployed_flow["locked"] is True
+
+    # Undeploy the flow
+    update_payload = {"status": "DRAFT"}
+    response = await client.patch(f"api/v1/flows/{flow_id}", json=update_payload, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    draft_flow = response.json()
+
+    # Verify flow is unlocked when in draft
+    assert draft_flow["status"] == "DRAFT"
+    assert draft_flow["locked"] is False
+
+
+async def test_create_flow_default_status(client: AsyncClient, logged_in_headers):
+    """Test that newly created flows have DRAFT status by default."""
+    basic_case = {
+        "name": "default_status_flow",
+        "description": "Test default status",
+        "icon": "string",
+        "icon_bg_color": "#ff00ff",
+        "gradient": "string",
+        "data": {},
+        "is_component": False,
+        "webhook": False,
+        "endpoint_name": "default_status_test",
+        "tags": ["test"],
+        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    }
+    response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    result = response.json()
+
+    # Verify default status is DRAFT
+    assert "status" in result
+    assert result["status"] == "DRAFT"
+    assert result["locked"] is False
