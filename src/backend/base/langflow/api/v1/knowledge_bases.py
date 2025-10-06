@@ -20,7 +20,7 @@ _KNOWLEDGE_BASES_DIR: Path | None = None
 
 def _get_knowledge_bases_dir() -> Path:
     """Lazy load the knowledge bases directory from settings."""
-    global _KNOWLEDGE_BASES_DIR
+    global _KNOWLEDGE_BASES_DIR  # noqa: PLW0603
     if _KNOWLEDGE_BASES_DIR is None:
         settings = get_settings_service().settings
         knowledge_directory = settings.knowledge_bases_dir
