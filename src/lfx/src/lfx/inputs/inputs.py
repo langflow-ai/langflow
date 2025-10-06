@@ -290,6 +290,7 @@ class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.PASSWORD
     multiline: CoalesceBool = True
     password: CoalesceBool = Field(default=True)
+    track_in_telemetry: CoalesceBool = False  # Never track secret inputs
 
 
 class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
@@ -307,6 +308,7 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
     password: CoalesceBool = Field(default=True)
     input_types: list[str] = []
     load_from_db: CoalesceBool = True
+    track_in_telemetry: CoalesceBool = False  # Never track passwords
 
     @field_validator("value")
     @classmethod
@@ -508,6 +510,7 @@ class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolM
     """
 
     field_type: SerializableFieldTypes = FieldTypes.CONNECTION
+    track_in_telemetry: CoalesceBool = False  # Never track connection strings (may contain credentials)
 
 
 class AuthInput(BaseInputMixin, AuthMixin, MetadataTraceMixin):
@@ -522,6 +525,7 @@ class AuthInput(BaseInputMixin, AuthMixin, MetadataTraceMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.AUTH
     show: bool = False
+    track_in_telemetry: CoalesceBool = False  # Never track auth credentials
 
 
 class QueryInput(MessageTextInput, QueryMixin):
@@ -628,6 +632,7 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixi
     """
 
     field_type: SerializableFieldTypes = FieldTypes.FILE
+    track_in_telemetry: CoalesceBool = False  # Never track file paths (may contain PII)
 
 
 class McpInput(BaseInputMixin, MetadataTraceMixin):
@@ -642,6 +647,7 @@ class McpInput(BaseInputMixin, MetadataTraceMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.MCP
     value: dict[str, Any] = Field(default_factory=dict)
+    track_in_telemetry: CoalesceBool = False  # Never track MCP config (may contain sensitive data)
 
 
 class LinkInput(BaseInputMixin, LinkMixin):
