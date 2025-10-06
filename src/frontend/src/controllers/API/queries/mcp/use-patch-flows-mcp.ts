@@ -78,6 +78,7 @@ export const usePatchFlowsMCP: useMutationFunctionType<
       queryClient.invalidateQueries({ queryKey: ["useGetFlowsMCP"] });
     },
     ...options,
+    retry: 0,
   });
 
   return mutation;

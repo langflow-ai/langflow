@@ -12,6 +12,11 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
+
+    // Allow for legacy components
+    await page.getByTestId("sidebar-options-trigger").click();
+    await page.getByTestId("sidebar-legacy-switch").click();
+
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("amazon bedrock");
 

@@ -608,7 +608,7 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
         return v
 
 
-class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin):
+class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a file field.
 
     This class represents a file input and provides functionality for handling file values.
