@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING
 
 from loguru import logger
@@ -84,3 +85,79 @@ class FlowCacheService(AsyncInMemoryCache):
         except RuntimeError as e:
             logger.error(f"Error retrieving cached graph for flow {flow_id}: {e!s}")
         return None
+
+    async def refresh_flow_in_cache(self, flow: Flow) -> None:
+        """Refresh a flow's Graph instance in the cache.
+
+        This removes the existing cached version (if any) and adds the updated version.
+        Useful when a deployed flow's data has been modified.
+
+        Args:
+            flow (Flow): The flow to refresh in cache
+        """
+        flow_id_str = str(flow.id)
+        try:
+            # Remove old version from cache
+            await self.remove_flow_from_cache(flow)
+            # Add updated version to cache
+            await self.add_flow_to_cache(flow)
+            logger.debug(f"Refreshed flow {flow_id_str} in cache")
+        except (KeyError, RuntimeError) as e:
+            logger.error(f"Error refreshing flow {flow_id_str} in cache: {e!s}")
+
+    async def get_cache_stats(self) -> dict[str, int | float | list[str] | None]:
+        """Get statistics about the current cache state.
+
+        Returns:
+            dict: Dictionary containing:
+                - size: Number of items in cache
+                - max_size: Maximum cache size (None if unlimited)
+                - keys: List of cached flow identifiers (IDs and endpoint names)
+                - memory_bytes: Approximate memory usage in bytes
+                - memory_mb: Approximate memory usage in megabytes
+        """
+        try:
+            async with self.lock:
+                cache_size = len(self.cache)
+                cache_keys = list(self.cache.keys())
+
+                # Calculate approximate memory footprint
+                # Note: This is an approximation using sys.getsizeof
+                # The cache structure is: {key: {"value": Graph, "time": float}}
+                total_bytes = sys.getsizeof(self.cache)
+                for key, cache_entry in self.cache.items():
+                    # Add size of the key (flow ID or endpoint name string)
+                    total_bytes += sys.getsizeof(key)
+                    # Add size of the cache entry dict wrapper
+                    total_bytes += sys.getsizeof(cache_entry)
+
+                    # Add size of the actual cached content
+                    if isinstance(cache_entry, dict):
+                        # Get the actual Graph object (or pickled bytes)
+                        cached_value = cache_entry.get("value")
+                        if cached_value is not None:
+                            total_bytes += sys.getsizeof(cached_value)
+                        # Add timestamp
+                        cached_time = cache_entry.get("time")
+                        if cached_time is not None:
+                            total_bytes += sys.getsizeof(cached_time)
+
+                memory_mb = total_bytes / (1024 * 1024)
+
+        except (KeyError, RuntimeError) as e:
+            logger.error(f"Error getting cache stats: {e!s}")
+            return {
+                "size": 0,
+                "max_size": self.max_size,
+                "keys": [],
+                "memory_bytes": 0,
+                "memory_mb": 0.0,
+            }
+        else:
+            return {
+                "size": cache_size,
+                "max_size": self.max_size,
+                "keys": cache_keys,
+                "memory_bytes": total_bytes,
+                "memory_mb": round(memory_mb, 2),
+            }
