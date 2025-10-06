@@ -130,17 +130,17 @@ class FlowConverter:
         # Handle tool mode
         if is_tool:
             node_data["tool_mode"] = True
-            # Ensure component_as_tool output exists
+            # Ensure api_build_tool output exists (this is the correct name used by real Langflow)
             if "outputs" in node_data:
-                has_tool_output = any(o.get("name") == "component_as_tool"
+                has_tool_output = any(o.get("name") == "api_build_tool"
                                     for o in node_data["outputs"])
                 if not has_tool_output:
                     node_data["outputs"].append({
                         "types": ["Tool"],
                         "selected": "Tool",
-                        "name": "component_as_tool",
-                        "display_name": "Toolset",
-                        "method": "to_toolkit",
+                        "name": "api_build_tool",
+                        "display_name": "Tool",
+                        "method": "build_tool",
                         "value": "__UNDEFINED__",
                         "cache": True,
                         "allows_loop": False,
@@ -240,9 +240,10 @@ class FlowConverter:
                                   node_map: Dict[str, Dict[str, Any]],
                                   source_component: Component) -> Optional[Dict[str, Any]]:
         """Create an edge from provides declaration with FIXED logic."""
-        # CRITICAL FIX: Handle Pydantic field alias correctly
-        target_id = getattr(provide, 'in_', None) or getattr(provide, 'in', None)
-        use_as = getattr(provide, 'useAs', None)
+        # CRITICAL FIX: Handle Pydantic field alias correctly for "in" field
+        # The field is named `in_` but aliased as `in` in YAML
+        target_id = provide.in_  # Direct access to the field
+        use_as = provide.useAs
 
         # Debug logging for data access
         logger.debug(f"Provides data access: target_id={target_id}, use_as={use_as}")
@@ -318,19 +319,19 @@ class FlowConverter:
         source_handle_id = json.dumps(source_handle, separators=(",", ":")).replace('"', "œ")
         target_handle_id = json.dumps(target_handle, separators=(",", ":")).replace('"', "œ")
 
-        # Handle strings: Use spaced format - for sourceHandle/targetHandle fields
-        source_handle_encoded = json.dumps(source_handle, separators=(", ", ": ")).replace('"', "œ")
-        target_handle_encoded = json.dumps(target_handle, separators=(", ", ": ")).replace('"', "œ")
+        # Handle strings: Use compact format for sourceHandle/targetHandle fields (FIXED)
+        source_handle_encoded = json.dumps(source_handle, separators=(",", ":")).replace('"', "œ")
+        target_handle_encoded = json.dumps(target_handle, separators=(",", ":")).replace('"', "œ")
 
-        # CRITICAL FIX: Use original working edge ID format with compact encoding
+        # CRITICAL FIX: Use correct Langflow edge ID format with full encoded handles
         edge = {
             "className": "",
             "data": {
                 "sourceHandle": source_handle,
                 "targetHandle": target_handle,
-                "label": getattr(provide, 'description', '') or ""
+                "label": provide.description or ""
             },
-            "id": f"reactflow__edge-{source_id}{source_handle_id}-{target_id}{target_handle_id}",
+            "id": f"reactflow__edge-{source_id}{source_handle_encoded}-{target_id}{target_handle_encoded}",
             "selected": False,
             "source": source_id,
             "sourceHandle": source_handle_encoded,
@@ -344,15 +345,20 @@ class FlowConverter:
                                      source_type: str, provide: Any) -> str:
         """FIXED output field determination logic."""
         # Check if specific output is requested
-        if hasattr(provide, 'fromOutput') and provide.fromOutput:
+        if provide.fromOutput:
             return provide.fromOutput
 
-        # Special case for tools
-        if use_as in ["tool", "tools"]:
-            return "component_as_tool"
-
-        # Get actual outputs from node data
+        # Get actual outputs from node data first
         outputs = self._get_component_outputs_fixed(source_node)
+
+        # Special case for tools - find the Tool output
+        if use_as in ["tool", "tools"]:
+            # Look for Tool type output in the component's outputs
+            if outputs:
+                for output in outputs:
+                    if "Tool" in output.get("types", []):
+                        return output.get("name", "api_build_tool")
+            return "api_build_tool"
 
         if outputs:
             # For single output, use it
@@ -422,7 +428,7 @@ class FlowConverter:
                                source_type: str) -> List[str]:
         """FIXED output types determination."""
         # Special cases
-        if output_field == "component_as_tool":
+        if output_field == "api_build_tool":
             return ["Tool"]
 
         # Check actual outputs
@@ -461,7 +467,7 @@ class FlowConverter:
             "tools": ["Tool"],
             "input_value": ["Data", "DataFrame", "Message"],  # ChatOutput accepts multiple
             "search_query": ["Message", "str"],  # AutonomizeModel
-            "system_message": ["Message"],
+            "system_prompt": ["Message"],
             "template": ["Message", "str"],
             "memory": ["Message"]
         }
@@ -613,7 +619,7 @@ class FlowConverter:
                 "outputs": [{"name": "response", "types": ["Message"]}],
                 "template": {
                     "input_value": {"input_types": ["Message"]},
-                    "system_message": {"input_types": ["Message"]},
+                    "system_prompt": {"input_types": ["Message"]},
                     "tools": {"input_types": ["Tool"]}
                 },
                 "base_classes": [component_type],
@@ -622,7 +628,7 @@ class FlowConverter:
             }
         elif "Tool" in component_type or "MCP" in component_type:
             return {
-                "outputs": [{"name": "component_as_tool", "types": ["Tool"]}],
+                "outputs": [{"name": "api_build_tool", "types": ["Tool"]}],
                 "template": {},
                 "base_classes": [component_type],
                 "description": f"Tool component: {component_type}",
