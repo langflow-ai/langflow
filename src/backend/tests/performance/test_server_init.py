@@ -107,7 +107,7 @@ def test_env_var_loading(tmp_path, monkeypatch):
     from langflow.services.settings.factory import SettingsServiceFactory
 
     factory = SettingsServiceFactory()
-    factory._check_env_loaded()
+    factory._load_env_vars()
 
     # Assert env var is now in os.environ
     assert os.getenv(env_var_name) == env_var_value
