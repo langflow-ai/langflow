@@ -1,7 +1,7 @@
 //Langflow Desktop Base URL
 export const baseURL = "";
 
-export const customDefaultShotrcuts = [
+export const customDefaultShortcuts = [
   {
     display_name: "Controls",
     name: "Advanced Settings",
