@@ -10,7 +10,7 @@ These tests specifically verify that:
 import os
 import subprocess
 import sys
-from unittest.mock import MagicMock 
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -65,7 +65,6 @@ class TestSettingsInitializationOrder:
     def test_dotenv_loading_before_settings_init(self, tmp_path):
         """Test the complete flow: load .env, then initialize settings."""
         from dotenv import load_dotenv
-
         from langflow.services.deps import get_settings_service, is_settings_service_initialized
         from langflow.services.manager import service_manager
 
@@ -102,7 +101,6 @@ class TestSettingsInitializationOrder:
     def test_cli_check_pattern_success_case(self, tmp_path):
         """Test the CLI check pattern when settings are NOT initialized (success case)."""
         from dotenv import load_dotenv
-
         from langflow.services.deps import is_settings_service_initialized
         from langflow.services.manager import service_manager
 
@@ -131,8 +129,6 @@ class TestSettingsInitializationOrder:
 
     def test_cli_check_pattern_error_case(self, tmp_path):
         """Test the CLI check pattern when settings ARE initialized (error case)."""
-        from dotenv import load_dotenv
-
         from langflow.services.deps import get_settings_service, is_settings_service_initialized
         from langflow.services.manager import service_manager
 
@@ -157,16 +153,13 @@ class TestSettingsInitializationOrder:
                     match="Settings service is already initialized",
                 ):
                     raise ValueError(
-                        "Settings service is already initialized. "
-                        "Please do not set the env file via the CLI."
+                        "Settings service is already initialized. Please do not set the env file via the CLI."
                     )
             else:
                 pytest.fail("Settings should be initialized, but check returned False")
 
     def test_error_message_when_settings_already_initialized(self, tmp_path):
         """Test that we get a clear error when trying to load .env after settings init."""
-        from dotenv import load_dotenv
-
         from langflow.services.deps import get_settings_service, is_settings_service_initialized
         from langflow.services.manager import service_manager
 
@@ -298,6 +291,7 @@ finally:
         # Run the integration test
         result = subprocess.run(
             [sys.executable, str(test_script)],
+            check=False,
             capture_output=True,
             text=True,
             timeout=60,
@@ -309,11 +303,6 @@ finally:
 
         # Verify the test passed
         assert result.returncode == 0, (
-            f"Integration test failed - env file values not used\n"
-            f"STDOUT: {result.stdout}\n"
-            f"STDERR: {result.stderr}"
+            f"Integration test failed - env file values not used\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
         )
-        assert "SUCCESS" in result.stdout, (
-            f"Database not created at env file location\n{result.stdout}"
-        )
-
+        assert "SUCCESS" in result.stdout, f"Database not created at env file location\n{result.stdout}"

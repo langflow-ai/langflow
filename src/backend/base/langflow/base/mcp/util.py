@@ -57,6 +57,8 @@ def get_session_idle_timeout() -> int:
 def get_session_cleanup_interval() -> int:
     """Get cleanup interval in seconds."""
     return _get_mcp_setting("mcp_session_cleanup_interval")
+
+
 # RFC 7230 compliant header name pattern: token = 1*tchar
 # tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /
 #         "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
