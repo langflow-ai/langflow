@@ -1,13 +1,20 @@
-import { UserButton } from "@clerk/clerk-react";
+import { UserButton, useClerk } from "@clerk/clerk-react";
 import { IS_CLERK_AUTH, useLogout } from "@/clerk/auth";
-import { LogOut } from "lucide-react";
+import { LogOut, Users } from "lucide-react";
 import { AccountMenu } from "@/components/core/appHeaderComponent/components/AccountMenu";
 
 export function ClerkAccountMenu() {
   const { mutate: mutationLogout } = useLogout();
+  const { openOrganizationProfile } = useClerk();
 
   const handleLogout = () => {
     mutationLogout();
+  };
+
+  const handleOpenOrgProfile = () => {
+    if (openOrganizationProfile) {
+      openOrganizationProfile();
+    }
   };
 
   return IS_CLERK_AUTH ? (
@@ -21,6 +28,11 @@ export function ClerkAccountMenu() {
         }}
       >
         <UserButton.MenuItems>
+          <UserButton.Action
+            label="Members"
+            labelIcon={<Users className="h-4 w-4" />}
+            onClick={handleOpenOrgProfile}
+          />
           <UserButton.Action
             label="Sign out"
             labelIcon={<LogOut className="h-4 w-4" />}
