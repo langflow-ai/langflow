@@ -279,6 +279,7 @@ async def build_vertex(
     top_level_vertices = []
     start_time = time.perf_counter()
     error_message = None
+    run_id = None
     try:
         graph: Graph = await chat_service.get_cache(flow_id_str)
     except KeyError as exc:
@@ -294,9 +295,12 @@ async def build_vertex(
                 session=await anext(get_session()),
                 chat_service=chat_service,
             )
+            run_id = str(uuid.uuid4())
+            graph.set_run_id(run_id)
         else:
             graph = cache.get("result")
             await graph.initialize_run()
+            run_id = graph.run_id
         vertex = graph.get_vertex(vertex_id)
 
         try:
@@ -387,7 +391,7 @@ async def build_vertex(
                 component_seconds=int(time.perf_counter() - start_time),
                 component_success=valid,
                 component_error_message=error_message,
-                component_run_id=graph.run_id,
+                component_run_id=run_id,
             ),
         )
     except Exception as exc:
@@ -398,7 +402,7 @@ async def build_vertex(
                 component_seconds=int(time.perf_counter() - start_time),
                 component_success=False,
                 component_error_message=str(exc),
-                component_run_id=graph.run_id,
+                component_run_id=run_id if "run_id" in locals() else None,
             ),
         )
         await logger.aexception("Error building Component")
