@@ -296,13 +296,29 @@ async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | U
         return FlowRead.model_validate(flow, from_attributes=True)
 
 
-async def get_flow_by_id_or_endpoint_name_from_cache(flow_id_or_name: str, *, use_cache: bool = False):
+async def get_flow_by_id_or_endpoint_name_from_cache(flow_id_or_name: str, *, use_cache: bool = True):
+    """Get a flow by ID or endpoint name, using cache when available.
+
+    Args:
+        flow_id_or_name: Flow UUID or endpoint name
+        use_cache: Whether to check the cache first (default: True)
+
+    Returns:
+        Graph instance if using cache and found, FlowRead otherwise
+
+    Notes:
+        - If use_cache=True, tries cache first for deployed flows
+        - Falls back to database if not found in cache
+        - If use_cache=False, always queries database
+    """
     if use_cache:
         flow_cache_service = get_flow_cache_service()
         flow = await flow_cache_service.get_cached_graph(flow_id_or_name)
-        if flow is None:
-            raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
-        return flow
+        if flow is not None:
+            # Cache hit - return the Graph instance
+            return flow
+        # Cache miss - fall through to database query
+
     return await get_flow_by_id_or_endpoint_name(flow_id_or_name)
 
 
