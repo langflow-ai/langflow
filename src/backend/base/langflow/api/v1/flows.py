@@ -361,8 +361,8 @@ async def update_flow(
             if default_folder:
                 db_flow.folder_id = default_folder.id
         if db_flow.status == DeploymentStateEnum.DEPLOYED:
-            # add the flow to the in memory cache
-            background_tasks.add_task(flow_cache_service.add_flow_to_cache, db_flow)
+            # Refresh the flow in the in-memory cache to ensure we have the latest version
+            background_tasks.add_task(flow_cache_service.refresh_flow_in_cache, db_flow)
             db_flow.locked = True
         elif update_data.get("status") in [DeploymentStateEnum.DRAFT, None] and update_data.get("locked") is None:
             # remove the flow from the in memory cache
@@ -549,6 +549,33 @@ async def download_multiple_file(
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     return flows_without_api_keys[0]
+
+
+@router.get("/cache/stats", response_model=dict, status_code=200)
+async def get_flow_cache_stats(
+    *,
+    _current_user: CurrentActiveUser,
+    flow_cache_service: Annotated[FlowCacheService, Depends(get_flow_cache_service)],
+):
+    """Get statistics about the flow cache.
+
+    Returns information about the current state of the flow cache, including:
+    - Number of flows currently cached
+    - Maximum cache size (if configured)
+    - List of cached flow identifiers (IDs and endpoint names)
+
+    This is useful for monitoring cache performance and debugging deployment issues.
+
+    Requires authentication (user must be logged in).
+
+    Args:
+        _current_user (User): The current authenticated user (required for auth)
+        flow_cache_service (FlowCacheService): The flow cache service
+
+    Returns:
+        dict: Cache statistics including size, max_size, and cached keys
+    """
+    return await flow_cache_service.get_cache_stats()
 
 
 all_starter_folder_flows_response: Response | None = None
