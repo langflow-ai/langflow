@@ -14,6 +14,7 @@ from lfx.log.logger import logger
 from langflow.services.base import Service
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
 from langflow.services.telemetry.schema import (
+    ComponentInputsPayload,
     ComponentPayload,
     ExceptionPayload,
     PlaygroundPayload,
@@ -128,6 +129,9 @@ class TelemetryService(Service):
 
     async def log_package_component(self, payload: ComponentPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "component"))
+
+    async def log_package_component_inputs(self, payload: ComponentInputsPayload) -> None:
+        await self._queue_event((self.send_telemetry_data, payload, "component_inputs"))
 
     async def log_exception(self, exc: Exception, context: str) -> None:
         """Log unhandled exceptions to telemetry.
