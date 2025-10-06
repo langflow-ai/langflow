@@ -1,6 +1,6 @@
 {
   "name": "langflow",
-  "version": "1.6.0",
+  "version": "1.6.3",
   "private": true,
   "dependencies": {
     "@chakra-ui/number-input": "^2.1.2",
