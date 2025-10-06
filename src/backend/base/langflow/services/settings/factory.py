@@ -1,8 +1,11 @@
+from dotenv import find_dotenv
+from flask.cli import load_dotenv
 from typing_extensions import override
 
 from langflow.services.factory import ServiceFactory
 from langflow.services.settings.service import SettingsService
-
+from langflow.logging.logger import logger
+import os
 
 class SettingsServiceFactory(ServiceFactory):
     _instance = None
@@ -15,8 +18,16 @@ class SettingsServiceFactory(ServiceFactory):
     def __init__(self) -> None:
         super().__init__(SettingsService)
 
+    def _check_env_loaded(self) -> bool:
+        env_file = find_dotenv()
+        if env_file:
+            logger.debug(f"Loading environment variables from {env_file}")
+            return load_dotenv(env_file)
+        return False
+
     @override
     def create(self):
         # Here you would have logic to create and configure a SettingsService
-
+        # Try to load env file if not already loaded
+        self._check_env_loaded()
         return SettingsService.initialize()
