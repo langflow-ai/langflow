@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Langflow",
-    "version": "1.6.0"
+    "version": "1.6.3"
   },
   "paths": {
     "/api/v1/build/{flow_id}/vertices": {
@@ -849,10 +849,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "null",
-                  "title": "Response Process Api V1 Process   Flow Id  Post"
-                }
+                "schema": {}
               }
             }
           },
@@ -900,10 +897,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "null",
-                  "title": "Response Process Api V1 Predict   Flow Id  Post"
-                }
+                "schema": {}
               }
             }
           },
@@ -4580,36 +4574,6 @@
             }
           },
           {
-            "name": "is_component",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Is Component"
-            }
-          },
-          {
-            "name": "is_flow",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Is Flow"
-            }
-          },
-          {
-            "name": "search",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "default": "",
-              "title": "Search"
-            }
-          },
-          {
             "name": "page",
             "in": "query",
             "required": false,
@@ -4639,6 +4603,36 @@
                 }
               ],
               "title": "Size"
+            }
+          },
+          {
+            "name": "is_component",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Is Component"
+            }
+          },
+          {
+            "name": "is_flow",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Is Flow"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Search"
             }
           }
         ],
