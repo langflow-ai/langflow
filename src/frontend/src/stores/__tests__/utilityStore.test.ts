@@ -40,6 +40,8 @@ describe("useUtilityStore", () => {
       currentSessionId: "",
       eventDelivery: EventDeliveryType.POLLING,
       webhookAuthEnable: true,
+      defaultFolderName: "Starter Project",
+      hideGettingStartedProgress: false,
     });
   });
 
@@ -61,6 +63,8 @@ describe("useUtilityStore", () => {
       expect(result.current.currentSessionId).toBe("");
       expect(result.current.eventDelivery).toBe(EventDeliveryType.POLLING);
       expect(result.current.webhookAuthEnable).toBe(true);
+      expect(result.current.defaultFolderName).toBe("Starter Project");
+      expect(result.current.hideGettingStartedProgress).toBe(false);
     });
   });
 
@@ -553,6 +557,75 @@ describe("useUtilityStore", () => {
         result.current.setWebhookAuthEnable(true);
       });
       expect(result.current.webhookAuthEnable).toBe(true);
+    });
+  });
+
+  describe("setDefaultFolderName", () => {
+    it("should set defaultFolderName", () => {
+      const { result } = renderHook(() => useUtilityStore());
+
+      act(() => {
+        result.current.setDefaultFolderName("OpenRAG");
+      });
+
+      expect(result.current.defaultFolderName).toBe("OpenRAG");
+    });
+
+    it("should change defaultFolderName", () => {
+      const { result } = renderHook(() => useUtilityStore());
+
+      act(() => {
+        result.current.setDefaultFolderName("OpenRAG");
+      });
+      expect(result.current.defaultFolderName).toBe("OpenRAG");
+
+      act(() => {
+        result.current.setDefaultFolderName("My Custom Folder");
+      });
+      expect(result.current.defaultFolderName).toBe("My Custom Folder");
+    });
+
+    it("should handle various folder names", () => {
+      const { result } = renderHook(() => useUtilityStore());
+
+      const folderNames = [
+        "Starter Project",
+        "OpenRAG",
+        "My Collection",
+        "Custom Folder",
+      ];
+      folderNames.forEach((folderName) => {
+        act(() => {
+          result.current.setDefaultFolderName(folderName);
+        });
+        expect(result.current.defaultFolderName).toBe(folderName);
+      });
+    });
+  });
+
+  describe("setHideGettingStartedProgress", () => {
+    it("should set hideGettingStartedProgress to true", () => {
+      const { result } = renderHook(() => useUtilityStore());
+
+      act(() => {
+        result.current.setHideGettingStartedProgress(true);
+      });
+
+      expect(result.current.hideGettingStartedProgress).toBe(true);
+    });
+
+    it("should toggle hideGettingStartedProgress", () => {
+      const { result } = renderHook(() => useUtilityStore());
+
+      act(() => {
+        result.current.setHideGettingStartedProgress(true);
+      });
+      expect(result.current.hideGettingStartedProgress).toBe(true);
+
+      act(() => {
+        result.current.setHideGettingStartedProgress(false);
+      });
+      expect(result.current.hideGettingStartedProgress).toBe(false);
     });
   });
 
