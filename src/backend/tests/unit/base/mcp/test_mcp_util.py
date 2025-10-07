@@ -1139,7 +1139,6 @@ class TestMCPSseClientUnit:
 
         with (
             patch.object(sse_client, "validate_url", return_value=(True, "")),
-            patch.object(sse_client, "pre_check_redirect", return_value=test_url),
             patch.object(sse_client, "_get_or_create_session") as mock_get_session,
         ):
             # Mock session
@@ -1188,27 +1187,6 @@ class TestMCPSseClientUnit:
                 "test_context", sse_client._connection_params, "streamable_http"
             )
             assert result_session == mock_session
-
-    async def test_pre_check_redirect_with_headers(self, sse_client):
-        """Test pre-check redirect functionality with custom headers."""
-        test_url = "http://test.url"
-        redirect_url = "http://redirect.url"
-        # Use pre-validated headers since pre_check_redirect expects already validated headers
-        test_headers = {"authorization": "Bearer token123"}  # already normalized
-
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_response = MagicMock()
-            mock_response.status_code = 307
-            mock_response.headers.get.return_value = redirect_url
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
-
-            result = await sse_client.pre_check_redirect(test_url, test_headers)
-
-            assert result == redirect_url
-            # Verify validated headers were passed to the request
-            mock_client.return_value.__aenter__.return_value.get.assert_called_with(
-                test_url, timeout=2.0, headers={"Accept": "text/event-stream", **test_headers}
-            )
 
     async def test_run_tool_with_retry_on_connection_error(self, sse_client):
         """Test that run_tool retries on connection errors."""
