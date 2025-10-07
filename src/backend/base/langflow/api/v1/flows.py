@@ -347,6 +347,9 @@ async def update_flow(
         if not db_flow:
             raise HTTPException(status_code=404, detail="Flow not found")
 
+        # Store old endpoint name for cache cleanup if it changes
+        old_endpoint_name = db_flow.endpoint_name
+
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
 
         # Specifically handle endpoint_name when it's explicitly set to null or empty string
@@ -371,11 +374,14 @@ async def update_flow(
                 db_flow.folder_id = default_folder.id
         if db_flow.status == DeploymentStateEnum.DEPLOYED:
             # Refresh the flow in the in-memory cache to ensure we have the latest version
-            await flow_cache_service.refresh_flow_in_cache(db_flow)
+            # Pass old_endpoint_name in case it changed, to clean up stale aliases
+            old_name = old_endpoint_name if old_endpoint_name != db_flow.endpoint_name else None
+            await flow_cache_service.refresh_flow_in_cache(db_flow, old_endpoint_name=old_name)
             db_flow.locked = True
         elif db_flow.status == DeploymentStateEnum.DRAFT and update_data.get("status") == DeploymentStateEnum.DRAFT:
             # Only unlock if status was explicitly changed to DRAFT (not just omitted from request)
-            await flow_cache_service.remove_flow_from_cache(db_flow)
+            # Pass old_endpoint_name to clean up all cache aliases
+            await flow_cache_service.remove_flow_from_cache(db_flow, old_endpoint_name=old_endpoint_name)
             db_flow.locked = False
 
         session.add(db_flow)

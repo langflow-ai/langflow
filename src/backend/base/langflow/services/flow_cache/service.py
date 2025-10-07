@@ -58,23 +58,39 @@ class FlowCacheService(AsyncInMemoryCache):
         except (KeyError, RuntimeError) as e:
             logger.error(f"Error caching graph for flow {flow_id_str}: {e!s}")
 
-    async def remove_flow_from_cache(self, flow: Flow, *, silent: bool = False) -> None:
+    async def remove_flow_from_cache(
+        self, flow: Flow, *, silent: bool = False, old_endpoint_name: str | None = None
+    ) -> None:
         """Remove a flow's Graph instance from the cache.
+
+        Removes all cache keys associated with the flow: UUID, current endpoint_name,
+        and optionally a previous endpoint_name (for handling renames).
 
         Args:
             flow (Flow): The flow to remove from cache
             silent (bool): If True, suppress debug logging (used during refresh)
+            old_endpoint_name (str | None): Previous endpoint name to remove (for renames)
         """
         flow_id_str = str(flow.id)
-        try:
-            await self.delete(flow_id_str)
-            if not silent:
-                logger.debug(f"Removed flow {flow_id_str} from cache")
-        except KeyError as e:
-            if not silent:
-                logger.error(f"Cache key not found when removing flow {flow_id_str}: {e!s}")
-        except RuntimeError as e:
-            logger.error(f"Error removing flow {flow_id_str} from cache: {e!s}")
+
+        # Collect all keys to remove: UUID + current endpoint + old endpoint
+        keys_to_remove = [flow_id_str]
+        if flow.endpoint_name:
+            keys_to_remove.append(flow.endpoint_name)
+        if old_endpoint_name:
+            keys_to_remove.append(old_endpoint_name)
+
+        # Remove each key independently
+        for key in keys_to_remove:
+            try:
+                await self.delete(key)
+                if not silent:
+                    logger.debug(f"Removed cache key: {key}")
+            except KeyError:
+                if not silent:
+                    logger.debug(f"Cache key not found: {key}")
+            except RuntimeError as e:
+                logger.error(f"Error removing cache key {key}: {e!s}")
 
     async def get_cached_graph(self, flow_id: str) -> Graph | None:
         """Get a cached Graph instance for a flow.
@@ -101,20 +117,21 @@ class FlowCacheService(AsyncInMemoryCache):
             logger.error(f"Error retrieving cached graph for flow {flow_id}: {e!s}")
         return None
 
-    async def refresh_flow_in_cache(self, flow: Flow) -> None:
+    async def refresh_flow_in_cache(self, flow: Flow, *, old_endpoint_name: str | None = None) -> None:
         """Refresh a flow's Graph instance in the cache.
 
         This removes the existing cached version (if any) and adds the updated version.
-        Useful when a deployed flow's data has been modified.
+        Useful when a deployed flow's data has been modified or endpoint renamed.
 
         Args:
             flow (Flow): The flow to refresh in cache
+            old_endpoint_name (str | None): Previous endpoint name to remove (for renames)
         """
         flow_id_str = str(flow.id)
         try:
-            # Remove old version from cache (silent to avoid duplicate logs)
-            await self.remove_flow_from_cache(flow, silent=True)
-            # Add updated version to cache (silent to avoid duplicate logs)
+            # Remove old version from cache, including old endpoint alias if provided
+            await self.remove_flow_from_cache(flow, silent=True, old_endpoint_name=old_endpoint_name)
+            # Add updated version to cache with new endpoint name
             await self.add_flow_to_cache(flow, silent=True)
             logger.debug(f"Refreshed flow {flow_id_str} in cache")
         except (KeyError, RuntimeError) as e:
