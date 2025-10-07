@@ -291,7 +291,7 @@ export default function AddMcpServerModal({
                     disabled={!!initialData && type !== "HTTP"}
                     value="HTTP"
                   >
-                    HTTP
+                    HTTP/SSE
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -392,12 +392,12 @@ export default function AddMcpServerModal({
                     </div>
                     <div className="flex flex-col gap-2">
                       <Label className="flex items-start gap-1 !text-mmd">
-                        HTTP URL<span className="text-red-500">*</span>
+                        HTTP/SSE URL<span className="text-red-500">*</span>
                       </Label>
                       <Input
                         value={httpUrl}
                         onChange={(e) => setHttpUrl(e.target.value)}
-                        placeholder="HTTP URL"
+                        placeholder="HTTP/SSE URL"
                         data-testid="http-url-input"
                         disabled={isPending}
                       />
