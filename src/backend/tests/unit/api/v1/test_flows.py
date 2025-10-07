@@ -612,3 +612,20 @@ async def test_cache_memory_tracking(client: AsyncClient, logged_in_headers):
     # Verify MB is correctly calculated from bytes
     expected_mb = round(result["memory_bytes"] / (1024 * 1024), 2)
     assert result["memory_mb"] == expected_mb
+
+
+async def test_create_deployed_flow_is_auto_locked(client: AsyncClient, logged_in_headers):
+    """Test that flows created with DEPLOYED status are automatically locked."""
+    flow_data = {
+        "name": "deployed_on_creation",
+        "description": "Test auto-lock on creation",
+        "data": {},
+        "status": "DEPLOYED",
+    }
+    response = await client.post("api/v1/flows/", json=flow_data, headers=logged_in_headers)
+    assert response.status_code == 201
+    result = response.json()
+
+    # Verify flow is both deployed AND locked
+    assert result["status"] == "DEPLOYED"
+    assert result["locked"] is True
