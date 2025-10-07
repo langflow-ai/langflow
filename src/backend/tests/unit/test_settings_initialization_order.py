@@ -260,23 +260,23 @@ proc = subprocess.Popen(
 )
 
 try:
-    # Wait a bit for server to initialize and create database
-    time.sleep(15)
+    # Poll for database file with timeout (more reliable in CI)
+    max_wait = 45  # Increased timeout for CI
+    poll_interval = 2
+    elapsed = 0
 
-    # Check if database file was created at our unique location
-    if db_path.exists():
-        print(f"SUCCESS: Database created at env file location: {{db_path}}")
-        sys.exit(0)
-    else:
-        # Startup times can vary, so we'll be lenient to avoid flaky tests
-        time.sleep(15)
+    while elapsed < max_wait:
         if db_path.exists():
             print(f"SUCCESS: Database created at env file location: {{db_path}}")
             sys.exit(0)
-        else:
-            print(f"ERROR: Database NOT created at env file location: {{db_path}}")
-            print(f"This means env file values were not used")
-            sys.exit(1)
+        time.sleep(poll_interval)
+        elapsed += poll_interval
+
+    # If we get here, database was not created
+    print(f"ERROR: Database NOT created at env file location: {{db_path}}")
+    print(f"This means env file values were not used")
+    print(f"Waited {{elapsed}} seconds")
+    sys.exit(1)
 finally:
     # Clean up: kill the server
     proc.terminate()
@@ -287,13 +287,13 @@ finally:
         """.strip()
         )
 
-        # Run the integration test
+        # Run the integration test (increased timeout for CI)
         result = subprocess.run(  # noqa: S603
             [sys.executable, str(test_script)],
             check=False,
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=90,
         )
 
         # Clean up database file if created
