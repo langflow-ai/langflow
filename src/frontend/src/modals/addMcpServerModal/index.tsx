@@ -392,7 +392,8 @@ export default function AddMcpServerModal({
                     </div>
                     <div className="flex flex-col gap-2">
                       <Label className="flex items-start gap-1 !text-mmd">
-                        Streamable HTTP/SSE URL<span className="text-red-500">*</span>
+                        Streamable HTTP/SSE URL
+                        <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         value={httpUrl}
