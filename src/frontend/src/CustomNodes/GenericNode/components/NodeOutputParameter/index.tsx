@@ -18,15 +18,27 @@ export const OutputParameter = ({
   hidden,
   handleSelectOutput,
 }) => {
-  const id = useMemo(
-    () => ({
-      output_types: [output.selected ?? output.types[0]],
+  const id = useMemo(() => {
+    const selectedType = output.selected ?? output.types[0];
+    // For infinity inputs (allows_loop), include both the original type and Message
+    const outputTypes = output.allows_loop
+      ? [selectedType, "Message"]
+      : [selectedType];
+
+    return {
+      output_types: outputTypes,
       id: data.id,
       dataType: data.type,
       name: output.name,
-    }),
-    [output.selected, output.types, data.id, data.type, output.name],
-  );
+    };
+  }, [
+    output.selected,
+    output.types,
+    output.allows_loop,
+    data.id,
+    data.type,
+    output.name,
+  ]);
 
   const colors = useMemo(
     () => getNodeOutputColors(output, data, types),
@@ -49,7 +61,11 @@ export const OutputParameter = ({
       colors={colors}
       outputProxy={output.proxy}
       title={output.display_name ?? output.name}
-      tooltipTitle={output.selected ?? output.types[0]}
+      tooltipTitle={
+        output.allows_loop
+          ? `${output.selected ?? output.types[0]}\nMessage`
+          : (output.selected ?? output.types[0])
+      }
       id={id}
       type={output.types.join("|")}
       showNode={showNode}

@@ -410,11 +410,24 @@ export function isValidConnection(
     return null;
   };
 
+  // Check if target is an infinity input (loop component)
+  const isInfinityInput = !!targetHandleObject.output_types;
+
+  // For infinity inputs, allow the original output types plus Message type
+  const infinityInputTypeCheck =
+    isInfinityInput &&
+    (sourceHandleObject.output_types.some(
+      (t) => targetHandleObject.output_types?.includes(t) || t === "Message",
+    ) ||
+      targetHandleObject.output_types?.includes(sourceHandleObject.dataType) ||
+      sourceHandleObject.dataType === "Message");
   if (
     targetHandleObject.inputTypes?.some(
       (n) => n === sourceHandleObject.dataType,
     ) ||
+    infinityInputTypeCheck ||
     (targetHandleObject.output_types &&
+      !infinityInputTypeCheck &&
       (targetHandleObject.output_types?.some(
         (n) => n === sourceHandleObject.dataType,
       ) ||
