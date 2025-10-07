@@ -87,7 +87,9 @@ class FlowConverter:
         return flow
 
     async def _build_nodes(self, spec: AgentSpec) -> List[Dict[str, Any]]:
-        """Build nodes from specification components."""
+        """Build nodes from agent specification."""
+        # Store spec for position calculation
+        self._current_spec = spec
         nodes = []
 
         for i, component in enumerate(spec.components):
@@ -613,17 +615,117 @@ class FlowConverter:
         return False
 
     def _calculate_position(self, index: int, kind: str) -> Dict[str, int]:
-        """Calculate node position based on improved flow layout algorithm."""
-        # If positions haven't been pre-calculated, fall back to improved simple logic
+        """Calculate node position based on intelligent graph-based layout algorithm."""
+        # If positions haven't been pre-calculated, calculate them now
         if not hasattr(self, '_component_positions'):
-            return self._calculate_simple_position(index, kind)
+            self._calculate_all_positions()
 
-        # Use pre-calculated positions from _calculate_all_positions
+        # Use pre-calculated positions from graph-based layout
         component_id = getattr(self, '_current_component_id', None)
         if component_id and component_id in self._component_positions:
             return self._component_positions[component_id]
 
+        # Fallback to simple positioning
         return self._calculate_simple_position(index, kind)
+
+    def _calculate_all_positions(self):
+        """Calculate positions for all components using graph-based layout algorithm."""
+        from collections import defaultdict, deque
+
+        if not hasattr(self, '_current_spec'):
+            self._component_positions = {}
+            return
+
+        spec = self._current_spec
+        components = {comp.id: comp for comp in spec.components}
+
+        # Build dependency graph from provides relationships
+        graph = defaultdict(list)
+        reverse_graph = defaultdict(list)
+
+        for component in spec.components:
+            comp_id = component.id
+            provides = component.provides or []
+
+            for provide in provides:
+                target = provide.in_
+                graph[comp_id].append(target)
+                reverse_graph[target].append(comp_id)
+
+        # Calculate topological layers using Kahn's algorithm
+        in_degree = {comp_id: 0 for comp_id in components}
+        for comp_id in components:
+            for target in graph[comp_id]:
+                if target in in_degree:
+                    in_degree[target] += 1
+
+        # Assign components to layers
+        layers = {}
+        queue = deque([(comp_id, 0) for comp_id, degree in in_degree.items() if degree == 0])
+
+        while queue:
+            comp_id, layer = queue.popleft()
+            layers[comp_id] = layer
+
+            for target in graph[comp_id]:
+                if target in in_degree:
+                    in_degree[target] -= 1
+                    if in_degree[target] == 0:
+                        queue.append((target, layer + 1))
+
+        # Group components by layer
+        layer_groups = defaultdict(list)
+        for comp_id, layer in layers.items():
+            layer_groups[layer].append(comp_id)
+
+        # Calculate positions using layout rules
+        self._component_positions = {}
+
+        # Layout parameters based on starter project analysis
+        BASE_X = 100
+        LAYER_GAP = 400  # 400px between layers (matches starter projects)
+        BASE_Y = 350     # Center vertically
+        KIND_Y_OFFSETS = {
+            'Prompt': -200,  # Above center
+            'Agent': 0,      # Center
+            'Tool': 200,     # Below center
+            'Data': 100,     # Slightly below center
+            'Model': 0       # Center with agents
+        }
+        STACK_GAP = 300  # Vertical gap between stacked components
+        SPREAD_GAP = 80  # Horizontal spread within layer
+
+        for layer_num in sorted(layer_groups.keys()):
+            layer_comps = layer_groups[layer_num]
+            layer_x = BASE_X + layer_num * LAYER_GAP
+
+            # Group by component kind for better vertical organization
+            by_kind = defaultdict(list)
+            for comp_id in layer_comps:
+                component = components[comp_id]
+                by_kind[component.kind].append(comp_id)
+
+            # Position components within the layer
+            kind_y_offset = 0
+            for kind, kind_comps in by_kind.items():
+                base_y_for_kind = BASE_Y + KIND_Y_OFFSETS.get(kind, 0) + kind_y_offset
+
+                for i, comp_id in enumerate(kind_comps):
+                    # For multiple components of same kind, stack vertically and spread horizontally
+                    if len(kind_comps) > 1:
+                        stack_offset = (i - len(kind_comps)/2 + 0.5) * STACK_GAP
+                        spread_offset = i * SPREAD_GAP
+                    else:
+                        stack_offset = 0
+                        spread_offset = 0
+
+                    self._component_positions[comp_id] = {
+                        'x': layer_x + spread_offset,
+                        'y': int(base_y_for_kind + stack_offset)
+                    }
+
+                # Add offset for next kind in same layer
+                kind_y_offset += len(kind_comps) * 100
 
     def _calculate_simple_position(self, index: int, kind: str) -> Dict[str, int]:
         """Fallback positioning with improved coordinates and spacing."""
