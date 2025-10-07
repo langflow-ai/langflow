@@ -149,16 +149,15 @@ class Edge:
         # .outputs is a list of Output objects as dictionaries
         # meaning: check for "types" key in each dictionary
         self.source_types = [output for output in source.outputs if output["name"] == self.source_handle.name]
-        
+
         # Check if this is an infinity input (loop target handle with output_types)
-        is_infinity_input = hasattr(self.target_handle, 'input_types') and self.target_handle.input_types
-        
+        is_infinity_input = hasattr(self.target_handle, "input_types") and self.target_handle.input_types
+
         if is_infinity_input:
             # For infinity inputs, accept both the declared types AND Message type
             infinity_types = list(self.target_handle.input_types) + ["Message"]
             self.valid = any(
-                any(output_type in infinity_types for output_type in output["types"])
-                for output in self.source_types
+                any(output_type in infinity_types for output_type in output["types"]) for output in self.source_types
             )
             # Find the first matching type
             self.matched_type = next(
@@ -192,7 +191,7 @@ class Edge:
                 ),
                 None,
             )
-        
+
         no_matched_type = self.matched_type is None
         if no_matched_type:
             logger.debug(self.source_types)
