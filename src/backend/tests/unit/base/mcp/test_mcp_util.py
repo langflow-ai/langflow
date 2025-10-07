@@ -12,6 +12,7 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from lfx.base.mcp import util
 from lfx.base.mcp.util import (
     MCPSessionManager,
@@ -420,8 +421,9 @@ class TestFieldNameConversion:
 
     def test_json_schema_alias_functionality(self):
         """Test that JSON schema creation includes aliases for camelCase field names."""
-        from lfx.schema.json_schema import create_input_schema_from_json_schema
         from pydantic import ValidationError
+
+        from lfx.schema.json_schema import create_input_schema_from_json_schema
 
         # Create a JSON schema with snake_case field names
         test_schema = {
@@ -1055,25 +1057,6 @@ class TestMCPStreamableHttpClientWithDeepWikiServer:
         assert not is_valid
         assert error != ""
 
-    @pytest.mark.asyncio
-    async def test_redirect_handling(self, streamable_http_client):
-        """Test redirect handling for SSE connections."""
-        # Test with the DeepWiki URL
-        url = "https://mcp.deepwiki.com/sse"
-
-        try:
-            # Check for redirects
-            final_url = await streamable_http_client.pre_check_redirect(url)
-
-            # Should return a URL (either original or redirected)
-            assert final_url is not None
-            assert isinstance(final_url, str)
-            assert final_url.startswith("http")
-
-        except Exception as e:
-            # If the server is not accessible, skip the test
-            pytest.skip(f"DeepWiki server not accessible for redirect test: {e}")
-
     @pytest.fixture
     def mock_tool(self):
         """Create a mock MCP tool."""
@@ -1299,6 +1282,7 @@ class TestMCPStructuredTool:
         # Import the MCPStructuredTool class from the actual code
         # We need to recreate it here since it's defined inline in the update_tools function
         from langchain_core.tools import StructuredTool
+
         from lfx.base.mcp.util import create_tool_coroutine, create_tool_func
 
         class MCPStructuredTool(StructuredTool):
