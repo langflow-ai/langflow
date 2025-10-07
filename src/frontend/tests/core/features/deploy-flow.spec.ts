@@ -166,7 +166,7 @@ test(
 );
 
 test(
-  "deploy switch should be disabled without IO components",
+  "deploy switch works even without IO components",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
@@ -187,14 +187,14 @@ test(
     await page.getByTestId("publish-button").click();
     await page.waitForTimeout(2000);
 
-    // Verify deploy switch is disabled
+    // Verify deploy switch is enabled (no longer requires IO components)
     await page.waitForSelector('[data-testid="deploy-switch"]', {
       timeout: 5000,
     });
 
     const deploySwitch = page.getByTestId("deploy-switch");
     await expect(deploySwitch).toBeVisible();
-    await expect(deploySwitch).toBeDisabled();
+    await expect(deploySwitch).not.toBeDisabled();
   },
 );
 
