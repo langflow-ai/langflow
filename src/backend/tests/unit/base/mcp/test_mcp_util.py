@@ -12,7 +12,6 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from lfx.base.mcp import util
 from lfx.base.mcp.util import (
     MCPSessionManager,
@@ -421,9 +420,8 @@ class TestFieldNameConversion:
 
     def test_json_schema_alias_functionality(self):
         """Test that JSON schema creation includes aliases for camelCase field names."""
-        from pydantic import ValidationError
-
         from lfx.schema.json_schema import create_input_schema_from_json_schema
+        from pydantic import ValidationError
 
         # Create a JSON schema with snake_case field names
         test_schema = {
@@ -1301,7 +1299,6 @@ class TestMCPStructuredTool:
         # Import the MCPStructuredTool class from the actual code
         # We need to recreate it here since it's defined inline in the update_tools function
         from langchain_core.tools import StructuredTool
-
         from lfx.base.mcp.util import create_tool_coroutine, create_tool_func
 
         class MCPStructuredTool(StructuredTool):
