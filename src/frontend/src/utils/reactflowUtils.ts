@@ -127,16 +127,16 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
       }
-      // Check if target is an infinity input (allows_loop=true)
+      // Check if target is an loop input (allows_loop=true)
       const targetOutput = targetNode.data.node!.outputs?.find(
         (output) => output.name === targetHandleObject.name
       );
-      const isInfinityInput = targetOutput?.allows_loop === true;
+      const isLoopInput = targetOutput?.allows_loop === true;
       
       if (
         (scapedJSONStringfy(id) !== targetHandle ||
         (targetNode.data.node?.tool_mode && isToolMode)) &&
-        !isInfinityInput
+        !isLoopInput
       ) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
       }
@@ -419,12 +419,12 @@ export function isValidConnection(
     return null;
   };
 
-  // Check if target is an infinity input (loop component)
-  const isInfinityInput = !!targetHandleObject.output_types;
+  // Check if target is an loop input (loop component)
+  const isLoopInput = !!targetHandleObject.output_types;
 
-  // For infinity inputs, allow the original output types plus Message type
-  const infinityInputTypeCheck =
-    isInfinityInput &&
+  // For loop inputs, allow the original output types plus Message type
+  const loopInputTypeCheck =
+    isLoopInput &&
     (sourceHandleObject.output_types.some(
       (t) => targetHandleObject.output_types?.includes(t) || t === "Message",
     ) ||
@@ -434,9 +434,9 @@ export function isValidConnection(
     targetHandleObject.inputTypes?.some(
       (n) => n === sourceHandleObject.dataType,
     ) ||
-    infinityInputTypeCheck ||
+    loopInputTypeCheck ||
     (targetHandleObject.output_types &&
-      !infinityInputTypeCheck &&
+      !loopInputTypeCheck &&
       (targetHandleObject.output_types?.some(
         (n) => n === sourceHandleObject.dataType,
       ) ||

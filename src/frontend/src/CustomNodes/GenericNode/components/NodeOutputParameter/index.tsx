@@ -20,7 +20,7 @@ export const OutputParameter = ({
 }) => {
   const id = useMemo(() => {
     const selectedType = output.selected ?? output.types[0];
-    // For infinity inputs (allows_loop), include both the original type and Message
+    // For loop inputs (allows_loop), include both the original type and Message
     const outputTypes = output.allows_loop
       ? [selectedType, "Message"]
       : [selectedType];

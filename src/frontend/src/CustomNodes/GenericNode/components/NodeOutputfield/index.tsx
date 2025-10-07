@@ -270,8 +270,8 @@ function NodeOutputField({
   const outputInspection = useShortcutsStore((state) => state.outputInspection);
   useHotkeys(outputInspection, handleOpenOutputModal, { preventDefault: true });
 
-  // Create separate colors for infinity input (left handle) - should be white
-  const infinityInputColorName = useMemo(() => {
+  // Create separate colors for loop input (left handle) - should be white
+  const loopInputColorName = useMemo(() => {
     if (data.node?.outputs![index].allows_loop) {
       // Add "indigo" (Message color) to make it multi-color (white)
       return colorName && !colorName.includes("indigo")
@@ -295,7 +295,7 @@ function NodeOutputField({
           setFilterEdge={setFilterEdge}
           showNode={showNode}
           testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
-          colorName={infinityInputColorName}
+          colorName={loopInputColorName}
         />
       );
     }
@@ -309,7 +309,7 @@ function NodeOutputField({
     setFilterEdge,
     showNode,
     data?.type,
-    infinityInputColorName,
+    loopInputColorName,
   ]);
 
   const Handle = useMemo(
