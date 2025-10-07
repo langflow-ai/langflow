@@ -91,7 +91,9 @@ export default function AddMcpServerModal({
   const [httpName, setHttpName] = useState(initialData?.name || "");
   const [httpUrl, setHttpUrl] = useState(initialData?.url || "");
   const [httpEnv, setHttpEnv] = useState<any>(initialData?.env || []);
-  const [httpHeaders, setHttpHeaders] = useState<any>(initialData?.headers || []);
+  const [httpHeaders, setHttpHeaders] = useState<any>(
+    initialData?.headers || [],
+  );
 
   useEffect(() => {
     if (open) {
