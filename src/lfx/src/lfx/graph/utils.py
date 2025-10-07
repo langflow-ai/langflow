@@ -170,11 +170,11 @@ async def log_transaction(
         # Enhanced output logging - capture outputs_logs when available
         outputs_payload = {}
         if hasattr(source, "outputs_logs") and source.outputs_logs:
-            try:
+            from contextlib import suppress
+
+            with suppress(Exception):
                 # outputs_logs contains rich formatted output data
                 outputs_payload = dict(source.outputs_logs)
-            except Exception:  # noqa: BLE001
-                pass
 
         # Enhanced error logging - extract details from ComponentBuildError
         error_details = None
@@ -209,6 +209,24 @@ async def log_transaction(
             logger.debug(f"Skipping transaction DB persistence due to error: {exc!s}")
     except Exception as exc:  # noqa: BLE001
         logger.debug(f"Error logging transaction: {exc!s}")
+        # If this is an error transaction, attempt to log it one more time with simplified data
+        if error and status == "error":
+            try:
+                # Create a simpler transaction without complex data structures
+                simple_transaction = LFTransactionBase(
+                    vertex_id=str(getattr(source, "id", "")),
+                    target_id=None,
+                    inputs={},
+                    outputs={},
+                    status="error",
+                    error=str(error),
+                    flow_id=str(flow_id),
+                )
+
+                async with lfx_session_scope() as session:
+                    await lf_log_transaction(session, simple_transaction)
+            except Exception as inner_exc:  # noqa: BLE001
+                logger.debug(f"Failed to log simplified error transaction: {inner_exc!s}")
 
 
 async def log_vertex_build(
