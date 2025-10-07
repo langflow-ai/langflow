@@ -129,13 +129,13 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       }
       // Check if target is an loop input (allows_loop=true)
       const targetOutput = targetNode.data.node!.outputs?.find(
-        (output) => output.name === targetHandleObject.name
+        (output) => output.name === targetHandleObject.name,
       );
       const isLoopInput = targetOutput?.allows_loop === true;
-      
+
       if (
         (scapedJSONStringfy(id) !== targetHandle ||
-        (targetNode.data.node?.tool_mode && isToolMode)) &&
+          (targetNode.data.node?.tool_mode && isToolMode)) &&
         !isLoopInput
       ) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
