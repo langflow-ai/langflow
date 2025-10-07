@@ -89,7 +89,7 @@ export default function PublishDropdown({
     mutateAsync(
       {
         id: flowId ?? "",
-        status: checked ? "DRAFT" : "DEPLOYED",
+        status: checked ? "DEPLOYED" : "DRAFT",
       },
       {
         onSuccess: (updatedFlow) => {
@@ -246,7 +246,6 @@ export default function PublishDropdown({
 
               <DropdownMenuItem
                 className="deploy-dropdown-item group"
-                disabled={!hasIO}
                 onClick={() => {}}
                 data-testid="deployed-status"
               >
@@ -256,11 +255,9 @@ export default function PublishDropdown({
                       styleClasses="truncate"
                       side="left"
                       content={
-                        hasIO
-                          ? isDeployed
-                            ? "Flow is currently deployed"
-                            : "Deploy this flow to make it available"
-                          : "Add a Chat Input or Chat Output to deploy your flow"
+                        isDeployed
+                          ? "Deployed and ready to use"
+                          : "Deploy to make this flow available via API"
                       }
                     >
                       <div className="flex items-center">
@@ -272,7 +269,7 @@ export default function PublishDropdown({
                           )}
                         />
                         <span className={cn(!isDeployed && "opacity-50")}>
-                          Deployed Status
+                          Deploy Flow
                         </span>
                       </div>
                     </ShadTooltipComponent>
@@ -281,11 +278,10 @@ export default function PublishDropdown({
                     data-testid="deploy-switch"
                     className="scale-[85%]"
                     checked={isDeployed}
-                    disabled={!hasIO}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      handleDeployedSwitch(isDeployed);
+                      handleDeployedSwitch(!isDeployed);
                     }}
                   />
                 </div>
