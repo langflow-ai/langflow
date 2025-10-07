@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from copy import deepcopy
 from typing import TYPE_CHECKING
 
 from loguru import logger
@@ -78,14 +79,21 @@ class FlowCacheService(AsyncInMemoryCache):
     async def get_cached_graph(self, flow_id: str) -> Graph | None:
         """Get a cached Graph instance for a flow.
 
+        Returns a deep copy to prevent concurrent requests from mutating shared state.
+
         Args:
             flow_id (str): The flow ID to look up
 
         Returns:
-            Graph | None: The cached Graph instance or None if not found
+            Graph | None: A deep copy of the cached Graph instance or None if not found
         """
         try:
-            return await self.get(flow_id)
+            cached = await self.get(flow_id)
+            # Check for cache miss sentinel
+            if not cached:
+                return None
+            # Return a deep copy to prevent concurrent requests from sharing mutable state
+            return deepcopy(cached)
 
         except KeyError as e:
             logger.error(f"Cache miss retrieving graph for flow {flow_id}: {e!s}")
