@@ -193,7 +193,11 @@ class FlowConverter:
             "height": self._get_node_height(component.kind),
             "selected": False,
             "positionAbsolute": position,
-            "width": 384
+            "width": 384,
+            "measured": {
+                "width": 384,
+                "height": self._get_node_height(component.kind)
+            }
         }
 
         # Apply component configuration
