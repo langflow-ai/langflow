@@ -1047,12 +1047,12 @@ test(
 
     // Wait for tools to load with proper timeout
     await page.waitForSelector(
-    '[data-testid="dropdown_str_tool"]:not([disabled])',
-    {
-      timeout: 10000,
-      state: "visible",
-    },
-  );
+      '[data-testid="dropdown_str_tool"]:not([disabled])',
+      {
+        timeout: 10000,
+        state: "visible",
+      },
+    );
 
     await page.getByTestId("dropdown_str_tool").click();
 
@@ -1064,7 +1064,9 @@ test(
     expect(toolCount).toBeGreaterThan(5);
 
     // Verify specific tools exist from server-everything
-    const readWikiStructureOption = page.getByTestId("read_wiki_structure-0-option");
+    const readWikiStructureOption = page.getByTestId(
+      "read_wiki_structure-0-option",
+    );
     expect(await readWikiStructureOption.count()).toBeGreaterThan(0);
 
     // Select the option to verify it loads properly
@@ -1151,12 +1153,12 @@ test(
 
     // Wait for tools to load with proper timeout
     await page.waitForSelector(
-    '[data-testid="dropdown_str_tool"]:not([disabled])',
-    {
-      timeout: 10000,
-      state: "visible",
-    },
-  );
+      '[data-testid="dropdown_str_tool"]:not([disabled])',
+      {
+        timeout: 10000,
+        state: "visible",
+      },
+    );
 
     await page.getByTestId("dropdown_str_tool").click();
 
@@ -1168,7 +1170,9 @@ test(
     expect(toolCount).toBeGreaterThan(5);
 
     // Verify specific tools exist from server-everything
-    const readWikiStructureOption = page.getByTestId("read_wiki_structure-0-option");
+    const readWikiStructureOption = page.getByTestId(
+      "read_wiki_structure-0-option",
+    );
     expect(await readWikiStructureOption.count()).toBeGreaterThan(0);
 
     // Select the readWikiStructure to verify it loads properly
