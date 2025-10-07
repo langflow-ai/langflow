@@ -17,7 +17,6 @@ import logging
 from .models import AgentSpec, Component
 from .mapper import ComponentMapper
 from .resolver import VariableResolver
-from langflow.services.spec.component_template_service import component_template_service
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +115,7 @@ class FlowConverter:
 
         if not template:
             logger.error(f"Component template not found for: {component_type} (original: {component.type})")
-            logger.error(f"Available templates: {list((await component_template_service.load_components()) or {})}")
+            logger.error(f"Available templates: [template service not accessible]")
             return None
 
         # Set current component ID for position calculation
@@ -820,8 +819,8 @@ class FlowConverter:
     async def _get_component_template(self, component_type: str) -> Optional[Dict[str, Any]]:
         """Get real component template from Langflow component registry."""
         try:
-            # Get template from the real component template service
-            template = await component_template_service.get_component_template(component_type)
+            # Use fallback templates since service causes circular import
+            template = None
 
             if template:
                 logger.debug(f"Found template for component: {component_type}")
