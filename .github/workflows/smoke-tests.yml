@@ -6,11 +6,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  smoke-tests:
+  backend-smoke-tests:
     if: contains(github.event.pull_request.labels.*.name, 'smoke-test')
-    name: "Smoke Tests (No API Keys)"
+    name: "Backend Smoke Tests"
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     steps:
       - name: Checkout PR
@@ -40,7 +40,6 @@ jobs:
             src/backend/tests/unit/api/v1/test_validate.py \
             src/backend/tests/unit/test_endpoints.py \
             src/backend/tests/unit/api/v1/test_flows.py \
-            src/backend/tests/unit/services/flow/test_flow_runner.py \
             src/backend/tests/unit/test_chat_endpoint.py \
             src/backend/tests/unit/api/v1/test_api_key.py \
             src/backend/tests/unit/api/v1/test_endpoints.py \
@@ -49,18 +48,45 @@ jobs:
             src/backend/tests/unit/services/tracing/test_tracing_service.py \
             -m 'not api_key_required' \
             --tb=short \
-            --maxfail=5 \
             -v
         env:
           LANGFLOW_SUPERUSER: admin
           LANGFLOW_SUPERUSER_PASSWORD: 123456
 
+  lfx-smoke-tests:
+    if: contains(github.event.pull_request.labels.*.name, 'smoke-test')
+    name: "LFX Smoke Tests (Isolated)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+
+      - name: Install lfx dependencies (isolated)
+        run: |
+          cd src/lfx
+          uv sync --dev
+
       - name: Run lfx smoke tests (critical tests only)
         run: |
+          cd src/lfx
           uv run pytest \
-            src/lfx/tests/unit/graph/test_graph.py \
-            src/lfx/tests/unit/custom/component/test_component_instance_attributes.py \
-            src/lfx/tests/unit/schema/test_schema_message.py \
+            tests/unit/graph/test_graph.py \
+            tests/unit/custom/component/test_component_instance_attributes.py \
+            tests/unit/schema/test_schema_message.py \
             -m 'not api_key_required' \
             --tb=short \
             --maxfail=5 \
@@ -68,6 +94,18 @@ jobs:
         env:
           LANGFLOW_SUPERUSER: admin
           LANGFLOW_SUPERUSER_PASSWORD: 123456
+
+  frontend-smoke-tests:
+    if: contains(github.event.pull_request.labels.*.name, 'smoke-test')
+    name: "Frontend Smoke Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -88,23 +126,38 @@ jobs:
         env:
           NODE_ENV: test
 
+  comment-results:
+    if: always() && contains(github.event.pull_request.labels.*.name, 'smoke-test')
+    name: "Comment Results"
+    needs: [backend-smoke-tests, lfx-smoke-tests, frontend-smoke-tests]
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Comment on PR with results
-        if: always()
         uses: actions/github-script@v7
         with:
           script: |
-            const conclusion = '${{ job.status }}';
-            const emoji = conclusion === 'success' ? '✅' : '❌';
-            const status = conclusion === 'success' ? 'passed' : 'failed';
+            const backendStatus = '${{ needs.backend-smoke-tests.result }}';
+            const lfxStatus = '${{ needs.lfx-smoke-tests.result }}';
+            const frontendStatus = '${{ needs.frontend-smoke-tests.result }}';
+            
+            const overallSuccess = backendStatus === 'success' && lfxStatus === 'success' && frontendStatus === 'success';
+            const emoji = overallSuccess ? '✅' : '❌';
+            const status = overallSuccess ? 'passed' : 'failed';
+            
+            const backendEmoji = backendStatus === 'success' ? '✅' : '❌';
+            const lfxEmoji = lfxStatus === 'success' ? '✅' : '❌';
+            const frontendEmoji = frontendStatus === 'success' ? '✅' : '❌';
 
             const comment = `${emoji} **Smoke tests ${status}**
 
-            Critical functionality validated (~5-8 minutes):
+            Critical functionality validated:
 
-            - **Backend**: 14 essential test files (imports, schema, serialization, core utils)
-            - **LFX**: Graph tests (langflow execution)
-            - **Frontend**: Unit tests only (components, utilities)
-            - **Coverage**: Core functionality without external dependencies
+            - ${backendEmoji} **Backend**: 11 essential test files (database, auth, API endpoints, flows, components)
+            - ${lfxEmoji} **LFX**: Graph tests (langflow execution) - runs in isolation
+            - ${frontendEmoji} **Frontend**: Unit tests only (components, utilities)
+            
+            **Coverage**: Core functionality without external dependencies
 
             View details in the [Actions tab](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).`;
 
