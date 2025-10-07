@@ -375,21 +375,11 @@ class Vertex:
         self.params = self.raw_params.copy()
         self.updated_raw_params = True
 
-    def create_class_object(self) -> type[Component]:
-        if self._custom_component_class is None:
-            self._custom_component_class, _ = initialize.loading.create_class_object(self)
-        return self._custom_component_class
-
     def instantiate_component(self, user_id=None) -> None:
-        custom_params = None
-        if self._custom_component_class is None:
-            self._custom_component_class = self.create_class_object()
         if not self.custom_component:
-            self.custom_component = initialize.loading.instantiate_class(
+            self.custom_component, _, self._custom_component_class = initialize.loading.instantiate_class(
                 user_id=user_id,
                 vertex=self,
-                class_object=self._custom_component_class,
-                custom_params=custom_params,
             )
 
     def reset_component(self) -> None:
@@ -409,17 +399,14 @@ class Vertex:
             msg = f"Base type for vertex {self.display_name} not found"
             raise ValueError(msg)
         custom_params = None
-        if self._custom_component_class is None:
-            class_object, custom_params = initialize.loading.create_class_object(self)
-            self._custom_component_class = class_object
+
         if not self.custom_component:
-            custom_component = initialize.loading.instantiate_class(
-                class_object=self._custom_component_class,
-                custom_params=custom_params,
+            custom_component, custom_params, class_object = initialize.loading.instantiate_class(
                 vertex=self,
                 user_id=user_id,
                 event_manager=event_manager,
             )
+            self._custom_component_class = class_object
         else:
             custom_component = self.custom_component
             if hasattr(self.custom_component, "set_event_manager"):
