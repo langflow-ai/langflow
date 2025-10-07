@@ -24,7 +24,6 @@ if TYPE_CHECKING:
     from lfx.components.processing.llm_router import LLMRouterComponent
     from lfx.components.processing.merge_data import MergeDataComponent
     from lfx.components.processing.message_to_data import MessageToDataComponent
-    from lfx.components.processing.mustache_prompt import MustachePromptComponent
     from lfx.components.processing.parse_data import ParseDataComponent
     from lfx.components.processing.parse_dataframe import ParseDataFrameComponent
     from lfx.components.processing.parse_json_data import ParseJSONDataComponent
@@ -55,7 +54,6 @@ _dynamic_imports = {
     "LLMRouterComponent": "llm_router",
     "MergeDataComponent": "merge_data",
     "MessageToDataComponent": "message_to_data",
-    "MustachePromptComponent": "mustache_prompt",
     "ParseDataComponent": "parse_data",
     "ParseDataFrameComponent": "parse_dataframe",
     "ParseJSONDataComponent": "parse_json_data",
@@ -86,7 +84,6 @@ __all__ = [
     "LambdaFilterComponent",
     "MergeDataComponent",
     "MessageToDataComponent",
-    "MustachePromptComponent",
     "ParseDataComponent",
     "ParseDataFrameComponent",
     "ParseJSONDataComponent",
