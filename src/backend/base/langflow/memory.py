@@ -147,13 +147,19 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
                 if msg.flow_id and isinstance(msg.flow_id, str):
                     msg.flow_id = UUID(msg.flow_id)
                 session.add(msg)
-                await session.commit()
-                await session.refresh(msg)
                 updated_messages.append(msg)
             else:
                 error_message = f"Message with id {message.id} not found"
                 await logger.awarning(error_message)
                 raise ValueError(error_message)
+
+        # Batch commit all updates at once
+        await session.commit()
+
+        # Skip refresh during commit - the msg objects already have the updated values
+        # Refresh is only needed if we need database-generated values (like timestamps)
+        # For streaming performance, we skip this extra round-trip
+
         return [MessageRead.model_validate(message, from_attributes=True) for message in updated_messages]
 
 
