@@ -1,5 +1,5 @@
 import { Background, Panel } from "@xyflow/react";
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControlButton from "@/components/core/canvasControlsComponent/CanvasControlButton";
@@ -34,6 +34,30 @@ export const MemoizedCanvasControls = memo(
     const isLocked = useFlowStore(
       useShallow((state) => state.currentFlow?.locked),
     );
+    const deploymentStatus = useFlowStore(
+      useShallow((state) => state.currentFlow?.status),
+    );
+    const isDeployed = deploymentStatus === "DEPLOYED";
+
+    const [showDeployedText, setShowDeployedText] = useState(false);
+    const [showLockedText, setShowLockedText] = useState(false);
+
+    // Show text briefly when state changes
+    useEffect(() => {
+      if (isDeployed) {
+        setShowDeployedText(true);
+        const timer = setTimeout(() => setShowDeployedText(false), 2000);
+        return () => clearTimeout(timer);
+      }
+    }, [isDeployed]);
+
+    useEffect(() => {
+      if (isLocked) {
+        setShowLockedText(true);
+        const timer = setTimeout(() => setShowLockedText(false), 2000);
+        return () => clearTimeout(timer);
+      }
+    }, [isLocked]);
 
     return (
       <CanvasControls>
@@ -41,9 +65,39 @@ export const MemoizedCanvasControls = memo(
           unstyled
           unselectable="on"
           size="icon"
+          data-testid="deployment-status-indicator"
+          className="flex items-center justify-center px-2 rounded-none gap-1 cursor-default group"
+          title={isDeployed ? "Flow is deployed" : "Flow is in draft mode"}
+          onMouseEnter={() => isDeployed && setShowDeployedText(true)}
+          onMouseLeave={() => isDeployed && setShowDeployedText(false)}
+        >
+          <ForwardedIconComponent
+            name="Rocket"
+            className={cn(
+              "!h-[18px] !w-[18px] transition-colors duration-200",
+              isDeployed ? "text-success" : "text-muted-foreground opacity-50",
+            )}
+          />
+          <span
+            className={cn(
+              "text-xs text-success transition-all duration-200 ease-in-out whitespace-nowrap overflow-hidden",
+              showDeployedText && isDeployed
+                ? "max-w-[100px] opacity-100"
+                : "max-w-0 opacity-0",
+            )}
+          >
+            Deployed
+          </span>
+        </Button>
+        <Button
+          unstyled
+          unselectable="on"
+          size="icon"
           data-testid="lock-status"
-          className="flex items-center justify-center px-2 rounded-none gap-1 cursor-default overflow-hidden"
+          className="flex items-center justify-center px-2 rounded-none gap-1 cursor-default overflow-hidden group"
           title={`Lock status: ${isLocked ? "Locked" : "Unlocked"}`}
+          onMouseEnter={() => isLocked && setShowLockedText(true)}
+          onMouseLeave={() => isLocked && setShowLockedText(false)}
         >
           <ForwardedIconComponent
             name={isLocked ? "Lock" : "Unlock"}
@@ -54,10 +108,10 @@ export const MemoizedCanvasControls = memo(
           />
           <span
             className={cn(
-              "text-xs text-destructive transition-all duration-200 ease-in-out whitespace-nowrap",
-              isLocked
+              "text-xs text-destructive transition-all duration-200 ease-in-out whitespace-nowrap overflow-hidden",
+              showLockedText && isLocked
                 ? "max-w-[100px] opacity-100"
-                : "max-w-0 opacity-0 overflow-hidden",
+                : "max-w-0 opacity-0",
             )}
           >
             Flow Locked
