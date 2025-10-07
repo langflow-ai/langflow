@@ -5,6 +5,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from lfx.log.logger import logger
+from lfx.services.cache.utils import CACHE_MISS
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import select
 
@@ -314,7 +315,7 @@ async def get_flow_by_id_or_endpoint_name_from_cache(flow_id_or_name: str, *, us
     if use_cache:
         flow_cache_service = get_flow_cache_service()
         flow = await flow_cache_service.get_cached_graph(flow_id_or_name)
-        if flow is not None:
+        if flow is not None and flow != CACHE_MISS:
             # Cache hit - return the Graph instance
             return flow
         # Cache miss - fall through to database query

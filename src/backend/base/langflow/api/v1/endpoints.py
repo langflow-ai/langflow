@@ -25,6 +25,7 @@ from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
+from lfx.services.cache.utils import CACHE_MISS
 from lfx.services.settings.service import SettingsService
 from sqlmodel import select
 
@@ -400,7 +401,7 @@ async def simplified_run_flow(
     if input_request is None:
         input_request = await parse_input_request_from_body(http_request)
 
-    if flow is None:
+    if flow is None or flow is CACHE_MISS:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
     # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
