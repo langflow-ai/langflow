@@ -359,7 +359,7 @@ class TestEventManagerAsync:
         received_events = []
         while not queue.empty():
             item = await queue.get()
-            event_id, data_bytes, timestamp = item
+            _, data_bytes, _ = item
             data_str = data_bytes.decode("utf-8").strip()
             parsed_data = json.loads(data_str)
             received_events.append((parsed_data["event"], parsed_data["data"]))

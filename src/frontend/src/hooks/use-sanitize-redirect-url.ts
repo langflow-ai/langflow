@@ -9,6 +9,5 @@ export function useSanitizeRedirectUrl() {
     if (searchParams.has("redirect")) {
       navigate(window.location.pathname, { replace: true });
     }
-    console.log("Sanitized redirect URL if present");
   }, []);
 }
