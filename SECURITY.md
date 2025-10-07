@@ -47,7 +47,7 @@ We appreciate your efforts in helping us maintain a secure platform and look for
 Langflow versions `1.6.0` through `1.6.3` have a critical bug where environment variables from `.env` files are not being read. This affects all deployments using environment variables for configuration, including security settings.
 
 **Potential security impact:**
-- Environment variables from `.env` files are completely ignored.
+- Environment variables from `.env` files are not read.
 - Security configurations like `AUTO_LOGIN=false` may not be applied, potentially giving all users superuser access.
 - Database credentials, API keys, and other sensitive configuration may not be loaded.
 
