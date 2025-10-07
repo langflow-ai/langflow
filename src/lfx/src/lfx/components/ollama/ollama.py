@@ -6,11 +6,11 @@ import httpx
 from langchain_ollama import ChatOllama
 
 from lfx.base.models.model import LCModelComponent
-from lfx.base.models.ollama_constants import URL_LIST
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SliderInput
 from lfx.log.logger import logger
+from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
 
@@ -32,8 +32,8 @@ class ChatOllamaComponent(LCModelComponent):
         MessageTextInput(
             name="base_url",
             display_name="Base URL",
-            info="Endpoint of the Ollama API.",
-            value="",
+            info="Endpoint of the Ollama API. Defaults to http://localhost:11434 .",
+            value="http://localhost:11434",
             real_time_refresh=True,
         ),
         DropdownInput(
@@ -156,9 +156,22 @@ class ChatOllamaComponent(LCModelComponent):
             mirostat_eta = self.mirostat_eta
             mirostat_tau = self.mirostat_tau
 
+        transformed_base_url = transform_localhost_url(self.base_url)
+
+        # Check if URL contains /v1 suffix (OpenAI-compatible mode)
+        if transformed_base_url and transformed_base_url.rstrip("/").endswith("/v1"):
+            # Strip /v1 suffix and log warning
+            transformed_base_url = transformed_base_url.rstrip("/").removesuffix("/v1")
+            logger.warning(
+                "Detected '/v1' suffix in base URL. The Ollama component uses the native Ollama API, "
+                "not the OpenAI-compatible API. The '/v1' suffix has been automatically removed. "
+                "If you want to use the OpenAI-compatible API, please use the OpenAI component instead. "
+                "Learn more at https://docs.ollama.com/openai#openai-compatibility"
+            )
+
         # Mapping system settings to their corresponding values
         llm_params = {
-            "base_url": self.base_url,
+            "base_url": transformed_base_url,
             "model": self.model_name,
             "mirostat": mirostat_value,
             "format": self.format,
@@ -189,8 +202,8 @@ class ChatOllamaComponent(LCModelComponent):
             output = ChatOllama(**llm_params)
         except Exception as e:
             msg = (
-                "Unable to connect to the Ollama API. ",
-                "Please verify the base URL, ensure the relevant Ollama model is pulled, and try again.",
+                "Unable to connect to the Ollama API. "
+                "Please verify the base URL, ensure the relevant Ollama model is pulled, and try again."
             )
             raise ValueError(msg) from e
 
@@ -199,6 +212,13 @@ class ChatOllamaComponent(LCModelComponent):
     async def is_valid_ollama_url(self, url: str) -> bool:
         try:
             async with httpx.AsyncClient() as client:
+                url = transform_localhost_url(url)
+                if not url:
+                    return False
+                # Strip /v1 suffix if present, as Ollama API endpoints are at root level
+                url = url.rstrip("/").removesuffix("/v1")
+                if not url.endswith("/"):
+                    url = url + "/"
                 return (await client.get(urljoin(url, "api/tags"))).status_code == HTTP_STATUS_OK
         except httpx.RequestError:
             return False
@@ -222,37 +242,11 @@ class ChatOllamaComponent(LCModelComponent):
                     build_config["mirostat_eta"]["value"] = 0.1
                     build_config["mirostat_tau"]["value"] = 5
 
-        if field_name in {"base_url", "model_name"}:
-            if build_config["base_url"].get("load_from_db", False):
-                base_url_value = await self.get_variables(build_config["base_url"].get("value", ""), "base_url")
-            else:
-                base_url_value = build_config["base_url"].get("value", "")
-
-            if not await self.is_valid_ollama_url(base_url_value):
-                # Check if any URL in the list is valid
-                valid_url = ""
-                check_urls = URL_LIST
-                if self.base_url:
-                    check_urls = [self.base_url, *URL_LIST]
-                for url in check_urls:
-                    if await self.is_valid_ollama_url(url):
-                        valid_url = url
-                        break
-                if valid_url != "":
-                    build_config["base_url"]["value"] = valid_url
-                else:
-                    msg = "No valid Ollama URL found."
-                    raise ValueError(msg)
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
             if await self.is_valid_ollama_url(self.base_url):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
                 build_config["model_name"]["options"] = await self.get_models(
                     self.base_url, tool_model_enabled=tool_model_enabled
-                )
-            elif await self.is_valid_ollama_url(build_config["base_url"].get("value", "")):
-                tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
-                build_config["model_name"]["options"] = await self.get_models(
-                    build_config["base_url"].get("value", ""), tool_model_enabled=tool_model_enabled
                 )
             else:
                 build_config["model_name"]["options"] = []
@@ -285,8 +279,11 @@ class ChatOllamaComponent(LCModelComponent):
                 names cannot be retrieved.
         """
         try:
-            # Normalize the base URL to avoid the repeated "/" at the end
-            base_url = base_url_value.rstrip("/") + "/"
+            # Strip /v1 suffix if present, as Ollama API endpoints are at root level
+            base_url = base_url_value.rstrip("/").removesuffix("/v1")
+            if not base_url.endswith("/"):
+                base_url = base_url + "/"
+            base_url = transform_localhost_url(base_url)
 
             # Ollama REST API to return models
             tags_url = urljoin(base_url, "api/tags")

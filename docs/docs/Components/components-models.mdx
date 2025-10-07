@@ -95,7 +95,7 @@ For example, if you are using the **Language Model** core component, you could t
 
 Some components use a language model component to perform LLM-driven actions.
 Typically, these components prepare data for further processing by downstream components, rather than emitting direct chat output.
-For an example, see the [**Smart Function** component](/components-processing#smart-function).
+For an example, see the [**Smart Function** component](/components-processing#smart-transform).
 
 A component must accept a `LanguageModel` input to use a language model component as a driver, and you must set the language model component's output type to `LanguageModel`.
 For more information, see [Language Model output types](#language-model-output-types).
@@ -144,7 +144,7 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 | api_key | SecretString | Input parameter. The API Key for authentication with the selected provider. |
 | input_value | String | Input parameter. The input text to send to the model. |
 | system_message | String | Input parameter. A system message that helps set the behavior of the assistant. |
-| stream | Boolean | Input parameter. Whether to stream the response. Default: false. |
+| stream | Boolean | Input parameter. Whether to stream the response. Default: `false`. |
 | temperature | Float | Input parameter. Controls randomness in responses. Range: `[0.0, 1.0]`. Default: `0.1`. |
 | model | LanguageModel | Output parameter. Alternative output type to the default `Message` output. Produces an instance of Chat configured with the specified parameters. See [Language Model output types](#language-model-output-types). |
 

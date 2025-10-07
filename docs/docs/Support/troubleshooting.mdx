@@ -165,7 +165,7 @@ To resolve this error, clear the cache by deleting the contents of your Langflow
 The filepath depends on your operating system, installation type, and configuration options.
 For more information and default filepaths, see [Memory management options](/memory).
 
-:::important
+:::danger
 Clearing the cache erases your settings.
 If you want to retain your settings files, create a backup of those files before clearing the cache folder.
 :::
@@ -257,6 +257,16 @@ This issue occurs because the MCP server runs from a Python process, which preve
 To work around this issue, use the standalone MCP server approach documented in the [Playwright MCP repository](https://github.com/microsoft/playwright-mcp?tab=readme-ov-file#standalone-mcp-server).
 After the server is up and running, you can add it as an SSE server in Langflow.
 For other browser navigation tools, see the provider's documentation for specific troubleshooting guidance.
+
+### "No tools or prompts connected" on MCP servers in mixed Windows/WSL environments
+
+If you encounter "No tools or prompts connected" errors or connection failures when using Langflow Desktop as an MCP server with clients running in different environments, such as Langflow on a Windows host and an MCP client in WSL, this is due to network isolation between Windows and WSL environments.
+
+WSL cannot directly access Windows localhost services, and Langflow running on a Windows host is not accessible from WSL clients at `localhost:7860`.
+
+To work around this issue, run the server and host in the same operating environment.
+
+Alternatively, configure Langflow Desktop to accept connections from WSL at the default Windows IP address of `10.255.255.254:7860` instead of `localhost`.
 
 ## Token length limit errors in Embedding Model components
 
