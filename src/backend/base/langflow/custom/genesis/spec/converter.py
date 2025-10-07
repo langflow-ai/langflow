@@ -117,7 +117,10 @@ class FlowConverter:
             logger.error(f"Available templates: {list((await component_template_service.load_components()) or {})}")
             return None
 
-        # Calculate position based on component kind
+        # Set current component ID for position calculation
+        self._current_component_id = component.id
+
+        # Calculate position based on component kind and role
         position = self._calculate_position(index, component.kind)
 
         # Check if this component is used as a tool
@@ -610,24 +613,57 @@ class FlowConverter:
         return False
 
     def _calculate_position(self, index: int, kind: str) -> Dict[str, int]:
-        """Calculate node position based on index and kind."""
-        kind_positions = {
-            "Data": {"x": 50, "y": 200},    # Inputs on left
-            "Agent": {"x": 400, "y": 200},   # Agents in center
-            "Prompt": {"x": 200, "y": 50},   # Prompts above
-            "Tool": {"x": 200, "y": 350},    # Tools below
-            "Model": {"x": 200, "y": 350},   # Models below
+        """Calculate node position based on improved flow layout algorithm."""
+        # If positions haven't been pre-calculated, fall back to improved simple logic
+        if not hasattr(self, '_component_positions'):
+            return self._calculate_simple_position(index, kind)
+
+        # Use pre-calculated positions from _calculate_all_positions
+        component_id = getattr(self, '_current_component_id', None)
+        if component_id and component_id in self._component_positions:
+            return self._component_positions[component_id]
+
+        return self._calculate_simple_position(index, kind)
+
+    def _calculate_simple_position(self, index: int, kind: str) -> Dict[str, int]:
+        """Fallback positioning with improved coordinates and spacing."""
+        # Detect if this is an output component based on ID
+        component_id = getattr(self, '_current_component_id', '')
+        is_output = 'output' in component_id.lower() or 'result' in component_id.lower()
+
+        # Use larger coordinate system similar to working starter projects
+        category_columns = {
+            "Data": 1700 if is_output else 150,  # Outputs on far right, inputs on left
+            "Tool": 350,      # Tools slightly right of inputs
+            "Prompt": 900,    # Prompts positioned above/near agents
+            "Agent": 1300,    # Agents in center-right
+            "Model": 1300,    # Models same as agents
         }
 
-        base_pos = kind_positions.get(kind, {"x": 300, "y": 300})
+        base_x = category_columns.get(kind, 500)
+        base_y = 350  # Center vertically
 
-        # Offset for multiple components
-        offset_x = (index % 4) * 200
-        offset_y = (index // 4) * 150
+        # Improved spacing for multiple components of same type
+        HORIZONTAL_SPREAD = 120  # Spread multiple tools horizontally
+        VERTICAL_SPREAD = 500    # Stack vertically with larger gaps
+
+        # For stacking: alternate above/below center, then move outward
+        if index == 0:
+            offset_x, offset_y = 0, 0
+        elif index == 1:
+            offset_x, offset_y = HORIZONTAL_SPREAD, -VERTICAL_SPREAD
+        elif index == 2:
+            offset_x, offset_y = HORIZONTAL_SPREAD * 2, VERTICAL_SPREAD
+        elif index == 3:
+            offset_x, offset_y = HORIZONTAL_SPREAD * 3, -VERTICAL_SPREAD * 2
+        else:
+            # For many components, use grid pattern
+            offset_x = (index % 4) * HORIZONTAL_SPREAD
+            offset_y = ((index // 4) - 1) * VERTICAL_SPREAD
 
         return {
-            "x": base_pos["x"] + offset_x,
-            "y": base_pos["y"] + offset_y
+            "x": base_x + offset_x,
+            "y": base_y + offset_y
         }
 
     def _get_node_height(self, kind: str) -> int:
