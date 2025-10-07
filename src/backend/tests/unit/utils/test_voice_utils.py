@@ -165,7 +165,7 @@ class TestResample24kTo16k:
 
         # Verify resample was called with correct parameters
         mock_resample.assert_called_once()
-        args, kwargs = mock_resample.call_args
+        args,  = mock_resample.call_args
         input_array, target_samples = args
 
         assert len(input_array) == 480
