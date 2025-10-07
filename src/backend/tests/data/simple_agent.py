@@ -17,10 +17,12 @@ Usage:
 import os
 from pathlib import Path
 
-# Using the new flattened component access
-from lfx import components as cp
 from lfx.graph import Graph
 from lfx.log.logger import LogConfig
+from lfx.utils.async_helpers import run_until_complete
+
+# Using the new flattened component access
+from lfx import components as cp
 
 log_config = LogConfig(
     log_level="INFO",
@@ -31,7 +33,7 @@ log_config = LogConfig(
 chat_input = cp.ChatInput()
 agent = cp.AgentComponent()
 url_component = cp.URLComponent()
-tools = url_component.to_toolkit()
+tools = run_until_complete(url_component.to_toolkit())
 
 agent.set(
     model_name="gpt-4o-mini",

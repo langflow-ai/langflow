@@ -64,7 +64,7 @@ def create_image_content_dict(image_path: str | Path, mime_type: str | None = No
         mime_type: MIME type of the image. If None, will be auto-detected
 
     Returns:
-        Content dictionary with type, source_type, and url fields
+        Content dictionary with type and image_url fields
 
     Raises:
         FileNotFoundError: If the image file doesn't exist

@@ -333,13 +333,16 @@ def run(
 
     # Step 2: Starting Core Services
     with progress.step(2):
-        app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
+        app = setup_app(static_files_dir=static_files_dir, backend_only=bool(backend_only))
 
     # Step 3: Connecting Database (this happens inside setup_app via dependencies)
     with progress.step(3):
         # check if port is being used
         if is_port_in_use(port, host):
             port = get_free_port(port)
+
+        # Store the runtime-detected port in settings (temporary until strict port enforcement)
+        get_settings_service().settings.runtime_port = port
 
         protocol = "https" if ssl_cert_file_path and ssl_key_file_path else "http"
 
@@ -361,7 +364,7 @@ def run(
             # We _may_ be able to subprocess, but with window's spawn behavior, we'd have to move all
             # non-picklable code to the subprocess.
             progress.print_summary()
-            print_banner(host, port, protocol)
+            print_banner(str(host), int(port or 7860), protocol)
 
         # Blocking call, so must be outside of the progress step
         uvicorn.run(
@@ -384,7 +387,7 @@ def run(
                 "timeout": worker_timeout,
                 "certfile": ssl_cert_file_path,
                 "keyfile": ssl_key_file_path,
-                "log_level": log_level.lower(),
+                "log_level": log_level.lower() if log_level is not None else "info",
             }
             server = LangflowApplication(app, options)
 
@@ -396,7 +399,7 @@ def run(
 
         # Print summary and banner after server is ready
         progress.print_summary()
-        print_banner(host, port, protocol)
+        print_banner(str(host), int(port or 7860), protocol)
 
         # Handle browser opening
         if open_browser and not backend_only:
@@ -683,7 +686,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
     if settings_service.auth_settings.AUTO_LOGIN:
         # Force default credentials for AUTO_LOGIN mode
         username = DEFAULT_SUPERUSER
-        password = DEFAULT_SUPERUSER_PASSWORD
+        password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
     else:
         # Production mode - prompt for credentials if not provided
         if not username:
@@ -711,7 +714,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
             raise typer.Exit(1)
 
         typer.echo(f"AUTO_LOGIN enabled. Creating default superuser '{username}'...")
-        typer.echo(f"Note: Default credentials are {DEFAULT_SUPERUSER}/{DEFAULT_SUPERUSER_PASSWORD}")
+        # Do not echo the default password to avoid exposing it in logs.
     # AUTO_LOGIN is false - production mode
     elif is_first_setup:
         typer.echo("No superusers found. Creating first superuser...")
