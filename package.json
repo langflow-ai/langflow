@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "@types/node": "^24.7.0"
+  }
+}
