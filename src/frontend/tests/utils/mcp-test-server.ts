@@ -125,7 +125,10 @@ export async function startMCPTestServer(
       } catch (error) {
         // Server not ready yet, schedule next check
         attempts++;
-        const nextDelay = Math.min(pollInterval * Math.pow(1.5, attempts), 2000);
+        const nextDelay = Math.min(
+          pollInterval * Math.pow(1.5, attempts),
+          2000,
+        );
         setTimeout(checkHealth, nextDelay);
       }
     };

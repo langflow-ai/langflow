@@ -1,7 +1,10 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { startMCPTestServer, waitForMCPToolsLoaded } from "../../utils/mcp-test-server";
+import {
+  startMCPTestServer,
+  waitForMCPToolsLoaded,
+} from "../../utils/mcp-test-server";
 
 import { zoomOut } from "../../utils/zoom-out";
 
