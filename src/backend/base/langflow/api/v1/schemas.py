@@ -444,7 +444,7 @@ class MCPSettings(BaseModel):
     action_description: str | None = None
     name: str | None = None
     description: str | None = None
-    status: str | None = None  # DRAFT or DEPLOYED
+    status: Literal["DRAFT", "DEPLOYED"] | None = None
 
 
 class MCPProjectUpdateRequest(BaseModel):
