@@ -701,12 +701,11 @@ class MCPSessionManager:
                 try:
                     await logger.adebug(f"Attempting Streamable HTTP connection for session {session_id}")
                     # Use a shorter timeout for the initial connection attempt (2 seconds)
-                    async with asyncio.timeout(2.0):
-                        async with streamablehttp_client(
+                    async with asyncio.wait_for(2.0), streamablehttp_client(
                             url=connection_params["url"],
                             headers=connection_params["headers"],
                             timeout=connection_params["timeout_seconds"],
-                        ) as (read, write, get_session_id):
+                        ) as (read, write, _):
                             session = ClientSession(read, write)
                             async with session:
                                 await session.initialize()
@@ -723,7 +722,7 @@ class MCPSessionManager:
                                     await event.wait()
                                 except asyncio.CancelledError:
                                     await logger.ainfo(f"Session {session_id} (Streamable HTTP) is shutting down")
-                except (asyncio.TimeoutError, Exception) as e:
+                except (asyncio.TimeoutError, Exception) as e:  # noqa: BLE001  
                     # If Streamable HTTP fails or times out, try SSE as fallback immediately
                     streamable_error = e
                     error_type = "timed out" if isinstance(e, asyncio.TimeoutError) else "failed"
