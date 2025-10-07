@@ -621,6 +621,8 @@ export default function Page({
           id: newId,
           type: "noteNode",
           position: position || { x: 0, y: 0 },
+          width: NOTE_NODE_MIN_WIDTH,
+          height: NOTE_NODE_MIN_HEIGHT,
           data: {
             ...data,
             id: newId,
@@ -787,6 +789,7 @@ export default function Page({
               backgroundColor: `${shadowBoxBackgroundColor}`,
               opacity: 0.7,
               pointerEvents: "none",
+              borderRadius: "12px",
               // Prevent shadow-box from showing unexpectedly during initial renders
               display: "none",
             }}

@@ -79,7 +79,7 @@ export default function NodeDescription({
         linkTarget="_blank"
         className={cn(
           "markdown prose flex w-full flex-col leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
-          stickyNote ? "text-mmd" : "text-xs",
+          stickyNote ? "text-base font-medium leading-relaxed" : "text-xs",
           mdClassName,
         )}
       >
@@ -156,7 +156,7 @@ export default function NodeDescription({
             className={cn(
               "nowheel w-full text-xs focus:border-primary focus:ring-0",
               stickyNote
-                ? "overflow-auto p-0 px-2 pt-0.5 !text-mmd"
+                ? "overflow-auto p-0 px-2 pt-0.5 !text-base font-medium"
                 : "px-2 py-0.5",
               inputClassName,
             )}
