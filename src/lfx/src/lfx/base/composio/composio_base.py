@@ -1153,9 +1153,9 @@ class ComposioBaseComponent(Component):
                 # Skip Access Token field (bearer_token)
                 if name == "bearer_token":
                     continue
-                # Skip fields with default values for optional fields
+                # Skip fields with default values for both required and optional fields
                 default_val = field.get("default")
-                if not required and default_val is not None:
+                if default_val is not None:
                     continue
                 disp = field.get("display_name") or field.get("displayName") or name
                 desc = field.get("description")
