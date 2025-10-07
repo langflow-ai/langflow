@@ -42,19 +42,26 @@ export const MemoizedCanvasControls = memo(
           unselectable="on"
           size="icon"
           data-testid="lock-status"
-          className="flex items-center justify-center px-2 rounded-none gap-1 cursor-default"
+          className="flex items-center justify-center px-2 rounded-none gap-1 cursor-default overflow-hidden"
           title={`Lock status: ${isLocked ? "Locked" : "Unlocked"}`}
         >
           <ForwardedIconComponent
             name={isLocked ? "Lock" : "Unlock"}
             className={cn(
-              "!h-[18px] !w-[18px] text-muted-foreground",
+              "!h-[18px] !w-[18px] text-muted-foreground transition-colors duration-200",
               isLocked && "text-destructive",
             )}
           />
-          {isLocked && (
-            <span className="text-xs text-destructive">Flow Locked</span>
-          )}
+          <span
+            className={cn(
+              "text-xs text-destructive transition-all duration-200 ease-in-out whitespace-nowrap",
+              isLocked
+                ? "max-w-[100px] opacity-100"
+                : "max-w-0 opacity-0 overflow-hidden",
+            )}
+          >
+            Flow Locked
+          </span>
         </Button>
       </CanvasControls>
     );
