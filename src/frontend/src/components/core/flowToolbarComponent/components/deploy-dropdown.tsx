@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
+import { ACCESS_TYPE, DEPLOYMENT_STATUS } from "@/constants/flows";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
@@ -44,8 +45,8 @@ export default function PublishDropdown({
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
-  const isPublished = currentFlow?.access_type === "PUBLIC";
-  const isDeployed = currentFlow?.status === "DEPLOYED";
+  const isPublished = currentFlow?.access_type === ACCESS_TYPE.PUBLIC;
+  const isDeployed = currentFlow?.status === DEPLOYMENT_STATUS.DEPLOYED;
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
   const [openExportModal, setOpenExportModal] = useState(false);
@@ -86,13 +87,13 @@ export default function PublishDropdown({
 
   const handlePublishedSwitch = async (checked: boolean) => {
     await handleFlowUpdate({
-      access_type: checked ? "PRIVATE" : "PUBLIC",
+      access_type: checked ? ACCESS_TYPE.PRIVATE : ACCESS_TYPE.PUBLIC,
     });
   };
 
   const handleDeployedSwitch = async (checked: boolean) => {
     await handleFlowUpdate({
-      status: checked ? "DEPLOYED" : "DRAFT",
+      status: checked ? DEPLOYMENT_STATUS.DEPLOYED : DEPLOYMENT_STATUS.DRAFT,
     });
   };
 

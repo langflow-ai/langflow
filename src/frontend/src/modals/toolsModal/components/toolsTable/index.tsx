@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { DEPLOYMENT_STATUS } from "@/constants/flows";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import useAlertStore from "@/stores/alertStore";
 import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
@@ -56,11 +57,14 @@ export default function ToolsTable({
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const handleDeployToggle = async (flowId: string, currentStatus: string) => {
-    const newStatus = currentStatus === "DEPLOYED" ? "DRAFT" : "DEPLOYED";
+    const newStatus =
+      currentStatus === DEPLOYMENT_STATUS.DEPLOYED
+        ? DEPLOYMENT_STATUS.DRAFT
+        : DEPLOYMENT_STATUS.DEPLOYED;
     try {
       await mutateAsync({
         id: flowId,
-        status: newStatus as "DRAFT" | "DEPLOYED",
+        status: newStatus,
       });
       // Update the focused row to reflect the change
       if (focusedRow && focusedRow.id === flowId) {
@@ -398,29 +402,32 @@ export default function ToolsTable({
                           name="Rocket"
                           className={cn(
                             "h-4 w-4",
-                            focusedRow.status === "DEPLOYED"
+                            focusedRow.status === DEPLOYMENT_STATUS.DEPLOYED
                               ? "text-success"
                               : "text-muted-foreground opacity-50",
                           )}
                         />
-                        <label className="text-mmd font-medium">
+                        <span className="text-mmd font-medium">
                           Deploy Flow
-                        </label>
+                        </span>
                       </div>
                       <Switch
-                        checked={focusedRow.status === "DEPLOYED"}
+                        checked={
+                          focusedRow.status === DEPLOYMENT_STATUS.DEPLOYED
+                        }
+                        aria-label="Deploy Flow"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
                           handleDeployToggle(
                             focusedRow.id,
-                            focusedRow.status || "DRAFT",
+                            focusedRow.status || DEPLOYMENT_STATUS.DRAFT,
                           );
                         }}
                       />
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {focusedRow.status === "DEPLOYED"
+                      {focusedRow.status === DEPLOYMENT_STATUS.DEPLOYED
                         ? "This flow is available via the MCP server"
                         : "Deploy to make this flow available via the MCP server"}
                     </div>

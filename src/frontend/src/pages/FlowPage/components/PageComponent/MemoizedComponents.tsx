@@ -7,6 +7,7 @@ import CanvasControls from "@/components/core/canvasControlsComponent/CanvasCont
 import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { DEPLOYMENT_STATUS } from "@/constants/flows";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
@@ -37,7 +38,7 @@ export const MemoizedCanvasControls = memo(
     const deploymentStatus = useFlowStore(
       useShallow((state) => state.currentFlow?.status),
     );
-    const isDeployed = deploymentStatus === "DEPLOYED";
+    const isDeployed = deploymentStatus === DEPLOYMENT_STATUS.DEPLOYED;
 
     const [showDeployedText, setShowDeployedText] = useState(false);
     const [showLockedText, setShowLockedText] = useState(false);

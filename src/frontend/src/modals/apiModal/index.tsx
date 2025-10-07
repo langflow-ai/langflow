@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { DEPLOYMENT_STATUS } from "@/constants/flows";
 import { CustomAPIGenerator } from "@/customization/components/custom-api-generator";
 import { CustomLink } from "@/customization/components/custom-link";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
@@ -56,7 +57,7 @@ export default function ApiModal({
     useShallow((state) => state.currentFlow?.status),
   );
 
-  const isDeployed = currentFlowStatus === "DEPLOYED";
+  const isDeployed = currentFlowStatus === DEPLOYMENT_STATUS.DEPLOYED;
 
   const [endpointName, setEndpointName] = useState(flowEndpointName ?? "");
   const [validEndpointName, setValidEndpointName] = useState(true);
