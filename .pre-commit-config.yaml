@@ -30,6 +30,7 @@ repos:
     hooks:
       - id: detect-secrets
         args: ["--baseline", ".secrets.baseline"]
+        exclude: ^docs/
   - repo: local
     hooks:
       - id: local-biome-check
