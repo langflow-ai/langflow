@@ -264,16 +264,16 @@ class Message(Data):
         return formatted_prompt
 
     @classmethod
-    async def from_template_and_variables(cls, template: str, **variables):
+    async def from_template_and_variables(cls, template: str, template_format: str = "f-string", **variables):
         # This method has to be async for backwards compatibility with versions
         # >1.0.15, <1.1
-        return cls.from_template(template, **variables)
+        return cls.from_template(template, template_format=template_format, **variables)
 
     # Define a sync version for backwards compatibility with versions >1.0.15, <1.1
     @classmethod
-    def from_template(cls, template: str, **variables):
+    def from_template(cls, template: str, template_format: str = "f-string", **variables):
         instance = cls(template=template, variables=variables)
-        text = instance.format_text()
+        text = instance.format_text(template_format=template_format)
         message = HumanMessage(content=text)
         contents = []
         for value in variables.values():
