@@ -197,7 +197,10 @@ When you select a flow for the **Run Flow** component, it uses the target flow's
 The **Smart Router** component is an LLM-powered variation of the [**If-Else** component](#if-else).
 Instead of string matching, the **Smart Router** uses a connected [**Language Model** component](/components-models) to categorize and route incoming messages.
 
-To use the **Smart Router**, replace the **If-Else** component in a flow like the [Incoming messages flow](#use-the-if-else-component-in-a-flow). Instead of sorting by regex, use the **Routes** table to define the outputs for your messages, and connect a **Language Model** component to provide the sorting intelligence.
+You can use the **Smart Router** component anywhere you would use the **If-Else** component.
+For an example, create [If-Else component example flow](#use-the-if-else-component-in-a-flow), then replace the **If-Else** component with a **Smart Router** component.
+Instead of a regex, use the **Routes** table to define the outputs for your messages.
+Finally, connect a **Language Model** component to provide the sorting intelligence.
 
 ### Smart Router parameters
 
