@@ -8,7 +8,7 @@ from langflow.services.factory import ServiceFactory
 from langflow.services.store.service import StoreService
 
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
+    from lfx.services.settings.service import SettingsService
 
 
 class StoreServiceFactory(ServiceFactory):

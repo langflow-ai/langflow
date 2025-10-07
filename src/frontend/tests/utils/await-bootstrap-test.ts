@@ -39,7 +39,7 @@ export const awaitBootstrapTest = async (
     }
 
     while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
+      await page.getByTestId("new-project-btn").click();
       await page.waitForSelector('[data-testid="modal-title"]', {
         timeout: 3000,
       });

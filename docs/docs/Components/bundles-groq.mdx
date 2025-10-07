@@ -1,0 +1,37 @@
+---
+title: Groq
+slug: /bundles-groq
+---
+
+import Icon from "@site/src/components/icon";
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Groq** bundle.
+
+For more information, see the [Groq documentation](https://groq.com/).
+
+## Groq text generation
+
+This component generates text using Groq's language models.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+Specifically, the **Language Model** output is an instance of [`ChatGroq`](https://docs.langchain.com/oss/python/integrations/chat/groq) configured according to the component's parameters.
+
+Use the **Language Model** output when you want to use a Groq model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
+
+For more information, see [Language model components](/components-models).
+
+![Groq component in a basic prompting flow](/img/component-groq.png)
+
+### Groq text generation parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| groq_api_key | SecretString | Your Groq API key. |
+| groq_api_base | String | Base URL path for API requests. Default: `https://api.groq.com`. |
+| max_tokens | Integer | The maximum number of tokens to generate. |
+| temperature | Float | Controls randomness in the output. Range: `[0.0, 1.0]`. Default: `0.1`. |
+| n | Integer | Number of chat completions to generate for each prompt. |
+| model_name | String | The name of the Groq model to use. Options are dynamically fetched from the Groq API after entering your API key and URL. To refresh your list of models, click <Icon name="RefreshCw" aria-hidden="true"/> **Refresh**. |
+| tool_mode_enabled | Boolean | If enabled, the component only displays models that work with tools. |

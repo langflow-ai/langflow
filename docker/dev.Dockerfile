@@ -23,6 +23,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
     --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
     --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
+    --mount=type=bind,source=src/lfx/README.md,target=src/lfx/README.md \
+    --mount=type=bind,source=src/lfx/pyproject.toml,target=src/lfx/pyproject.toml \
     uv sync --frozen --no-install-project --no-dev --extra postgresql
 
 EXPOSE 7860

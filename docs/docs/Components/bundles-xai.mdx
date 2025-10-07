@@ -1,0 +1,38 @@
+---
+title: xAI
+slug: /bundles-xai
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **xAI** bundle.
+
+For more information about xAI features and functionality used by xAI components, see the [xAI documentation](https://x.ai/).
+
+## xAI text generation
+
+The **xAI** component generates text using xAI models like [Grok](https://x.ai/grok).
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use an xAI model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
+
+For more information, see [Language model components](/components-models).
+
+### xAI text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| max_tokens | Integer | Input parameter. Maximum number of tokens to generate. Set to `0` for unlimited. Range: `0-128000`. |
+| model_kwargs | Dictionary | Input parameter. Additional keyword arguments for the model. |
+| json_mode | Boolean | Input parameter. If `true`, outputs JSON regardless of passing a schema. |
+| model_name | String | Input parameter. The xAI model to use. Default: `grok-2-latest`. |
+| base_url | String | Input parameter. Base URL for API requests. Default: `https://api.x.ai/v1`. |
+| api_key | SecretString | Input parameter. Your xAI API key for authentication. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: `[0.0, 2.0]`. Default: `0.1`. |
+| seed | Integer | Input parameter. Controls reproducibility of the job. |

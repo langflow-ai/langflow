@@ -1,0 +1,84 @@
+---
+title: Amazon
+slug: /bundles-amazon
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Amazon** bundle.
+
+## Amazon Bedrock
+
+This component generates text using [Amazon Bedrock LLMs](https://docs.aws.amazon.com/bedrock).
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+Specifically, the **Language Model** output is an instance of [`ChatBedrock`](https://docs.langchain.com/oss/python/integrations/chat/bedrock) configured according to the component's parameters.
+
+Use the **Language Model** output when you want to use an Amazon Bedrock model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
+
+For more information, see [Language model components](/components-models).
+
+### Amazon Bedrock parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| input | String | Input parameter. The input string for text generation. |
+| system_message | String | Input parameter. A system message to pass to the model. |
+| stream | Boolean | Input parameter. Whether to stream the response. Only works in chat. Default: `false`. |
+| model_id | String | Input parameter. The Amazon Bedrock model to use. |
+| aws_access_key_id | SecretString | Input parameter. AWS Access Key for authentication. |
+| aws_secret_access_key | SecretString | Input parameter. AWS Secret Key for authentication. |
+| aws_session_token | SecretString | Input parameter. The session key for your AWS account. |
+| credentials_profile_name | String | Input parameter. Name of the AWS credentials profile to use. |
+| region_name | String | Input parameter. AWS region where your Bedrock resources are located. Default: `us-east-1`. |
+| model_kwargs | Dictionary | Input parameter. Additional keyword arguments to pass to the model. |
+| endpoint_url | String | Input parameter. Custom endpoint URL for a Bedrock service. |
+
+## Amazon Bedrock Embeddings
+
+The **Amazon Bedrock Embeddings** component is used to load embedding models from [Amazon Bedrock](https://aws.amazon.com/bedrock/).
+
+For more information about using embedding model components in flows, see [Embedding model components](/components-embedding-models).
+
+### Amazon Bedrock Embeddings parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| model_id | String | Input parameter. The ID of the model to call, such as `amazon.titan-embed-text-v1`. This is equivalent to the `modelId` property in the `list-foundation-models` API. |
+| aws_access_key_id | SecretString | Input parameter. AWS Access Key for authentication. |
+| aws_secret_access_key | SecretString | Input parameter. AWS Secret Key for authentication. |
+| aws_session_token | SecretString | Input parameter. The session key for your AWS account. |
+| credentials_profile_name | String | Input parameter. The name of the AWS credentials profile in `~/.aws/credentials` or `~/.aws/config`, which has access keys or role information. |
+| region_name | String | Input parameter. The AWS region to use, such as `us-west-2`. Falls back to the `AWS_DEFAULT_REGION` environment variable or region specified in `~/.aws/config` if not provided. |
+| endpoint_url | String | Input parameter. The URL to set a specific service endpoint other than the default AWS endpoint. |
+
+## S3 Bucket Uploader
+
+The **S3 Bucket Uploader** component uploads files to an Amazon S3 bucket.
+It is designed to process `Data` input from a **File** or **Directory** component.
+If you upload `Data` from other components, test the results before running the flow in production.
+
+Requires the `boto3` package, which is included in your Langflow installation.
+
+The component produces logs but it doesn't emit output to the flow.
+
+### S3 Bucket Uploader parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| **AWS Access Key ID** | SecretString | Input parameter. AWS Access Key ID for authentication. |
+| **AWS Secret Key** | SecretString | Input parameter. AWS Secret Key for authentication. |
+| **Bucket Name** | String | Input parameter. The name of the S3 bucket to upload files to. |
+| **Strategy for file upload** | String | Input parameter. The file upload strategy. **Store Data** (default) iterates over `Data` inputs, logs the file path and text content, and uploads each file to the specified S3 bucket if both file path and text content are available. **Store Original File** iterates through the list of data inputs, retrieves the file path from each data item, uploads the file to the specified S3 bucket if the file path is available, and logs the file path being uploaded. |
+| **Data Inputs** | Data | Input parameter. The `Data` input to iterate over and upload as files in the specified S3 bucket. |
+| **S3 Prefix** | String | Input parameter. Optional prefix (folder path) within the S3 bucket where files will be uploaded. |
+| **Strip Path** | Boolean | Input parameter. Whether to strip the file path when uploading. Default: `false`. |

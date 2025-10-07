@@ -1,7 +1,8 @@
-.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_all
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
+DOCKER=podman
 DOCKERFILE=docker/build_and_push.Dockerfile
 DOCKERFILE_BACKEND=docker/build_and_push_backend.Dockerfile
 DOCKERFILE_FRONTEND=docker/frontend/build_and_push_frontend.Dockerfile
@@ -87,6 +88,14 @@ clean_npm_cache:
 	rm -f src/frontend/package-lock.json
 	@echo "$(GREEN)NPM cache and frontend directories cleaned.$(NC)"
 
+clean_frontend_build: ## clean frontend build artifacts to ensure fresh build
+	@echo "Cleaning frontend build artifacts..."
+	@echo "  - Removing src/frontend/build directory"
+	$(call CLEAR_DIRS,src/frontend/build)
+	@echo "  - Removing built frontend files from backend"
+	$(call CLEAR_DIRS,src/backend/base/langflow/frontend)
+	@echo "$(GREEN)Frontend build artifacts cleaned - fresh build guaranteed.$(NC)"
+
 clean_all: clean_python_cache clean_npm_cache # clean all caches and temporary directories
 	@echo "$(GREEN)All caches and temporary directories cleaned.$(NC)"
 
@@ -130,13 +139,21 @@ unit_tests: ## run unit tests
 		EXTRA_ARGS="$$EXTRA_ARGS --ff"; \
 	fi; \
 	uv run pytest src/backend/tests/unit \
-	--ignore=src/backend/tests/integration $$EXTRA_ARGS \
+	--ignore=src/backend/tests/integration \
+	--ignore=src/backend/tests/unit/template \
+	$$EXTRA_ARGS \
 	--instafail -ra -m 'not api_key_required' \
 	--durations-path src/backend/tests/.test_durations \
 	--splitting-algorithm least_duration $(args)
 
 unit_tests_looponfail:
 	@make unit_tests args="-f"
+
+lfx_tests: ## run lfx package unit tests
+	@echo 'Running LFX Package Tests...'
+	@cd src/lfx && \
+	uv sync && \
+	uv run pytest tests/unit -v $(args)
 
 integration_tests:
 	uv run pytest src/backend/tests/integration \
@@ -162,6 +179,14 @@ tests: ## run unit, integration, coverage tests
 	make coverage
 
 ######################
+# TEMPLATE TESTING
+######################
+
+template_tests: ## run all starter project template tests
+	@echo 'Running Starter Project Template Tests...'
+	@uv run pytest src/backend/tests/unit/template/test_starter_projects.py -v -n auto
+
+######################
 # CODE QUALITY
 ######################
 
@@ -177,10 +202,6 @@ format_backend: ## backend code formatters
 
 format: format_backend format_frontend ## run code formatters
 
-format_frontend: ## run biome check and format on frontend code
-	@echo 'Running Biome check and format on frontend...'
-	@cd src/frontend && npx @biomejs/biome check --write
-
 format_frontend_check: ## run biome check without formatting
 	@echo 'Running Biome check on frontend...'
 	@cd src/frontend && npx @biomejs/biome check
@@ -193,8 +214,18 @@ lint: install_backend ## run linters
 
 
 
-run_cli: install_frontend install_backend build_frontend ## run the CLI
-	@echo 'Running the CLI'
+run_clic: clean_frontend_build install_frontend install_backend build_frontend ## run the CLI with fresh frontend build
+	@echo 'Running the CLI with fresh frontend build'
+	@uv run langflow run \
+		--frontend-path $(path) \
+		--log-level $(log_level) \
+		--host $(host) \
+		--port $(port) \
+		$(if $(env),--env-file $(env),) \
+		$(if $(filter false,$(open_browser)),--no-open-browser)
+
+run_cli: install_frontend install_backend build_frontend ## run the CLI quickly (without cleaning build cache)
+	@echo 'Running the CLI quickly (reusing existing build cache if available)'
 	@uv run langflow run \
 		--frontend-path $(path) \
 		--log-level $(log_level) \
@@ -301,42 +332,45 @@ docker_build_frontend: dockerfile_build_fe clear_dockerimage ## build Frontend D
 
 dockerfile_build:
 	@echo 'BUILDING DOCKER IMAGE: ${DOCKERFILE}'
-	@docker build --rm \
+	@command -v $(DOCKER) >/dev/null 2>&1 || { echo "Error: $(DOCKER) is not installed. Please install $(DOCKER), or run 'make docker_build DOCKER=podman' (or DOCKER=docker) if you have an alternative installed."; exit 1; }
+	@$(DOCKER) build --rm \
 		-f ${DOCKERFILE} \
 		-t langflow:${VERSION} .
 
 dockerfile_build_be: dockerfile_build
 	@echo 'BUILDING DOCKER IMAGE BACKEND: ${DOCKERFILE_BACKEND}'
-	@docker build --rm \
+	@command -v $(DOCKER) >/dev/null 2>&1 || { echo "Error: $(DOCKER) is not installed. Please install $(DOCKER), or run 'make docker_build_backend DOCKER=podman' (or DOCKER=docker) if you have an alternative installed."; exit 1; }
+	@$(DOCKER) build --rm \
 		--build-arg LANGFLOW_IMAGE=langflow:${VERSION} \
 		-f ${DOCKERFILE_BACKEND} \
 		-t langflow_backend:${VERSION} .
 
 dockerfile_build_fe: dockerfile_build
 	@echo 'BUILDING DOCKER IMAGE FRONTEND: ${DOCKERFILE_FRONTEND}'
-	@docker build --rm \
+	@command -v $(DOCKER) >/dev/null 2>&1 || { echo "Error: $(DOCKER) is not installed. Please install $(DOCKER), or run 'make docker_build_frontend DOCKER=podman' (or DOCKER=docker) if you have an alternative installed."; exit 1; }
+	@$(DOCKER) build --rm \
 		--build-arg LANGFLOW_IMAGE=langflow:${VERSION} \
 		-f ${DOCKERFILE_FRONTEND} \
 		-t langflow_frontend:${VERSION} .
 
 clear_dockerimage:
 	@echo 'Clearing the docker build'
-	@if docker images -f "dangling=true" -q | grep -q '.*'; then \
-		docker rmi $$(docker images -f "dangling=true" -q); \
+	@if $(DOCKER) images -f "dangling=true" -q | grep -q '.*'; then \
+		$(DOCKER) rmi $$($(DOCKER) images -f "dangling=true" -q); \
 	fi
 
 docker_compose_up: docker_build docker_compose_down
 	@echo 'Running docker compose up'
-	docker compose -f $(DOCKER_COMPOSE) up --remove-orphans
+	$(DOCKER) compose -f $(DOCKER_COMPOSE) up --remove-orphans
 
 docker_compose_down:
 	@echo 'Running docker compose down'
-	docker compose -f $(DOCKER_COMPOSE) down || true
+	$(DOCKER) compose -f $(DOCKER_COMPOSE) down || true
 
 dcdev_up:
 	@echo 'Running docker compose up'
-	docker compose -f docker/dev.docker-compose.yml down || true
-	docker compose -f docker/dev.docker-compose.yml up --remove-orphans
+	$(DOCKER) compose -f docker/dev.docker-compose.yml down || true
+	$(DOCKER) compose -f docker/dev.docker-compose.yml up --remove-orphans
 
 lock_base:
 	cd src/backend/base && uv lock
@@ -380,6 +414,50 @@ endif
 
 publish_testpypi: ## build the frontend static files and package the project and publish it to PyPI
 	@echo 'Publishing the project'
+
+######################
+# LFX PACKAGE
+######################
+
+lfx_build: ## build the LFX package
+	@echo 'Building LFX package'
+	@cd src/lfx && make build
+
+lfx_publish: ## publish LFX package to PyPI
+	@echo 'Publishing LFX package'
+	@cd src/lfx && make publish
+
+lfx_publish_testpypi: ## publish LFX package to test PyPI
+	@echo 'Publishing LFX package to test PyPI'
+	@cd src/lfx && make publish_test
+
+lfx_test: ## run LFX tests
+	@echo 'Running LFX tests'
+	@cd src/lfx && make test
+
+lfx_format: ## format LFX code
+	@echo 'Formatting LFX code'
+	@cd src/lfx && make format
+
+lfx_lint: ## lint LFX code
+	@echo 'Linting LFX code'
+	@cd src/lfx && make lint
+
+lfx_clean: ## clean LFX build artifacts
+	@echo 'Cleaning LFX build artifacts'
+	@cd src/lfx && make clean
+
+lfx_docker_build: ## build LFX production Docker image
+	@echo 'Building LFX Docker image'
+	@cd src/lfx && make docker_build
+
+lfx_docker_dev: ## start LFX development environment
+	@echo 'Starting LFX development environment'
+	@cd src/lfx && make docker_dev
+
+lfx_docker_test: ## run LFX tests in Docker
+	@echo 'Running LFX tests in Docker'
+	@cd src/lfx && make docker_test
 
 # example make alembic-revision message="Add user table"
 alembic-revision: ## generate a new migration

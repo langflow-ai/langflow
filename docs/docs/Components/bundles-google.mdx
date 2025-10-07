@@ -1,0 +1,201 @@
+---
+title: Google components
+slug: /bundles-google
+---
+
+import Icon from "@site/src/components/icon";
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Google** bundle.
+
+## BigQuery
+
+Langflow integrates with [Google BigQuery](https://cloud.google.com/bigquery) through the **BigQuery** component in the [**Google** bundle](/bundles-google), allowing you to execute SQL queries and retrieve data from your BigQuery datasets.
+
+### Use the BigQuery component in a flow
+
+To use the **BigQuery** component in a flow, you need the following:
+
+* A [Google Cloud project](https://developers.google.com/workspace/guides/create-project) with the BigQuery API enabled
+* A [service account](https://developers.google.com/workspace/guides/create-credentials#service-account) with the **BigQuery Job User** role
+* A [BigQuery dataset and table](https://cloud.google.com/bigquery/docs/datasets-intro)
+* A [running Langflow server](/get-started-installation)
+
+#### Create a service account with BigQuery access
+
+1. Select and enable your Google Cloud project.
+For more information, see [Create a Google Cloud project](https://developers.google.com/workspace/guides/create-project).
+2. Create a service account in your Google Cloud project.
+For more information, see [Create a service account](https://developers.google.com/workspace/guides/create-credentials#service-account).
+3. Assign the **BigQuery Job User** role to your new account.
+This role allows Langflow to access BigQuery resources with the service account.
+You may also need to allow access to your BigQuery dataset.
+For more information, see [BigQuery access control with IAM](https://cloud.google.com/bigquery/docs/access-control).
+4. To generate a new JSON key for the service account, navigate to your service account.
+5. Click **Add Key**, and then click **Create new key**.
+6. Under **Key type**, select **JSON**, and then click **Create**.
+A JSON private key file is downloaded to your machine.
+Now that you have a service account and a JSON private key, you need to configure the credentials in the Langflow **BigQuery** component.
+
+#### Configure credentials in the Langflow component
+
+With your service account configured and your credentials JSON file created, follow these steps to authenticate the Langflow application.
+
+1. Create a new flow in Langflow.
+2. In <Icon name="Blocks" aria-hidden="true" /> **Bundles**, find the Google **BigQuery** component, and then add it to your flow.
+3. In the **BigQuery** component's **Upload Service Account JSON** field, click **Select file**.
+4. In the **My Files** pane, select **Click or drag files here**.
+Your file browser opens.
+5. In your file browser, select the service account JSON file, and then click **Open**.
+6. In the **My Files** pane, select your service account JSON file, and then click **Select files**.
+The **BigQuery** component can now query your datasets and tables using your service account JSON file.
+
+#### Query a BigQuery dataset
+
+With your component credentials configured, query your BigQuery datasets and tables to confirm connectivity.
+
+1. Connect **Chat Input** and **Chat Output** components to the **BigQuery** component.
+
+    ![BigQuery component connected to chat input and output](/img/integrations-bigquery.png)
+
+2. Open the **Playground**, and then submit a valid SQL query.
+
+    This example queries a table of Oscar winners stored within a BigQuery dataset called `the_oscar_award`:
+
+    ```sql
+    SELECT film, category, year_film
+    FROM `big-query-langflow-project.the_oscar_award.oscar_winners`
+    WHERE winner = TRUE
+    LIMIT 10
+    ```
+
+    <details>
+    <summary>Result</summary>
+
+    ```text
+    film	category	year_film
+    The Last Command	ACTOR	1927
+    7th Heaven	ACTRESS	1927
+    The Dove;	ART DIRECTION	1927
+    Sunrise	CINEMATOGRAPHY	1927
+    Sunrise	CINEMATOGRAPHY	1927
+    Two Arabian Knights	DIRECTING (Comedy Picture)	1927
+    7th Heaven	DIRECTING (Dramatic Picture)	1927
+    Wings	ENGINEERING EFFECTS	1927
+    Wings	OUTSTANDING PICTURE	1927
+    Sunrise	UNIQUE AND ARTISTIC PICTURE	1927
+    ```
+
+    </details>
+
+    A successful chat confirms the component can access the BigQuery table.
+
+## Google Generative AI
+
+This component generates text using [Google Generative AI models](https://cloud.google.com/vertex-ai/docs/).
+
+### Google Generative AI parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Google API Key | SecretString | Input parameter. Your Google API key to use for the Google Generative AI. |
+| Model | String | Input parameter. The name of the model to use, such as `"gemini-pro"`. |
+| Max Output Tokens | Integer | Input parameter. The maximum number of tokens to generate. |
+| Temperature | Float | Input parameter. Run inference with this temperature. |
+| Top K | Integer | Input parameter. Consider the set of top K most probable tokens. |
+| Top P | Float | Input parameter. The maximum cumulative probability of tokens to consider when sampling. |
+| N | Integer | Input parameter. Number of chat completions to generate for each prompt. |
+| model | LanguageModel | Output parameter. An instance of ChatGoogleGenerativeAI configured with the specified parameters. |
+
+## Google Generative AI Embeddings
+
+The **Google Generative AI Embeddings** component connects to Google's generative AI embedding service using the GoogleGenerativeAIEmbeddings class from the `langchain-google-genai` package.
+
+For more information about using embedding model components in flows, see [Embedding model components](/components-embedding-models).
+
+### Google Generative AI Embeddings parameters
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| api_key | API Key | Input parameter. The secret API key for accessing Google's generative AI service. Required. |
+| model_name | Model Name | Input parameter. The name of the embedding model to use. Default: "models/text-embedding-004". |
+| embeddings | Embeddings | Output parameter. The built GoogleGenerativeAIEmbeddings object. |
+
+## Google Search API
+
+This component allows you to call the Google Search API.
+
+### Google Search API parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| google_api_key | SecretString | Input parameter. A Google API key for authentication. |
+| google_cse_id | SecretString | Input parameter. A Google Custom Search Engine ID. |
+| input_value | String | Input parameter. The search query input. |
+| k | Integer | Input parameter. The number of search results to return. |
+| results | List[Data] | Output parameter. A list of search results. |
+| tool | Tool | Output parameter. A Google Search tool for use in LangChain. |
+
+### Other Google Search components
+
+Langflow includes multiple components that support Google Search, such as the following:
+
+* [**Apify Actors** component](/bundles-apify)
+* [**SearchApi** component](/bundles-searchapi)
+* [**Serper Google Search API** component](/bundles-serper)
+* [**News Search** component](/components-data#news-search)
+* [**Web Search** component](/components-data#web-search)
+
+## Google Vertex AI
+
+For information about Vertex AI components, see the [**Vertex AI** bundle](/bundles-vertexai).
+
+## Legacy Google components
+
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
+
+<PartialLegacy />
+
+The following Google components are in legacy status:
+
+<details>
+<summary>Google OAuth Token</summary>
+
+The **Google OAuth Token** component was deprecated in Langflow 1.4.0.
+
+To connect your flows to Google OAuth services, use [Composio components](/bundles-composio).
+
+</details>
+
+<details>
+<summary>Gmail Loader</summary>
+
+This component loads emails from Gmail using [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account) credentials and label ID filters.
+
+As an alternative, you can use [Composio components](/bundles-composio) to connect your flows to Google services.
+
+</details>
+
+<details>
+<summary>Google Drive Loader</summary>
+
+This component loads documents from Google Drive using [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account) credentials and document ID filters.
+
+While there is no direct replacement, consider using the [**API Request** component](/components-data#api-request) to call the Google Drive API.
+
+</details>
+
+<details>
+<summary>Google Drive Search</summary>
+
+This component searches Google Drive using [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account) credentials and various query strings and filters.
+
+While there is no direct replacement, consider using the [**API Request** component](/components-data#api-request) to call the Google Drive API.
+
+</details>
+
+## See also
+
+- [**Composio** bundle](/bundles-composio)
+- [**Vertex AI** bundle](/bundles-vertexai)

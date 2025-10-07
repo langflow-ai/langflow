@@ -1,0 +1,72 @@
+---
+title: Cohere
+slug: /bundles-cohere
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Cohere** bundle.
+
+For more information about Cohere features and functionality used by Cohere components, see the [Cohere documentation](https://cohere.ai/).
+
+## Cohere text generation
+
+This component generates text using Cohere's language models.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a Cohere model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
+
+For more information, see [Language model components](/components-models).
+
+### Cohere text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Input | String | Input parameter. Specifies the input text for text generation. |
+| System Message | String | Input parameter. A [system message](https://docs.cohere.com/docs/system-instructions) to pass to the model. |
+| Stream | Boolean | Input parameter. Whether to stream the response. Only works in chat. Default: `false`. |
+| Cohere API Key | SecretString | Input parameter. Your Cohere API key. |
+| Temperature | Float | Input parameter. Specifies the randomness of sampling. Lower values (near 0) are more deterministic, and higher values (near 1) are more creative. Defaults to `0.75`. |
+
+## Cohere Embeddings
+
+The **Cohere Embeddings** component is used to load embedding models from Cohere.
+
+For more information about using embedding model components in flows, see [Embedding model components](/components-embedding-models).
+
+### Cohere Embeddings parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| cohere_api_key | SecretString | Input parameter. The API key required to authenticate with the Cohere service. |
+| model | String | Input parameter. The language model used for embedding text documents and performing queries. Default: `embed-english-v2.0` |
+| truncate | Boolean | Input parameter. How to handle input that exceeds the model's token limit. One of `NONE`, `START`, or `END` (default). For more information, see the [Cohere `truncate` API reference](https://docs.cohere.com/reference/embed#request.body.truncate). |
+| max_retries | Integer | Input parameter. The maximum number of retry attempts for failed requests. Default: `3` |
+| user_agent | String | Input parameter. A user agent string to include in requests. Default: `langchain`|
+| request_timeout | Float | Input parameter. The timeout duration for requests in seconds. Default: None |
+
+## Cohere Rerank
+
+This component finds and reranks documents using the Cohere API.
+
+Outputs `Data` containing the reranked documents, limited by the **Top N** parameter.
+
+### Cohere Rerank parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| **Search Query** | String | Input parameter. The search query for reranking documents. |
+| **Search Results** | Data | Input parameter. Connect search results output from a vector store component. Use this parameter to apply reranking after running a similarity search on your vector database. |
+| **Top N** | Integer | Input parameter. The number of documents to return after reranking. Default: `3`. |
+| **Cohere API Key** | SecretString | Input parameter. Your Cohere API key. |
+| **Model** | String | Input parameter. The re-ranker model to use. Default: `rerank-english-v3.0` |

@@ -131,7 +131,7 @@ export default function AddMcpServerModal({
         return;
       }
       const name = parseString(stdioName, [
-        "snake_case",
+        "mcp_name_case",
         "no_blank",
         "lowercase",
       ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
@@ -165,7 +165,7 @@ export default function AddMcpServerModal({
         return;
       }
       const name = parseString(sseName, [
-        "snake_case",
+        "mcp_name_case",
         "no_blank",
         "lowercase",
       ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
@@ -199,7 +199,7 @@ export default function AddMcpServerModal({
       servers = extractMcpServersFromJson(jsonValue).map((server) => ({
         ...server,
         name: parseString(server.name, [
-          "snake_case",
+          "mcp_name_case",
           "no_blank",
           "lowercase",
         ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH),
@@ -358,6 +358,7 @@ export default function AddMcpServerModal({
                         listAddLabel="Add Argument"
                         editNode={false}
                         id="stdio-args"
+                        data-testid="stdio-args-input"
                       />
                     </div>
                     <div className="flex flex-col gap-2">
@@ -368,6 +369,7 @@ export default function AddMcpServerModal({
                         duplicateKey={false}
                         isList={true}
                         isInputField={true}
+                        testId="stdio-env"
                       />
                     </div>
                   </div>
@@ -382,6 +384,7 @@ export default function AddMcpServerModal({
                         value={sseName}
                         onChange={(e) => setSseName(e.target.value)}
                         placeholder="Name"
+                        data-testid="sse-name-input"
                         disabled={isPending}
                       />
                     </div>
@@ -393,6 +396,7 @@ export default function AddMcpServerModal({
                         value={sseUrl}
                         onChange={(e) => setSseUrl(e.target.value)}
                         placeholder="SSE URL"
+                        data-testid="sse-url-input"
                         disabled={isPending}
                       />
                     </div>
@@ -404,6 +408,7 @@ export default function AddMcpServerModal({
                         duplicateKey={false}
                         isList={true}
                         isInputField={true}
+                        testId="sse-headers"
                       />
                     </div>
                     <div className="flex flex-col gap-2">
@@ -414,6 +419,7 @@ export default function AddMcpServerModal({
                         duplicateKey={false}
                         isList={true}
                         isInputField={true}
+                        testId="sse-env"
                       />
                     </div>
                   </div>

@@ -16,6 +16,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
+from lfx.log import logger
 from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -23,7 +24,6 @@ from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
-from langflow.logging import logger
 from langflow.services.database.models.flow.model import (
     AccessTypeEnum,
     Flow,
@@ -55,7 +55,7 @@ async def _save_flow_to_fs(flow: Flow) -> None:
             try:
                 await f.write(flow.model_dump_json())
             except OSError:
-                logger.exception("Failed to write flow %s to path %s", flow.name, flow.fs_path)
+                await logger.aexception("Failed to write flow %s to path %s", flow.name, flow.fs_path)
 
 
 async def _new_flow(
@@ -83,7 +83,15 @@ async def _new_flow(
                 )
             ).all()
             if flows:
-                extract_number = re.compile(r"\((\d+)\)$")
+                # Use regex to extract numbers only from flows that follow the copy naming pattern:
+                # "{original_name} ({number})"
+                # This avoids extracting numbers from the original flow name if it naturally contains parentheses
+                #
+                # Examples:
+                # - For flow "My Flow": matches "My Flow (1)", "My Flow (2)" → extracts 1, 2
+                # - For flow "Analytics (Q1)": matches "Analytics (Q1) (1)" → extracts 1
+                #   but does NOT match "Analytics (Q1)" → avoids extracting the original "1"
+                extract_number = re.compile(rf"^{re.escape(flow.name)} \((\d+)\)$")
                 numbers = []
                 for _flow in flows:
                     result = extract_number.search(_flow.name)
@@ -91,6 +99,8 @@ async def _new_flow(
                         numbers.append(int(result.groups(1)[0]))
                 if numbers:
                     flow.name = f"{flow.name} ({max(numbers) + 1})"
+                else:
+                    flow.name = f"{flow.name} (1)"
             else:
                 flow.name = f"{flow.name} (1)"
         # Now check if the endpoint is unique

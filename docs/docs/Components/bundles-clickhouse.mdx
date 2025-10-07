@@ -1,0 +1,61 @@
+---
+title: ClickHouse
+slug: /bundles-clickhouse
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **ClickHouse** bundle.
+
+## ClickHouse vector store
+
+The **ClickHouse** component reads and writes to a ClickHouse vector store using an instance of `ClickHouse` vector store.
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+<PartialVectorSearchResults />
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
+
+### ClickHouse parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [ClickHouse Documentation](https://clickhouse.com/docs/en/intro) or inspect [component code](/concepts-components#component-code).
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| host | hostname | Input parameter. The ClickHouse server hostname. Required. Default: `localhost`. |
+| port | port | Input parameter. The ClickHouse server port. Required. Default: `8123`. |
+| database | database | Input parameter. The ClickHouse database name. Required. |
+| table | Table name | Input parameter. The ClickHouse table name. Required. |
+| username | Username | Input parameter. ClickHouse username for authentication. Required. |
+| password | Password | Input parameter. ClickHouse password for authentication. Required. |
+| index_type | index_type | Input parameter. Type of the index, either `annoy` (default) or `vector_similarity`. |
+| metric | metric | Input parameter. Metric to compute distance for similarity search. The options are `angular` (default), `euclidean`, `manhattan`, `hamming`, `dot`. |
+| secure | Use HTTPS/TLS | Input parameter. If `true`, enables HTTPS/TLS for the ClickHouse server and overrides inferred values for interface or port arguments. Default: `false`. |
+| index_param | Param of the index | Input parameter. Index parameters. Default: `100,'L2Distance'`. |
+| index_query_params | index query params | Input parameter. Additional index query parameters. |
+| search_query | Search Query | Input parameter. The query string for similarity search. Only relevant for reads. |
+| ingest_data | Ingest Data | Input parameter. The records to load into the vector store. |
+| cache_vector_store | Cache Vector Store | Input parameter. If `true`, the component caches the vector store in memory for faster reads. Default: Enabled (`true`). |
+| embedding | Embedding | Input parameter. The embedding model to use. |
+| number_of_results | Number of Results | Input parameter. The number of search results to return. Default: `4`. Only relevant for reads. |
+| score_threshold | Score threshold | Input parameter. The threshold for similarity score comparison. Default: Unset (no threshold). Only relevant for reads. |
