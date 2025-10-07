@@ -40,7 +40,7 @@ jobs:
             src/backend/tests/unit/api/v1/test_validate.py \
             src/backend/tests/unit/test_endpoints.py \
             src/backend/tests/unit/api/v1/test_flows.py \
-            src/backend/tests/unit/graph/test_graph.py \
+            src/lfx/tests/unit/graph/test_graph.py \
             src/backend/tests/unit/services/flow/test_flow_runner.py \
             src/backend/tests/unit/test_chat_endpoint.py \
             src/backend/tests/unit/api/v1/test_api_key.py \
