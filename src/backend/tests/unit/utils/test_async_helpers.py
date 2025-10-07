@@ -1,7 +1,7 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from langflow.utils.async_helpers import run_until_complete, timeout_context
+from lfx.utils.async_helpers import run_until_complete, timeout_context
 
 
 class TestTimeoutContext:

@@ -3,7 +3,7 @@ import time
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langflow.utils.concurrency import KeyedMemoryLockManager, KeyedWorkerLockManager
+from lfx.utils.concurrency import KeyedMemoryLockManager, KeyedWorkerLockManager
 
 
 class TestKeyedMemoryLockManager:
