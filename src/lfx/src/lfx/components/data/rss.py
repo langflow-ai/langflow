@@ -14,6 +14,8 @@ class RSSReaderComponent(Component):
     documentation: str = "https://docs.langflow.org/components-data#rss-reader"
     icon = "rss"
     name = "RSSReaderSimple"
+    legacy = True
+    replacement = "data.WebSearch"
 
     inputs = [
         MessageTextInput(
