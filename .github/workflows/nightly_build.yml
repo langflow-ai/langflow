@@ -227,18 +227,81 @@ jobs:
   slack-notification:
     name: Send Slack Notification
     needs: release-nightly-build
+    if: ${{ github.repository == 'langflow-ai/langflow' && always() }}
     runs-on: ubuntu-latest
     steps:
       - name: Send failure notification to Slack
-        if: failure()
+        if: ${{ needs.release-nightly-build.result == 'failure' }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\":\"❌ Nightly Build Failed.\nStatus: *${{ job.status }}*\"}" \
-          ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
+          --data '{
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "❌ *Nightly Build Failed*"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Job:*\nrelease-nightly-build"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Status:*\n`${{ needs.release-nightly-build.result }}`"
+                  }
+                ]
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View full logs on GitHub>"
+                  }
+                ]
+              }
+            ]
+          }' ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
 
-      # - name: Send success notification to Slack
-      #   if: success()
-      #   run: |
-      #     curl -X POST -H 'Content-type: application/json' \
-      #     --data "{\"text\":\"✅ Nightly Build Successful.\nStatus: *${{ job.status }}*\"}" \
-      #     ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
+      - name: Send success notification to Slack
+        if: ${{ needs.release-nightly-build.result == 'success' }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "✅ *Nightly Build Successful*"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Job:*\nrelease-nightly-build"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Status:*\n`${{ needs.release-nightly-build.result }}`"
+                  }
+                ]
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View full logs on GitHub>"
+                  }
+                ]
+              }
+            ]
+          }' ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
