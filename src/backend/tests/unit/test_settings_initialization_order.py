@@ -152,9 +152,8 @@ class TestSettingsInitializationOrder:
                     ValueError,
                     match="Settings service is already initialized",
                 ):
-                    raise ValueError(
-                        "Settings service is already initialized. Please do not set the env file via the CLI."
-                    )
+                    msg = "Settings service is already initialized. Please do not set the env file via the CLI."
+                    raise ValueError(msg)
             else:
                 pytest.fail("Settings should be initialized, but check returned False")
 
@@ -289,7 +288,7 @@ finally:
         )
 
         # Run the integration test
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S603
             [sys.executable, str(test_script)],
             check=False,
             capture_output=True,

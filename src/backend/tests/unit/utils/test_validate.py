@@ -429,7 +429,7 @@ class TestClass:
 
         with (
             patch("langflow.utils.validate.prepare_global_scope", side_effect=validation_error),
-            pytest.raises(ValueError, match=".*"),
+            pytest.raises(ValueError, match=r".*"),
         ):
             create_class(code, "TestClass")
 

@@ -86,7 +86,7 @@ class TestMetadataInTemplateBuilders:
                 patch("langflow.custom.utils.reorder_fields"),
             ):
                 # Call the function
-                template, _ = build_custom_component_template_from_inputs(test_component, module_name="test.module")
+                _template, _ = build_custom_component_template_from_inputs(test_component, module_name="test.module")
 
         # Verify metadata was added
         # assert "module" in mock_frontend.metadata
@@ -128,7 +128,7 @@ class TestMetadataInTemplateBuilders:
                 patch("langflow.custom.utils.reorder_fields"),
             ):
                 # Call the function
-                template, _ = build_custom_component_template(test_component, module_name="custom.test")
+                _template, _ = build_custom_component_template(test_component, module_name="custom.test")
 
         # Verify metadata was added
         # assert "module" in mock_frontend.metadata

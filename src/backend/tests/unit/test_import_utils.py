@@ -62,7 +62,7 @@ class TestImportAttr:
     def test_import_with_none_package(self):
         """Test behavior when package is None."""
         # This should raise TypeError because relative imports require a package
-        with pytest.raises(TypeError, match="package.*required"):
+        with pytest.raises(TypeError, match=r"package.*required"):
             import_mod("something", "some_module", None)
 
     def test_module_not_found_error_handling(self):

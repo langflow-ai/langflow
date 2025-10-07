@@ -58,7 +58,7 @@ class TestExceptionTelemetry:
         # Verify event was queued
         assert len(captured_events) == 1
 
-        func, payload, path = captured_events[0]
+        _func, payload, path = captured_events[0]
 
         # Verify payload
         assert isinstance(payload, ExceptionPayload)
