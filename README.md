@@ -35,29 +35,36 @@
 
 ## ⚡️ Quickstart
 
-### Local install (recommended)
+### Install locally (recommended)
 
-Requirements: Python 3.10–3.13 and [uv](https://docs.astral.sh/uv/getting-started/installation/).
+Requires Python 3.10–3.13 and [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended package manager).
 
 #### Install
 
 ```shell
-uv pip install langflow -U
+$ uv pip install langflow -U
 ```
+
+Installs the latest Langflow package.
 
 #### Run
 
 ```shell
-uv run langflow run
+$ uv run langflow run
 ```
 
-Open http://127.0.0.1:7860
+Starts the Langflow server at http://127.0.0.1:7860.
 
-Need Docker or Desktop? See [Install Langflow](https://docs.langflow.org/get-started-installation).
+That's it! You're ready to build with Langflow 🎉
 
-### From a cloned repo
+### Other install options
 
-See [DEVELOPMENT.md](./DEVELOPMENT.md) for environment setup and repo commands.
+- [Docker](https://docs.langflow.org/deployment-docker)
+- [Desktop app](https://docs.langflow.org/get-started-installation#install-and-run-langflow-desktop)
+
+### Install from repo
+
+If you're contributing or running from source, see [DEVELOPMENT.md](./DEVELOPMENT.md) for setup instructions.
 
 ## 📦 Deployment
 
