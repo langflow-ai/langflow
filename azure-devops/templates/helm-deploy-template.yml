@@ -1,0 +1,64 @@
+# Template for Helm chart deployment
+# DEPRECATED: This template is no longer used.
+# Deployments now use GitOps with platform-charts repository.
+# See: https://github.com/autonomizeai/platform-charts
+parameters:
+  - name: environment
+    type: string
+  - name: namespace
+    type: string
+  - name: releaseName
+    type: string
+    default: 'ai-studio'
+  - name: chartPath
+    type: string
+    default: 'platform-charts/charts/ai-studio'  # Updated path
+  - name: valuesFile
+    type: string
+    default: ''
+  - name: setValues
+    type: object
+    default: {}
+
+steps:
+  - task: HelmInstaller@1
+    displayName: 'Install Helm'
+    inputs:
+      helmVersionToInstall: '3.12.0'
+
+  - task: Kubernetes@1
+    displayName: 'Create namespace if not exists'
+    inputs:
+      connectionType: 'Kubernetes Service Connection'
+      kubernetesServiceEndpoint: '${{ parameters.environment }}-k8s'
+      command: 'apply'
+      useConfigurationFile: true
+      inline: |
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: ${{ parameters.namespace }}
+
+  - task: HelmDeploy@0
+    displayName: 'Deploy AI Studio with Helm'
+    inputs:
+      connectionType: 'Kubernetes Service Connection'
+      kubernetesServiceConnection: '${{ parameters.environment }}-k8s'
+      namespace: '${{ parameters.namespace }}'
+      command: 'upgrade'
+      chartType: 'FilePath'
+      chartPath: '${{ parameters.chartPath }}'
+      releaseName: '${{ parameters.releaseName }}'
+      arguments: >
+        --install
+        --wait
+        --timeout=10m
+        {{- if ne parameters.valuesFile "" }}
+        --values ${{ parameters.valuesFile }}
+        {{- end }}
+        {{- range $key, $value := parameters.setValues }}
+        --set ${{ $key }}=${{ $value }}
+        {{- end }}
+        --set global.imageRegistry=aistudioregistry.azurecr.io
+        --set frontend.image.tag=$(Build.BuildId)
+        --set backend.image.tag=$(Build.BuildId)

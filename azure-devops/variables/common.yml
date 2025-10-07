@@ -1,0 +1,37 @@
+# Common variables for all pipelines
+variables:
+  # Container Registry
+  ACR_NAME: 'sprintregistry'
+  ACR_ENDPOINT: 'sprintregistry.azurecr.io'
+
+  # Build Configuration
+  BUILD_CONFIGURATION: 'Release'
+  DISABLE_TELEMETRY: 'true'
+
+  # Runtime Versions
+  NODE_VERSION: '20.x'
+  PYTHON_VERSION: '3.12'
+  UV_VERSION: '0.4.0'
+
+  # Helm Configuration (deprecated - now using platform-charts repository)
+  HELM_VERSION: '3.12.0'
+  # CHART_PATH: 'helmcharts/ai-studio'  # Moved to platform-charts repository
+
+  # Test Configuration
+  TEST_RESULTS_DIR: '$(Agent.TempDirectory)/test-results'
+  COVERAGE_DIR: '$(Agent.TempDirectory)/coverage'
+
+  # Security Scanning
+  TRIVY_VERSION: '0.47.0'
+  SECURITY_SCAN_ENABLED: true
+
+  # Deployment Configuration
+  DEV_NAMESPACE: 'ai-studio-dev'
+  STAGING_NAMESPACE: 'ai-studio-staging'
+  PROD_NAMESPACE: 'ai-studio-prod'
+
+  # Platform Charts Configuration
+  PLATFORM_CHARTS_REPO: 'platform-charts'
+  PLATFORM_CHARTS_PATH: '$(Pipeline.Workspace)/platform-charts'
+  VALUES_FILE_UMBRELLA: 'charts/genesis-platform/values-dev.yaml'
+  VALUES_FILE_STANDALONE: 'charts/ai-studio/values-dev.yaml'
