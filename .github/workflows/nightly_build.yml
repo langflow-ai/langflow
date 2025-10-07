@@ -224,35 +224,21 @@ jobs:
       push_to_registry: ${{ inputs.push_to_registry != false }}
     secrets: inherit
 
-  # slack-notification:
-  #   name: Send Slack Notification
-  #   needs: run-nightly-build
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Send success notification to Slack
-  #       if: success()
-  #       uses: slackapi/slack-github-action@v1.26.0
-  #       with:
-  #         payload: |
-  #           {
-  #             "channel": "#langflow-nightly-builds",
-  #             "username": "GitHub Actions",
-  #             "text": "Nightly Build Successful :white_check_mark:",
-  #             "icon_emoji": ":rocket:"
-  #           }
-  #       env:
-  #         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  slack-notification:
+    name: Send Slack Notification
+    needs: release-nightly-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send failure notification to Slack
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"❌ Nightly Build Failed.\nStatus: *${{ job.status }}*\"}" \
+          ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
 
-  #     - name: Send failure notification to Slack
-  #       if: failure()
-  #       uses: slackapi/slack-github-action@v1.26.0
-  #       with:
-  #         payload: |
-  #           {
-  #             "channel": "#langflow-nightly-builds",
-  #             "username": "GitHub Actions",
-  #             "text": "Nightly Build Failed :x:",
-  #             "icon_emoji": ":warning:"
-  #           }
-  #       env:
-  #         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      # - name: Send success notification to Slack
+      #   if: success()
+      #   run: |
+      #     curl -X POST -H 'Content-type: application/json' \
+      #     --data "{\"text\":\"✅ Nightly Build Successful.\nStatus: *${{ job.status }}*\"}" \
+      #     ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
