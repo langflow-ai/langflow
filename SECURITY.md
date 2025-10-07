@@ -48,7 +48,7 @@ Langflow versions `1.6.0` through `1.6.3` have a critical bug where environment 
 
 **Potential security impact:**
 - Environment variables from `.env` files are not read.
-- Security configurations like `AUTO_LOGIN=false` may not be applied, potentially giving all users superuser access.
+- Security configurations like `AUTO_LOGIN=false` may not be applied, potentially allowing users to log in as the default superuser.
 - Database credentials, API keys, and other sensitive configuration may not be loaded.
 
 **DO NOT** upgrade to Langflow versions `1.6.0` through `1.6.3` if you use `.env` files for configuration. Instead, upgrade to version `1.6.4`, which includes a fix for this bug.
