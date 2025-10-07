@@ -40,8 +40,8 @@ class FlowCacheService(AsyncInMemoryCache):
         # Parse the Graph payload, catch parsing issues
         try:
             graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=flow.user_id, flow_name=flow.name)
-        except (ValueError, TypeError) as e:
-            logger.error(f"Error parsing graph payload for flow {flow_id_str}: {e!s}")
+        except (ValueError, TypeError, AttributeError, KeyError) as e:
+            logger.warning(f"Flow {flow_id_str} cannot be cached due to parsing error: {e!s}")
             return
 
         # Store in cache, catch cache-specific errors

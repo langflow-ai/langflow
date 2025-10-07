@@ -11,7 +11,7 @@ from uuid import UUID
 import orjson
 from aiofile import async_open
 from anyio import Path
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
@@ -159,6 +159,7 @@ async def create_flow(
     session: DbSession,
     flow: FlowCreate,
     current_user: CurrentActiveUser,
+    flow_cache_service: Annotated[FlowCacheService, Depends(get_flow_cache_service)],
 ):
     try:
         db_flow = await _new_flow(session=session, flow=flow, user_id=current_user.id)
@@ -166,6 +167,10 @@ async def create_flow(
         await session.refresh(db_flow)
 
         await _save_flow_to_fs(db_flow)
+
+        # If flow is created as DEPLOYED, add it to cache
+        if db_flow.status == DeploymentStateEnum.DEPLOYED:
+            await flow_cache_service.add_flow_to_cache(db_flow)
 
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
@@ -324,7 +329,6 @@ async def update_flow(
     flow: FlowUpdate,
     current_user: CurrentActiveUser,
     flow_cache_service: Annotated[FlowCacheService, Depends(get_flow_cache_service)],
-    background_tasks: BackgroundTasks,
 ):
     """Update a flow."""
     settings_service = get_settings_service()
@@ -362,11 +366,11 @@ async def update_flow(
                 db_flow.folder_id = default_folder.id
         if db_flow.status == DeploymentStateEnum.DEPLOYED:
             # Refresh the flow in the in-memory cache to ensure we have the latest version
-            background_tasks.add_task(flow_cache_service.refresh_flow_in_cache, db_flow)
+            await flow_cache_service.refresh_flow_in_cache(db_flow)
             db_flow.locked = True
         elif update_data.get("status") in [DeploymentStateEnum.DRAFT, None] and update_data.get("locked") is None:
             # remove the flow from the in memory cache
-            background_tasks.add_task(flow_cache_service.remove_flow_from_cache, db_flow)
+            await flow_cache_service.remove_flow_from_cache(db_flow)
             db_flow.locked = False
 
         session.add(db_flow)
