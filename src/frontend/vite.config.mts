@@ -42,6 +42,14 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: "build",
     },
+    resolve: {
+      alias: {
+        "@langflow/ui-components": path.resolve(
+          __dirname,
+          "ui-components/src/index.ts",
+        ),
+      },
+    },
     define: {
       "process.env.BACKEND_URL": JSON.stringify(
         envLangflow.BACKEND_URL ?? "http://localhost:7860",
