@@ -268,6 +268,14 @@ def run(
 ) -> None:
     """Run Langflow."""
     if env_file:
+        if is_settings_service_initialized():
+            err = (
+                "Settings service is already initialized. This indicates potential race conditions "
+                "with settings initialization. Ensure the settings service is not created during "
+                "module loading."
+            )
+            # i.e. ensures the env file is loaded before the settings service is initialized
+            raise ValueError(err)
         load_dotenv(env_file, override=True)
 
     # Set and normalize log level, with precedence: cli > env > default
