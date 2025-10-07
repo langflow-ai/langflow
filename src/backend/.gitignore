@@ -135,3 +135,14 @@ dmypy.json
 
 # Generated pytest-cov config
 .coveragerc
+
+# Large media files that should not be committed
+*.gif
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# Backup directories
+*_backup/
+*backup/
