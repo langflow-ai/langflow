@@ -24,7 +24,6 @@ from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.schema.message import Message
 from langflow.services.database.models import Flow
-from langflow.services.database.models.flow.model import DeploymentStateEnum
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_flow_cache_service, get_settings_service, get_storage_service, session_scope
 
@@ -193,12 +192,8 @@ async def handle_call_tool(
             msg = f"Flow '{name}' not found in project {project_id}"
             raise ValueError(msg)
 
-        # Verify flow is deployed (MCP should only serve deployed flows)
-        if flow.status != DeploymentStateEnum.DEPLOYED:
-            msg = f"Flow '{name}' is not deployed. Deploy it to make it available via MCP server."
-            raise ValueError(msg)
-
-        # Try to get the flow from cache for better performance
+        # Try to get the flow from cache for better performance (deployed flows are cached)
+        # If not in cache, use the flow from database - no breaking changes
         flow_cache_service = get_flow_cache_service()
         cached_graph = await flow_cache_service.get_cached_graph(str(flow.id))
         flow_to_run = cached_graph if cached_graph is not None else flow

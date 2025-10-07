@@ -428,8 +428,8 @@ export default function ToolsTable({
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {focusedRow.status === DEPLOYMENT_STATUS.DEPLOYED
-                        ? "This flow is available via the MCP server"
-                        : "Deploy to make this flow available via the MCP server"}
+                        ? "Deployed and cached for optimal performance"
+                        : "Deploy to cache this flow for faster execution"}
                     </div>
                   </div>
                 )}

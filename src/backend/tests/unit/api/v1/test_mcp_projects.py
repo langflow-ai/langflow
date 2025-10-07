@@ -727,12 +727,12 @@ async def test_list_project_tools_includes_status_field():
         assert tool.status == "DEPLOYED"
 
 
-async def test_list_project_tools_excludes_draft_flows():
-    """Test that only DEPLOYED flows are included in MCP project tools."""
+async def test_list_project_tools_includes_all_flows_regardless_of_status():
+    """Test that both DRAFT and DEPLOYED flows are included in MCP (no breaking changes)."""
     async with session_scope() as session:
         # Create user and project
         user = User(
-            username="test_mcp_draft_user",
+            username="test_mcp_all_flows_user",
             password=get_password_hash("test123"),
             is_active=True,
             is_superuser=False,
@@ -741,7 +741,7 @@ async def test_list_project_tools_excludes_draft_flows():
         await session.commit()
         await session.refresh(user)
 
-        project = Folder(name="Test MCP Draft Project", user_id=user.id)
+        project = Folder(name="Test MCP All Flows Project", user_id=user.id)
         session.add(project)
         await session.commit()
         await session.refresh(project)
@@ -777,17 +777,17 @@ async def test_list_project_tools_excludes_draft_flows():
 
         tool_ids = [t.id for t in result.tools]
 
-        # Verify only deployed flow is included
+        # Verify BOTH flows are included (deployment is just for caching, not access control)
         assert deployed_flow.id in tool_ids
-        assert draft_flow.id not in tool_ids
+        assert draft_flow.id in tool_ids
 
 
-async def test_mcp_deploy_undeploy_updates_tool_list():
-    """Test that deploying/undeploying a flow adds/removes it from MCP tools."""
+async def test_mcp_status_field_reflects_deployment_state():
+    """Test that status field in MCP tools reflects the flow's deployment state."""
     async with session_scope() as session:
         # Create user and project
         user = User(
-            username="test_mcp_toggle_user",
+            username="test_mcp_status_user",
             password=get_password_hash("test123"),
             is_active=True,
             is_superuser=False,
@@ -796,14 +796,14 @@ async def test_mcp_deploy_undeploy_updates_tool_list():
         await session.commit()
         await session.refresh(user)
 
-        project = Folder(name="Test Deploy Project", user_id=user.id)
+        project = Folder(name="Test Status Project", user_id=user.id)
         session.add(project)
         await session.commit()
         await session.refresh(project)
 
         # Create a DRAFT flow
         flow = Flow(
-            name="Toggle Deploy Flow",
+            name="Status Test Flow",
             data={},
             folder_id=project.id,
             user_id=user.id,
@@ -816,10 +816,11 @@ async def test_mcp_deploy_undeploy_updates_tool_list():
 
         from langflow.api.v1.mcp_projects import list_project_tools
 
-        # Verify not in tools list initially (DRAFT)
+        # Verify status is DRAFT
         result = await list_project_tools(project_id=project.id, current_user=user, mcp_enabled=False)
-        tool_ids = [t.id for t in result.tools]
-        assert flow.id not in tool_ids
+        tool = next((t for t in result.tools if t.id == flow.id), None)
+        assert tool is not None
+        assert tool.status == "DRAFT"
 
         # Deploy the flow
         flow.status = "DEPLOYED"
@@ -827,18 +828,8 @@ async def test_mcp_deploy_undeploy_updates_tool_list():
         await session.commit()
         await session.refresh(flow)
 
-        # Verify now in tools list
+        # Verify status is now DEPLOYED
         result = await list_project_tools(project_id=project.id, current_user=user, mcp_enabled=False)
-        tool_ids = [t.id for t in result.tools]
-        assert flow.id in tool_ids
-
-        # Undeploy the flow
-        flow.status = "DRAFT"
-        session.add(flow)
-        await session.commit()
-        await session.refresh(flow)
-
-        # Verify removed from tools list
-        result = await list_project_tools(project_id=project.id, current_user=user, mcp_enabled=False)
-        tool_ids = [t.id for t in result.tools]
-        assert flow.id not in tool_ids
+        tool = next((t for t in result.tools if t.id == flow.id), None)
+        assert tool is not None
+        assert tool.status == "DEPLOYED"
