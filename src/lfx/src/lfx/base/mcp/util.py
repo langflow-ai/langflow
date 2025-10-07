@@ -701,17 +701,15 @@ class MCPSessionManager:
                 try:
                     await logger.adebug(f"Attempting Streamable HTTP connection for session {session_id}")
                     # Use a shorter timeout for the initial connection attempt (2 seconds)
-                    async with (
-                        asyncio.wait_for(2.0),
-                        streamablehttp_client(
-                            url=connection_params["url"],
-                            headers=connection_params["headers"],
-                            timeout=connection_params["timeout_seconds"],
-                        ) as (read, write, _),
-                    ):
+                    async with streamablehttp_client(
+                        url=connection_params["url"],
+                        headers=connection_params["headers"],
+                        timeout=connection_params["timeout_seconds"],
+                    ) as (read, write, _):
                         session = ClientSession(read, write)
                         async with session:
-                            await session.initialize()
+                            # Initialize with a timeout to fail fast
+                            await asyncio.wait_for(session.initialize(), timeout=2.0)
                             used_transport.append("streamable_http")
                             await logger.ainfo(f"Session {session_id} connected via Streamable HTTP")
                             # Signal that session is ready
