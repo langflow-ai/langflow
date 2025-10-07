@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING, Literal
 
 import pytest
-
 from lfx.components.input_output import ChatInput
 from lfx.inputs.inputs import DropdownInput, FileInput, IntInput, NestedDictInput, StrInput
 from lfx.io.schema import create_input_schema

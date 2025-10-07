@@ -217,7 +217,7 @@ class TestComponentDynamicImports:
         assert "SearchComponent" in searchapi_components._dynamic_imports
 
         # Accessing should trigger dynamic import - may fail due to missing dependencies
-        with pytest.raises(AttributeError, match="Could not import.*SearchComponent"):
+        with pytest.raises(AttributeError, match=r"Could not import.*SearchComponent"):
             _ = searchapi_components.SearchComponent
 
 
@@ -229,7 +229,7 @@ class TestPerformanceCharacteristics:
         from lfx.components import chroma as chromamodules
 
         # Test that we can access a component
-        with pytest.raises(AttributeError, match="Could not import.*ChromaVectorStoreComponent"):
+        with pytest.raises(AttributeError, match=r"Could not import.*ChromaVectorStoreComponent"):
             chromamodules.ChromaVectorStoreComponent  # noqa: B018
 
     def test_caching_behavior(self):
@@ -237,11 +237,11 @@ class TestPerformanceCharacteristics:
         from lfx.components import models
 
         # EmbeddingModelComponent should raise AttributeError due to missing dependencies
-        with pytest.raises(AttributeError, match="Could not import.*EmbeddingModelComponent"):
+        with pytest.raises(AttributeError, match=r"Could not import.*EmbeddingModelComponent"):
             _ = models.EmbeddingModelComponent
 
         # Test that error is cached - subsequent access should also fail
-        with pytest.raises(AttributeError, match="Could not import.*EmbeddingModelComponent"):
+        with pytest.raises(AttributeError, match=r"Could not import.*EmbeddingModelComponent"):
             _ = models.EmbeddingModelComponent
 
     def test_memory_usage_multiple_accesses(self):
@@ -284,7 +284,7 @@ class TestSpecialCases:
         import lfx.components.nvidia as nvidia_components
 
         # NVIDIAModelComponent should raise AttributeError due to missing langchain-nvidia-ai-endpoints dependency
-        with pytest.raises(AttributeError, match="Could not import.*NVIDIAModelComponent"):
+        with pytest.raises(AttributeError, match=r"Could not import.*NVIDIAModelComponent"):
             _ = nvidia_components.NVIDIAModelComponent
 
         # Test that __all__ still works correctly despite import failures
@@ -296,7 +296,7 @@ class TestSpecialCases:
 
         # Test that we can access nested components through the hierarchy
         # OpenAI component requires langchain_openai which isn't installed
-        with pytest.raises(AttributeError, match="Could not import.*OpenAIModelComponent"):
+        with pytest.raises(AttributeError, match=r"Could not import.*OpenAIModelComponent"):
             _ = components.openai.OpenAIModelComponent
 
         # APIRequestComponent should work now that validators is installed

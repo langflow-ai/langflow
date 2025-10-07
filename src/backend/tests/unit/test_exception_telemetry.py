@@ -40,6 +40,7 @@ class TestExceptionTelemetry:
         telemetry_service = TelemetryService.__new__(TelemetryService)
         telemetry_service.do_not_track = False
         telemetry_service._stopping = False
+        telemetry_service.client_type = "oss"
 
         # Mock the _queue_event method to capture calls
         captured_events = []
@@ -58,7 +59,7 @@ class TestExceptionTelemetry:
         # Verify event was queued
         assert len(captured_events) == 1
 
-        func, payload, path = captured_events[0]
+        _func, payload, path = captured_events[0]
 
         # Verify payload
         assert isinstance(payload, ExceptionPayload)
@@ -78,6 +79,7 @@ class TestExceptionTelemetry:
         telemetry_service = TelemetryService.__new__(TelemetryService)
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
+        telemetry_service.client_type = "oss"
 
         # Mock HTTP client
         mock_response = MagicMock()
@@ -109,6 +111,7 @@ class TestExceptionTelemetry:
             "exceptionMessage": "Test error",
             "exceptionContext": "handler",
             "stackTraceHash": "abc123",
+            "clientType": "oss",
         }
         assert call_args[1]["params"] == expected_params
 
@@ -119,6 +122,7 @@ class TestExceptionTelemetry:
         telemetry_service = TelemetryService.__new__(TelemetryService)
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = True
+        telemetry_service.client_type = "oss"
 
         # Mock HTTP client
         mock_client = AsyncMock()
@@ -168,6 +172,7 @@ class TestExceptionTelemetry:
         telemetry_service = TelemetryService.__new__(TelemetryService)
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
+        telemetry_service.client_type = "oss"
 
         # Create payload with very long message
         long_message = "A" * 2000  # Very long message
@@ -197,6 +202,7 @@ class TestExceptionTelemetry:
         telemetry_service = TelemetryService.__new__(TelemetryService)
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
+        telemetry_service.client_type = "oss"
 
         # Create payload with special characters
         special_message = "Error with special chars: &?=#@!$%^&*()"
@@ -228,6 +234,7 @@ class TestExceptionTelemetry:
         telemetry_service = TelemetryService.__new__(TelemetryService)
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
+        telemetry_service.client_type = "oss"
 
         # Create payload with potentially sensitive data
         sensitive_message = "Password: secret123, API Key: sk-abc123, Token: xyz789"
@@ -259,6 +266,7 @@ class TestExceptionTelemetry:
         telemetry_service = TelemetryService.__new__(TelemetryService)
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
+        telemetry_service.client_type = "oss"
 
         # Create payload with unicode characters
         unicode_message = "Error with unicode: 世界, 🚀, émojis"

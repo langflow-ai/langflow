@@ -6,7 +6,7 @@ slug: /components-logic
 import Icon from "@site/src/components/icon";
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 
-Langflow's **Logic** components provide functionalities for routing, conditional processing, and flow management.
+Logic components provide functionalities for routing, conditional processing, and flow management.
 
 ## If-Else (conditional router) {#if-else}
 
@@ -90,7 +90,7 @@ The chat output should reflect the instructions in your prompts based on the reg
 | input_text     | String   | Input parameter. The primary text input for the operation. |
 | match_text     | String   | Input parameter. The text to compare against. |
 | operator       | Dropdown | Input parameter. The operator used to compare texts. Options include `equals`, `not equals`, `contains`, `starts with`, `ends with`, and `regex`. The default is `equals`. |
-| case_sensitive | Boolean  | Input parameter. When true, the comparison is case sensitive. The default is false. This setting doesn't apply to regex comparisons. |
+| case_sensitive | Boolean  | Input parameter. When `true`, the comparison is case sensitive. The default is `false`. This setting doesn't apply to regex comparisons. |
 | max_iterations | Integer  | Input parameter. The maximum number of iterations allowed for the conditional router. The default is 10. |
 | default_route  | Dropdown | Input parameter. The route to take when max iterations are reached. Options include `true_result` or `false_result`. The default is `false_result`. |
 | true_result  | Message | Output parameter. The output produced when the condition is true. |
@@ -194,14 +194,14 @@ When you select a flow for the **Run Flow** component, it uses the target flow's
 
 ## Legacy Logic components
 
-The following **Logic** components are legacy components.
-You can still use them in your flows, but they are no longer supported and can be removed in a future release.
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
 
-Replace these components with suggested alternatives as soon as possible.
-Components marked deprecated in addition to legacy should be replaced immediately.
+<PartialLegacy />
+
+The following Logic components are in legacy status:
 
 <details>
-<summary>Condition/Data Conditional Router</summary>
+<summary>Condition</summary>
 
 As an alternative to this legacy component, see the [**If-Else** component](#if-else).
 
@@ -259,7 +259,7 @@ It accepts the following parameters:
 </details>
 
 <details>
-<summary>Flow As Tool (deprecated)</summary>
+<summary>Flow As Tool</summary>
 
 This component constructed a tool from a function that ran a loaded flow.
 
@@ -268,7 +268,7 @@ It was deprecated in Langflow version 1.1.2 and replaced by the [**Run Flow** co
 </details>
 
 <details>
-<summary>Sub Flow (deprecated)</summary>
+<summary>Sub Flow</summary>
 
 This component integrated entire flows as components within a larger workflow.
 It dynamically generated inputs based on the selected flow and executed the flow with provided parameters.
