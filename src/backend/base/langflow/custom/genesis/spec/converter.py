@@ -21,6 +21,16 @@ from .resolver import VariableResolver
 logger = logging.getLogger(__name__)
 
 
+def _get_component_template_service():
+    """Lazy import to avoid circular dependency."""
+    try:
+        from langflow.services.spec.component_template_service import component_template_service
+        return component_template_service
+    except ImportError:
+        logger.warning("component_template_service not available")
+        return None
+
+
 class FlowConverter:
     """Converts agent specifications to AI Studio flows with corrected edge logic."""
 
@@ -115,7 +125,12 @@ class FlowConverter:
 
         if not template:
             logger.error(f"Component template not found for: {component_type} (original: {component.type})")
-            logger.error(f"Available templates: [template service not accessible]")
+            service = _get_component_template_service()
+            if service:
+                available = await service.load_components()
+                logger.error(f"Available templates: {list(available or {})}")
+            else:
+                logger.error("Available templates: [service not available]")
             return None
 
         # Set current component ID for position calculation
@@ -819,8 +834,11 @@ class FlowConverter:
     async def _get_component_template(self, component_type: str) -> Optional[Dict[str, Any]]:
         """Get real component template from Langflow component registry."""
         try:
-            # Use fallback templates since service causes circular import
-            template = None
+            # Get template from the real component template service
+            service = _get_component_template_service()
+            if not service:
+                return None
+            template = await service.get_component_template(component_type)
 
             if template:
                 logger.debug(f"Found template for component: {component_type}")
