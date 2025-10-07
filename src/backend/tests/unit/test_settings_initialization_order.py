@@ -148,11 +148,11 @@ class TestSettingsInitializationOrder:
             if is_settings_service_initialized():
                 # This is the error case - settings already initialized
                 # Should raise an error
+                msg = "Settings service is already initialized. Please do not set the env file via the CLI."
                 with pytest.raises(
                     ValueError,
                     match="Settings service is already initialized",
                 ):
-                    msg = "Settings service is already initialized. Please do not set the env file via the CLI."
                     raise ValueError(msg)
             else:
                 pytest.fail("Settings should be initialized, but check returned False")
