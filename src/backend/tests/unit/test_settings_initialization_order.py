@@ -251,23 +251,16 @@ from pathlib import Path
 db_path = Path(r"{db_path}")
 env_file = Path(r"{env_file}")
 
-print(f"DEBUG: Looking for database at: {{db_path}}")
-print(f"DEBUG: Using env file: {{env_file}}")
-print(f"DEBUG: Env file exists: {{env_file.exists()}}")
-if env_file.exists():
-    print(f"DEBUG: Env file contents:")
-    with open(env_file) as f:
-        print(f.read())
-
 # Start the server
-print(f"DEBUG: Starting langflow server...")
 proc = subprocess.Popen(
-    [sys.executable, "-m", "langflow", "run", "--env-file", str(env_file), "--host", "127.0.0.1", "--port", "17860"],
+    [
+        sys.executable, "-m", "langflow", "run", "--env-file", str(env_file),
+        "--host", "127.0.0.1", "--port", "17860", "--backend-only"
+    ],
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE,
     text=True,
 )
-print(f"DEBUG: Server process started with PID: {{proc.pid}}")
 
 try:
     # Poll for database file with timeout (more reliable in CI)
@@ -279,30 +272,21 @@ try:
         # Check if process has died
         if proc.poll() is not None:
             stdout, stderr = proc.communicate()
-            print(f"ERROR: Server process died unexpectedly after {{elapsed}} seconds")
+            print(f"ERROR: Server process died unexpectedly")
             print(f"STDOUT: {{stdout}}")
             print(f"STDERR: {{stderr}}")
             sys.exit(1)
 
         if db_path.exists():
-            print(f"SUCCESS: Database created at env file location: {{db_path}} after {{elapsed}} seconds")
+            print(f"SUCCESS: Database created at env file location: {{db_path}}")
             sys.exit(0)
-
-        # Print periodic status updates
-        if elapsed % 10 == 0:
-            print(f"DEBUG: Still waiting for database... ({{elapsed}}s elapsed, process alive: {{proc.poll() is None}})")
 
         time.sleep(poll_interval)
         elapsed += poll_interval
 
-    # If we get here, database was not created - capture server output
-    proc.terminate()
-    stdout, stderr = proc.communicate(timeout=5)
+    # If we get here, database was not created
     print(f"ERROR: Database NOT created at env file location: {{db_path}}")
     print(f"This means env file values were not used")
-    print(f"Waited {{elapsed}} seconds")
-    print(f"Server STDOUT: {{stdout[:500] if stdout else 'None'}}")
-    print(f"Server STDERR: {{stderr[:500] if stderr else 'None'}}")
     sys.exit(1)
 finally:
     # Clean up: kill the server if still running
