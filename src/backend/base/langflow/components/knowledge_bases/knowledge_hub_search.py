@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from langflow.custom import Component
-from langflow.io import MultilineInput, MultiselectInput, Output
+from langflow.io import DropdownInput, IntInput, MultilineInput, MultiselectInput, Output
 from langflow.schema import Data
 from loguru import logger
 
@@ -60,6 +60,19 @@ class KnowledgeHubSearchComponent(Component):
             value=[],
             refresh_button=True,
         ),
+        DropdownInput(
+            name="search_type",
+            display_name="Search Type",
+            options=["similarity", "semantic", "keyword", "hybrid"],
+            value="similarity",
+            info="Type of search to perform",
+        ),
+        IntInput(
+            name="top_k",
+            display_name="Top K Results",
+            value=10,
+            info="Number of top results to retrieve",
+        ),
     ]
 
     outputs = [
@@ -73,24 +86,30 @@ class KnowledgeHubSearchComponent(Component):
     async def build_output(self) -> Data:
         """Generate the output based on selected knowledge hubs."""
         try:
+            # Get configuration values
+            search_type = getattr(self, 'search_type', 'similarity')
+            top_k = getattr(self, 'top_k', 10)
+
             # For now, return mock results until the service is properly configured
             query_results = [
                 {
                     "metadata": {
-                        "content": f"Mock search result for query: {self.search_query}"
+                        "content": f"Mock search result for query: {self.search_query} (type: {search_type}, top_k: {top_k})"
                     }
                 }
             ]
 
-            logger.info(f"Mock query results: {query_results}")
+            logger.info(f"Mock query results with search_type={search_type}, top_k={top_k}: {query_results}")
 
-            plain_text = "Mock search result content"
+            plain_text = f"Mock search result content (search_type: {search_type}, top_k: {top_k})"
 
             data = Data(
                 text=plain_text,
                 data={
                     "result": query_results,
                     "used_data_sources": self._selected_hub_names,
+                    "search_type": search_type,
+                    "top_k": top_k,
                 },
             )
             self.status = data

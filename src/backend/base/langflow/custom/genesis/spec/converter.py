@@ -132,6 +132,12 @@ class FlowConverter:
         import copy
         node_data = copy.deepcopy(template)
 
+        # Override template metadata with spec values
+        if node_data and isinstance(node_data, dict):
+            # Set display_name and description from spec
+            node_data["display_name"] = component.name
+            node_data["description"] = component.description or ""
+
         # Handle tool mode
         if is_tool:
             logger.info(f"🔨 Setting up tool mode for {component.id} (type: {component.type})")
@@ -221,8 +227,23 @@ class FlowConverter:
             config = dict(config)
             config["system_prompt"] = spec.agentGoal
 
+        # Special handling for KnowledgeHubSearch - map collections to selected_hubs
+        if (component and "knowledge_hub_search" in component.type.lower() and
+            "collections" in config and "selected_hubs" not in config):
+            config = dict(config)
+            collections = config.pop("collections")
+            if isinstance(collections, list):
+                config["selected_hubs"] = collections
+            elif isinstance(collections, str):
+                # Handle comma-separated string
+                config["selected_hubs"] = [c.strip() for c in collections.split(",") if c.strip()]
+
         # Resolve variables in config
         resolved_config = self.resolver.resolve(config)
+
+        logger.debug(f"Applying config to template for {component.id if component else 'unknown'}")
+        logger.debug(f"Config keys: {list(resolved_config.keys())}")
+        logger.debug(f"Template keys: {list(template.keys()) if template else 'No template'}")
 
         for key, value in resolved_config.items():
             if key in template and isinstance(template[key], dict):
@@ -232,6 +253,9 @@ class FlowConverter:
                     template[key]["value"] = value
                 else:
                     template[key]["value"] = value
+                logger.debug(f"Set template[{key}][value] = {value}")
+            else:
+                logger.warning(f"Config key '{key}' not found in template or not a dict")
 
     async def _build_edges(self, spec: AgentSpec,
                           nodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -386,7 +410,7 @@ class FlowConverter:
                 "targetHandle": target_handle,
                 "label": provide.description or ""
             },
-            "id": f"reactflow__edge-{source_id}{source_handle_encoded}-{target_id}{target_handle_encoded}",
+            "id": f"xy-edge__{source_id}{source_handle_encoded}-{target_id}{target_handle_encoded}",
             "selected": False,
             "source": source_id,
             "sourceHandle": source_handle_encoded,
