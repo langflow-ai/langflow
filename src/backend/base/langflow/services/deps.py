@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 
 from langflow.services.schema import ServiceType
+from langflow.services.tracing.factory import TracingServiceFactory
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -64,14 +66,13 @@ def get_telemetry_service() -> TelemetryService:
     return get_service(ServiceType.TELEMETRY_SERVICE, TelemetryServiceFactory())
 
 
+@lru_cache(maxsize=1)
 def get_tracing_service() -> TracingService:
     """Retrieves the TracingService instance from the service manager.
 
     Returns:
         TracingService: The TracingService instance.
     """
-    from langflow.services.tracing.factory import TracingServiceFactory
-
     return get_service(ServiceType.TRACING_SERVICE, TracingServiceFactory())
 
 
