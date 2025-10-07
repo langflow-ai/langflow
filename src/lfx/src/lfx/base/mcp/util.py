@@ -1421,11 +1421,17 @@ class MCPStreamableHttpClient:
         await self.disconnect()
 
 
+# Backward compatibility: MCPSseClient is now an alias for MCPStreamableHttpClient
+# The new client supports both Streamable HTTP and SSE with automatic fallback
+MCPSseClient = MCPStreamableHttpClient
+
+
 async def update_tools(
     server_name: str,
     server_config: dict,
     mcp_stdio_client: MCPStdioClient | None = None,
     mcp_streamable_http_client: MCPStreamableHttpClient | None = None,
+    mcp_sse_client: MCPStreamableHttpClient | None = None,  # Backward compatibility
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
     """Fetch server config and update available tools."""
     if server_config is None:
@@ -1434,8 +1440,10 @@ async def update_tools(
         return "", [], {}
     if mcp_stdio_client is None:
         mcp_stdio_client = MCPStdioClient()
+
+    # Backward compatibility: accept mcp_sse_client parameter
     if mcp_streamable_http_client is None:
-        mcp_streamable_http_client = MCPStreamableHttpClient()
+        mcp_streamable_http_client = mcp_sse_client if mcp_sse_client is not None else MCPStreamableHttpClient()
 
     # Fetch server config from backend
     # Determine mode from config, defaulting to Streamable_HTTP if URL present
