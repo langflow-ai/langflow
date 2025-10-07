@@ -70,7 +70,7 @@ class TransactionReadResponse(TransactionBase):
 
 
 class TransactionLogsResponse(SQLModel):
-    """Transaction response model for logs view - excludes error and flow_id fields"""
+    """Transaction response model for logs view - excludes error and flow_id fields."""
 
     id: UUID = Field(alias="transaction_id")
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
