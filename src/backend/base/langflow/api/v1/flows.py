@@ -163,12 +163,17 @@ async def create_flow(
 ):
     try:
         db_flow = await _new_flow(session=session, flow=flow, user_id=current_user.id)
+
+        # If flow is created as DEPLOYED, lock it before committing
+        if db_flow.status == DeploymentStateEnum.DEPLOYED:
+            db_flow.locked = True
+
         await session.commit()
         await session.refresh(db_flow)
 
         await _save_flow_to_fs(db_flow)
 
-        # If flow is created as DEPLOYED, add it to cache
+        # Add deployed flows to cache
         if db_flow.status == DeploymentStateEnum.DEPLOYED:
             await flow_cache_service.add_flow_to_cache(db_flow)
 
