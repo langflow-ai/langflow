@@ -7,7 +7,12 @@ from typing import Any
 from langchain_core.tools import StructuredTool  # noqa: TC002
 
 from lfx.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cache_set
-from lfx.base.mcp.util import MCPStreamableHttpClient, MCPStdioClient, create_input_schema_from_json_schema, update_tools
+from lfx.base.mcp.util import (
+    MCPStdioClient,
+    MCPStreamableHttpClient,
+    create_input_schema_from_json_schema,
+    update_tools,
+)
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from lfx.inputs.inputs import InputTypes  # noqa: TC001
 from lfx.io import BoolInput, DropdownInput, McpInput, MessageTextInput, Output
