@@ -118,6 +118,10 @@ class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeM
     field_type: SerializableFieldTypes = FieldTypes.PROMPT
 
 
+class MustachePromptInput(PromptInput):
+    field_type: SerializableFieldTypes = FieldTypes.MUSTACHE_PROMPT
+
+
 class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.CODE
 
@@ -689,6 +693,7 @@ InputTypes: TypeAlias = (
     | NestedDictInput
     | ToolsInput
     | PromptInput
+    | MustachePromptInput
     | CodeInput
     | SecretStrInput
     | StrInput
