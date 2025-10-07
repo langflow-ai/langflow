@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 
 from langflow.services.schema import ServiceType
+from langflow.services.tracing.factory import TracingServiceFactory
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -13,7 +15,8 @@ if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-    from langflow.services.cache.service import AsyncBaseCacheService, CacheService
+    from langflow.services.cache.service import (AsyncBaseCacheService,
+                                                 CacheService)
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
     from langflow.services.flow_cache.service import FlowCacheService
@@ -64,14 +67,13 @@ def get_telemetry_service() -> TelemetryService:
     return get_service(ServiceType.TELEMETRY_SERVICE, TelemetryServiceFactory())
 
 
+@lru_cache(maxsize=1)
 def get_tracing_service() -> TracingService:
     """Retrieves the TracingService instance from the service manager.
 
     Returns:
         TracingService: The TracingService instance.
     """
-    from langflow.services.tracing.factory import TracingServiceFactory
-
     return get_service(ServiceType.TRACING_SERVICE, TracingServiceFactory())
 
 
@@ -191,7 +193,8 @@ def get_shared_component_cache_service() -> CacheService:
     Returns:
         The cache service instance.
     """
-    from langflow.services.shared_component_cache.factory import SharedComponentCacheServiceFactory
+    from langflow.services.shared_component_cache.factory import \
+        SharedComponentCacheServiceFactory
 
     return get_service(ServiceType.SHARED_COMPONENT_CACHE_SERVICE, SharedComponentCacheServiceFactory())
 

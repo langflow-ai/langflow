@@ -112,10 +112,11 @@ async def get_instance_results(
 
 
 def get_params(vertex_params):
-    params = vertex_params
+    # Make a shallow copy to avoid mutating the caller's dict, just once
+    params = vertex_params.copy()
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
-    return params.copy()
+    return params
 
 
 def convert_params_to_sets(params):
