@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
-from langchain_chroma import Chroma
-from langflow.api.v1.knowledge_bases import get_kb_root_path
 from langflow.custom import Component
+from langflow.custom.genesis.services.deps import get_knowledge_service
 from langflow.io import DropdownInput, IntInput, MultilineInput, MultiselectInput, Output
 from langflow.schema import Data
-from langflow.services.deps import get_settings_service
 from loguru import logger
 
 
@@ -33,39 +30,39 @@ class KnowledgeHubSearchComponent(Component):
 
         if field_name == "selected_hubs":
             try:
-                # Get real knowledge bases from API
-                options = []
+                # Load the hub options when the field is refreshed
+                service = get_knowledge_service()
+                if not service.ready:
+                    logger.error("KnowledgeHub service is not ready")
+                    build_config["selected_hubs"]["options"] = ["Service not ready"]
+                    return build_config
 
-                try:
-                    kb_root_path = get_kb_root_path()
-                    # For demo purposes, get a basic user directory (you'd get this from current user in real app)
-                    # This assumes knowledge bases are stored in user directories
-                    if kb_root_path.exists():
-                        for user_dir in kb_root_path.iterdir():
-                            if user_dir.is_dir() and not user_dir.name.startswith('.'):
-                                for kb_dir in user_dir.iterdir():
-                                    if kb_dir.is_dir() and not kb_dir.name.startswith('.'):
-                                        # Convert directory name to display name
-                                        display_name = kb_dir.name.replace("_", " ").replace("-", " ").title()
-                                        options.append(display_name)
-                                        self._hub_data.append({"id": kb_dir.name, "name": display_name, "path": str(kb_dir)})
+                self._hub_data = await service.get_knowledge_hubs()
 
-                    if not options:
-                        options = ["No knowledge bases found"]
+                # Debug the raw response
+                logger.info(f"Raw hub data: {self._hub_data}")
 
-                except Exception as e:
-                    logger.error(f"Error fetching knowledge bases: {e}")
-                    options = ["Error loading knowledge bases"]
+                options = [hub["name"] for hub in self._hub_data]
+                logger.info(f"Extracted hub options: {options}")
 
-                logger.info(f"Available knowledge bases: {options}")
+                # Debug the build_config before update
+                logger.info(
+                    f"Build config before update: {build_config.get('selected_hubs', {})}"
+                )
 
                 build_config["selected_hubs"]["options"] = options
 
+                # Store selected hub names for validation during build
                 if field_value and isinstance(field_value, list):
                     self._selected_hub_names = field_value
                     logger.info(
                         f"Stored selected hub names: {self._selected_hub_names}"
                     )
+
+                # Debug the build_config after update
+                logger.info(
+                    f"Build config after update: {build_config.get('selected_hubs', {})}"
+                )
 
                 return build_config
             except Exception as e:
@@ -111,109 +108,71 @@ class KnowledgeHubSearchComponent(Component):
     async def build_output(self) -> Data:
         """Generate the output based on selected knowledge hubs."""
         try:
-            # Get configuration values
-            search_type = getattr(self, 'search_type', 'similarity')
-            top_k = getattr(self, 'top_k', 10)
-
-            if not self._selected_hub_names:
-                logger.warning("No knowledge hubs selected.")
-                return Data(
-                    text="No knowledge bases selected for search.",
-                    data={"query_results": [], "error": "No knowledge bases selected"}
+            # Validate and refresh data sources if needed
+            if self._selected_hub_names:
+                is_valid, validated_hubs = (
+                    await self._validate_and_refresh_data_sources()
                 )
 
-            # Perform real search using Chroma
-            all_results = []
-            used_sources = []
+                if not is_valid and not validated_hubs:
+                    error_message = f"Error: Selected data sources are no longer available. Please select different data sources."
+                    logger.error(error_message)
+                    return Data(
+                        text=error_message,
+                        data={"error": error_message, "query_results": []},
+                    )
 
-            try:
-                kb_root_path = get_kb_root_path()
-
-                for selected_name in self._selected_hub_names:
-                    if selected_name in ["No knowledge bases found", "Error loading knowledge bases"]:
-                        continue
-
-                    # Find the corresponding hub data
-                    hub_info = None
-                    for hub in self._hub_data:
-                        if hub["name"] == selected_name:
-                            hub_info = hub
-                            break
-
-                    if not hub_info:
-                        logger.warning(f"Could not find hub info for: {selected_name}")
-                        continue
-
-                    try:
-                        # Create Chroma instance for this knowledge base
-                        kb_path = Path(hub_info["path"])
-                        if not kb_path.exists():
-                            logger.warning(f"Knowledge base path does not exist: {kb_path}")
-                            continue
-
-                        chroma = Chroma(
-                            persist_directory=str(kb_path),
-                            collection_name=hub_info["id"],
-                        )
-
-                        # Perform similarity search
-                        results = chroma.similarity_search_with_score(
-                            query=self.search_query,
-                            k=top_k
-                        )
-
-                        # Process results
-                        for doc, score in results:
-                            result_item = {
-                                "metadata": {
-                                    "content": doc.page_content,
-                                    "source": hub_info["name"],
-                                    "score": float(score),
-                                    **doc.metadata
-                                }
-                            }
-                            all_results.append(result_item)
-
-                        used_sources.append(selected_name)
-                        logger.info(f"Found {len(results)} results from {selected_name}")
-
-                    except Exception as e:
-                        logger.error(f"Error searching knowledge base {selected_name}: {e}")
-                        continue
-
-                # Sort all results by score (lower is better for similarity)
-                all_results.sort(key=lambda x: x["metadata"].get("score", float('inf')))
-
-                # Limit to top_k results overall
-                all_results = all_results[:top_k]
-
-                # Create plain text output
-                if all_results:
-                    contents = [
-                        result["metadata"]["content"]
-                        for result in all_results
-                    ]
-                    plain_text = "\n\n=== NEW CHUNK ===\n\n".join(contents)
-                else:
-                    plain_text = "No relevant results found in the selected knowledge bases."
-
-                logger.info(f"Search completed. Found {len(all_results)} total results across {len(used_sources)} sources")
-
-            except Exception as e:
-                logger.error(f"Error during knowledge base search: {e}")
-                return Data(
-                    text=f"Error searching knowledge bases: {str(e)}",
-                    data={"query_results": [], "error": str(e)}
+                # Use validated hubs instead of self.selected_hubs
+                effective_selected_hubs = validated_hubs
+            else:
+                effective_selected_hubs = (
+                    self.selected_hubs if hasattr(self, "selected_hubs") else []
                 )
+
+            if not effective_selected_hubs:
+                logger.warning("No knowledge hubs selected or available.")
+                return Data(value={"query_results": []})
+
+            # Make sure we have hub data
+            if not self._hub_data:
+                service = get_knowledge_service()
+                if not service.ready:
+                    logger.error("KnowledgeHub service is not ready")
+                    return Data(value={"query_results": []})
+                self._hub_data = await service.get_knowledge_hubs()
+
+            # Map the selected names to their IDs
+            selected_hub_ids = [
+                hub["id"]
+                for hub in self._hub_data
+                if hub["name"] in effective_selected_hubs
+            ]
+
+            logger.info(f"Using data sources: {effective_selected_hubs}")
+            logger.info(f"Mapped to hub IDs: {selected_hub_ids}")
+
+            service = get_knowledge_service()
+            if not service.ready:
+                logger.error("KnowledgeHub service is not ready")
+                return Data(value={"query_results": []})
+
+            query_results = await service.query_vector_store(
+                knowledge_hub_ids=selected_hub_ids, query=self.search_query
+            )
+            logger.debug(f"query_results: {query_results}")
+
+            # Concatenate content from query results
+            contents = [
+                result.get("metadata", {}).get("content", "")
+                for result in query_results
+            ]
+            plain_text = "\n\n=== NEW CHUNK ===\n\n".join(contents)
 
             data = Data(
                 text=plain_text,
                 data={
-                    "result": all_results,
-                    "used_data_sources": used_sources,
-                    "search_type": search_type,
-                    "top_k": top_k,
-                    "total_results": len(all_results)
+                    "result": query_results,
+                    "used_data_sources": effective_selected_hubs,  # Include which sources were actually used
                 },
             )
             self.status = data
@@ -221,7 +180,4 @@ class KnowledgeHubSearchComponent(Component):
 
         except Exception as e:
             logger.error(f"Error in build_output: {e!s}")
-            return Data(
-                text=f"Error in search: {str(e)}",
-                data={"query_results": [], "error": str(e)}
-            )
+            return Data(value={"query_results": []})
