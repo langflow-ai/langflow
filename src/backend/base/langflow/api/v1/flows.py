@@ -368,8 +368,8 @@ async def update_flow(
             # Refresh the flow in the in-memory cache to ensure we have the latest version
             await flow_cache_service.refresh_flow_in_cache(db_flow)
             db_flow.locked = True
-        elif update_data.get("status") in [DeploymentStateEnum.DRAFT, None] and update_data.get("locked") is None:
-            # remove the flow from the in memory cache
+        elif db_flow.status == DeploymentStateEnum.DRAFT and update_data.get("status") == DeploymentStateEnum.DRAFT:
+            # Only unlock if status was explicitly changed to DRAFT (not just omitted from request)
             await flow_cache_service.remove_flow_from_cache(db_flow)
             db_flow.locked = False
 
