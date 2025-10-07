@@ -1,7 +1,6 @@
 import copy
 import json
 import re
-from contextlib import suppress
 from typing import Any
 
 from composio import Composio
@@ -77,7 +76,7 @@ class ComposioBaseComponent(Component):
             required=False,
         ),
         StrInput(
-            name="client_secret", 
+            name="client_secret",
             display_name="Client secret",
             info="",
             show=False,
@@ -1032,11 +1031,11 @@ class ComposioBaseComponent(Component):
         # composio_managed_auth_schemes: list[str]
         managed = schema.get("composio_managed_auth_schemes") or schema.get("composioManagedAuthSchemes") or []
         has_managed_schemes = isinstance(managed, list) and len(managed) > 0
-        
+
         # Add "Composio managed" as first option if there are managed schemes
         if has_managed_schemes:
             modes.append("Composio managed")
-        
+
         # auth_config_details: list with entries containing mode
         details = schema.get("auth_config_details") or schema.get("authConfigDetails") or []
         for item in details:
@@ -1143,9 +1142,9 @@ class ComposioBaseComponent(Component):
         if not selected:
             return
         fields = selected.get("fields") or {}
-        
+
         # Helper function to process fields
-        def process_fields(field_list: list, required: bool) -> None:
+        def process_fields(field_list: list, *, required: bool) -> None:
             for field in field_list:
                 name = field.get("name")
                 if not name:
@@ -1160,14 +1159,14 @@ class ComposioBaseComponent(Component):
                 disp = field.get("display_name") or field.get("displayName") or name
                 desc = field.get("description")
                 self._add_text_field(build_config, name, disp, desc, required=required, default_value=default_val)
-        
+
         # a) AuthConfigCreation fields (for custom OAuth2, etc.)
         creation = fields.get("auth_config_creation") or fields.get("authConfigCreation") or {}
         # Process required fields
         process_fields(creation.get("required", []), required=True)
         # Process optional fields (excluding those with defaults and bearer_token)
         process_fields(creation.get("optional", []), required=False)
-        
+
         # b) ConnectedAccountInitiation fields (for API_KEY, etc.)
         initiation = fields.get("connected_account_initiation") or fields.get("connectedAccountInitiation") or {}
         # Process required fields
@@ -1206,7 +1205,6 @@ class ComposioBaseComponent(Component):
                 build_config[name]["value"] = ""
         # Also clear any tracked dynamic fields
         self._clear_auth_dynamic_fields(build_config)
-
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         """Update build config for auth and action selection."""
@@ -1455,7 +1453,7 @@ class ComposioBaseComponent(Component):
                             mode = build_config["auth_mode"].get("value")
                         # If no managed default exists (400 Default auth config), require mode selection
                         managed = (schema or {}).get("composio_managed_auth_schemes") or []
-                        
+
                         # Handle "Composio managed" mode explicitly
                         if mode == "Composio managed":
                             # Use Composio managed auth flow
@@ -1463,7 +1461,7 @@ class ComposioBaseComponent(Component):
                             build_config["auth_link"]["value"] = redirect_url
                             logger.info(f"New OAuth URL created for {toolkit_slug}: {redirect_url}")
                             return build_config
-                        
+
                         if not mode:
                             build_config["auth_link"]["value"] = "connect"
                             build_config["auth_link"]["auth_tooltip"] = "Select Auth Mode"
@@ -1834,11 +1832,7 @@ class ComposioBaseComponent(Component):
                 schema = self._get_toolkit_schema()
                 mode = (build_config.get("auth_mode") or {}).get("value")
                 managed = (schema or {}).get("composio_managed_auth_schemes") or []
-                if (
-                    mode
-                    and mode != "Composio managed"
-                    and not getattr(self, "_auth_dynamic_fields", set())
-                ):
+                if mode and mode != "Composio managed" and not getattr(self, "_auth_dynamic_fields", set()):
                     self._render_custom_auth_fields(build_config, schema or {}, mode)
             except (TypeError, ValueError, AttributeError):
                 pass
