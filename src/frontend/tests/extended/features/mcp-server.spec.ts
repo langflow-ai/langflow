@@ -242,7 +242,7 @@ test(
     const sidebarButton = page.getByTestId("sidebar-add-mcp-server-button");
     const fallbackButton = page.getByTestId("add-mcp-server-button-sidebar");
 
-    if (await sidebarButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await sidebarButton.isVisible({ timeout: 5000 }).catch(() => false)) {
       await sidebarButton.click();
     } else {
       await fallbackButton.click();
@@ -266,6 +266,8 @@ test(
     await page.getByTestId("stdio-command-input").fill("uvx mcp-server-fetch");
 
     await page.getByTestId("add-mcp-server-button").click();
+
+    await page.waitForTimeout(1000);
 
     await page.getByTestId(`add-component-button-${testName}`).click();
 
