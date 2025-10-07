@@ -684,48 +684,46 @@ class FlowConverter:
         # Layout parameters based on starter project analysis
         BASE_X = 100
         LAYER_GAP = 400  # 400px between layers (matches starter projects)
-        BASE_Y = 350     # Center vertically
-        KIND_Y_OFFSETS = {
-            'Prompt': -200,  # Above center
-            'Agent': 0,      # Center
-            'Tool': 200,     # Below center
-            'Data': 100,     # Slightly below center
-            'Model': 0       # Center with agents
-        }
-        STACK_GAP = 300  # Vertical gap between stacked components
+        BASE_Y = 100     # Start from top
+        VERTICAL_BUFFER = 150  # Optimized gap between nodes for compact layout
         SPREAD_GAP = 80  # Horizontal spread within layer
 
         for layer_num in sorted(layer_groups.keys()):
             layer_comps = layer_groups[layer_num]
             layer_x = BASE_X + layer_num * LAYER_GAP
 
-            # Group by component kind for better vertical organization
+            # Sort components by kind for consistent vertical order
+            kind_order = ['Prompt', 'Data', 'Tool', 'Model', 'Agent']
             by_kind = defaultdict(list)
             for comp_id in layer_comps:
                 component = components[comp_id]
                 by_kind[component.kind].append(comp_id)
 
-            # Position components within the layer
-            kind_y_offset = 0
-            for kind, kind_comps in by_kind.items():
-                base_y_for_kind = BASE_Y + KIND_Y_OFFSETS.get(kind, 0) + kind_y_offset
+            # Position components within the layer using actual heights
+            current_y = BASE_Y
+
+            for kind in kind_order:
+                if kind not in by_kind:
+                    continue
+
+                kind_comps = by_kind[kind]
 
                 for i, comp_id in enumerate(kind_comps):
-                    # For multiple components of same kind, stack vertically and spread horizontally
-                    if len(kind_comps) > 1:
-                        stack_offset = (i - len(kind_comps)/2 + 0.5) * STACK_GAP
-                        spread_offset = i * SPREAD_GAP
-                    else:
-                        stack_offset = 0
-                        spread_offset = 0
+                    component = components[comp_id]
+
+                    # Get actual node height for this component
+                    node_height = self._get_node_height(component.kind)
+
+                    # For multiple components of same kind, spread horizontally
+                    spread_offset = i * SPREAD_GAP if len(kind_comps) > 1 else 0
 
                     self._component_positions[comp_id] = {
                         'x': layer_x + spread_offset,
-                        'y': int(base_y_for_kind + stack_offset)
+                        'y': current_y
                     }
 
-                # Add offset for next kind in same layer
-                kind_y_offset += len(kind_comps) * 100
+                    # Move current_y down for next component (node height + buffer)
+                    current_y += node_height + VERTICAL_BUFFER
 
     def _calculate_simple_position(self, index: int, kind: str) -> Dict[str, int]:
         """Fallback positioning with improved coordinates and spacing."""
@@ -769,15 +767,15 @@ class FlowConverter:
         }
 
     def _get_node_height(self, kind: str) -> int:
-        """Get node height based on kind."""
+        """Get node height based on kind - optimized for compact layout."""
         heights = {
-            "Agent": 500,
-            "Prompt": 300,
-            "Tool": 350,
-            "Model": 400,
-            "Data": 250
+            "Agent": 300,  # Reduced from 500px
+            "Prompt": 180, # Reduced from 300px
+            "Tool": 200,   # Reduced from 350px
+            "Model": 180,  # Reduced from 400px
+            "Data": 150    # Reduced from 250px
         }
-        return heights.get(kind, 350)
+        return heights.get(kind, 200)  # Default reduced from 350px
 
     def _is_component_used_as_tool(self, component: Component) -> bool:
         """Check if component is used as a tool based on provides declarations and asTools flag."""
