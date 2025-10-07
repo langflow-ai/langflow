@@ -51,9 +51,7 @@ uv pip install langflow -U
 uv run langflow run
 ```
 
-#### Open
-
-http://127.0.0.1:7860
+Open http://127.0.0.1:7860
 
 Need Docker or Desktop? See [Install Langflow](https://docs.langflow.org/get-started-installation).
 
