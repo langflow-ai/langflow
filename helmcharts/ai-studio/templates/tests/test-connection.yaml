@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "ai-studio.fullname" . }}-test-connection"
+  labels:
+    {{- include "ai-studio.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  restartPolicy: Never
+  containers:
+    {{- if .Values.frontend.enabled }}
+    - name: frontend-test
+      image: curlimages/curl:latest
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "Testing frontend connection..."
+          curl -f http://{{ include "ai-studio.frontend.fullname" . }}:{{ .Values.frontend.service.port }}/ || exit 1
+          echo "Frontend test passed!"
+    {{- end }}
+    {{- if .Values.backend.enabled }}
+    - name: backend-test
+      image: curlimages/curl:latest
+      command: ['sh', '-c']
+      args:
+        - |
+          echo "Testing backend connection..."
+          curl -f http://{{ include "ai-studio.backend.fullname" . }}:{{ .Values.backend.service.port }}/api/v1/health || exit 1
+          echo "Backend test passed!"
+    {{- end }}

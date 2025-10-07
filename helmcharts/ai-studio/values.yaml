@@ -1,0 +1,276 @@
+# Default values for ai-studio.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global configuration shared between frontend and backend
+global:
+  nameOverride: ""
+  fullnameOverride: ""
+
+  # Container registry configuration
+  imageRegistry: "aistudioregistry.azurecr.io"
+  imagePullSecrets: []
+
+  # Common labels applied to all resources
+  commonLabels: {}
+
+  # Environment-specific configuration
+  environment: "development"
+
+  # Service account configuration
+  serviceAccount:
+    create: true
+    name: "ai-studio-sa"
+    annotations: {}
+
+# Frontend service configuration
+frontend:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: "ai-studio-frontend"
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: ai-studio.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  resources:
+    limits:
+      cpu: 1
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 800Mi
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 80
+
+  # Environment variables for frontend
+  env:
+    NODE_ENV: "production"
+    VITE_BACKEND_URL: "http://ai-studio-backend:7860"
+
+  # Health checks
+  livenessProbe:
+    httpGet:
+      path: /
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 3000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+# Backend service configuration
+backend:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: "ai-studio-backend"
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  service:
+    type: ClusterIP
+    port: 7860
+    targetPort: 7860
+
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: api.ai-studio.local
+        paths:
+          - path: /api
+            pathType: Prefix
+    tls: []
+
+  resources:
+    limits:
+      cpu: 2
+      memory: 8Gi
+    requests:
+      cpu: 1
+      memory: 4Gi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+  # Service account with managed identity
+  serviceAccount:
+    create: false
+    name: "ai-studio-backend-sa"
+    annotations:
+      azure.workload.identity/client-id: ""
+
+  # Environment variables for backend
+  env:
+    # Server Configuration
+    HOST: "0.0.0.0"
+    PORT: "7860"
+    DEBUG: "false"
+    LOG_LEVEL: "info"
+
+    # Langflow Configuration
+    LANGFLOW_CONFIG_DIR: "./config"
+    LANGFLOW_LOG_LEVEL: "ERROR"
+    LANGFLOW_STORE_ENVIRONMENT_VARIABLES: "true"
+    LANGFLOW_REMOVE_API_KEYS: "true"
+    LANGFLOW_WORKERS: "2"
+    DO_NOT_TRACK: "true"
+
+    # Database Configuration
+    LANGFLOW_DATABASE_URL: "sqlite:///app/data/langflow.db"
+
+    # Cache Configuration
+    LANGFLOW_CACHE_TYPE: "memory"
+
+    # API Configuration
+    API_PREFIX: "/api/v1"
+
+  # Secret environment variables
+  secretEnv:
+    LANGFLOW_DATABASE_URL:
+      secret: "ai-studio-secrets"
+      key: "database-url"
+
+  # Health checks
+  livenessProbe:
+    httpGet:
+      path: /api/v1/health
+      port: 7860
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /api/v1/health
+      port: 7860
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+
+  # Persistence for backend data
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 10Gi
+    mountPath: "/app/data"
+
+# Database configuration (PostgreSQL)
+database:
+  enabled: true
+
+  # Use external database or deploy PostgreSQL
+  external: false
+  host: ""
+  port: 5432
+  database: "ai_studio"
+  username: "aistudio"
+
+  # Internal PostgreSQL configuration
+  postgresql:
+    image:
+      repository: "postgres"
+      tag: "15-alpine"
+
+    persistence:
+      enabled: true
+      size: 20Gi
+
+    resources:
+      limits:
+        cpu: 1
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+# Cache configuration (Redis)
+cache:
+  enabled: true
+
+  # Use external Redis or deploy Redis
+  external: false
+  host: ""
+  port: 6379
+
+  # Internal Redis configuration
+  redis:
+    image:
+      repository: "redis"
+      tag: "7-alpine"
+
+    persistence:
+      enabled: true
+      size: 5Gi
+
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+
+# Security context
+podSecurityContext:
+  fsGroup: 1001
+  runAsNonRoot: true
+  runAsUser: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1001
+
+# Node affinity and tolerations
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Additional volumes and volume mounts
+volumes: []
+volumeMounts: []
+
+# Pod annotations and labels
+podAnnotations:
+  reloader.stakater.com/auto: "true"
+
+podLabels: {}

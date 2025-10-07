@@ -1,0 +1,30 @@
+apiVersion: v2
+name: ai-studio
+description: A unified Helm chart for AI Studio frontend and backend services
+type: application
+
+# This is the chart version. Increment this each time you make changes
+# to the chart and its templates, including the app version.
+version: 0.1.0
+
+# This is the version number of the application being deployed.
+# This version number should be incremented each time you make changes to the application.
+appVersion: "1.0.0"
+
+maintainers:
+  - name: AI Studio Development Team
+    email: aistudio-dev@autonomize.ai
+
+keywords:
+  - ai-studio
+  - langflow
+  - frontend
+  - backend
+  - machine-learning
+  - workflow
+
+home: https://github.com/autonomizeai/ai-studio
+sources:
+  - https://github.com/autonomizeai/ai-studio
+
+dependencies: []

@@ -101,6 +101,40 @@ Navigate to `http://127.0.0.1:7860` and start creating agents with natural langu
 3. **Review Generated Spec**: The AI will generate a complete YAML specification
 4. **Test and Deploy**: Use the interactive playground to validate your agent
 
+## 🚀 Production Deployment
+
+AI Studio is deployed using Helm charts maintained in the **[platform-charts](https://github.com/autonomizeai/platform-charts)** repository, following GitOps best practices.
+
+### Quick Deploy
+
+```bash
+# Clone platform-charts repository
+git clone https://github.com/autonomizeai/platform-charts.git
+cd platform-charts
+
+# Deploy full Genesis platform (recommended)
+helm install genesis-platform ./charts/genesis-platform \
+  --values ./charts/genesis-platform/values-dev.yaml \
+  --namespace genesis-dev \
+  --create-namespace
+
+# Or deploy AI Studio standalone
+helm install ai-studio ./charts/ai-studio \
+  --values ./charts/ai-studio/values-dev.yaml \
+  --namespace ai-studio-dev \
+  --create-namespace
+```
+
+### GitOps Workflow
+
+Production deployments are automated via ArgoCD:
+
+1. **Code Changes** → AI Studio CI pipelines build and push images
+2. **Chart Updates** → CI automatically updates image tags in platform-charts
+3. **Auto Deploy** → ArgoCD detects changes and deploys to Kubernetes
+
+For detailed deployment instructions, see the [platform-charts documentation](https://github.com/autonomizeai/platform-charts).
+
 ## 🏥 Healthcare Use Cases
 
 ### Clinical Diagnosis Assistant
@@ -172,7 +206,7 @@ python -m pytest tests/unit/custom/genesis/ -v
 - [Agent Builder Guide](./docs/agent-builder-guide.md) - Create agents with conversational UI
 - [Genesis Specification Format](./docs/genesis-spec-format.md) - YAML agent definition reference
 - [Healthcare Components](./docs/healthcare-components.md) - Medical AI component library
-- [Deployment Guide](./docs/deployment.md) - Production deployment instructions
+- [Deployment Guide](https://github.com/autonomizeai/platform-charts) - Production deployment with Helm charts
 - [API Reference](./docs/api-reference.md) - REST API documentation
 
 ## 🔒 Security & Compliance
