@@ -16,7 +16,9 @@ from pydantic.v1 import BaseModel as PydanticV1BaseModel
 text_strategy = st.text(min_size=0, max_size=MAX_TEXT_LENGTH * 3)
 bytes_strategy = st.binary(min_size=0, max_size=MAX_TEXT_LENGTH * 3)
 datetime_strategy = st.datetimes(
-    min_value=datetime.min, max_value=datetime.max, timezones=st.sampled_from([timezone.utc, None])
+    min_value=datetime.min,  # noqa: DTZ901 - Hypothesis requires naive datetime bounds
+    max_value=datetime.max,  # noqa: DTZ901 - Hypothesis requires naive datetime bounds
+    timezones=st.sampled_from([timezone.utc, None]),
 )
 decimal_strategy = st.decimals(min_value=-1e6, max_value=1e6, allow_nan=False, allow_infinity=False, places=10)
 uuid_strategy = st.uuids()
@@ -92,7 +94,7 @@ class TestSerializationHypothesis:
     @settings(max_examples=100)
     @given(lst=list_strategy)
     def test_list_truncation(self, lst: list) -> None:
-        result: list = serialize(lst)
+        result: list = serialize(lst, max_items=MAX_ITEMS_LENGTH)
         if len(lst) > MAX_ITEMS_LENGTH:
             assert len(result) == MAX_ITEMS_LENGTH + 1
             assert f"... [truncated {len(lst) - MAX_ITEMS_LENGTH} items]" in result
@@ -133,7 +135,7 @@ class TestSerializationHypothesis:
 
     @settings(max_examples=100)
     @given(data=st.one_of(st.integers(), st.floats(allow_nan=True), st.booleans(), st.none()))
-    def test_primitive_types(self, data: float | bool | None) -> None:
+    def test_primitive_types(self, data: float | bool | None) -> None:  # noqa: FBT001
         result: int | float | bool | None = serialize(data)
         if isinstance(data, float) and math.isnan(data) and isinstance(result, float):
             assert math.isnan(result)

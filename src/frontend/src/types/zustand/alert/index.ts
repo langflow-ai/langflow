@@ -1,4 +1,4 @@
-import { AlertItemType } from "../../alerts";
+import type { AlertItemType } from "../../alerts";
 
 export type AlertStoreType = {
   errorData: { title: string; list?: Array<string> };
@@ -15,4 +15,6 @@ export type AlertStoreType = {
   removeFromTempNotificationList: (index: string) => void;
   clearNotificationList: () => void;
   removeFromNotificationList: (index: string) => void;
+  addNotificationToHistory: (notification: Omit<AlertItemType, "id">) => void;
+  addNotificationToTempList: (notification: Omit<AlertItemType, "id">) => void;
 };

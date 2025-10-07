@@ -1,3 +1,7 @@
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import ShortUniqueId from "short-unique-id";
+import { useStickToBottomContext } from "use-stick-to-bottom";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
@@ -5,16 +9,13 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useVoiceStore } from "@/stores/voiceStore";
-import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
-import ShortUniqueId from "short-unique-id";
 import {
   ALLOWED_IMAGE_INPUT_EXTENSIONS,
   FS_ERROR_TEXT,
   SN_ERROR_TEXT,
 } from "../../../../../constants/constants";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
-import {
+import type {
   ChatInputType,
   FilePreviewType,
 } from "../../../../../types/components";
@@ -40,6 +41,8 @@ export default function ChatInput({
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const chatValue = useUtilityStore((state) => state.chatValueStore);
+
+  const { scrollToBottom } = useStickToBottomContext();
 
   const [showAudioInput, setShowAudioInput] = useState(false);
 
@@ -162,12 +165,28 @@ export default function ChatInput({
     };
   }, [handleFileChange, currentFlowId, isBuilding]);
 
-  const send = () => {
-    sendMessage({
-      repeat: 1,
-      files: files.map((file) => file.path ?? "").filter((file) => file !== ""),
-    });
+  const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
+
+  const send = async () => {
+    const storedChatValue = chatValue;
+    const filesToSend = files
+      .map((file) => file.path ?? "")
+      .filter((file) => file !== "");
+    const storedFiles = [...files];
     setFiles([]);
+    try {
+      scrollToBottom({
+        animation: "smooth",
+        duration: 1000,
+      });
+      await sendMessage({
+        repeat: 1,
+        files: filesToSend,
+      });
+    } catch (_error) {
+      setChatValueStore(storedChatValue);
+      setFiles(storedFiles);
+    }
   };
 
   const checkSendingOk = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {

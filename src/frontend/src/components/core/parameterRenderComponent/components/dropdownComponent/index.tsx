@@ -1,5 +1,5 @@
 import Dropdown from "../../../dropdownComponent";
-import { DropDownComponentType, InputProps } from "../../types";
+import type { DropDownComponentType, InputProps } from "../../types";
 import ToggleShadComponent from "../toggleShadComponent";
 
 export default function DropdownComponent({
@@ -12,7 +12,9 @@ export default function DropdownComponent({
   options,
   name,
   dialogInputs,
+  externalOptions,
   optionsMetaData,
+  placeholder,
   nodeClass,
   nodeId,
   handleNodeClass,
@@ -38,11 +40,13 @@ export default function DropdownComponent({
         handleNodeClass={handleNodeClass}
         optionsMetaData={optionsMetaData}
         onSelect={onChange}
+        placeholder={placeholder}
         combobox={combobox}
         value={value || (toggleValue === false && toggle ? options[0] : "")}
         id={`dropdown_${id}`}
         name={name}
         dialogInputs={dialogInputs}
+        externalOptions={externalOptions}
         handleOnNewValue={handleOnNewValue}
         hasRefreshButton={hasRefreshButton}
         {...baseInputProps}

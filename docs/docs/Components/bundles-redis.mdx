@@ -1,0 +1,77 @@
+---
+title: Redis
+slug: /bundles-redis
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Redis** bundle.
+
+## Redis Chat Memory
+
+The **Redis Chat Memory** component retrieves and stores chat messages using Redis memory storage.
+
+Chat memories are passed between memory storage components as the [`Memory`](/data-types#memory) data type.
+
+For more information about using external chat memory in flows, see the [**Message History** component](/components-helpers#message-history).
+
+### Redis Chat Memory parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| host | hostname | Input parameter. The IP address or hostname. |
+| port | port | Input parameter. The Redis Port Number. |
+| database | database | Input parameter. The Redis database. |
+| username | Username | Input parameter. The Redis username. |
+| password | Password | Input parameter. The password for the username. |
+| key_prefix | Key prefix | Input parameter. The key prefix. |
+| session_id | Session ID | Input parameter. The unique session identifier for the message. |
+
+## Redis vector store
+
+The **Redis** vector store component reads and writes to Redis vector stores using an instance of [`RedisVectorStore`](https://python.langchain.com/docs/integrations/vectorstores/redis/).
+
+<details>
+<summary>About vector store instances</summary>
+
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<PartialVectorStoreInstance />
+
+</details>
+
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+
+<PartialVectorSearchResults />
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
+
+### Redis vector store parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Redis documentation](https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/) or inspect [component code](/concepts-components#component-code).
+
+| Name              | Type         | Description                               |
+| ----------------- | ------------ | ----------------------------------------- |
+| redis_server_url  | SecretString | Input parameter. The Redis server connection string. |
+| redis_index_name  | String       | Input parameter. The name of the Redis index. |
+| code              | String       | Input parameter. Additional custom code for Redis, if supported. |
+| schema            | String       | Input parameter. The schema for Redis index. |
+| ingest_data       | Data         | Input parameter. The data to be ingested into the vector store. |
+| search_query      | String       | Input parameter. The query for similarity search. |
+| embedding         | Embeddings   | Input parameter. The embedding function to use. |
+| number_of_results | Integer      | Input parameter. The number of results to return in search. |

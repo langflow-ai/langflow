@@ -3,6 +3,7 @@ import {
   STATUS_BUILD,
   STATUS_BUILDING,
   STATUS_INACTIVE,
+  STATUS_MISSING_FIELDS_ERROR,
 } from "@/constants/constants";
 import { BuildStatus } from "@/constants/enums";
 
@@ -30,9 +31,11 @@ const ValidationDetails = ({
   validationStatus,
 }) => (
   <div className="max-h-100 px-1 py-2.5">
-    <div className="flex max-h-80 flex-col gap-2 overflow-auto">
+    <div className="flex max-h-80 flex-col gap-2">
       {validationString && (
-        <div className="text-sm text-foreground">{validationString}</div>
+        <div className="break-words text-sm text-foreground">
+          {validationString}
+        </div>
       )}
       {lastRunTime && (
         <TimeStamp prefix={RUN_TIMESTAMP_PREFIX} time={lastRunTime} />
@@ -54,6 +57,11 @@ const BuildStatusDisplay = ({
 
   if (buildStatus === BuildStatus.INACTIVE) {
     return <StatusMessage>{STATUS_INACTIVE}</StatusMessage>;
+  }
+
+  if (buildStatus === BuildStatus.ERROR && !validationStatus) {
+    // If the build status is error and there is no validation status, it means that it failed before building, so show the Missing Required Fields error message
+    return <StatusMessage>{STATUS_MISSING_FIELDS_ERROR}</StatusMessage>;
   }
 
   if (!validationStatus) {

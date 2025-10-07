@@ -1,16 +1,18 @@
+import { useMemo, useRef, useState } from "react";
 import { GRADIENT_CLASS_DISABLED } from "@/constants/constants";
+import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
-import { useMemo, useRef, useState } from "react";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Input } from "../../../../ui/input";
-import { InputProps, TextAreaComponentType } from "../../types";
+import type { InputProps, TextAreaComponentType } from "../../types";
 
 const BACKEND_URL = "BACKEND_URL";
 const MCP_SSE_VALUE = "MCP_SSE";
-const URL_WEBHOOK = `${window.location.protocol}//${window.location.host}/api/v1/webhook/`;
-const URL_MCP_SSE = `${window.location.protocol}//${window.location.host}/api/v1/mcp/sse`;
+const { protocol, host } = customGetHostProtocol();
+const URL_WEBHOOK = `${protocol}//${host}/api/v1/webhook/`;
+const URL_MCP_SSE = `${protocol}//${host}/api/v1/mcp/sse`;
 
 const inputClasses = {
   base: ({ isFocused }: { isFocused: boolean }) =>
@@ -64,7 +66,7 @@ export default function CopyFieldAreaComponent({
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
-  const endpointName = currentFlow?.endpoint_name ?? "";
+  const endpointName = currentFlow?.endpoint_name ?? currentFlow?.id ?? "";
 
   const valueToRender = useMemo(() => {
     if (value === BACKEND_URL) {
@@ -121,7 +123,9 @@ export default function CopyFieldAreaComponent({
       )}
       <div onClick={handleCopy}>
         <IconComponent
-          dataTestId={`btn_copy_${id?.toLowerCase()}${editNode ? "_advanced" : ""}`}
+          dataTestId={`btn_copy_${id?.toLowerCase()}${
+            editNode ? "_advanced" : ""
+          }`}
           name={isCopied ? "Check" : "Copy"}
           className={cn(
             "cursor-pointer bg-muted",

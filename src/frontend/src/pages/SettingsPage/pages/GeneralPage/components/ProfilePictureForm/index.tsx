@@ -1,9 +1,9 @@
+import * as Form from "@radix-ui/react-form";
+import type { UseQueryResult } from "@tanstack/react-query";
 import {
-  ProfilePicturesQueryResponse,
+  type ProfilePicturesQueryResponse,
   useGetProfilePicturesQuery,
 } from "@/controllers/API/queries/files";
-import * as Form from "@radix-ui/react-form";
-import { UseQueryResult } from "@tanstack/react-query";
 import { Button } from "../../../../../../components/ui/button";
 import {
   Card,

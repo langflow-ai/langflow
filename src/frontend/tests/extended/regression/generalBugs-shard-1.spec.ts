@@ -1,6 +1,6 @@
-import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
@@ -23,10 +23,6 @@ test(
 
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
-
-    await page.getByText("built successfully").last().click({
-      timeout: 30000,
-    });
 
     await page.getByTestId("user-profile-settings").click();
 

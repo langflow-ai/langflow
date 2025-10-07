@@ -1,3 +1,5 @@
+import { cloneDeep } from "lodash";
+import { memo, useCallback, useMemo } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import {
   Popover,
@@ -6,14 +8,13 @@ import {
 } from "@/components/ui/popover";
 import { Select, SelectTrigger } from "@/components/ui/select-custom";
 import { COLOR_OPTIONS } from "@/constants/constants";
+import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import { NoteDataType } from "@/types/flow";
-import { classNames, cn, openInNewTab } from "@/utils/utils";
-import { cloneDeep } from "lodash";
-import { memo, useCallback, useMemo } from "react";
+import type { NoteDataType } from "@/types/flow";
+import { classNames, cn } from "@/utils/utils";
 import IconComponent from "../../../components/common/genericIconComponent";
 import { ColorPickerButtons } from "../components/color-picker-buttons";
 import { SelectItems } from "../components/select-items";
@@ -47,7 +48,7 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
 
   const openDocs = useCallback(() => {
     if (data.node?.documentation) {
-      return openInNewTab(data.node?.documentation);
+      return customOpenNewTab(data.node?.documentation);
     }
     setNoticeData({
       title: `${data.id} docs is not available at the moment.`,
@@ -64,10 +65,11 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
           takeSnapshot();
           deleteNode(data.id);
           break;
-        case "copy":
+        case "copy": {
           const node = nodes.filter((node) => node.id === data.id);
           setLastCopiedSelection({ nodes: cloneDeep(node), edges: [] });
           break;
+        }
         case "duplicate":
           paste(
             {

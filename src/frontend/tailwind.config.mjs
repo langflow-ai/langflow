@@ -1,11 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 import tailwindcssForms from "@tailwindcss/forms";
 import tailwindcssTypography from "@tailwindcss/typography";
+import { fontFamily } from "tailwindcss/defaultTheme";
+import plugin from "tailwindcss/plugin";
 import tailwindcssAnimate from "tailwindcss-animate";
 import tailwindcssDottedBackground from "tailwindcss-dotted-background";
-import { fontFamily } from "tailwindcss/defaultTheme";
-
-import plugin from "tailwindcss/plugin";
 
 const config = {
   variants: {
@@ -33,12 +32,14 @@ const config = {
       center: true,
       screens: {
         "2xl": "1400px",
+        "3xl": "1500px",
       },
     },
     extend: {
       screens: {
         xl: "1200px",
         "2xl": "1400px",
+        "3xl": "1500px",
       },
       keyframes: {
         // Overlay animations
@@ -166,8 +167,9 @@ const config = {
         },
         "success-background": "var(--success-background)",
         "success-foreground": "var(--success-foreground)",
-        "accent-pink": "hsl(var(--accent-pink))",
         "accent-pink-foreground": "hsl(var(--accent-pink-foreground))",
+        "accent-purple-foreground": "hsl(var(--accent-purple-foreground))",
+        "accent-red-foreground": "hsl(var(--accent-red-foreground))",
         filter: {
           foreground: "var(--filter-foreground)",
           background: "var(--filter-background)",
@@ -359,7 +361,7 @@ const config = {
     tailwindcssForms({
       strategy: "class", // only generate classes
     }),
-    plugin(function ({ addUtilities }) {
+    plugin(({ addUtilities }) => {
       addUtilities({
         ".scrollbar-hide": {
           /* IE and Edge */
@@ -370,6 +372,9 @@ const config = {
           "&::-webkit-scrollbar": {
             display: "none",
           },
+        },
+        ".gutter-stable": {
+          "scrollbar-gutter": "stable",
         },
         ".truncate-multiline": {
           display: "-webkit-box",
@@ -462,7 +467,7 @@ const config = {
     }),
     tailwindcssTypography,
     tailwindcssDottedBackground,
-    plugin(function ({ addUtilities, theme, e }) {
+    plugin(({ addUtilities, theme, e }) => {
       const colors = theme("colors");
 
       const generateUtilities = (colors, prefix = "") => {
@@ -474,6 +479,7 @@ const config = {
             acc[`.truncate-${className}`] = {
               position: "relative",
               overflow: "hidden",
+              pointerEvents: "none",
               "&::after": {
                 content: '""',
                 position: "absolute",
@@ -487,6 +493,7 @@ const config = {
               acc[`.truncate-${className}`] = {
                 position: "relative",
                 overflow: "hidden",
+                pointerEvents: "none",
                 "&::after": {
                   content: '""',
                   position: "absolute",

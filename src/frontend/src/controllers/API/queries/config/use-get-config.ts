@@ -1,3 +1,4 @@
+import axios from "axios";
 import {
   DEFAULT_POLLING_INTERVAL,
   DEFAULT_TIMEOUT,
@@ -5,8 +6,7 @@ import {
 import { EventDeliveryType } from "@/constants/enums";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import axios from "axios";
-import { useQueryFunctionType } from "../../../../types/api";
+import type { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -19,7 +19,12 @@ export interface ConfigResponse {
   max_file_size_upload: number;
   feature_flags: Record<string, any>;
   webhook_polling_interval: number;
+  serialization_max_items_length: number;
   event_delivery: EventDeliveryType;
+  webhook_auth_enable: boolean;
+  voice_mode_available: boolean;
+  default_folder_name: string;
+  hide_getting_started_progress: boolean;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
@@ -35,11 +40,24 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
   const setMaxFileSizeUpload = useUtilityStore(
     (state) => state.setMaxFileSizeUpload,
   );
+  const setSerializationMaxItemsLength = useUtilityStore(
+    (state) => state.setSerializationMaxItemsLength,
+  );
   const setFeatureFlags = useUtilityStore((state) => state.setFeatureFlags);
   const setWebhookPollingInterval = useUtilityStore(
     (state) => state.setWebhookPollingInterval,
   );
   const setEventDelivery = useUtilityStore((state) => state.setEventDelivery);
+  const setWebhookAuthEnable = useUtilityStore(
+    (state) => state.setWebhookAuthEnable,
+  );
+  const setDefaultFolderName = useUtilityStore(
+    (state) => state.setDefaultFolderName,
+  );
+  const setHideGettingStartedProgress = useUtilityStore(
+    (state) => state.setHideGettingStartedProgress,
+  );
+
   const { query } = UseRequestProcessor();
 
   const getConfigFn = async () => {
@@ -56,10 +74,16 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
       setHealthCheckMaxRetries(data.health_check_max_retries);
       setMaxFileSizeUpload(data.max_file_size_upload);
       setFeatureFlags(data.feature_flags);
+      setSerializationMaxItemsLength(data.serialization_max_items_length);
       setWebhookPollingInterval(
         data.webhook_polling_interval ?? DEFAULT_POLLING_INTERVAL,
       );
       setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
+      setWebhookAuthEnable(data.webhook_auth_enable ?? true);
+      setDefaultFolderName(data.default_folder_name ?? "Starter Project");
+      setHideGettingStartedProgress(
+        data.hide_getting_started_progress ?? false,
+      );
     }
     return data;
   };

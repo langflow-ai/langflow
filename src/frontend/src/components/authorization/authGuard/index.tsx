@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   IS_AUTO_LOGIN,
   LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS,
@@ -6,7 +7,6 @@ import {
 import { useRefreshAccessToken } from "@/controllers/API/queries/auth";
 import { CustomNavigate } from "@/customization/components/custom-navigate";
 import useAuthStore from "@/stores/authStore";
-import { useEffect } from "react";
 
 export const ProtectedRoute = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);

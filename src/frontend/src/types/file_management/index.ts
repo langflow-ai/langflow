@@ -10,4 +10,5 @@ export type FileType = {
   progress?: number;
   file?: File;
   type?: string;
+  disabled?: boolean;
 };

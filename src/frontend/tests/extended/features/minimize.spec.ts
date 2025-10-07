@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
@@ -13,15 +13,14 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
-    await page.waitForSelector("data-testid=inputsText Input", {
+    await page.waitForSelector("data-testid=input_outputText Input", {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("inputsText Input")
+      .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-    await page.getByTestId("zoom_out").click();
     await page
       .locator('//*[@id="react-flow-id"]')
       .hover()

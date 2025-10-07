@@ -1,6 +1,6 @@
 import { BuildStatus } from "@/constants/enums";
 import useFlowStore from "@/stores/flowStore";
-import { NodeDataType } from "@/types/flow";
+import type { NodeDataType } from "@/types/flow";
 
 export const useBuildStatus = (data: NodeDataType, nodeId: string) => {
   return useFlowStore((state) => {

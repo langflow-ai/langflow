@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { uploadFile } from "../../utils/upload-file";
@@ -37,11 +37,8 @@ test(
     await uploadFile(page, "chain.png");
 
     await page.getByTestId("button_run_chat output").click();
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
 
-    await page.getByText("Playground", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Playground", exact: true }).click();
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,

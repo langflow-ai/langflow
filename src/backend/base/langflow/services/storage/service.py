@@ -8,8 +8,9 @@ import anyio
 from langflow.services.base import Service
 
 if TYPE_CHECKING:
+    from lfx.services.settings.service import SettingsService
+
     from langflow.services.session.service import SessionService
-    from langflow.services.settings.service import SettingsService
 
 
 class StorageService(Service):
@@ -37,6 +38,10 @@ class StorageService(Service):
 
     @abstractmethod
     async def list_files(self, flow_id: str) -> list[str]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_file_size(self, flow_id: str, file_name: str):
         raise NotImplementedError
 
     @abstractmethod

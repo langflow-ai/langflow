@@ -77,7 +77,7 @@ export const workletCode = `
       return true;
     }
   }
-  
+
   try {
     registerProcessor('stream_processor', StreamProcessor);
   } catch (e) {
