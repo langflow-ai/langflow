@@ -1117,14 +1117,14 @@ class TestMCPSseClientUnit:
             mock_response.status_code = 200
             mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
 
-            is_valid, error_msg = await sse_client.validate_url("http://test.url", {})
+            is_valid, error_msg = await sse_client.validate_url("http://test.url")
 
             assert is_valid is True
             assert error_msg == ""
 
     async def test_validate_url_invalid_format(self, sse_client):
         """Test URL validation with invalid format."""
-        is_valid, error_msg = await sse_client.validate_url("invalid-url", {})
+        is_valid, error_msg = await sse_client.validate_url("invalid-url")
 
         assert is_valid is False
         assert "Invalid URL format" in error_msg
@@ -1136,7 +1136,7 @@ class TestMCPSseClientUnit:
             mock_response.status_code = 404
             mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
 
-            is_valid, error_msg = await sse_client.validate_url("http://test.url", {})
+            is_valid, error_msg = await sse_client.validate_url("http://test.url")
 
             assert is_valid is True
             assert error_msg == ""
