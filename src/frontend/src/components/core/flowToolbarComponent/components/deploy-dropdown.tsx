@@ -50,22 +50,21 @@ export default function PublishDropdown({
   const isAuth = useAuthStore((state) => !!state.autoLogin);
   const [openExportModal, setOpenExportModal] = useState(false);
 
-  const handlePublishedSwitch = async (checked: boolean) => {
-    mutateAsync(
+  const handleFlowUpdate = async (
+    updateData: Record<string, any>,
+  ): Promise<void> => {
+    await mutateAsync(
       {
         id: flowId ?? "",
-        access_type: checked ? "PRIVATE" : "PUBLIC",
+        ...updateData,
       },
       {
         onSuccess: (updatedFlow) => {
           if (flows) {
             setFlows(
-              flows.map((flow) => {
-                if (flow.id === updatedFlow.id) {
-                  return updatedFlow;
-                }
-                return flow;
-              }),
+              flows.map((flow) =>
+                flow.id === updatedFlow.id ? updatedFlow : flow,
+              ),
             );
             setCurrentFlow(updatedFlow);
           } else {
@@ -85,39 +84,16 @@ export default function PublishDropdown({
     );
   };
 
+  const handlePublishedSwitch = async (checked: boolean) => {
+    await handleFlowUpdate({
+      access_type: checked ? "PRIVATE" : "PUBLIC",
+    });
+  };
+
   const handleDeployedSwitch = async (checked: boolean) => {
-    mutateAsync(
-      {
-        id: flowId ?? "",
-        status: checked ? "DEPLOYED" : "DRAFT",
-      },
-      {
-        onSuccess: (updatedFlow) => {
-          if (flows) {
-            setFlows(
-              flows.map((flow) => {
-                if (flow.id === updatedFlow.id) {
-                  return updatedFlow;
-                }
-                return flow;
-              }),
-            );
-            setCurrentFlow(updatedFlow);
-          } else {
-            setErrorData({
-              title: "Failed to save flow",
-              list: ["Flows variable undefined"],
-            });
-          }
-        },
-        onError: (e) => {
-          setErrorData({
-            title: "Failed to save flow",
-            list: [e.message],
-          });
-        },
-      },
-    );
+    await handleFlowUpdate({
+      status: checked ? "DEPLOYED" : "DRAFT",
+    });
   };
 
   return (
