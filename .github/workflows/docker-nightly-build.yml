@@ -44,12 +44,12 @@ env:
 jobs:
   build-nightly-base:
     name: Build Nightly Base Package
-    if: inputs.release_type == 'nightly-base'
+    if: ${{ inputs.release_type == 'nightly-base' }}
     strategy:
       matrix:
         include:
           - arch: amd64
-            runner: [self-hosted, linux, X64, Langflow-runner]
+            runner: [Langflow-runner]
           - arch: arm64
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
@@ -72,7 +72,8 @@ jobs:
         id: version
         run: |
           echo "Extracting base version from pyproject.toml"
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
+          version=$(uv tree 2>/dev/null | grep '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
+
 
           # Verify nightly tag format
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+$ ]]; then
@@ -87,8 +88,8 @@ jobs:
         id: tags
         run: |
           version="${{ steps.version.outputs.version }}"
-          echo "docker_tags=langflowai/langflow:nightly-base-${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
-          echo "ghcr_tags=ghcr.io/langflow-ai/langflow:nightly-base-${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "docker_tags=langflowai/langflow-nightly:base-${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-nightly:base-${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
 
       - name: Docker cleanup
         run: |
@@ -119,6 +120,7 @@ jobs:
           file: ./docker/build_and_push_base.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -130,17 +132,18 @@ jobs:
           file: ./docker/build_and_push_base.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   build-nightly-main:
     name: Build Nightly Main Package
-    if: inputs.release_type == 'nightly-main'
+    if: ${{ inputs.release_type == 'nightly-main' }}
     strategy:
       matrix:
         include:
           - arch: amd64
-            runner: [self-hosted, linux, X64, Langflow-runner]
+            runner: [Langflow-runner]
           - arch: arm64
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
@@ -163,7 +166,7 @@ jobs:
         id: version
         run: |
           echo "Extracting main version from pyproject.toml"
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//' | head -n 1)
+          version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
 
           # Verify nightly tag format
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+$ ]]; then
@@ -178,8 +181,8 @@ jobs:
         id: tags
         run: |
           version="${{ steps.version.outputs.version }}"
-          echo "docker_tags=langflowai/langflow:nightly-${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
-          echo "ghcr_tags=ghcr.io/langflow-ai/langflow:nightly-${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "docker_tags=langflowai/langflow-nightly:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-nightly:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
 
       - name: Docker cleanup
         run: |
@@ -210,6 +213,7 @@ jobs:
           file: ./docker/build_and_push.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -221,17 +225,18 @@ jobs:
           file: ./docker/build_and_push.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   build-nightly-main-all:
     name: Build Nightly Main All Package
-    if: inputs.release_type == 'nightly-main-all'
+    if: ${{ inputs.release_type == 'nightly-main-all' }}
     strategy:
       matrix:
         include:
           - arch: amd64
-            runner: [self-hosted, linux, X64, Langflow-runner]
+            runner: [Langflow-runner]
           - arch: arm64
             runner: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb]
     runs-on: ${{ matrix.runner }}
@@ -254,7 +259,7 @@ jobs:
         id: version
         run: |
           echo "Extracting main version from pyproject.toml"
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//' | head -n 1)
+          version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
 
           # Verify nightly tag format
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+$ ]]; then
@@ -269,8 +274,8 @@ jobs:
         id: tags
         run: |
           version="${{ steps.version.outputs.version }}"
-          echo "docker_tags=langflowai/langflow-all:nightly-${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
-          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-all:nightly-${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "docker_tags=langflowai/langflow-nightly-all:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "ghcr_tags=ghcr.io/langflow-ai/langflow-nightly-all:${version}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
 
       - name: Docker cleanup
         run: |
@@ -301,6 +306,7 @@ jobs:
           file: ./docker/build_and_push_with_extras.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -312,6 +318,7 @@ jobs:
           file: ./docker/build_and_push_with_extras.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -319,7 +326,7 @@ jobs:
     name: Create Multi-Arch Nightly Manifest
     needs: [build-nightly-base, build-nightly-main, build-nightly-main-all]
     runs-on: ubuntu-latest
-    if: always() && inputs.push_to_registry && (needs.build-nightly-base.result == 'success' || needs.build-nightly-main.result == 'success' || needs.build-nightly-main-all.result == 'success')
+    if: ${{ always() && inputs.push_to_registry && (needs.build-nightly-base.result == 'success' || needs.build-nightly-main.result == 'success' || needs.build-nightly-main-all.result == 'success') }}
     steps:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
@@ -338,9 +345,9 @@ jobs:
         id: version
         run: |
           if [[ "${{ inputs.release_type }}" == "nightly-base" ]]; then
-            version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
+            version=$(uv tree 2>/dev/null | grep '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
           else
-            version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//' | head -n 1)
+            version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
           fi
           echo "Using version: $version"
           echo version=$version >> $GITHUB_OUTPUT
@@ -351,19 +358,19 @@ jobs:
           version="${{ steps.version.outputs.version }}"
           case "${{ inputs.release_type }}" in
             "nightly-base")
-              echo "final_tags=langflowai/langflow:nightly-base-${version},langflowai/langflow:nightly-base-latest,ghcr.io/langflow-ai/langflow:nightly-base-${version},ghcr.io/langflow-ai/langflow:nightly-base-latest" >> $GITHUB_OUTPUT
-              echo "arch_base=langflowai/langflow:nightly-base-${version}" >> $GITHUB_OUTPUT
-              echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow:nightly-base-${version}" >> $GITHUB_OUTPUT
+              echo "final_tags=langflowai/langflow-nightly:base-${version},langflowai/langflow-nightly:base-latest,ghcr.io/langflow-ai/langflow-nightly:base-${version},ghcr.io/langflow-ai/langflow-nightly:base-latest" >> $GITHUB_OUTPUT
+              echo "arch_base=langflowai/langflow-nightly:base-${version}" >> $GITHUB_OUTPUT
+              echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-nightly:base-${version}" >> $GITHUB_OUTPUT
               ;;
             "nightly-main")
-              echo "final_tags=langflowai/langflow:nightly-${version},langflowai/langflow:nightly-latest,ghcr.io/langflow-ai/langflow:nightly-${version},ghcr.io/langflow-ai/langflow:nightly-latest" >> $GITHUB_OUTPUT
-              echo "arch_base=langflowai/langflow:nightly-${version}" >> $GITHUB_OUTPUT
-              echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow:nightly-${version}" >> $GITHUB_OUTPUT
+              echo "final_tags=langflowai/langflow-nightly:${version},langflowai/langflow-nightly:latest,ghcr.io/langflow-ai/langflow-nightly:${version},ghcr.io/langflow-ai/langflow-nightly:latest" >> $GITHUB_OUTPUT
+              echo "arch_base=langflowai/langflow-nightly:${version}" >> $GITHUB_OUTPUT
+              echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-nightly:${version}" >> $GITHUB_OUTPUT
               ;;
             "nightly-main-all")
-              echo "final_tags=langflowai/langflow-all:nightly-${version},langflowai/langflow-all:nightly-latest,ghcr.io/langflow-ai/langflow-all:nightly-${version},ghcr.io/langflow-ai/langflow-all:nightly-latest" >> $GITHUB_OUTPUT
-              echo "arch_base=langflowai/langflow-all:nightly-${version}" >> $GITHUB_OUTPUT
-              echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-all:nightly-${version}" >> $GITHUB_OUTPUT
+              echo "final_tags=langflowai/langflow-nightly-all:${version},langflowai/langflow-nightly-all:latest,ghcr.io/langflow-ai/langflow-nightly-all:${version},ghcr.io/langflow-ai/langflow-nightly-all:latest" >> $GITHUB_OUTPUT
+              echo "arch_base=langflowai/langflow-nightly-all:${version}" >> $GITHUB_OUTPUT
+              echo "ghcr_arch_base=ghcr.io/langflow-ai/langflow-nightly-all:${version}" >> $GITHUB_OUTPUT
               ;;
             *)
               echo "Error: Invalid release_type: ${{ inputs.release_type }}" >&2
