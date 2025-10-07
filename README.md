@@ -1,73 +1,234 @@
 <!-- markdownlint-disable MD030 -->
 
-![Langflow logo](./docs/static/img/langflow-logo-color-black-solid.svg)
+![Autonomize AI Studio](./docs/static/img/autonomize-ai-studio-logo.svg)
 
+# Autonomize AI Studio
 
-[![Release Notes](https://img.shields.io/github/release/langflow-ai/langflow?style=flat-square)](https://github.com/langflow-ai/langflow/releases)
-[![PyPI - License](https://img.shields.io/badge/license-MIT-orange)](https://opensource.org/licenses/MIT)
-[![PyPI - Downloads](https://img.shields.io/pypi/dm/langflow?style=flat-square)](https://pypistats.org/packages/langflow)
-[![GitHub star chart](https://img.shields.io/github/stars/langflow-ai/langflow?style=flat-square)](https://star-history.com/#langflow-ai/langflow)
-[![Open Issues](https://img.shields.io/github/issues-raw/langflow-ai/langflow?style=flat-square)](https://github.com/langflow-ai/langflow/issues)
-[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/langflow-ai.svg?style=social&label=Follow%20%40Langflow)](https://twitter.com/langflow_ai)
-[![YouTube Channel](https://img.shields.io/youtube/channel/subscribers/UCn2bInQrjdDYKEEmbpwblLQ?label=Subscribe)](https://www.youtube.com/@Langflow)
-[![Discord Server](https://img.shields.io/discord/1116803230643527710?logo=discord&style=social&label=Join)](https://discord.gg/EqksyE2EX9)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/langflow-ai/langflow)
+[![GitHub star chart](https://img.shields.io/github/stars/autonomizeai/ai-studio?style=flat-square)](https://star-history.com/#autonomizeai/ai-studio)
+[![License](https://img.shields.io/badge/license-Proprietary%20%2B%20MIT-blue)](./LICENSE)
+[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/autonomizeai.svg?style=social&label=Follow%20%40AutonomizeAI)](https://twitter.com/autonomizeai)
 
-> [!CAUTION]
-> Users must update to Langflow >= 1.3 to protect against [CVE-2025-3248](https://nvd.nist.gov/vuln/detail/CVE-2025-3248).
+**Autonomize AI Studio** is the next-generation platform for building, deploying, and managing AI-powered agents through an intuitive conversational interface. Built on top of proven open-source foundations, AI Studio transforms the agent creation experience with natural language interactions, advanced healthcare-specific components, and enterprise-grade security.
 
-[Langflow](https://langflow.org) is a powerful tool for building and deploying AI-powered agents and workflows. It provides developers with both a visual authoring experience and built-in API and MCP servers that turn every workflow into a tool that can be integrated into applications built on any framework or stack. Langflow comes with batteries included and supports all major LLMs, vector databases and a growing library of AI tools.
+## 🚀 Vision: Conversational Agent Creation
 
-## ✨ Highlight features
+AI Studio revolutionizes how developers and domain experts create AI agents by introducing:
 
-- **Visual builder interface** to quickly get started and iterate .
-- **Source code access** lets you customize any component using Python.
-- **Interactive playground** to immediately test and refine your flows with step-by-step control.
-- **Multi-agent orchestration** with conversation management and retrieval.
-- **Deploy as an API** or export as JSON for Python apps.
-- **Deploy as an MCP server** and turn your flows into tools for MCP clients.
-- **Observability** with LangSmith, LangFuse and other integrations.
-- **Enterprise-ready** security and scalability.
+- **🗣️ Conversational UI**: Describe your agent in natural language - "Create a clinical diagnosis agent that uses ICD-10 codes and medical knowledge"
+- **🤖 Intelligent Agent Builder**: AI-powered assistant that understands your requirements and generates complete agent specifications
+- **🏥 Healthcare-First Design**: Built-in compliance, medical terminology, and clinical workflows
+- **📋 YAML Specification System**: Behind-the-scenes agent specs that are human-readable and version-controllable
+- **🔄 Visual Flow Editor**: Optional visual interface for fine-tuning generated agents
 
-## ⚡️ Quickstart
+## ✨ Key Features
 
-Langflow requires [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/) and [uv](https://docs.astral.sh/uv/getting-started/installation/).
+### Conversational Agent Development
+- **Natural Language Agent Creation**: "Build an agent that extracts medical codes from clinical notes"
+- **Intelligent Suggestions**: AI recommends components, connections, and configurations
+- **Real-time Validation**: Instant feedback on agent design and compliance requirements
+- **Template Library**: Healthcare-specific agent templates for common use cases
 
-1. To install Langflow, run:
+### Healthcare-Specific Components
+- **Clinical Models Integration**: Unified AutonomizeModel component supporting RxNorm, ICD-10, CPT codes
+- **Medical Knowledge Search**: HIPAA-compliant knowledge hub integration
+- **Entity Linking**: Advanced medical entity recognition and standardization
+- **Compliance Built-In**: GDPR, HIPAA, and other healthcare regulations supported out-of-the-box
 
-```shell
-uv pip install langflow -U
+### Enterprise-Ready Platform
+- **MCP (Model Context Protocol)**: Native support for tool discovery and integration
+- **API-First Architecture**: RESTful APIs for all agent operations
+- **Scalable Deployment**: Docker, Kubernetes, and cloud-native deployment options
+- **Advanced Security**: Role-based access control, audit trails, and data encryption
+
+### Developer Experience
+- **Genesis Specification Format**: YAML-based agent definitions with variable templating
+- **Live Testing Environment**: Interactive playground for immediate agent validation
+- **Version Control**: Full GitOps workflow support for agent specifications
+- **Extensible Components**: Python-based component system for custom functionality
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│ Conversational  │    │   Agent Builder  │    │  Visual Flow    │
+│      UI         │◄──►│      AI          │◄──►│    Editor       │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 │
+                    ┌──────────────────┐
+                    │ Genesis Spec     │
+                    │ Converter        │
+                    └──────────────────┘
+                                 │
+                    ┌──────────────────┐
+                    │ AI Studio        │
+                    │ Runtime Engine   │
+                    └──────────────────┘
 ```
 
-2. To run Langflow, run:
+## ⚡️ Quick Start
 
-```shell
-uv run langflow run
+### Prerequisites
+- [Python 3.10 to 3.13](https://www.python.org/downloads/)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended) or pip
+
+### Installation
+
+1. **Clone the repository:**
+```bash
+git clone https://github.com/autonomizeai/ai-studio.git
+cd ai-studio
 ```
 
-3. Go to the default Langflow URL at `http://127.0.0.1:7860`.
+2. **Install dependencies:**
+```bash
+uv pip install -e ".[dev]"
+```
 
-For more information about installing Langflow, including Docker and Desktop options, see [Install Langflow](https://docs.langflow.org/get-started-installation).
+3. **Start AI Studio:**
+```bash
+uv run langflow run --port 7860
+```
 
-## 📦 Deployment
+4. **Open the Conversational UI:**
+Navigate to `http://127.0.0.1:7860` and start creating agents with natural language!
 
-Langflow is completely open source and you can deploy it to all major deployment clouds. To learn how to use Docker to deploy Langflow, see the [Docker deployment guide](https://docs.langflow.org/deployment-docker).
+### Creating Your First Agent
 
-## ⭐ Stay up-to-date
+1. **Open the Agent Builder**: Click "Create New Agent" in the AI Studio interface
+2. **Describe Your Agent**: "Create a medical diagnosis agent that processes clinical notes and extracts ICD-10 codes"
+3. **Review Generated Spec**: The AI will generate a complete YAML specification
+4. **Test and Deploy**: Use the interactive playground to validate your agent
 
-Star Langflow on GitHub to be instantly notified of new releases.
+## 🏥 Healthcare Use Cases
 
-![Star Langflow](https://github.com/user-attachments/assets/03168b17-a11d-4b2a-b0f7-c1cce69e5a2c)
+### Clinical Diagnosis Assistant
+```yaml
+# Generated automatically from: "Create a diagnosis agent with ICD-10 coding"
+id: clinical-diagnosis-agent
+name: Clinical Diagnosis Assistant
+agentGoal: Extract and classify medical conditions from clinical notes using ICD-10 standards
+components:
+  - id: clinical-input
+    type: genesis:chat_input
+  - id: entity-extractor
+    type: genesis:combined_entity_linking
+  - id: icd10-classifier
+    type: genesis:icd10
+  - id: medical-knowledge
+    type: genesis:knowledge_hub_search
+```
 
-## 👋 Contribute
+### Drug Interaction Checker
+```yaml
+# Generated from: "Build an agent that checks drug interactions using RxNorm codes"
+id: drug-interaction-agent
+name: Drug Interaction Checker
+agentGoal: Analyze medication lists for potential interactions and contraindications
+components:
+  - id: medication-input
+    type: genesis:chat_input
+  - id: rxnorm-lookup
+    type: genesis:rxnorm
+  - id: interaction-analyzer
+    type: genesis:clinical_llm
+```
 
-We welcome contributions from developers of all levels. If you'd like to contribute, please check our [contributing guidelines](./CONTRIBUTING.md) and help make Langflow more accessible.
+## 🔧 Development
+
+### Project Structure
+```
+ai-studio-service/
+├── src/backend/                    # AI Studio backend service
+│   ├── base/langflow/             # Core platform (based on Langflow)
+│   ├── custom/genesis/            # Autonomize-specific components
+│   └── tests/                     # Comprehensive test suite
+├── src/frontend/                  # Conversational UI (React/TypeScript)
+├── docs/                         # Documentation and guides
+└── examples/                     # Agent templates and examples
+```
+
+### Key Components
+
+- **Genesis Specification System**: YAML-based agent definitions
+- **Conversational UI**: Natural language agent creation interface
+- **Component Mapper**: Maps Genesis types to platform components
+- **Variable Resolver**: Template variable substitution system
+- **Knowledge Service**: HIPAA-compliant medical knowledge integration
+
+### Running Tests
+```bash
+# Run comprehensive test suite
+cd src/backend
+python test_genesis_direct.py
+
+# Run specific test modules
+python -m pytest tests/unit/custom/genesis/ -v
+```
+
+## 📚 Documentation
+
+- [Agent Builder Guide](./docs/agent-builder-guide.md) - Create agents with conversational UI
+- [Genesis Specification Format](./docs/genesis-spec-format.md) - YAML agent definition reference
+- [Healthcare Components](./docs/healthcare-components.md) - Medical AI component library
+- [Deployment Guide](./docs/deployment.md) - Production deployment instructions
+- [API Reference](./docs/api-reference.md) - REST API documentation
+
+## 🔒 Security & Compliance
+
+Autonomize AI Studio is built with healthcare-grade security:
+
+- **HIPAA Compliance**: All data handling meets HIPAA requirements
+- **GDPR Support**: Privacy controls and data protection mechanisms
+- **Role-Based Access**: Granular permissions and audit trails
+- **Data Encryption**: End-to-end encryption for all sensitive data
+- **SOC 2 Ready**: Security controls for enterprise deployment
+
+## 🌟 What Makes AI Studio Different
+
+### From Langflow to AI Studio
+
+While built on Langflow's solid foundation, AI Studio introduces:
+
+1. **Conversational Interface**: Replace complex visual flows with natural language
+2. **Healthcare Focus**: Medical AI components and compliance built-in
+3. **Agent-First Design**: Optimized for building AI agents, not just workflows
+4. **Enterprise Security**: Healthcare-grade security and compliance
+5. **Intelligent Assistance**: AI helps you build better agents faster
+
+### Why Choose AI Studio
+
+- **🎯 Purpose-Built**: Designed specifically for healthcare AI agents
+- **🚀 Faster Development**: Create agents in minutes, not hours
+- **🔧 Enterprise Ready**: Production-grade security and scalability
+- **🤝 Intuitive**: No coding required - describe what you want in plain English
+- **📈 Extensible**: Full Python extensibility when you need custom components
+
+## 🤝 Contributing
+
+We welcome contributions from the healthcare AI community! Please see our [Contributing Guide](./CONTRIBUTING.md) for details on:
+
+- Code contribution guidelines
+- Healthcare compliance requirements
+- Component development standards
+- Testing and documentation expectations
+
+## 📄 License
+
+This project uses a dual licensing approach:
+
+- **Proprietary Components**: Autonomize AI's custom features are proprietary
+- **Open Source Components**: Based on Langflow (MIT License)
+
+See [LICENSE](./LICENSE) for complete details.
+
+## 🙏 Acknowledgments
+
+AI Studio is built on the excellent foundation provided by the Langflow open source project. We extend our gratitude to the Langflow community and contributors.
 
 ---
 
-[![Star History Chart](https://api.star-history.com/svg?repos=langflow-ai/langflow&type=Timeline)](https://star-history.com/#langflow-ai/langflow&Date)
+**Ready to revolutionize your AI agent development?** [Get started with AI Studio](https://ai-studio.autonomize.ai) today!
 
-## ❤️ Contributors
-
-[![langflow contributors](https://contrib.rocks/image?repo=langflow-ai/langflow)](https://github.com/langflow-ai/langflow/graphs/contributors)
-
+For enterprise inquiries: [enterprise@autonomize.ai](mailto:enterprise@autonomize.ai)
