@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from lfx.components.logic.conditional_router import ConditionalRouterComponent
@@ -117,17 +117,24 @@ class TestConditionalRouterComponent:
         component.max_iterations = 5
         component.default_route = "false_result"
 
+        # Mock the graph object with exclude_branch_conditionally method
+        mock_graph = MagicMock()
+        mock_exclude = MagicMock()
+        mock_graph.exclude_branch_conditionally = mock_exclude
+
         # Mock the context property and methods
         with (
             patch.object(type(component), "ctx", new_callable=dict),
             patch.object(component, "_id", "test_id"),
             patch.object(component, "update_ctx") as mock_update,
             patch.object(component, "stop") as mock_stop,
+            patch.object(type(component), "graph", new_callable=PropertyMock, return_value=mock_graph),
         ):
             component.iterate_and_stop_once("false_result")
 
             mock_update.assert_called_once_with({"test_id_iteration": 1})
             mock_stop.assert_called_once_with("false_result")
+            mock_exclude.assert_called_once_with("test_id", output_name="false_result")
             assert component._ConditionalRouterComponent__iteration_updated is True
 
     def test_iterate_and_stop_once_max_iterations_reached(self, component):
@@ -136,6 +143,13 @@ class TestConditionalRouterComponent:
         component.max_iterations = 5
         component.default_route = "false_result"
 
+        # Mock the graph object with conditional exclusion tracking
+        mock_graph = MagicMock()
+        mock_graph.conditional_exclusion_sources = {}
+        mock_graph.conditionally_excluded_vertices = set()
+        mock_exclude = MagicMock()
+        mock_graph.exclude_branch_conditionally = mock_exclude
+
         # Mock ctx with existing iterations at the limit
         mock_ctx = {"test_id_iteration": 5}
         with (
@@ -143,12 +157,15 @@ class TestConditionalRouterComponent:
             patch.object(component, "_id", "test_id"),
             patch.object(component, "update_ctx") as mock_update,
             patch.object(component, "stop") as mock_stop,
+            patch.object(type(component), "graph", new_callable=PropertyMock, return_value=mock_graph),
         ):
             component.iterate_and_stop_once("false_result")
 
             mock_update.assert_called_once_with({"test_id_iteration": 6})
             # Should flip to opposite route when max iterations reached
             mock_stop.assert_called_once_with("true_result")
+            # exclude_branch_conditionally should NOT be called when breaking cycle
+            mock_exclude.assert_not_called()
 
     def test_iterate_and_stop_once_already_updated(self, component):
         """Test iterate_and_stop_once when already updated in this iteration."""
