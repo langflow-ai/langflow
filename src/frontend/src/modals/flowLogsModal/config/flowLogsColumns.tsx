@@ -1,13 +1,11 @@
+import type { ColDef } from "ag-grid-community";
 import DictAreaModal from "@/modals/dictAreaModal";
 import { convertUTCToLocalTimezone } from "@/utils/utils";
-import type { ColDef } from "ag-grid-community";
 
 export const createFlowLogsColumns = (): ColDef[] => {
-  const baseCellClass =
-    "text-muted-foreground select-text cursor-default";
-  
-  const modalCellClass =
-    "text-muted-foreground cursor-pointer";
+  const baseCellClass = "text-muted-foreground select-text cursor-default";
+
+  const modalCellClass = "text-muted-foreground cursor-pointer";
 
   return [
     {
@@ -58,7 +56,7 @@ export const createFlowLogsColumns = (): ColDef[] => {
     },
     {
       headerName: "Target ID",
-      field: "target_id", 
+      field: "target_id",
       flex: 1,
       filter: false,
       sortable: false,
@@ -83,10 +81,10 @@ export const createFlowLogsColumns = (): ColDef[] => {
       cellRenderer: (params) => {
         const inputs = params.value;
 
-        if (!inputs || typeof inputs !== 'object') {
+        if (!inputs || typeof inputs !== "object") {
           return <div className="text-muted-foreground">-</div>;
         }
-                
+
         return (
           <DictAreaModal value={inputs}>
             <div className="flex items-center">
@@ -106,20 +104,20 @@ export const createFlowLogsColumns = (): ColDef[] => {
       cellRenderer: (params) => {
         const outputs = params.value;
 
-        if (!outputs || typeof outputs !== 'object') {
+        if (!outputs || typeof outputs !== "object") {
           return <div className="text-muted-foreground">-</div>;
         }
-                
+
         return (
           <DictAreaModal value={outputs}>
-             <div className="flex items-center">
+            <div className="flex items-center">
               <span className="truncate">{JSON.stringify(outputs)}</span>
             </div>
           </DictAreaModal>
         );
       },
     },
-        {
+    {
       headerName: "Status",
       field: "status",
       flex: 0.6,
@@ -130,7 +128,7 @@ export const createFlowLogsColumns = (): ColDef[] => {
       cellClass: baseCellClass,
       cellRenderer: (params) => {
         const status = params.value;
- 
+
         return (
           <div className="flex items-center">
             <span className="inline-flex items-center px-2 py-1 font-medium truncate">

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { renameFlow } from "../../utils/rename-flow";
 
 test(
@@ -109,9 +109,9 @@ test(
       timeout: 3000,
     });
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.getByTestId("canvas_controls_dropdown").click();
-    await page.waitForSelector('[data-testid="fit_view"]', { timeout: 30000 });
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 30000,
+    });
 
     await renameFlow(page, { flowName: userAFlowName });
 

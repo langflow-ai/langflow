@@ -4,7 +4,7 @@ import PaginatorComponent from "@/components/common/paginatorComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { cn } from "@/utils/utils";
+import { cn, convertUTCToLocalTimezone } from "@/utils/utils";
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import BaseModal from "../baseModal";
@@ -17,13 +17,12 @@ export default function FlowLogsModal({
 }): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [open, setOpen] = useState(false);
-
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(24);
   const [rows, setRows] = useState<any>([]);
   const [searchParams] = useSearchParams();
   const flowIdFromUrl = searchParams.get("id");
-  
+
   const columnDefs = createFlowLogsColumns();
 
   const { data, isLoading, refetch } = useGetTransactionsQuery({
@@ -38,8 +37,17 @@ export default function FlowLogsModal({
   useEffect(() => {
     if (data) {
       const { rows } = data;
-      // Set rows directly - timestamp conversion is now handled in column config
-      setRows(rows || []);
+
+      // Convert timestamps to local timezone format (backend handles sorting)
+      const processedRows =
+        rows?.length > 0
+          ? rows.map((row: any) => ({
+              ...row,
+              timestamp: convertUTCToLocalTimezone(row.timestamp),
+            }))
+          : rows;
+
+      setRows(processedRows);
     }
   }, [data]);
 
@@ -49,10 +57,13 @@ export default function FlowLogsModal({
     }
   }, [pageIndex, pageSize, open, refetch]);
 
-  const handlePageChange = useCallback((newPageIndex: number, newPageSize: number) => {
-    setPageIndex(newPageIndex);
-    setPageSize(newPageSize);
-  }, []);
+  const handlePageChange = useCallback(
+    (newPageIndex: number, newPageSize: number) => {
+      setPageIndex(newPageIndex);
+      setPageSize(newPageSize);
+    },
+    [],
+  );
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="x-large">
@@ -79,9 +90,7 @@ export default function FlowLogsModal({
               }}
               columnDefs={columnDefs}
               rowData={rows}
-              className={cn(
-                "ag-no-border ag-flow-logs-table w-full h-full"
-              )}
+              className={cn("ag-no-border ag-flow-logs-table w-full h-full")}
               pagination={false}
               autoSizeStrategy={{ type: "fitGridWidth" }}
               gridOptions={{

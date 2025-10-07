@@ -493,6 +493,7 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     options_metadata: list[dict[str, Any]] = Field(default_factory=list)
     combobox: CoalesceBool = False
     dialog_inputs: dict[str, Any] = Field(default_factory=dict)
+    external_options: dict[str, Any] = Field(default_factory=dict)
     toggle: bool = False
     toggle_disable: bool | None = None
     toggle_value: bool | None = None
@@ -616,7 +617,7 @@ class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, Metada
         return v
 
 
-class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin):
+class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a file field.
 
     This class represents a file input and provides functionality for handling file values.
