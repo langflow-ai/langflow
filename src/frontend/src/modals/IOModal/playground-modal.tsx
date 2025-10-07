@@ -423,19 +423,19 @@ export default function IOModal({
                       <div className="text-sm">Theme</div>
                       <ThemeButtons />
                     </div>
-                    <Button
+                    {/* <Button
                       onClick={LangflowButtonClick}
                       variant="primary"
                       className="w-full !rounded-xl shadow-lg"
                     >
                       <LangflowLogoColor />
                       <div className="text-sm">Built with Langflow</div>
-                    </Button>
+                    </Button> */}
                   </div>
                 )}
               </div>
             </div>
-            {!sidebarOpen && showPublishOptions && (
+            {/* {!sidebarOpen && showPublishOptions && (
               <div className="absolute bottom-6 left-4 hidden transition-all md:block">
                 <ShadTooltip
                   styleClasses="z-50"
@@ -451,7 +451,7 @@ export default function IOModal({
                   </Button>
                 </ShadTooltip>
               </div>
-            )}
+            )} */}
             <div className="flex h-full min-w-96 flex-grow bg-background">
               {selectedViewField && !sessionsLoading && (
                 <SelectedViewField

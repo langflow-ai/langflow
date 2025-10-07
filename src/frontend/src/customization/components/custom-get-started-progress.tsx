@@ -12,14 +12,15 @@ export function CustomGetStartedProgress({
   isDiscordJoined: boolean;
   handleDismissDialog: () => void;
 }) {
-  return (
-    <GetStartedProgress
-      userData={userData}
-      isGithubStarred={isGithubStarred}
-      isDiscordJoined={isDiscordJoined}
-      handleDismissDialog={handleDismissDialog}
-    />
-  );
+  // return (
+  //   <GetStartedProgress
+  //     userData={userData}
+  //     isGithubStarred={isGithubStarred}
+  //     isDiscordJoined={isDiscordJoined}
+  //     handleDismissDialog={handleDismissDialog}
+  //   />
+  // );
+  return null;
 }
 
 export default CustomGetStartedProgress;
