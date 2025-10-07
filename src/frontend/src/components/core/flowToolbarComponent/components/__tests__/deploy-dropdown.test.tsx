@@ -175,10 +175,10 @@ describe("PublishDropdown - Deployment Status", () => {
     const shareButton = screen.getByTestId("publish-button");
     await user.click(shareButton);
 
-    await waitFor(() => {
-      const deploySwitch = screen.getByTestId("deploy-switch");
-      fireEvent.click(deploySwitch);
-    });
+    const deploySwitch = await screen.findByTestId("deploy-switch");
+
+    // Simulate toggle ON (currently DRAFT, toggling to DEPLOYED)
+    await user.click(deploySwitch);
 
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith(
@@ -225,10 +225,10 @@ describe("PublishDropdown - Deployment Status", () => {
     const shareButton = screen.getByTestId("publish-button");
     await user.click(shareButton);
 
-    await waitFor(() => {
-      const deploySwitch = screen.getByTestId("deploy-switch");
-      fireEvent.click(deploySwitch);
-    });
+    const deploySwitch = await screen.findByTestId("deploy-switch");
+
+    // Simulate toggle OFF (currently DEPLOYED, toggling to DRAFT)
+    await user.click(deploySwitch);
 
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith(
@@ -259,10 +259,8 @@ describe("PublishDropdown - Deployment Status", () => {
     const shareButton = screen.getByTestId("publish-button");
     await user.click(shareButton);
 
-    await waitFor(() => {
-      const deploySwitch = screen.getByTestId("deploy-switch");
-      fireEvent.click(deploySwitch);
-    });
+    const deploySwitch = await screen.findByTestId("deploy-switch");
+    await user.click(deploySwitch);
 
     await waitFor(() => {
       expect(mockSetFlows).toHaveBeenCalled();
@@ -298,10 +296,8 @@ describe("PublishDropdown - Deployment Status", () => {
     const shareButton = screen.getByTestId("publish-button");
     await user.click(shareButton);
 
-    await waitFor(() => {
-      const deploySwitch = screen.getByTestId("deploy-switch");
-      fireEvent.click(deploySwitch);
-    });
+    const deploySwitch = await screen.findByTestId("deploy-switch");
+    await user.click(deploySwitch);
 
     await waitFor(() => {
       expect(mockSetErrorData).toHaveBeenCalledWith({
@@ -329,10 +325,8 @@ describe("PublishDropdown - Deployment Status", () => {
     const shareButton = screen.getByTestId("publish-button");
     await user.click(shareButton);
 
-    await waitFor(() => {
-      const deploySwitch = screen.getByTestId("deploy-switch");
-      fireEvent.click(deploySwitch);
-    });
+    const deploySwitch = await screen.findByTestId("deploy-switch");
+    await user.click(deploySwitch);
 
     await waitFor(() => {
       expect(mockSetErrorData).toHaveBeenCalledWith({
@@ -342,7 +336,7 @@ describe("PublishDropdown - Deployment Status", () => {
     });
   });
 
-  it("deploy switch is disabled when hasIO is false", async () => {
+  it("deploy switch works even without IO components", async () => {
     const user = userEvent.setup();
     // Override mock to return hasIO as false
     jest
@@ -366,7 +360,7 @@ describe("PublishDropdown - Deployment Status", () => {
 
     await waitFor(() => {
       const deploySwitch = screen.getByTestId("deploy-switch");
-      expect(deploySwitch).toBeDisabled();
+      expect(deploySwitch).not.toBeDisabled();
     });
   });
 
