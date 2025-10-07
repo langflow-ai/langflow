@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { startMCPTestServer, waitForMCPToolsLoaded } from "../../utils/mcp-test-server";
 
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -987,21 +988,8 @@ test(
   "Streamable HTTP MCP server with server-everything should load tools correctly",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    // Start the MCP server-everything with Streamable HTTP transport
-    const { spawn } = require("node:child_process");
-
-    // Start the server in the background
-    const serverProcess = spawn("npx", [
-      "@modelcontextprotocol/server-everything",
-      "streamableHttp",
-    ]);
-
-    // Wait for the server to start (give it 5 seconds)
-    await page.waitForTimeout(5000);
-
-    // Default URL for server-everything with streamableHttp
-    // The server typically runs on http://localhost:3001
-    const serverUrl = "http://localhost:3001/mcp";
+    // Start the MCP server with proper health checking
+    const server = await startMCPTestServer({ transport: "streamableHttp" });
 
     try {
       await awaitBootstrapTest(page);
@@ -1056,21 +1044,12 @@ test(
       await page.getByTestId("http-name-input").fill(testName);
 
       // Use the HTTP endpoint URL
-      await page.getByTestId("http-url-input").fill(serverUrl);
+      await page.getByTestId("http-url-input").fill(server.url);
 
       await page.getByTestId("add-mcp-server-button").click();
 
-      // Wait for server to be created
-      await page.waitForTimeout(2000);
-
-      // Wait for tools to load
-      await page.waitForSelector(
-        '[data-testid="dropdown_str_tool"]:not([disabled])',
-        {
-          timeout: 30000,
-          state: "visible",
-        },
-      );
+      // Wait for tools to load with proper timeout
+      await waitForMCPToolsLoaded(page);
 
       await page.getByTestId("dropdown_str_tool").click();
 
@@ -1103,8 +1082,8 @@ test(
         page.getByTestId("popover-anchor-input-message"),
       ).toBeVisible();
     } finally {
-      // Clean up: kill the server process
-      serverProcess.kill();
+      // Clean up: stop the server process
+      server.stop();
     }
   },
 );
@@ -1113,21 +1092,8 @@ test(
   "SSE MCP server with server-everything should load tools correctly",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    // Start the MCP server-everything with SSE transport
-    const { spawn } = require("node:child_process");
-
-    // Start the server in the background
-    const serverProcess = spawn("npx", [
-      "@modelcontextprotocol/server-everything",
-      "sse",
-    ]);
-
-    // Wait for the server to start (give it 5 seconds)
-    await page.waitForTimeout(5000);
-
-    // Default URL for server-everything with sse
-    // The server typically runs on http://localhost:3001
-    const serverUrl = "http://localhost:3001/sse";
+    // Start the MCP server with proper health checking
+    const server = await startMCPTestServer({ transport: "sse" });
 
     try {
       await awaitBootstrapTest(page);
@@ -1167,7 +1133,7 @@ test(
         timeout: 30000,
       });
 
-      // Switch to HTTP tab for Streamable HTTP
+      // Switch to HTTP tab for SSE
       await page.getByTestId("http-tab").click();
 
       await page.waitForSelector('[data-testid="http-name-input"]', {
@@ -1182,21 +1148,12 @@ test(
       await page.getByTestId("http-name-input").fill(testName);
 
       // Use the HTTP endpoint URL
-      await page.getByTestId("http-url-input").fill(serverUrl);
+      await page.getByTestId("http-url-input").fill(server.url);
 
       await page.getByTestId("add-mcp-server-button").click();
 
-      // Wait for server to be created
-      await page.waitForTimeout(2000);
-
-      // Wait for tools to load
-      await page.waitForSelector(
-        '[data-testid="dropdown_str_tool"]:not([disabled])',
-        {
-          timeout: 30000,
-          state: "visible",
-        },
-      );
+      // Wait for tools to load with proper timeout
+      await waitForMCPToolsLoaded(page);
 
       await page.getByTestId("dropdown_str_tool").click();
 
@@ -1229,8 +1186,8 @@ test(
         page.getByTestId("popover-anchor-input-message"),
       ).toBeVisible();
     } finally {
-      // Clean up: kill the server process
-      serverProcess.kill();
+      // Clean up: stop the server process
+      server.stop();
     }
   },
 );
