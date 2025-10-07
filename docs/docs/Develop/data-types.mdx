@@ -133,23 +133,23 @@ The `Embeddings` data type is used specifically by components that either produc
 
 For example, embedding model components output `Embeddings` data that you can connect to an **Embedding** input port on a vector store component.
 
-For information about the underlying Python classes that produce `Embeddings`, see the [LangChain Embedding models documentation](https://python.langchain.com/docs/integrations/text_embedding/).
+For information about the underlying Python classes that produce `Embeddings`, see the [LangChain Embedding models documentation](https://docs.langchain.com/oss/python/integrations/text_embedding).
 
 ## LanguageModel
 
 The `LanguageModel` type is a specific data type that can be produced by language model components and accepted by components that use an LLM.
 
 When you change a language model component's output type from **Model Response** to **Language Model**, the component's output port changes from a **Message** port to a **Language Model** port <Icon name="Circle" size="16" aria-label="Fuchsia language model port" style={{ color: '#c026d3', fill: '#c026d3' }} />.
-Then, you connect the outgoing **Language Model** port to a **Language Model** input port on a compatible component, such as a **Smart Transform** component.
+Then, you connect the outgoing **Language Model** port to a **Language Model** input port on a compatible component, such as a **Smart Function** component.
 
 For more information about using these components in flows and toggling `LanguageModel` output, see [Language model components](/components-models#language-model-output-types).
 
 <details>
 <summary>LanguageModel is an instance of LangChain ChatModel</summary>
 
-Because Langflow is built on LangChain, `LanguageModel` is actually an instance of a [LangChain chat model](https://python.langchain.com/docs/concepts/chat_models/) that uses the configuration parameters set in the originating component.
+Because Langflow is built on LangChain, `LanguageModel` is actually an instance of a [LangChain chat model](https://docs.langchain.com/oss/python/integrations/chat) that uses the configuration parameters set in the originating component.
 
-Often, components produce an instance of an [integrated chat model](https://python.langchain.com/docs/integrations/chat/) that is designed to support the specific model provider, such as [`ChatOpenAI`](https://python.langchain.com/docs/integrations/chat/openai/) or [`ChatAnthropic`](https://python.langchain.com/docs/integrations/chat/anthropic/).
+Often, components produce an instance of an integrated chat model that is designed to support the specific model provider, such as [`ChatOpenAI`](https://docs.langchain.com/oss/python/integrations/chat/openai) or [`ChatAnthropic`](https://docs.langchain.com/oss/python/integrations/chat/anthropic).
 
 You can inspect the [component code](/concepts-components#component-code) to see the specific `Chat` instance it produces.
 

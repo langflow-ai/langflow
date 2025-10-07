@@ -80,7 +80,7 @@ async def handle_on_chain_start(
                 header={"title": "Input", "icon": "MessageSquare"},
             )
             agent_message.content_blocks[0].contents.append(text_content)
-            agent_message = await send_message_method(message=agent_message)
+            agent_message = await send_message_method(message=agent_message, skip_db_update=True)
             start_time = perf_counter()
     return agent_message, start_time
 
@@ -110,22 +110,23 @@ def _extract_output_text(output: str | list) -> str:
                 # This is a workaround to deal with function calling by Anthropic
                 if "partial_json" in item:
                     return ""
+                # For any other dict format, return empty string
+                return ""
+            # For any other single item type (not str or dict), return empty string
+            return ""
 
         # Handle multiple items - extract text from all text-type items
-        else:
-            text_parts = []
-            for item in output:
-                if isinstance(item, str):
-                    text_parts.append(item)
-                elif isinstance(item, dict):
-                    if "text" in item and item["text"] is not None:
-                        text_parts.append(item["text"])
-                    # Skip tool_use, index-only, and partial_json items
-                    elif (
-                        item.get("type") == "tool_use" or "partial_json" in item or ("index" in item and len(item) == 1)
-                    ):
-                        continue
-            return "".join(text_parts)
+        text_parts = []
+        for item in output:
+            if isinstance(item, str):
+                text_parts.append(item)
+            elif isinstance(item, dict):
+                if "text" in item and item["text"] is not None:
+                    text_parts.append(item["text"])
+                # Skip tool_use, index-only, and partial_json items
+                elif item.get("type") == "tool_use" or "partial_json" in item or ("index" in item and len(item) == 1):
+                    continue
+        return "".join(text_parts)
 
     # If we get here, the format is unexpected but try to be graceful
     return ""
@@ -150,7 +151,7 @@ async def handle_on_chain_end(
                 header={"title": "Output", "icon": "MessageSquare"},
             )
             agent_message.content_blocks[0].contents.append(text_content)
-        agent_message = await send_message_method(message=agent_message)
+        agent_message = await send_message_method(message=agent_message, skip_db_update=True)
         start_time = perf_counter()
     return agent_message, start_time
 
@@ -189,7 +190,7 @@ async def handle_on_tool_start(
     tool_blocks_map[tool_key] = tool_content
     agent_message.content_blocks[0].contents.append(tool_content)
 
-    agent_message = await send_message_method(message=agent_message)
+    agent_message = await send_message_method(message=agent_message, skip_db_update=True)
     if agent_message.content_blocks and agent_message.content_blocks[0].contents:
         tool_blocks_map[tool_key] = agent_message.content_blocks[0].contents[-1]
     return agent_message, new_start_time
@@ -209,7 +210,7 @@ async def handle_on_tool_end(
 
     if tool_content and isinstance(tool_content, ToolContent):
         # Call send_message_method first to get the updated message structure
-        agent_message = await send_message_method(message=agent_message)
+        agent_message = await send_message_method(message=agent_message, skip_db_update=True)
         new_start_time = perf_counter()
 
         # Now find and update the tool content in the current message
@@ -257,7 +258,7 @@ async def handle_on_tool_error(
         tool_content.error = event["data"].get("error", "Unknown error")
         tool_content.duration = _calculate_duration(start_time)
         tool_content.header = {"title": f"Error using **{tool_content.name}**", "icon": "Hammer"}
-        agent_message = await send_message_method(message=agent_message)
+        agent_message = await send_message_method(message=agent_message, skip_db_update=True)
         start_time = perf_counter()
     return agent_message, start_time
 
@@ -274,14 +275,14 @@ async def handle_on_chain_stream(
         if output and isinstance(output, str | list):
             agent_message.text = _extract_output_text(output)
         agent_message.properties.state = "complete"
-        agent_message = await send_message_method(message=agent_message)
+        agent_message = await send_message_method(message=agent_message, skip_db_update=True)
         start_time = perf_counter()
     elif isinstance(data_chunk, AIMessageChunk):
         output_text = _extract_output_text(data_chunk.content)
         if output_text and isinstance(agent_message.text, str):
             agent_message.text += output_text
             agent_message.properties.state = "partial"
-            agent_message = await send_message_method(message=agent_message)
+            agent_message = await send_message_method(message=agent_message, skip_db_update=True)
         if not agent_message.text:
             start_time = perf_counter()
     return agent_message, start_time
@@ -345,13 +346,17 @@ async def process_agent_events(
         async for event in agent_executor:
             if event["event"] in TOOL_EVENT_HANDLERS:
                 tool_handler = TOOL_EVENT_HANDLERS[event["event"]]
+                # Use skip_db_update=True during streaming to avoid DB round-trips
                 agent_message, start_time = await tool_handler(
                     event, agent_message, tool_blocks_map, send_message_method, start_time
                 )
             elif event["event"] in CHAIN_EVENT_HANDLERS:
                 chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
+                # Use skip_db_update=True during streaming to avoid DB round-trips
                 agent_message, start_time = await chain_handler(event, agent_message, send_message_method, start_time)
         agent_message.properties.state = "complete"
+        # Final DB update with the complete message (skip_db_update=False by default)
+        agent_message = await send_message_method(message=agent_message)
     except Exception as e:
         raise ExceptionWithMessageError(agent_message, str(e)) from e
     return await Message.create(**agent_message.model_dump())
