@@ -1,5 +1,9 @@
 // tests/fixtures.ts
 import { test as base, expect } from "@playwright/test";
+import * as fs from "fs";
+import * as path from "path";
+
+const istanbulCLIOutput = path.join(process.cwd(), ".nyc_output");
 
 // Extend test to log backend errors
 export const test = base.extend({
@@ -53,6 +57,37 @@ export const test = base.extend({
     if (errors.length > 0) {
       console.log(
         `\n📋 Found ${errors.length} backend error(s) during test - continuing for debug`,
+      );
+    }
+  },
+  context: async ({ context }, use, testInfo) => {
+    await context.addInitScript(() =>
+      window.addEventListener("beforeunload", () =>
+        (window as any).collectIstanbulCoverage(
+          JSON.stringify((window as any).__coverage__),
+        ),
+      ),
+    );
+    await fs.promises.mkdir(istanbulCLIOutput, { recursive: true });
+    await context.exposeFunction(
+      "collectIstanbulCoverage",
+      (coverageJSON: string) => {
+        if (coverageJSON)
+          fs.writeFileSync(
+            path.join(
+              istanbulCLIOutput,
+              `playwright_coverage_${testInfo.titlePath[1]}.json`,
+            ),
+            coverageJSON,
+          );
+      },
+    );
+    await use(context);
+    for (const page of context.pages()) {
+      await page.evaluate(() =>
+        (window as any).collectIstanbulCoverage(
+          JSON.stringify((window as any).__coverage__),
+        ),
       );
     }
   },
