@@ -54,18 +54,18 @@ export default function PromptModal({
 
   const insertVariableAtCursor = () => {
     if (readonly) return;
-    
+
     // Switch to edit mode first if not already in edit mode
     if (!isEdit) {
       setIsEdit(true);
     }
-    
+
     // Insert the variable at the end of current text
     const variableText = "{variable_name}";
     const newText = inputValue + variableText;
-    
+
     setInputValue(newText);
-    
+
     // Focus and select "variable_name" part for immediate editing
     setTimeout(() => {
       if (textareaRef.current) {
@@ -76,7 +76,7 @@ export default function PromptModal({
         textareaRef.current.setSelectionRange(selectStart, selectEnd);
       }
     }, 100);
-    
+
     checkVariables(newText);
   };
 
@@ -273,7 +273,11 @@ export default function PromptModal({
         </div>
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
-        <div className={classNames("relative flex h-full w-full rounded-lg border")}>
+        <div
+          className={classNames(
+            "relative flex h-full w-full rounded-lg border",
+          )}
+        >
           {isEdit && !readonly ? (
             <Textarea
               id={"modal-" + id}
@@ -312,10 +316,7 @@ export default function PromptModal({
               className="absolute top-3 right-3 z-10 bg-background/80 backdrop-blur-sm"
               data-testid="add-variable-button"
             >
-              <IconComponent
-                name="Plus"
-                className="h-4 w-4"
-              />
+              <IconComponent name="Plus" className="h-4 w-4" />
               Add Variable
             </Button>
           )}

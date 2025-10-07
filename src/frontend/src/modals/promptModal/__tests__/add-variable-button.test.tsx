@@ -9,12 +9,20 @@ jest.mock("@/controllers/API/queries/nodes/use-post-validate-prompt", () => ({
 }));
 
 jest.mock("../../baseModal", () => {
-  const MockBaseModal = ({ children }: any) => <div data-testid="base-modal">{children}</div>;
+  const MockBaseModal = ({ children }: any) => (
+    <div data-testid="base-modal">{children}</div>
+  );
   MockBaseModal.Trigger = ({ children }: any) => children;
-  MockBaseModal.Header = ({ children }: any) => <div data-testid="modal-header">{children}</div>;
-  MockBaseModal.Content = ({ children }: any) => <div data-testid="modal-content">{children}</div>;
-  MockBaseModal.Footer = ({ children }: any) => <div data-testid="modal-footer">{children}</div>;
-  
+  MockBaseModal.Header = ({ children }: any) => (
+    <div data-testid="modal-header">{children}</div>
+  );
+  MockBaseModal.Content = ({ children }: any) => (
+    <div data-testid="modal-content">{children}</div>
+  );
+  MockBaseModal.Footer = ({ children }: any) => (
+    <div data-testid="modal-footer">{children}</div>
+  );
+
   return {
     __esModule: true,
     default: MockBaseModal,
@@ -42,7 +50,10 @@ jest.mock("../../../components/ui/textarea", () => ({
 }));
 
 jest.mock("../../../components/common/sanitizedHTMLWrapper", () => {
-  return React.forwardRef(function MockSanitizedHTMLWrapper({ content }: any, ref: any) {
+  return React.forwardRef(function MockSanitizedHTMLWrapper(
+    { content }: any,
+    ref: any,
+  ) {
     return <div ref={ref} dangerouslySetInnerHTML={{ __html: content }} />;
   });
 });
@@ -69,7 +80,7 @@ jest.mock("../../../stores/alertStore", () => ({
 jest.mock("../../../constants/alerts_constants", () => ({
   BUG_ALERT: "Bug Alert",
   PROMPT_ERROR_ALERT: "Prompt Error Alert",
-  PROMPT_SUCCESS_ALERT: "Prompt Success Alert", 
+  PROMPT_SUCCESS_ALERT: "Prompt Success Alert",
   TEMP_NOTICE_ALERT: "Temp Notice Alert",
 }));
 
@@ -113,7 +124,7 @@ describe("PromptModal - Add Variable Button", () => {
 
   it("should render Add Variable button when not readonly", () => {
     render(<PromptModal {...defaultProps} />);
-    
+
     const addVariableButton = screen.getByTestId("add-variable-button");
     expect(addVariableButton).toBeInTheDocument();
     expect(addVariableButton).toHaveTextContent("Add Variable");
@@ -121,22 +132,24 @@ describe("PromptModal - Add Variable Button", () => {
 
   it("should not render Add Variable button when readonly", () => {
     render(<PromptModal {...defaultProps} readonly={true} />);
-    
+
     const addVariableButton = screen.queryByTestId("add-variable-button");
     expect(addVariableButton).not.toBeInTheDocument();
   });
 
   it("should have Plus icon in Add Variable button", () => {
     render(<PromptModal {...defaultProps} />);
-    
+
     const plusIcon = screen.getByTestId("icon-Plus");
     expect(plusIcon).toBeInTheDocument();
   });
 
   it("should insert variable at end of text when clicked", async () => {
     const setValue = jest.fn();
-    render(<PromptModal {...defaultProps} value="Hello world" setValue={setValue} />);
-    
+    render(
+      <PromptModal {...defaultProps} value="Hello world" setValue={setValue} />,
+    );
+
     const addVariableButton = screen.getByTestId("add-variable-button");
     fireEvent.click(addVariableButton);
 
@@ -149,20 +162,23 @@ describe("PromptModal - Add Variable Button", () => {
 
   it("should focus and select variable name after insertion", async () => {
     render(<PromptModal {...defaultProps} value="Test " />);
-    
+
     const addVariableButton = screen.getByTestId("add-variable-button");
     fireEvent.click(addVariableButton);
 
-    await waitFor(() => {
-      const textarea = screen.getByRole("textbox");
-      expect(textarea).toHaveFocus();
-    }, { timeout: 200 });
+    await waitFor(
+      () => {
+        const textarea = screen.getByRole("textbox");
+        expect(textarea).toHaveFocus();
+      },
+      { timeout: 200 },
+    );
   });
 
   it("should work with empty text", async () => {
     const setValue = jest.fn();
     render(<PromptModal {...defaultProps} value="" setValue={setValue} />);
-    
+
     const addVariableButton = screen.getByTestId("add-variable-button");
     fireEvent.click(addVariableButton);
 
@@ -175,8 +191,10 @@ describe("PromptModal - Add Variable Button", () => {
 
   it("should not trigger if readonly", () => {
     const setValue = jest.fn();
-    render(<PromptModal {...defaultProps} readonly={true} setValue={setValue} />);
-    
+    render(
+      <PromptModal {...defaultProps} readonly={true} setValue={setValue} />,
+    );
+
     // Button shouldn't exist in readonly mode, but if it did, it shouldn't work
     expect(screen.queryByTestId("add-variable-button")).not.toBeInTheDocument();
     expect(setValue).not.toHaveBeenCalled();
@@ -184,22 +202,22 @@ describe("PromptModal - Add Variable Button", () => {
 
   it("should be positioned absolutely in top-right", () => {
     render(<PromptModal {...defaultProps} />);
-    
+
     const addVariableButton = screen.getByTestId("add-variable-button");
     expect(addVariableButton).toHaveClass("absolute", "top-3", "right-3");
   });
 
   it("should have proper styling classes", () => {
     render(<PromptModal {...defaultProps} />);
-    
+
     const addVariableButton = screen.getByTestId("add-variable-button");
     expect(addVariableButton).toHaveClass(
       "absolute",
       "top-3",
-      "right-3", 
+      "right-3",
       "z-10",
       "bg-background/80",
-      "backdrop-blur-sm"
+      "backdrop-blur-sm",
     );
   });
 });
