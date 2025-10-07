@@ -159,7 +159,7 @@ test(
       timeout: 3000,
     });
 
-    await expect(page.getByTestId("sse-tab")).toBeDisabled({
+    await expect(page.getByTestId("http-tab")).toBeDisabled({
       timeout: 3000,
     });
 
@@ -521,7 +521,7 @@ test(
 );
 
 test(
-  "SSE MCP server fields should persist after saving and editing",
+  "HTTP/SSE MCP server fields should persist after saving and editing",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
@@ -560,16 +560,16 @@ test(
       timeout: 30000,
     });
 
-    // Go to SSE tab and fill all fields
-    await page.getByTestId("sse-tab").click();
-    await page.waitForSelector('[data-testid="sse-name-input"]', {
+    // Go to HTTP tab and fill all fields
+    await page.getByTestId("http-tab").click();
+    await page.waitForSelector('[data-testid="http-name-input"]', {
       state: "visible",
       timeout: 30000,
     });
 
     // Test data with random suffix
     const randomSuffix = Math.floor(Math.random() * 90000) + 10000; // 5-digit random number
-    const testName = `test_sse_server_${randomSuffix}`;
+    const testName = `test_http_server_${randomSuffix}`;
     const testUrl = "https://api.example.com/mcp";
     const testHeaderKey1 = "Authorization";
     const testHeaderValue1 = "Bearer token123";
@@ -581,26 +581,26 @@ test(
     const testEnvValue2 = "3";
 
     // Fill basic fields
-    await page.getByTestId("sse-name-input").fill(testName);
-    await page.getByTestId("sse-url-input").fill(testUrl);
+    await page.getByTestId("http-name-input").fill(testName);
+    await page.getByTestId("http-url-input").fill(testUrl);
 
     // Add first header
-    await page.getByTestId("sse-headers-key-0").fill(testHeaderKey1);
-    await page.getByTestId("sse-headers-value-0").fill(testHeaderValue1);
+    await page.getByTestId("http-headers-key-0").fill(testHeaderKey1);
+    await page.getByTestId("http-headers-value-0").fill(testHeaderValue1);
 
     // Add second header
-    await page.getByTestId("sse-headers-plus-btn-0").click();
-    await page.getByTestId("sse-headers-key-1").fill(testHeaderKey2);
-    await page.getByTestId("sse-headers-value-1").fill(testHeaderValue2);
+    await page.getByTestId("http-headers-plus-btn-0").click();
+    await page.getByTestId("http-headers-key-1").fill(testHeaderKey2);
+    await page.getByTestId("http-headers-value-1").fill(testHeaderValue2);
 
     // Add first environment variable
-    await page.getByTestId("sse-env-key-0").fill(testEnvKey1);
-    await page.getByTestId("sse-env-value-0").fill(testEnvValue1);
+    await page.getByTestId("http-env-key-0").fill(testEnvKey1);
+    await page.getByTestId("http-env-value-0").fill(testEnvValue1);
 
     // Add second environment variable
-    await page.getByTestId("sse-env-plus-btn-0").click();
-    await page.getByTestId("sse-env-key-1").fill(testEnvKey2);
-    await page.getByTestId("sse-env-value-1").fill(testEnvValue2);
+    await page.getByTestId("http-env-plus-btn-0").click();
+    await page.getByTestId("http-env-key-1").fill(testEnvKey2);
+    await page.getByTestId("http-env-value-1").fill(testEnvValue2);
 
     // Save the server
     await page.getByTestId("add-mcp-server-button").click();
@@ -641,32 +641,32 @@ test(
     });
 
     // Verify all fields persisted correctly
-    expect(await page.getByTestId("sse-name-input").inputValue()).toBe(
+    expect(await page.getByTestId("http-name-input").inputValue()).toBe(
       testName,
     );
-    expect(await page.getByTestId("sse-url-input").inputValue()).toBe(testUrl);
-    expect(await page.getByTestId("sse-headers-key-0").inputValue()).toBe(
+    expect(await page.getByTestId("http-url-input").inputValue()).toBe(testUrl);
+    expect(await page.getByTestId("http-headers-key-0").inputValue()).toBe(
       testHeaderKey1,
     );
-    expect(await page.getByTestId("sse-headers-value-0").inputValue()).toBe(
+    expect(await page.getByTestId("http-headers-value-0").inputValue()).toBe(
       testHeaderValue1,
     );
-    expect(await page.getByTestId("sse-headers-key-1").inputValue()).toBe(
+    expect(await page.getByTestId("http-headers-key-1").inputValue()).toBe(
       testHeaderKey2,
     );
-    expect(await page.getByTestId("sse-headers-value-1").inputValue()).toBe(
+    expect(await page.getByTestId("http-headers-value-1").inputValue()).toBe(
       testHeaderValue2,
     );
-    expect(await page.getByTestId("sse-env-key-0").inputValue()).toBe(
+    expect(await page.getByTestId("http-env-key-0").inputValue()).toBe(
       testEnvKey1,
     );
-    expect(await page.getByTestId("sse-env-value-0").inputValue()).toBe(
+    expect(await page.getByTestId("http-env-value-0").inputValue()).toBe(
       testEnvValue1,
     );
-    expect(await page.getByTestId("sse-env-key-1").inputValue()).toBe(
+    expect(await page.getByTestId("http-env-key-1").inputValue()).toBe(
       testEnvKey2,
     );
-    expect(await page.getByTestId("sse-env-value-1").inputValue()).toBe(
+    expect(await page.getByTestId("http-env-value-1").inputValue()).toBe(
       testEnvValue2,
     );
 
@@ -838,7 +838,7 @@ test(
       timeout: 3000,
     });
 
-    await expect(page.getByTestId("sse-tab")).toBeDisabled({
+    await expect(page.getByTestId("http-tab")).toBeDisabled({
       timeout: 3000,
     });
 
@@ -980,5 +980,131 @@ test(
     const fetchOptionCount2 = await page.getByTestId("fetch-0-option").count();
 
     expect(fetchOptionCount2).toBeGreaterThan(0);
+  },
+);
+
+test(
+  "Streamable HTTP MCP server with server-everything should load tools correctly",
+  { tag: ["@release", "@workspace", "@components"] },
+  async ({ page }) => {
+    // Start the MCP server-everything with Streamable HTTP transport
+    const { spawn } = require("node:child_process");
+
+    // Start the server in the background
+    const serverProcess = spawn("npx", [
+      "@modelcontextprotocol/server-everything",
+      "streamableHttp",
+    ]);
+
+    // Wait for the server to start (give it 5 seconds)
+    await page.waitForTimeout(5000);
+
+    // Default URL for server-everything with streamableHttp
+    // The server typically runs on http://localhost:3001
+    const serverUrl = "http://localhost:3001/mcp";
+
+    try {
+      await awaitBootstrapTest(page);
+
+      await page.waitForSelector('[data-testid="blank-flow"]', {
+        timeout: 30000,
+      });
+      await page.getByTestId("blank-flow").click();
+      await page.getByTestId("sidebar-search-input").click();
+      await page.getByTestId("sidebar-search-input").fill("mcp tools");
+
+      await page.waitForSelector('[data-testid="agentsMCP Tools"]', {
+        timeout: 30000,
+      });
+
+      await page
+        .getByTestId("agentsMCP Tools")
+        .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+          targetPosition: { x: 100, y: 100 },
+        });
+
+      await adjustScreenView(page, { numberOfZoomOut: 3 });
+
+      try {
+        await page.getByText("Add MCP Server", { exact: true }).click({
+          timeout: 5000,
+        });
+      } catch (_error) {
+        await page.getByTestId("mcp-server-dropdown").click({ timeout: 3000 });
+        await page.getByText("Add MCP Server", { exact: true }).click({
+          timeout: 5000,
+        });
+      }
+
+      await page.waitForSelector('[data-testid="add-mcp-server-button"]', {
+        state: "visible",
+        timeout: 30000,
+      });
+
+      // Switch to HTTP tab for Streamable HTTP
+      await page.getByTestId("http-tab").click();
+
+      await page.waitForSelector('[data-testid="http-name-input"]', {
+        state: "visible",
+        timeout: 30000,
+      });
+
+      const randomSuffix = Math.floor(Math.random() * 90000) + 10000;
+      const testName = `test_streamable_http_${randomSuffix}`;
+
+      // Fill in the server details
+      await page.getByTestId("http-name-input").fill(testName);
+
+      // Use the HTTP endpoint URL
+      await page.getByTestId("http-url-input").fill(serverUrl);
+
+      await page.getByTestId("add-mcp-server-button").click();
+
+      // Wait for server to be created
+      await page.waitForTimeout(2000);
+
+      // Wait for tools to load
+      await page.waitForSelector(
+        '[data-testid="dropdown_str_tool"]:not([disabled])',
+        {
+          timeout: 30000,
+          state: "visible",
+        },
+      );
+
+      await page.getByTestId("dropdown_str_tool").click();
+
+      // Check for tools from server-everything
+      // server-everything provides multiple tools including echo, add, longRunningOperation, etc.
+      const toolOptions = page.locator('[data-testid*="-option"]');
+      const toolCount = await toolOptions.count();
+
+      // server-everything should have multiple tools (at least 5+)
+      expect(toolCount).toBeGreaterThan(5);
+
+      // Verify specific tools exist from server-everything
+      const echoOption = page.getByTestId("echo-0-option");
+      expect(await echoOption.count()).toBeGreaterThan(0);
+
+      // Select the echo to verify it loads properly
+      await echoOption.last().click();
+
+      // Wait for the tool input field to appear
+      await page.waitForSelector(
+        '[data-testid="popover-anchor-input-message"]',
+        {
+          state: "visible",
+          timeout: 10000,
+        },
+      );
+
+      // Verify the input field is present
+      await expect(
+        page.getByTestId("popover-anchor-input-message"),
+      ).toBeVisible();
+    } finally {
+      // Clean up: kill the server process
+      serverProcess.kill();
+    }
   },
 );
