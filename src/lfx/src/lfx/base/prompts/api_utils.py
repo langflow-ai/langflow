@@ -125,9 +125,9 @@ def _check_input_variables(input_variables):
 
 def validate_prompt(prompt_template: str, *, silent_errors: bool = False, is_mustache: bool = False) -> list[str]:
     if is_mustache:
-        input_variables = extract_input_variables_from_prompt(prompt_template)
-    else:
         input_variables = mustache_template_vars(prompt_template)
+    else:
+        input_variables = extract_input_variables_from_prompt(prompt_template)
 
     # Check if there are invalid characters in the input_variables
     input_variables = _check_input_variables(input_variables)
@@ -203,11 +203,16 @@ def update_input_variables_field(input_variables, template) -> None:
 
 
 def process_prompt_template(
-    template: str, name: str, custom_fields: dict[str, list[str]] | None, frontend_node_template: dict[str, Any]
+    template: str,
+    name: str,
+    custom_fields: dict[str, list[str]] | None,
+    frontend_node_template: dict[str, Any],
+    *,
+    is_mustache: bool = False,
 ):
     """Process and validate prompt template, update template and custom fields."""
     # Validate the prompt template and extract input variables
-    input_variables = validate_prompt(template)
+    input_variables = validate_prompt(template, is_mustache=is_mustache)
 
     # Initialize custom_fields if None
     if custom_fields is None:
