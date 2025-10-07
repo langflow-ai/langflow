@@ -411,7 +411,7 @@ export function isValidConnection(
   };
 
   // Check if target is an infinity input (loop component)
-  const isInfinityInput = !!targetHandleObject.output_types;
+  const isInfinityInput = Array.isArray(targetHandleObject.output_types) && targetHandleObject.output_types.length > 0;
 
   // For infinity inputs, allow the original output types plus Message type
   const infinityInputTypeCheck =
