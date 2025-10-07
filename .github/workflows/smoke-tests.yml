@@ -47,8 +47,6 @@ jobs:
             src/backend/tests/unit/components/languagemodels/test_openai_model.py \
             src/backend/tests/unit/components/agents/test_agent_component.py \
             src/backend/tests/unit/services/tracing/test_tracing_service.py \
-            src/backend/tests/unit/custom/component/test_component_instance_attributes.py \
-            src/backend/tests/unit/schema/test_schema_message.py \
             -m 'not api_key_required' \
             --tb=short \
             --maxfail=5 \
@@ -61,6 +59,8 @@ jobs:
         run: |
           uv run pytest \
             src/lfx/tests/unit/graph/test_graph.py \
+            src/lfx/tests/unit/custom/component/test_component_instance_attributes.py \
+            src/lfx/tests/unit/schema/test_schema_message.py \
             -m 'not api_key_required' \
             --tb=short \
             --maxfail=5 \
