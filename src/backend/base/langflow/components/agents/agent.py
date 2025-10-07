@@ -42,7 +42,7 @@ def set_advanced_true(component_input):
     return component_input
 
 
-MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "OpenAI"]
+MODEL_PROVIDERS_LIST = ["Anthropic", "Google Generative AI", "OpenAI", "Azure OpenAI"]
 
 
 class AgentComponent(ToolCallingAgentComponent):
@@ -56,11 +56,14 @@ class AgentComponent(ToolCallingAgentComponent):
     memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
 
     # Filter out json_mode from OpenAI inputs since we handle structured output differently
-    openai_inputs_filtered = [
-        input_field
-        for input_field in MODEL_PROVIDERS_DICT["OpenAI"]["inputs"]
-        if not (hasattr(input_field, "name") and input_field.name == "json_mode")
-    ]
+    if "OpenAI" in MODEL_PROVIDERS_DICT:
+        openai_inputs_filtered = [
+            input_field
+            for input_field in MODEL_PROVIDERS_DICT["OpenAI"]["inputs"]
+            if not (hasattr(input_field, "name") and input_field.name == "json_mode")
+        ]
+    else:
+        openai_inputs_filtered = []
 
     inputs = [
         DropdownInput(
@@ -72,7 +75,8 @@ class AgentComponent(ToolCallingAgentComponent):
             real_time_refresh=True,
             refresh_button=False,
             input_types=[],
-            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST],
+            options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA]
+            + [{"icon": "brain"}],
             external_options={
                 "fields": {
                     "data": {
@@ -517,10 +521,7 @@ class AgentComponent(ToolCallingAgentComponent):
                     self.delete_fields(build_config, fields)
 
                 # Add provider-specific fields
-                if field_value == "OpenAI" and not any(field in build_config for field in fields_to_add):
-                    build_config.update(fields_to_add)
-                else:
-                    build_config.update(fields_to_add)
+                build_config.update(fields_to_add)
                 # Reset input types for agent_llm
                 build_config["agent_llm"]["input_types"] = []
                 build_config["agent_llm"]["display_name"] = "Model Provider"
@@ -537,7 +538,7 @@ class AgentComponent(ToolCallingAgentComponent):
                     refresh_button=False,
                     input_types=["LanguageModel"],
                     placeholder="Awaiting model input.",
-                    options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST],
+                    options_metadata=[MODELS_METADATA[key] for key in MODEL_PROVIDERS_LIST if key in MODELS_METADATA],
                     external_options={
                         "fields": {
                             "data": {

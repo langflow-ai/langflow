@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
+from langchain_chroma import Chroma
+from langflow.api.v1.knowledge_bases import get_kb_root_path
 from langflow.custom import Component
 from langflow.io import DropdownInput, IntInput, MultilineInput, MultiselectInput, Output
 from langflow.schema import Data
+from langflow.services.deps import get_settings_service
 from loguru import logger
 
 
@@ -13,7 +17,6 @@ class KnowledgeHubSearchComponent(Component):
     description = (
         "This component is used to search for information in the knowledge hub."
     )
-    documentation: str = "http://docs.langflow.org/components/custom"
     icon = "Autonomize"
     name = "KnowledgeHubSearch"
 
@@ -30,9 +33,31 @@ class KnowledgeHubSearchComponent(Component):
 
         if field_name == "selected_hubs":
             try:
-                # For now, return some mock options until the service is properly configured
-                options = ["Mock Hub 1", "Mock Hub 2", "Mock Hub 3"]
-                logger.info(f"Mock hub options: {options}")
+                # Get real knowledge bases from API
+                options = []
+
+                try:
+                    kb_root_path = get_kb_root_path()
+                    # For demo purposes, get a basic user directory (you'd get this from current user in real app)
+                    # This assumes knowledge bases are stored in user directories
+                    if kb_root_path.exists():
+                        for user_dir in kb_root_path.iterdir():
+                            if user_dir.is_dir() and not user_dir.name.startswith('.'):
+                                for kb_dir in user_dir.iterdir():
+                                    if kb_dir.is_dir() and not kb_dir.name.startswith('.'):
+                                        # Convert directory name to display name
+                                        display_name = kb_dir.name.replace("_", " ").replace("-", " ").title()
+                                        options.append(display_name)
+                                        self._hub_data.append({"id": kb_dir.name, "name": display_name, "path": str(kb_dir)})
+
+                    if not options:
+                        options = ["No knowledge bases found"]
+
+                except Exception as e:
+                    logger.error(f"Error fetching knowledge bases: {e}")
+                    options = ["Error loading knowledge bases"]
+
+                logger.info(f"Available knowledge bases: {options}")
 
                 build_config["selected_hubs"]["options"] = options
 
@@ -90,26 +115,105 @@ class KnowledgeHubSearchComponent(Component):
             search_type = getattr(self, 'search_type', 'similarity')
             top_k = getattr(self, 'top_k', 10)
 
-            # For now, return mock results until the service is properly configured
-            query_results = [
-                {
-                    "metadata": {
-                        "content": f"Mock search result for query: {self.search_query} (type: {search_type}, top_k: {top_k})"
-                    }
-                }
-            ]
+            if not self._selected_hub_names:
+                logger.warning("No knowledge hubs selected.")
+                return Data(
+                    text="No knowledge bases selected for search.",
+                    data={"query_results": [], "error": "No knowledge bases selected"}
+                )
 
-            logger.info(f"Mock query results with search_type={search_type}, top_k={top_k}: {query_results}")
+            # Perform real search using Chroma
+            all_results = []
+            used_sources = []
 
-            plain_text = f"Mock search result content (search_type: {search_type}, top_k: {top_k})"
+            try:
+                kb_root_path = get_kb_root_path()
+
+                for selected_name in self._selected_hub_names:
+                    if selected_name in ["No knowledge bases found", "Error loading knowledge bases"]:
+                        continue
+
+                    # Find the corresponding hub data
+                    hub_info = None
+                    for hub in self._hub_data:
+                        if hub["name"] == selected_name:
+                            hub_info = hub
+                            break
+
+                    if not hub_info:
+                        logger.warning(f"Could not find hub info for: {selected_name}")
+                        continue
+
+                    try:
+                        # Create Chroma instance for this knowledge base
+                        kb_path = Path(hub_info["path"])
+                        if not kb_path.exists():
+                            logger.warning(f"Knowledge base path does not exist: {kb_path}")
+                            continue
+
+                        chroma = Chroma(
+                            persist_directory=str(kb_path),
+                            collection_name=hub_info["id"],
+                        )
+
+                        # Perform similarity search
+                        results = chroma.similarity_search_with_score(
+                            query=self.search_query,
+                            k=top_k
+                        )
+
+                        # Process results
+                        for doc, score in results:
+                            result_item = {
+                                "metadata": {
+                                    "content": doc.page_content,
+                                    "source": hub_info["name"],
+                                    "score": float(score),
+                                    **doc.metadata
+                                }
+                            }
+                            all_results.append(result_item)
+
+                        used_sources.append(selected_name)
+                        logger.info(f"Found {len(results)} results from {selected_name}")
+
+                    except Exception as e:
+                        logger.error(f"Error searching knowledge base {selected_name}: {e}")
+                        continue
+
+                # Sort all results by score (lower is better for similarity)
+                all_results.sort(key=lambda x: x["metadata"].get("score", float('inf')))
+
+                # Limit to top_k results overall
+                all_results = all_results[:top_k]
+
+                # Create plain text output
+                if all_results:
+                    contents = [
+                        result["metadata"]["content"]
+                        for result in all_results
+                    ]
+                    plain_text = "\n\n=== NEW CHUNK ===\n\n".join(contents)
+                else:
+                    plain_text = "No relevant results found in the selected knowledge bases."
+
+                logger.info(f"Search completed. Found {len(all_results)} total results across {len(used_sources)} sources")
+
+            except Exception as e:
+                logger.error(f"Error during knowledge base search: {e}")
+                return Data(
+                    text=f"Error searching knowledge bases: {str(e)}",
+                    data={"query_results": [], "error": str(e)}
+                )
 
             data = Data(
                 text=plain_text,
                 data={
-                    "result": query_results,
-                    "used_data_sources": self._selected_hub_names,
+                    "result": all_results,
+                    "used_data_sources": used_sources,
                     "search_type": search_type,
                     "top_k": top_k,
+                    "total_results": len(all_results)
                 },
             )
             self.status = data
@@ -117,4 +221,7 @@ class KnowledgeHubSearchComponent(Component):
 
         except Exception as e:
             logger.error(f"Error in build_output: {e!s}")
-            return Data(value={"query_results": []})
+            return Data(
+                text=f"Error in search: {str(e)}",
+                data={"query_results": [], "error": str(e)}
+            )
