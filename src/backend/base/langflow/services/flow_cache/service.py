@@ -22,14 +22,16 @@ class FlowCacheService(AsyncInMemoryCache):
 
     name = "flow_cache_service"
 
-    async def add_flow_to_cache(self, flow: Flow) -> None:
+    async def add_flow_to_cache(self, flow: Flow, *, silent: bool = False) -> None:
         """Add a flow's Graph instance to the cache.
 
         Args:
             flow (Flow): The flow to cache
+            silent (bool): If True, suppress debug logging (used during refresh)
         """
         if flow.data is None:
-            logger.warning(f"Flow {flow.id} has no data, skipping cache")
+            if not silent:
+                logger.warning(f"Flow {flow.id} has no data, skipping cache")
             return
 
         from lfx.graph.graph.base import Graph
@@ -41,7 +43,8 @@ class FlowCacheService(AsyncInMemoryCache):
         try:
             graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=flow.user_id, flow_name=flow.name)
         except (ValueError, TypeError, AttributeError, KeyError) as e:
-            logger.warning(f"Flow {flow_id_str} cannot be cached due to parsing error: {e!s}")
+            if not silent:
+                logger.warning(f"Flow {flow_id_str} cannot be cached due to parsing error: {e!s}")
             return
 
         # Store in cache, catch cache-specific errors
@@ -49,22 +52,26 @@ class FlowCacheService(AsyncInMemoryCache):
             await self.set(flow_id_str, graph)
             if flow.endpoint_name:
                 await self.set(flow.endpoint_name, graph)
-            logger.debug(f"Added flow {flow_id_str} to cache")
+            if not silent:
+                logger.debug(f"Added flow {flow_id_str} to cache")
         except (KeyError, RuntimeError) as e:
             logger.error(f"Error caching graph for flow {flow_id_str}: {e!s}")
 
-    async def remove_flow_from_cache(self, flow: Flow) -> None:
+    async def remove_flow_from_cache(self, flow: Flow, *, silent: bool = False) -> None:
         """Remove a flow's Graph instance from the cache.
 
         Args:
             flow (Flow): The flow to remove from cache
+            silent (bool): If True, suppress debug logging (used during refresh)
         """
         flow_id_str = str(flow.id)
         try:
             await self.delete(flow_id_str)
-            logger.debug(f"Removed flow {flow_id_str} from cache")
+            if not silent:
+                logger.debug(f"Removed flow {flow_id_str} from cache")
         except KeyError as e:
-            logger.error(f"Cache key not found when removing flow {flow_id_str}: {e!s}")
+            if not silent:
+                logger.error(f"Cache key not found when removing flow {flow_id_str}: {e!s}")
         except RuntimeError as e:
             logger.error(f"Error removing flow {flow_id_str} from cache: {e!s}")
 
@@ -97,10 +104,10 @@ class FlowCacheService(AsyncInMemoryCache):
         """
         flow_id_str = str(flow.id)
         try:
-            # Remove old version from cache
-            await self.remove_flow_from_cache(flow)
-            # Add updated version to cache
-            await self.add_flow_to_cache(flow)
+            # Remove old version from cache (silent to avoid duplicate logs)
+            await self.remove_flow_from_cache(flow, silent=True)
+            # Add updated version to cache (silent to avoid duplicate logs)
+            await self.add_flow_to_cache(flow, silent=True)
             logger.debug(f"Refreshed flow {flow_id_str} in cache")
         except (KeyError, RuntimeError) as e:
             logger.error(f"Error refreshing flow {flow_id_str} in cache: {e!s}")
