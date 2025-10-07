@@ -86,7 +86,7 @@ class TestExceptionTelemetryIntegration:
 
         # Mock _queue_event to call our mock directly
         async def mock_queue_event(event_tuple):
-            func, payload, path = event_tuple
+            _func, payload, path = event_tuple
             await mock_send_data(payload, path)
 
         telemetry_service._queue_event = mock_queue_event

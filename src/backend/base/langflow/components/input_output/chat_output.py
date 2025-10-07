@@ -100,7 +100,7 @@ class ChatOutput(ChatComponent):
         text = self.convert_to_string()
 
         # Get source properties
-        source, icon, display_name, source_id = self.get_properties_from_source_component()
+        source, _icon, display_name, source_id = self.get_properties_from_source_component()
 
         # Create or use existing Message object
         if isinstance(self.input_value, Message):

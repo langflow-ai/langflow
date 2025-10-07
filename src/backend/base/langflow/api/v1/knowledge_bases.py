@@ -15,12 +15,20 @@ from langflow.services.deps import get_settings_service
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases")
 
 
-settings = get_settings_service().settings
-knowledge_directory = settings.knowledge_bases_dir
-if not knowledge_directory:
-    msg = "Knowledge bases directory is not set in the settings."
-    raise ValueError(msg)
-KNOWLEDGE_BASES_DIR = Path(knowledge_directory).expanduser()
+_KNOWLEDGE_BASES_DIR: Path | None = None
+
+
+def _get_knowledge_bases_dir() -> Path:
+    """Lazy load the knowledge bases directory from settings."""
+    global _KNOWLEDGE_BASES_DIR  # noqa: PLW0603
+    if _KNOWLEDGE_BASES_DIR is None:
+        settings = get_settings_service().settings
+        knowledge_directory = settings.knowledge_bases_dir
+        if not knowledge_directory:
+            msg = "Knowledge bases directory is not set in the settings."
+            raise ValueError(msg)
+        _KNOWLEDGE_BASES_DIR = Path(knowledge_directory).expanduser()
+    return _KNOWLEDGE_BASES_DIR
 
 
 class KnowledgeBaseInfo(BaseModel):
@@ -41,7 +49,7 @@ class BulkDeleteRequest(BaseModel):
 
 def get_kb_root_path() -> Path:
     """Get the knowledge bases root path."""
-    return KNOWLEDGE_BASES_DIR
+    return _get_knowledge_bases_dir()
 
 
 def get_directory_size(path: Path) -> int:
@@ -195,8 +203,8 @@ def calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[i
             continue
 
         text_series = df[col].astype(str).fillna("")
-        total_characters += text_series.str.len().sum()
-        total_words += text_series.str.split().str.len().sum()
+        total_characters += text_series.str.len().sum()  # type: ignore[assignment]
+        total_words += text_series.str.split().str.len().sum()  # type: ignore[assignment]
 
     return int(total_words), int(total_characters)
 

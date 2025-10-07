@@ -893,7 +893,7 @@ async def get_url_by_os(host: str, port: int, url: str) -> str:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            stdout, stderr = await proc.communicate()
+            stdout, _stderr = await proc.communicate()
 
             if proc.returncode == 0 and stdout.strip():
                 wsl_ip = stdout.decode().strip().split()[0]  # Get first IP address
@@ -930,7 +930,7 @@ async def get_config_path(client: str) -> Path:
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.PIPE,
                     )
-                    stdout, stderr = await proc.communicate()
+                    stdout, _stderr = await proc.communicate()
 
                     if proc.returncode == 0 and stdout.strip():
                         windows_username = stdout.decode().strip()
