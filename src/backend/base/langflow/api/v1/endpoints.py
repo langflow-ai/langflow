@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import sys
 import time
-from collections import OrderedDict
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
@@ -53,12 +51,10 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
-    get_flow_cache_service,
     get_session_service,
     get_settings_service,
     get_telemetry_service,
 )
-from langflow.services.flow_cache.service import FlowCacheService
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
@@ -308,45 +304,6 @@ async def run_flow_generator(
         event_manager.on_error(data={"error": str(e)})
     finally:
         await event_manager.queue.put((None, None, time.time))
-
-
-@router.get("/cache")
-async def get_cache(flow_cache_service: Annotated[FlowCacheService, Depends(get_flow_cache_service)]):
-    """Get information about the cache status.
-
-    Returns:
-        dict: A dictionary containing cache information including:
-            - total_items: Number of items in cache
-            - cache_type: Type of cache being used
-            - memory_usage: Approximate memory usage in bytes
-            - items: List of cached items with their sizes
-    """
-    cache_info = {"total_items": 0, "cache_type": flow_cache_service.__class__.__name__, "memory_usage": 0, "items": []}
-
-    try:
-        cache_dict = flow_cache_service.cache
-        if isinstance(cache_dict, OrderedDict):
-            for key, value in cache_dict.items():
-                item_size = sys.getsizeof(value["value"].__dict__)
-                cache_info["memory_usage"] += item_size
-                cache_info["items"].append({"key": key, "size_bytes": item_size, "type": type(value).__name__})
-            cache_info["total_items"] = len(cache_dict)
-
-        # Convert memory usage to human readable format
-        def format_size(size_bytes):
-            for unit in ["B", "KB", "MB", "GB"]:
-                if size_bytes < BYTES_PER_KB:
-                    return f"{size_bytes:.2f} {unit}"
-                size_bytes /= BYTES_PER_KB
-            return f"{size_bytes:.2f} GB"
-
-        cache_info["memory_usage"] = format_size(cache_info["memory_usage"])
-
-    except Exception as e:  # noqa: BLE001
-        logger.error(f"Error getting cache info: {e!s}")
-        cache_info["error"] = str(e)
-
-    return cache_info
 
 
 @router.post("/run/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
