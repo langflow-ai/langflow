@@ -1119,14 +1119,14 @@ class TestMCPSseClientUnit:
         assert sse_client._connected is False
         assert sse_client._session_context is None
 
-    async def test_validate_url_valid(self, streamable_http_client):
+    async def test_validate_url_valid(self, sse_client):
         """Test URL validation with valid URL."""
         with patch("httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
             mock_response.status_code = 200
             mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
 
-            is_valid, error_msg = await streamable_http_client.validate_url("http://test.url")
+            is_valid, error_msg = await sse_client.validate_url("http://test.url")
 
             assert is_valid is True
             assert error_msg == ""
