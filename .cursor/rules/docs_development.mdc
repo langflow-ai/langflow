@@ -335,7 +335,7 @@ module.exports = {
 module.exports = {
   title: 'Langflow Documentation',
   tagline: 'Build AI flows visually',
-  url: 'https://docs.langflow.org',
+  url: 'https://docs.autonomize.ai',
   baseUrl: '/',
 
   themeConfig: {

@@ -1101,10 +1101,10 @@ export const DEFAULT_FILE_PICKER_TIMEOUT = 60000;
 export const DISCORD_URL = "https://discord.com/invite/EqksyE2EX9";
 export const GITHUB_URL = "https://github.com/langflow-ai/langflow";
 export const TWITTER_URL = "https://x.com/langflow_ai";
-export const DOCS_URL = "https://docs.langflow.org";
+export const DOCS_URL = "https://docs.autonomize.ai";
 export const DATASTAX_DOCS_URL =
   "https://docs.datastax.com/en/langflow/index.html";
-export const DESKTOP_URL = "https://www.langflow.org/desktop";
+export const DESKTOP_URL = "https://www.autonomize.ai/desktop";
 export const BUG_REPORT_URL = "https://github.com/langflow-ai/langflow/issues";
 
 export const UUID_PARSING_ERROR = "uuid_parsing";

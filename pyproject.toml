@@ -1,7 +1,7 @@
 [project]
 name = "langflow"
 version = "1.6.3"
-description = "A Python package with a built-in web application"
+description = "Next-generation conversational AI agent platform for healthcare"
 requires-python = ">=3.12,<3.14"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
@@ -202,8 +202,8 @@ members = [
 packages = ["src/backend/langflow"]
 
 [project.urls]
-Repository = "https://github.com/langflow-ai/langflow"
-Documentation = "https://docs.langflow.org"
+Repository = "https://github.com/autonomizeai/ai-studio"
+Documentation = "https://docs.autonomize.ai"
 
 [project.optional-dependencies]
 docling = [
