@@ -51,6 +51,7 @@ from langflow.services.auth.utils import AUTO_LOGIN_WARNING
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import check_key, create_api_key
 from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
+from langflow.services.database.models.flow.model import DeploymentStateEnum
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service
@@ -218,8 +219,12 @@ async def list_project_tools(
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
 
-            # Query flows in the project
-            flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.is_component == False)  # noqa: E712
+            # Query flows in the project - only DEPLOYED flows should be available via MCP
+            flows_query = select(Flow).where(
+                Flow.folder_id == project_id,
+                Flow.is_component == False,  # noqa: E712
+                Flow.status == DeploymentStateEnum.DEPLOYED,  # Only serve deployed flows
+            )
 
             # Optionally filter for MCP-enabled flows only
             if mcp_enabled:
@@ -248,6 +253,7 @@ async def list_project_tools(
                         # inputSchema=json_schema_from_flow(flow),
                         name=flow.name,
                         description=flow.description,
+                        status=flow.status,
                     )
                     tools.append(tool)
                 except Exception as e:  # noqa: BLE001
