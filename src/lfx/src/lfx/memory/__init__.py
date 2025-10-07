@@ -23,7 +23,7 @@ if has_langflow_memory():
             get_messages,
             store_message,
         )
-    except (ImportError, ModuleNotFoundError):
+    except ImportError:
         # Fallback to lfx implementation if langflow import fails
         from lfx.memory.stubs import (
             aadd_messages,
