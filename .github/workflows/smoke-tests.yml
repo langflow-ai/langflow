@@ -40,7 +40,6 @@ jobs:
             src/backend/tests/unit/api/v1/test_validate.py \
             src/backend/tests/unit/test_endpoints.py \
             src/backend/tests/unit/api/v1/test_flows.py \
-            src/lfx/tests/unit/graph/test_graph.py \
             src/backend/tests/unit/services/flow/test_flow_runner.py \
             src/backend/tests/unit/test_chat_endpoint.py \
             src/backend/tests/unit/api/v1/test_api_key.py \
@@ -50,6 +49,18 @@ jobs:
             src/backend/tests/unit/services/tracing/test_tracing_service.py \
             src/backend/tests/unit/custom/component/test_component_instance_attributes.py \
             src/backend/tests/unit/schema/test_schema_message.py \
+            -m 'not api_key_required' \
+            --tb=short \
+            --maxfail=5 \
+            -v
+        env:
+          LANGFLOW_SUPERUSER: admin
+          LANGFLOW_SUPERUSER_PASSWORD: 123456
+
+      - name: Run lfx smoke tests (critical tests only)
+        run: |
+          uv run pytest \
+            src/lfx/tests/unit/graph/test_graph.py \
             -m 'not api_key_required' \
             --tb=short \
             --maxfail=5 \
@@ -90,7 +101,8 @@ jobs:
 
             Critical functionality validated (~5-8 minutes):
 
-            - **Backend**: 10 essential test files (imports, schema, serialization, core utils)
+            - **Backend**: 14 essential test files (imports, schema, serialization, core utils)
+            - **LFX**: Graph tests (langflow execution)
             - **Frontend**: Unit tests only (components, utilities)
             - **Coverage**: Core functionality without external dependencies
 

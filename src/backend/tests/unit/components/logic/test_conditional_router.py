@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
 import pytest
-from langflow.components.logic.conditional_router import ConditionalRouterComponent
-from langflow.schema.message import Message
+from lfx.components.logic.conditional_router import ConditionalRouterComponent
+from lfx.schema.message import Message
 
 
 class TestConditionalRouterComponent:
