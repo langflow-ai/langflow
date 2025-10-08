@@ -40,17 +40,22 @@ def _dev_mode() -> bool:
     """Detect if running in development mode.
 
     Development mode is detected by:
-    1. LFX_DEV environment variable set to 1/true/yes
-    2. Editable install (source file path doesn't contain site-packages)
+    1. LFX_DEV environment variable: "1"/"true"/"yes" = dev, "0"/"false"/"no" = prod
+    2. If LFX_DEV not set: Editable install = dev, otherwise = prod
 
     Returns:
         True if in development mode, False otherwise
     """
-    # 1) Check env override
-    if os.getenv("LFX_DEV", "").lower() in {"1", "true", "yes"}:
-        return True
+    # 1) Check env override (takes precedence)
+    lfx_dev = os.getenv("LFX_DEV", "").lower()
+    if lfx_dev:
+        # Explicit setting: 1/true/yes = dev, 0/false/no = prod
+        if lfx_dev in {"1", "true", "yes"}:
+            return True
+        if lfx_dev in {"0", "false", "no"}:
+            return False
 
-    # 2) Editable install heuristic: check if lfx module is in site-packages
+    # 2) If no env var, use editable install heuristic
     try:
         import lfx
 
