@@ -259,12 +259,10 @@ async def run(
             logger.exception("Failed to load graph.")
 
         # Restore stdout/stderr if they were redirected before outputting error
-        if 'original_stdout' in locals() and sys.stdout is not original_stdout:
+        if "original_stdout" in locals() and sys.stdout is not original_stdout:
             sys.stdout = original_stdout
-        if 'original_stderr' in locals() and sys.stderr is not original_stderr:
-            sys.stderr = original_stderr
-        
-        output_error(f"Failed to load graph. {e}", verbose=verbose, exception=e)
+        if "original_stderr" in locals() and sys.stderr is not original_stderr:
+            sys.stderr = original_stderroutput_error(f"Failed to load graph. {e}", verbose=verbose, exception=e)
         if temp_file_to_cleanup:
             try:
                 Path(temp_file_to_cleanup).unlink()
@@ -326,12 +324,10 @@ async def run(
             logger.exception("Failed to prepare graph - full traceback:")
 
         # Restore stdout/stderr if they were redirected before outputting error
-        if 'original_stdout' in locals() and sys.stdout is not original_stdout:
+        if "original_stdout" in locals() and sys.stdout is not original_stdout:
             sys.stdout = original_stdout
-        if 'original_stderr' in locals() and sys.stderr is not original_stderr:
-            sys.stderr = original_stderr
-        
-        output_error(f"Failed to prepare graph: {e}", verbose=verbose, exception=e)
+        if "original_stderr" in locals() and sys.stderr is not original_stderr:
+            sys.stderr = original_stderroutput_error(f"Failed to prepare graph: {e}", verbose=verbose, exception=e)
         if temp_file_to_cleanup:
             try:
                 Path(temp_file_to_cleanup).unlink()
@@ -452,7 +448,6 @@ async def run(
         # Restore stdout/stderr before outputting error to ensure it's captured properly
         sys.stdout = original_stdout
         sys.stderr = original_stderr
-        
         output_error(f"Failed to execute graph: {e}", verbose=verbosity > 0, exception=e)
         if temp_file_to_cleanup:
             try:
@@ -466,8 +461,7 @@ async def run(
         if sys.stdout is not original_stdout:
             sys.stdout = original_stdout
         if sys.stderr is not original_stderr:
-            sys.stderr = original_stderr
-        if temp_file_to_cleanup:
+            sys.stderr = original_stderrif temp_file_to_cleanup:
             try:
                 Path(temp_file_to_cleanup).unlink()
                 logger.info(f"Cleaned up temporary file: {temp_file_to_cleanup}")
