@@ -520,4 +520,3 @@ async def run(
             result_data["timing"] = timing_metadata
         indent = 2 if verbosity > 0 else None
         typer.echo(json.dumps(result_data, indent=indent))
-        
