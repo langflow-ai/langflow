@@ -7,27 +7,23 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-3WTYa",
+            "id": "TavilySearchComponent-DTqM5",
             "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-Hz2it",
-            "inputTypes": [
-              "Tool"
-            ],
+            "id": "Agent-qEcm1",
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-3WTYa{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-3WTYaœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Hz2it{œfieldNameœ:œtoolsœ,œidœ:œAgent-Hz2itœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-DTqM5{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-DTqM5œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-qEcm1{œfieldNameœ:œtoolsœ,œidœ:œAgent-qEcm1œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-3WTYa",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-3WTYaœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-Hz2it",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Hz2itœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-DTqM5",
+        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-DTqM5œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-qEcm1",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-qEcm1œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -35,59 +31,23 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-OSw5o",
+            "id": "ChatInput-UU2Tp",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-Hz2it",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "Agent-qEcm1",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-OSw5o{œdataTypeœ:œChatInputœ,œidœ:œChatInput-OSw5oœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-Hz2it{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Hz2itœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-UU2Tp{œdataTypeœ:œChatInputœ,œidœ:œChatInput-UU2Tpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-qEcm1{œfieldNameœ:œinput_valueœ,œidœ:œAgent-qEcm1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-OSw5o",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-OSw5oœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-Hz2it",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-Hz2itœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ParserComponent",
-            "id": "ParserComponent-8lfAE",
-            "name": "parsed_text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-tjFWM",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__ParserComponent-8lfAE{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-8lfAEœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-tjFWM{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-tjFWMœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ParserComponent-8lfAE",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-8lfAEœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-tjFWM",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-tjFWMœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-UU2Tp",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-UU2Tpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-qEcm1",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-qEcm1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -95,27 +55,23 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-Hz2it",
+            "id": "Agent-qEcm1",
             "name": "response",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "StructuredOutput-zfjb9",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "StructuredOutput-JRnJ1",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "xy-edge__Agent-Hz2it{œdataTypeœ:œAgentœ,œidœ:œAgent-Hz2itœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-zfjb9{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-zfjb9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-qEcm1{œdataTypeœ:œAgentœ,œidœ:œAgent-qEcm1œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-JRnJ1{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-JRnJ1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-Hz2it",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-Hz2itœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutput-zfjb9",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-zfjb9œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-qEcm1",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-qEcm1œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "StructuredOutput-JRnJ1",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-JRnJ1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -123,58 +79,65 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-Enuj5",
+            "id": "LanguageModelComponent-jb3qr",
             "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
+            "output_types": ["LanguageModel"]
           },
           "targetHandle": {
             "fieldName": "llm",
-            "id": "StructuredOutput-zfjb9",
-            "inputTypes": [
-              "LanguageModel"
-            ],
+            "id": "StructuredOutput-JRnJ1",
+            "inputTypes": ["LanguageModel"],
             "type": "other"
           }
         },
-        "id": "xy-edge__LanguageModelComponent-Enuj5{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-Enuj5œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-zfjb9{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-zfjb9œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LanguageModelComponent-jb3qr{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-jb3qrœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-JRnJ1{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-JRnJ1œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LanguageModelComponent-Enuj5",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-Enuj5œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutput-zfjb9",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-zfjb9œ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "LanguageModelComponent-jb3qr",
+        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-jb3qrœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "target": "StructuredOutput-JRnJ1",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-JRnJ1œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
       },
       {
-        "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "StructuredOutput",
-            "id": "StructuredOutput-zfjb9",
+            "id": "StructuredOutput-JRnJ1",
             "name": "dataframe_output",
-            "output_types": [
-              "Table"
-            ]
+            "output_types": ["DataFrame"]
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "ParserComponent-8lfAE",
-            "inputTypes": [
-              "DataFrame",
-              "Table",
-              "Data",
-              "JSON"
-            ],
+            "id": "ParserComponent-isiHR",
+            "inputTypes": ["DataFrame", "Table", "Data", "JSON"],
             "type": "other"
           }
         },
-        "id": "xy-edge__StructuredOutput-zfjb9{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-zfjb9œ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-8lfAE{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-8lfAEœ,œinputTypesœ:[œDataFrameœ,œDataœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "StructuredOutput-zfjb9",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-zfjb9œ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œTableœ]}",
-        "target": "ParserComponent-8lfAE",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-8lfAEœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__StructuredOutput-JRnJ1{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-JRnJ1œ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-isiHR{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-isiHRœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
+        "source": "StructuredOutput-JRnJ1",
+        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-JRnJ1œ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}",
+        "target": "ParserComponent-isiHR",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-isiHRœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ParserComponent",
+            "id": "ParserComponent-isiHR",
+            "name": "parsed_text",
+            "output_types": ["Message"]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-gzrhu",
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__ParserComponent-isiHR{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-isiHRœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-gzrhu{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-gzrhuœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
+        "source": "ParserComponent-isiHR",
+        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-isiHRœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-gzrhu",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-gzrhuœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "nodes": [
@@ -182,11 +145,9 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-OSw5o",
+          "id": "ChatInput-UU2Tp",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -233,9 +194,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -331,10 +290,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -349,9 +305,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -370,9 +324,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -408,7 +360,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-OSw5o",
+        "id": "ChatInput-UU2Tp",
         "measured": {
           "height": 234,
           "width": 320
@@ -429,11 +381,9 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-tjFWM",
+          "id": "ChatOutput-gzrhu",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -488,9 +438,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -539,9 +487,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -588,10 +534,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -607,9 +550,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -629,9 +570,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -668,7 +607,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-tjFWM",
+        "id": "ChatOutput-gzrhu",
         "measured": {
           "height": 234,
           "width": 320
@@ -687,7 +626,7 @@
       },
       {
         "data": {
-          "id": "note-goubF",
+          "id": "note-YVcQE",
           "node": {
             "description": "# Market Research\nThis flow helps you gather comprehensive information about companies for sales and business intelligence purposes.\n\n## Prerequisites\n\n- **[Tavily API Key](https://docs.tavily.com/welcome)**\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Add your **OpenAI API key** to the **OpenAI** model and **Agent** components.\n2. Add your **Tavily API key** to the **Tavily Search** component.\n3. In the **Chat Input**, enter a company name you want to research.\n4. Open the **Playground** and research the company. The **Structured Output** component transforms the raw LLM response into structured data, and the **Parser** component presents the data as text for the **Chat output** component to present.",
             "display_name": "",
@@ -700,7 +639,7 @@
         },
         "dragging": false,
         "height": 671,
-        "id": "note-goubF",
+        "id": "note-YVcQE",
         "measured": {
           "height": 671,
           "width": 659
@@ -726,12 +665,9 @@
         "data": {
           "description": "**Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
           "display_name": "Tavily AI Search",
-          "id": "TavilySearchComponent-3WTYa",
+          "id": "TavilySearchComponent-DTqM5",
           "node": {
-            "base_classes": [
-              "Data",
-              "Message"
-            ],
+            "base_classes": ["Data", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -751,7 +687,7 @@
             ],
             "frozen": false,
             "icon": "TavilyIcon",
-            "last_updated": "2025-09-29T15:47:37.204Z",
+            "last_updated": "2025-10-08T20:21:44.030Z",
             "legacy": false,
             "lf_version": "1.6.0",
             "metadata": {
@@ -786,9 +722,7 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -872,9 +806,7 @@
                 "display_name": "Exclude Domains",
                 "dynamic": false,
                 "info": "Comma-separated list of domains to exclude from the search results.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -913,9 +845,7 @@
                 "display_name": "Include Domains",
                 "dynamic": false,
                 "info": "Comma-separated list of domains to include in the search results.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -990,9 +920,7 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "The search query you want to execute with Tavily.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1016,10 +944,7 @@
                 "dynamic": false,
                 "info": "The depth of the search.",
                 "name": "search_depth",
-                "options": [
-                  "basic",
-                  "advanced"
-                ],
+                "options": ["basic", "advanced"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1039,12 +964,7 @@
                 "dynamic": false,
                 "info": "The time range back from the current date to filter results.",
                 "name": "time_range",
-                "options": [
-                  "day",
-                  "week",
-                  "month",
-                  "year"
-                ],
+                "options": ["day", "week", "month", "year"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1087,9 +1007,7 @@
                     "name": "fetch_content_dataframe",
                     "readonly": false,
                     "status": true,
-                    "tags": [
-                      "fetch_content_dataframe"
-                    ]
+                    "tags": ["fetch_content_dataframe"]
                   }
                 ]
               },
@@ -1102,10 +1020,7 @@
                 "dynamic": false,
                 "info": "The category of the search.",
                 "name": "topic",
-                "options": [
-                  "general",
-                  "news"
-                ],
+                "options": ["general", "news"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1124,7 +1039,7 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-3WTYa",
+        "id": "TavilySearchComponent-DTqM5",
         "measured": {
           "height": 316,
           "width": 320
@@ -1138,12 +1053,9 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-Enuj5",
+          "id": "LanguageModelComponent-jb3qr",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1162,7 +1074,7 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "last_updated": "2025-09-29T15:47:37.204Z",
+            "last_updated": "2025-10-08T20:21:44.035Z",
             "legacy": false,
             "lf_version": "1.6.0",
             "metadata": {
@@ -1210,9 +1122,7 @@
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1226,9 +1136,7 @@
                 "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1278,9 +1186,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input text to send to the model",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1345,11 +1251,7 @@
                 "dynamic": false,
                 "info": "Select the model provider",
                 "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
-                ],
+                "options": ["OpenAI", "Anthropic", "Google"],
                 "options_metadata": [
                   {
                     "icon": "OpenAI"
@@ -1397,9 +1299,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1451,7 +1351,7 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-Enuj5",
+        "id": "LanguageModelComponent-jb3qr",
         "measured": {
           "height": 451,
           "width": 320
@@ -1465,11 +1365,9 @@
       },
       {
         "data": {
-          "id": "Agent-Hz2it",
+          "id": "Agent-qEcm1",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "agents",
             "conditional_paths": [],
@@ -1503,7 +1401,7 @@
             "frozen": false,
             "icon": "bot",
             "key": "Agent",
-            "last_updated": "2025-09-29T15:47:37.204Z",
+            "last_updated": "2025-10-08T20:21:44.037Z",
             "legacy": false,
             "lf_version": "1.6.0",
             "metadata": {
@@ -1541,9 +1439,7 @@
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1576,9 +1472,7 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1615,11 +1509,7 @@
                 "info": "The provider of the language model that the agent will use to generate responses.",
                 "input_types": [],
                 "name": "agent_llm",
-                "options": [
-                  "Anthropic",
-                  "Google Generative AI",
-                  "OpenAI"
-                ],
+                "options": ["Anthropic", "Google Generative AI", "OpenAI"],
                 "options_metadata": [
                   {
                     "icon": "Anthropic"
@@ -1688,9 +1578,7 @@
                 "display_name": "Output Format Instructions",
                 "dynamic": false,
                 "info": "Generic Template for structured output formatting. Valid only with Structured response.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1730,9 +1618,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1940,13 +1826,7 @@
                     "display_name": "Type",
                     "edit_mode": "inline",
                     "name": "type",
-                    "options": [
-                      "str",
-                      "int",
-                      "float",
-                      "bool",
-                      "dict"
-                    ],
+                    "options": ["str", "int", "float", "bool", "dict"],
                     "type": "str"
                   },
                   {
@@ -1991,9 +1871,7 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2061,9 +1939,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": [
-                  "Tool"
-                ],
+                "input_types": ["Tool"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -2100,7 +1976,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-Hz2it",
+        "id": "Agent-qEcm1",
         "measured": {
           "height": 594,
           "width": 320
@@ -2114,199 +1990,9 @@
       },
       {
         "data": {
-          "id": "ParserComponent-8lfAE",
+          "id": "StructuredOutput-JRnJ1",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Extracts text using a template.",
-            "display_name": "Parser",
-            "documentation": "https://docs.langflow.org/components-processing#parser",
-            "edited": false,
-            "field_order": [
-              "input_data",
-              "mode",
-              "pattern",
-              "sep"
-            ],
-            "frozen": false,
-            "icon": "braces",
-            "legacy": false,
-            "lf_version": "1.6.0",
-            "metadata": {
-              "code_hash": "022082ddd0ba",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "lfx.components.processing.parser.ParserComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Parsed Text",
-                "group_outputs": false,
-                "method": "parse_combined_text",
-                "name": "parsed_text",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from lfx.custom.custom_component.component import Component\nfrom lfx.helpers.data import safe_convert\nfrom lfx.inputs.inputs import BoolInput, HandleInput, MessageTextInput, MultilineInput, TabInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\n\n\nclass ParserComponent(Component):\n    display_name = \"Parser\"\n    description = \"Extracts text using a template.\"\n    documentation: str = \"https://docs.langflow.org/components-processing#parser\"\n    icon = \"braces\"\n\n    inputs = [\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"JSON or Table\",\n            input_types=[\"DataFrame\", \"Table\", \"Data\", \"JSON\"],\n            info=\"Accepts either a DataFrame or a Data object.\",\n            required=True,\n        ),\n        TabInput(\n            name=\"mode\",\n            display_name=\"Mode\",\n            options=[\"Parser\", \"Stringify\"],\n            value=\"Parser\",\n            info=\"Convert into raw string instead of using a template.\",\n            real_time_refresh=True,\n        ),\n        MultilineInput(\n            name=\"pattern\",\n            display_name=\"Template\",\n            info=(\n                \"Use variables within curly brackets to extract column values for DataFrames \"\n                \"or key values for Data.\"\n                \"For example: `Name: {Name}, Age: {Age}, Country: {Country}`\"\n            ),\n            value=\"Text: {text}\",  # Example default\n            dynamic=True,\n            show=True,\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"sep\",\n            display_name=\"Separator\",\n            advanced=True,\n            value=\"\\n\",\n            info=\"String used to separate rows/items.\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Parsed Text\",\n            name=\"parsed_text\",\n            info=\"Formatted text output.\",\n            method=\"parse_combined_text\",\n        ),\n    ]\n\n    def update_build_config(self, build_config, field_value, field_name=None):\n        \"\"\"Dynamically hide/show `template` and enforce requirement based on `stringify`.\"\"\"\n        if field_name == \"mode\":\n            build_config[\"pattern\"][\"show\"] = self.mode == \"Parser\"\n            build_config[\"pattern\"][\"required\"] = self.mode == \"Parser\"\n            if field_value:\n                clean_data = BoolInput(\n                    name=\"clean_data\",\n                    display_name=\"Clean Data\",\n                    info=(\n                        \"Enable to clean the data by removing empty rows and lines \"\n                        \"in each cell of the DataFrame/ Data object.\"\n                    ),\n                    value=True,\n                    advanced=True,\n                    required=False,\n                )\n                build_config[\"clean_data\"] = clean_data.to_dict()\n            else:\n                build_config.pop(\"clean_data\", None)\n\n        return build_config\n\n    def _clean_args(self):\n        \"\"\"Prepare arguments based on input type.\"\"\"\n        input_data = self.input_data\n\n        match input_data:\n            case list() if all(isinstance(item, Data) for item in input_data):\n                msg = \"List of Data objects is not supported.\"\n                raise ValueError(msg)\n            case DataFrame():\n                return input_data, None\n            case Data():\n                return None, input_data\n            case dict() if \"data\" in input_data:\n                try:\n                    if \"columns\" in input_data:  # Likely a DataFrame\n                        return DataFrame.from_dict(input_data), None\n                    # Likely a Data object\n                    return None, Data(**input_data)\n                except (TypeError, ValueError, KeyError) as e:\n                    msg = f\"Invalid structured input provided: {e!s}\"\n                    raise ValueError(msg) from e\n            case _:\n                msg = f\"Unsupported input type: {type(input_data)}. Expected DataFrame or Data.\"\n                raise ValueError(msg)\n\n    def parse_combined_text(self) -> Message:\n        \"\"\"Parse all rows/items into a single text or convert input to string if `stringify` is enabled.\"\"\"\n        # Early return for stringify option\n        if self.mode == \"Stringify\":\n            return self.convert_to_string()\n\n        df, data = self._clean_args()\n\n        lines = []\n        if df is not None:\n            for _, row in df.iterrows():\n                formatted_text = self.pattern.format(**row.to_dict())\n                lines.append(formatted_text)\n        elif data is not None:\n            formatted_text = self.pattern.format(**data.data)\n            lines.append(formatted_text)\n\n        combined_text = self.sep.join(lines)\n        self.status = combined_text\n        return Message(text=combined_text)\n\n    def convert_to_string(self) -> Message:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        result = \"\"\n        if isinstance(self.input_data, list):\n            result = \"\\n\".join([safe_convert(item, clean_data=self.clean_data or False) for item in self.input_data])\n        else:\n            result = safe_convert(self.input_data or False)\n        self.log(f\"Converted to string with length: {len(result)}\")\n\n        message = Message(text=result)\n        self.status = message\n        return message\n"
-              },
-              "input_data": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "JSON or Table",
-                "dynamic": false,
-                "info": "Accepts either a DataFrame or a Data object.",
-                "input_types": [
-                  "DataFrame",
-                  "Table",
-                  "Data",
-                  "JSON"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "input_data",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "mode": {
-                "_input_type": "TabInput",
-                "advanced": false,
-                "display_name": "Mode",
-                "dynamic": false,
-                "info": "Convert into raw string instead of using a template.",
-                "name": "mode",
-                "options": [
-                  "Parser",
-                  "Stringify"
-                ],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "tab",
-                "value": "Parser"
-              },
-              "pattern": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "copy_field": false,
-                "display_name": "Template",
-                "dynamic": true,
-                "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "pattern",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "# Company Profile\n\n## Basic Information\n\n- **Domain:** {domain}\n- **LinkedIn URL:** {linkedinUrl}\n\n## Pricing and Plans\n- **Cheapest Plan:** {cheapestPlan}\n- **Has Free Trial:** {hasFreeTrial}\n- **Has Enterprise Plan:** {hasEnterprisePlan}\n\n## Technical Capabilities\n- **Has API:** {hasAPI}\n\n## Market and Target Audience\n- **Market:** {market}\n- **Target Industries:** {targetIndustries}\n\n## Pricing Structure\n{pricingTiers}\n\n## Key Features\n{KeyFeatures}"
-              },
-              "sep": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Separator",
-                "dynamic": false,
-                "info": "String used to separate rows/items.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "sep",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "\n"
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "ParserComponent"
-        },
-        "dragging": false,
-        "id": "ParserComponent-8lfAE",
-        "measured": {
-          "height": 329,
-          "width": 320
-        },
-        "position": {
-          "x": 2109.171649979737,
-          "y": 774.5251266612232
-        },
-        "selected": true,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "StructuredOutput-zfjb9",
-          "node": {
-            "base_classes": [
-              "Data",
-              "DataFrame"
-            ],
+            "base_classes": ["Data", "DataFrame"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2358,9 +2044,7 @@
                 "name": "structured_output",
                 "selected": null,
                 "tool_mode": true,
-                "types": [
-                  "JSON"
-                ],
+                "types": ["JSON"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2372,9 +2056,7 @@
                 "name": "dataframe_output",
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
+                "types": ["Table"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2406,9 +2088,7 @@
                 "display_name": "Input Message",
                 "dynamic": false,
                 "info": "The input message to the language model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2430,9 +2110,7 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "The language model to use to generate the structured output.",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "llm",
@@ -2483,13 +2161,7 @@
                     "edit_mode": "inline",
                     "formatter": "text",
                     "name": "type",
-                    "options": [
-                      "str",
-                      "int",
-                      "float",
-                      "bool",
-                      "dict"
-                    ],
+                    "options": ["str", "int", "float", "bool", "dict"],
                     "type": "str"
                   },
                   {
@@ -2577,9 +2249,7 @@
                 "display_name": "Schema Name",
                 "dynamic": false,
                 "info": "Provide a name for the output data schema.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2601,9 +2271,7 @@
                 "display_name": "Format Instructions",
                 "dynamic": false,
                 "info": "The instructions to the language model for formatting the output.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2627,7 +2295,7 @@
           "type": "StructuredOutput"
         },
         "dragging": false,
-        "id": "StructuredOutput-zfjb9",
+        "id": "StructuredOutput-JRnJ1",
         "measured": {
           "height": 349,
           "width": 320
@@ -2638,12 +2306,177 @@
         },
         "selected": false,
         "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ParserComponent-isiHR",
+          "node": {
+            "base_classes": ["Message"],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Extracts text using a template.",
+            "display_name": "Parser",
+            "documentation": "https://docs.langflow.org/components-processing#parser",
+            "edited": false,
+            "field_order": ["input_data", "mode", "pattern", "sep"],
+            "frozen": false,
+            "icon": "braces",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "022082ddd0ba",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
+              },
+              "module": "lfx.components.processing.parser.ParserComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Parsed Text",
+                "group_outputs": false,
+                "method": "parse_combined_text",
+                "name": "parsed_text",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": ["Message"],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.custom.custom_component.component import Component\nfrom lfx.helpers.data import safe_convert\nfrom lfx.inputs.inputs import BoolInput, HandleInput, MessageTextInput, MultilineInput, TabInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\n\n\nclass ParserComponent(Component):\n    display_name = \"Parser\"\n    description = \"Extracts text using a template.\"\n    documentation: str = \"https://docs.langflow.org/components-processing#parser\"\n    icon = \"braces\"\n\n    inputs = [\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"JSON or Table\",\n            input_types=[\"DataFrame\", \"Table\", \"Data\", \"JSON\"],\n            info=\"Accepts either a DataFrame or a Data object.\",\n            required=True,\n        ),\n        TabInput(\n            name=\"mode\",\n            display_name=\"Mode\",\n            options=[\"Parser\", \"Stringify\"],\n            value=\"Parser\",\n            info=\"Convert into raw string instead of using a template.\",\n            real_time_refresh=True,\n        ),\n        MultilineInput(\n            name=\"pattern\",\n            display_name=\"Template\",\n            info=(\n                \"Use variables within curly brackets to extract column values for DataFrames \"\n                \"or key values for Data.\"\n                \"For example: `Name: {Name}, Age: {Age}, Country: {Country}`\"\n            ),\n            value=\"Text: {text}\",  # Example default\n            dynamic=True,\n            show=True,\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"sep\",\n            display_name=\"Separator\",\n            advanced=True,\n            value=\"\\n\",\n            info=\"String used to separate rows/items.\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Parsed Text\",\n            name=\"parsed_text\",\n            info=\"Formatted text output.\",\n            method=\"parse_combined_text\",\n        ),\n    ]\n\n    def update_build_config(self, build_config, field_value, field_name=None):\n        \"\"\"Dynamically hide/show `template` and enforce requirement based on `stringify`.\"\"\"\n        if field_name == \"mode\":\n            build_config[\"pattern\"][\"show\"] = self.mode == \"Parser\"\n            build_config[\"pattern\"][\"required\"] = self.mode == \"Parser\"\n            if field_value:\n                clean_data = BoolInput(\n                    name=\"clean_data\",\n                    display_name=\"Clean Data\",\n                    info=(\n                        \"Enable to clean the data by removing empty rows and lines \"\n                        \"in each cell of the DataFrame/ Data object.\"\n                    ),\n                    value=True,\n                    advanced=True,\n                    required=False,\n                )\n                build_config[\"clean_data\"] = clean_data.to_dict()\n            else:\n                build_config.pop(\"clean_data\", None)\n\n        return build_config\n\n    def _clean_args(self):\n        \"\"\"Prepare arguments based on input type.\"\"\"\n        input_data = self.input_data\n\n        match input_data:\n            case list() if all(isinstance(item, Data) for item in input_data):\n                msg = \"List of Data objects is not supported.\"\n                raise ValueError(msg)\n            case DataFrame():\n                return input_data, None\n            case Data():\n                return None, input_data\n            case dict() if \"data\" in input_data:\n                try:\n                    if \"columns\" in input_data:  # Likely a DataFrame\n                        return DataFrame.from_dict(input_data), None\n                    # Likely a Data object\n                    return None, Data(**input_data)\n                except (TypeError, ValueError, KeyError) as e:\n                    msg = f\"Invalid structured input provided: {e!s}\"\n                    raise ValueError(msg) from e\n            case _:\n                msg = f\"Unsupported input type: {type(input_data)}. Expected DataFrame or Data.\"\n                raise ValueError(msg)\n\n    def parse_combined_text(self) -> Message:\n        \"\"\"Parse all rows/items into a single text or convert input to string if `stringify` is enabled.\"\"\"\n        # Early return for stringify option\n        if self.mode == \"Stringify\":\n            return self.convert_to_string()\n\n        df, data = self._clean_args()\n\n        lines = []\n        if df is not None:\n            for _, row in df.iterrows():\n                formatted_text = self.pattern.format(**row.to_dict())\n                lines.append(formatted_text)\n        elif data is not None:\n            formatted_text = self.pattern.format(**data.data)\n            lines.append(formatted_text)\n\n        combined_text = self.sep.join(lines)\n        self.status = combined_text\n        return Message(text=combined_text)\n\n    def convert_to_string(self) -> Message:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        result = \"\"\n        if isinstance(self.input_data, list):\n            result = \"\\n\".join([safe_convert(item, clean_data=self.clean_data or False) for item in self.input_data])\n        else:\n            result = safe_convert(self.input_data or False)\n        self.log(f\"Converted to string with length: {len(result)}\")\n\n        message = Message(text=result)\n        self.status = message\n        return message\n"
+              },
+              "input_data": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "JSON or Table",
+                "dynamic": false,
+                "info": "Accepts either a DataFrame or a Data object.",
+                "input_types": ["DataFrame", "Table", "Data", "JSON"],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_data",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "mode": {
+                "_input_type": "TabInput",
+                "advanced": false,
+                "display_name": "Mode",
+                "dynamic": false,
+                "info": "Convert into raw string instead of using a template.",
+                "name": "mode",
+                "options": ["Parser", "Stringify"],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "tab",
+                "value": "Parser"
+              },
+              "pattern": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "copy_field": false,
+                "display_name": "Template",
+                "dynamic": true,
+                "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
+                "input_types": ["Message"],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "pattern",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "# Company Profile## Basic Information- **Domain:** {domain}- **LinkedIn URL:** {linkedinUrl}## Pricing and Plans- **Cheapest Plan:** {cheapestPlan}- **Has Free Trial:** {hasFreeTrial}- **Has Enterprise Plan:** {hasEnterprisePlan}## Technical Capabilities- **Has API:** {hasAPI}## Market and Target Audience- **Market:** {market}- **Target Industries:** {targetIndustries}## Pricing Structure{pricingTiers}## Key Features{KeyFeatures}"
+              },
+              "sep": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Separator",
+                "dynamic": false,
+                "info": "String used to separate rows/items.",
+                "input_types": ["Message"],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sep",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "\n"
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "ParserComponent"
+        },
+        "dragging": false,
+        "id": "ParserComponent-isiHR",
+        "measured": {
+          "height": 329,
+          "width": 320
+        },
+        "position": {
+          "x": 2091.5724864316244,
+          "y": 766.2695995943287
+        },
+        "selected": false,
+        "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -286.2250796857875,
-      "y": -257.26691224713466,
-      "zoom": 0.5812257189224358
+      "x": -52.69921859150668,
+      "y": -107.98546748177239,
+      "zoom": 0.5272106158141294
     }
   },
   "description": "Researches companies, extracts key business data, and presents structured information for efficient analysis. ",
@@ -2652,8 +2485,5 @@
   "is_component": false,
   "last_tested_version": "1.6.0",
   "name": "Market Research",
-  "tags": [
-    "assistants",
-    "agents"
-  ]
+  "tags": ["assistants", "agents"]
 }
