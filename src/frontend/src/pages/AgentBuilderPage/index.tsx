@@ -20,8 +20,6 @@ import { cn, getNumberFromString } from "@/utils/utils";
 import { useGetTemplateStyle } from "@/pages/MainPage/utils/get-template-style";
 import { timeElapsed } from "@/pages/MainPage/utils/time-elapse";
 import type { FlowType } from "@/types/flow";
-import { useAgentBuilderStream } from "@/hooks/useAgentBuilderStream";
-import StreamingMessages from "@/components/AgentBuilder/StreamingMessages";
 
 // Agent Table Row Component (reused from StudioHomePage)
 const AgentTableRow = ({
@@ -105,9 +103,6 @@ export default function AgentBuilderPage() {
   const [promptValue, setPromptValue] = useState("");
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
 
-  // Streaming hook
-  const { messages, isLoading, startStream, reset } = useAgentBuilderStream();
-
   // Fetch folders and agents (same logic as StudioHomePage)
   const myCollectionId = useFolderStore((s) => s.myCollectionId);
   const folders = useFolderStore((s) => s.folders);
@@ -134,8 +129,8 @@ export default function AgentBuilderPage() {
 
   const handlePromptSubmit = () => {
     if (promptValue.trim()) {
-      // Start streaming from backend
-      startStream(promptValue);
+      // Navigate to conversation page with prompt
+      navigate("/agent-builder/conversation", { state: { prompt: promptValue } });
     }
   };
 
@@ -195,11 +190,6 @@ export default function AgentBuilderPage() {
               Or Start Manually
             </button>
           </div>
-        </div>
-
-        {/* Streaming Messages */}
-        <div className="max-w-4xl mx-auto">
-          <StreamingMessages messages={messages} isLoading={isLoading} />
         </div>
 
         {/* Recent Agents Section */}

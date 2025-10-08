@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 
 export interface StreamMessage {
   id: string;
-  type: "thinking" | "agent_found" | "complete" | "error";
+  type: "user" | "thinking" | "agent_found" | "complete" | "error";
   data: any;
   timestamp: number;
 }
@@ -47,10 +47,17 @@ export function useAgentBuilderStream() {
         abortControllerRef.current.abort();
       }
 
-      // Reset state
+      // Add user message first
+      const userMessage: StreamMessage = {
+        id: `${Date.now()}-user`,
+        type: "user",
+        data: { message: prompt },
+        timestamp: Date.now(),
+      };
+
       setState({
         status: "connecting",
-        messages: [],
+        messages: [userMessage],
         error: null,
       });
 
