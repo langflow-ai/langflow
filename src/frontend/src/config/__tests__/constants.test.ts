@@ -1,13 +1,4 @@
-import {
-  getBackendUrl,
-  getApiPrefix,
-  getWebSocketUrl,
-  BASE_URL_API,
-  BASE_URL_API_V2,
-  APP_CONFIG,
-  FEATURE_FLAGS,
-  ADVANCED_CONFIG,
-} from "../constants";
+// Dynamic imports will be used within tests to avoid import.meta issues
 
 // Mock the env configuration
 jest.mock("../env/index", () => ({
@@ -48,6 +39,7 @@ describe("Constants Configuration", () => {
 
   describe("getBackendUrl", () => {
     it("should return backend URL from environment config", () => {
+      const { getBackendUrl } = require("../constants");
       const url = getBackendUrl();
       expect(url).toBe("https://test-backend.example.com");
     });
@@ -85,6 +77,7 @@ describe("Constants Configuration", () => {
 
   describe("getApiPrefix", () => {
     it("should return API prefix from environment config", () => {
+      const { getApiPrefix } = require("../constants");
       const prefix = getApiPrefix();
       expect(prefix).toBe("/api/v1");
     });
@@ -105,6 +98,7 @@ describe("Constants Configuration", () => {
 
   describe("getWebSocketUrl", () => {
     it("should return configured WebSocket URL", () => {
+      const { getWebSocketUrl } = require("../constants");
       const wsUrl = getWebSocketUrl();
       expect(wsUrl).toBe("wss://test-ws.example.com");
     });
@@ -154,6 +148,7 @@ describe("Constants Configuration", () => {
 
   describe("BASE_URL_API", () => {
     it("should construct correct API URL", () => {
+      const { BASE_URL_API } = require("../constants");
       expect(BASE_URL_API).toBe("https://test-backend.example.com/api/v1/");
     });
 
@@ -173,12 +168,14 @@ describe("Constants Configuration", () => {
 
   describe("BASE_URL_API_V2", () => {
     it("should construct correct API v2 URL", () => {
+      const { BASE_URL_API_V2 } = require("../constants");
       expect(BASE_URL_API_V2).toBe("https://test-backend.example.com/api/v2/");
     });
   });
 
   describe("APP_CONFIG", () => {
     it("should provide correct app configuration", () => {
+      const { APP_CONFIG } = require("../constants");
       expect(APP_CONFIG).toEqual({
         title: "Test AI Studio",
         buildVersion: "1.0.0-test",
@@ -208,6 +205,7 @@ describe("Constants Configuration", () => {
     });
 
     it("should be immutable (readonly)", () => {
+      const { APP_CONFIG } = require("../constants");
       expect(() => {
         // @ts-expect-error - testing immutability
         APP_CONFIG.title = "Modified Title";
@@ -217,6 +215,7 @@ describe("Constants Configuration", () => {
 
   describe("FEATURE_FLAGS", () => {
     it("should provide correct feature flags", () => {
+      const { FEATURE_FLAGS } = require("../constants");
       expect(FEATURE_FLAGS).toEqual({
         enableChat: false,
         enableAgentBuilder: true,
@@ -261,6 +260,7 @@ describe("Constants Configuration", () => {
     });
 
     it("should be immutable (readonly)", () => {
+      const { FEATURE_FLAGS } = require("../constants");
       expect(() => {
         // @ts-expect-error - testing immutability
         FEATURE_FLAGS.enableChat = true;
@@ -270,6 +270,7 @@ describe("Constants Configuration", () => {
 
   describe("ADVANCED_CONFIG", () => {
     it("should provide correct advanced configuration", () => {
+      const { ADVANCED_CONFIG } = require("../constants");
       expect(ADVANCED_CONFIG).toEqual({
         maxFileSize: "25MB",
         timeout: 10000, // parsed as integer
@@ -319,6 +320,7 @@ describe("Constants Configuration", () => {
     });
 
     it("should be immutable (readonly)", () => {
+      const { ADVANCED_CONFIG } = require("../constants");
       expect(() => {
         // @ts-expect-error - testing immutability
         ADVANCED_CONFIG.maxFileSize = "100MB";
@@ -328,6 +330,7 @@ describe("Constants Configuration", () => {
 
   describe("integration tests", () => {
     it("should work together to provide consistent configuration", () => {
+      const { getBackendUrl, getApiPrefix, BASE_URL_API } = require("../constants");
       const backendUrl = getBackendUrl();
       const apiPrefix = getApiPrefix();
       const expectedApiUrl = `${backendUrl}${apiPrefix}/`;
@@ -337,6 +340,7 @@ describe("Constants Configuration", () => {
 
     it("should maintain consistency across all configuration objects", () => {
       // All configuration should come from the same environment source
+      const { getBackendUrl, getApiPrefix, APP_CONFIG, FEATURE_FLAGS } = require("../constants");
       expect(typeof getBackendUrl()).toBe("string");
       expect(typeof getApiPrefix()).toBe("string");
       expect(typeof APP_CONFIG.title).toBe("string");

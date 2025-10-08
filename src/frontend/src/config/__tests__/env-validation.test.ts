@@ -85,6 +85,8 @@ function testValidateEnv(env: Record<string, any>) {
 describe("Environment Validation", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Clear any module cache to ensure fresh test environment
+    jest.resetModules();
   });
 
   describe("Schema Validation", () => {

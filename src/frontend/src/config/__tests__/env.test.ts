@@ -1,4 +1,3 @@
-import { validateEnv, envConfig } from "../env/index";
 import { ZodError } from "zod";
 
 // Mock window object for browser environment simulation
@@ -6,10 +5,19 @@ const mockWindow = {
   _env_: {},
 };
 
-Object.defineProperty(global, "window", {
-  value: mockWindow,
-  writable: true,
-});
+// Store original window if it exists
+const originalWindow = global.window;
+
+// Define or redefine window
+if (global.window) {
+  global.window = mockWindow;
+} else {
+  Object.defineProperty(global, "window", {
+    value: mockWindow,
+    writable: true,
+    configurable: true,
+  });
+}
 
 // Mock import.meta.env for development environment simulation
 const mockImportMeta = {
@@ -60,8 +68,17 @@ describe("Environment Configuration", () => {
     jest.clearAllMocks();
   });
 
+  afterAll(() => {
+    // Restore original window if it existed
+    if (originalWindow) {
+      global.window = originalWindow;
+    }
+  });
+
   describe("validateEnv", () => {
     it("should validate and transform valid environment variables", () => {
+      const { validateEnv } = require("../env/index");
+
       const validEnv = {
         VITE_BACKEND_URL: "https://api.example.com",
         VITE_API_PREFIX: "/api/v1",
@@ -96,6 +113,8 @@ describe("Environment Configuration", () => {
     });
 
     it("should apply default values for optional fields", () => {
+      const { validateEnv } = require("../env/index");
+
       const minimalEnv = {
         VITE_BACKEND_URL: "https://api.example.com",
       };
@@ -113,6 +132,8 @@ describe("Environment Configuration", () => {
     });
 
     it("should throw ZodError for invalid URL", () => {
+      const { validateEnv } = require("../env/index");
+
       const invalidEnv = {
         VITE_BACKEND_URL: "not-a-valid-url",
       };
@@ -121,12 +142,16 @@ describe("Environment Configuration", () => {
     });
 
     it("should throw ZodError for missing required fields", () => {
+      const { validateEnv } = require("../env/index");
+
       const emptyEnv = {};
 
       expect(() => validateEnv(emptyEnv)).toThrow(ZodError);
     });
 
     it("should convert boolean strings correctly", () => {
+      const { validateEnv } = require("../env/index");
+
       const booleanTestEnv = {
         VITE_BACKEND_URL: "https://api.example.com",
         VITE_ENABLE_CHAT: "TRUE",
@@ -144,6 +169,8 @@ describe("Environment Configuration", () => {
     });
 
     it("should handle camelCase conversion correctly", () => {
+      const { validateEnv } = require("../env/index");
+
       const env = {
         VITE_BACKEND_URL: "https://api.example.com",
         VITE_API_PREFIX: "/api/v2",
@@ -262,6 +289,8 @@ describe("Environment Configuration", () => {
 
   describe("type safety", () => {
     it("should export correct TypeScript types", () => {
+      const { validateEnv } = require("../env/index");
+
       const validEnv = {
         VITE_BACKEND_URL: "https://api.example.com",
         VITE_ENABLE_CHAT: "true",
