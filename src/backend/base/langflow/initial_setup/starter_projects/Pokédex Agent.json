@@ -1524,6 +1524,7 @@
                   "gpt-4-turbo-preview",
                   "gpt-4",
                   "gpt-3.5-turbo",
+                  "gemini-2.5-pro",
                   "gpt-5",
                   "gpt-5-mini",
                   "gpt-5-nano",
