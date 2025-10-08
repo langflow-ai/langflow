@@ -108,7 +108,10 @@ stages:
 
   - stage: Build
     displayName: 'Build and Push Frontend Docker Image'
-    condition: and(succeeded(), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/develop'))
+    condition: and(succeeded(), or(
+      in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/develop'),
+      eq(variables['Build.Reason'], 'Manual')
+    ))
     jobs:
       - job: BuildAndPushFrontendImage
         displayName: 'Build and Push Frontend to ACR'
@@ -143,7 +146,10 @@ stages:
 
   - stage: UpdatePlatformCharts
     displayName: 'Update Platform Charts Image Tags'
-    condition: and(succeeded(), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/develop'))
+    condition: and(succeeded(), or(
+      in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/develop'),
+      eq(variables['Build.Reason'], 'Manual')
+    ))
     dependsOn: Build
     jobs:
       - job: UpdateImageTags
