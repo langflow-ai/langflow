@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
 import pytest
-from langflow.components.logic.flow_tool import FlowToolComponent
-from langflow.schema.data import Data
+from lfx.components.logic.flow_tool import FlowToolComponent
+from lfx.schema.data import Data
 
 
 class TestFlowToolComponent:
@@ -15,8 +15,8 @@ class TestFlowToolComponent:
 
     def test_component_initialization(self, component):
         """Test proper initialization of FlowToolComponent."""
-        assert component.display_name == "Flow as Tool [Deprecated]"
-        assert "Construct a Tool from a function" in component.description
+        assert component.display_name == "Flow as Tool"
+        assert "Construct a Tool from a function that runs the loaded Flow" in component.description
         assert component.name == "FlowTool"
         assert component.icon == "hammer"
         assert component.legacy is True
@@ -137,8 +137,11 @@ class TestFlowToolComponent:
     @pytest.mark.asyncio
     async def test_build_tool_no_flow_name(self, component):
         """Test build_tool raises error when flow_name is not provided."""
+        from lfx.base.tools.flow_tool import FlowTool
+        
         with (
             patch.object(component, "_attributes", {}),
+            patch.object(FlowTool, "model_rebuild"),  # Mock to avoid Graph annotation error
             pytest.raises(ValueError, match="Flow name is required"),
         ):
             await component.build_tool()
@@ -146,8 +149,11 @@ class TestFlowToolComponent:
     @pytest.mark.asyncio
     async def test_build_tool_empty_flow_name(self, component):
         """Test build_tool raises error when flow_name is empty."""
+        from lfx.base.tools.flow_tool import FlowTool
+        
         with (
             patch.object(component, "_attributes", {"flow_name": ""}),
+            patch.object(FlowTool, "model_rebuild"),  # Mock to avoid Graph annotation error
             pytest.raises(ValueError, match="Flow name is required"),
         ):
             await component.build_tool()
@@ -155,16 +161,19 @@ class TestFlowToolComponent:
     @pytest.mark.asyncio
     async def test_build_tool_flow_not_found(self, component):
         """Test build_tool raises error when flow is not found."""
+        from lfx.base.tools.flow_tool import FlowTool
+        
         with (
             patch.object(component, "_attributes", {"flow_name": "Nonexistent Flow"}),
             patch.object(component, "get_flow", return_value=None),
+            patch.object(FlowTool, "model_rebuild"),  # Mock to avoid Graph annotation error
             pytest.raises(ValueError, match="Flow not found"),
         ):
             await component.build_tool()
 
     def test_component_inheritance(self, component):
         """Test that component properly inherits from LCToolComponent."""
-        from langflow.base.langchain_utilities.model import LCToolComponent
+        from lfx.base.langchain_utilities.model import LCToolComponent
 
         assert isinstance(component, LCToolComponent)
 
