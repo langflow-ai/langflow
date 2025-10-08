@@ -1,0 +1,118 @@
+# Docker Compose for AI Studio Local Development
+# Provides a complete local development environment
+
+version: '3.8'
+
+services:
+  # Backend Service
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      args:
+        BUILD_VERSION: local-dev
+        PYTHON_VERSION: 3.12
+    container_name: ai-studio-backend
+    ports:
+      - "7860:7860"
+    environment:
+      - PYTHONPATH=/app
+      - LANGFLOW_DATABASE_URL=sqlite:///app/data/langflow.db
+      - LANGFLOW_CACHE_TYPE=memory
+      - LANGFLOW_LOG_LEVEL=DEBUG
+      - HOST=0.0.0.0
+      - PORT=7860
+    volumes:
+      - ./src/backend:/app/src/backend
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - ai-studio-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Service
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+      args:
+        BUILD_VERSION: local-dev
+        BACKEND_URL: http://localhost:7860
+        NODE_ENV: development
+    container_name: ai-studio-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - BACKEND_URL=http://backend:7860
+      - NODE_ENV=development
+    volumes:
+      - ./src/frontend/src:/app/src
+      - ./src/frontend/public:/app/public
+    networks:
+      - ai-studio-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Database Service (PostgreSQL for production-like environment)
+  database:
+    image: postgres:15-alpine
+    container_name: ai-studio-db
+    environment:
+      - POSTGRES_DB=ai_studio
+      - POSTGRES_USER=aistudio
+      - POSTGRES_PASSWORD=dev_password_change_in_production
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/database/init:/docker-entrypoint-initdb.d
+    networks:
+      - ai-studio-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aistudio -d ai_studio"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Service (for caching and session management)
+  cache:
+    image: redis:7-alpine
+    container_name: ai-studio-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ai-studio-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  ai-studio-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# Development overrides
+# Run with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up

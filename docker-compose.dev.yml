@@ -1,0 +1,94 @@
+# Docker Compose Development Overrides
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  # Backend Development Overrides
+  backend:
+    build:
+      target: builder  # Use builder stage for development with more tools
+    environment:
+      - LANGFLOW_LOG_LEVEL=DEBUG
+      - PYTHONPATH=/app:/app/src/backend
+      - LANGFLOW_DEV_MODE=true
+      - LANGFLOW_AUTO_RELOAD=true
+    volumes:
+      # Mount source code for hot reloading
+      - ./src/backend:/app/src/backend:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./uv.lock:/app/uv.lock:ro
+      # Development data persistence
+      - ai_studio_dev_data:/app/data
+    command: >
+      sh -c "cd /app &&
+             . /app/.venv/bin/activate &&
+             uvicorn langflow.main:create_app --factory --host 0.0.0.0 --port 7860 --reload"
+
+  # Frontend Development Overrides
+  frontend:
+    build:
+      target: frontend_build  # Use build stage for development
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:7860
+      - VITE_DEV_MODE=true
+    volumes:
+      # Mount source code for hot reloading
+      - ./src/frontend/src:/app/src:ro
+      - ./src/frontend/public:/app/public:ro
+      - ./src/frontend/package.json:/app/package.json:ro
+      - ./src/frontend/vite.config.mts:/app/vite.config.mts:ro
+      - ./src/frontend/tsconfig.json:/app/tsconfig.json:ro
+      - ./src/frontend/tailwind.config.mjs:/app/tailwind.config.mjs:ro
+      # Node modules cache
+      - frontend_node_modules:/app/node_modules
+    command: npm run dev -- --host 0.0.0.0 --port 3000
+    ports:
+      - "3000:3000"
+      - "3001:3001"  # HMR port
+
+  # Development Database with pgAdmin
+  database:
+    environment:
+      - POSTGRES_DB=ai_studio_dev
+      - POSTGRES_USER=dev_user
+      - POSTGRES_PASSWORD=dev_password
+    volumes:
+      - ai_studio_dev_db:/var/lib/postgresql/data
+
+  # pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: ai-studio-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=dev@ai-studio.local
+      - PGADMIN_DEFAULT_PASSWORD=dev_password
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    ports:
+      - "5050:80"
+    networks:
+      - ai-studio-network
+    depends_on:
+      - database
+
+  # Redis Commander for cache management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: ai-studio-redis-commander
+    environment:
+      - REDIS_HOSTS=local:cache:6379
+    ports:
+      - "8081:8081"
+    networks:
+      - ai-studio-network
+    depends_on:
+      - cache
+
+volumes:
+  ai_studio_dev_data:
+    driver: local
+  ai_studio_dev_db:
+    driver: local
+  frontend_node_modules:
+    driver: local

@@ -1,0 +1,42 @@
+# Template for Docker build and push operations
+parameters:
+  - name: serviceName
+    type: string
+  - name: dockerfilePath
+    type: string
+  - name: buildContext
+    type: string
+    default: '.'
+  - name: containerRegistry
+    type: string
+    default: 'aistudioregistry.azurecr.io'
+  - name: buildArgs
+    type: object
+    default: {}
+
+steps:
+  - task: Docker@2
+    displayName: 'Build ${{ parameters.serviceName }} Docker image'
+    inputs:
+      containerRegistry: '${{ parameters.containerRegistry }}'
+      repository: 'ai-studio-${{ parameters.serviceName }}'
+      command: 'build'
+      Dockerfile: '${{ parameters.dockerfilePath }}'
+      buildContext: '${{ parameters.buildContext }}'
+      tags: |
+        $(Build.BuildId)
+        latest
+      arguments: >
+        {{- range $key, $value := parameters.buildArgs }}
+        --build-arg ${{ $key }}=${{ $value }}
+        {{- end }}
+
+  - task: Docker@2
+    displayName: 'Push ${{ parameters.serviceName }} Docker image'
+    inputs:
+      containerRegistry: '${{ parameters.containerRegistry }}'
+      repository: 'ai-studio-${{ parameters.serviceName }}'
+      command: 'push'
+      tags: |
+        $(Build.BuildId)
+        latest
