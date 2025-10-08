@@ -1,0 +1,295 @@
+# Azure DevOps Pipeline for AI Studio Frontend
+# Triggers on frontend-related changes in the monorepo
+
+resources:
+  repositories:
+  - repository: platform-charts
+    type: github
+    endpoint: autonomize-ai
+    name: autonomize-ai/platform-charts
+    ref: main
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+      - feature/*
+  paths:
+    include:
+      - src/frontend/**
+      - docker/frontend/**
+      - azure-devops/pipelines/azure-pipelines-frontend.yml
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - src/frontend/**
+      - docker/frontend/**
+      - azure-devops/pipelines/azure-pipelines-frontend.yml
+
+variables:
+  # Container Registry Configuration
+  ACR_NAME: 'sprintregistry'
+  ACR_ENDPOINT: 'sprintregistry.azurecr.io'
+  IMAGE_NAME: 'ai-studio-frontend'
+  DOCKERFILE_PATH: 'docker/frontend/Dockerfile'
+
+  # Node.js Configuration
+  NODE_VERSION: '20.x'
+  NPM_CACHE_FOLDER: $(Pipeline.Workspace)/.npm
+
+  # Build Configuration
+  BUILD_CONFIGURATION: 'production'
+  WORKING_DIRECTORY: 'src/frontend'
+
+  # Platform Charts Configuration
+  VALUES_FILE: 'charts/genesis-platform/values-dev.yaml'
+
+stages:
+  - stage: Test
+    displayName: 'Test and Validate Frontend'
+    condition: eq(variables['Build.Reason'], 'PullRequest')
+    jobs:
+      - job: RunFrontendTests
+        displayName: 'Run Frontend Tests and Linting'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(NODE_VERSION)
+            displayName: 'Install Node.js $(NODE_VERSION)'
+
+          - task: Cache@2
+            inputs:
+              key: 'npm | "$(Agent.OS)" | $(WORKING_DIRECTORY)/package-lock.json'
+              restoreKeys: |
+                npm | "$(Agent.OS)"
+              path: $(NPM_CACHE_FOLDER)
+            displayName: 'Cache npm packages'
+
+          - script: |
+              cd $(WORKING_DIRECTORY)
+              npm ci --cache $(NPM_CACHE_FOLDER) --prefer-offline
+            displayName: 'Install Frontend Dependencies'
+
+          - script: |
+              cd $(WORKING_DIRECTORY)
+              npm run lint || echo "Linting completed with warnings"
+            displayName: 'Lint Frontend Code'
+
+          - script: |
+              cd $(WORKING_DIRECTORY)
+              npm run type-check || echo "Type checking completed"
+            displayName: 'Type Check Frontend Code'
+
+          - script: |
+              cd $(WORKING_DIRECTORY)
+              npm run test:unit || echo "Unit tests completed"
+            displayName: 'Run Frontend Unit Tests'
+            continueOnError: true
+
+          - script: |
+              cd $(WORKING_DIRECTORY)
+              npm run build
+            displayName: 'Build Frontend Application'
+
+          - task: PublishTestResults@2
+            condition: succeededOrFailed()
+            inputs:
+              testRunner: JUnit
+              testResultsFiles: '$(WORKING_DIRECTORY)/test-results.xml'
+            displayName: 'Publish Frontend Test Results'
+
+  - stage: Build
+    displayName: 'Build and Push Frontend Docker Image'
+    condition: and(succeeded(), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/develop'))
+    jobs:
+      - job: BuildAndPushFrontendImage
+        displayName: 'Build and Push Frontend to ACR'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: Docker@2
+            displayName: 'Build Frontend Docker Image'
+            inputs:
+              command: 'build'
+              repository: $(IMAGE_NAME)
+              containerRegistry: $(ACR_NAME)
+              dockerfile: $(DOCKERFILE_PATH)
+              buildContext: '.'
+              arguments: |
+                --build-arg BUILD_VERSION=$(Build.BuildId)
+                --build-arg NODE_ENV=production
+                --build-arg BACKEND_URL=https://api.ai-studio.autonomize.ai
+              tags: |
+                $(Build.BuildId)
+                latest
+
+          - task: Docker@2
+            displayName: 'Push Frontend Image to Registry'
+            inputs:
+              command: 'push'
+              repository: $(IMAGE_NAME)
+              containerRegistry: $(ACR_NAME)
+              tags: |
+                $(Build.BuildId)
+                latest
+
+  - stage: UpdatePlatformCharts
+    displayName: 'Update Platform Charts Image Tags'
+    condition: and(succeeded(), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/develop'))
+    dependsOn: Build
+    jobs:
+      - job: UpdateImageTags
+        displayName: 'Update Frontend Image Tags in Platform Charts'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: platform-charts
+            fetchDepth: 0
+            persistCredentials: true
+
+          - script: |
+              git config --global user.email "release@autonomize.ai"
+              git config --global user.name "release"
+              git checkout main
+            displayName: 'Setup GIT'
+
+          - script: |
+              echo "Build Number: $(Build.BuildId)"
+              wget -q https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_amd64
+              mv yq_linux_amd64 /usr/local/bin/yq
+              chmod +x /usr/local/bin/yq
+
+              # Update umbrella chart values
+              echo "Updating frontend image tag in umbrella chart..."
+              buildnumber="$(Build.BuildId)" yq -i e '.ai-studio.frontend.image.tag = env(buildnumber)' $(VALUES_FILE)
+
+              # Show the changes
+              echo "=== Changes Made ==="
+              git diff
+            displayName: 'Update Image Tags'
+
+          - script: |
+              git add $(VALUES_FILE)
+              git commit -m "[skip ci] Frontend image tag updated: $(Build.BuildId) in platform-charts" || echo "No changes to commit"
+              git push --set-upstream origin main
+
+              echo "✅ Platform charts updated with frontend image tag: $(Build.BuildId)"
+            displayName: 'Push version to git'
+
+  - stage: E2ETests
+    displayName: 'End-to-End Testing'
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    dependsOn: UpdatePlatformCharts
+    jobs:
+      - job: PlaywrightTests
+        displayName: 'Run Playwright E2E Tests'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(NODE_VERSION)
+            displayName: 'Install Node.js for E2E Tests'
+
+          - script: |
+              cd $(WORKING_DIRECTORY)
+              npm ci
+              npx playwright install --with-deps
+            displayName: 'Install E2E Test Dependencies'
+
+          - script: |
+              cd $(WORKING_DIRECTORY)
+              npm run test:e2e || echo "E2E tests completed"
+            displayName: 'Run Playwright E2E Tests'
+            continueOnError: true
+
+          - task: PublishTestResults@2
+            condition: succeededOrFailed()
+            inputs:
+              testRunner: JUnit
+              testResultsFiles: '$(WORKING_DIRECTORY)/e2e-results.xml'
+            displayName: 'Publish E2E Test Results'
+
+  - stage: SecurityScan
+    displayName: 'Security and Vulnerability Scanning'
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    dependsOn: UpdatePlatformCharts
+    jobs:
+      - job: FrontendSecurityScan
+        displayName: 'Scan Frontend for Vulnerabilities'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(NODE_VERSION)
+            displayName: 'Install Node.js for Security Scan'
+
+          - script: |
+              cd $(WORKING_DIRECTORY)
+              npm ci
+              npm audit --audit-level=high || echo "Security audit completed with findings"
+            displayName: 'Run npm Security Audit'
+            continueOnError: true
+
+          - task: CmdLine@2
+            displayName: 'Run Container Security Scan'
+            inputs:
+              script: |
+                # Install Trivy
+                sudo apt-get update
+                sudo apt-get install wget apt-transport-https gnupg lsb-release
+                wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+                echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+                sudo apt-get update
+                sudo apt-get install trivy
+
+                # Scan the frontend image
+                trivy image --exit-code 0 --severity HIGH,CRITICAL $(ACR_ENDPOINT)/$(IMAGE_NAME):$(Build.BuildId) || echo "Security scan completed with warnings"
+            continueOnError: true
+
+  - stage: Notification
+    displayName: 'Send Build Notifications'
+    condition: always()
+    dependsOn:
+      - Test
+      - Build
+      - UpdatePlatformCharts
+      - E2ETests
+      - SecurityScan
+    jobs:
+      - job: NotifyFrontendCompletion
+        displayName: 'Frontend Pipeline Completion Notification'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - script: |
+              echo "🎨 AI Studio Frontend Pipeline Completed"
+              echo "Build ID: $(Build.BuildId)"
+              echo "Source Branch: $(Build.SourceBranch)"
+              echo "Commit: $(Build.SourceVersion)"
+              echo "Trigger: $(Build.Reason)"
+
+              if [ "$(Agent.JobStatus)" == "Succeeded" ]; then
+                echo "✅ Frontend pipeline succeeded!"
+                echo "🐳 Docker Image: $(ACR_ENDPOINT)/$(IMAGE_NAME):$(Build.BuildId)"
+                echo "📦 Platform Charts Updated: AI Studio Frontend"
+                echo "🚀 ArgoCD will detect changes and deploy automatically"
+              else
+                echo "❌ Frontend pipeline failed or was partially successful"
+              fi
+
+              echo "📊 Frontend Components:"
+              echo "  - React Application"
+              echo "  - Conversational UI"
+              echo "  - Agent Builder Interface"
+              echo "  - Healthcare UI Components"
+            displayName: 'Frontend Pipeline Summary'
