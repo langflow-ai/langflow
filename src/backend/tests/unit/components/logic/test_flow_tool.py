@@ -138,7 +138,7 @@ class TestFlowToolComponent:
     async def test_build_tool_no_flow_name(self, component):
         """Test build_tool raises error when flow_name is not provided."""
         from lfx.base.tools.flow_tool import FlowTool
-        
+
         with (
             patch.object(component, "_attributes", {}),
             patch.object(FlowTool, "model_rebuild"),  # Mock to avoid Graph annotation error
@@ -150,7 +150,7 @@ class TestFlowToolComponent:
     async def test_build_tool_empty_flow_name(self, component):
         """Test build_tool raises error when flow_name is empty."""
         from lfx.base.tools.flow_tool import FlowTool
-        
+
         with (
             patch.object(component, "_attributes", {"flow_name": ""}),
             patch.object(FlowTool, "model_rebuild"),  # Mock to avoid Graph annotation error
@@ -162,7 +162,7 @@ class TestFlowToolComponent:
     async def test_build_tool_flow_not_found(self, component):
         """Test build_tool raises error when flow is not found."""
         from lfx.base.tools.flow_tool import FlowTool
-        
+
         with (
             patch.object(component, "_attributes", {"flow_name": "Nonexistent Flow"}),
             patch.object(component, "get_flow", return_value=None),
