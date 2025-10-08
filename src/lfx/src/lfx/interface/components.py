@@ -298,8 +298,8 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
         # TODO: Surface these errors to the UI in a friendly manner
         logger.error(f"Failed to import module {modname}: {e}", exc_info=True)
         return None
-    # Extract the top-level subpackage name after "langflow.components."
-    # e.g., "langflow.components.Notion.add_content_to_page" -> "Notion"
+    # Extract the top-level subpackage name after "lfx.components."
+    # e.g., "lfx.components.Notion.add_content_to_page" -> "Notion"
     mod_parts = modname.split(".")
     if len(mod_parts) <= MIN_MODULE_PARTS:
         return None
@@ -396,12 +396,18 @@ async def get_and_cache_all_types_dict(
         langflow_components = await import_langflow_components(settings_service)
         custom_components_dict = await _determine_loading_strategy(settings_service)
 
-        # merge the dicts
-        component_cache.all_types_dict = {
+        # Flatten custom dict if it has a "components" wrapper
+        custom_flat = custom_components_dict.get("components", custom_components_dict) or {}
+
+        # Merge built-in and custom components
+        merged = {
             **langflow_components["components"],
-            **custom_components_dict,
+            **custom_flat,
         }
-        component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
+
+        # Store with "components" wrapper for consistency
+        component_cache.all_types_dict = {"components": merged}
+        component_count = sum(len(comps) for comps in merged.values())
         await logger.adebug(f"Loaded {component_count} components")
     return component_cache.all_types_dict
 
