@@ -27,6 +27,10 @@ if TYPE_CHECKING:
     from langflow.services.tracing.service import TracingService
     from langflow.services.variable.service import VariableService
 
+_service_manager = None
+
+_factories_registered = False
+
 
 def get_service(service_type: ServiceType, default=None):
     """Retrieves the service instance for the given service type.
@@ -40,17 +44,20 @@ def get_service(service_type: ServiceType, default=None):
         Any: The service instance.
 
     """
-    from lfx.services.manager import get_service_manager
+    global _service_manager, _factories_registered
 
-    service_manager = get_service_manager()
+    if _service_manager is None:
+        from lfx.services.manager import get_service_manager
 
-    if not service_manager.are_factories_registered():
-        # ! This is a workaround to ensure that the service manager is initialized
-        # ! Not optimal, but it works for now
+        _service_manager = get_service_manager()
+
+    if not _factories_registered and not _service_manager.are_factories_registered():
         from langflow.services.manager import ServiceManager
 
-        service_manager.register_factories(ServiceManager.get_factories())
-    return service_manager.get(service_type, default)
+        _service_manager.register_factories(ServiceManager.get_factories())
+        _factories_registered = True
+
+    return _service_manager.get(service_type, default)
 
 
 def get_telemetry_service() -> TelemetryService:
@@ -246,6 +253,9 @@ def get_queue_service() -> JobQueueService:
 
 def get_flow_cache_service() -> FlowCacheService:
     """Retrieves the FlowCacheService instance from the service manager."""
-    from langflow.services.flow_cache.factory import FlowCacheServiceFactory
+    # Factory can be cached at module level for efficiency
+    if not hasattr(get_flow_cache_service, "_factory"):
+        from langflow.services.flow_cache.factory import FlowCacheServiceFactory
 
-    return get_service(ServiceType.FLOW_CACHE_SERVICE, FlowCacheServiceFactory())
+        get_flow_cache_service._factory = FlowCacheServiceFactory()
+    return get_service(ServiceType.FLOW_CACHE_SERVICE, get_flow_cache_service._factory)
