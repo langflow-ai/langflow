@@ -138,23 +138,17 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const parsedSourceHandle = scapeJSONParse(sourceHandle);
       const name = parsedSourceHandle.name;
 
-      if (sourceNode.type == "genericNode") {
-        const output =
-          sourceNode.data.node!.outputs?.find(
-            (output) => output.name === sourceNode.data.selected_output,
-          ) ??
-          sourceNode.data.node!.outputs?.find(
-            (output) =>
-              (output.selected ||
-                (sourceNode.data.node!.outputs?.filter(
-                  (output) => !output.group_outputs,
-                )?.length ?? 0) <= 1) &&
-              output.name === name,
-          );
+      if (sourceNode.type === "genericNode") {
+        const output = sourceNode.data.node.outputs?.find(
+          (output) =>
+            output.name === name &&  // if output name is the same as the source handle name
+            (((output.group_outputs ?? true) === true && output.selected) ||   // if output is grouped and it's selected (visible)
+              (output.group_outputs ?? true) === false),  // if output is not grouped (visible)
+        );
 
         if (output) {
           const outputTypes =
-            output!.types.length === 1 ? output!.types : [output!.selected!];
+            output.types.length === 1 ? output.types : [output.selected];
 
           const id: sourceHandleType = {
             id: sourceNode.data.id,
@@ -1392,8 +1386,8 @@ export function mergeNodeTemplates({
               nodeTemplate[key].display_name
                 ? nodeTemplate[key].display_name
                 : nodeTemplate[key].name
-                  ? toTitleCase(nodeTemplate[key].name)
-                  : toTitleCase(key);
+                ? toTitleCase(nodeTemplate[key].name)
+                : toTitleCase(key);
           }
         }
       });
