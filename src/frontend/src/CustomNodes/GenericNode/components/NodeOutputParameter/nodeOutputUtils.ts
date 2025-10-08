@@ -1,21 +1,21 @@
-import type { NodeDataType } from '@/types/flow';
-import { scapeJSONParse } from '../../../../utils/reactflowUtils';
+import type { NodeDataType } from "@/types/flow";
+import { scapeJSONParse } from "../../../../utils/reactflowUtils";
 import {
   logFirstMessage,
   logHasMessage,
   logTypeIsError,
   logTypeIsUnknown,
-} from '../../../../utils/utils';
+} from "../../../../utils/utils";
 
 /**
  * Determines if all outputs should be shown based on loop outputs and node type
  */
 export const shouldShowAllOutputs = (
   outputs: any[],
-  data: NodeDataType
+  data: NodeDataType,
 ): boolean => {
-  const hasLoopOutput = outputs.some(output => output.allows_loop);
-  const isConditionalRouter = data.type === 'ConditionalRouter';
+  const hasLoopOutput = outputs.some((output) => output.allows_loop);
+  const isConditionalRouter = data.type === "ConditionalRouter";
   return hasLoopOutput || isConditionalRouter;
 };
 
@@ -23,11 +23,11 @@ export const shouldShowAllOutputs = (
  * Separates outputs into grouped and individual outputs
  */
 export const separateOutputsByGroup = (
-  outputs: any[]
+  outputs: any[],
 ): { groupedOutputs: any[]; individualOutputs: any[] } => {
   const groupedOutputs = outputs.filter((output: any) => output.group_outputs);
   const individualOutputs = outputs.filter(
-    (output: any) => !output.group_outputs
+    (output: any) => !output.group_outputs,
   );
   return { groupedOutputs, individualOutputs };
 };
@@ -37,12 +37,12 @@ export const separateOutputsByGroup = (
  */
 export const getDisplayOutput = (
   groupedOutputs: any[],
-  selectedOutput: any
+  selectedOutput: any,
 ) => {
   if (groupedOutputs.length === 0) return undefined;
 
   const outputWithSelection = groupedOutputs.find(
-    output => output.name === selectedOutput?.name
+    (output) => output.name === selectedOutput?.name,
   );
   return outputWithSelection || groupedOutputs[0];
 };
@@ -53,7 +53,7 @@ export const getDisplayOutput = (
 export const determineOutputStatus = (
   flowPool: any,
   flowPoolId: string,
-  internalOutputName: string
+  internalOutputName: string,
 ) => {
   const pool = flowPool[flowPoolId] ?? [];
   const flowPoolNode = pool[pool.length - 1];
@@ -71,7 +71,7 @@ export const determineOutputStatus = (
     logHasMessage(flowPoolNode?.data, internalOutputName);
   const unknownOutput = logTypeIsUnknown(
     flowPoolNode?.data,
-    internalOutputName
+    internalOutputName,
   );
   const errorOutput = logTypeIsError(flowPoolNode?.data, internalOutputName);
 
@@ -89,7 +89,7 @@ export const isOutputEmpty = (nodeData: any): boolean => {
   if (!nodeData?.outputs) return true;
 
   return Object.keys(nodeData.outputs).every(
-    key => nodeData.outputs[key]?.message?.length === 0
+    (key) => nodeData.outputs[key]?.message?.length === 0,
   );
 };
 
@@ -97,9 +97,9 @@ export const isOutputEmpty = (nodeData: any): boolean => {
  * Detects if there's a looping edge
  */
 export const detectLooping = (edges: any[], sourceHandle: string): boolean => {
-  return edges.some(edge => {
+  return edges.some((edge) => {
     try {
-      const targetHandleObject = scapeJSONParse(edge.targetHandle || '{}');
+      const targetHandleObject = scapeJSONParse(edge.targetHandle || "{}");
       return (
         targetHandleObject.output_types && edge.sourceHandle === sourceHandle
       );
@@ -136,21 +136,21 @@ export const isOutputShortcutOpenable = ({
   if (!hasOutputs) return false;
 
   const sortedEdges = [...edges]
-    .filter(edge => edge.source === nodeData.id)
+    .filter((edge) => edge.source === nodeData.id)
     .sort((a, b) => {
       const indexA =
         nodeData?.node?.outputs?.findIndex(
-          (output: any) => output.name === a.data?.sourceHandle?.name
+          (output: any) => output.name === a.data?.sourceHandle?.name,
         ) ?? 0;
       const indexB =
         nodeData?.node?.outputs?.findIndex(
-          (output: any) => output.name === b.data?.sourceHandle?.name
+          (output: any) => output.name === b.data?.sourceHandle?.name,
         ) ?? 0;
       return indexA - indexB;
     });
 
   const isFirstOutput = sortedEdges[0]?.sourceHandle === id;
-  const hasNoEdges = !edges.some(edge => edge.source === nodeData.id);
+  const hasNoEdges = !edges.some((edge) => edge.source === nodeData.id);
   const isValidFirstMessage =
     hasNoEdges && logFirstMessage(flowPoolNode?.data, internalOutputName);
 

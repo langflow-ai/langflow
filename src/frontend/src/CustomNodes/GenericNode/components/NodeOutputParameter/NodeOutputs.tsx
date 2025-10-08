@@ -1,10 +1,10 @@
-import type { NodeDataType } from '@/types/flow';
-import { OutputParameter } from '.';
+import type { NodeDataType } from "@/types/flow";
+import { OutputParameter } from ".";
 import {
-  shouldShowAllOutputs,
-  separateOutputsByGroup,
   getDisplayOutput,
-} from './nodeOutputUtils';
+  separateOutputsByGroup,
+  shouldShowAllOutputs,
+} from "./nodeOutputUtils";
 
 export default function NodeOutputs({
   outputs,
@@ -29,7 +29,7 @@ export default function NodeOutputs({
 }) {
   // Separate outputs based on group_outputs field
   const { groupedOutputs, individualOutputs } = separateOutputsByGroup(
-    outputs
+    outputs,
   ) as { groupedOutputs: any[]; individualOutputs: any[] };
 
   const shouldShowAll = shouldShowAllOutputs(outputs, data);
@@ -43,8 +43,9 @@ export default function NodeOutputs({
             output={output}
             outputs={outputs}
             idx={
-              data.node!.outputs?.findIndex(out => out.name === output.name) ??
-              idx
+              data.node!.outputs?.findIndex(
+                (out) => out.name === output.name,
+              ) ?? idx
             }
             lastOutput={idx === outputs.length - 1}
             data={data}
@@ -68,7 +69,7 @@ export default function NodeOutputs({
         outputs={[output] as any} // Pass only this output to avoid dropdown behavior
         idx={
           data.node!.outputs?.findIndex(
-            (out: any) => out.name === output.name
+            (out: any) => out.name === output.name,
           ) ?? idx
         }
         lastOutput={individualOutputs.length === 0}
@@ -95,7 +96,7 @@ export default function NodeOutputs({
         outputs={groupedOutputs as any}
         idx={
           data.node!.outputs?.findIndex(
-            out => out.name === displayOutput.name
+            (out) => out.name === displayOutput.name,
           ) ?? 0
         }
         lastOutput={true}
