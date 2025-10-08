@@ -157,6 +157,10 @@ async def run(
 
     temp_file_to_cleanup = None
 
+    # Initialize stdout/stderr capture variables
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+
     if flow_json is not None:
         if verbosity > 0:
             typer.echo("Processing inline JSON content...", file=sys.stderr)
@@ -254,6 +258,12 @@ async def run(
             # Show full traceback in debug mode
             logger.exception("Failed to load graph.")
 
+        # Restore stdout/stderr if they were redirected before outputting error
+        if 'original_stdout' in locals() and sys.stdout is not original_stdout:
+            sys.stdout = original_stdout
+        if 'original_stderr' in locals() and sys.stderr is not original_stderr:
+            sys.stderr = original_stderr
+        
         output_error(f"Failed to load graph. {e}", verbose=verbose, exception=e)
         if temp_file_to_cleanup:
             try:
@@ -315,6 +325,12 @@ async def run(
             logger.debug(f"Preparation error: {e!s}")
             logger.exception("Failed to prepare graph - full traceback:")
 
+        # Restore stdout/stderr if they were redirected before outputting error
+        if 'original_stdout' in locals() and sys.stdout is not original_stdout:
+            sys.stdout = original_stdout
+        if 'original_stderr' in locals() and sys.stderr is not original_stderr:
+            sys.stderr = original_stderr
+        
         output_error(f"Failed to prepare graph: {e}", verbose=verbose, exception=e)
         if temp_file_to_cleanup:
             try:
@@ -336,8 +352,6 @@ async def run(
 
     captured_stdout = StringIO()
     captured_stderr = StringIO()
-    original_stdout = sys.stdout
-    original_stderr = sys.stderr
 
     # Track component timing if requested
     component_timings = [] if timing else None
@@ -435,6 +449,10 @@ async def run(
 
             logger.exception("Failed to execute graph - full traceback:")
 
+        # Restore stdout/stderr before outputting error to ensure it's captured properly
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+        
         output_error(f"Failed to execute graph: {e}", verbose=verbosity > 0, exception=e)
         if temp_file_to_cleanup:
             try:
@@ -444,8 +462,11 @@ async def run(
                 pass
         raise typer.Exit(1) from e
     finally:
-        sys.stdout = original_stdout
-        sys.stderr = original_stderr
+        # Ensure stdout/stderr are restored even if output_error fails
+        if sys.stdout is not original_stdout:
+            sys.stdout = original_stdout
+        if sys.stderr is not original_stderr:
+            sys.stderr = original_stderr
         if temp_file_to_cleanup:
             try:
                 Path(temp_file_to_cleanup).unlink()

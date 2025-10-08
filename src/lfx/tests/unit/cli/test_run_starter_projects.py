@@ -6,6 +6,7 @@ without import errors for langflow modules. We expect execution errors
 """
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -189,11 +190,21 @@ class TestRunStarterProjects:
             # More specific checks for these basic templates
             assert "No module named 'langflow'" not in all_output, f"Langflow import error in {template_name}"
 
-            # Check for module not found errors specifically related to langflow
+            # Check for module not found errors specifically related to langflow/lfx modules
             # (Settings service errors are runtime errors, not import errors)
-            if "ModuleNotFoundError" in all_output and "langflow" in all_output and "lfx.services" not in all_output:
-                # This is an actual langflow import error, not an internal lfx error
-                pytest.fail(f"Module not found error for langflow in {template_name}")
+            # (External dependencies like langchain_* are expected to be missing)
+            if "ModuleNotFoundError" in all_output and "lfx.services" not in all_output:
+                # Check if this is an actual langflow/lfx import error, not external dependencies
+                langflow_import_patterns = [
+                    r"No module named 'langflow",
+                    r"No module named 'lfx", 
+                    r"cannot import name.*langflow",
+                    r"cannot import name.*lfx"
+                ]
+                is_langflow_import_error = any(re.search(pattern, all_output) for pattern in langflow_import_patterns)
+                
+                if is_langflow_import_error:
+                    pytest.fail(f"Module not found error for langflow in {template_name}")
 
     @pytest.mark.parametrize("template_file", get_starter_project_files()[:5], ids=lambda x: x.name)
     def test_run_starter_project_with_stdin(self, template_file):
