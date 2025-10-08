@@ -134,7 +134,7 @@ class TestOutput:
             "types": [],
             "name": "test_output",
             "display_name": "test_output",
-            "group_outputs": False,
+            "group_outputs": True,
             "cache": True,
             "value": "__UNDEFINED__",
             "tool_mode": True,
