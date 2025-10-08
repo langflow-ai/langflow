@@ -1,0 +1,67 @@
+jobs:
+- job: UpdatePlatformCharts
+  displayName: 'Update Platform Charts Image Tags'
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - checkout: platform-charts
+    fetchDepth: 0
+    persistCredentials: true
+
+  - script: |
+      git config --global user.email "release@autonomize.ai"
+      git config --global user.name "release"
+      git checkout main
+    displayName: 'Setup GIT'
+
+  - script: |
+      echo "Build Number: $(Build.BuildNumber)"
+      echo "Source Branch: $(Build.SourceBranchName)"
+      wget -q https://github.com/mikefarah/yq/releases/download/v4.42.1/yq_linux_amd64
+      mv yq_linux_amd64 /usr/local/bin/yq
+      chmod +x /usr/local/bin/yq
+
+      # Determine values file based on branch
+      if [ "$(Build.SourceBranchName)" = "develop" ]; then
+        valuesFile="$(VALUES_FILE)"
+      elif [ "$(Build.SourceBranchName)" = "main" ]; then
+        valuesFile="charts/genesis-platform/values-prod.yaml"
+      else
+        echo "Branch $(Build.SourceBranchName) not configured for deployment"
+        exit 0
+      fi
+
+      echo "Updating image tags in: $valuesFile"
+
+      # Update both frontend and backend image tags
+      buildnumber="$(Build.BuildNumber)" yq -i e '.ai-studio.frontend.image.tag = env(buildnumber)' $valuesFile
+      buildnumber="$(Build.BuildNumber)" yq -i e '.ai-studio.backend.image.tag = env(buildnumber)' $valuesFile
+
+      # Show the changes
+      echo "=== Changes Made ==="
+      git diff
+    displayName: 'Update Image Tags'
+
+  - script: |
+      # Determine values file based on branch
+      if [ "$(Build.SourceBranchName)" = "develop" ]; then
+        valuesFile="$(VALUES_FILE)"
+        environment="development"
+      elif [ "$(Build.SourceBranchName)" = "main" ]; then
+        valuesFile="charts/genesis-platform/values-prod.yaml"
+        environment="production"
+      else
+        echo "Branch $(Build.SourceBranchName) not configured for deployment"
+        exit 0
+      fi
+
+      git add $valuesFile
+      git commit -m "[skip ci] AI Studio image tags updated: $(Build.BuildNumber) for $environment" || echo "No changes to commit"
+      git push --set-upstream origin main
+
+      echo "✅ Platform charts updated with AI Studio image tags: $(Build.BuildNumber)"
+      echo "🎯 Environment: $environment"
+      echo "📦 Frontend: sprintregistry.azurecr.io/ai-studio-frontend:$(Build.BuildNumber)"
+      echo "📦 Backend: sprintregistry.azurecr.io/ai-studio-backend:$(Build.BuildNumber)"
+      echo "🚀 ArgoCD will detect changes and deploy automatically"
+    displayName: 'Commit and Push Changes'

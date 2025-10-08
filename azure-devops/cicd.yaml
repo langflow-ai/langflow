@@ -1,0 +1,121 @@
+# AI Studio CI/CD Pipeline
+# Follows Genesis template pattern with monorepo support
+
+variables:
+  major: 1
+  minor: 0
+  patch: $[counter(variables['Build.SourceBranchName'], 0)]
+  globalPatch: $[counter('globalPatch', 0)]
+
+  # Container Registry Configuration
+  ACR_RESOURCE_GROUP: sprintRG
+  AZURE_CONTAINER_REGISTRY: sprintregistry
+  ACR_ENDPOINT: 'sprintregistry.azurecr.io'
+
+  # Image Names
+  FRONTEND_IMAGE_NAME: 'ai-studio-frontend'
+  BACKEND_IMAGE_NAME: 'ai-studio-backend'
+
+  # Dockerfile Paths (monorepo support)
+  FRONTEND_DOCKERFILE_PATH: 'docker/frontend/Dockerfile'
+  BACKEND_DOCKERFILE_PATH: 'docker/backend/Dockerfile'
+
+  # Python Configuration
+  PYTHON_VERSION: '3.12'
+  UV_VERSION: '0.4.0'
+
+  # Node.js Configuration
+  NODE_VERSION: '20.x'
+
+  # Platform Charts Configuration
+  PLATFORM_CHARTS_REPO: 'platform-charts'
+  VALUES_FILE: 'charts/genesis-platform/values-dev.yaml'
+
+resources:
+  repositories:
+  - repository: platform-charts
+    type: github
+    endpoint: autonomize-ai
+    name: autonomize-ai/platform-charts
+    ref: main
+
+trigger:
+  branches:
+    include:
+    - main
+    - develop
+    - feature/*
+  paths:
+    include:
+      - src/backend/**
+      - src/frontend/**
+      - docker/**
+      - pyproject.toml
+      - uv.lock
+      - azure-devops/**
+
+pr:
+  branches:
+    include:
+    - main
+    - develop
+  paths:
+    include:
+      - src/backend/**
+      - src/frontend/**
+      - docker/**
+      - pyproject.toml
+      - uv.lock
+      - azure-devops/**
+
+stages:
+- stage: Test
+  displayName: 'Test and Validate'
+  condition: eq(variables['Build.Reason'], 'PullRequest')
+  jobs:
+  - template: templates/test-template.yml
+
+- stage: BuildBackend
+  displayName: 'Build Backend Image'
+  condition: and(succeeded(), in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI'))
+  jobs:
+  - template: templates/build-template.yml
+    parameters:
+      SERVICE_NAME: 'backend'
+      CONTAINER_NAME: $(BACKEND_IMAGE_NAME)
+      DOCKERFILE_PATH: $(BACKEND_DOCKERFILE_PATH)
+      AZURE_CONTAINER_REGISTRY: $(AZURE_CONTAINER_REGISTRY)
+      BUILD_ARGS: |
+        --build-arg BUILD_VERSION=$(Build.BuildNumber)
+        --build-arg PYTHON_VERSION=$(PYTHON_VERSION)
+
+- stage: BuildFrontend
+  displayName: 'Build Frontend Image'
+  condition: and(succeeded(), in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI'))
+  jobs:
+  - template: templates/build-template.yml
+    parameters:
+      SERVICE_NAME: 'frontend'
+      CONTAINER_NAME: $(FRONTEND_IMAGE_NAME)
+      DOCKERFILE_PATH: $(FRONTEND_DOCKERFILE_PATH)
+      AZURE_CONTAINER_REGISTRY: $(AZURE_CONTAINER_REGISTRY)
+      BUILD_ARGS: |
+        --build-arg BUILD_VERSION=$(Build.BuildNumber)
+        --build-arg NODE_ENV=production
+        --build-arg BACKEND_URL=https://api.ai-studio.autonomize.ai
+
+- stage: UpdatePlatformCharts
+  displayName: 'Update Platform Charts'
+  dependsOn:
+    - BuildBackend
+    - BuildFrontend
+  condition: and(succeeded(), in(variables['Build.SourceBranchName'], 'develop', 'main'))
+  jobs:
+  - template: templates/release-template.yml
+
+- stage: SecurityScan
+  displayName: 'Security Scanning'
+  dependsOn: UpdatePlatformCharts
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - template: templates/security-template.yml
