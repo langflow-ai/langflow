@@ -8,7 +8,7 @@ from langflow.schema.data import Data
 from langflow.schema.message import Message
 
 
-class DataFrame(pandas_DataFrame):
+class DataFrame(pandas_DataFrame):  # noqa: PLW1641
     """A pandas DataFrame subclass specialized for handling collections of Data objects.
 
     This class extends pandas.DataFrame to provide seamless integration between
@@ -135,7 +135,7 @@ class DataFrame(pandas_DataFrame):
 
         return _c
 
-    def __bool__(self):
+    def __bool__(self):  # type: ignore[misc]
         """Truth value testing for the DataFrame.
 
         Returns True if the DataFrame has at least one row, False otherwise.

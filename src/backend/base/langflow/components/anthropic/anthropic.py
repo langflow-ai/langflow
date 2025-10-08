@@ -1,7 +1,6 @@
 from typing import Any, cast
 
 import requests
-from loguru import logger
 from pydantic import ValidationError
 
 from langflow.base.models.anthropic_constants import (
@@ -14,12 +13,13 @@ from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
+from langflow.logging.logger import logger
 from langflow.schema.dotdict import dotdict
 
 
 class AnthropicModelComponent(LCModelComponent):
     display_name = "Anthropic"
-    description = "Generate text using Anthropic Chat&Completion LLMs with prefill support."
+    description = "Generate text using Anthropic's Messages API and models."
     icon = "Anthropic"
     name = "AnthropicModel"
 
@@ -74,9 +74,6 @@ class AnthropicModelComponent(LCModelComponent):
             value=False,
             real_time_refresh=True,
         ),
-        MessageTextInput(
-            name="prefill", display_name="Prefill", info="Prefill text to guide the model's response.", advanced=True
-        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
@@ -104,7 +101,7 @@ class AnthropicModelComponent(LCModelComponent):
 
         return output
 
-    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:
+    def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
         try:
             import anthropic
 
@@ -132,7 +129,7 @@ class AnthropicModelComponent(LCModelComponent):
                 model_with_tool = ChatAnthropic(
                     model=model,  # Use the current model being checked
                     anthropic_api_key=self.api_key,
-                    anthropic_api_url=cast(str, self.base_url) or DEFAULT_ANTHROPIC_API_URL,
+                    anthropic_api_url=cast("str", self.base_url) or DEFAULT_ANTHROPIC_API_URL,
                 )
 
                 if (
@@ -180,8 +177,9 @@ class AnthropicModelComponent(LCModelComponent):
                     except (ImportError, ValueError, requests.exceptions.RequestException) as e:
                         logger.exception(f"Error getting model names: {e}")
                         ids = ANTHROPIC_MODELS
+                build_config.setdefault("model_name", {})
                 build_config["model_name"]["options"] = ids
-                build_config["model_name"]["value"] = ids[0]
+                build_config["model_name"].setdefault("value", ids[0])
                 build_config["model_name"]["combobox"] = True
             except Exception as e:
                 msg = f"Error getting model names: {e}"

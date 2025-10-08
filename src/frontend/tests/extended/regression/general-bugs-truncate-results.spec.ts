@@ -31,8 +31,10 @@ test.skip(
     await page
       .getByTestId("inputlist_str_urls_1")
       .fill("https://www.langflow.org/");
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTitle("fit view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByTestId("default_slider_display_value").click();
     await page.getByTestId("slider_input").fill("5");

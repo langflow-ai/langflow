@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
-from loguru import logger
 
+from langflow.logging.logger import logger
 from langflow.services.base import Service
 from langflow.services.settings.auth import AuthSettings
 from langflow.services.settings.base import Settings

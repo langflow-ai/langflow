@@ -30,7 +30,7 @@ test(
     // Check if we're on the files page
     await page.waitForSelector('[data-testid="mainpage_title"]');
     const title = await page.getByTestId("mainpage_title");
-    expect(await title.textContent()).toContain("My Files");
+    expect(await title.textContent()).toContain("Files");
 
     // Check for empty state when no files are present
     const noFilesText = await page.getByText("No files");

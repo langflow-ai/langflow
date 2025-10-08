@@ -1,8 +1,8 @@
 import httpx
-from loguru import logger
 
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, MessageTextInput, Output, SecretStrInput
+from langflow.logging.logger import logger
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 

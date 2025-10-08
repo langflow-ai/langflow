@@ -3,12 +3,12 @@ from enum import Enum
 import httpx
 from langchain.tools import StructuredTool
 from langchain_core.tools import ToolException
-from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 
 # Add at the top with other constants
@@ -81,6 +81,7 @@ Note: Check 'Advanced' for all options.
     name = "TavilyAISearch"
     documentation = "https://docs.tavily.com/"
     legacy = True
+    replacement = ["tavily.TavilySearchComponent"]
 
     inputs = [
         SecretStrInput(
@@ -338,7 +339,7 @@ Note: Check 'Advanced' for all options.
             raise ToolException(error_message) from e
         except Exception as e:
             error_message = f"Unexpected error: {e}"
-            logger.opt(exception=True).debug("Error running Tavily Search")
+            logger.debug("Error running Tavily Search", exc_info=True)
             self.status = error_message
             raise ToolException(error_message) from e
         return data_results

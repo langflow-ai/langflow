@@ -15,8 +15,6 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
-from loguru import logger
-
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.edge.base import CycleEdge, Edge
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
@@ -36,7 +34,7 @@ from langflow.graph.utils import log_vertex_build
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData, NodeTypeEnum
 from langflow.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
-from langflow.logging.logger import LogConfig, configure
+from langflow.logging.logger import LogConfig, configure, logger
 from langflow.schema.dotdict import dotdict
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from langflow.services.cache.utils import CacheMiss
@@ -103,6 +101,9 @@ class Graph:
         self.vertices_to_run: set[str] = set()
         self.stop_vertex: str | None = None
         self.inactive_vertices: set = set()
+        # Conditional routing system (separate from ACTIVE/INACTIVE cycle management)
+        self.conditionally_excluded_vertices: set = set()  # Vertices excluded by conditional routing
+        self.conditional_exclusion_sources: dict[str, set[str]] = {}  # Maps source vertex -> excluded vertices
         self.edges: list[CycleEdge] = []
         self.vertices: list[Vertex] = []
         self.run_manager = RunnableVerticesManager()
@@ -348,7 +349,7 @@ class Graph:
             for key, value in _input.items():
                 vertex = self.get_vertex(key)
                 vertex.set_input_value(key, value)
-        # I want to keep a counter of how many tyimes result.vertex.id
+        # I want to keep a counter of how many times result.vertex.id
         # has been yielded
         yielded_counts: dict[str, int] = defaultdict(int)
 
@@ -848,7 +849,7 @@ class Graph:
                 event_manager=event_manager,
             )
             run_output_object = RunOutputs(inputs=run_inputs, outputs=run_outputs)
-            logger.debug(f"Run outputs: {run_output_object}")
+            await logger.adebug(f"Run outputs: {run_output_object}")
             vertex_outputs.append(run_output_object)
         return vertex_outputs
 
@@ -944,6 +945,59 @@ class Graph:
             run_predecessors=new_predecessor_map,
             vertices_to_run=self.vertices_to_run,
         )
+
+    def exclude_branch_conditionally(self, vertex_id: str, output_name: str | None = None) -> None:
+        """Marks a branch as conditionally excluded (for conditional routing).
+
+        This system is separate from the ACTIVE/INACTIVE state used for cycle management:
+        - ACTIVE/INACTIVE: Reset after each cycle iteration to allow cycles to continue
+        - Conditional exclusion: Persists until explicitly cleared by the same source vertex
+
+        Used by ConditionalRouter to ensure only one branch executes per condition evaluation.
+        If this vertex has previously excluded branches, they are cleared first to allow
+        re-evaluation on subsequent iterations (e.g., in cycles where condition may change).
+
+        Args:
+            vertex_id: The source vertex making the exclusion decision
+            output_name: The output name to follow when excluding downstream vertices
+        """
+        # Clear any previous exclusions from this source vertex
+        if vertex_id in self.conditional_exclusion_sources:
+            previous_exclusions = self.conditional_exclusion_sources[vertex_id]
+            self.conditionally_excluded_vertices -= previous_exclusions
+            del self.conditional_exclusion_sources[vertex_id]
+
+        # Now exclude the new branch
+        visited: set[str] = set()
+        excluded: set[str] = set()
+        self._exclude_branch_conditionally(vertex_id, visited, excluded, output_name, skip_first=True)
+
+        # Track which vertices this source excluded
+        if excluded:
+            self.conditional_exclusion_sources[vertex_id] = excluded
+
+    def _exclude_branch_conditionally(
+        self, vertex_id: str, visited: set, excluded: set, output_name: str | None = None, *, skip_first: bool = False
+    ) -> None:
+        """Recursively excludes vertices in a branch for conditional routing."""
+        if vertex_id in visited:
+            return
+        visited.add(vertex_id)
+
+        # Don't exclude the first vertex (the router itself)
+        if not skip_first:
+            self.conditionally_excluded_vertices.add(vertex_id)
+            excluded.add(vertex_id)
+
+        for child_id in self.parent_child_map[vertex_id]:
+            # If we're at the router (skip_first=True) and have an output_name,
+            # only follow edges from that specific output
+            if skip_first and output_name:
+                edge = self.get_edge(vertex_id, child_id)
+                if edge and edge.source_handle.name != output_name:
+                    continue
+            # After the first level, exclude all descendants
+            self._exclude_branch_conditionally(child_id, visited, excluded, output_name=None, skip_first=False)
 
     def get_edge(self, source_id: str, target_id: str) -> CycleEdge | None:
         """Returns the edge between two vertices."""
@@ -1049,6 +1103,7 @@ class Graph:
         flow_id: str | None = None,
         flow_name: str | None = None,
         user_id: str | None = None,
+        context: dict | None = None,
     ) -> Graph:
         """Creates a graph from a payload.
 
@@ -1057,6 +1112,7 @@ class Graph:
             flow_id: The ID of the flow.
             flow_name: The flow name.
             user_id: The user ID.
+            context: Optional context dictionary for request-specific data.
 
         Returns:
             Graph: The created graph.
@@ -1066,7 +1122,7 @@ class Graph:
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
-            graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id)
+            graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id, context=context)
             graph.add_nodes_and_edges(vertices, edges)
         except KeyError as exc:
             logger.exception(exc)
@@ -1449,7 +1505,7 @@ class Graph:
                             if vertex.result is not None:
                                 vertex.result.used_frozen_result = True
                         except Exception:  # noqa: BLE001
-                            logger.opt(exception=True).debug("Error finalizing build")
+                            logger.debug("Error finalizing build", exc_info=True)
                             should_build = True
                     except KeyError:
                         should_build = True
@@ -1476,7 +1532,7 @@ class Graph:
 
         except Exception as exc:
             if not isinstance(exc, ComponentBuildError):
-                logger.exception("Error building Component")
+                await logger.aexception("Error building Component")
             raise
 
         if vertex.result is not None:
@@ -1557,20 +1613,20 @@ class Graph:
                 tasks.append(task)
                 vertex_task_run_count[vertex_id] = vertex_task_run_count.get(vertex_id, 0) + 1
 
-            logger.debug(f"Running layer {layer_index} with {len(tasks)} tasks, {current_batch}")
+            await logger.adebug(f"Running layer {layer_index} with {len(tasks)} tasks, {current_batch}")
             try:
                 next_runnable_vertices = await self._execute_tasks(
                     tasks, lock=lock, has_webhook_component=has_webhook_component
                 )
             except Exception:
-                logger.exception(f"Error executing tasks in layer {layer_index}")
+                await logger.aexception(f"Error executing tasks in layer {layer_index}")
                 raise
             if not next_runnable_vertices:
                 break
             to_process.extend(next_runnable_vertices)
             layer_index += 1
 
-        logger.debug("Graph processing complete")
+        await logger.adebug("Graph processing complete")
         return self
 
     def find_next_runnable_vertices(self, vertex_successors_ids: list[str]) -> list[str]:
@@ -1634,7 +1690,7 @@ class Graph:
             from langflow.api.utils import format_exception_message
 
             tb = traceback.format_exc()
-            logger.exception("Error building Component")
+            await logger.aexception("Error building Component")
 
             params = format_exception_message(result)
         message = {"errorMessage": params, "stackTrace": tb}
@@ -1680,7 +1736,7 @@ class Graph:
             vertex_id = tasks[i].get_name().split(" ")[0]
 
             if isinstance(result, Exception):
-                logger.error(f"Task {task_name} failed with exception: {result}")
+                await logger.aerror(f"Task {task_name} failed with exception: {result}")
                 if has_webhook_component:
                     await self._log_vertex_build_from_exception(vertex_id, result)
 
@@ -1710,7 +1766,7 @@ class Graph:
             # This could usually happen with input vertices like ChatInput
             self.run_manager.remove_vertex_from_runnables(v.id)
 
-            logger.debug(f"Vertex {v.id}, result: {v.built_result}, object: {v.built_object}")
+            await logger.adebug(f"Vertex {v.id}, result: {v.built_result}, object: {v.built_object}")
 
         for v in vertices:
             next_runnable_vertices = await self.get_next_runnable_vertices(lock, vertex=v, cache=False)
@@ -1996,6 +2052,10 @@ class Graph:
             f"{edges_repr}"
         )
 
+    def __hash__(self) -> int:
+        """Return hash of the graph based on its string representation."""
+        return hash(self.__repr__())
+
     def get_vertex_predecessors_ids(self, vertex_id: str) -> list[str]:
         """Get the predecessor IDs of a vertex."""
         return [v.id for v in self.get_predecessors(self.get_vertex(vertex_id))]
@@ -2078,6 +2138,9 @@ class Graph:
 
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Returns whether a vertex is runnable."""
+        # Check if vertex is conditionally excluded (for conditional routing)
+        if vertex_id in self.conditionally_excluded_vertices:
+            return False
         is_active = self.get_vertex(vertex_id).is_active()
         is_loop = self.get_vertex(vertex_id).is_loop
         return self.run_manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
@@ -2110,10 +2173,8 @@ class Graph:
             if predecessor_id in visited:
                 return
             visited.add(predecessor_id)
-            predecessor_vertex = self.get_vertex(predecessor_id)
-            is_active = predecessor_vertex.is_active()
-            is_loop = predecessor_vertex.is_loop
-            if self.run_manager.is_vertex_runnable(predecessor_id, is_active=is_active, is_loop=is_loop):
+
+            if self.is_vertex_runnable(predecessor_id):
                 runnable_vertices.append(predecessor_id)
             else:
                 for pred_pred_id in self.run_manager.run_predecessors.get(predecessor_id, []):

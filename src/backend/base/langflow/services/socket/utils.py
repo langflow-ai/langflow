@@ -2,7 +2,6 @@ import time
 from collections.abc import Callable
 
 import socketio
-from loguru import logger
 from sqlmodel import select
 
 from langflow.api.utils import format_elapsed_time
@@ -11,6 +10,7 @@ from langflow.graph.graph.base import Graph
 from langflow.graph.graph.utils import layered_topological_sort
 from langflow.graph.utils import log_vertex_build
 from langflow.graph.vertex.base import Vertex
+from langflow.logging.logger import logger
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_session
 
@@ -44,7 +44,7 @@ async def get_vertices(sio, sid, flow_id, chat_service) -> None:
         await sio.emit("vertices_order", data=vertices, to=sid)
 
     except Exception as exc:  # noqa: BLE001
-        logger.opt(exception=True).debug("Error getting vertices")
+        logger.debug("Error getting vertices", exc_info=True)
         await sio.emit("error", data=str(exc), to=sid)
 
 
@@ -88,7 +88,7 @@ async def build_vertex(
                 timedelta=timedelta,
             )
         except Exception as exc:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error building vertex")
+            logger.debug("Error building vertex", exc_info=True)
             params = str(exc)
             valid = False
             result_dict = ResultDataResponse(results={})
@@ -108,5 +108,5 @@ async def build_vertex(
         await sio.emit("vertex_build", data=response.model_dump(), to=sid)
 
     except Exception as exc:  # noqa: BLE001
-        logger.opt(exception=True).debug("Error building vertex")
+        logger.debug("Error building vertex", exc_info=True)
         await sio.emit("error", data=str(exc), to=sid)

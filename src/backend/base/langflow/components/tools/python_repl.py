@@ -3,21 +3,22 @@ import importlib
 from langchain.tools import StructuredTool
 from langchain_core.tools import ToolException
 from langchain_experimental.utilities import PythonREPL
-from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import StrInput
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 
 
 class PythonREPLToolComponent(LCToolComponent):
-    display_name = "Python REPL [DEPRECATED]"
+    display_name = "Python REPL"
     description = "A tool for running Python code in a REPL environment."
     name = "PythonREPLTool"
     icon = "Python"
     legacy = True
+    replacement = ["processing.PythonREPLComponent"]
 
     inputs = [
         StrInput(
@@ -78,7 +79,7 @@ class PythonREPLToolComponent(LCToolComponent):
             try:
                 return python_repl.run(code)
             except Exception as e:
-                logger.opt(exception=True).debug("Error running Python code")
+                logger.debug("Error running Python code", exc_info=True)
                 raise ToolException(str(e)) from e
 
         tool = StructuredTool.from_function(

@@ -45,6 +45,7 @@ export default function InputComponent({
   hasRefreshButton = false,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
+  const [cursor, setCursor] = useState<number | null>(null);
   const refInput = useRef<HTMLInputElement>(null);
   const [showOptions, setShowOptions] = useState<boolean>(false);
 
@@ -53,6 +54,13 @@ export default function InputComponent({
       onChange("", true);
     }
   }, [disabled]);
+
+  // Restore cursor position after value changes
+  useEffect(() => {
+    if (cursor !== null && refInput.current) {
+      refInput.current.setSelectionRange(cursor, cursor);
+    }
+  }, [cursor, value]);
 
   function onInputLostFocus(event): void {
     if (onBlur) onBlur(event);
@@ -83,6 +91,7 @@ export default function InputComponent({
             )}
             placeholder={password && editNode ? "Key" : placeholder}
             onChange={(e) => {
+              setCursor(e.target.selectionStart);
               if (onChangeFolderName) {
                 return onChangeFolderName(e);
               }

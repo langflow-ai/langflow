@@ -15,6 +15,7 @@ class MessageStoreComponent(Component):
     icon = "message-square-text"
     name = "StoreMessage"
     legacy = True
+    replacement = ["helpers.Memory"]
 
     inputs = [
         MessageTextInput(

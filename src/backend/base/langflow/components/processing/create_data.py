@@ -14,6 +14,7 @@ class CreateDataComponent(Component):
     name: str = "CreateData"
     MAX_FIELDS = 15  # Define a constant for maximum number of fields
     legacy = True
+    replacement = ["processing.DataOperations"]
     icon = "ListFilter"
 
     inputs = [

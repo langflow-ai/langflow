@@ -1,17 +1,9 @@
 import httpx
-from loguru import logger
 
 from langflow.custom.custom_component.component import Component
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.io import (
-    BoolInput,
-    DropdownInput,
-    IntInput,
-    MessageTextInput,
-    MultilineInput,
-    Output,
-    SecretStrInput,
-)
+from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 
 
@@ -25,7 +17,7 @@ class AgentQL(Component):
     inputs = [
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
+            display_name="AgentQL API Key",
             required=True,
             password=True,
             info="Your AgentQL API key from dev.agentql.com",

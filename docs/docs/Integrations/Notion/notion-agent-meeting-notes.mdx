@@ -9,13 +9,13 @@ The Notion Agent for Meeting Notes is an AI-powered tool that automatically proc
 
 ## Prerequisites
 
-- [Notion App](/integrations/notion/setup)
-- [Notion API key](https://www.notion.so/my-integrations)
-- [OpenAI API key](https://platform.openai.com/account/api-keys)
-- [Download Flow Meeting Agent Flow](./Meeting_Notes_Agent.json)(Download link)
+- [A Notion App](/integrations/notion/setup)
+- [A Notion API key](https://www.notion.so/my-integrations)
+- [An OpenAI API key](https://platform.openai.com/account/api-keys)
+- Recommended: [Download the Meeting Agent Flow JSON](./Meeting_Notes_Agent.json), and then [import the flow](/concepts-flows-import) into Langflow.
 
 :::important
-Before using this flow, ensure you have obtained the necessary API keys from Notion and OpenAI. These keys are essential for the flow to function properly. Keep them secure and do not share them publicly.
+Treat all keys and other credentials as sensitive information. Use secure references, and don't share them publicly.
 :::
 
 ## Components
@@ -42,7 +42,7 @@ This component allows users to input the meeting transcript directly into the fl
   - Sort Direction
 - **Output**: List of database data
 
-### Prompt
+### Prompt Template
 
 This component creates a dynamic prompt template using the following inputs:
 - Meeting Transcript
@@ -54,7 +54,7 @@ This component creates a dynamic prompt template using the following inputs:
 
 - **Purpose**: Analyzes the meeting transcript and identifies tasks and action items.
 - **Inputs**:
-  - System Prompt (from the Prompt component)
+  - System Prompt (from the **Prompt Template** component)
   - Language Model (OpenAI)
   - Tools:
     - Notion Search
@@ -69,7 +69,7 @@ This component creates a dynamic prompt template using the following inputs:
 
 - **Purpose**: Executes actions in Notion based on the meeting summary.
 - **Inputs**:
-  - System Prompt (from the second Prompt component)
+  - System Prompt (from the second **Prompt Template** component)
   - Language Model (OpenAI)
   - Tools:
     - List Database Properties
@@ -128,17 +128,18 @@ Displays the final output of the Notion Agent in the Playground.
 
 ## Run the Notion Meeting Notes flow
 
-To run the Notion Agent for Meeting Notes:
+1. Create a flow manually or import a pre-built flow JSON file:
 
-1. Open Langflow and create a new project.
-2. Add the components listed above to your flow canvas, or download the [Flow Meeting Agent Flow](./Meeting_Notes_Agent.json)(Download link) and **Import** the JSON file into Langflow.
-3. Connect the components as shown in the flow diagram.
-4. Input the Notion and OpenAI API keys in their respective components.
-5. Paste your meeting transcript into the Meeting Transcript component.
-6. Run the flow by clicking <Icon name="Play" aria-hidden="True" /> **Run component** on the **Chat Output** component.
-7. Review the output in the Chat Output component, which will summarize the actions taken in your Notion workspace.
+    * Recommended: [Download the Meeting Agent flow JSON](./Meeting_Notes_Agent.json) and then [import the flow](/concepts-flows-import) into Langflow.
+    * Create a blank flow, and then add the previously described components to your flow, connecting them as shown in the flow diagram.
 
-For optimal results, use detailed meeting transcripts. The quality of the output depends on the comprehensiveness of the input provided.
+2. Input the Notion and OpenAI API keys in their respective components.
+3. Paste your meeting transcript into the **Meeting Transcript** component.
+
+    For optimal results, use detailed meeting transcripts. The quality of the output depends on the comprehensiveness of the input provided.
+
+4. Run the flow by clicking <Icon name="Play" aria-hidden="True" /> **Run component** on the **Chat Output** component or open the **Playground**.
+5. Review the output summarizing the actions taken in your Notion workspace.
 
 ## Customization
 

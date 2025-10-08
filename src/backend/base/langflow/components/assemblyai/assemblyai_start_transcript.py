@@ -1,10 +1,10 @@
 from pathlib import Path
 
 import assemblyai as aai
-from loguru import logger
 
 from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, DropdownInput, FileInput, MessageTextInput, Output, SecretStrInput
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 
 
@@ -176,7 +176,7 @@ class AssemblyAITranscriptionJobCreator(Component):
         try:
             transcript = aai.Transcriber().submit(audio, config=config)
         except Exception as e:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error submitting transcription job")
+            logger.debug("Error submitting transcription job", exc_info=True)
             self.status = f"An error occurred: {e}"
             return Data(data={"error": f"An error occurred: {e}"})
 

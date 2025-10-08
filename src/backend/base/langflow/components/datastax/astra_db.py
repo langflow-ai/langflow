@@ -1,7 +1,5 @@
 import os
 
-from astrapy.admin import parse_api_endpoint
-
 from langflow.base.memory.model import LCChatMemoryComponent
 from langflow.field_typing.constants import Memory
 from langflow.inputs.inputs import MessageTextInput, SecretStrInput, StrInput
@@ -24,7 +22,7 @@ class AstraDBChatMemory(LCChatMemoryComponent):
         ),
         SecretStrInput(
             name="api_endpoint",
-            display_name="API Endpoint",
+            display_name="Astra DB API Endpoint",
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
             required=True,
@@ -51,6 +49,7 @@ class AstraDBChatMemory(LCChatMemoryComponent):
 
     def build_message_history(self) -> Memory:
         try:
+            from astrapy.admin import parse_api_endpoint
             from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
         except ImportError as e:
             msg = (

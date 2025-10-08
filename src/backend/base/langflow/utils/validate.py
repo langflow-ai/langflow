@@ -6,10 +6,10 @@ from types import FunctionType
 from typing import Optional, Union
 
 from langchain_core._api.deprecation import LangChainDeprecationWarning
-from loguru import logger
 from pydantic import ValidationError
 
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
+from langflow.logging.logger import logger
 
 
 def add_type_ignores() -> None:
@@ -30,7 +30,7 @@ def validate_code(code):
         tree = ast.parse(code)
     except Exception as e:  # noqa: BLE001
         if hasattr(logger, "opt"):
-            logger.opt(exception=True).debug("Error parsing code")
+            logger.debug("Error parsing code", exc_info=True)
         else:
             logger.debug("Error parsing code")
         errors["function"]["errors"].append(str(e))
@@ -49,18 +49,88 @@ def validate_code(code):
                 except ModuleNotFoundError as e:
                     errors["imports"]["errors"].append(str(e))
 
-    # Evaluate the function definition
+    # Evaluate the function definition with langflow context
     for node in tree.body:
         if isinstance(node, ast.FunctionDef):
             code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
             try:
-                exec(code_obj)
+                # Create execution context with common langflow imports
+                exec_globals = _create_langflow_execution_context()
+                exec(code_obj, exec_globals)
             except Exception as e:  # noqa: BLE001
-                logger.opt(exception=True).debug("Error executing function code")
+                logger.debug("Error executing function code", exc_info=True)
                 errors["function"]["errors"].append(str(e))
 
     # Return the errors dictionary
     return errors
+
+
+def _create_langflow_execution_context():
+    """Create execution context with common langflow imports."""
+    context = {}
+
+    # Import common langflow types that are used in templates
+    try:
+        from langflow.schema.dataframe import DataFrame
+
+        context["DataFrame"] = DataFrame
+    except ImportError:
+        # Create a mock DataFrame if import fails
+        context["DataFrame"] = type("DataFrame", (), {})
+
+    try:
+        from langflow.schema.message import Message
+
+        context["Message"] = Message
+    except ImportError:
+        context["Message"] = type("Message", (), {})
+
+    try:
+        from langflow.schema.data import Data
+
+        context["Data"] = Data
+    except ImportError:
+        context["Data"] = type("Data", (), {})
+
+    try:
+        from langflow.custom import Component
+
+        context["Component"] = Component
+    except ImportError:
+        context["Component"] = type("Component", (), {})
+
+    try:
+        from langflow.io import HandleInput, Output, TabInput
+
+        context["HandleInput"] = HandleInput
+        context["Output"] = Output
+        context["TabInput"] = TabInput
+    except ImportError:
+        context["HandleInput"] = type("HandleInput", (), {})
+        context["Output"] = type("Output", (), {})
+        context["TabInput"] = type("TabInput", (), {})
+
+    # Add common Python typing imports
+    try:
+        from typing import Any, Optional, Union
+
+        context["Any"] = Any
+        context["Dict"] = dict
+        context["List"] = list
+        context["Optional"] = Optional
+        context["Union"] = Union
+    except ImportError:
+        pass
+
+    # Add other common imports that might be used
+    try:
+        import pandas as pd
+
+        context["pd"] = pd
+    except ImportError:
+        pass
+
+    return context
 
 
 def eval_function(function_string: str):

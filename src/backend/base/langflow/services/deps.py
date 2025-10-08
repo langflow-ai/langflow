@@ -3,8 +3,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
-from loguru import logger
-
+from langflow.logging.logger import logger
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
@@ -114,6 +113,17 @@ def get_variable_service() -> VariableService:
     return get_service(ServiceType.VARIABLE_SERVICE, VariableServiceFactory())
 
 
+def is_settings_service_initialized() -> bool:
+    """Check if the SettingsService is already initialized without triggering initialization.
+
+    Returns:
+        bool: True if the SettingsService is already initialized, False otherwise.
+    """
+    from langflow.services.manager import service_manager
+
+    return ServiceType.SETTINGS_SERVICE in service_manager.services
+
+
 def get_settings_service() -> SettingsService:
     """Retrieves the SettingsService instance.
 
@@ -174,7 +184,7 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
             yield session
             await session.commit()
         except Exception:
-            logger.exception("An error occurred during the session scope.")
+            await logger.aexception("An error occurred during the session scope.")
             await session.rollback()
             raise
 

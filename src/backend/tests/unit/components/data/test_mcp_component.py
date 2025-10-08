@@ -1,13 +1,18 @@
-import asyncio
+"""Unit tests for MCP component with actual MCP servers.
+
+This test suite validates the MCP component functionality using real MCP servers:
+- Everything server (stdio mode) - provides echo and other tools
+- DeepWiki server (SSE mode) - provides wiki-related tools
+"""
+
+import shutil
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langflow.components.agents.mcp_component import MCPSseClient, MCPStdioClient, MCPToolsComponent
+from langflow.base.mcp.util import MCPSessionManager, MCPSseClient, MCPStdioClient
+from langflow.components.agents.mcp_component import MCPToolsComponent
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
-
-# TODO: This test suite is incomplete and is in need of an update to handle the latest MCP component changes.
-pytestmark = pytest.mark.skip(reason="Skipping entire file")
 
 
 class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
@@ -21,9 +26,10 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         """Return the default kwargs for the component."""
         return {
             "mode": "Stdio",
-            "command": "uvx mcp-server-fetch",
-            "sse_url": "http://localhost:7860/api/v1/mcp/sse",
-            "tool": "",
+            "command": "npx -y @modelcontextprotocol/server-everything",
+            "sse_url": "https://mcp.deepwiki.com/sse",
+            "tool": "echo",
+            "mcp_server": {"name": "test_server", "config": {"command": "uvx mcp-server-fetch"}},
         }
 
     @pytest.fixture
@@ -31,153 +37,170 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         """Return the file names mapping for different versions."""
         return []
 
-    @pytest.fixture
-    def mock_tool(self):
-        """Create a mock MCP tool."""
-        tool = MagicMock()
-        tool.name = "test_tool"
-        tool.description = "Test tool description"
-        tool.inputSchema = {
-            "type": "object",
-            "properties": {"test_param": {"type": "string", "description": "Test parameter"}},
-        }
-        return tool
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
+    async def test_component_initialization(self, component_class, default_kwargs):
+        """Test that the component initializes correctly."""
+        component = component_class(**default_kwargs)
+
+        # Check that the component has the expected attributes
+        assert hasattr(component, "stdio_client")
+        assert hasattr(component, "sse_client")
+        assert isinstance(component.stdio_client, MCPStdioClient)
+        assert isinstance(component.sse_client, MCPSseClient)
+
+        # Check that the component has a session manager
+        session_manager = component.stdio_client._get_session_manager()
+        assert isinstance(session_manager, MCPSessionManager)
+
+
+class TestMCPToolsComponentIntegration:
+    """Integration tests for the MCPToolsComponent."""
 
     @pytest.fixture
-    def mock_stdio_client(self, mock_tool):
-        """Create a mock stdio client."""
-        stdio_client = AsyncMock()
-        stdio_client.connect_to_server = AsyncMock(return_value=[mock_tool])
-        stdio_client.session = AsyncMock()
-        return stdio_client
+    def component(self):
+        """Create a component for testing."""
+        return MCPToolsComponent()
 
-    @pytest.fixture
-    def mock_sse_client(self, mock_tool):
-        """Create a mock SSE client."""
-        sse_client = AsyncMock()
-        sse_client.connect_to_server = AsyncMock(return_value=[mock_tool])
-        sse_client.session = AsyncMock()
-        return sse_client
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
+    async def test_stdio_mode_integration(self, component):
+        """Test the component in stdio mode with Everything server."""
+        # Configure for stdio mode
+        component.mode = "Stdio"
+        component.command = "npx -y @modelcontextprotocol/server-everything"
+        component.tool = "echo"
+
+        try:
+            # Mock the update_tool_list method to simulate server connection
+            tools, server_info = await component.update_tool_list()
+
+            # Should have tools
+            assert len(tools) > 0
+
+            # Should have server info
+            assert server_info is not None
+            assert isinstance(server_info, dict)
+
+        except Exception as e:
+            # If the server is not accessible, skip the test
+            pytest.skip(f"Everything server not accessible: {e}")
+
+    @pytest.mark.asyncio
+    async def test_sse_mode_integration(self, component):
+        """Test the component in SSE mode with DeepWiki server."""
+        # Configure for SSE mode
+        component.mode = "SSE"
+        component.sse_url = "https://mcp.deepwiki.com/sse"
+
+        try:
+            # Mock the update_tool_list method to simulate server connection
+            tools, server_info = await component.update_tool_list()
+
+            # Should have tools
+            assert len(tools) > 0
+
+            # Should have server info
+            assert server_info is not None
+            assert isinstance(server_info, dict)
+
+        except Exception as e:
+            # If the server is not accessible, skip the test
+            pytest.skip(f"DeepWiki server not accessible: {e}")
+
+    @pytest.mark.asyncio
+    async def test_session_context_setting(self, component):
+        """Test that session context is properly set."""
+        # Set session context
+        component.stdio_client.set_session_context("test_context")
+        component.sse_client.set_session_context("test_context")
+
+        # Verify context was set
+        assert component.stdio_client._session_context == "test_context"
+        assert component.sse_client._session_context == "test_context"
+
+    @pytest.mark.asyncio
+    async def test_session_manager_sharing(self, component):
+        """Test that session managers are shared through component cache."""
+        # Get session managers
+        stdio_manager = component.stdio_client._get_session_manager()
+        sse_manager = component.sse_client._get_session_manager()
+
+        # Both should be MCPSessionManager instances
+        assert isinstance(stdio_manager, MCPSessionManager)
+        assert isinstance(sse_manager, MCPSessionManager)
+
+        # They should be the same instance (shared through cache)
+        assert stdio_manager is sse_manager
 
 
-class TestMCPStdioClient:
+class TestMCPComponentErrorHandling:
+    """Test error handling in MCP components."""
+
     @pytest.fixture
     def stdio_client(self):
         return MCPStdioClient()
 
-    async def test_connect_to_server(self, stdio_client):
-        """Test connecting to server via Stdio."""
-        # Create mock for stdio transport
-        mock_stdio = AsyncMock()
-        mock_write = AsyncMock()
-        mock_stdio_transport = (mock_stdio, mock_write)
-        mock_stdio_cm = AsyncMock()
-        mock_stdio_cm.__aenter__.return_value = mock_stdio_transport
+    @pytest.fixture
+    def mock_session_manager(self):
+        """Create a mock session manager."""
+        return AsyncMock(spec=MCPSessionManager)
 
-        # Mock the stdio_client function to return our mock context manager
-        with patch("mcp.client.stdio.stdio_client", return_value=mock_stdio_cm):
-            # Mock ClientSession
+    async def test_connect_to_server_with_command(self, stdio_client):
+        """Test connecting to server via Stdio with command."""
+        with patch.object(stdio_client, "_get_or_create_session") as mock_get_session:
+            # Mock session
             mock_session = AsyncMock()
-            mock_session.initialize = AsyncMock()
-            mock_session.list_tools.return_value.tools = [MagicMock()]
+            mock_tool = MagicMock()
+            mock_tool.name = "test_tool"
+            list_tools_result = MagicMock()
+            list_tools_result.tools = [mock_tool]
+            mock_session.list_tools = AsyncMock(return_value=list_tools_result)
+            mock_get_session.return_value = mock_session
 
-            # Mock the AsyncExitStack
-            mock_exit_stack = AsyncMock()
-            mock_exit_stack.enter_async_context = AsyncMock()
-            mock_exit_stack.enter_async_context.side_effect = [
-                mock_stdio_transport,  # For stdio_client
-                mock_session,  # For ClientSession
-            ]
-            stdio_client.exit_stack = mock_exit_stack
-
-            tools = await stdio_client.connect_to_server("test_command")
+            tools = await stdio_client.connect_to_server("uvx test-command")
 
             assert len(tools) == 1
-            assert stdio_client.session is not None
-            # Verify the exit stack was used correctly
-            assert mock_exit_stack.enter_async_context.call_count == 2
-            # Verify the stdio transport was properly set
-            assert stdio_client.stdio == mock_stdio
-            assert stdio_client.write == mock_write
+            assert tools[0].name == "test_tool"
+            assert stdio_client._connected is True
+            assert stdio_client._connection_params is not None
 
+    async def test_run_tool_success(self, stdio_client):
+        """Test successfully running a tool."""
+        # Setup connection state
+        stdio_client._connected = True
+        stdio_client._connection_params = MagicMock()
+        stdio_client._session_context = "test_context"
 
-class TestMCPSseClient:
-    @pytest.fixture
-    def sse_client(self):
-        return MCPSseClient()
+        with patch.object(stdio_client, "_get_or_create_session") as mock_get_session:
+            mock_session = AsyncMock()
+            mock_result = MagicMock()
+            mock_session.call_tool = AsyncMock(return_value=mock_result)
+            mock_get_session.return_value = mock_session
 
-    async def test_pre_check_redirect(self, sse_client):
-        """Test pre-checking URL for redirects."""
-        test_url = "http://test.url"
-        redirect_url = "http://redirect.url"
+            result = await stdio_client.run_tool("test_tool", {"param": "value"})
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_response = MagicMock()
-            mock_response.status_code = 307
-            mock_response.headers.get.return_value = redirect_url
-            mock_client.return_value.__aenter__.return_value.request.return_value = mock_response
+            assert result == mock_result
+            mock_session.call_tool.assert_called_once_with("test_tool", arguments={"param": "value"})
 
-            result = await sse_client.pre_check_redirect(test_url)
-            assert result == redirect_url
+    async def test_run_tool_without_connection(self, stdio_client):
+        """Test running a tool without being connected."""
+        stdio_client._connected = False
 
-    async def test_connect_to_server(self, sse_client):
-        """Test connecting to server via SSE."""
-        # Mock the pre_check_redirect first
-        with (
-            patch.object(sse_client, "pre_check_redirect", return_value="http://test.url"),
-            patch.object(sse_client, "validate_url", return_value=(True, "")),
-        ):
-            # Create mock for sse_client context manager
-            mock_sse = AsyncMock()
-            mock_write = AsyncMock()
-            mock_sse_transport = (mock_sse, mock_write)
-            mock_sse_cm = AsyncMock()
-            mock_sse_cm.__aenter__.return_value = mock_sse_transport
+        with pytest.raises(ValueError, match="Session not initialized"):
+            await stdio_client.run_tool("test_tool", {})
 
-            # Mock the sse_client function to return our mock context manager
-            with patch("mcp.client.sse.sse_client", return_value=mock_sse_cm):
-                # Mock ClientSession
-                mock_session = AsyncMock()
-                mock_session.initialize = AsyncMock()
-                mock_session.list_tools.return_value.tools = [MagicMock()]
+    async def test_disconnect_cleanup(self, stdio_client):
+        """Test that disconnect properly cleans up resources."""
+        stdio_client._session_context = "test_context"
+        stdio_client._connected = True
 
-                # Mock the AsyncExitStack
-                mock_exit_stack = AsyncMock()
-                mock_exit_stack.enter_async_context = AsyncMock()
-                mock_exit_stack.enter_async_context.side_effect = [
-                    mock_sse_transport,  # For sse_client
-                    mock_session,  # For ClientSession
-                ]
-                sse_client.exit_stack = mock_exit_stack
+        with patch.object(stdio_client, "_get_session_manager") as mock_get_manager:
+            mock_manager = AsyncMock()
+            mock_get_manager.return_value = mock_manager
 
-                tools = await sse_client.connect_to_server("http://test.url", {})
+            await stdio_client.disconnect()
 
-                assert len(tools) == 1
-                assert sse_client.session is not None
-                # Verify the exit stack was used correctly
-                assert mock_exit_stack.enter_async_context.call_count == 2
-                # Verify the SSE transport was properly set
-                assert sse_client.sse == mock_sse
-                assert sse_client.write == mock_write
-
-    async def test_connect_timeout(self, sse_client):
-        """Test connection timeout handling."""
-        # Set max_retries to 1 to avoid multiple retry attempts
-        sse_client.max_retries = 1
-
-        with (
-            patch.object(sse_client, "pre_check_redirect", return_value="http://test.url"),
-            patch.object(sse_client, "validate_url", return_value=(True, "")),  # Mock URL validation
-            patch.object(sse_client, "_connect_with_timeout") as mock_connect,
-        ):
-            mock_connect.side_effect = asyncio.TimeoutError()
-
-            # Expect ConnectionError instead of TimeoutError
-            with pytest.raises(
-                ConnectionError,
-                match=(
-                    "Failed to connect after 1 attempts. "
-                    "Last error: Connection to http://test.url timed out after 1 seconds"
-                ),
-            ):
-                await sse_client.connect_to_server("http://test.url", {}, timeout_seconds=1)
+            mock_manager._cleanup_session.assert_called_once_with("test_context")
+            assert stdio_client.session is None
+            assert stdio_client._connected is False

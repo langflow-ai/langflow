@@ -12,6 +12,7 @@ class DataConditionalRouterComponent(Component):
     icon = "split"
     name = "DataConditionalRouter"
     legacy = True
+    replacement = ["logic.ConditionalRouter"]
 
     inputs = [
         DataInput(

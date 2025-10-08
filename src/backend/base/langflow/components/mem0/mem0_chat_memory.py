@@ -1,17 +1,11 @@
 import os
 
-from loguru import logger
 from mem0 import Memory, MemoryClient
 
 from langflow.base.memory.model import LCChatMemoryComponent
-from langflow.inputs.inputs import (
-    DictInput,
-    HandleInput,
-    MessageTextInput,
-    NestedDictInput,
-    SecretStrInput,
-)
+from langflow.inputs.inputs import DictInput, HandleInput, MessageTextInput, NestedDictInput, SecretStrInput
 from langflow.io import Output
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 
 

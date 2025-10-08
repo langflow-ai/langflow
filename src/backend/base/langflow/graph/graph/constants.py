@@ -17,6 +17,9 @@ class Finish:
     def __eq__(self, /, other):
         return isinstance(other, Finish)
 
+    def __hash__(self) -> int:
+        return hash(type(self))
+
 
 def _import_vertex_types():
     from langflow.graph.vertex import vertex_types

@@ -7,8 +7,7 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
-
+from langflow.logging.logger import logger
 from langflow.services.base import Service
 
 if TYPE_CHECKING:
@@ -51,6 +50,12 @@ def _get_opik_tracer():
     from langflow.services.tracing.opik import OpikTracer
 
     return OpikTracer
+
+
+def _get_traceloop_tracer():
+    from langflow.services.tracing.traceloop import TraceloopTracer
+
+    return TraceloopTracer
 
 
 trace_context_var: ContextVar[TraceContext | None] = ContextVar("trace_context", default=None)
@@ -127,7 +132,7 @@ class TracingService(Service):
             try:
                 trace_func(*args)
             except Exception:  # noqa: BLE001
-                logger.exception("Error processing trace_func")
+                await logger.aexception("Error processing trace_func")
             finally:
                 trace_context.traces_queue.task_done()
 
@@ -138,7 +143,7 @@ class TracingService(Service):
             trace_context.running = True
             trace_context.worker_task = asyncio.create_task(self._trace_worker(trace_context))
         except Exception:  # noqa: BLE001
-            logger.exception("Error starting tracing service")
+            await logger.aexception("Error starting tracing service")
 
     def _initialize_langsmith_tracer(self, trace_context: TraceContext) -> None:
         langsmith_tracer = _get_langsmith_tracer()
@@ -201,6 +206,19 @@ class TracingService(Service):
             session_id=trace_context.session_id,
         )
 
+    def _initialize_traceloop_tracer(self, trace_context: TraceContext) -> None:
+        if self.deactivated:
+            return
+        traceloop_tracer = _get_traceloop_tracer()
+        trace_context.tracers["traceloop"] = traceloop_tracer(
+            trace_name=trace_context.run_name,
+            trace_type="chain",
+            project_name=trace_context.project_name,
+            trace_id=trace_context.run_id,
+            user_id=trace_context.user_id,
+            session_id=trace_context.session_id,
+        )
+
     async def start_tracers(
         self,
         run_id: UUID,
@@ -227,8 +245,9 @@ class TracingService(Service):
             self._initialize_langfuse_tracer(trace_context)
             self._initialize_arize_phoenix_tracer(trace_context)
             self._initialize_opik_tracer(trace_context)
+            self._initialize_traceloop_tracer(trace_context)
         except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error initializing tracers: {e}")
+            await logger.adebug(f"Error initializing tracers: {e}")
 
     async def _stop(self, trace_context: TraceContext) -> None:
         try:
@@ -241,7 +260,7 @@ class TracingService(Service):
                 trace_context.worker_task = None
 
         except Exception:  # noqa: BLE001
-            logger.exception("Error stopping tracing service")
+            await logger.aexception("Error stopping tracing service")
 
     def _end_all_tracers(self, trace_context: TraceContext, outputs: dict, error: Exception | None = None) -> None:
         for tracer in trace_context.tracers.values():
@@ -275,10 +294,19 @@ class TracingService(Service):
     @staticmethod
     def _cleanup_inputs(inputs: dict[str, Any]):
         inputs = inputs.copy()
-        for key in inputs:
-            if "api_key" in key:
-                inputs[key] = "*****"  # avoid logging api_keys for security reasons
-        return inputs
+        sensitive_keywords = {"api_key", "password", "server_url"}
+
+        def _mask(obj: Any):
+            if isinstance(obj, dict):
+                return {
+                    k: "*****" if any(word in k.lower() for word in sensitive_keywords) else _mask(v)
+                    for k, v in obj.items()
+                }
+            if isinstance(obj, list):
+                return [_mask(i) for i in obj]
+            return obj
+
+        return _mask(inputs)
 
     def _start_component_traces(
         self,
@@ -344,6 +372,7 @@ class TracingService(Service):
         if component._vertex:
             trace_id = component._vertex.id
         trace_type = component.trace_type
+        inputs = self._cleanup_inputs(inputs)
         component_trace_context = ComponentTraceContext(
             trace_id, trace_name, trace_type, component._vertex, inputs, metadata
         )

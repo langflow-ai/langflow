@@ -220,7 +220,7 @@ class YouTubeChannelComponent(Component):
 
             return DataFrame(channel_df)
 
-        except (HttpError, HTTPError, Exception) as e:
+        except (HttpError, HTTPError) as e:
             return DataFrame(pd.DataFrame({"error": [str(e)]}))
         finally:
             if youtube:

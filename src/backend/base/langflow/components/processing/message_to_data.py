@@ -1,7 +1,6 @@
-from loguru import logger
-
 from langflow.custom.custom_component.component import Component
 from langflow.io import MessageInput, Output
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 
@@ -13,6 +12,7 @@ class MessageToDataComponent(Component):
     beta = True
     name = "MessagetoData"
     legacy = True
+    replacement = ["processing.TypeConverterComponent"]
 
     inputs = [
         MessageInput(
@@ -32,6 +32,6 @@ class MessageToDataComponent(Component):
             return Data(data=self.message.data)
 
         msg = "Error converting Message to Data: Input must be a Message object"
-        logger.opt(exception=True).debug(msg)
+        logger.debug(msg, exc_info=True)
         self.status = msg
         return Data(data={"error": msg})

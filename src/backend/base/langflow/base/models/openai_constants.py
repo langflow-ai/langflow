@@ -2,6 +2,35 @@ from .model_metadata import create_model_metadata
 
 # Unified model metadata - single source of truth
 OPENAI_MODELS_DETAILED = [
+    # GPT-5 Series
+    create_model_metadata(
+        provider="OpenAI",
+        name="gpt-5",
+        icon="OpenAI",
+        tool_calling=True,
+        reasoning=True,
+    ),
+    create_model_metadata(
+        provider="OpenAI",
+        name="gpt-5-mini",
+        icon="OpenAI",
+        tool_calling=True,
+        reasoning=True,
+    ),
+    create_model_metadata(
+        provider="OpenAI",
+        name="gpt-5-nano",
+        icon="OpenAI",
+        tool_calling=True,
+        reasoning=True,
+    ),
+    create_model_metadata(
+        provider="OpenAI",
+        name="gpt-5-chat-latest",
+        icon="OpenAI",
+        tool_calling=False,
+        reasoning=True,
+    ),
     # Regular OpenAI Models
     create_model_metadata(provider="OpenAI", name="gpt-4o-mini", icon="OpenAI", tool_calling=True),
     create_model_metadata(provider="OpenAI", name="gpt-4o", icon="OpenAI", tool_calling=True),

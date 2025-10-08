@@ -5,16 +5,17 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from alembic.util.exc import CommandError
-from loguru import logger
 from sqlmodel import text
 from sqlmodel.ext.asyncio.session import AsyncSession
+
+from langflow.logging.logger import logger
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
 
 
 async def initialize_database(*, fix_migration: bool = False) -> None:
-    logger.debug("Initializing database")
+    await logger.adebug("Initializing database")
     from langflow.services.deps import get_db_service
 
     database_service: DatabaseService = get_db_service()
@@ -28,7 +29,7 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
         # we can ignore it
         if "already exists" not in str(exc):
             msg = "Error creating DB and tables"
-            logger.exception(msg)
+            await logger.aexception(msg)
             raise RuntimeError(msg) from exc
     try:
         await database_service.check_schema_health()
@@ -58,7 +59,7 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
         if "already exists" not in str(exc):
             logger.exception(exc)
         raise
-    logger.debug("Database initialized")
+    await logger.adebug("Database initialized")
 
 
 @asynccontextmanager
@@ -67,7 +68,7 @@ async def session_getter(db_service: DatabaseService):
         session = AsyncSession(db_service.engine, expire_on_commit=False)
         yield session
     except Exception:
-        logger.exception("Session rollback because of exception")
+        await logger.aexception("Session rollback because of exception")
         await session.rollback()
         raise
     finally:

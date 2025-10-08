@@ -1,5 +1,4 @@
 import ast
-import json
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
@@ -8,6 +7,7 @@ from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 from zipfile import ZipFile, is_zipfile
 
+import orjson
 import pandas as pd
 
 from langflow.custom.custom_component.component import Component
@@ -222,7 +222,6 @@ class BaseFileComponent(Component, ABC):
             # Delete temporary directories
             for temp_dir in self._temp_dirs:
                 temp_dir.cleanup()
-
             # Delete files marked for deletion
             for file in final_files:
                 if file.delete_after_processing and file.path.exists():
@@ -254,11 +253,25 @@ class BaseFileComponent(Component, ABC):
 
         sep: str = getattr(self, "separator", "\n\n") or "\n\n"
 
+        # Files are loaded in as Data objects. Converts their content to strings for the Message.
         parts: list[str] = []
         for d in data_list:
-            # Prefer explicit text if available, fall back to full dict, lastly str()
-            text = (getattr(d, "get_text", lambda: None)() or d.data.get("text")) if isinstance(d.data, dict) else None
-            parts.append(text if text is not None else str(d))
+            try:
+                data_text = d.get_text()
+                if data_text and isinstance(data_text, str):
+                    parts.append(data_text)
+                elif data_text:
+                    # get_text() returned non-string, convert it
+                    parts.append(str(data_text))
+                elif isinstance(d.data, dict):
+                    # convert the data dict to a readable string
+                    parts.append(orjson.dumps(d.data, option=orjson.OPT_INDENT_2, default=str).decode())
+                else:
+                    parts.append(str(d))
+            except Exception:  # noqa: BLE001
+                # Final fallback - just try to convert to string.
+                # TODO: Consider downstream error case more. Should this raise an error?
+                parts.append(str(d))
 
         return Message(text=sep.join(parts))
 
@@ -325,10 +338,10 @@ class BaseFileComponent(Component, ABC):
     def parse_string_to_dict(self, s: str) -> dict:
         # Try JSON first (handles true/false/null)
         try:
-            result = json.loads(s)
+            result = orjson.loads(s)
             if isinstance(result, dict):
                 return result
-        except json.JSONDecodeError:
+        except orjson.JSONDecodeError:
             pass
 
         # Fall back to Python literal evaluation

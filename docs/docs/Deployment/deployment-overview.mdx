@@ -6,40 +6,19 @@ slug: /deployment-overview
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-You have a flow, and want to share it with the world in a production environment.
+This section includes the different ways to bring your locally-built flows to the world.
 
-This page outlines the journey from locally-run flow to a cloud-hosted production server.
+* To self-host your local server through an Ngrok gateway, see [Deploy a public Langflow server](/deployment-public-server).
+This approach uses [ngrok](https://ngrok.com/docs/getting-started/) to forward traffic and share your local Langflow server over the internet, without deploying to a cloud provider or exposing your network directly.
 
-More specific instructions are available in the [Docker](/deployment-docker) and [Kubernetes](/deployment-kubernetes-dev) pages.
+* To build and deploy a Langflow container that includes your flow files, see [Containerize a Langflow application](develop-application).
+This approach bundles your flows and dependencies into a portable, reproducible Docker image for easy deployment across different environments.
 
-## Langflow deployment architecture
+* To deploy a Langflow server on a remote server with Docker and Caddy, see [Deploy Langflow on a remote server](/deployment-caddyfile).
+This approach is good for hosting your own Langflow instance on a remote server with secure web access, using Docker containers and Caddy as a reverse proxy for HTTPS support.
 
-Langflow can be deployed in two distinct environments:
+* To deploy Langflow on Kubernetes, see [Langflow Kubernetes architecture and best practices](/deployment-prod-best-practices)
+This approach creates production-grade deployments with high availability, scalability, and robust orchestration.
 
-* [Langflow IDE](/deployment-kubernetes-dev) - A development environment for creating and testing flows.
-* [Langflow runtime](/deployment-kubernetes-prod) - A production environment for hosting and serving flows.
-
-The **Langflow IDE** includes the frontend for visual development of your flow. The default [docker-compose.yml](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file hosted in the Langflow repository builds the Langflow IDE image. The Langflow IDE can be deployed on [Docker](/deployment-docker) or [Kubernetes](/deployment-kubernetes-dev).
-
-The **Langflow runtime** is a headless or backend-only mode. The server exposes your flow as an endpoint, and runs only the processes necessary to serve your flow, with PostgreSQL as the database for improved scalability. Use the Langflow **runtime** to deploy your flows if you don't require the frontend for visual development. The Langflow runtime can be deployed on [Docker](/deployment-docker) or [Kubernetes](/deployment-kubernetes-prod).
-
-:::tip
-You can start Langflow in headless mode with the [LANGFLOW_BACKEND_ONLY](/environment-variables#LANGFLOW_BACKEND_ONLY) environment variable.
-:::
-
-## Package your flow with the Langflow runtime image
-
-To package your flow as a Docker image, copy your flow's `.JSON` file with a command in the Dockerfile.
-
-An example [Dockerfile](https://github.com/langflow-ai/langflow-helm-charts/blob/main/examples/langflow-runtime/docker/Dockerfile) for bundling flows is hosted in the Langflow Helm Charts repository.
-
-For more on building the Langflow docker image and pushing it to Docker Hub, see [Package your flow as a docker image](/deployment-docker#package-your-flow-as-a-docker-image).
-
-## Deploy to Kubernetes
-
-After your flow is packaged as a Docker image and available on Docker Hub, deploy your application by overriding the values in the [langflow-runtime](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/Chart.yaml) Helm chart.
-
-For more information, see [Deploy the Langflow development environment on Kubernetes](/deployment-kubernetes-dev).
-
-<!--TODO: Verify these scenarios-->
-<!--You can host a Langflow server 24x7 and have all of your apps call that fixed server to run your flows. You can bundle the Langflow package as a dependency of a larger application and run the whole thing all together. You can containerize Langflow and serve it as a microservice for a larger application comprised of microservices like a website.-->
+* For cloud provider-specific deployment guides, see your cloud provider's documentation.
+The Langflow documentation provides a few examples, such as [Google Cloud Platform](/deployment-gcp) and [Hugging Face Spaces](/deployment-hugging-face-spaces), to help you get started.

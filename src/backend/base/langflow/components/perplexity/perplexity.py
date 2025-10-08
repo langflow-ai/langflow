@@ -31,9 +31,7 @@ class PerplexityComponent(LCModelComponent):
             ],
             value="llama-3.1-sonar-small-128k-online",
         ),
-        IntInput(
-            name="max_output_tokens", display_name="Max Output Tokens", info="The maximum number of tokens to generate."
-        ),
+        IntInput(name="max_tokens", display_name="Max Output Tokens", info="The maximum number of tokens to generate."),
         SecretStrInput(
             name="api_key",
             display_name="Perplexity API Key",
@@ -57,20 +55,13 @@ class PerplexityComponent(LCModelComponent):
             "Note that the API may not return the full n completions if duplicates are generated.",
             advanced=True,
         ),
-        IntInput(
-            name="top_k",
-            display_name="Top K",
-            info="Decode using top-k sampling: consider the set of top_k most probable tokens. Must be positive.",
-            advanced=True,
-        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         api_key = SecretStr(self.api_key).get_secret_value()
         temperature = self.temperature
         model = self.model_name
-        max_output_tokens = self.max_output_tokens
-        top_k = self.top_k
+        max_tokens = self.max_tokens
         top_p = self.top_p
         n = self.n
 
@@ -78,8 +69,7 @@ class PerplexityComponent(LCModelComponent):
             model=model,
             temperature=temperature or 0.75,
             pplx_api_key=api_key,
-            top_k=top_k or None,
             top_p=top_p or None,
             n=n or 1,
-            max_output_tokens=max_output_tokens,
+            max_tokens=max_tokens,
         )

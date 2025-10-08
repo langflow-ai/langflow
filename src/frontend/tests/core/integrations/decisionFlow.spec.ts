@@ -32,9 +32,9 @@ test(
     await page.waitForSelector('[data-testid="input_outputChat Input"]', {
       timeout: 2000,
     });
-
+    await page.getByTestId("canvas_controls_dropdown").click();
     await zoomOut(page, 6);
-
+    await page.getByTestId("canvas_controls_dropdown").click();
     await page
       .getByTestId("input_outputChat Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
@@ -213,7 +213,11 @@ test(
       timeout: 2000,
     });
     //----------------------------------
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     //---------------------------------- EDIT PROMPT
     await page.getByTestId("promptarea_prompt_template").first().click();
     await page
@@ -353,7 +357,11 @@ test(
     }
     await page.getByTestId("dropdown_str_model_name").click();
     await page.getByTestId("gpt-4o-1-option").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,

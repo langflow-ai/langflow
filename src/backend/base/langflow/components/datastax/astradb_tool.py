@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from typing import Any
 
 from astrapy import Collection, DataAPIClient, Database
-from astrapy.admin import parse_api_endpoint
 from langchain_core.tools import StructuredTool, Tool
 from pydantic import BaseModel, Field, create_model
 
@@ -192,6 +191,11 @@ class AstraDBToolComponent(LCToolComponent):
     _cached_collection: Collection | None = None
 
     def _build_collection(self):
+        try:
+            from astrapy.admin import parse_api_endpoint
+        except ImportError as e:
+            msg = "Could not import Astra DB integration package. Please install it with `uv pip install astrapy`."
+            raise ImportError(msg) from e
         if self._cached_collection:
             return self._cached_collection
 
@@ -268,7 +272,7 @@ class AstraDBToolComponent(LCToolComponent):
         return tool
 
     def projection_args(self, input_str: str) -> dict | None:
-        """Build the projection arguments for the AstraDB query."""
+        """Build the projection arguments for the Astra DB query."""
         elements = input_str.split(",")
         result = {}
 
@@ -329,7 +333,7 @@ class AstraDBToolComponent(LCToolComponent):
         raise ValueError(msg)
 
     def build_filter(self, args: dict, filter_settings: list) -> dict:
-        """Build filter dictionary for AstraDB query.
+        """Build filter dictionary for Astra DB query.
 
         Args:
             args: Dictionary of arguments from the tool
@@ -370,7 +374,7 @@ class AstraDBToolComponent(LCToolComponent):
         return filters
 
     def run_model(self, **args) -> Data | list[Data]:
-        """Run the query to get the data from the AstraDB collection."""
+        """Run the query to get the data from the Astra DB collection."""
         collection = self._build_collection()
         sort = {}
 

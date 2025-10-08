@@ -3,12 +3,12 @@ from typing import Any
 from langchain.tools import StructuredTool
 from langchain_community.utilities.serpapi import SerpAPIWrapper
 from langchain_core.tools import ToolException
-from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import DictInput, IntInput, MultilineInput, SecretStrInput
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 
 
@@ -30,11 +30,12 @@ class SerpAPISchema(BaseModel):
 
 
 class SerpAPIComponent(LCToolComponent):
-    display_name = "Serp Search API [DEPRECATED]"
+    display_name = "Serp Search API"
     description = "Call Serp Search API with result limiting"
     name = "SerpAPI"
     icon = "SerpSearch"
     legacy = True
+    replacement = ["serpapi.Serp"]
 
     inputs = [
         SecretStrInput(name="serpapi_api_key", display_name="SerpAPI API Key", required=True),
@@ -111,7 +112,7 @@ class SerpAPIComponent(LCToolComponent):
             data_list = [Data(data=result, text=result.get("snippet", "")) for result in results]
 
         except Exception as e:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error running SerpAPI")
+            logger.debug("Error running SerpAPI", exc_info=True)
             self.status = f"Error: {e}"
             return [Data(data={"error": str(e)}, text=str(e))]
 

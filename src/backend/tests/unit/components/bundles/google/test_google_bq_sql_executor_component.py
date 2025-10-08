@@ -177,7 +177,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         fake_client.query.side_effect = RefreshError("Token expired")
 
         component = component_class(**default_kwargs)
-        with pytest.raises(ValueError, match="Authentication error: Unable to refresh authentication token."):
+        with pytest.raises(ValueError, match=r"Authentication error: Unable to refresh authentication token\."):
             component.execute_sql()
 
     @patch.object(Credentials, "from_service_account_file")

@@ -1,13 +1,10 @@
 from typing import Any
 
-from loguru import logger
-from requests.exceptions import ConnectionError  # noqa: A004
-from urllib3.exceptions import MaxRetryError, NameResolutionError
-
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
+from langflow.logging.logger import logger
 from langflow.schema.dotdict import dotdict
 
 
@@ -27,11 +24,8 @@ class NVIDIAModelComponent(LCModelComponent):
     except ImportError as e:
         msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
         raise ImportError(msg) from e
-    except (ConnectionError, MaxRetryError, NameResolutionError):
-        logger.warning(
-            "Failed to connect to NVIDIA API. Model list may be unavailable."
-            " Please check your internet connection and API credentials."
-        )
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Failed to fetch NVIDIA models during initialization: {e}. Model list will be unavailable.")
         all_models = []
 
     inputs = [
@@ -97,7 +91,7 @@ class NVIDIAModelComponent(LCModelComponent):
         ),
     ]
 
-    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:
+    def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
         try:
             from langchain_nvidia_ai_endpoints import ChatNVIDIA
         except ImportError as e:
@@ -114,7 +108,7 @@ class NVIDIAModelComponent(LCModelComponent):
     def update_build_config(self, build_config: dotdict, _field_value: Any, field_name: str | None = None):
         if field_name in {"model_name", "tool_model_enabled", "base_url", "api_key"}:
             try:
-                ids = self.get_models(self.tool_model_enabled)
+                ids = self.get_models(tool_model_enabled=self.tool_model_enabled)
                 build_config["model_name"]["options"] = ids
 
                 if "value" not in build_config["model_name"] or build_config["model_name"]["value"] is None:

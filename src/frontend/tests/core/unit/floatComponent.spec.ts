@@ -42,7 +42,10 @@ test(
 
     await page.getByText("Close").last().click();
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.locator('//*[@id="int_int_seed"]').click();
     await page.locator('//*[@id="int_int_seed"]').fill("");

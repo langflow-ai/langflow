@@ -19,7 +19,7 @@ Voice mode requires the following:
 
 * An [OpenAI](https://platform.openai.com/) account and an OpenAI API key because Langflow uses the OpenAI API to process voice input and generate responses.
 
-* Optional: An [ElevenLabs](https://elevenlabs.io) API key to enable voice options for the LLM's response.
+* Optional: An [ElevenLabs](https://elevenlabs.io) API key to enable more voice options for the LLM's response.
 
 * A microphone and speakers.
 
@@ -29,7 +29,7 @@ Voice mode requires the following:
 
 In the **Playground**, click the <Icon name="Mic" aria-hidden="true"/> **Microphone** to enable voice mode and verbally interact with your flows through a microphone and speakers.
 
-The following steps use the [**Simple Agent** template](/simple-agent) to demonstrate how to enable voice mode:
+The following steps use the **Simple Agent** template to demonstrate how to enable voice mode:
 
 1. Create a flow based on the **Simple Agent** template.
 
@@ -54,7 +54,7 @@ This option changes both the expected input language and the response language.
 
 10. Speak into your microphone to start the chat.
 
-    If configured correctly, the waveform in the voice mode dialog registers your input, and then the agent's logic and response are described verbally and in the **Playground**.
+    If configured correctly, the waveform registers your input, and then the agent's logic and response are described verbally and in the **Playground**.
 
 ## Develop applications with websockets endpoints
 
@@ -86,3 +86,7 @@ If omitted, Langflow uses the flow ID as the [session ID](/session-id).
 
 However, be aware that voice mode only maintains context within the current conversation instance.
 When you close the **Playground** or end a chat, verbal chat history is discarded and not available for future chat sessions.
+
+## See also
+
+* [Test flows in the Playground](/concepts-playground)

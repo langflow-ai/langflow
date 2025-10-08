@@ -8,7 +8,7 @@ import Icon from "@site/src/components/icon";
 You can use the **Webhook** component to start a flow run in response to an external event.
 
 With the **Webhook** component, a flow can receive data directly from external sources. Then, the flow can parse the data and pass it to other components in the flow to initiate other actions, such as calling APIs, writing to databases, and chatting with LLMs.
-If the input is not valid JSON, the **Webhook** component wraps it in a `payload` object so that it can be accepted as input to trigger the flow.
+If the input isn't valid JSON, the **Webhook** component wraps it in a `payload` object so that it can be accepted as input to trigger the flow.
 
 The **Webhook** component provides a versatile entrypoint that can make your flows more event-driven and integrated with your entire stack of applications and services.
 For example:
@@ -55,8 +55,8 @@ To use the **Webhook** component in a flow, do the following:
 
 6. From the **Webhook** component's **Endpoint** field, copy the API endpoint that you will use to send data to the **Webhook** component and trigger the flow.
 
-    Alternatively, to get a complete `POST /v1/webhook/$FLOW_ID` code snippet, open the flow's [**API access** pane](/concepts-publish#api-access), and then click the **Webhook cURL** tab.
-    You can also modify the default curl command in the **Webhook** component's **cURL** field.
+    Alternatively, to get a complete `POST /v1/webhook/$FLOW_ID` code snippet, open the flow's [**API access** pane](/concepts-publish#api-access), and then click the **Webhook curl** tab.
+    You can also modify the default curl command in the **Webhook** component's **curl** field.
     If this field isn't visible by default, click the **Webhook** component, and then click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 7. Send a POST request with `data` to the flow's `webhook` endpoint to trigger the flow.
@@ -103,7 +103,7 @@ To troubleshoot a flow with a **Webhook** component and verify that the componen
 
     This mode passes the data received by the **Webhook** component as a string that is printed by the **Chat Output** component.
 
-5. Click **Share**, select **API access**, and then copy the **Webhook cURL** code snippet.
+5. Click **Share**, select **API access**, and then copy the **Webhook curl** code snippet.
 6. Optional: Edit the `data` in the code snippet if you want to pass a different payload.
 7. Send the POST request to trigger the flow.
 8. Click **Playground** to verify that the **Chat Output** component printed the JSON data from your POST request.
@@ -118,5 +118,5 @@ Then, you can examine the string output and troubleshoot your parsing template, 
 ## See also
 
 - [Get started with the Langflow API](/api-reference-api-examples)
-- [Webhook component](/components-data#webhook)
+- [**Webhook** component](/components-data#webhook)
 - [Flow trigger endpoints](/api-flows-run)

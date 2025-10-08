@@ -7,7 +7,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Icon from "@site/src/components/icon";
 
-Use the [MCP Tools component](/mcp-client) to connect Langflow to a [Datastax Astra DB MCP server](https://github.com/datastax/astra-db-mcp).
+This guide demonstrates how to [use Langflow as an MCP client](/mcp-client) by using the **MCP Tools** component to run a [DataStax Astra DB MCP server](https://github.com/datastax/astra-db-mcp) in an agent flow.
 
 1. Install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
 
@@ -17,7 +17,7 @@ Use the [MCP Tools component](/mcp-client) to connect Langflow to a [Datastax As
 
 4. Get your database's Astra DB API endpoint and an Astra application token with the **Database Administrator** role. For more information, see [Generate an application token for a database](https://docs.datastax.com/en/astra-db-serverless/administration/manage-application-tokens.html#database-token).
 
-5. To follow along with this guide, create a flow based on the [**Simple Agent** template](/simple-agent).
+5. To follow along with this guide, create a flow based on the **Simple Agent** template.
 
     You can also use an existing flow or create a blank flow.
 
@@ -52,7 +52,7 @@ Use the [MCP Tools component](/mcp-client) to connect Langflow to a [Datastax As
         ASTRA_DB_API_ENDPOINT=https://...-us-east-2.apps.astra.datastax.com
         ```
 
-8. In the **Agent** component, add your **OpenAI API key**.
+8. In the **Agent** component, add your OpenAI API key.
 
     The default model is an OpenAI model.
     If you want to use a different model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.

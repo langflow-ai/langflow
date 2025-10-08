@@ -2,11 +2,11 @@ import secrets
 from pathlib import Path
 from typing import Literal
 
-from loguru import logger
 from passlib.context import CryptContext
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from langflow.logging.logger import logger
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
 
@@ -27,15 +27,29 @@ class AuthSettings(BaseSettings):
     API_KEY_ALGORITHM: str = "HS256"
     API_V1_STR: str = "/api/v1"
 
-    AUTO_LOGIN: bool = True
+    AUTO_LOGIN: bool = Field(
+        default=True,  # TODO: Set to False in v2.0
+        description=(
+            "Enable automatic login with default credentials. "
+            "SECURITY WARNING: This bypasses authentication and should only be used in development environments. "
+            "Set to False in production. This will default to False in v2.0."
+        ),
+    )
     """If True, the application will attempt to log in automatically as a super user."""
-    skip_auth_auto_login: bool = True
+    skip_auth_auto_login: bool = False
     """If True, the application will skip authentication when AUTO_LOGIN is enabled.
-    This will be removed in v1.6"""
+    This will be removed in v2.0"""
+
+    ENABLE_SUPERUSER_CLI: bool = Field(
+        default=True,
+        description="Allow creation of superusers via CLI. Set to False in production for security.",
+    )
+    """If True, allows creation of superusers via the CLI 'langflow superuser' command."""
 
     NEW_USER_IS_ACTIVE: bool = False
     SUPERUSER: str = DEFAULT_SUPERUSER
-    SUPERUSER_PASSWORD: str = DEFAULT_SUPERUSER_PASSWORD
+    # Store password as SecretStr to prevent accidental plaintext exposure
+    SUPERUSER_PASSWORD: SecretStr = Field(default=DEFAULT_SUPERUSER_PASSWORD)
 
     REFRESH_SAME_SITE: Literal["lax", "strict", "none"] = "none"
     """The SameSite attribute of the refresh token cookie."""
@@ -58,8 +72,8 @@ class AuthSettings(BaseSettings):
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
     def reset_credentials(self) -> None:
-        self.SUPERUSER = DEFAULT_SUPERUSER
-        self.SUPERUSER_PASSWORD = DEFAULT_SUPERUSER_PASSWORD
+        # Preserve the configured username but scrub the password from memory to avoid plaintext exposure.
+        self.SUPERUSER_PASSWORD = SecretStr("")
 
     # If autologin is true, then we need to set the credentials to
     # the default values
@@ -68,15 +82,17 @@ class AuthSettings(BaseSettings):
     @field_validator("SUPERUSER", "SUPERUSER_PASSWORD", mode="before")
     @classmethod
     def validate_superuser(cls, value, info):
+        # When AUTO_LOGIN is enabled, force superuser to use default values.
         if info.data.get("AUTO_LOGIN"):
-            if value != DEFAULT_SUPERUSER:
-                value = DEFAULT_SUPERUSER
-                logger.debug("Resetting superuser to default value")
-            if info.data.get("SUPERUSER_PASSWORD") != DEFAULT_SUPERUSER_PASSWORD:
-                info.data["SUPERUSER_PASSWORD"] = DEFAULT_SUPERUSER_PASSWORD
-                logger.debug("Resetting superuser password to default value")
-
-            return value
+            logger.debug("Auto login is enabled, forcing superuser to use default values")
+            if info.field_name == "SUPERUSER":
+                if value != DEFAULT_SUPERUSER:
+                    logger.debug("Resetting superuser to default value")
+                return DEFAULT_SUPERUSER
+            if info.field_name == "SUPERUSER_PASSWORD":
+                if value != DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
+                    logger.debug("Resetting superuser password to default value")
+                return DEFAULT_SUPERUSER_PASSWORD
 
         return value
 

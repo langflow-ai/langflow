@@ -23,11 +23,14 @@ test(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 3000,
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 100000,
     });
 
+    await page.getByTestId("canvas_controls_dropdown").click();
+
     await page.getByTestId("fit_view").click();
+    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.getByText("openai").last().click();
     await page.keyboard.press("Delete");
@@ -79,6 +82,8 @@ test(
 
     await page.getByTestId("button_open_prompt_modal").click();
 
+    await page.waitForTimeout(500);
+
     await page.getByTestId("edit-prompt-sanitized").last().click();
 
     await page
@@ -87,11 +92,15 @@ test(
 
     await page.getByText("Check & Save").click();
 
+    await page.waitForTimeout(500);
+
     await page.getByTestId("button_run_chat output").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     await page.getByTestId("playground-btn-flow-io").click();
+
+    await page.waitForTimeout(500);
 
     const textContents2 = await page
       .getByTestId("div-chat-message")

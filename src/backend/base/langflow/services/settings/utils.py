@@ -1,7 +1,7 @@
 import platform
 from pathlib import Path
 
-from loguru import logger
+from langflow.logging.logger import logger
 
 
 def set_secure_permissions(file_path: Path) -> None:

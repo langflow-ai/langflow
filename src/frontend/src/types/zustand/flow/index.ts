@@ -65,6 +65,8 @@ export type FlowStoreType = {
   dismissedNodes: string[];
   addDismissedNodes: (dismissedNodes: string[]) => void;
   removeDismissedNodes: (dismissedNodes: string[]) => void;
+  dismissedNodesLegacy: string[];
+  addDismissedNodesLegacy: (dismissedNodes: string[]) => void;
   //key x, y
   positionDictionary: { [key: number]: number };
   isPositionAvailable: (position: { x: number; y: number }) => boolean;
@@ -152,6 +154,8 @@ export type FlowStoreType = {
   cleanFlow: () => void;
   setFilterEdge: (newState) => void;
   getFilterEdge: any[];
+  setFilterComponent: (newState) => void;
+  getFilterComponent: string;
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
   playgroundPage: boolean;

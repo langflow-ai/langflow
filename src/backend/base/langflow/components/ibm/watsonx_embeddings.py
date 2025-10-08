@@ -4,12 +4,12 @@ import requests
 from ibm_watsonx_ai import APIClient, Credentials
 from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
 from langchain_ibm import WatsonxEmbeddings
-from loguru import logger
 from pydantic.v1 import SecretStr
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
 from langflow.io import BoolInput, DropdownInput, IntInput, SecretStrInput, StrInput
+from langflow.logging.logger import logger
 from langflow.schema.dotdict import dotdict
 
 
@@ -51,7 +51,7 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
         ),
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
+            display_name="Watsonx API Key",
             info="The API Key to use for the model.",
             required=True,
         ),

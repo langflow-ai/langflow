@@ -9,165 +9,175 @@ You can use the Langflow Docker image to start a Langflow container.
 
 This guide demonstrates several ways to deploy Langflow with [Docker](https://docs.docker.com/) and [Docker Compose](https://docs.docker.com/compose/):
 
-* [Start a Langflow container with default values](#quickstart)
-* [Clone the repo and use Docker Compose to build the Langflow Docker container](#clone-the-repo-and-build-the-langflow-docker-container) with a persistent PostgreSQL database service
-* [Use a Dockerfile to package a flow as a Docker image](#package-your-flow-as-a-docker-image)
-* [Customize the Langflow Docker image](#customize-the-langflow-docker-image-with-your-own-code)
+* [Quickstart](#quickstart): Start a Langflow container with default values.
+* [Use Docker Compose](#clone): Clone the Langflow repo, and then use Docker Compose to build the Langflow Docker container.
+This option provides more control over the configuration, including a persistent PostgreSQL database service, while still using the base Langflow Docker image.
+* [Create a custom flow image](#package-your-flow-as-a-docker-image): Use a Dockerfile to package a flow as a Docker image.
+* [Create a custom Langflow image](#customize-the-langflow-docker-image): Use a Dockerfile to package a custom Langflow Docker image that includes your own code, custom dependencies, or other modifications.
 
-## Start a Langflow container with default values {#quickstart}
+## Quickstart: Start a Langflow container with default values {#quickstart}
 
 With Docker installed and running on your system, run the following command:
 
-`docker run -p 7860:7860 langflowai/langflow:latest`
+```shell
+docker run -p 7860:7860 langflowai/langflow:latest
+```
 
 Then, access Langflow at `http://localhost:7860/`.
 
-## Clone the repo and build the Langflow Docker container
+This container runs a pre-built Docker image with default settings.
+For more control over the configuration, see [Clone the repo and run the Langflow Docker container](#clone).
 
-Use Docker Compose to build Langflow with a persistent PostgreSQL database service:
+## Clone the repo and run the Langflow Docker container {#clone}
+
+Cloning the Langflow repository and using Docker Compose gives you more control over your configuration, allowing you to customize environment variables, use a persistent PostgreSQL database service (instead of the default SQLite database), and include custom dependencies.
+
+The default deployment with Docker Compose includes the following:
+
+- **Langflow service**: Runs the latest Langflow image with PostgreSQL as the database.
+- **PostgreSQL service**: Provides persistent data storage for flows, users, and settings.
+- **Persistent volumes**: Ensures your data survives container restarts.
+
+The complete Docker Compose configuration is available in `docker_example/docker-compose.yml`.
 
 1. Clone the Langflow repository:
 
-   `git clone https://github.com/langflow-ai/langflow.git`
+   ```shell
+   git clone https://github.com/langflow-ai/langflow.git
+   ```
 
 2. Navigate to the `docker_example` directory:
 
-   `cd langflow/docker_example`
+   ```shell
+   cd langflow/docker_example
+   ```
 
 3. Run the Docker Compose file:
 
-   `docker compose up`
+   ```shell
+   docker compose up
+   ```
 
 4. Access Langflow at `http://localhost:7860/`.
 
-### Configure Docker services
+### Customize your deployment
 
-The Docker Compose configuration spins up two services: `langflow` and `postgres`.
+You can customize the Docker Compose configuration to fit your specific deployment.
 
-To configure values for these services at container startup, define relevant [Langflow environment variables](/environment-variables) in a `.env` file.
-Then, include the `--env-file` flag in your `docker run` command:
+For example, to configure the container's database credentials using a `.env` file, do the following:
 
-```
-docker run -it --rm \
-    -p 7860:7860 \
-    --env-file .env \
-    langflowai/langflow:latest
-```
+1. Create a `.env` file with your database credentials in the same directory as `docker-compose.yml`:
 
-If your `.env` file isn't in the same directory, provide the path to your `.env` file.
+    ```text
+    # Database credentials
+    POSTGRES_USER=myuser
+    POSTGRES_PASSWORD=mypassword
+    POSTGRES_DB=langflow
 
-### Langflow service
+    # Langflow configuration
+    LANGFLOW_DATABASE_URL=postgresql://myuser:mypassword@postgres:5432/langflow
+    LANGFLOW_CONFIG_DIR=/app/langflow
+    ```
 
-The `langflow`service serves both the backend API and frontend UI of the Langflow web application.
+2. Modify the `docker-compose.yml` file to reference the `.env` file for both the `langflow` and `postgres` services:
 
-The `langflow` service uses the `langflowai/langflow:latest` Docker image and exposes port `7860`. It depends on the `postgres` service.
+    ```yaml
+    services:
+      langflow:
+        environment:
+          - LANGFLOW_DATABASE_URL=${LANGFLOW_DATABASE_URL}
+          - LANGFLOW_CONFIG_DIR=${LANGFLOW_CONFIG_DIR}
+      postgres:
+        environment:
+          - POSTGRES_USER=${POSTGRES_USER}
+          - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+          - POSTGRES_DB=${POSTGRES_DB}
+    ```
 
-Environment variables:
+For a complete list of available environment variables, see [Langflow environment variables](/environment-variables).
 
-- `LANGFLOW_DATABASE_URL`: The connection string for the PostgreSQL database.
-- `LANGFLOW_CONFIG_DIR`: The directory where Langflow stores logs, file storage, monitor data, and secret keys.
-
-Volumes:
-
-- `langflow-data`: This volume is mapped to `/app/langflow` in the container.
-
-### PostgreSQL service
-
-The `postgres` service is a database that stores Langflow's persistent data including flows, users, and settings.
-
-The service runs on port 5432 and includes a dedicated volume for data storage.
-
-The `postgres` service uses the `postgres:16` Docker image.
-
-Environment variables:
-
-- `POSTGRES_USER`: The username for the PostgreSQL database.
-- `POSTGRES_PASSWORD`: The password for the PostgreSQL database.
-- `POSTGRES_DB`: The name of the PostgreSQL database.
-
-Volumes:
-
-- `langflow-postgres`: This volume is mapped to `/var/lib/postgresql/data` in the container.
-
-### Deploy a specific Langflow version with Docker Compose
-
-If you want to deploy a specific version of Langflow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version `1.0-alpha`, change `langflowai/langflow:latest` to `langflowai/langflow:1.0-alpha`.
+For more customization options, see [Customize the Langflow Docker image with your own code](#customize-the-langflow-docker-image).
 
 ## Package your flow as a Docker image {#package-your-flow-as-a-docker-image}
 
-You can include your Langflow flow with the application image.
-When you build the image, your saved flow `.JSON` flow is included.
-This enables you to serve a flow from a container, push the image to Docker Hub, and deploy on Kubernetes.
+This section shows you how to create a Dockerfile that builds a Docker image containing your Langflow flow. This approach is useful when you want to distribute a specific flow as a standalone container or deploy it to environments like Kubernetes.
 
-An example flow is available in the [Langflow Helm Charts](https://github.com/langflow-ai/langflow-helm-charts/tree/main/examples/flows) repository, or you can provide your own `JSON` file.
+Unlike the previous sections that use pre-built images, this method builds a custom image with your flow embedded inside it.
 
-1. Create a project directory:
+1. Create a project directory, and change directory into it.
 
-```bash
-mkdir langflow-custom && cd langflow-custom
-```
+    ```bash
+    mkdir langflow-custom && cd langflow-custom
+    ```
 
-2. Download the example flow or include your flow's `.JSON` file in the `langflow-custom` directory.
+2. Add your flow's JSON file to the directory. You can download an example, or use your own:
 
-```bash
-wget https://raw.githubusercontent.com/langflow-ai/langflow-helm-charts/refs/heads/main/examples/flows/basic-prompting-hello-world.json
-```
+    ```bash
+    # Download an example flow
+    wget https://raw.githubusercontent.com/langflow-ai/langflow-helm-charts/refs/heads/main/examples/flows/basic-prompting-hello-world.json
 
-3. Create a Dockerfile:
+    # Or copy your own flow file
+    cp /path/to/your/flow.json .
+    ```
 
-```dockerfile
-FROM langflowai/langflow-backend:latest
-RUN mkdir /app/flows
-COPY ./*.json /app/flows/
-ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows
-```
+3. Create a Dockerfile to build your custom image:
 
-The `COPY ./*json` command copies all JSON files in your current directory to the `/flows` folder.
+    ```dockerfile
+    FROM langflowai/langflow:latest
+    RUN mkdir /app/flows
+    COPY ./*.json /app/flows/
+    ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows
+    ```
 
-The `ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows` command sets the environment variable within the Docker container. By pointing it to `/app/flows`, you ensure that the application can find and utilize the JSON flow files that have been copied into that directory during the image build process.
+This Dockerfile uses the official Langflow image as the base, creates a directory for your flows, copies your JSON flow files into the directory, and sets the environment variable to tell Langflow where to find the flows.
 
-4. Build and run the image locally.
+4. Build and test your custom image:
 
-```bash
-docker build -t myuser/langflow-hello-world:1.0.0 .
-docker run -p 7860:7860 myuser/langflow-hello-world:1.0.0
-```
+    ```bash
+    docker build -t myuser/langflow-custom:1.0.0 .
+    docker run -p 7860:7860 myuser/langflow-custom:1.0.0
+    ```
 
-5. Build and push the image to Docker Hub.
-   Replace `myuser` with your Docker Hub username.
+5. Push your image to Docker Hub (optional):
 
-```bash
-docker build -t myuser/langflow-hello-world:1.0.0 .
-docker push myuser/langflow-hello-world:1.0.0
-```
+    ```bash
+    docker push myuser/langflow-custom:1.0.0
+    ```
 
-To deploy the image with Helm, see [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod).
+Your custom image now contains your flow and can be deployed anywhere Docker runs. For Kubernetes deployment, see [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod).
 
-## Customize the Langflow Docker image with your own code
+## Customize the Langflow Docker image with your own code {#customize-the-langflow-docker-image}
 
-You can customize the Langflow Docker image by adding your own code or modifying existing components.
+While the previous section showed how to package a flow with a Docker image, this section shows how to customize the Langflow application itself. This is useful when you need to add custom Python packages or dependencies, modify Langflow's configuration or settings, include custom components or tools, or add your own code to extend Langflow's functionality.
 
-This example Dockerfile demonstrates how to customize Langflow by replacing the `astradb_graph.py` component, but the pattern can be adapted for any other components or custom code.
+This example demonstrates how to customize the **Message History** component, but the same approach can be used for any code modifications.
 
 ```dockerfile
 FROM langflowai/langflow:latest
+
 # Set working directory
 WORKDIR /app
-# Copy your modified astradb_graph.py file
-COPY src/backend/base/langflow/components/vectorstores/astradb_graph.py /tmp/astradb_graph.py
+
+# Copy your modified memory component
+COPY src/backend/base/langflow/components/helpers/memory.py /tmp/memory.py
+
 # Find the site-packages directory where langflow is installed
 RUN python -c "import site; print(site.getsitepackages()[0])" > /tmp/site_packages.txt
+
 # Replace the file in the site-packages location
 RUN SITE_PACKAGES=$(cat /tmp/site_packages.txt) && \
     echo "Site packages at: $SITE_PACKAGES" && \
-    mkdir -p "$SITE_PACKAGES/langflow/components/vectorstores" && \
-    cp /tmp/astradb_graph.py "$SITE_PACKAGES/langflow/components/vectorstores/"
+    mkdir -p "$SITE_PACKAGES/langflow/components/helpers" && \
+    cp /tmp/memory.py "$SITE_PACKAGES/langflow/components/helpers/"
+
 # Clear Python cache in the site-packages directory only
 RUN SITE_PACKAGES=$(cat /tmp/site_packages.txt) && \
     find "$SITE_PACKAGES" -name "*.pyc" -delete && \
     find "$SITE_PACKAGES" -name "__pycache__" -type d -exec rm -rf {} +
+
 # Expose the default Langflow port
 EXPOSE 7860
+
 # Command to run Langflow
 CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--port", "7860"]
 ```
@@ -175,24 +185,27 @@ CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--port", "7860"]
 To use this custom Dockerfile, do the following:
 
 1. Create a directory for your custom Langflow setup:
-```bash
-mkdir langflow-custom && cd langflow-custom
-```
+
+    ```bash
+    mkdir langflow-custom && cd langflow-custom
+    ```
 
 2. Create the necessary directory structure for your custom code.
-In this example, Langflow expects `astradb_graph.py` to exist in the `/vectorstores` directory, so you create a directory in that location.
-```bash
-mkdir -p src/backend/base/langflow/components/vectorstores
-```
+In this example, Langflow expects `memory.py` to exist in the `/helpers` directory, so you create a directory in that location.
 
-3. Place your modified `astradb_graph.py` file in the `/vectorstores` directory.
+    ```bash
+    mkdir -p src/backend/base/langflow/components/helpers
+    ```
+
+3. Place your modified `memory.py` file in the `/helpers` directory.
 
 4. Create a new file named `Dockerfile` in your `langflow-custom` directory, and then copy the Dockerfile contents shown above into it.
 
 5. Build and run the image:
-```bash
-docker build -t myuser/langflow-custom:1.0.0 .
-docker run -p 7860:7860 myuser/langflow-custom:1.0.0
-```
+
+    ```bash
+    docker build -t myuser/langflow-custom:1.0.0 .
+    docker run -p 7860:7860 myuser/langflow-custom:1.0.0
+    ```
 
 This approach can be adapted for any other components or custom code you want to add to Langflow by modifying the file paths and component names.

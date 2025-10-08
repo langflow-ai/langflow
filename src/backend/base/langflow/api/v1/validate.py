@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException
-from loguru import logger
 
 from langflow.api.utils import CurrentActiveUser
 from langflow.api.v1.base import Code, CodeValidationResponse, PromptValidationResponse, ValidatePromptRequest
 from langflow.base.prompts.api_utils import process_prompt_template
+from langflow.logging.logger import logger
 from langflow.utils.validate import validate_code
 
 # build router
@@ -19,7 +19,7 @@ async def post_validate_code(code: Code, _current_user: CurrentActiveUser) -> Co
             function=errors.get("function", {}),
         )
     except Exception as e:
-        logger.opt(exception=True).debug("Error validating code")
+        logger.debug("Error validating code", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

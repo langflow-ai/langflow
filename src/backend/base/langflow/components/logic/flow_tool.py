@@ -1,6 +1,5 @@
 from typing import Any
 
-from loguru import logger
 from typing_extensions import override
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -9,17 +8,19 @@ from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.helpers.flow import get_flow_inputs
 from langflow.io import BoolInput, DropdownInput, Output, StrInput
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.schema.dotdict import dotdict
 
 
 class FlowToolComponent(LCToolComponent):
-    display_name = "Flow as Tool [Deprecated]"
+    display_name = "Flow as Tool"
     description = "Construct a Tool from a function that runs the loaded Flow."
     field_order = ["flow_name", "name", "description", "return_direct"]
     trace_type = "tool"
     name = "FlowTool"
     legacy: bool = True
+    replacement = ["logic.RunFlow"]
     icon = "hammer"
 
     async def get_flow_names(self) -> list[str]:
@@ -91,7 +92,7 @@ class FlowToolComponent(LCToolComponent):
         try:
             graph.set_run_id(self.graph.run_id)
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).warning("Failed to set run_id")
+            logger.warning("Failed to set run_id", exc_info=True)
         inputs = get_flow_inputs(graph)
         tool_description = self.tool_description.strip() or flow_data.description
         tool = FlowTool(

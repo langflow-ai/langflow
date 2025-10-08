@@ -8,14 +8,13 @@ from collections.abc import AsyncIterator, Callable, Iterator, Mapping
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from loguru import logger
-
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
 from langflow.graph.vertex.param_handler import ParameterHandler
 from langflow.interface import initialize
 from langflow.interface.listing import lazy_load_dict
+from langflow.logging.logger import logger
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.data import Data
 from langflow.schema.message import Message
@@ -378,7 +377,7 @@ class Vertex:
         event_manager: EventManager | None = None,
     ) -> None:
         """Initiate the build process."""
-        logger.debug(f"Building {self.display_name}")
+        await logger.adebug(f"Building {self.display_name}")
         await self._build_each_vertex_in_params_dict()
 
         if self.base_type is None:
@@ -599,7 +598,7 @@ class Vertex:
 
                     self.params[key].append(result)
                 except AttributeError as e:
-                    logger.exception(e)
+                    await logger.aexception(e)
                     msg = (
                         f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {result}"
                         f"Error building Component {self.display_name}: \n\n{e}"
@@ -646,7 +645,7 @@ class Vertex:
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             tb = traceback.format_exc()
-            logger.exception(exc)
+            await logger.aexception(exc)
             msg = f"Error building Component {self.display_name}: \n\n{exc}"
             raise ComponentBuildError(msg, tb) from exc
 

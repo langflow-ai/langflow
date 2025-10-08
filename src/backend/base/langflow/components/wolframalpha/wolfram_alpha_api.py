@@ -10,7 +10,7 @@ from langflow.schema.dataframe import DataFrame
 
 class WolframAlphaAPIComponent(LCToolComponent):
     display_name = "WolframAlpha API"
-    description = """Enables queries to Wolfram Alpha for computational data, facts, and calculations across various \
+    description = """Enables queries to WolframAlpha for computational data, facts, and calculations across various \
 topics, delivering structured responses."""
     name = "WolframAlphaAPI"
 
@@ -22,7 +22,7 @@ topics, delivering structured responses."""
         MultilineInput(
             name="input_value", display_name="Input Query", info="Example query: 'What is the population of France?'"
         ),
-        SecretStrInput(name="app_id", display_name="App ID", required=True),
+        SecretStrInput(name="app_id", display_name="WolframAlpha App ID", required=True),
     ]
 
     icon = "WolframAlphaAPI"
@@ -45,7 +45,7 @@ topics, delivering structured responses."""
         return data
 
     def fetch_content_dataframe(self) -> DataFrame:
-        """Convert the Wolfram Alpha results to a DataFrame.
+        """Convert the WolframAlpha results to a DataFrame.
 
         Returns:
             DataFrame: A DataFrame containing the query results.

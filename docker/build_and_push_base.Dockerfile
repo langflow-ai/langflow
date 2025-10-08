@@ -21,6 +21,9 @@ ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
 
+# Set RUSTFLAGS for reqwest unstable features needed by apify-client v2.0.0
+ENV RUSTFLAGS='--cfg reqwest_unstable'
+
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \

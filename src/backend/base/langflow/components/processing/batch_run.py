@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 import toml  # type: ignore[import-untyped]
-from loguru import logger
 
 from langflow.custom.custom_component.component import Component
 from langflow.io import BoolInput, DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output
+from langflow.logging.logger import logger
 from langflow.schema.dataframe import DataFrame
 
 if TYPE_CHECKING:
@@ -144,11 +144,11 @@ class BatchRunComponent(Component):
                 user_texts = df[col_name].astype(str).tolist()
             else:
                 user_texts = [
-                    self._format_row_as_toml(cast(dict[str, Any], row)) for row in df.to_dict(orient="records")
+                    self._format_row_as_toml(cast("dict[str, Any]", row)) for row in df.to_dict(orient="records")
                 ]
 
             total_rows = len(user_texts)
-            logger.info(f"Processing {total_rows} rows with batch run")
+            await logger.ainfo(f"Processing {total_rows} rows with batch run")
 
             # Prepare the batch of conversations
             conversations = [
@@ -185,21 +185,21 @@ class BatchRunComponent(Component):
             ):
                 response_text = response[1].content if hasattr(response[1], "content") else str(response[1])
                 row = self._create_base_row(
-                    cast(dict[str, Any], original_row), model_response=response_text, batch_index=idx
+                    cast("dict[str, Any]", original_row), model_response=response_text, batch_index=idx
                 )
                 self._add_metadata(row, success=True, system_msg=system_msg)
                 rows.append(row)
 
                 # Log progress
                 if (idx + 1) % max(1, total_rows // 10) == 0:
-                    logger.info(f"Processed {idx + 1}/{total_rows} rows")
+                    await logger.ainfo(f"Processed {idx + 1}/{total_rows} rows")
 
-            logger.info("Batch processing completed successfully")
+            await logger.ainfo("Batch processing completed successfully")
             return DataFrame(rows)
 
         except (KeyError, AttributeError) as e:
             # Handle data structure and attribute access errors
-            logger.error(f"Data processing error: {e!s}")
-            error_row = self._create_base_row({col: "" for col in df.columns}, model_response="", batch_index=-1)
+            await logger.aerror(f"Data processing error: {e!s}")
+            error_row = self._create_base_row(dict.fromkeys(df.columns, ""), model_response="", batch_index=-1)
             self._add_metadata(error_row, success=False, error=str(e))
             return DataFrame([error_row])

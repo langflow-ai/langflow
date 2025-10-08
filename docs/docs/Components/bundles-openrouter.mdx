@@ -1,0 +1,37 @@
+---
+title: OpenRouter
+slug: /bundles-openrouter
+---
+
+import Icon from "@site/src/components/icon";
+
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **OpenRouter** bundle.
+
+For more information about OpenRouter features and functionality used by OpenRouter components, see the [OpenRouter documentation](https://openrouter.ai/docs).
+
+## OpenRouter text generation
+
+This component generates text using OpenRouter's unified API for multiple AI models from different providers.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use an OpenRouter model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+
+For more information, see [**Language Model** components](/components-models).
+
+### OpenRouter text generation parameters
+
+Many **OpenRouter** component input parameters are hidden by default in the visual editor.
+You can toggle parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your OpenRouter API key for authentication. |
+| site_url | String | Input parameter. Your site URL for OpenRouter rankings (advanced). |
+| app_name | String | Input parameter. Your app name for OpenRouter rankings (advanced). |
+| provider | String | Input parameter. The AI model provider to use. |
+| model_name | String | Input parameter. The specific model to use for chat completion. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: [0.0, 2.0]. Default: 0.7. |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate (advanced). |

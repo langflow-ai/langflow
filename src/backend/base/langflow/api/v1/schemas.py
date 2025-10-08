@@ -8,6 +8,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    SecretStr,
     field_serializer,
     field_validator,
     model_serializer,
@@ -406,6 +407,7 @@ class ConfigResponse(BaseModel):
     public_flow_cleanup_interval: int
     public_flow_expiration: int
     event_delivery: Literal["polling", "streaming", "direct"]
+    voice_mode_available: bool
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "ConfigResponse":
@@ -430,6 +432,7 @@ class ConfigResponse(BaseModel):
             public_flow_cleanup_interval=settings.public_flow_cleanup_interval,
             public_flow_expiration=settings.public_flow_expiration,
             event_delivery=settings.event_delivery,
+            voice_mode_available=settings.voice_mode_available,
         )
 
 
@@ -438,6 +441,22 @@ class CancelFlowResponse(BaseModel):
 
     success: bool
     message: str
+
+
+class AuthSettings(BaseModel):
+    """Model representing authentication settings for MCP."""
+
+    auth_type: Literal["none", "apikey", "oauth"] = "none"
+    oauth_host: str | None = None
+    oauth_port: str | None = None
+    oauth_server_url: str | None = None
+    oauth_callback_path: str | None = None
+    oauth_client_id: str | None = None
+    oauth_client_secret: SecretStr | None = None
+    oauth_auth_url: str | None = None
+    oauth_token_url: str | None = None
+    oauth_mcp_scope: str | None = None
+    oauth_provider_scope: str | None = None
 
 
 class MCPSettings(BaseModel):
@@ -449,6 +468,20 @@ class MCPSettings(BaseModel):
     action_description: str | None = None
     name: str | None = None
     description: str | None = None
+
+
+class MCPProjectUpdateRequest(BaseModel):
+    """Request model for updating MCP project settings including auth."""
+
+    settings: list[MCPSettings]
+    auth_settings: AuthSettings | None = None
+
+
+class MCPProjectResponse(BaseModel):
+    """Response model for MCP project tools with auth settings."""
+
+    tools: list[MCPSettings]
+    auth_settings: AuthSettings | None = None
 
 
 class MCPInstallRequest(BaseModel):

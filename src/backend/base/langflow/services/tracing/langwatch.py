@@ -4,9 +4,9 @@ import os
 from typing import TYPE_CHECKING, Any, cast
 
 import nanoid
-from loguru import logger
 from typing_extensions import override
 
+from langflow.logging.logger import logger
 from langflow.schema.data import Data
 from langflow.services.tracing.base import BaseTracer
 
@@ -138,7 +138,7 @@ class LangWatchTracer(BaseTracer):
         if metadata and "flow_name" in metadata:
             self.trace.update(metadata=(self.trace.metadata or {}) | {"labels": [f"Flow: {metadata['flow_name']}"]})
 
-        if self.trace.api_key or self._client.api_key:
+        if self.trace.api_key or self._client._api_key:
             try:
                 self.trace.__exit__(None, None, None)
             except ValueError:  # ignoring token was created in a different Context errors

@@ -74,6 +74,7 @@ export default function TextAreaComponent({
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [cursor, setCursor] = useState<number | null>(null);
 
   const isWebhook = useMemo(
     () => nodeInformationMetadata?.nodeType === "webhook",
@@ -100,6 +101,13 @@ export default function TextAreaComponent({
     }
   }, [isWebhook, value, nodeInformationMetadata, handleOnNewValue]);
 
+  // Restore cursor position after value changes
+  useEffect(() => {
+    if (cursor !== null && inputRef.current) {
+      inputRef.current.setSelectionRange(cursor, cursor);
+    }
+  }, [cursor, value]);
+
   const getInputClassName = () => {
     return cn(
       inputClasses.base({ isFocused, password: password! }),
@@ -111,6 +119,7 @@ export default function TextAreaComponent({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCursor(e.target.selectionStart);
     handleOnNewValue({ value: e.target.value });
   };
 
