@@ -200,6 +200,18 @@ class Settings(BaseSettings):
     backend_only: bool = False
     """If set to True, Langflow will not serve the frontend."""
 
+    # CORS Settings
+    cors_origins: list[str] | str = "*"
+    """Allowed origins for CORS. Can be a list of origins or '*' for all origins.
+    Default is '*' for backward compatibility. In production, specify exact origins."""
+    cors_allow_credentials: bool = True
+    """Whether to allow credentials in CORS requests.
+    Default is True for backward compatibility. In v2.0, this will be changed to False when using wildcard origins."""
+    cors_allow_methods: list[str] | str = "*"
+    """Allowed HTTP methods for CORS requests."""
+    cors_allow_headers: list[str] | str = "*"
+    """Allowed headers for CORS requests."""
+
     # Telemetry
     do_not_track: bool = False
     """If set to True, Langflow will not track telemetry."""
@@ -214,6 +226,10 @@ class Settings(BaseSettings):
     """The host on which Langflow will run."""
     port: int = 7860
     """The port on which Langflow will run."""
+    runtime_port: int | None = Field(default=None, exclude=True)
+    """TEMPORARY: The port detected at runtime after checking for conflicts.
+    This field is system-managed only and will be removed in future versions
+    when strict port enforcement is implemented (errors will be raised if port unavailable)."""
     workers: int = 1
     """The number of workers to run."""
     log_level: str = "critical"
@@ -263,6 +279,13 @@ class Settings(BaseSettings):
     mcp_server_enable_progress_notifications: bool = False
     """If set to False, Langflow will not send progress notifications in the MCP server."""
 
+    # Add projects to MCP servers automatically on creation
+    add_projects_to_mcp_servers: bool = True
+    """If set to True, newly created projects will be added to the user's MCP servers config automatically."""
+    # MCP Composer
+    mcp_composer_enabled: bool = True
+    """If set to False, Langflow will not start the MCP Composer service."""
+
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
     """The interval in seconds at which public temporary flows will be cleaned up.
@@ -283,6 +306,18 @@ class Settings(BaseSettings):
     this is intended to be used to skip all startup project logic."""
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def validate_cors_origins(cls, value):
+        """Convert comma-separated string to list if needed."""
+        if isinstance(value, str) and value != "*":
+            if "," in value:
+                # Convert comma-separated string to list
+                return [origin.strip() for origin in value.split(",")]
+            # Convert single origin to list for consistency
+            return [value]
+        return value
 
     @field_validator("use_noop_database", mode="before")
     @classmethod
@@ -346,6 +381,8 @@ class Settings(BaseSettings):
 
         if isinstance(value, str):
             value = Path(value)
+        # Resolve to absolute path to handle relative paths correctly
+        value = value.resolve()
         if not value.exists():
             value.mkdir(parents=True, exist_ok=True)
 
@@ -496,6 +533,16 @@ class Settings(BaseSettings):
                 setattr(self, key, value)
                 logger.debug(f"Updated {key}")
             logger.debug(f"{key}: {getattr(self, key)}")
+
+    @property
+    def voice_mode_available(self) -> bool:
+        """Check if voice mode is available by testing webrtcvad import."""
+        try:
+            import webrtcvad  # noqa: F401
+        except ImportError:
+            return False
+        else:
+            return True
 
     @classmethod
     @override

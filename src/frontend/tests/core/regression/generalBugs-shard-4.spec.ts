@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { renameFlow } from "../../utils/rename-flow";
 
@@ -21,13 +22,11 @@ test(
       .first()
       .click();
 
-    await page.getByTestId("canvas_controls_dropdown").click();
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
 
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     await renameFlow(page, { flowName: randomName });
 

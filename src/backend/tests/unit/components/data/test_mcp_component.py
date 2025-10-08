@@ -2,16 +2,16 @@
 
 This test suite validates the MCP component functionality using real MCP servers:
 - Everything server (stdio mode) - provides echo and other tools
-- DeepWiki server (SSE mode) - provides wiki-related tools
+- HTTP/SSE servers (streamable HTTP mode) - provides various tools
 """
 
 import shutil
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-from lfx.base.mcp.util import MCPSessionManager, MCPSseClient, MCPStdioClient
+from lfx.base.mcp.util import MCPSessionManager, MCPStdioClient, MCPStreamableHttpClient
 from lfx.components.agents.mcp_component import MCPToolsComponent
+
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
 
@@ -45,9 +45,9 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
 
         # Check that the component has the expected attributes
         assert hasattr(component, "stdio_client")
-        assert hasattr(component, "sse_client")
+        assert hasattr(component, "streamable_http_client")
         assert isinstance(component.stdio_client, MCPStdioClient)
-        assert isinstance(component.sse_client, MCPSseClient)
+        assert isinstance(component.streamable_http_client, MCPStreamableHttpClient)
 
         # Check that the component has a session manager
         session_manager = component.stdio_client._get_session_manager()
@@ -87,11 +87,11 @@ class TestMCPToolsComponentIntegration:
             pytest.skip(f"Everything server not accessible: {e}")
 
     @pytest.mark.asyncio
-    async def test_sse_mode_integration(self, component):
-        """Test the component in SSE mode with DeepWiki server."""
-        # Configure for SSE mode
-        component.mode = "SSE"
-        component.sse_url = "https://mcp.deepwiki.com/sse"
+    async def test_streamable_http_mode_integration(self, component):
+        """Test the component in Streamable HTTP mode with DeepWiki server."""
+        # Configure for Streamable HTTP mode
+        component.mode = "Streamable HTTP"
+        component.streamable_http_url = "https://mcp.deepwiki.com/mcp"
 
         try:
             # Mock the update_tool_list method to simulate server connection
@@ -111,27 +111,27 @@ class TestMCPToolsComponentIntegration:
     @pytest.mark.asyncio
     async def test_session_context_setting(self, component):
         """Test that session context is properly set."""
-        # Set session context
+        # Set session context on both clients
         component.stdio_client.set_session_context("test_context")
-        component.sse_client.set_session_context("test_context")
+        component.streamable_http_client.set_session_context("test_context")
 
         # Verify context was set
         assert component.stdio_client._session_context == "test_context"
-        assert component.sse_client._session_context == "test_context"
+        assert component.streamable_http_client._session_context == "test_context"
 
     @pytest.mark.asyncio
     async def test_session_manager_sharing(self, component):
         """Test that session managers are shared through component cache."""
-        # Get session managers
+        # Get session managers from both clients
         stdio_manager = component.stdio_client._get_session_manager()
-        sse_manager = component.sse_client._get_session_manager()
+        http_manager = component.streamable_http_client._get_session_manager()
 
         # Both should be MCPSessionManager instances
         assert isinstance(stdio_manager, MCPSessionManager)
-        assert isinstance(sse_manager, MCPSessionManager)
+        assert isinstance(http_manager, MCPSessionManager)
 
         # They should be the same instance (shared through cache)
-        assert stdio_manager is sse_manager
+        assert stdio_manager is http_manager
 
 
 class TestMCPComponentErrorHandling:

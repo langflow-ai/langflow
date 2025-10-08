@@ -134,27 +134,38 @@ class TestComponentDynamicImports:
             # If it fails due to missing dependencies, that's also expected
             pass
 
-        # APIRequestComponent should raise AttributeError due to missing validators dependency
-        with pytest.raises(AttributeError, match="Could not import.*APIRequestComponent"):
-            _ = data_components.APIRequestComponent
+        # APIRequestComponent should work now that validators is installed
+        api_component = data_components.APIRequestComponent
+        assert api_component is not None
+        assert hasattr(api_component, "__name__")
 
         # Test that __all__ still works correctly despite import failures
         assert "AnthropicModelComponent" in anthropic_components.__all__
         assert "APIRequestComponent" in data_components.__all__
 
     def test_backward_compatibility(self):
-        """Test that existing import patterns handle missing dependencies correctly."""
-        # These imports should raise ImportError due to missing dependencies
-        # The import mechanism is working correctly by detecting and reporting the issues
+        """Test that existing import patterns work correctly."""
+        # These imports should work since langflow is installed with dependencies
+        # Test that the import mechanism correctly handles the components
 
-        with pytest.raises(ImportError, match="cannot import name"):
-            from lfx.components.agents import AgentComponent  # noqa: F401
+        from lfx.components.agents import AgentComponent
 
-        with pytest.raises(ImportError, match="cannot import name"):
-            from lfx.components.data import APIRequestComponent  # noqa: F401
+        assert AgentComponent is not None
+        assert hasattr(AgentComponent, "__init__")
 
-        with pytest.raises(ImportError, match="cannot import name"):
-            from lfx.components.openai import OpenAIModelComponent  # noqa: F401
+        # Access components through the dynamic import mechanism
+        from lfx.components import data
+
+        api_component = data.APIRequestComponent
+        assert api_component is not None
+        assert hasattr(api_component, "__init__")
+
+        # Use a component that doesn't require langchain_openai
+        from lfx.components import helpers
+
+        calc_component = helpers.CalculatorComponent
+        assert calc_component is not None
+        assert hasattr(calc_component, "__init__")
 
     def test_component_instantiation(self):
         """Test that dynamically imported components can be instantiated."""
@@ -206,7 +217,7 @@ class TestComponentDynamicImports:
         assert "SearchComponent" in searchapi_components._dynamic_imports
 
         # Accessing should trigger dynamic import - may fail due to missing dependencies
-        with pytest.raises(AttributeError, match="Could not import.*SearchComponent"):
+        with pytest.raises(AttributeError, match=r"Could not import.*SearchComponent"):
             _ = searchapi_components.SearchComponent
 
 
@@ -218,7 +229,7 @@ class TestPerformanceCharacteristics:
         from lfx.components import chroma as chromamodules
 
         # Test that we can access a component
-        with pytest.raises(AttributeError, match="Could not import.*ChromaVectorStoreComponent"):
+        with pytest.raises(AttributeError, match=r"Could not import.*ChromaVectorStoreComponent"):
             chromamodules.ChromaVectorStoreComponent  # noqa: B018
 
     def test_caching_behavior(self):
@@ -226,11 +237,11 @@ class TestPerformanceCharacteristics:
         from lfx.components import models
 
         # EmbeddingModelComponent should raise AttributeError due to missing dependencies
-        with pytest.raises(AttributeError, match="Could not import.*EmbeddingModelComponent"):
+        with pytest.raises(AttributeError, match=r"Could not import.*EmbeddingModelComponent"):
             _ = models.EmbeddingModelComponent
 
         # Test that error is cached - subsequent access should also fail
-        with pytest.raises(AttributeError, match="Could not import.*EmbeddingModelComponent"):
+        with pytest.raises(AttributeError, match=r"Could not import.*EmbeddingModelComponent"):
             _ = models.EmbeddingModelComponent
 
     def test_memory_usage_multiple_accesses(self):
@@ -250,9 +261,10 @@ class TestPerformanceCharacteristics:
         # All should be different classes
         assert len(set(components)) == len(components)
 
-        # Test that components with missing dependencies raise AttributeError
-        with pytest.raises(AttributeError, match="Could not import.*SplitTextComponent"):
-            _ = processing.SplitTextComponent
+        # Test that SplitTextComponent works since dependencies are available
+        component = processing.SplitTextComponent
+        assert component is not None
+        assert hasattr(component, "__init__")
 
 
 class TestSpecialCases:
@@ -272,7 +284,7 @@ class TestSpecialCases:
         import lfx.components.nvidia as nvidia_components
 
         # NVIDIAModelComponent should raise AttributeError due to missing langchain-nvidia-ai-endpoints dependency
-        with pytest.raises(AttributeError, match="Could not import.*NVIDIAModelComponent"):
+        with pytest.raises(AttributeError, match=r"Could not import.*NVIDIAModelComponent"):
             _ = nvidia_components.NVIDIAModelComponent
 
         # Test that __all__ still works correctly despite import failures
@@ -283,12 +295,13 @@ class TestSpecialCases:
         from lfx import components
 
         # Test that we can access nested components through the hierarchy
-        # These should raise AttributeErrors due to missing dependencies
-        with pytest.raises(AttributeError, match="Could not import.*OpenAIModelComponent"):
+        # OpenAI component requires langchain_openai which isn't installed
+        with pytest.raises(AttributeError, match=r"Could not import.*OpenAIModelComponent"):
             _ = components.openai.OpenAIModelComponent
 
-        with pytest.raises(AttributeError, match="Could not import.*APIRequestComponent"):
-            _ = components.data.APIRequestComponent
+        # APIRequestComponent should work now that validators is installed
+        api_component = components.data.APIRequestComponent
+        assert api_component is not None
 
         # Test that both main module and submodules are properly cached
         assert "openai" in components.__dict__

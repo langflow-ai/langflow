@@ -70,30 +70,12 @@ class ChatOutput(ChatComponent):
             advanced=True,
             info="Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
         ),
-        MessageTextInput(
-            name="background_color",
-            display_name="Background Color",
-            info="The background color of the icon.",
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="chat_icon",
-            display_name="Icon",
-            info="The icon of the message.",
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="text_color",
-            display_name="Text Color",
-            info="The text color of the name",
-            advanced=True,
-        ),
         BoolInput(
             name="clean_data",
             display_name="Basic Clean Data",
             value=True,
-            info="Whether to clean the data",
             advanced=True,
+            info="Whether to clean data before converting to string.",
         ),
     ]
     outputs = [
@@ -125,11 +107,7 @@ class ChatOutput(ChatComponent):
         text = self.convert_to_string()
 
         # Get source properties
-        source, icon, display_name, source_id = self.get_properties_from_source_component()
-        background_color = self.background_color
-        text_color = self.text_color
-        if self.chat_icon:
-            icon = self.chat_icon
+        source, _, display_name, source_id = self.get_properties_from_source_component()
 
         # Create or use existing Message object
         if isinstance(self.input_value, Message):
@@ -145,9 +123,6 @@ class ChatOutput(ChatComponent):
         message.session_id = self.session_id
         message.flow_id = self.graph.flow_id if hasattr(self, "graph") else None
         message.properties.source = self._build_source(source_id, display_name, source)
-        message.properties.icon = icon
-        message.properties.background_color = background_color
-        message.properties.text_color = text_color
 
         # Store message if needed
         if self.session_id and self.should_store_message:
@@ -194,7 +169,8 @@ class ChatOutput(ChatComponent):
         """Convert input data to string with proper error handling."""
         self._validate_input()
         if isinstance(self.input_value, list):
-            return "\n".join([safe_convert(item, clean_data=self.clean_data) for item in self.input_value])
+            clean_data: bool = getattr(self, "clean_data", False)
+            return "\n".join([safe_convert(item, clean_data=clean_data) for item in self.input_value])
         if isinstance(self.input_value, Generator):
             return self.input_value
         return safe_convert(self.input_value)

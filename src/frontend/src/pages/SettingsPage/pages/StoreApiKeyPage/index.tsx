@@ -61,7 +61,10 @@ const StoreApiKeyPage = () => {
     <div className="flex h-full w-full flex-col gap-6">
       <div className="flex w-full items-start gap-6">
         <div className="flex w-full flex-col">
-          <h2 className="flex items-center text-lg font-semibold tracking-tight">
+          <h2
+            className="flex items-center text-lg font-semibold tracking-tight"
+            data-testid="settings_menu_header"
+          >
             Langflow Store
             <ForwardedIconComponent
               name="Store"
