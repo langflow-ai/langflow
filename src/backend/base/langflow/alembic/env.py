@@ -1,5 +1,6 @@
 # noqa: INP001
 import asyncio
+import hashlib
 from logging.config import fileConfig
 
 from alembic import context
@@ -85,8 +86,11 @@ def _do_run_migrations(connection):
 
     with context.begin_transaction():
         if connection.dialect.name == "postgresql":
+            # Hash the database URL to create a unique lock key per database
+            db_url = str(connection.engine.url)
+            lock_key = int(hashlib.sha256(db_url.encode()).hexdigest()[:16], 16) % (2**63 - 1)
             connection.execute(text("SET LOCAL lock_timeout = '60s';"))
-            connection.execute(text("SELECT pg_advisory_xact_lock(112233);"))
+            connection.execute(text(f"SELECT pg_advisory_xact_lock({lock_key});"))
         context.run_migrations()
 
 

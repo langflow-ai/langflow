@@ -1,4 +1,3 @@
-import asyncio
 import json
 from pathlib import Path
 
@@ -7,6 +6,7 @@ from json_repair import repair_json
 from langflow.custom.custom_component.component import Component
 from langflow.io import FileInput, MessageTextInput, MultilineInput, Output
 from langflow.schema.data import Data
+from langflow.utils.async_helpers import run_until_complete
 
 
 class JSONToDataComponent(Component):
@@ -64,8 +64,8 @@ class JSONToDataComponent(Component):
                     # Read bytes using storage-aware function
                     settings = get_settings_service().settings
                     if settings.storage_type == "s3":
-                        # For S3, run async read in sync context
-                        json_bytes = asyncio.run(read_file_bytes(resolved_path))
+                        # For S3, run async read in sync context using Langflow's helper
+                        json_bytes = run_until_complete(read_file_bytes(resolved_path))
                         json_data = json_bytes.decode("utf-8")
                     else:
                         # For local, read directly
