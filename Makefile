@@ -633,7 +633,7 @@ help_backend: ## show backend-specific commands
 	@echo "  $(GREEN)make install_backend$(NC)     - Install backend dependencies"
 	@echo "  $(GREEN)make reinstall_backend$(NC)   - Force reinstall backend dependencies"
 	@echo "  $(GREEN)make setup_uv$(NC)            - Install uv using pipx"
-	@echo '  $(GREEN)make add$(NC)                 - Add dependencies (use: make add main="pkg" or base="pkg")'
+	@echo "  $(GREEN)make add$(NC)                 - Add dependencies (use: make add main=\"pkg\" or base=\"pkg\")"
 	@echo ''
 	@echo "$(GREEN)Development:$(NC)"
 	@echo "  $(GREEN)make backend$(NC)             - Run backend in development mode"
@@ -652,7 +652,7 @@ help_backend: ## show backend-specific commands
 	@echo "  $(GREEN)make unsafe_fix$(NC)          - Run ruff with unsafe fixes"
 	@echo ''
 	@echo "$(GREEN)Database (Alembic):$(NC)"
-	@echo '  $(GREEN)make alembic-revision message="text"$(NC) - Generate new migration'
+	@echo "  $(GREEN)make alembic-revision message=\"text\"$(NC) - Generate new migration"
 	@echo "  $(GREEN)make alembic-upgrade$(NC)     - Upgrade database to latest version"
 	@echo "  $(GREEN)make alembic-downgrade$(NC)   - Downgrade database by one version"
 	@echo "  $(GREEN)make alembic-current$(NC)     - Show current database revision"
@@ -777,7 +777,7 @@ help_advanced: ## show advanced and miscellaneous commands
 	@echo "    This updates: pyproject.toml, langflow-base, frontend package.json"
 	@echo ''
 	@echo "$(GREEN)Publishing:$(NC)"
-	@echo '  $(GREEN)make publish$(NC)             - Publish to PyPI (use: make publish base=1 or main=1)'
+	@echo "  $(GREEN)make publish$(NC)             - Publish to PyPI (use: make publish base=1 or main=1)"
 	@echo "  $(GREEN)make publish_testpypi$(NC)    - Publish to test PyPI"
 	@echo "  $(GREEN)make publish_base$(NC)        - Publish langflow-base to PyPI"
 	@echo "  $(GREEN)make publish_langflow$(NC)    - Publish langflow to PyPI"
