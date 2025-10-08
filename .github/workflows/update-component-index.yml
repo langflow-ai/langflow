@@ -15,10 +15,17 @@ jobs:
   update-index:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout repository (PR)
+        if: github.event_name == 'pull_request'
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout repository (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v4
+        with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install uv
@@ -30,6 +37,8 @@ jobs:
         run: uv sync --dev
 
       - name: Build component index
+        env:
+          LFX_DEV: "1"
         run: uv run python scripts/build_component_index.py
 
       - name: Check if index changed
