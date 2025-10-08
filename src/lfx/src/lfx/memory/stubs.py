@@ -237,14 +237,13 @@ async def adelete_messages(session_id: str | None = None, context_id: str | None
         msg = "Either session_id or context_id must be provided to delete messages."
         raise ValueError(msg)
 
-    delete_id = session_id if session_id else context_id
     async with session_scope() as session:
         try:
             # In a real implementation, this would delete from database
             # For now, this is a no-op since we're using NoopSession
-            await session.delete(delete_id)
+            await session.delete(session_id or context_id)  # type: ignore  # noqa: PGH003
             await session.commit()
-            logger.debug(f"Messages deleted for session: {delete_id}")
+            logger.debug(f"Messages deleted for session: {session_id or context_id}")
         except Exception as e:
             logger.exception(f"Error deleting messages: {e}")
             raise
