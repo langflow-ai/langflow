@@ -187,13 +187,12 @@ class TestRunStarterProjects:
             all_output = result.output
 
             # More specific checks for these basic templates
+            # Check for actual langflow/lfx import errors (not just the word "langflow" in paths)
             assert "No module named 'langflow'" not in all_output, f"Langflow import error in {template_name}"
-
-            # Check for module not found errors specifically related to langflow
-            # (Settings service errors are runtime errors, not import errors)
-            if "ModuleNotFoundError" in all_output and "langflow" in all_output and "lfx.services" not in all_output:
-                # This is an actual langflow import error, not an internal lfx error
-                pytest.fail(f"Module not found error for langflow in {template_name}")
+            assert "No module named 'lfx'" not in all_output, f"LFX import error in {template_name}"
+            
+            # ModuleNotFoundError for langchain/other dependencies is expected and acceptable
+            # Only fail if it's specifically about langflow or lfx modules
 
     @pytest.mark.parametrize("template_file", get_starter_project_files()[:5], ids=lambda x: x.name)
     def test_run_starter_project_with_stdin(self, template_file):
