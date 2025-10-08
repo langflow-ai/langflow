@@ -9,21 +9,25 @@
             "dataType": "TavilySearchComponent",
             "id": "TavilySearchComponent-DTqM5",
             "name": "component_as_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-qEcm1",
-            "inputTypes": ["Tool"],
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
         "id": "reactflow__edge-TavilySearchComponent-DTqM5{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-DTqM5œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-qEcm1{œfieldNameœ:œtoolsœ,œidœ:œAgent-qEcm1œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "TavilySearchComponent-DTqM5",
-        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-DTqM5œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-DTqM5œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-qEcm1",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-qEcm1œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-qEcm1œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -33,21 +37,25 @@
             "dataType": "ChatInput",
             "id": "ChatInput-UU2Tp",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "Agent-qEcm1",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
         "id": "reactflow__edge-ChatInput-UU2Tp{œdataTypeœ:œChatInputœ,œidœ:œChatInput-UU2Tpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-qEcm1{œfieldNameœ:œinput_valueœ,œidœ:œAgent-qEcm1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-UU2Tp",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-UU2Tpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-UU2Tpœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-qEcm1",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-qEcm1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-qEcm1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -57,21 +65,25 @@
             "dataType": "Agent",
             "id": "Agent-qEcm1",
             "name": "response",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "StructuredOutput-JRnJ1",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
         "id": "reactflow__edge-Agent-qEcm1{œdataTypeœ:œAgentœ,œidœ:œAgent-qEcm1œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutput-JRnJ1{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-JRnJ1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-qEcm1",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-qEcm1œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-qEcm1œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "StructuredOutput-JRnJ1",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutput-JRnJ1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutput-JRnJ1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -81,21 +93,25 @@
             "dataType": "LanguageModelComponent",
             "id": "LanguageModelComponent-jb3qr",
             "name": "model_output",
-            "output_types": ["LanguageModel"]
+            "output_types": [
+              "LanguageModel"
+            ]
           },
           "targetHandle": {
             "fieldName": "llm",
             "id": "StructuredOutput-JRnJ1",
-            "inputTypes": ["LanguageModel"],
+            "inputTypes": [
+              "LanguageModel"
+            ],
             "type": "other"
           }
         },
         "id": "reactflow__edge-LanguageModelComponent-jb3qr{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-jb3qrœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutput-JRnJ1{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-JRnJ1œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "LanguageModelComponent-jb3qr",
-        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-jb3qrœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-jb3qrœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "StructuredOutput-JRnJ1",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutput-JRnJ1œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutput-JRnJ1œ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
@@ -103,20 +119,27 @@
             "dataType": "StructuredOutput",
             "id": "StructuredOutput-JRnJ1",
             "name": "dataframe_output",
-            "output_types": ["DataFrame"]
+            "output_types": [
+              "Table"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_data",
             "id": "ParserComponent-isiHR",
-            "inputTypes": ["DataFrame", "Table", "Data", "JSON"],
+            "inputTypes": [
+              "DataFrame",
+              "Table",
+              "Data",
+              "JSON"
+            ],
             "type": "other"
           }
         },
         "id": "xy-edge__StructuredOutput-JRnJ1{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-JRnJ1œ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-ParserComponent-isiHR{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-isiHRœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
         "source": "StructuredOutput-JRnJ1",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputœ,œidœ:œStructuredOutput-JRnJ1œ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-JRnJ1œ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œTableœ]}",
         "target": "ParserComponent-isiHR",
-        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-isiHRœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-isiHRœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
@@ -124,20 +147,28 @@
             "dataType": "ParserComponent",
             "id": "ParserComponent-isiHR",
             "name": "parsed_text",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-gzrhu",
-            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
+            "inputTypes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table",
+              "Message"
+            ],
             "type": "str"
           }
         },
         "id": "xy-edge__ParserComponent-isiHR{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-isiHRœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-gzrhu{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-gzrhuœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
         "source": "ParserComponent-isiHR",
-        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-isiHRœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-isiHRœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-gzrhu",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-gzrhuœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-gzrhuœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -147,7 +178,9 @@
           "display_name": "Chat Input",
           "id": "ChatInput-UU2Tp",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -194,7 +227,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -290,7 +325,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -305,7 +343,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -324,7 +364,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -383,7 +425,9 @@
           "display_name": "Chat Output",
           "id": "ChatOutput-gzrhu",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -438,7 +482,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -487,7 +533,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -534,7 +582,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -550,7 +601,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -570,7 +623,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -667,7 +722,10 @@
           "display_name": "Tavily AI Search",
           "id": "TavilySearchComponent-DTqM5",
           "node": {
-            "base_classes": ["Data", "Message"],
+            "base_classes": [
+              "Data",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -722,7 +780,9 @@
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -806,7 +866,9 @@
                 "display_name": "Exclude Domains",
                 "dynamic": false,
                 "info": "Comma-separated list of domains to exclude from the search results.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -845,7 +907,9 @@
                 "display_name": "Include Domains",
                 "dynamic": false,
                 "info": "Comma-separated list of domains to include in the search results.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -920,7 +984,9 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "The search query you want to execute with Tavily.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -944,7 +1010,10 @@
                 "dynamic": false,
                 "info": "The depth of the search.",
                 "name": "search_depth",
-                "options": ["basic", "advanced"],
+                "options": [
+                  "basic",
+                  "advanced"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -964,7 +1033,12 @@
                 "dynamic": false,
                 "info": "The time range back from the current date to filter results.",
                 "name": "time_range",
-                "options": ["day", "week", "month", "year"],
+                "options": [
+                  "day",
+                  "week",
+                  "month",
+                  "year"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1007,7 +1081,9 @@
                     "name": "fetch_content_dataframe",
                     "readonly": false,
                     "status": true,
-                    "tags": ["fetch_content_dataframe"]
+                    "tags": [
+                      "fetch_content_dataframe"
+                    ]
                   }
                 ]
               },
@@ -1020,7 +1096,10 @@
                 "dynamic": false,
                 "info": "The category of the search.",
                 "name": "topic",
-                "options": ["general", "news"],
+                "options": [
+                  "general",
+                  "news"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1055,7 +1134,10 @@
         "data": {
           "id": "LanguageModelComponent-jb3qr",
           "node": {
-            "base_classes": ["LanguageModel", "Message"],
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1122,7 +1204,9 @@
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1136,7 +1220,9 @@
                 "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": ["LanguageModel"],
+                "types": [
+                  "LanguageModel"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1186,7 +1272,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input text to send to the model",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1251,7 +1339,11 @@
                 "dynamic": false,
                 "info": "Select the model provider",
                 "name": "provider",
-                "options": ["OpenAI", "Anthropic", "Google"],
+                "options": [
+                  "OpenAI",
+                  "Anthropic",
+                  "Google"
+                ],
                 "options_metadata": [
                   {
                     "icon": "OpenAI"
@@ -1299,7 +1391,9 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1367,7 +1461,9 @@
         "data": {
           "id": "Agent-qEcm1",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "agents",
             "conditional_paths": [],
@@ -1439,7 +1535,9 @@
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1472,7 +1570,9 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1509,7 +1609,11 @@
                 "info": "The provider of the language model that the agent will use to generate responses.",
                 "input_types": [],
                 "name": "agent_llm",
-                "options": ["Anthropic", "Google Generative AI", "OpenAI"],
+                "options": [
+                  "Anthropic",
+                  "Google Generative AI",
+                  "OpenAI"
+                ],
                 "options_metadata": [
                   {
                     "icon": "Anthropic"
@@ -1578,7 +1682,9 @@
                 "display_name": "Output Format Instructions",
                 "dynamic": false,
                 "info": "Generic Template for structured output formatting. Valid only with Structured response.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1618,7 +1724,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1826,7 +1934,13 @@
                     "display_name": "Type",
                     "edit_mode": "inline",
                     "name": "type",
-                    "options": ["str", "int", "float", "bool", "dict"],
+                    "options": [
+                      "str",
+                      "int",
+                      "float",
+                      "bool",
+                      "dict"
+                    ],
                     "type": "str"
                   },
                   {
@@ -1871,7 +1985,9 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1939,7 +2055,9 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": ["Tool"],
+                "input_types": [
+                  "Tool"
+                ],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -1992,7 +2110,10 @@
         "data": {
           "id": "StructuredOutput-JRnJ1",
           "node": {
-            "base_classes": ["Data", "DataFrame"],
+            "base_classes": [
+              "Data",
+              "DataFrame"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2044,7 +2165,9 @@
                 "name": "structured_output",
                 "selected": null,
                 "tool_mode": true,
-                "types": ["JSON"],
+                "types": [
+                  "JSON"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2056,7 +2179,9 @@
                 "name": "dataframe_output",
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": ["Table"],
+                "types": [
+                  "Table"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2088,7 +2213,9 @@
                 "display_name": "Input Message",
                 "dynamic": false,
                 "info": "The input message to the language model.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2110,7 +2237,9 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "The language model to use to generate the structured output.",
-                "input_types": ["LanguageModel"],
+                "input_types": [
+                  "LanguageModel"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "llm",
@@ -2161,7 +2290,13 @@
                     "edit_mode": "inline",
                     "formatter": "text",
                     "name": "type",
-                    "options": ["str", "int", "float", "bool", "dict"],
+                    "options": [
+                      "str",
+                      "int",
+                      "float",
+                      "bool",
+                      "dict"
+                    ],
                     "type": "str"
                   },
                   {
@@ -2249,7 +2384,9 @@
                 "display_name": "Schema Name",
                 "dynamic": false,
                 "info": "Provide a name for the output data schema.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2271,7 +2408,9 @@
                 "display_name": "Format Instructions",
                 "dynamic": false,
                 "info": "The instructions to the language model for formatting the output.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2311,7 +2450,9 @@
         "data": {
           "id": "ParserComponent-isiHR",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2319,7 +2460,12 @@
             "display_name": "Parser",
             "documentation": "https://docs.langflow.org/components-processing#parser",
             "edited": false,
-            "field_order": ["input_data", "mode", "pattern", "sep"],
+            "field_order": [
+              "input_data",
+              "mode",
+              "pattern",
+              "sep"
+            ],
             "frozen": false,
             "icon": "braces",
             "legacy": false,
@@ -2348,7 +2494,9 @@
                 "name": "parsed_text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2379,7 +2527,12 @@
                 "display_name": "JSON or Table",
                 "dynamic": false,
                 "info": "Accepts either a DataFrame or a Data object.",
-                "input_types": ["DataFrame", "Table", "Data", "JSON"],
+                "input_types": [
+                  "DataFrame",
+                  "Table",
+                  "Data",
+                  "JSON"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_data",
@@ -2398,7 +2551,10 @@
                 "dynamic": false,
                 "info": "Convert into raw string instead of using a template.",
                 "name": "mode",
-                "options": ["Parser", "Stringify"],
+                "options": [
+                  "Parser",
+                  "Stringify"
+                ],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -2416,7 +2572,9 @@
                 "display_name": "Template",
                 "dynamic": true,
                 "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2438,7 +2596,9 @@
                 "display_name": "Separator",
                 "dynamic": false,
                 "info": "String used to separate rows/items.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2485,5 +2645,8 @@
   "is_component": false,
   "last_tested_version": "1.6.0",
   "name": "Market Research",
-  "tags": ["assistants", "agents"]
+  "tags": [
+    "assistants",
+    "agents"
+  ]
 }

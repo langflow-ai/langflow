@@ -4,7 +4,7 @@ from lfx.schema.data import JSON, Data
 
 
 class FilterDataComponent(Component):
-    display_name = "Filter JSON"
+    display_name = "Filter Data"
     description = "Filters a Data object based on a list of keys."
     icon = "filter"
     beta = True
