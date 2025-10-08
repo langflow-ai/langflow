@@ -217,7 +217,7 @@ test(
     await embeddingSimilarityOutput.hover();
     await page.mouse.down();
     const filterDataInput = await page
-      .getByTestId("handle-filterdata-shownode-data-left")
+      .getByTestId("handle-filterdata-shownode-json-left")
       .nth(0);
     await filterDataInput.hover();
     await page.mouse.up();
@@ -229,7 +229,7 @@ test(
     await filterDataOutput.hover();
     await page.mouse.down();
     const parseDataInput = await page
-      .getByTestId("handle-parsedata-shownode-data-left")
+      .getByTestId("handle-parsedata-shownode-json-left")
       .nth(0);
     await parseDataInput.hover();
     await page.mouse.up();

@@ -122,7 +122,7 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-dataoperations-shownode-data-left")
+      .getByTestId("handle-dataoperations-shownode-json-left")
       .first()
       .click();
 
@@ -203,7 +203,7 @@ test(
     // Update Data -> Loop Item (left side)
 
     await page
-      .getByTestId("handle-dataoperations-shownode-data-right")
+      .getByTestId("handle-dataoperations-shownode-json-right")
       .first()
       .click();
     await page

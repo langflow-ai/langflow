@@ -47,7 +47,7 @@ test(
         ) ?? false;
 
       await page
-        .getByTestId("output-inspection-dataframe-duckduckgosearchcomponent")
+        .getByTestId("output-inspection-table-duckduckgosearchcomponent")
         .first()
         .click();
 
