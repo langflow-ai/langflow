@@ -1,6 +1,4 @@
 parameters:
-  - name: SERVICE_NAME
-    type: string
   - name: CONTAINER_NAME
     type: string
   - name: DOCKERFILE_PATH
@@ -12,8 +10,8 @@ parameters:
     default: ''
 
 jobs:
-- job: BuildAndPush${{ parameters.SERVICE_NAME }}
-  displayName: 'Build and Push ${{ parameters.SERVICE_NAME }}'
+- job: BuildAndPushFrontend
+  displayName: 'Build and Push Frontend'
   pool:
     vmImage: 'ubuntu-latest'
   steps:
@@ -22,7 +20,7 @@ jobs:
     persistCredentials: true
 
   - task: Docker@2
-    displayName: 'Build ${{ parameters.SERVICE_NAME }} Image'
+    displayName: 'Build Frontend Image'
     inputs:
       command: 'build'
       repository: '${{ parameters.CONTAINER_NAME }}'
@@ -40,7 +38,7 @@ jobs:
     displayName: 'List Docker Images'
 
   - task: Docker@2
-    displayName: 'Push ${{ parameters.SERVICE_NAME }} Image'
+    displayName: 'Push Frontend Image'
     inputs:
       command: 'push'
       repository: '${{ parameters.CONTAINER_NAME }}'
@@ -51,6 +49,11 @@ jobs:
     condition: and(succeeded(), in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI'))
 
   - script: |
-      echo "✅ ${{ parameters.SERVICE_NAME }} image built and pushed successfully"
+      echo "✅ Frontend image built and pushed successfully"
       echo "🐳 Image: ${{ parameters.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ parameters.CONTAINER_NAME }}:$(Build.BuildNumber)"
-    displayName: 'Build Summary'
+      echo "📦 Frontend Components:"
+      echo "  - React Application"
+      echo "  - Conversational UI"
+      echo "  - Agent Builder Interface"
+      echo "  - Healthcare UI Components"
+    displayName: 'Frontend Build Summary'

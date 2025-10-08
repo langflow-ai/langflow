@@ -1,3 +1,9 @@
+parameters:
+  - name: SERVICE_NAME
+    type: string
+  - name: IMAGE_NAME
+    type: string
+
 jobs:
 - job: UpdatePlatformCharts
   displayName: 'Update Platform Charts Image Tags'
@@ -31,11 +37,10 @@ jobs:
         exit 0
       fi
 
-      echo "Updating image tags in: $valuesFile"
+      echo "Updating ${{ parameters.SERVICE_NAME }} image tag in: $valuesFile"
 
-      # Update both frontend and backend image tags
-      buildnumber="$(Build.BuildNumber)" yq -i e '.ai-studio.frontend.image.tag = env(buildnumber)' $valuesFile
-      buildnumber="$(Build.BuildNumber)" yq -i e '.ai-studio.backend.image.tag = env(buildnumber)' $valuesFile
+      # Update specific service image tag
+      buildnumber="$(Build.BuildNumber)" yq -i e '.ai-studio.${{ parameters.SERVICE_NAME }}.image.tag = env(buildnumber)' $valuesFile
 
       # Show the changes
       echo "=== Changes Made ==="
@@ -56,12 +61,11 @@ jobs:
       fi
 
       git add $valuesFile
-      git commit -m "[skip ci] AI Studio image tags updated: $(Build.BuildNumber) for $environment" || echo "No changes to commit"
+      git commit -m "[skip ci] AI Studio ${{ parameters.SERVICE_NAME }} image tag updated: $(Build.BuildNumber) for $environment" || echo "No changes to commit"
       git push --set-upstream origin main
 
-      echo "✅ Platform charts updated with AI Studio image tags: $(Build.BuildNumber)"
+      echo "✅ Platform charts updated with AI Studio ${{ parameters.SERVICE_NAME }} image tag: $(Build.BuildNumber)"
       echo "🎯 Environment: $environment"
-      echo "📦 Frontend: sprintregistry.azurecr.io/ai-studio-frontend:$(Build.BuildNumber)"
-      echo "📦 Backend: sprintregistry.azurecr.io/ai-studio-backend:$(Build.BuildNumber)"
+      echo "📦 ${{ parameters.SERVICE_NAME }}: sprintregistry.azurecr.io/${{ parameters.IMAGE_NAME }}:$(Build.BuildNumber)"
       echo "🚀 ArgoCD will detect changes and deploy automatically"
     displayName: 'Commit and Push Changes'

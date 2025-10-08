@@ -1,0 +1,96 @@
+# AI Studio Frontend CI/CD Pipeline
+# Follows Genesis template pattern
+
+variables:
+  major: 1
+  minor: 0
+  patch: $[counter(variables['Build.SourceBranchName'], 0)]
+  globalPatch: $[counter('globalPatch', 0)]
+
+  # Container Registry Configuration
+  ACR_RESOURCE_GROUP: sprintRG
+  AZURE_CONTAINER_REGISTRY: sprintregistry
+  ACR_ENDPOINT: 'sprintregistry.azurecr.io'
+
+  # Frontend Configuration
+  IMAGE_NAME: 'ai-studio-frontend'
+  DOCKERFILE_PATH: 'docker/frontend/Dockerfile'
+  NODE_VERSION: '20.x'
+
+  # Platform Charts Configuration
+  VALUES_FILE: 'charts/genesis-platform/values-dev.yaml'
+
+resources:
+  repositories:
+  - repository: platform-charts
+    type: github
+    endpoint: autonomize-ai
+    name: autonomize-ai/platform-charts
+    ref: main
+
+trigger:
+  branches:
+    include:
+    - main
+    - develop
+    - feature/*
+  paths:
+    include:
+      - src/frontend/**
+      - docker/frontend/**
+      - azure-devops/frontend-cicd.yaml
+      - azure-devops/templates/*frontend*
+      - azure-devops/templates/release-template.yml
+      - azure-devops/templates/security-template.yml
+
+pr:
+  branches:
+    include:
+    - main
+    - develop
+  paths:
+    include:
+      - src/frontend/**
+      - docker/frontend/**
+      - azure-devops/frontend-cicd.yaml
+      - azure-devops/templates/*frontend*
+
+stages:
+- stage: Test
+  displayName: 'Frontend Test and Validate'
+  condition: eq(variables['Build.Reason'], 'PullRequest')
+  jobs:
+  - template: templates/frontend-test-template.yml
+
+- stage: Build
+  displayName: 'Build Frontend Image'
+  condition: and(succeeded(), in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI'))
+  jobs:
+  - template: templates/frontend-build-template.yml
+    parameters:
+      CONTAINER_NAME: $(IMAGE_NAME)
+      DOCKERFILE_PATH: $(DOCKERFILE_PATH)
+      AZURE_CONTAINER_REGISTRY: $(AZURE_CONTAINER_REGISTRY)
+      BUILD_ARGS: |
+        --build-arg BUILD_VERSION=$(Build.BuildNumber)
+        --build-arg NODE_ENV=production
+        --build-arg BACKEND_URL=https://api.ai-studio.autonomize.ai
+
+- stage: UpdatePlatformCharts
+  displayName: 'Update Platform Charts'
+  dependsOn: Build
+  condition: and(succeeded(), in(variables['Build.SourceBranchName'], 'develop', 'main'))
+  jobs:
+  - template: templates/release-template.yml
+    parameters:
+      SERVICE_NAME: 'frontend'
+      IMAGE_NAME: $(IMAGE_NAME)
+
+- stage: SecurityScan
+  displayName: 'Security Scanning'
+  dependsOn: UpdatePlatformCharts
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - template: templates/frontend-security-template.yml
+    parameters:
+      IMAGE_NAME: $(IMAGE_NAME)

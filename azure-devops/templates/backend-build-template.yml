@@ -1,0 +1,59 @@
+parameters:
+  - name: CONTAINER_NAME
+    type: string
+  - name: DOCKERFILE_PATH
+    type: string
+  - name: AZURE_CONTAINER_REGISTRY
+    type: string
+  - name: BUILD_ARGS
+    type: string
+    default: ''
+
+jobs:
+- job: BuildAndPushBackend
+  displayName: 'Build and Push Backend'
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - checkout: self
+    submodules: true
+    persistCredentials: true
+
+  - task: Docker@2
+    displayName: 'Build Backend Image'
+    inputs:
+      command: 'build'
+      repository: '${{ parameters.CONTAINER_NAME }}'
+      containerRegistry: '${{ parameters.AZURE_CONTAINER_REGISTRY }}'
+      dockerfile: '${{ parameters.DOCKERFILE_PATH }}'
+      buildContext: '.'
+      ${{ if ne(parameters.BUILD_ARGS, '') }}:
+        arguments: '${{ parameters.BUILD_ARGS }}'
+      tags: |
+        $(Build.BuildNumber)
+        latest
+    condition: and(succeeded(), in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI'))
+
+  - script: docker images
+    displayName: 'List Docker Images'
+
+  - task: Docker@2
+    displayName: 'Push Backend Image'
+    inputs:
+      command: 'push'
+      repository: '${{ parameters.CONTAINER_NAME }}'
+      containerRegistry: '${{ parameters.AZURE_CONTAINER_REGISTRY }}'
+      tags: |
+        $(Build.BuildNumber)
+        latest
+    condition: and(succeeded(), in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI'))
+
+  - script: |
+      echo "✅ Backend image built and pushed successfully"
+      echo "🐳 Image: ${{ parameters.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ parameters.CONTAINER_NAME }}:$(Build.BuildNumber)"
+      echo "📦 Backend Components:"
+      echo "  - Genesis Spec System"
+      echo "  - Langflow Components"
+      echo "  - AI Studio APIs"
+      echo "  - Healthcare Components"
+    displayName: 'Backend Build Summary'
