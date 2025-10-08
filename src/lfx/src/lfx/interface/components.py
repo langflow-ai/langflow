@@ -399,15 +399,12 @@ async def get_and_cache_all_types_dict(
         # Flatten custom dict if it has a "components" wrapper
         custom_flat = custom_components_dict.get("components", custom_components_dict) or {}
 
-        # Merge built-in and custom components
-        merged = {
+        # Merge built-in and custom components (no wrapper at cache level)
+        component_cache.all_types_dict = {
             **langflow_components["components"],
             **custom_flat,
         }
-
-        # Store with "components" wrapper for consistency
-        component_cache.all_types_dict = {"components": merged}
-        component_count = sum(len(comps) for comps in merged.values())
+        component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
         await logger.adebug(f"Loaded {component_count} components")
     return component_cache.all_types_dict
 
