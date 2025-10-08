@@ -199,7 +199,7 @@ class TestRunStarterProjects:
                     r"No module named 'langflow",
                     r"No module named 'lfx",
                     r"cannot import name.*langflow",
-                    r"cannot import name.*lfx"
+                    r"cannot import name.*lfx",
                 ]
                 is_langflow_import_error = any(re.search(pattern, all_output) for pattern in langflow_import_patterns)
                 if is_langflow_import_error:
