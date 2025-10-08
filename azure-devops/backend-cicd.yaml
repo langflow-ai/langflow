@@ -83,7 +83,7 @@ stages:
 - stage: UpdatePlatformCharts
   displayName: 'Update Platform Charts'
   dependsOn: Build
-  condition: and(succeeded(), in(variables['Build.SourceBranchName'], 'develop', 'main'))
+  condition: succeeded()
   jobs:
   - template: templates/release-template.yml
     parameters:
