@@ -141,9 +141,9 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       if (sourceNode.type === "genericNode") {
         const output = sourceNode.data.node.outputs?.find(
           (output) =>
-            output.name === name &&  // if output name is the same as the source handle name
-            (((output.group_outputs ?? true) === true && output.selected) ||   // if output is grouped and it's selected (visible)
-              (output.group_outputs ?? true) === false),  // if output is not grouped (visible)
+            output.name === name && // if output name is the same as the source handle name
+            (((output.group_outputs ?? true) === true && output.selected) || // if output is grouped and it's selected (visible)
+              (output.group_outputs ?? true) === false), // if output is not grouped (visible)
         );
 
         if (output) {
@@ -1386,8 +1386,8 @@ export function mergeNodeTemplates({
               nodeTemplate[key].display_name
                 ? nodeTemplate[key].display_name
                 : nodeTemplate[key].name
-                ? toTitleCase(nodeTemplate[key].name)
-                : toTitleCase(key);
+                  ? toTitleCase(nodeTemplate[key].name)
+                  : toTitleCase(key);
           }
         }
       });
