@@ -44,7 +44,8 @@ jobs:
       - name: Check if index changed
         id: check_changes
         run: |
-          if git diff --quiet src/lfx/src/lfx/_assets/component_index.json; then
+          git add -N src/lfx/src/lfx/_assets/component_index.json
+          if git diff --quiet --exit-code -- src/lfx/src/lfx/_assets/component_index.json; then
             echo "changed=false" >> $GITHUB_OUTPUT
             echo "No changes to component index"
           else
@@ -73,8 +74,8 @@ jobs:
               body: '⚠️ Component index needs to be updated. Please run `uv run python scripts/build_component_index.py` locally and commit the changes.'
             })
 
-      - name: Comment on PR
-        if: steps.check_changes.outputs.changed == 'true' && github.event_name == 'pull_request'
+      - name: Comment on PR (same repo - auto-updated)
+        if: steps.check_changes.outputs.changed == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v7
         with:
           script: |
