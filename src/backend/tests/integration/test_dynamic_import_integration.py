@@ -82,9 +82,8 @@ class TestDynamicImportIntegration:
     def test_multiple_import_styles_same_result(self):
         """Test that different import styles yield the same component."""
         # Import the same component in different ways
-        from langflow.components.openai import OpenAIModelComponent as DirectImport
-
         from langflow import components
+        from langflow.components.openai import OpenAIModelComponent as DirectImport
 
         dynamic_import = components.openai.OpenAIModelComponent
 
@@ -170,7 +169,6 @@ class TestDynamicImportIntegration:
     def test_ide_autocomplete_support(self):
         """Test that IDE autocomplete support still works."""
         import langflow.components.openai as openai_components
-
         from langflow import components
 
         # __dir__ should return all available components/modules
@@ -225,9 +223,8 @@ class TestDynamicImportIntegration:
         # circular dependency issues
 
         # These imports should work without circular import errors
-        from langflow.components import openai
-
         from langflow import components
+        from langflow.components import openai
 
         # Access components in different orders
         model1 = components.openai.OpenAIModelComponent

@@ -160,7 +160,6 @@ async def upload_user_file(
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error saving file: {e}") from e
 
-
         # Compute the file size based on the path
         try:
             file_size = await storage_service.get_file_size(

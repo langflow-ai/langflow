@@ -47,10 +47,7 @@ class S3StorageService(StorageService):
         try:
             import aioboto3
         except ImportError as exc:
-            msg = (
-                "aioboto3 is required for S3 storage. "
-                "Install it with: pip install aioboto3 or uv add aioboto3"
-            )
+            msg = "aioboto3 is required for S3 storage. Install it with: pip install aioboto3 or uv add aioboto3"
             raise ImportError(msg) from exc
 
         # Create session - AWS credentials are picked up from environment/IAM
@@ -143,16 +140,15 @@ class S3StorageService(StorageService):
             if error_code == "NoSuchBucket":
                 msg = f"S3 bucket '{self.bucket_name}' does not exist"
                 raise ValueError(msg) from e
-            elif error_code == "AccessDenied":
+            if error_code == "AccessDenied":
                 msg = "Access denied to S3 bucket. Please check your AWS credentials and bucket permissions"
                 raise PermissionError(msg) from e
-            elif error_code == "InvalidAccessKeyId":
+            if error_code == "InvalidAccessKeyId":
                 msg = "Invalid AWS credentials. Please check your AWS access key and secret key"
                 raise ValueError(msg) from e
-            else:
-                # Re-raise with a more descriptive message
-                msg = f"Failed to save file to S3: {error_msg}"
-                raise RuntimeError(msg) from e
+            # Re-raise with a more descriptive message
+            msg = f"Failed to save file to S3: {error_msg}"
+            raise RuntimeError(msg) from e
 
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """Retrieve a file from S3.

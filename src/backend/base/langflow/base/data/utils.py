@@ -13,7 +13,7 @@ from defusedxml import ElementTree
 from langflow.schema.data import Data
 from langflow.services.deps import get_storage_service
 
-from .storage_utils import is_storage_service_path, parse_storage_path
+from .storage_utils import parse_storage_path
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
@@ -165,9 +165,7 @@ async def read_text_file_async(file_path: str) -> str:
     encoding = result.get("encoding")
 
     # If encoding detection fails (e.g., binary file), default to utf-8
-    if not encoding:
-        encoding = "utf-8"
-    elif encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
+    if not encoding or encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
         encoding = "utf-8"
 
     return raw_data.decode(encoding, errors="replace")

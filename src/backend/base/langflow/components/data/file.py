@@ -18,7 +18,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 from langflow.base.data.base_file import BaseFileComponent
-from langflow.base.data.storage_utils import is_storage_service_path, parse_storage_path
+from langflow.base.data.storage_utils import parse_storage_path
 from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from langflow.io import (
     BoolInput,
@@ -613,7 +613,10 @@ class FileComponent(BaseFileComponent):
         except Exception as e:  # noqa: BLE001
             err_msg = proc.stderr.decode("utf-8", errors="replace")
             return Data(
-                data={"error": f"Invalid JSON from Docling subprocess: {e}. stderr={err_msg}", "file_path": original_file_path},
+                data={
+                    "error": f"Invalid JSON from Docling subprocess: {e}. stderr={err_msg}",
+                    "file_path": original_file_path,
+                },
             )
 
         if not result.get("ok"):
