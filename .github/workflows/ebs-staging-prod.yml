@@ -225,7 +225,7 @@ jobs:
               --db-user ${{ secrets.POSTGRES_USER }} \
               --db-password ${{ secrets.POSTGRES_PASSWD }} \
               --db-name ${{ secrets.POSTGRES_DB }} \
-              --volume-name ${{ secrets.STAGING_VOLUME }}
+              --volume-name ${{ secrets.STAGING_VOLUME_NAME }}
 
       - name: If env is prod Run script on VM
         if: ${{ github.event.inputs.environment == 'prod' }}
@@ -244,7 +244,7 @@ jobs:
               --db-user ${{ secrets.PROD_POSTGRES_USER }} \
               --db-password ${{ secrets.PROD_POSTGRES_PASSWD }} \
               --db-name ${{ secrets.PROD_POSTGRES_DB }} \
-              --volume-name ${{ secrets.PROD_VOLUME }} 
+              --volume-name ${{ secrets.PROD_VOLUME_NAME }}
 
       - name: Copy deploy_status.env from VM
         run: |
