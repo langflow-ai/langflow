@@ -68,10 +68,9 @@ class CustomComponent(Component):
     const test3Element = page.locator('text="Test 3"');
     await expect(test3Element).toBeVisible();
 
-    const dropdownTrigger = test3Element.locator(
-      '..',
-      { has: page.locator('[data-testid="icon-ChevronDown"]') }
-    ).locator('[data-testid="icon-ChevronDown"]');
+    const dropdownTrigger = test3Element
+      .locator("..", { has: page.locator('[data-testid="icon-ChevronDown"]') })
+      .locator('[data-testid="icon-ChevronDown"]');
     await expect(dropdownTrigger).toBeVisible();
 
     // Click the dropdown to expand it
@@ -164,7 +163,7 @@ class CustomComponent(Component):
     // Now the dropdown is showing Test 4, so re-query for it
     const test4Element = page.locator('text="Test 4"');
     const dropdownTrigger4 = test4Element
-      .locator('..', { has: page.locator('[data-testid="icon-ChevronDown"]') })
+      .locator("..", { has: page.locator('[data-testid="icon-ChevronDown"]') })
       .locator('[data-testid="icon-ChevronDown"]');
 
     await dropdownTrigger4.click();
@@ -179,7 +178,7 @@ class CustomComponent(Component):
     // Now the dropdown is showing Test 3 again, so re-query for it
     const test3Element2 = page.locator('text="Test 3"');
     const dropdownTrigger3 = test3Element2
-      .locator('..', { has: page.locator('[data-testid="icon-ChevronDown"]') })
+      .locator("..", { has: page.locator('[data-testid="icon-ChevronDown"]') })
       .locator('[data-testid="icon-ChevronDown"]');
 
     await dropdownTrigger3.click();
@@ -198,9 +197,7 @@ class CustomComponent(Component):
     await page.waitForTimeout(500);
 
     // Count edges before refresh (should have 3 edges: Test 1, Test 2, Test 5)
-    const edgesBeforeRefresh = await page
-      .locator(".react-flow__edge")
-      .count();
+    const edgesBeforeRefresh = await page.locator(".react-flow__edge").count();
     expect(edgesBeforeRefresh).toBe(3);
 
     // Refresh the page
