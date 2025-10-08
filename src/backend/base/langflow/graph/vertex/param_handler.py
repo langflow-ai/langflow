@@ -129,9 +129,7 @@ class ParameterHandler:
     def process_file_field(self, field_name: str, field: dict, params: dict[str, Any]) -> dict[str, Any]:
         """Process file type fields.
 
-        Converts logical paths (flow_id/filename) to component-ready paths using the
-        storage service's resolve_component_path() method. This encapsulates the
-        storage-specific path handling logic in the storage service where it belongs.
+        Converts logical paths (flow_id/filename) to component-ready paths.
         """
         if file_path := field.get("file_path"):
             try:
@@ -141,11 +139,9 @@ class ParameterHandler:
                     if isinstance(file_path, str):
                         file_path = [file_path]
                     for p in file_path:
-                        # Let the storage service handle the path resolution
                         resolved = self.storage_service.resolve_component_path(p)
                         full_path.append(resolved)
                 else:
-                    # Let the storage service handle the path resolution
                     full_path = self.storage_service.resolve_component_path(file_path)
             except ValueError as e:
                 if "too many values to unpack" in str(e):

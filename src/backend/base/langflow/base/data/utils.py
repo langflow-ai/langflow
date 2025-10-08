@@ -11,7 +11,7 @@ import yaml
 from defusedxml import ElementTree
 
 from langflow.schema.data import Data
-from langflow.services.deps import get_storage_service
+from langflow.services.deps import get_settings_service, get_storage_service
 
 from .storage_utils import parse_storage_path
 
@@ -43,6 +43,34 @@ IMG_FILE_TYPES = ["jpg", "jpeg", "png", "bmp", "image"]
 
 def normalize_text(text):
     return unicodedata.normalize("NFKD", text)
+
+
+def parse_structured_text(text: str, file_path: str) -> str | dict | list:
+    """Parse structured text formats (JSON, YAML, XML) and normalize text.
+
+    Args:
+        text: The text content to parse
+        file_path: The file path (used to determine format)
+
+    Returns:
+        Parsed content (dict/list for JSON, dict for YAML, str for XML)
+    """
+    if file_path.endswith(".json"):
+        loaded_json = orjson.loads(text)
+        if isinstance(loaded_json, dict):
+            loaded_json = {k: normalize_text(v) if isinstance(v, str) else v for k, v in loaded_json.items()}
+        elif isinstance(loaded_json, list):
+            loaded_json = [normalize_text(item) if isinstance(item, str) else item for item in loaded_json]
+        return orjson.dumps(loaded_json).decode("utf-8")
+
+    elif file_path.endswith((".yaml", ".yml")):
+        return yaml.safe_load(text)
+
+    elif file_path.endswith(".xml"):
+        xml_element = ElementTree.fromstring(text)
+        return ElementTree.tostring(xml_element, encoding="unicode")
+
+    return text
 
 
 def is_hidden(path: Path) -> bool:
@@ -142,23 +170,10 @@ async def read_text_file_async(file_path: str) -> str:
     Returns:
         str: The file content as text
     """
-    from langflow.services.deps import get_settings_service
+    from .storage_utils import read_file_bytes
 
-    settings = get_settings_service().settings
-
-    if settings.storage_type == "s3":
-        # S3 storage: parse the path as "flow_id/filename"
-        parsed = parse_storage_path(file_path)
-        if not parsed:
-            msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
-            raise ValueError(msg)
-
-        storage_service = get_storage_service()
-        flow_id, filename = parsed
-        raw_data = await storage_service.get_file(flow_id, filename)
-    else:
-        # Local storage: read from filesystem
-        raw_data = Path(file_path).read_bytes()
+    # Use storage-aware read to get bytes
+    raw_data = await read_file_bytes(file_path)
 
     # Auto-detect encoding
     result = chardet.detect(raw_data)
@@ -205,6 +220,8 @@ async def read_docx_file_async(file_path: str) -> str:
 
     from langflow.services.deps import get_settings_service
 
+    from .storage_utils import read_file_bytes
+
     settings = get_settings_service().settings
 
     if settings.storage_type == "local":
@@ -212,18 +229,12 @@ async def read_docx_file_async(file_path: str) -> str:
         doc = Document(file_path)
         return "\n\n".join([p.text for p in doc.paragraphs])
 
-    # S3 storage - need temp file for python-docx
-    parsed = parse_storage_path(file_path)
-    if not parsed:
-        msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
-        raise ValueError(msg)
-
-    storage_service = get_storage_service()
-    flow_id, filename = parsed
-    content = await storage_service.get_file(flow_id, filename)
+    # S3 storage - need temp file for python-docx (doesn't support BytesIO)
+    content = await read_file_bytes(file_path)
 
     # Create temp file with .docx extension
-    suffix = Path(filename).suffix
+    # Extract filename from path for suffix
+    suffix = Path(file_path.split("/")[-1]).suffix
     with tempfile.NamedTemporaryFile(mode="wb", suffix=suffix, delete=False) as tmp_file:
         tmp_file.write(content)
         temp_path = tmp_file.name
@@ -259,8 +270,7 @@ def parse_pdf_to_text(file_path: str) -> str:
 async def parse_pdf_to_text_async(file_path: str) -> str:
     """Parse a PDF file to extract text (async, storage-aware).
 
-    For S3 storage, reads bytes directly (no temp file needed!).
-    For local storage, reads directly from filesystem.
+    Uses storage-aware file reading to support both local and S3 storage.
 
     Args:
         file_path: Path to the PDF file (S3 key format "flow_id/filename" or local path)
@@ -272,28 +282,14 @@ async def parse_pdf_to_text_async(file_path: str) -> str:
 
     from pypdf import PdfReader
 
-    from langflow.services.deps import get_settings_service
+    from .storage_utils import read_file_bytes
 
-    settings = get_settings_service().settings
+    # Use storage-aware read to get bytes
+    content = await read_file_bytes(file_path)
 
-    if settings.storage_type == "s3":
-        # S3 storage - get bytes directly and use BytesIO
-        parsed = parse_storage_path(file_path)
-        if not parsed:
-            msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
-            raise ValueError(msg)
-
-        storage_service = get_storage_service()
-        flow_id, filename = parsed
-        content = await storage_service.get_file(flow_id, filename)
-
-        # pypdf can read from BytesIO - no temp file needed!
-        with BytesIO(content) as f, PdfReader(f) as reader:
-            return "\n\n".join([page.extract_text() for page in reader.pages])
-    else:
-        # Local storage
-        with Path(file_path).open("rb") as f, PdfReader(f) as reader:
-            return "\n\n".join([page.extract_text() for page in reader.pages])
+    # pypdf can read from BytesIO - no temp file needed!
+    with BytesIO(content) as f, PdfReader(f) as reader:
+        return "\n\n".join([page.extract_text() for page in reader.pages])
 
 
 def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
@@ -320,20 +316,8 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
         else:
             text = read_text_file(file_path)
 
-        # if file is json, yaml, or xml, we can parse it
-        if file_path.endswith(".json"):
-            loaded_json = orjson.loads(text)
-            if isinstance(loaded_json, dict):
-                loaded_json = {k: normalize_text(v) if isinstance(v, str) else v for k, v in loaded_json.items()}
-            elif isinstance(loaded_json, list):
-                loaded_json = [normalize_text(item) if isinstance(item, str) else item for item in loaded_json]
-            text = orjson.dumps(loaded_json).decode("utf-8")
-
-        elif file_path.endswith((".yaml", ".yml")):
-            text = yaml.safe_load(text)
-        elif file_path.endswith(".xml"):
-            xml_element = ElementTree.fromstring(text)
-            text = ElementTree.tostring(xml_element, encoding="unicode")
+        # Parse structured formats (JSON, YAML, XML)
+        text = parse_structured_text(text, file_path)
     except Exception as e:
         if not silent_errors:
             msg = f"Error loading file {file_path}: {e}"
@@ -360,20 +344,8 @@ async def parse_text_file_to_data_async(file_path: str, *, silent_errors: bool) 
             # Text files - read directly, no temp file needed
             text = await read_text_file_async(file_path)
 
-        # if file is json, yaml, or xml, we can parse it
-        if file_path.endswith(".json"):
-            loaded_json = orjson.loads(text)
-            if isinstance(loaded_json, dict):
-                loaded_json = {k: normalize_text(v) if isinstance(v, str) else v for k, v in loaded_json.items()}
-            elif isinstance(loaded_json, list):
-                loaded_json = [normalize_text(item) if isinstance(item, str) else item for item in loaded_json]
-            text = orjson.dumps(loaded_json).decode("utf-8")
-
-        elif file_path.endswith((".yaml", ".yml")):
-            text = yaml.safe_load(text)
-        elif file_path.endswith(".xml"):
-            xml_element = ElementTree.fromstring(text)
-            text = ElementTree.tostring(xml_element, encoding="unicode")
+        # Parse structured formats (JSON, YAML, XML)
+        text = parse_structured_text(text, file_path)
 
         return Data(data={"file_path": file_path, "text": text})
 

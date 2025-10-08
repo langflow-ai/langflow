@@ -43,14 +43,16 @@ class S3StorageService(StorageService):
 
         self.tags = settings_service.settings.object_storage_tags or {}
 
-        # Import aioboto3
         try:
             import aioboto3
         except ImportError as exc:
-            msg = "aioboto3 is required for S3 storage. Install it with: pip install aioboto3 or uv add aioboto3"
+            msg = (
+                "aioboto3 is required for S3 storage. "
+                "Install it with: uv pip install aioboto3"
+            )
             raise ImportError(msg) from exc
 
-        # Create session - AWS credentials are picked up from environment/IAM
+        # Create session - AWS credentials are picked up from environment variables
         self.session = aioboto3.Session()
         self._client = None
 
@@ -88,8 +90,6 @@ class S3StorageService(StorageService):
 
     def _get_client(self):
         """Get or create an S3 client using the async context manager."""
-        # We use the context manager pattern for each operation
-        # This ensures proper resource cleanup
         return self.session.client("s3")
 
     async def save_file(self, flow_id: str, file_name: str, data: bytes) -> None:
@@ -107,14 +107,12 @@ class S3StorageService(StorageService):
 
         try:
             async with self._get_client() as s3_client:
-                # Build put_object parameters
                 put_params: dict[str, Any] = {
                     "Bucket": self.bucket_name,
                     "Key": key,
                     "Body": data,
                 }
 
-                # Add tags if configured
                 if self.tags:
                     tag_string = "&".join([f"{k}={v}" for k, v in self.tags.items()])
                     put_params["Tagging"] = tag_string
@@ -124,11 +122,9 @@ class S3StorageService(StorageService):
             await logger.ainfo(f"File {file_name} saved successfully to S3: s3://{self.bucket_name}/{key}")
 
         except Exception as e:
-            # Extract meaningful error message from boto3 exception
             error_msg = str(e)
             error_code = None
 
-            # Try to extract the error code from boto3 ClientError
             if hasattr(e, "response") and isinstance(e.response, dict):
                 error_info = e.response.get("Error", {})
                 error_code = error_info.get("Code")
@@ -136,7 +132,6 @@ class S3StorageService(StorageService):
 
             logger.exception(f"Error saving file {file_name} to S3 in flow {flow_id}: {error_msg}")
 
-            # Raise a more informative exception
             if error_code == "NoSuchBucket":
                 msg = f"S3 bucket '{self.bucket_name}' does not exist"
                 raise ValueError(msg) from e
@@ -146,9 +141,9 @@ class S3StorageService(StorageService):
             if error_code == "InvalidAccessKeyId":
                 msg = "Invalid AWS credentials. Please check your AWS access key and secret key"
                 raise ValueError(msg) from e
-            # Re-raise with a more descriptive message
-            msg = f"Failed to save file to S3: {error_msg}"
-            raise RuntimeError(msg) from e
+            else:
+                msg = f"Failed to save file to S3: {error_msg}"
+                raise RuntimeError(msg) from e
 
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """Retrieve a file from S3.
@@ -168,14 +163,12 @@ class S3StorageService(StorageService):
         try:
             async with self._get_client() as s3_client:
                 response = await s3_client.get_object(Bucket=self.bucket_name, Key=key)
-                # Read the streaming body
                 content = await response["Body"].read()
 
             logger.debug(f"File {file_name} retrieved successfully from S3: s3://{self.bucket_name}/{key}")
             return content
 
         except Exception as e:
-            # Check if it's a NoSuchKey error
             if hasattr(e, "response") and e.response.get("Error", {}).get("Code") == "NoSuchKey":
                 await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
                 msg = f"File {file_name} not found in flow {flow_id}"
@@ -204,14 +197,12 @@ class S3StorageService(StorageService):
             async with self._get_client() as s3_client:
                 response = await s3_client.get_object(Bucket=self.bucket_name, Key=key)
 
-                # Stream the body in chunks
                 async for chunk in response["Body"].iter_chunks(chunk_size):
                     yield chunk
 
             logger.debug(f"File {file_name} streamed successfully from S3: s3://{self.bucket_name}/{key}")
 
         except Exception as e:
-            # Check if it's a NoSuchKey error
             if hasattr(e, "response") and e.response.get("Error", {}).get("Code") == "NoSuchKey":
                 await logger.awarning(f"File {file_name} not found in S3 flow {flow_id}")
                 msg = f"File {file_name} not found in flow {flow_id}"
@@ -239,7 +230,6 @@ class S3StorageService(StorageService):
 
         try:
             async with self._get_client() as s3_client:
-                # List objects with the given prefix
                 paginator = s3_client.get_paginator("list_objects_v2")
                 files = []
 

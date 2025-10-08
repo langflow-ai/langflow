@@ -192,11 +192,7 @@ async def upload_user_file(
             except Exception:  # noqa: S110
                 pass
             raise HTTPException(status_code=500, detail=f"Database error: {db_err}") from db_err
-    except HTTPException:
-        # Re-raise HTTPException to avoid being caught by the generic exception handler
-        raise
     except Exception as e:
-        # Catch any other unexpected errors
         raise HTTPException(status_code=500, detail=f"Unexpected error: {e}") from e
 
     return UploadFileResponse(id=new_file.id, name=new_file.name, path=Path(new_file.path), size=new_file.size)

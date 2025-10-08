@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 from zipfile import ZipFile, is_zipfile
 
+from langflow.services.deps import get_settings_service
 import orjson
 import pandas as pd
 
@@ -26,6 +27,8 @@ class BaseFileComponent(Component, ABC):
     This class provides common functionality for resolving, validating, and
     processing file paths. Child classes must define valid file extensions
     and implement the `process_files` method.
+
+    # TODO: May want to subclass for local and remote files
     """
 
     class BaseFile:
@@ -519,21 +522,18 @@ class BaseFileComponent(Component, ABC):
         resolved_files = []
 
         def add_file(data: Data, path: str | Path, *, delete_after_processing: bool):
-            from langflow.services.deps import get_settings_service
-
             path_str = str(path)
             settings = get_settings_service().settings
 
-            # When using object storage (S3), file paths are storage keys (e.g., "flow_id/filename")
+            # When using object storage (S3), file paths are storage keys (e.g., "<flow_id>/<filename>")
             # that don't exist on the local filesystem. We defer validation until file processing.
             # For local storage, validate the file exists immediately to fail fast.
             if settings.storage_type == "s3":
-                # Store the storage reference without local filesystem validation
+                print(f"FRAZIER _ TEST - FILE PATH: {path_str}")
                 resolved_files.append(
                     BaseFileComponent.BaseFile(data, Path(path_str), delete_after_processing=delete_after_processing)
                 )
             else:
-                # Local storage: validate the filesystem path exists
                 resolved_path = Path(self.resolve_path(path_str))
                 if not resolved_path.exists():
                     msg = f"File or directory not found: {path}"
