@@ -551,8 +551,7 @@ async def copy_profile_pictures() -> None:
     └── Space/
         └── [profile images]
     """
-    # Get config directory from settings
-    config_dir = get_storage_service().settings_service.settings.config_dir
+    config_dir = get_settings_service().settings.config_dir
     if config_dir is None:
         msg = "Config dir is not set in the settings"
         raise ValueError(msg)
@@ -919,7 +918,8 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
             # 1. Delete all existing starter projects
             successfully_updated_projects = 0
             await delete_starter_projects(session, new_folder.id)
-            await copy_profile_pictures()
+            # Profile pictures are now served directly from the package installation directory
+            # No need to copy them to config_dir
 
             # 2. Update all starter projects with the latest component versions (this modifies the actual file data)
             for project_path, project in starter_projects:

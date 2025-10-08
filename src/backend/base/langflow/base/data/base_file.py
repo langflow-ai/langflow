@@ -519,16 +519,30 @@ class BaseFileComponent(Component, ABC):
         resolved_files = []
 
         def add_file(data: Data, path: str | Path, *, delete_after_processing: bool):
-            resolved_path = Path(self.resolve_path(str(path)))
+            from langflow.services.deps import get_settings_service
 
-            if not resolved_path.exists():
-                msg = f"File or directory not found: {path}"
-                self.log(msg)
-                if not self.silent_errors:
-                    raise ValueError(msg)
-            resolved_files.append(
-                BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing)
-            )
+            path_str = str(path)
+            settings = get_settings_service().settings
+
+            # When using object storage (S3), file paths are storage keys (e.g., "flow_id/filename")
+            # that don't exist on the local filesystem. We defer validation until file processing.
+            # For local storage, validate the file exists immediately to fail fast.
+            if settings.storage_type == "s3":
+                # Store the storage reference without local filesystem validation
+                resolved_files.append(
+                    BaseFileComponent.BaseFile(data, Path(path_str), delete_after_processing=delete_after_processing)
+                )
+            else:
+                # Local storage: validate the filesystem path exists
+                resolved_path = Path(self.resolve_path(path_str))
+                if not resolved_path.exists():
+                    msg = f"File or directory not found: {path}"
+                    self.log(msg)
+                    if not self.silent_errors:
+                        raise ValueError(msg)
+                resolved_files.append(
+                    BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing)
+                )
 
         file_path = self._file_path_as_list()
 
@@ -673,15 +687,23 @@ class BaseFileComponent(Component, ABC):
         Raises:
             ValueError: If unsupported files are encountered and `ignore_unsupported_extensions` is False.
         """
+        from langflow.services.deps import get_settings_service
+
+        settings = get_settings_service().settings
         final_files = []
         ignored_files = []
 
         for file in files:
-            if not file.path.is_file():
-                self.log(f"Not a file: {file.path.name}")
-                continue
+            # For S3 storage, paths are virtual keys that don't exist locally
+            # Skip filesystem checks and only validate extensions
+            if settings.storage_type != "s3":
+                if not file.path.is_file():
+                    self.log(f"Not a file: {file.path.name}")
+                    continue
 
-            if file.path.suffix[1:].lower() not in self.valid_extensions:
+            # Validate file extension
+            extension = file.path.suffix[1:].lower()
+            if extension not in self.valid_extensions:
                 if self.ignore_unsupported_extensions:
                     ignored_files.append(file.path.name)
                     continue

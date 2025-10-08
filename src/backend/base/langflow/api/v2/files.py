@@ -160,11 +160,18 @@ async def upload_user_file(
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error saving file: {e}") from e
 
+
         # Compute the file size based on the path
-        file_size = await storage_service.get_file_size(
-            flow_id=str(current_user.id),
-            file_name=stored_file_name,
-        )
+        try:
+            file_size = await storage_service.get_file_size(
+                flow_id=str(current_user.id),
+                file_name=stored_file_name,
+            )
+        except Exception as e:
+            # If we can't get file size, the file might still be in storage
+            # Don't delete it - just report the error
+            # Clean up will happen if database insert fails below
+            raise HTTPException(status_code=500, detail=f"Storage error getting file size: {e}") from e
 
         # Create a new file record
         new_file = UserFile(
@@ -176,11 +183,22 @@ async def upload_user_file(
         )
         session.add(new_file)
 
-        await session.commit()
-        await session.refresh(new_file)
+        try:
+            await session.commit()
+            await session.refresh(new_file)
+        except Exception as db_err:
+            # Database insert failed - clean up the uploaded file to avoid orphaned files
+            try:
+                await storage_service.delete_file(flow_id=str(current_user.id), file_name=stored_file_name)
+            except Exception:  # noqa: S110
+                pass
+            raise HTTPException(status_code=500, detail=f"Database error: {db_err}") from db_err
+    except HTTPException:
+        # Re-raise HTTPException to avoid being caught by the generic exception handler
+        raise
     except Exception as e:
-        # Optionally, you could also delete the file from disk if the DB insert fails.
-        raise HTTPException(status_code=500, detail=f"Database error: {e}") from e
+        # Catch any other unexpected errors
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}") from e
 
     return UploadFileResponse(id=new_file.id, name=new_file.name, path=Path(new_file.path), size=new_file.size)
 

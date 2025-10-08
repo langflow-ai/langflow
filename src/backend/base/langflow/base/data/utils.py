@@ -1,3 +1,5 @@
+import asyncio
+import tempfile
 import unicodedata
 from collections.abc import Callable
 from concurrent import futures
@@ -9,6 +11,9 @@ import yaml
 from defusedxml import ElementTree
 
 from langflow.schema.data import Data
+from langflow.services.deps import get_storage_service
+
+from .storage_utils import is_storage_service_path, parse_storage_path
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
@@ -109,6 +114,14 @@ def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | Non
 
 
 def read_text_file(file_path: str) -> str:
+    """Read a text file with automatic encoding detection.
+
+    Args:
+        file_path: Path to the file (local path only, not storage service path)
+
+    Returns:
+        str: The file content as text
+    """
     file_path_ = Path(file_path)
     raw_data = file_path_.read_bytes()
     result = chardet.detect(raw_data)
@@ -120,21 +133,187 @@ def read_text_file(file_path: str) -> str:
     return file_path_.read_text(encoding=encoding)
 
 
+async def read_text_file_async(file_path: str) -> str:
+    """Read a text file with automatic encoding detection (async, storage-aware).
+
+    Args:
+        file_path: Path to the file (S3 key format "flow_id/filename" or local path)
+
+    Returns:
+        str: The file content as text
+    """
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+
+    if settings.storage_type == "s3":
+        # S3 storage: parse the path as "flow_id/filename"
+        parsed = parse_storage_path(file_path)
+        if not parsed:
+            msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
+            raise ValueError(msg)
+
+        storage_service = get_storage_service()
+        flow_id, filename = parsed
+        raw_data = await storage_service.get_file(flow_id, filename)
+    else:
+        # Local storage: read from filesystem
+        raw_data = Path(file_path).read_bytes()
+
+    # Auto-detect encoding
+    result = chardet.detect(raw_data)
+    encoding = result.get("encoding")
+
+    # If encoding detection fails (e.g., binary file), default to utf-8
+    if not encoding:
+        encoding = "utf-8"
+    elif encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
+        encoding = "utf-8"
+
+    return raw_data.decode(encoding, errors="replace")
+
+
 def read_docx_file(file_path: str) -> str:
+    """Read a DOCX file and extract text.
+
+    Note: python-docx requires a file path, so this only works with local files.
+    For storage service files, use read_docx_file_async which downloads to temp.
+
+    Args:
+        file_path: Path to the DOCX file (local path only)
+
+    Returns:
+        str: Extracted text from the document
+    """
     from docx import Document
 
     doc = Document(file_path)
     return "\n\n".join([p.text for p in doc.paragraphs])
 
 
+async def read_docx_file_async(file_path: str) -> str:
+    """Read a DOCX file and extract text (async, storage-aware).
+
+    For S3 storage, downloads to temp file (python-docx requires file path).
+    For local storage, reads directly.
+
+    Args:
+        file_path: Path to the DOCX file (S3 key format "flow_id/filename" or local path)
+
+    Returns:
+        str: Extracted text from the document
+    """
+    from docx import Document
+
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+
+    if settings.storage_type == "local":
+        # Local storage - read directly
+        doc = Document(file_path)
+        return "\n\n".join([p.text for p in doc.paragraphs])
+
+    # S3 storage - need temp file for python-docx
+    parsed = parse_storage_path(file_path)
+    if not parsed:
+        msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
+        raise ValueError(msg)
+
+    storage_service = get_storage_service()
+    flow_id, filename = parsed
+    content = await storage_service.get_file(flow_id, filename)
+
+    # Create temp file with .docx extension
+    suffix = Path(filename).suffix
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=suffix, delete=False) as tmp_file:
+        tmp_file.write(content)
+        temp_path = tmp_file.name
+
+    try:
+        doc = Document(temp_path)
+        return "\n\n".join([p.text for p in doc.paragraphs])
+    finally:
+        try:
+            Path(temp_path).unlink()
+        except Exception:  # noqa: S110
+            pass
+
+
 def parse_pdf_to_text(file_path: str) -> str:
+    """Parse a PDF file to extract text.
+
+    Note: pypdf can work with file-like objects, but for simplicity this only works with local files.
+    For storage service files, use parse_pdf_to_text_async which streams bytes directly.
+
+    Args:
+        file_path: Path to the PDF file (local path only)
+
+    Returns:
+        str: Extracted text from all pages
+    """
     from pypdf import PdfReader
 
     with Path(file_path).open("rb") as f, PdfReader(f) as reader:
         return "\n\n".join([page.extract_text() for page in reader.pages])
 
 
+async def parse_pdf_to_text_async(file_path: str) -> str:
+    """Parse a PDF file to extract text (async, storage-aware).
+
+    For S3 storage, reads bytes directly (no temp file needed!).
+    For local storage, reads directly from filesystem.
+
+    Args:
+        file_path: Path to the PDF file (S3 key format "flow_id/filename" or local path)
+
+    Returns:
+        str: Extracted text from all pages
+    """
+    from io import BytesIO
+
+    from pypdf import PdfReader
+
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+
+    if settings.storage_type == "s3":
+        # S3 storage - get bytes directly and use BytesIO
+        parsed = parse_storage_path(file_path)
+        if not parsed:
+            msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
+            raise ValueError(msg)
+
+        storage_service = get_storage_service()
+        flow_id, filename = parsed
+        content = await storage_service.get_file(flow_id, filename)
+
+        # pypdf can read from BytesIO - no temp file needed!
+        with BytesIO(content) as f, PdfReader(f) as reader:
+            return "\n\n".join([page.extract_text() for page in reader.pages])
+    else:
+        # Local storage
+        with Path(file_path).open("rb") as f, PdfReader(f) as reader:
+            return "\n\n".join([page.extract_text() for page in reader.pages])
+
+
 def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
+    """Parse a text file to Data (sync version).
+
+    For S3 storage, this will use async operations to fetch the file.
+    For local storage, reads directly from filesystem.
+    """
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+
+    # If using S3 storage, we need to use async operations
+    if settings.storage_type == "s3":
+        # Run the async version in a new event loop
+        return asyncio.run(parse_text_file_to_data_async(file_path, silent_errors=silent_errors))
+
+    # Local storage: original sync implementation
     try:
         if file_path.endswith(".pdf"):
             text = parse_pdf_to_text(file_path)
@@ -164,6 +343,47 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
         return None
 
     return Data(data={"file_path": file_path, "text": text})
+
+
+async def parse_text_file_to_data_async(file_path: str, *, silent_errors: bool) -> Data | None:
+    """Parse a text file to Data (async version, supports storage service).
+
+    This version properly handles storage service files:
+    - For text/JSON/YAML/XML: reads bytes directly (no temp file)
+    - For PDF: reads bytes directly via BytesIO (no temp file)
+    - For DOCX: downloads to temp file (python-docx requires file path)
+    """
+    try:
+        if file_path.endswith(".pdf"):
+            text = await parse_pdf_to_text_async(file_path)
+        elif file_path.endswith(".docx"):
+            text = await read_docx_file_async(file_path)
+        else:
+            # Text files - read directly, no temp file needed
+            text = await read_text_file_async(file_path)
+
+        # if file is json, yaml, or xml, we can parse it
+        if file_path.endswith(".json"):
+            loaded_json = orjson.loads(text)
+            if isinstance(loaded_json, dict):
+                loaded_json = {k: normalize_text(v) if isinstance(v, str) else v for k, v in loaded_json.items()}
+            elif isinstance(loaded_json, list):
+                loaded_json = [normalize_text(item) if isinstance(item, str) else item for item in loaded_json]
+            text = orjson.dumps(loaded_json).decode("utf-8")
+
+        elif file_path.endswith((".yaml", ".yml")):
+            text = yaml.safe_load(text)
+        elif file_path.endswith(".xml"):
+            xml_element = ElementTree.fromstring(text)
+            text = ElementTree.tostring(xml_element, encoding="unicode")
+
+        return Data(data={"file_path": file_path, "text": text})
+
+    except Exception as e:
+        if not silent_errors:
+            msg = f"Error loading file {file_path}: {e}"
+            raise ValueError(msg) from e
+        return None
 
 
 # ! Removing unstructured dependency until
