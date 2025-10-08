@@ -21,6 +21,14 @@ frontend:
   - ".github/workflows/ci.yml"
 docs:
   - "docs/**"
+docker:
+  - "docker/**"
+  - "uv.lock"
+  - "pyproject.toml"
+  - "src/backend/**"
+  - "src/frontend/**"
+  - ".dockerignore"
+  - ".github/workflows/docker_test.yml"
 
 # Test categories and their associated paths
 starter-projects:
