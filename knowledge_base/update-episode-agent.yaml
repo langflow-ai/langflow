@@ -1,0 +1,144 @@
+id: urn:agent:genesis:update_episode:1
+name: Update Episode Agent
+fullyQualifiedName: genesis.autonomize.ai.update_episode
+description: Update case management system with adjudication results
+domain: autonomize.ai
+subDomain: case-management
+version: 1.0.0
+environment: production
+agentOwner: case-management@autonomize.ai
+agentOwnerDisplayName: Update Episode Agent Team
+email: case-management@autonomize.ai
+status: ACTIVE
+variables:
+- name: llm_provider
+  type: string
+  required: false
+  default: Azure OpenAI
+  description: LLM provider (AzureOpenAI, OpenAI, Anthropic, etc.)
+- name: model_name
+  type: string
+  required: false
+  default: gpt-4
+  description: Model name to use
+- name: temperature
+  type: float
+  required: false
+  default: 0.1
+  description: Temperature for model generation
+tags:
+- UM
+- case-management
+- healthcare
+- prior-authorization
+kind: Single Agent
+agentGoal: Write back the adjudication status, summary, and rationale to the client's system of record
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: ModelDrivenWorkflow
+toolsUse: true
+learningCapability: None
+sampleInput:
+  case_id: PA-2024-12345
+  adjudication_result:
+    decision: approved
+    auth_number: AUTH789012
+    effective_date: '2024-03-15'
+    expiration_date: '2024-09-15'
+    approved_units: 6
+  summary: Approved for 6 units based on medical necessity
+  rationale: Member meets clinical criteria
+components:
+- id: input
+  name: Request Input
+  kind: Data
+  type: genesis:chat_input
+  description: Input for update episode agent
+  provides:
+  - useAs: input
+    in: main-agent
+    description: Input data
+- id: main-agent-prompt
+  name: Agent Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Prompt template for agent instructions
+  config:
+    saved_prompt: update_episode_prompt_v1
+    template: 'You are a specialist agent. Update case management system with adjudication results
+
+
+      Goal: Write back the adjudication status, summary, and rationale to the client''s system of record
+
+
+      Provide accurate and efficient results.'
+  provides:
+  - useAs: system_prompt
+    in: main-agent
+    description: System prompt for the agent
+- id: main-agent
+  name: Update Episode Agent
+  kind: Agent
+  type: genesis:agent
+  description: Update case management system with adjudication results
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 2000
+  provides:
+  - useAs: input
+    in: output
+    description: Results
+- id: tool-1
+  name: Api Component
+  kind: Tool
+  type: genesis:api_component
+  description: Tool for update episode agent
+  asTools: true
+  provides:
+  - useAs: tools
+    in: main-agent
+    description: Api Component tool
+- id: output
+  name: Results Output
+  kind: Data
+  type: genesis:chat_output
+  description: Display results
+  config:
+    should_store_message: true
+outputs:
+- results
+- status
+- details
+kpis:
+- name: Timely Case Closure Rate
+  category: Efficiency
+  valueType: percentage
+  target: 98
+  unit: '%'
+  description: Percentage of cases updated within SLA
+- name: Update Success
+  category: Quality
+  valueType: percentage
+  target: 99.5
+  unit: '%'
+  description: Percentage of successful system updates
+- name: Retry Count
+  category: Performance
+  valueType: numeric
+  target: 1.2
+  unit: average
+  description: Average number of retry attempts
+- name: Update Latency
+  category: Performance
+  valueType: numeric
+  target: 1000
+  unit: ms
+  description: Time to update case system
+securityInfo:
+  visibility: Private
+  confidentiality: High
+  gdprSensitive: false
