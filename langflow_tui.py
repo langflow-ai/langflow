@@ -682,24 +682,19 @@ class LangflowTUI(App):
         if cmd_info["vars"]:
             def on_variables_input(result: dict[str, str] | None) -> None:
                 if result:
-                    self.run_worker(
-                        self.execute_command,
-                        command=command,
-                        variables=result,
-                        thread=True,
-                        exclusive=True
-                    )
+                    # Create a wrapper function that calls execute_command with the right args
+                    def worker_fn() -> None:
+                        self.execute_command(command, result)
+
+                    self.run_worker(worker_fn, thread=True, exclusive=True)
 
             self.push_screen(VariableInputScreen(command, cmd_info["vars"]), on_variables_input)
         else:
             # Execute immediately if no variables
-            self.run_worker(
-                self.execute_command,
-                command=command,
-                variables={},
-                thread=True,
-                exclusive=True
-            )
+            def worker_fn() -> None:
+                self.execute_command(command, {})
+
+            self.run_worker(worker_fn, thread=True, exclusive=True)
 
     def execute_command(self, command: str, variables: dict[str, str]) -> None:
         """Execute a make command with real-time output streaming."""
