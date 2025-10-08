@@ -61,33 +61,15 @@ pr:
       - azure-devops/templates/*backend*
 
 stages:
-- stage: Debug
-  displayName: 'Debug Build Variables'
-  jobs:
-  - job: DebugVariables
-    displayName: 'Show Build Variables'
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - script: |
-        echo "Build.Reason: $(Build.Reason)"
-        echo "Build.SourceBranch: $(Build.SourceBranch)"
-        echo "Build.SourceBranchName: $(Build.SourceBranchName)"
-        echo "Build.BuildNumber: $(Build.BuildNumber)"
-        echo "Agent.JobStatus: $(Agent.JobStatus)"
-      displayName: 'Debug Variables'
-
 - stage: Test
   displayName: 'Backend Test and Validate'
   condition: eq(variables['Build.Reason'], 'PullRequest')
-  dependsOn: Debug
   jobs:
   - template: templates/backend-test-template.yml
 
 - stage: Build
   displayName: 'Build Backend Image'
   condition: and(succeeded(), in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI'))
-  dependsOn: Debug
   jobs:
   - template: templates/backend-build-template.yml
     parameters:
