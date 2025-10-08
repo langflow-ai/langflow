@@ -224,35 +224,84 @@ jobs:
       push_to_registry: ${{ inputs.push_to_registry != false }}
     secrets: inherit
 
-  # slack-notification:
-  #   name: Send Slack Notification
-  #   needs: run-nightly-build
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Send success notification to Slack
-  #       if: success()
-  #       uses: slackapi/slack-github-action@v1.26.0
-  #       with:
-  #         payload: |
-  #           {
-  #             "channel": "#langflow-nightly-builds",
-  #             "username": "GitHub Actions",
-  #             "text": "Nightly Build Successful :white_check_mark:",
-  #             "icon_emoji": ":rocket:"
-  #           }
-  #       env:
-  #         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  slack-notification:
+    name: Send Slack Notification
+    needs: release-nightly-build
+    if: ${{ github.repository == 'langflow-ai/langflow' && always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send failure notification to Slack
+        if: ${{ needs.release-nightly-build.result == 'failure' }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "❌ *Nightly Build Failed*"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Job:*\nrelease-nightly-build"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Status:*\n`${{ needs.release-nightly-build.result }}`"
+                  }
+                ]
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View full logs on GitHub>"
+                  }
+                ]
+              }
+            ]
+          }' ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
 
-  #     - name: Send failure notification to Slack
-  #       if: failure()
-  #       uses: slackapi/slack-github-action@v1.26.0
-  #       with:
-  #         payload: |
-  #           {
-  #             "channel": "#langflow-nightly-builds",
-  #             "username": "GitHub Actions",
-  #             "text": "Nightly Build Failed :x:",
-  #             "icon_emoji": ":warning:"
-  #           }
-  #       env:
-  #         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      - name: Send success notification to Slack
+        if: ${{ needs.release-nightly-build.result == 'success' }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "✅ *Nightly Build Successful*"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Job:*\nrelease-nightly-build"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Status:*\n`${{ needs.release-nightly-build.result }}`"
+                  }
+                ]
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View full logs on GitHub>"
+                  }
+                ]
+              }
+            ]
+          }' ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
