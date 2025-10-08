@@ -64,7 +64,7 @@ export default function OutputComponent({
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   // Check if all outputs have group_outputs: true AND there are multiple outputs
-  const allOutputsGrouped = outputs?.every?.((output) => output.group_outputs);
+  const allOutputsGrouped = outputs?.every?.((output) => (output.group_outputs ?? true) === true);
   const hasMultipleGroupedOutputs = hasOutputs && allOutputsGrouped;
 
   const shouldShowDropdown =

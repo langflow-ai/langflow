@@ -120,7 +120,7 @@ const NodeToolbarComponent = memo(
     const addFlow = useAddFlow();
 
     const hasGroupOutputs = data.node?.outputs?.some?.(
-      (output) => output.group_outputs,
+      (output) => (output.group_outputs ?? true) === true,
     );
     const hasOutputs =
       data.node?.outputs?.length && data.node?.outputs?.length > 1;

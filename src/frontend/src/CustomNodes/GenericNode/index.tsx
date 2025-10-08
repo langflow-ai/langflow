@@ -304,7 +304,7 @@ function GenericNode({
   useEffect(() => {
     if (
       data?.selected_output ||
-      (data?.node?.outputs?.filter((output) => !output.group_outputs)?.length ??
+      (data?.node?.outputs?.filter((output) => (output.group_outputs ?? true) === true)?.length ??
         0) <= 1
     )
       return;
