@@ -55,6 +55,10 @@ help: ## show basic help message with common commands
 	@echo "  $(GREEN)make build$(NC)               - Build the project"
 	@echo "  $(GREEN)make clean_all$(NC)           - Clean all caches and build artifacts"
 	@echo ''
+	@echo "$(GREEN)✨ Interactive TUI:$(NC)"
+	@echo "  $(GREEN)make tui$(NC)                 - Launch the interactive Terminal UI (recommended for beginners)"
+	@echo "  $(GREEN)./tui$(NC)                    - Alternative way to launch the TUI"
+	@echo ''
 	@echo "$(GREEN)Specialized Help Commands:$(NC)"
 	@echo "  $(GREEN)make help_backend$(NC)        - Show backend-specific commands"
 	@echo "  $(GREEN)make help_frontend$(NC)       - Show frontend-specific commands"
@@ -806,6 +810,14 @@ help_advanced: ## show advanced and miscellaneous commands
 	@echo ''
 	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
 	@echo ''
+
+######################
+# TUI (Terminal User Interface)
+######################
+
+tui: ## launch the interactive Terminal UI
+	@echo "$(GREEN)Launching Langflow Interactive TUI...$(NC)"
+	@python3 langflow_tui.py || python langflow_tui.py
 
 ######################
 # INCLUDE FRONTEND MAKEFILE

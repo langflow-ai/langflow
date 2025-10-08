@@ -135,6 +135,7 @@ dependencies = [
     "traceloop-sdk>=0.43.1,<1.0.0",
     # TODO: Remove when 4.1.x is released
     "pytest-codspeed==4.0.0",
+    "textual>=6.2.1",
 ]
 
 [dependency-groups]

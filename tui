@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+#
+# Langflow TUI Launcher
+# Quick launcher script for the Langflow Development TUI
+#
+
+# Colors
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# Get script directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Check if Python is available
+if ! command -v python3 &> /dev/null && ! command -v python &> /dev/null; then
+    echo -e "${RED}Error: Python is not installed${NC}"
+    echo "Please install Python 3.8 or higher"
+    exit 1
+fi
+
+# Use python3 if available, otherwise python
+PYTHON_CMD=$(command -v python3 || command -v python)
+
+# Check if textual is installed
+if ! $PYTHON_CMD -c "import textual" &> /dev/null; then
+    echo -e "${BLUE}═══════════════════════════════════════════════════════════════════${NC}"
+    echo -e "${BLUE}            Langflow TUI - First Time Setup                        ${NC}"
+    echo -e "${BLUE}═══════════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "${RED}Error: 'textual' package is not installed${NC}"
+    echo ""
+    echo "The Textual library is required to run the TUI."
+    echo ""
+    echo -e "${GREEN}Install it using one of these commands:${NC}"
+    echo "  uv pip install textual"
+    echo "  pip install textual"
+    echo ""
+    read -p "Would you like to install it now with uv? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if command -v uv &> /dev/null; then
+            echo -e "${BLUE}Installing textual...${NC}"
+            uv pip install textual
+            if [ $? -eq 0 ]; then
+                echo -e "${GREEN}✓ Successfully installed textual!${NC}"
+                echo ""
+            else
+                echo -e "${RED}✗ Installation failed${NC}"
+                exit 1
+            fi
+        else
+            echo -e "${RED}Error: 'uv' is not installed${NC}"
+            echo "Please install textual manually: pip install textual"
+            exit 1
+        fi
+    else
+        exit 1
+    fi
+fi
+
+# Navigate to script directory
+cd "$SCRIPT_DIR" || exit 1
+
+# Check if Makefile exists
+if [ ! -f "Makefile" ]; then
+    echo -e "${RED}Error: Makefile not found in current directory${NC}"
+    echo "Please run this script from the Langflow root directory"
+    exit 1
+fi
+
+# Display banner
+echo -e "${GREEN}═══════════════════════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}            Langflow Development TUI - Starting...                 ${NC}"
+echo -e "${GREEN}═══════════════════════════════════════════════════════════════════${NC}"
+echo ""
+
+# Run the TUI
+$PYTHON_CMD "${SCRIPT_DIR}/langflow_tui.py"
+
+# Capture exit code
+EXIT_CODE=$?
+
+# Display goodbye message
+echo ""
+echo -e "${GREEN}═══════════════════════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}            Thank you for using Langflow TUI!                      ${NC}"
+echo -e "${GREEN}═══════════════════════════════════════════════════════════════════${NC}"
+
+exit $EXIT_CODE

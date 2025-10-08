@@ -1,5 +1,9 @@
 {
   "devDependencies": {
     "@types/node": "^24.7.0"
+  },
+  "dependencies": {
+    "figlet": "^1.9.3",
+    "oh-my-logo": "^0.4.0"
   }
 }
