@@ -5,19 +5,28 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from lfx.components.models.embedding_model import EmbeddingModelComponent
-    from lfx.components.models.language_model import LanguageModelComponent
+    from lfx.components.data_source.csv_to_data import CSVToDataComponent
+    from lfx.components.data_source.json_to_data import JSONToDataComponent
+    from lfx.components.data_source.news_search import NewsSearchComponent
+    from lfx.components.data_source.rss import RSSReaderComponent
 
 _dynamic_imports = {
-    "EmbeddingModelComponent": "embedding_model",
-    "LanguageModelComponent": "language_model",
+    "CSVToDataComponent": "csv_to_data",
+    "JSONToDataComponent": "json_to_data",
+    "NewsSearchComponent": "news_search",
+    "RSSReaderComponent": "rss",
 }
 
-__all__ = ["EmbeddingModelComponent", "LanguageModelComponent"]
+__all__ = [
+    "CSVToDataComponent",
+    "JSONToDataComponent",
+    "NewsSearchComponent",
+    "RSSReaderComponent",
+]
 
 
 def __getattr__(attr_name: str) -> Any:
-    """Lazily import model components on attribute access."""
+    """Lazily import data source components on attribute access."""
     if attr_name not in _dynamic_imports:
         msg = f"module '{__name__}' has no attribute '{attr_name}'"
         raise AttributeError(msg)

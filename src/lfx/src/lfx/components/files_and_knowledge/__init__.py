@@ -5,31 +5,28 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from lfx.components.data.api_request import APIRequestComponent
-    from lfx.components.data.file import FileComponent
-    from lfx.components.data.mock_data import MockDataGeneratorComponent
-    from lfx.components.data.url import URLComponent
-    from lfx.components.data.web_search import WebSearchComponent
+    from lfx.components.files_and_knowledge.directory import DirectoryComponent
+    from lfx.components.files_and_knowledge.ingestion import KnowledgeIngestionComponent
+    from lfx.components.files_and_knowledge.retrieval import KnowledgeRetrievalComponent
+    from lfx.components.files_and_knowledge.save_file import SaveToFileComponent
 
 _dynamic_imports = {
-    "APIRequestComponent": "api_request",
-    "FileComponent": "file",
-    "MockDataGeneratorComponent": "mock_data",
-    "URLComponent": "url",
-    "WebSearchComponent": "web_search",
+    "DirectoryComponent": "directory",
+    "KnowledgeIngestionComponent": "ingestion",
+    "KnowledgeRetrievalComponent": "retrieval",
+    "SaveToFileComponent": "save_file",
 }
 
 __all__ = [
-    "APIRequestComponent",
-    "FileComponent",
-    "MockDataGeneratorComponent",
-    "URLComponent",
-    "WebSearchComponent",
+    "DirectoryComponent",
+    "KnowledgeIngestionComponent",
+    "KnowledgeRetrievalComponent",
+    "SaveToFileComponent",
 ]
 
 
 def __getattr__(attr_name: str) -> Any:
-    """Lazily import data components on attribute access."""
+    """Lazily import files and knowledge components on attribute access."""
     if attr_name not in _dynamic_imports:
         msg = f"module '{__name__}' has no attribute '{attr_name}'"
         raise AttributeError(msg)
