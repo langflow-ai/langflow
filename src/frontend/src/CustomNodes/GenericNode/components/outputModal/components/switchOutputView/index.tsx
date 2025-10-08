@@ -36,14 +36,14 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   // Get the node to access output configuration
   const currentNode = nodes.find((node) => node.id === nodeId);
   const outputConfig = currentNode?.data?.node?.outputs?.find(
-    (output) => output.name === outputName
+    (output) => output.name === outputName,
   );
 
   // Check if this is a Tool output
-  const isToolOutput = outputConfig && (
-    outputConfig.method === "to_toolkit" || 
-    (outputConfig.types && outputConfig.types.includes("Tool"))
-  );
+  const isToolOutput =
+    outputConfig &&
+    (outputConfig.method === "to_toolkit" ||
+      (outputConfig.types && outputConfig.types.includes("Tool")));
 
   const results: OutputLogType | LogsLogType =
     (type === "Outputs"
@@ -125,12 +125,25 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   return type === "Outputs" ? (
     <>
       <Case condition={isToolOutput && resultMessageMemoized}>
-        <ToolOutputDisplay tools={Array.isArray(resultMessageMemoized) ? resultMessageMemoized : [resultMessageMemoized]} />
+        <ToolOutputDisplay
+          tools={
+            Array.isArray(resultMessageMemoized)
+              ? resultMessageMemoized
+              : [resultMessageMemoized]
+          }
+        />
       </Case>
-      <Case condition={(!resultType || resultType === "unknown") && !isToolOutput}>
+      <Case
+        condition={(!resultType || resultType === "unknown") && !isToolOutput}
+      >
         <div>NO OUTPUT</div>
       </Case>
-      <Case condition={(resultType === "error" || resultType === "ValueError") && !isToolOutput}>
+      <Case
+        condition={
+          (resultType === "error" || resultType === "ValueError") &&
+          !isToolOutput
+        }
+      >
         <ErrorOutput
           value={`${resultMessageMemoized?.errorMessage}\n\n${resultMessageMemoized?.stackTrace}`}
         />
