@@ -158,6 +158,13 @@ class Settings(BaseSettings):
     disable_track_apikey_usage: bool = False
     remove_api_keys: bool = False
     components_path: list[str] = []
+    components_index_path: str | None = None
+    """Path or URL to a prebuilt component index JSON file.
+
+    If None, uses the built-in index at lfx/_assets/component_index.json.
+    Set to a file path (e.g., '/path/to/index.json') or URL (e.g., 'https://example.com/index.json')
+    to use a custom index.
+    """
     langchain_cache: str = "InMemoryCache"
     load_flows_path: str | None = None
     bundle_urls: list[str] = []
