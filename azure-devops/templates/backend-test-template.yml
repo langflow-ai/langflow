@@ -34,7 +34,7 @@ jobs:
 
   - script: |
       export PATH="$HOME/.cargo/bin:$PATH"
-      cd src/backend && python test_genesis_direct.py
+      cd src/backend && uv run python test_genesis_direct.py
     displayName: 'Run Genesis Module Tests'
 
   - script: |

@@ -1,0 +1,14 @@
+window._env_ = Object.freeze({
+  VITE_BACKEND_URL: "http://localhost:7860",
+  VITE_API_PREFIX: "",
+  VITE_APP_TITLE: "",
+  VITE_BUILD_VERSION: "",
+  VITE_ENABLE_CHAT: "",
+  VITE_ENABLE_AGENT_BUILDER: "",
+  VITE_ENABLE_HEALTHCARE_COMPONENTS: "",
+  VITE_DEBUG_MODE: "true",
+  VITE_LOG_LEVEL: "",
+  VITE_WEBSOCKET_URL: "",
+  VITE_MAX_FILE_SIZE: "",
+  VITE_TIMEOUT: "",
+})

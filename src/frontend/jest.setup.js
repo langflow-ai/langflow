@@ -104,3 +104,63 @@ jest.mock("@/stores/darkStore", () => ({
         })
       : {},
 }));
+
+// Mock environment configuration modules to avoid import.meta issues
+jest.mock("@/config/env/index", () => ({
+  __esModule: true,
+  envConfig: {
+    backendUrl: "http://localhost:7860",
+    apiPrefix: "/api/v1",
+    appTitle: "AI Studio",
+    buildVersion: "test",
+    enableChat: true,
+    enableAgentBuilder: true,
+    enableHealthcareComponents: true,
+    debugMode: false,
+    logLevel: "info",
+    websocketUrl: "ws://localhost:7860",
+    maxFileSize: "10MB",
+    timeout: "5000",
+    proxyTarget: "http://localhost:7860",
+    port: "3000",
+  },
+  validateEnv: jest.fn((env) => ({
+    viteBackendUrl: env.VITE_BACKEND_URL || "http://localhost:7860",
+    viteApiPrefix: env.VITE_API_PREFIX || "/api/v1",
+    viteAppTitle: env.VITE_APP_TITLE || "AI Studio",
+    viteBuildVersion: env.VITE_BUILD_VERSION || "test",
+    viteEnableChat: env.VITE_ENABLE_CHAT ? env.VITE_ENABLE_CHAT.toLowerCase() === "true" : true,
+    viteEnableAgentBuilder: env.VITE_ENABLE_AGENT_BUILDER ? env.VITE_ENABLE_AGENT_BUILDER.toLowerCase() === "true" : true,
+    viteEnableHealthcareComponents: env.VITE_ENABLE_HEALTHCARE_COMPONENTS ? env.VITE_ENABLE_HEALTHCARE_COMPONENTS.toLowerCase() === "true" : true,
+    viteDebugMode: env.VITE_DEBUG_MODE ? env.VITE_DEBUG_MODE.toLowerCase() === "true" : false,
+    viteLogLevel: env.VITE_LOG_LEVEL || "info",
+  })),
+}));
+
+jest.mock("@/config/constants", () => ({
+  __esModule: true,
+  getBackendUrl: () => "http://localhost:7860",
+  getApiPrefix: () => "/api/v1",
+  getWebSocketUrl: () => "ws://localhost:7860",
+  BASE_URL_API: "http://localhost:7860/api/v1/",
+  BASE_URL_API_V2: "http://localhost:7860/api/v2/",
+  APP_CONFIG: {
+    title: "AI Studio",
+    buildVersion: "test",
+    debugMode: false,
+    logLevel: "info",
+  },
+  FEATURE_FLAGS: {
+    enableChat: true,
+    enableAgentBuilder: true,
+    enableHealthcareComponents: true,
+  },
+  ADVANCED_CONFIG: {
+    maxFileSize: "10MB",
+    timeout: 5000,
+  },
+  PROXY_CONFIG: {
+    target: "http://localhost:7860",
+    port: 3000,
+  },
+}));

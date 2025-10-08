@@ -9,6 +9,7 @@ import { track } from "@/customization/utils/analytics";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { type CookieOptions, getCookie, setCookie } from "@/utils/utils";
+import { APP_CONFIG } from "../../config/constants";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { getInputsAndOutputs } from "../../utils/storeUtils";
 export default function PlaygroundPage() {
@@ -59,7 +60,7 @@ export default function PlaygroundPage() {
   }, []);
 
   useEffect(() => {
-    document.title = currentSavedFlow?.name || "Langflow";
+    document.title = currentSavedFlow?.name || APP_CONFIG.title;
     if (currentSavedFlow?.data) {
       const { inputs, outputs } = getInputsAndOutputs(
         currentSavedFlow?.data?.nodes || [],
