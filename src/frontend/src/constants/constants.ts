@@ -2,6 +2,8 @@
 
 import custom from "../customization/config-constants";
 import type { languageMap } from "../types/components";
+// Import runtime environment configuration
+import { BASE_URL_API as RUNTIME_BASE_URL_API, BASE_URL_API_V2 as RUNTIME_BASE_URL_API_V2 } from "../config/constants";
 
 /**
  * invalid characters for flow name
@@ -576,9 +578,9 @@ export const ADMIN_HEADER_TITLE = "Admin Page";
 export const ADMIN_HEADER_DESCRIPTION =
   "Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.";
 
-export const BASE_URL_API = custom.BASE_URL_API || "/api/v1/";
+export const BASE_URL_API = RUNTIME_BASE_URL_API;
 
-export const BASE_URL_API_V2 = custom.BASE_URL_API_V2 || "/api/v2/";
+export const BASE_URL_API_V2 = RUNTIME_BASE_URL_API_V2;
 
 /**
  * URLs excluded from error retries.

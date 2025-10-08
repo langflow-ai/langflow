@@ -26,17 +26,26 @@ COPY src/frontend/tsconfig.json \
      src/frontend/postcss.config.js \
      ./
 
+# Copy runtime environment files
+COPY src/frontend/.env.example ./
+COPY src/frontend/env.sh ./
+COPY src/frontend/setup-nginx.sh ./
+
 # Copy source code
 COPY src/frontend/src ./src
 COPY src/frontend/public ./public
 
-# Set environment variables for build
-ENV VITE_BACKEND_URL=$BACKEND_URL \
-    VITE_BUILD_VERSION=$BUILD_VERSION \
+# Set build environment variables (only for build process)
+ENV VITE_BUILD_VERSION=$BUILD_VERSION \
     NODE_ENV=$NODE_ENV
 
-# Build the application
+# Build the application (without hardcoded backend URL)
 RUN npm run build
+
+# Copy runtime scripts to build directory
+RUN cp .env.example dist/ && \
+    cp env.sh dist/ && \
+    cp setup-nginx.sh dist/
 
 # Production stage
 FROM nginx:1.25-alpine
@@ -44,15 +53,14 @@ FROM nginx:1.25-alpine
 # Copy custom nginx configuration
 COPY src/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy built application from build stage
+# Copy built application with runtime scripts from build stage
 COPY --from=frontend_build /app/dist /usr/share/nginx/html
 
-# Copy startup script
-COPY src/frontend/start-nginx.sh /start-nginx.sh
-RUN chmod +x /start-nginx.sh
-
-# Set runtime environment variables
-ENV BACKEND_URL=$BACKEND_URL
+# Make runtime scripts executable
+RUN chmod +x /usr/share/nginx/html/env.sh && \
+    chmod +x /usr/share/nginx/html/setup-nginx.sh && \
+    chmod -R 755 /usr/share/nginx/html/ && \
+    chown -R aistudio:aistudio /usr/share/nginx/html/
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S aistudio && \
@@ -74,5 +82,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3000 || exit 1
 
-# Start nginx
-CMD ["/start-nginx.sh"]
+# Start nginx with runtime environment setup
+CMD ["/usr/share/nginx/html/setup-nginx.sh"]

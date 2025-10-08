@@ -64,7 +64,7 @@ stages:
 
 - stage: Build
   displayName: 'Build Frontend Image'
-  condition: and(succeeded(), in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI'))
+  condition: in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI')
   jobs:
   - template: templates/frontend-build-template.yml
     parameters:
@@ -74,7 +74,6 @@ stages:
       BUILD_ARGS: |
         --build-arg BUILD_VERSION=$(Build.BuildNumber)
         --build-arg NODE_ENV=production
-        --build-arg BACKEND_URL=https://api.ai-studio.autonomize.ai
 
 - stage: UpdatePlatformCharts
   displayName: 'Update Platform Charts'
