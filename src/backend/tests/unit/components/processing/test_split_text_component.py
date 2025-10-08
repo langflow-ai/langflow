@@ -1,8 +1,8 @@
 import pytest
-
 from lfx.components.data import URLComponent
 from lfx.components.processing import SplitTextComponent
 from lfx.schema import Data, DataFrame
+
 from tests.base import ComponentTestBaseWithoutClient
 
 

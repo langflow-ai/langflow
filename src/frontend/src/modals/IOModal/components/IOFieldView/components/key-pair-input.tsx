@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import IconComponent from "../../../../../components/common/genericIconComponent";
 import { Input } from "../../../../../components/ui/input";
 import { classNames } from "../../../../../utils/utils";
@@ -54,21 +54,24 @@ const IOKeyPairInput = ({
   };
 
   // Create flat array with additional metadata for rendering
-  const flattenedData =
-    currentData?.flatMap((obj, objIndex) => {
-      return Object.keys(obj).map((key) => ({
-        key,
-        value: obj[key],
-        objIndex,
-        uniqueId: `${objIndex}-${key}`, // Create unique identifier for React key
-      }));
-    }) || [];
+  const flattenedData = useMemo(() => {
+    return (
+      currentData?.flatMap((obj, objIndex) => {
+        return Object.keys(obj).map((key) => ({
+          key,
+          value: obj[key],
+          objIndex,
+          uniqueId: `${objIndex}-${key}`, // Create unique identifier for React key
+        }));
+      }) || []
+    );
+  }, [currentData]);
 
   return (
     <div className={classNames("flex h-full flex-col gap-3")}>
       {flattenedData.map((item, idx) => {
         return (
-          <div key={item.uniqueId} className="flex w-full gap-2">
+          <div key={item.objIndex} className="flex w-full gap-2">
             <Input
               type="text"
               value={item.key.trim()}
