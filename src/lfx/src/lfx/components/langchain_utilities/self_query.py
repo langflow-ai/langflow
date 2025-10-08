@@ -4,7 +4,7 @@ from langchain.retrievers.self_query.base import SelfQueryRetriever
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import HandleInput, MessageTextInput
 from lfx.io import Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.message import Message
 
 
@@ -32,7 +32,7 @@ class SelfQueryRetrieverComponent(Component):
             name="attribute_infos",
             display_name="Metadata Field Info",
             info="Metadata Field Info to be passed as input.",
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
             is_list=True,
         ),
         MessageTextInput(
@@ -56,7 +56,7 @@ class SelfQueryRetrieverComponent(Component):
         ),
     ]
 
-    def retrieve_documents(self) -> list[Data]:
+    def retrieve_documents(self) -> list[JSON]:
         metadata_field_infos = [AttributeInfo(**value.data) for value in self.attribute_infos]
         self_query_retriever = SelfQueryRetriever.from_llm(
             llm=self.llm,

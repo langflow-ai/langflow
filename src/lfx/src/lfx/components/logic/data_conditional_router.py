@@ -2,7 +2,7 @@ from typing import Any
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, DropdownInput, MessageTextInput, Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.dotdict import dotdict
 
 
@@ -67,7 +67,7 @@ class DataConditionalRouterComponent(Component):
             return value.lower() in {"true", "1", "yes", "y", "on"}
         return bool(value)
 
-    def validate_input(self, data_item: Data) -> bool:
+    def validate_input(self, data_item: JSON) -> bool:
         if not isinstance(data_item, Data):
             self.status = "Input is not a Data object"
             return False
@@ -76,7 +76,7 @@ class DataConditionalRouterComponent(Component):
             return False
         return True
 
-    def process_data(self) -> Data | list[Data]:
+    def process_data(self) -> JSON | list[Data]:
         if isinstance(self.data_input, list):
             true_output = []
             false_output = []
@@ -95,7 +95,7 @@ class DataConditionalRouterComponent(Component):
         self.stop("false_output" if result else "true_output")
         return self.data_input
 
-    def process_single_data(self, data_item: Data) -> bool:
+    def process_single_data(self, data_item: JSON) -> bool:
         item_value = data_item.data[self.key_name]
         operator = self.operator
 

@@ -8,7 +8,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import HandleInput, MessageTextInput
 from lfx.io import Output
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.message import Message
 
 
@@ -26,7 +26,7 @@ class ParseJSONDataComponent(Component):
             display_name="Input",
             info="Data object to filter.",
             required=True,
-            input_types=["Message", "Data"],
+            input_types=["Message", "Data", "JSON"],
         ),
         MessageTextInput(
             name="query",
@@ -37,7 +37,7 @@ class ParseJSONDataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Filtered Data", name="filtered_data", method="filter_data"),
+        Output(display_name="Filtered JSON", name="filtered_data", method="filter_data"),
     ]
 
     def _parse_data(self, input_value) -> str:
@@ -47,7 +47,7 @@ class ParseJSONDataComponent(Component):
             return json.dumps(input_value.data)
         return str(input_value)
 
-    def filter_data(self) -> list[Data]:
+    def filter_data(self) -> list[JSON]:
         to_filter = self.input_value
         if not to_filter:
             return []

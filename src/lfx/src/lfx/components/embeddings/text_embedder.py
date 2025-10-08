@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from lfx.custom.custom_component.component import Component
 from lfx.io import HandleInput, MessageInput, Output
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 if TYPE_CHECKING:
     from lfx.field_typing import Embeddings
@@ -32,10 +32,10 @@ class TextEmbedderComponent(Component):
         ),
     ]
     outputs = [
-        Output(display_name="Embedding Data", name="embeddings", method="generate_embeddings"),
+        Output(display_name="Embedding JSON", name="embeddings", method="generate_embeddings"),
     ]
 
-    def generate_embeddings(self) -> Data:
+    def generate_embeddings(self) -> JSON:
         try:
             embedding_model: Embeddings = self.embedding_model
             message: Message = self.message

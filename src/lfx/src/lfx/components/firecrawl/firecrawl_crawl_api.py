@@ -2,7 +2,7 @@ import uuid
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, IntInput, MultilineInput, Output, SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class FirecrawlCrawlApi(Component):
@@ -50,11 +50,11 @@ class FirecrawlCrawlApi(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="crawl"),
+        Output(display_name="JSON", name="data", method="crawl"),
     ]
     idempotency_key: str | None = None
 
-    def crawl(self) -> Data:
+    def crawl(self) -> JSON:
         try:
             from firecrawl import FirecrawlApp
         except ImportError as e:

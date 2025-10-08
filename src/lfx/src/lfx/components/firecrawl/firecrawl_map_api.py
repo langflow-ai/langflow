@@ -5,7 +5,7 @@ from lfx.io import (
     Output,
     SecretStrInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class FirecrawlMapApi(Component):
@@ -48,10 +48,10 @@ class FirecrawlMapApi(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="map"),
+        Output(display_name="JSON", name="data", method="map"),
     ]
 
-    def map(self) -> Data:
+    def map(self) -> JSON:
         try:
             from firecrawl import FirecrawlApp
         except ImportError as e:

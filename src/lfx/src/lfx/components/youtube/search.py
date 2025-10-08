@@ -6,7 +6,7 @@ from googleapiclient.errors import HttpError
 
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.template.field.base import Output
 
 
@@ -66,7 +66,7 @@ class YouTubeSearchComponent(Component):
         finally:
             client.close()
 
-    def search_videos(self) -> DataFrame:
+    def search_videos(self) -> Table:
         """Searches YouTube videos and returns results as DataFrame."""
         try:
             with self.youtube_client() as youtube:

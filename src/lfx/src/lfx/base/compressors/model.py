@@ -3,8 +3,8 @@ from abc import abstractmethod
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing import BaseDocumentCompressor
 from lfx.io import DataInput, IntInput, MultilineInput
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.template.field.base import Output
 
 
@@ -43,7 +43,7 @@ class LCCompressorComponent(Component):
         msg = "build_compressor method must be implemented."
         raise NotImplementedError(msg)
 
-    async def compress_documents(self) -> list[Data]:
+    async def compress_documents(self) -> list[JSON]:
         """Compresses the documents retrieved from the vector store."""
         compressor = self.build_compressor()
         documents = compressor.compress_documents(
@@ -54,7 +54,7 @@ class LCCompressorComponent(Component):
         self.status = data
         return data
 
-    async def compress_documents_as_dataframe(self) -> DataFrame:
+    async def compress_documents_as_dataframe(self) -> Table:
         """Compresses the documents retrieved from the vector store and returns a pandas DataFrame."""
         data_objs = await self.compress_documents()
         return DataFrame(data=data_objs)

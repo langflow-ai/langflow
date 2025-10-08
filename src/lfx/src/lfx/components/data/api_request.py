@@ -24,7 +24,7 @@ from lfx.io import (
     Output,
     TableInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.dotdict import dotdict
 from lfx.utils.component_utils import set_current_fields, set_field_advanced, set_field_display
 
@@ -108,7 +108,7 @@ class APIRequestComponent(Component):
                 },
             ],
             value=[],
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
             advanced=True,
             real_time_refresh=True,
         ),
@@ -132,7 +132,7 @@ class APIRequestComponent(Component):
             ],
             value=[{"key": "User-Agent", "value": "Langflow/1.0"}],
             advanced=True,
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
             real_time_refresh=True,
         ),
         IntInput(
@@ -300,7 +300,7 @@ class APIRequestComponent(Component):
         follow_redirects: bool = True,
         save_to_file: bool = False,
         include_httpx_metadata: bool = False,
-    ) -> Data:
+    ) -> JSON:
         method = method.upper()
         if method not in {"GET", "POST", "PATCH", "PUT", "DELETE"}:
             msg = f"Unsupported method: {method}"
@@ -413,7 +413,7 @@ class APIRequestComponent(Component):
             return {item["key"]: item["value"] for item in headers if self._is_valid_key_value_item(item)}
         return {}
 
-    async def make_api_request(self) -> Data:
+    async def make_api_request(self) -> JSON:
         """Make HTTP request with optimized parameter handling."""
         method = self.method
         url = self.url_input.strip() if isinstance(self.url_input, str) else ""

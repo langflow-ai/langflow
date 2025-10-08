@@ -9,7 +9,7 @@ from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 # Add at the top with other constants
 MAX_CHUNKS_PER_SOURCE = 3
@@ -175,7 +175,7 @@ Note: Check 'Advanced' for all options.
         ),
     ]
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         # Convert string values to enum instances with validation
         try:
             search_depth_enum = (
@@ -259,7 +259,7 @@ Note: Check 'Advanced' for all options.
         include_raw_content: bool = False,
         days: int = 7,
         time_range: TavilySearchTimeRange | None = None,
-    ) -> list[Data]:
+    ) -> list[JSON]:
         # Validate enum values
         if not isinstance(search_depth, TavilySearchDepth):
             msg = f"Invalid search_depth value: {search_depth}"

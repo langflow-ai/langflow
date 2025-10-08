@@ -1,6 +1,6 @@
 from lfx.custom import Component
 from lfx.io import Output, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class ListenComponent(Component):
@@ -19,9 +19,9 @@ class ListenComponent(Component):
         )
     ]
 
-    outputs = [Output(name="data", display_name="Data", method="listen_for_data", cache=False)]
+    outputs = [Output(name="data", display_name="JSON", method="listen_for_data", cache=False)]
 
-    def listen_for_data(self) -> Data:
+    def listen_for_data(self) -> JSON:
         """Retrieves a Data object from the component context using the provided context key.
 
         If the specified context key does not exist in the context, returns an empty Data object.

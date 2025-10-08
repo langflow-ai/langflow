@@ -1,5 +1,5 @@
 from lfx.custom.custom_component.custom_component import CustomComponent
-from lfx.schema.data import Data
+from lfx.schema.data import JSON
 
 
 class ListFlowsComponent(CustomComponent):
@@ -14,7 +14,7 @@ class ListFlowsComponent(CustomComponent):
 
     async def build(
         self,
-    ) -> list[Data]:
+    ) -> list[JSON]:
         flows = await self.alist_flows()
         self.status = flows
         return flows

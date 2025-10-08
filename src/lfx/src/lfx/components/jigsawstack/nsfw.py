@@ -1,6 +1,6 @@
 from lfx.custom.custom_component.component import Component
 from lfx.io import Output, SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class JigsawStackNSFWComponent(Component):
@@ -29,7 +29,7 @@ class JigsawStackNSFWComponent(Component):
         Output(display_name="NSFW Analysis", name="nsfw_result", method="detect_nsfw"),
     ]
 
-    def detect_nsfw(self) -> Data:
+    def detect_nsfw(self) -> JSON:
         try:
             from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:

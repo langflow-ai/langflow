@@ -16,7 +16,7 @@ from pydantic import BaseModel, create_model
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing.constants import Tool
 from lfx.io import HandleInput, Output, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 class DataFrameToToolsetComponent(LCToolComponent):
     """Component that converts DataFrame rows into a toolset with multiple callable actions."""
 
-    display_name = "DataFrame to Toolset"
+    display_name = "Table to Toolset"
     description = "Convert each row of a DataFrame into a callable tool/action in a toolset."
     icon = "wrench"
     name = "DataFrameToToolset"
@@ -35,8 +35,8 @@ class DataFrameToToolsetComponent(LCToolComponent):
     inputs = [
         HandleInput(
             name="dataframe",
-            display_name="DataFrame",
-            input_types=["DataFrame"],
+            display_name="Table",
+            input_types=["DataFrame", "Table"],
             info="DataFrame where each row will become a tool/action",
             required=True,
         ),
@@ -232,7 +232,7 @@ class DataFrameToToolsetComponent(LCToolComponent):
 
         return Message(text=message_text)
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         """Run the model and return tool information as Data objects."""
         # Handle case where inputs are not ready
         if not hasattr(self, "dataframe") or self.dataframe is None:

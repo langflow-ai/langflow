@@ -4,7 +4,7 @@ import numpy as np
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, DropdownInput, Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class EmbeddingSimilarityComponent(Component):
@@ -32,11 +32,11 @@ class EmbeddingSimilarityComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Similarity Data", name="similarity_data", method="compute_similarity"),
+        Output(display_name="Similarity JSON", name="similarity_data", method="compute_similarity"),
     ]
 
-    def compute_similarity(self) -> Data:
-        embedding_vectors: list[Data] = self.embedding_vectors
+    def compute_similarity(self) -> JSON:
+        embedding_vectors: list[JSON] = self.embedding_vectors
 
         # Assert that the list contains exactly two Data objects
         if len(embedding_vectors) != 2:  # noqa: PLR2004

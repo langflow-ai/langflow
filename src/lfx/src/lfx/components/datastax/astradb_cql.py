@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, create_model
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.io import DictInput, IntInput, SecretStrInput, StrInput, TableInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.table import EditMode
 
 
@@ -300,9 +300,9 @@ class AstraDBCQLToolComponent(LCToolComponent):
 
         return result
 
-    def run_model(self, **args) -> Data | list[Data]:
+    def run_model(self, **args) -> JSON | list[Data]:
         results = self.astra_rest(args)
-        data: list[Data] = []
+        data: list[JSON] = []
 
         if isinstance(results, list):
             data = [Data(data=doc) for doc in results]

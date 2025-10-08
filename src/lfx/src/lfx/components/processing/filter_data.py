@@ -1,10 +1,10 @@
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, MessageTextInput, Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class FilterDataComponent(Component):
-    display_name = "Filter Data"
+    display_name = "Filter JSON"
     description = "Filters a Data object based on a list of keys."
     icon = "filter"
     beta = True
@@ -15,7 +15,7 @@ class FilterDataComponent(Component):
     inputs = [
         DataInput(
             name="data",
-            display_name="Data",
+            display_name="JSON",
             info="Data object to filter.",
         ),
         MessageTextInput(
@@ -27,10 +27,10 @@ class FilterDataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Filtered Data", name="filtered_data", method="filter_data"),
+        Output(display_name="Filtered JSON", name="filtered_data", method="filter_data"),
     ]
 
-    def filter_data(self) -> Data:
+    def filter_data(self) -> JSON:
         filter_criteria: list[str] = self.filter_criteria
         data = self.data.data if isinstance(self.data, Data) else {}
 

@@ -3,7 +3,7 @@ import assemblyai as aai
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, DropdownInput, IntInput, Output, SecretStrInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class AssemblyAIGetSubtitles(Component):
@@ -45,7 +45,7 @@ class AssemblyAIGetSubtitles(Component):
         Output(display_name="Subtitles", name="subtitles", method="get_subtitles"),
     ]
 
-    def get_subtitles(self) -> Data:
+    def get_subtitles(self) -> JSON:
         aai.settings.api_key = self.api_key
 
         # check if it's an error message from the previous step

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class ListHomeAssistantStates(LCToolComponent):
@@ -49,7 +49,7 @@ class ListHomeAssistantStates(LCToolComponent):
 
         filter_domain: str = Field("", description="Filter domain (e.g., 'light'). If empty, returns all.")
 
-    def run_model(self) -> Data:
+    def run_model(self) -> JSON:
         """Execute the LangFlow component.
 
         Uses self.ha_token, self.base_url, self.filter_domain as entered in the UI.
@@ -116,7 +116,7 @@ class ListHomeAssistantStates(LCToolComponent):
             return f"Error processing response: {e}"
         return all_states
 
-    def _make_data_response(self, result: list[Any] | str | dict) -> Data:
+    def _make_data_response(self, result: list[Any] | str | dict) -> JSON:
         """Format the response into a Data object."""
         try:
             if isinstance(result, list):

@@ -9,7 +9,7 @@ from docling_core.types.doc import DoclingDocument
 from pydantic import BaseModel, SecretStr, TypeAdapter
 
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.dataframe import DataFrame
 
 if TYPE_CHECKING:
@@ -25,7 +25,7 @@ class DoclingDependencyError(Exception):
         super().__init__(f"{dependency_name} is not correctly installed. {install_command}")
 
 
-def extract_docling_documents(data_inputs: Data | list[Data] | DataFrame, doc_key: str) -> list[DoclingDocument]:
+def extract_docling_documents(data_inputs: JSON | list[Data] | DataFrame, doc_key: str) -> list[DoclingDocument]:
     documents: list[DoclingDocument] = []
     if isinstance(data_inputs, DataFrame):
         if not len(data_inputs):

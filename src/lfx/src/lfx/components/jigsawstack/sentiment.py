@@ -1,6 +1,6 @@
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output, SecretStrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.message import Message
 
 
@@ -32,7 +32,7 @@ class JigsawStackSentimentComponent(Component):
         Output(display_name="Sentiment Text", name="sentiment_text", method="get_sentiment_text"),
     ]
 
-    def analyze_sentiment(self) -> Data:
+    def analyze_sentiment(self) -> JSON:
         try:
             from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:

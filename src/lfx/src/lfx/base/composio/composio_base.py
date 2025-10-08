@@ -24,8 +24,8 @@ from lfx.inputs.inputs import (
 from lfx.io import Output
 from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
 from lfx.log.logger import logger
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.schema.message import Message
 
 
@@ -115,7 +115,7 @@ class ComposioBaseComponent(Component):
             return Message(text="Action execution returned no result")
         return Message(text=str(result))
 
-    def as_dataframe(self) -> DataFrame:
+    def as_dataframe(self) -> Table:
         result = self.execute_action()
 
         if isinstance(result, dict):
@@ -127,7 +127,7 @@ class ComposioBaseComponent(Component):
             df = df.rename(columns={"data": "_data"})
         return df
 
-    def as_data(self) -> Data:
+    def as_data(self) -> JSON:
         result = self.execute_action()
         return Data(results=result)
 

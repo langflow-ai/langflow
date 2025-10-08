@@ -6,7 +6,7 @@ from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import SecretStrInput, StrInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class NotionDatabaseProperties(LCToolComponent):
@@ -32,7 +32,7 @@ class NotionDatabaseProperties(LCToolComponent):
     class NotionDatabasePropertiesSchema(BaseModel):
         database_id: str = Field(..., description="The ID of the Notion database.")
 
-    def run_model(self) -> Data:
+    def run_model(self) -> JSON:
         result = self._fetch_database_properties(self.database_id)
         if isinstance(result, str):
             # An error occurred, return it as text

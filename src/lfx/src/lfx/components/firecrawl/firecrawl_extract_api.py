@@ -1,7 +1,7 @@
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DataInput, MultilineInput, Output, SecretStrInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class FirecrawlExtractApi(Component):
@@ -65,10 +65,10 @@ class FirecrawlExtractApi(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="extract"),
+        Output(display_name="JSON", name="data", method="extract"),
     ]
 
-    def extract(self) -> Data:
+    def extract(self) -> JSON:
         try:
             from firecrawl import FirecrawlApp
         except ImportError as e:

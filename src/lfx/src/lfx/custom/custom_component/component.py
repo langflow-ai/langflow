@@ -51,7 +51,7 @@ if TYPE_CHECKING:
     from lfx.graph.edge.schema import EdgeData
     from lfx.graph.vertex.base import Vertex
     from lfx.inputs.inputs import InputTypes
-    from lfx.schema.dataframe import DataFrame
+    from lfx.schema.dataframe import Table
     from lfx.schema.log import LoggableType
 
 
@@ -1354,7 +1354,7 @@ class Component(CustomComponent):
         """Extract the first tag from each tool's metadata."""
         return [tool["tags"][0] for tool in tools_metadata if tool["tags"]]
 
-    def _update_tools_with_metadata(self, tools: list[Tool], metadata: DataFrame | None) -> list[Tool]:
+    def _update_tools_with_metadata(self, tools: list[Tool], metadata: Table | None) -> list[Tool]:
         """Update tools with provided metadata."""
         component_toolkit: type[ComponentToolkit] = get_component_toolkit()
         return component_toolkit(component=self, metadata=metadata).update_tools_metadata(tools=tools)

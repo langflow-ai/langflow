@@ -4,7 +4,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class AgentQL(Component):
@@ -90,10 +90,10 @@ class AgentQL(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="build_output"),
+        Output(display_name="JSON", name="data", method="build_output"),
     ]
 
-    def build_output(self) -> Data:
+    def build_output(self) -> JSON:
         endpoint = "https://api.agentql.com/v1/query-data"
         headers = {
             "X-API-Key": self.api_key,

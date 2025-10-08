@@ -4,7 +4,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import DataInput, FloatInput, Output, SecretStrInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class AssemblyAITranscriptionJobPoller(Component):
@@ -40,7 +40,7 @@ class AssemblyAITranscriptionJobPoller(Component):
         Output(display_name="Transcription Result", name="transcription_result", method="poll_transcription_job"),
     ]
 
-    def poll_transcription_job(self) -> Data:
+    def poll_transcription_job(self) -> JSON:
         """Polls the transcription status until completion and returns the Data."""
         aai.settings.api_key = self.api_key
         aai.settings.polling_interval = self.polling_interval

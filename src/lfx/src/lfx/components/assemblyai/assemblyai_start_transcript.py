@@ -5,7 +5,7 @@ import assemblyai as aai
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DropdownInput, FileInput, MessageTextInput, Output, SecretStrInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class AssemblyAITranscriptionJobCreator(Component):
@@ -133,7 +133,7 @@ class AssemblyAITranscriptionJobCreator(Component):
         Output(display_name="Transcript ID", name="transcript_id", method="create_transcription_job"),
     ]
 
-    def create_transcription_job(self) -> Data:
+    def create_transcription_job(self) -> JSON:
         aai.settings.api_key = self.api_key
 
         # Convert speakers_expected to int if it's not empty

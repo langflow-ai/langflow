@@ -6,7 +6,7 @@ from lfx.io import (
     Output,
     SecretStrInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class FirecrawlScrapeApi(Component):
@@ -49,10 +49,10 @@ class FirecrawlScrapeApi(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="scrape"),
+        Output(display_name="JSON", name="data", method="scrape"),
     ]
 
-    def scrape(self) -> Data:
+    def scrape(self) -> JSON:
         try:
             from firecrawl import FirecrawlApp
         except ImportError as e:

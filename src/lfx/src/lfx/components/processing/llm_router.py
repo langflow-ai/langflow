@@ -9,7 +9,7 @@ from lfx.base.models.chat_result import get_chat_result
 from lfx.base.models.model_utils import get_model_name
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.message import Message
 from lfx.template.field.base import Output
 
@@ -471,7 +471,7 @@ Return ONLY the index number:"""
             self.log(f"Error parsing judge response '{response_content}': {e!s}. Defaulting to index 0.", "error")
             return 0, self.models[0]
 
-    def get_selected_model_info(self) -> list[Data]:
+    def get_selected_model_info(self) -> list[JSON]:
         """Return detailed information about the selected model as a list of Data objects."""
         if self._selected_model_name:
             specs_dict = self._get_model_specs_dict(self._selected_model_name)

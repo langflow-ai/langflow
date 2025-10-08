@@ -2,7 +2,7 @@ from langchain_core.tools import Tool
 
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.inputs.inputs import IntInput, MultilineInput, SecretStrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class GoogleSearchAPIComponent(LCToolComponent):
@@ -21,7 +21,7 @@ class GoogleSearchAPIComponent(LCToolComponent):
         IntInput(name="k", display_name="Number of results", value=4, required=True),
     ]
 
-    def run_model(self) -> Data | list[Data]:
+    def run_model(self) -> JSON | list[Data]:
         wrapper = self._build_wrapper()
         results = wrapper.results(query=self.input_value, num_results=self.k)
         data = [Data(data=result, text=result["snippet"]) for result in results]

@@ -6,7 +6,7 @@ from googleapiclient.errors import HttpError
 
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.template.field.base import Output
 
 
@@ -149,7 +149,7 @@ class YouTubeCommentsComponent(Component):
         finally:
             client.close()
 
-    def get_video_comments(self) -> DataFrame:
+    def get_video_comments(self) -> Table:
         """Retrieves comments from a YouTube video and returns as DataFrame."""
         try:
             # Extract video ID from URL

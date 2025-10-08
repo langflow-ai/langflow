@@ -12,8 +12,8 @@ import pandas as pd
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, FileInput, HandleInput, Output, StrInput
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.schema.message import Message
 from lfx.utils.helpers import build_content_type_from_extension
 
@@ -34,7 +34,7 @@ class BaseFileComponent(Component, ABC):
 
         def __init__(
             self,
-            data: Data | list[Data],
+            data: JSON | list[Data],
             path: Path,
             *,
             delete_after_processing: bool = False,
@@ -46,11 +46,11 @@ class BaseFileComponent(Component, ABC):
             self._silent_errors = silent_errors
 
         @property
-        def data(self) -> list[Data]:
+        def data(self) -> list[JSON]:
             return self._data or []
 
         @data.setter
-        def data(self, value: Data | list[Data]):
+        def data(self, value: JSON | list[Data]):
             if isinstance(value, Data):
                 self._data = [value]
             elif isinstance(value, list) and all(isinstance(item, Data) for item in value):
@@ -60,15 +60,14 @@ class BaseFileComponent(Component, ABC):
                 if not self._silent_errors:
                     raise ValueError(msg)
 
-        def merge_data(self, new_data: Data | list[Data] | None) -> list[Data]:
+        def merge_data(self, new_data: JSON | list[Data] | None) -> list[JSON]:
             r"""Generate a new list of Data objects by merging `new_data` into the current `data`.
 
             Args:
                 new_data (Data | list[Data] | None): The new Data object(s) to merge into each existing Data object.
                     If None, the current `data` is returned unchanged.
 
-            Returns:
-                list[Data]: A new list of Data objects with `new_data` merged.
+            Returns: list[JSON]: A new list of Data objects with `new_data` merged.
             """
             if new_data is None:
                 return self.data
@@ -196,11 +195,10 @@ class BaseFileComponent(Component, ABC):
             list[BaseFile]: A list of BaseFile objects with updated `data`.
         """
 
-    def load_files_base(self) -> list[Data]:
+    def load_files_base(self) -> list[JSON]:
         """Loads and parses file(s), including unpacked file bundles.
 
-        Returns:
-            list[Data]: Parsed data from the processed files.
+        Returns: list[JSON]: Parsed data from the processed files.
         """
         self._temp_dirs: list[TemporaryDirectory] = []
         final_files = []  # Initialize to avoid UnboundLocalError
@@ -232,11 +230,10 @@ class BaseFileComponent(Component, ABC):
                     else:
                         file.path.unlink()
 
-    def load_files_core(self) -> list[Data]:
+    def load_files_core(self) -> list[JSON]:
         """Load files and return as Data objects.
 
-        Returns:
-            list[Data]: List of Data objects from all files
+        Returns: list[JSON]: List of Data objects from all files
         """
         data_list = self.load_files_base()
         if not data_list:
@@ -348,11 +345,10 @@ class BaseFileComponent(Component, ABC):
 
         return None
 
-    def load_files_structured(self) -> DataFrame:
+    def load_files_structured(self) -> Table:
         """Load files and return as DataFrame with structured content.
 
-        Returns:
-            DataFrame: DataFrame containing structured content from all files
+        Returns: Table: Table containing structured content from all files
         """
         data_list = self.load_files_core()
         if not data_list:
@@ -393,11 +389,10 @@ class BaseFileComponent(Component, ABC):
         # If all parsing fails, return the fallback
         return {"value": s}
 
-    def load_files_json(self) -> Data:
+    def load_files_json(self) -> JSON:
         """Load files and return as a single Data object containing JSON content.
 
-        Returns:
-            Data: Data object containing JSON content from all files
+        Returns: JSON: JSON object containing JSON content from all files
         """
         data_list = self.load_files_core()
         if not data_list:
@@ -411,11 +406,10 @@ class BaseFileComponent(Component, ABC):
 
         return Data(data=json_data)
 
-    def load_files(self) -> DataFrame:
+    def load_files(self) -> Table:
         """Load files and return as DataFrame.
 
-        Returns:
-            DataFrame: DataFrame containing all file data
+        Returns: Table: Table containing all file data
         """
         data_list = self.load_files_core()
         if not data_list:
@@ -512,12 +506,12 @@ class BaseFileComponent(Component, ABC):
 
         return updated_base_files
 
-    def _file_path_as_list(self) -> list[Data]:
+    def _file_path_as_list(self) -> list[JSON]:
         file_path = self.file_path
         if not file_path:
             return []
 
-        def _message_to_data(message: Message) -> Data:
+        def _message_to_data(message: Message) -> JSON:
             return Data(**{self.SERVER_FILE_PATH_FIELDNAME: message.text})
 
         if isinstance(file_path, Data):
@@ -556,7 +550,7 @@ class BaseFileComponent(Component, ABC):
         """
         resolved_files = []
 
-        def add_file(data: Data, path: str | Path, *, delete_after_processing: bool):
+        def add_file(data: JSON, path: str | Path, *, delete_after_processing: bool):
             resolved_path = Path(self.resolve_path(str(path)))
 
             if not resolved_path.exists():

@@ -4,7 +4,7 @@ from typing import cast
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, DropdownInput, Output
 from lfx.log.logger import logger
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 
 
 class DataOperation(str, Enum):
@@ -31,9 +31,9 @@ class MergeDataComponent(Component):
             value=DataOperation.CONCATENATE.value,
         ),
     ]
-    outputs = [Output(display_name="DataFrame", name="combined_data", method="combine_data")]
+    outputs = [Output(display_name="Table", name="combined_data", method="combine_data")]
 
-    def combine_data(self) -> DataFrame:
+    def combine_data(self) -> Table:
         if not self.data_inputs or len(self.data_inputs) < self.MIN_INPUTS_REQUIRED:
             empty_dataframe = DataFrame()
             self.status = empty_dataframe
@@ -49,7 +49,7 @@ class MergeDataComponent(Component):
         else:
             return combined_dataframe
 
-    def _process_operation(self, operation: DataOperation) -> DataFrame:
+    def _process_operation(self, operation: DataOperation) -> Table:
         if operation == DataOperation.CONCATENATE:
             combined_data: dict[str, str | object] = {}
             for data_input in self.data_inputs:

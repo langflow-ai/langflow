@@ -1,7 +1,7 @@
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import HandleInput
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.template.field.base import Output
 
 
@@ -18,7 +18,7 @@ class LoopComponent(Component):
             name="data",
             display_name="Inputs",
             info="The initial list of Data objects or DataFrame to iterate over.",
-            input_types=["DataFrame"],
+            input_types=["DataFrame", "Table"],
         ),
     ]
 
@@ -62,7 +62,7 @@ class LoopComponent(Component):
         data_length = len(self.ctx.get(f"{self._id}_data", []))
         return current_index > data_length
 
-    def item_output(self) -> Data:
+    def item_output(self) -> JSON:
         """Output the next item in the list or stop if done."""
         self.initialize_data()
         current_item = Data(text="")
@@ -90,7 +90,7 @@ class LoopComponent(Component):
         if item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:
             self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)
 
-    def done_output(self) -> DataFrame:
+    def done_output(self) -> Table:
         """Trigger the done output when iteration is complete."""
         self.initialize_data()
 
@@ -111,7 +111,7 @@ class LoopComponent(Component):
             self.ctx.get(f"{self._id}_index", 0),
         )
 
-    def aggregated_output(self) -> list[Data]:
+    def aggregated_output(self) -> list[JSON]:
         """Return the aggregated list once all items are processed."""
         self.initialize_data()
 

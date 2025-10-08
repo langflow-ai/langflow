@@ -9,7 +9,7 @@ from lfx.graph.graph.base import Graph
 from lfx.helpers.flow import get_flow_inputs
 from lfx.io import BoolInput, DropdownInput, Output, StrInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON
 from lfx.schema.dotdict import dotdict
 
 
@@ -27,7 +27,7 @@ class FlowToolComponent(LCToolComponent):
         flow_datas = await self.alist_flows()
         return [flow_data.data["name"] for flow_data in flow_datas]
 
-    async def get_flow(self, flow_name: str) -> Data | None:
+    async def get_flow(self, flow_name: str) -> JSON | None:
         """Retrieves a flow by its name.
 
         Args:

@@ -16,7 +16,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import MessageTextInput
 from lfx.io import SecretStrInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.template.field.base import Output
 
 
@@ -64,10 +64,10 @@ class GmailLoaderComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="load_emails"),
+        Output(display_name="JSON", name="data", method="load_emails"),
     ]
 
-    def load_emails(self) -> Data:
+    def load_emails(self) -> JSON:
         class CustomGMailLoader(GMailLoader):
             def __init__(
                 self, creds: Any, *, n: int = 100, label_ids: list[str] | None = None, raise_error: bool = False

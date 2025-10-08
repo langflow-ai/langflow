@@ -9,7 +9,7 @@ from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import DictInput, IntInput, MultilineInput, SecretStrInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class SerpAPISchema(BaseModel):
@@ -97,7 +97,7 @@ class SerpAPIComponent(LCToolComponent):
         self.status = "SerpAPI Tool created"
         return tool
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         tool = self.build_tool()
         try:
             results = tool.run(

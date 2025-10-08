@@ -3,6 +3,7 @@ from pathlib import Path
 from lfx.base.data import BaseFileComponent
 from lfx.io import FileInput
 from lfx.schema import Data, DataFrame
+from lfx.schema.dataframe import Table
 
 
 class VideoFileComponent(BaseFileComponent):
@@ -135,7 +136,7 @@ class VideoFileComponent(BaseFileComponent):
 
         return processed_files
 
-    def load_files(self) -> DataFrame:
+    def load_files(self) -> Table:
         """Load video files and return a list of Data objects."""
         try:
             self.log("DEBUG: Starting video file load")

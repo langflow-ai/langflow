@@ -28,7 +28,7 @@ from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSA
 from lfx.utils.image import create_image_content_dict
 
 if TYPE_CHECKING:
-    from lfx.schema.dataframe import DataFrame
+    from lfx.schema.dataframe import Table
 
 
 class Message(Data):
@@ -287,7 +287,7 @@ class Message(Data):
     def to_data(self) -> Data:
         return Data(data=self.data)
 
-    def to_dataframe(self) -> DataFrame:
+    def to_dataframe(self) -> Table:
         from lfx.schema.dataframe import DataFrame  # Local import to avoid circular import
 
         return DataFrame(data=[self])

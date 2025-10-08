@@ -1,6 +1,6 @@
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, Output, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class ExtractDataKeyComponent(Component):
@@ -31,7 +31,7 @@ class ExtractDataKeyComponent(Component):
         Output(display_name="Extracted Data", name="extracted_data", method="extract_key"),
     ]
 
-    def extract_key(self) -> Data | list[Data]:
+    def extract_key(self) -> JSON | list[Data]:
         key = self.key
 
         if isinstance(self.data_input, list):

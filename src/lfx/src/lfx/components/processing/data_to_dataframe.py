@@ -1,11 +1,11 @@
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, Output
 from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 
 
 class DataToDataFrameComponent(Component):
-    display_name = "Data → DataFrame"
+    display_name = "JSON → Table"
     description = (
         "Converts one or multiple Data objects into a DataFrame. "
         "Each Data object corresponds to one row. Fields from `.data` become columns, "
@@ -27,14 +27,14 @@ class DataToDataFrameComponent(Component):
 
     outputs = [
         Output(
-            display_name="DataFrame",
+            display_name="Table",
             name="dataframe",
             method="build_dataframe",
             info="A DataFrame built from each Data object's fields plus a 'text' column.",
         ),
     ]
 
-    def build_dataframe(self) -> DataFrame:
+    def build_dataframe(self) -> Table:
         """Builds a DataFrame from Data objects by combining their fields.
 
         For each Data object:

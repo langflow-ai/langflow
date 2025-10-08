@@ -13,7 +13,7 @@ from lfx.inputs.inputs import InputTypes  # noqa: TC001
 from lfx.io import BoolInput, DropdownInput, McpInput, MessageTextInput, Output
 from lfx.io.schema import flatten_schema, schema_to_langflow_inputs
 from lfx.log.logger import logger
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service, get_storage_service, session_scope
 
@@ -487,7 +487,7 @@ class MCPToolsComponent(ComponentWithCache):
             await logger.aexception(msg)
             raise ValueError(msg) from e
 
-    async def build_output(self) -> DataFrame:
+    async def build_output(self) -> Table:
         """Build output with improved error handling and validation."""
         try:
             self.tools, _ = await self.update_tool_list()

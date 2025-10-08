@@ -4,7 +4,7 @@ from langchain_community.vectorstores import Weaviate
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
 from lfx.io import BoolInput, HandleInput, IntInput, SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class WeaviateVectorStoreComponent(LCVectorStoreComponent):
@@ -74,7 +74,7 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
             by_text=self.search_by_text,
         )
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         vector_store = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():

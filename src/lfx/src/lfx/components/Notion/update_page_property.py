@@ -9,7 +9,7 @@ from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import MultilineInput, SecretStrInput, StrInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class NotionPageUpdate(LCToolComponent):
@@ -43,7 +43,7 @@ class NotionPageUpdate(LCToolComponent):
             ..., description="The properties to update on the page (as a JSON string or a dictionary)."
         )
 
-    def run_model(self) -> Data:
+    def run_model(self) -> JSON:
         result = self._update_notion_page(self.page_id, self.properties)
         if isinstance(result, str):
             # An error occurred, return it as text

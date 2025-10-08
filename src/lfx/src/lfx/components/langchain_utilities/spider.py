@@ -11,7 +11,7 @@ from lfx.io import (
     SecretStrInput,
     StrInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class SpiderTool(Component):
@@ -95,7 +95,7 @@ class SpiderTool(Component):
         Output(display_name="Markdown", name="content", method="crawl"),
     ]
 
-    def crawl(self) -> list[Data]:
+    def crawl(self) -> list[JSON]:
         if self.params:
             parameters = self.params["data"]
         else:

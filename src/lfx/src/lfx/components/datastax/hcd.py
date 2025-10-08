@@ -10,7 +10,7 @@ from lfx.io import (
     SecretStrInput,
     StrInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class HCDVectorStoreComponent(LCVectorStoreComponent):
@@ -280,7 +280,7 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
                 args["filter"] = clean_filter
         return args
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         vector_store = self.build_vector_store()
 
         self.log(f"Search query: {self.search_query}")

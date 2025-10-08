@@ -2,7 +2,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import DataInput, IntInput
 from lfx.io import Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON
 
 
 class SelectDataComponent(Component):
@@ -33,7 +33,7 @@ class SelectDataComponent(Component):
         Output(display_name="Selected Data", name="selected_data", method="select_data"),
     ]
 
-    async def select_data(self) -> Data:
+    async def select_data(self) -> JSON:
         # Retrieve the selected index from the dropdown
         selected_index = int(self.data_index)
         # Get the data list

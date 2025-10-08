@@ -9,7 +9,7 @@ import git
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.message import Message
 
 
@@ -50,7 +50,7 @@ class GitExtractorComponent(Component):
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-    async def get_repository_info(self) -> list[Data]:
+    async def get_repository_info(self) -> list[JSON]:
         try:
             async with self.temp_git_repo() as temp_dir:
                 repo = git.Repo(temp_dir)
@@ -75,7 +75,7 @@ class GitExtractorComponent(Component):
             self.status = error_result
             return error_result
 
-    async def get_statistics(self) -> list[Data]:
+    async def get_statistics(self) -> list[JSON]:
         try:
             async with self.temp_git_repo() as temp_dir:
                 total_files = 0
@@ -134,7 +134,7 @@ class GitExtractorComponent(Component):
             self.status = error_message
             return Message(text=error_message)
 
-    async def get_files_content(self) -> list[Data]:
+    async def get_files_content(self) -> list[JSON]:
         try:
             async with self.temp_git_repo() as temp_dir:
                 content_list = []

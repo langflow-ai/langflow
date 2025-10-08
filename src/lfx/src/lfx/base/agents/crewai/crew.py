@@ -7,7 +7,7 @@ from pydantic import SecretStr
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import HandleInput, InputTypes
 from lfx.io import BoolInput, IntInput, Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON
 from lfx.schema.message import Message
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
@@ -152,7 +152,7 @@ class BaseCrewComponent(Component):
     # Model properties to exclude when creating a CrewAI LLM object
     manager_llm = None
 
-    def task_is_valid(self, task_data: Data, crew_type) -> bool:
+    def task_is_valid(self, task_data: JSON, crew_type) -> bool:
         return "task_type" in task_data and task_data.task_type == crew_type
 
     def get_tasks_and_agents(self, agents_list=None) -> tuple[list, list]:

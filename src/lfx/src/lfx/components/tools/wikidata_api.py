@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import MultilineInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class WikidataSearchSchema(BaseModel):
@@ -84,7 +84,7 @@ class WikidataAPIComponent(LCToolComponent):
 
         return tool
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         tool = self.build_tool()
 
         results = tool.run({"query": self.query})

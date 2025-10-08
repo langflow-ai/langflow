@@ -3,7 +3,7 @@ from langchain_community.document_loaders.confluence import ContentFormat
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class ConfluenceComponent(Component):
@@ -61,7 +61,7 @@ class ConfluenceComponent(Component):
     ]
 
     outputs = [
-        Output(name="data", display_name="Data", method="load_documents"),
+        Output(name="data", display_name="JSON", method="load_documents"),
     ]
 
     def build_confluence(self) -> ConfluenceLoader:
@@ -76,7 +76,7 @@ class ConfluenceComponent(Component):
             max_pages=self.max_pages,
         )
 
-    def load_documents(self) -> list[Data]:
+    def load_documents(self) -> list[JSON]:
         confluence = self.build_confluence()
         documents = confluence.load()
         data = [Data.from_document(doc) for doc in documents]  # Using the from_document method of Data

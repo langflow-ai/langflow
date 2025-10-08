@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 from lfx.custom import Component
 from lfx.io import IntInput, MessageTextInput, Output, TabInput
 from lfx.schema import DataFrame
+from lfx.schema.dataframe import Table
 from lfx.utils.request_utils import get_user_agent
 
 
@@ -151,7 +152,7 @@ class WebSearchComponent(Component):
         """Remove HTML tags from text."""
         return BeautifulSoup(html_string, "html.parser").get_text(separator=" ", strip=True)
 
-    def perform_web_search(self) -> DataFrame:
+    def perform_web_search(self) -> Table:
         """Perform DuckDuckGo web search."""
         query = self._sanitize_query(self.query)
         if not query:
@@ -207,7 +208,7 @@ class WebSearchComponent(Component):
 
         return DataFrame(pd.DataFrame(results))
 
-    def perform_news_search(self) -> DataFrame:
+    def perform_news_search(self) -> Table:
         """Perform Google News search."""
         query = getattr(self, "query", "")
         hl = getattr(self, "hl", "en-US") or "en-US"
@@ -269,7 +270,7 @@ class WebSearchComponent(Component):
 
         return DataFrame(pd.DataFrame(articles))
 
-    def perform_rss_read(self) -> DataFrame:
+    def perform_rss_read(self) -> Table:
         """Read RSS feed."""
         rss_url = getattr(self, "query", "")
         if not rss_url:
@@ -312,7 +313,7 @@ class WebSearchComponent(Component):
         self.log(f"Fetched {len(df_articles)} articles.")
         return DataFrame(df_articles)
 
-    def perform_search(self) -> DataFrame:
+    def perform_search(self) -> Table:
         """Main search method that routes to appropriate search function based on mode."""
         search_mode = getattr(self, "search_mode", "Web")
 

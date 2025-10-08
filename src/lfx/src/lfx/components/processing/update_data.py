@@ -10,12 +10,12 @@ from lfx.inputs.inputs import (
     MessageTextInput,
 )
 from lfx.io import Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.dotdict import dotdict
 
 
 class UpdateDataComponent(Component):
-    display_name: str = "Update Data"
+    display_name: str = "Update JSON"
     description: str = "Dynamically update or append data with the specified fields."
     name: str = "UpdateData"
     MAX_FIELDS = 15  # Define a constant for maximum number of fields
@@ -26,7 +26,7 @@ class UpdateDataComponent(Component):
     inputs = [
         DataInput(
             name="old_data",
-            display_name="Data",
+            display_name="JSON",
             info="The record to update.",
             is_list=True,  # Changed to True to handle list of Data objects
             required=True,
@@ -54,7 +54,7 @@ class UpdateDataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="build_data"),
+        Output(display_name="JSON", name="data", method="build_data"),
     ]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
@@ -100,14 +100,14 @@ class UpdateDataComponent(Component):
                         display_name=f"Field {i}",
                         name=key,
                         info=f"Key for field {i}.",
-                        input_types=["Message", "Data"],
+                        input_types=["Message", "Data", "JSON"],
                     )
                     build_config[field.name] = field.to_dict()
 
             build_config["number_of_fields"]["value"] = field_value_int
         return build_config
 
-    async def build_data(self) -> Data | list[Data]:
+    async def build_data(self) -> JSON | list[Data]:
         """Build the updated data by combining the old data with new fields."""
         new_data = self.get_data()
         if isinstance(self.old_data, list):
@@ -153,7 +153,7 @@ class UpdateDataComponent(Component):
                 data[attr_name] = attr_value
         return data
 
-    def validate_text_key(self, data: Data) -> None:
+    def validate_text_key(self, data: JSON) -> None:
         """This function validates that the Text Key is one of the keys in the Data."""
         data_keys = data.data.keys()
         if self.text_key and self.text_key not in data_keys:

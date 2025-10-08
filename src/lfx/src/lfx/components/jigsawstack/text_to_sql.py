@@ -1,6 +1,6 @@
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output, QueryInput, SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class JigsawStackTextToSQLComponent(Component):
@@ -51,7 +51,7 @@ class JigsawStackTextToSQLComponent(Component):
         Output(display_name="SQL Query", name="sql_query", method="generate_sql"),
     ]
 
-    def generate_sql(self) -> Data:
+    def generate_sql(self) -> JSON:
         try:
             from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:

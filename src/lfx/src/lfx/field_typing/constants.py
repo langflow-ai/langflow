@@ -96,7 +96,8 @@ except ImportError:
 
 
 # Import lfx schema types (avoid circular deps)
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 
 # Type aliases
 NestedDict: TypeAlias = dict[str, str | dict]
@@ -154,6 +155,9 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
     **LANGCHAIN_BASE_TYPES,
     "NestedDict": NestedDict,
     "Data": Data,
+    "JSON": JSON,
+    "DataFrame": DataFrame,
+    "Table": Table,
     "Text": Text,  # noqa: UP019
     "Object": Object,
     "Callable": Callable,
@@ -208,7 +212,8 @@ from lfx.io import (
     StrInput,
     TableInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import Data, JSON
+from lfx.schema.dataframe import DataFrame, Table
 """
 
 if importlib.util.find_spec("langchain") is not None:

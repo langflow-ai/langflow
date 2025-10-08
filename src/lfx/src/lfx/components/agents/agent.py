@@ -23,7 +23,7 @@ from lfx.helpers.base_model import build_model_from_schema
 from lfx.inputs.inputs import BoolInput
 from lfx.io import DropdownInput, IntInput, MultilineInput, Output, TableInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 from lfx.schema.table import EditMode
@@ -300,7 +300,7 @@ class AgentComponent(ToolCallingAgentComponent):
             # Fallback to parsed JSON without validation
             return json_data
 
-    async def json_response(self) -> Data:
+    async def json_response(self) -> JSON:
         """Convert agent response to structured JSON Data output with schema validation."""
         # Always use structured chat agent for JSON response mode for better JSON formatting
         try:

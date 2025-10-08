@@ -1,6 +1,6 @@
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output, SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class JigsawStackTextTranslateComponent(Component):
@@ -39,7 +39,7 @@ class JigsawStackTextTranslateComponent(Component):
         Output(display_name="Translation Results", name="translation_results", method="translation"),
     ]
 
-    def translation(self) -> Data:
+    def translation(self) -> JSON:
         try:
             from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:

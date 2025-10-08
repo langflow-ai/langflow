@@ -2,7 +2,7 @@ from typing import cast
 
 from lfx.custom import Component
 from lfx.io import BoolInput, HandleInput, Output, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class NotifyComponent(Component):
@@ -21,10 +21,10 @@ class NotifyComponent(Component):
         ),
         HandleInput(
             name="input_value",
-            display_name="Input Data",
+            display_name="Input JSON",
             info="The data to store.",
             required=False,
-            input_types=["Data", "Message", "DataFrame"],
+            input_types=["Data", "JSON", "Message", "DataFrame", "Table"],
         ),
         BoolInput(
             name="append",
@@ -37,14 +37,14 @@ class NotifyComponent(Component):
 
     outputs = [
         Output(
-            display_name="Data",
+            display_name="JSON",
             name="result",
             method="notify_components",
             cache=False,
         ),
     ]
 
-    async def notify_components(self) -> Data:
+    async def notify_components(self) -> JSON:
         """Processes and stores a notification in the component's context.
 
         Normalizes the input value to a `Data` object and stores it under the
@@ -61,7 +61,7 @@ class NotifyComponent(Component):
         if not self._vertex:
             msg = "Notify component must be used in a graph."
             raise ValueError(msg)
-        input_value: Data | str | dict | None = self.input_value
+        input_value: JSON | str | dict | None = self.input_value
         if input_value is None:
             input_value = Data(text="")
         elif not isinstance(input_value, Data):

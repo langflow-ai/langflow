@@ -11,7 +11,7 @@ from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import MultilineInput, SecretStrInput, StrInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 MIN_ROWS_IN_TABLE = 3
 
@@ -45,7 +45,7 @@ class AddContentToPage(LCToolComponent):
         markdown_text: str = Field(..., description="The markdown text to convert to Notion blocks.")
         block_id: str = Field(..., description="The ID of the page/block to add the content.")
 
-    def run_model(self) -> Data:
+    def run_model(self) -> JSON:
         result = self._add_content_to_page(self.markdown_text, self.block_id)
         return Data(data=result, text=json.dumps(result))
 

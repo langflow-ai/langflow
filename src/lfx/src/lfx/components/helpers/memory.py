@@ -4,8 +4,8 @@ from lfx.custom.custom_component.component import Component
 from lfx.helpers.data import data_to_text
 from lfx.inputs.inputs import DropdownInput, HandleInput, IntInput, MessageTextInput, MultilineInput, TabInput
 from lfx.memory import aget_messages, astore_message
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 from lfx.template.field.base import Output
@@ -175,7 +175,7 @@ class MemoryComponent(Component):
         self.status = stored_message
         return stored_message
 
-    async def retrieve_messages(self) -> Data:
+    async def retrieve_messages(self) -> JSON:
         sender_type = self.sender_type
         sender_name = self.sender_name
         session_id = self.session_id
@@ -229,11 +229,10 @@ class MemoryComponent(Component):
         # self.status = stored_text
         return Message(text=stored_text)
 
-    async def retrieve_messages_dataframe(self) -> DataFrame:
+    async def retrieve_messages_dataframe(self) -> Table:
         """Convert the retrieved messages into a DataFrame.
 
-        Returns:
-            DataFrame: A DataFrame containing the message data.
+        Returns: Table: A DataFrame containing the message data.
         """
         messages = await self.retrieve_messages()
         return DataFrame(messages)

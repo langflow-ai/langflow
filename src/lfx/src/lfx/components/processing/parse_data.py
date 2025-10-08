@@ -1,7 +1,7 @@
 from lfx.custom.custom_component.component import Component
 from lfx.helpers.data import data_to_text, data_to_text_list
 from lfx.io import DataInput, MultilineInput, Output, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.message import Message
 
 
@@ -19,7 +19,7 @@ class ParseDataComponent(Component):
     inputs = [
         DataInput(
             name="data",
-            display_name="Data",
+            display_name="JSON",
             info="The data to convert to text.",
             is_list=True,
             required=True,
@@ -62,7 +62,7 @@ class ParseDataComponent(Component):
         self.status = result_string
         return Message(text=result_string)
 
-    def parse_data_as_list(self) -> list[Data]:
+    def parse_data_as_list(self) -> list[JSON]:
         data, template, _ = self._clean_args()
         text_list, data_list = data_to_text_list(template, data)
         for item, text in zip(data_list, text_list, strict=True):

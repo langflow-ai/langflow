@@ -5,7 +5,7 @@ from langchain_core.documents import BaseDocumentTransformer
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.utils.util import build_loader_repr_from_data
 
 
@@ -15,7 +15,7 @@ class LCDocumentTransformerComponent(Component):
         Output(display_name="Data", name="data", method="transform_data"),
     ]
 
-    def transform_data(self) -> list[Data]:
+    def transform_data(self) -> list[JSON]:
         data_input = self.get_data_input()
         documents = []
 

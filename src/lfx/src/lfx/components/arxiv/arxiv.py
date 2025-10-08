@@ -6,8 +6,8 @@ from defusedxml.ElementTree import fromstring
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, IntInput, MessageTextInput, Output
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 
 
 class ArXivComponent(Component):
@@ -38,7 +38,7 @@ class ArXivComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="search_papers_dataframe"),
+        Output(display_name="Table", name="dataframe", method="search_papers_dataframe"),
     ]
 
     def build_query_url(self) -> str:
@@ -105,10 +105,10 @@ class ArXivComponent(Component):
         cat = element.find("arxiv:primary_category", ns)
         return cat.get("term") if cat is not None else None
 
-    def run_model(self) -> DataFrame:
+    def run_model(self) -> Table:
         return self.search_papers_dataframe()
 
-    def search_papers(self) -> list[Data]:
+    def search_papers(self) -> list[JSON]:
         """Search arXiv and return results."""
         try:
             # Build the query URL
@@ -153,11 +153,10 @@ class ArXivComponent(Component):
         else:
             return results
 
-    def search_papers_dataframe(self) -> DataFrame:
+    def search_papers_dataframe(self) -> Table:
         """Convert the Arxiv search results to a DataFrame.
 
-        Returns:
-            DataFrame: A DataFrame containing the search results.
+        Returns: Table: A DataFrame containing the search results.
         """
         data = self.search_papers()
         return DataFrame(data)

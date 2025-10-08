@@ -4,7 +4,7 @@ from lfx.io import (
     Output,
     SecretStrInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class ScrapeGraphSearchApi(Component):
@@ -32,10 +32,10 @@ class ScrapeGraphSearchApi(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="search"),
+        Output(display_name="JSON", name="data", method="search"),
     ]
 
-    def search(self) -> list[Data]:
+    def search(self) -> list[JSON]:
         try:
             from scrapegraph_py import Client
             from scrapegraph_py.logger import sgai_logger

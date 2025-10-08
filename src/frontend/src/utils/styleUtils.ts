@@ -174,6 +174,7 @@ export const nodeColorsName: { [char: string]: string } = {
   unknown: "gray",
   Document: "lime",
   Data: "red",
+  JSON: "red",
   Message: "indigo",
   Prompt: "violet",
   Embeddings: "emerald",
@@ -186,6 +187,7 @@ export const nodeColorsName: { [char: string]: string } = {
   BaseChatMessageHistory: "orange",
   Memory: "orange",
   DataFrame: "pink",
+  Table: "pink",
 };
 
 export const FILE_ICONS = {

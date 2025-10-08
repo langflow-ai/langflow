@@ -8,8 +8,8 @@ from lfx.graph.vertex.base import Vertex
 from lfx.helpers.flow import get_flow_inputs
 from lfx.inputs.inputs import DropdownInput, InputTypes, MessageInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 from lfx.template.field.base import Output
@@ -68,10 +68,10 @@ class RunFlowBaseComponent(Component):
     flow_tweak_data: dict = {}
 
     @abstractmethod
-    async def run_flow_with_tweaks(self) -> list[Data]:
+    async def run_flow_with_tweaks(self) -> list[JSON]:
         """Run the flow with tweaks."""
 
-    async def data_output(self) -> Data:
+    async def data_output(self) -> JSON:
         """Return the data output."""
         run_outputs = await self.run_flow_with_tweaks()
         first_output = run_outputs[0]
@@ -84,7 +84,7 @@ class RunFlowBaseComponent(Component):
         message_data = message_result.data
         return Data(data=message_data)
 
-    async def dataframe_output(self) -> DataFrame:
+    async def dataframe_output(self) -> Table:
         """Return the dataframe output."""
         run_outputs = await self.run_flow_with_tweaks()
         first_output = run_outputs[0]
@@ -112,7 +112,7 @@ class RunFlowBaseComponent(Component):
         flow_data = await self.alist_flows()
         return [flow_data.data["name"] for flow_data in flow_data]
 
-    async def get_flow(self, flow_name_selected: str) -> Data | None:
+    async def get_flow(self, flow_name_selected: str) -> JSON | None:
         # get flow from flow id
         flow_datas = await self.alist_flows()
         for flow_data in flow_datas:

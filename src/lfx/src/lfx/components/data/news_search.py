@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from lfx.custom import Component
 from lfx.io import IntInput, MessageTextInput, Output
 from lfx.schema import DataFrame
+from lfx.schema.dataframe import Table
 
 
 class NewsSearchComponent(Component):
@@ -84,7 +85,7 @@ class NewsSearchComponent(Component):
 
     outputs = [Output(name="articles", display_name="News Articles", method="search_news")]
 
-    def search_news(self) -> DataFrame:
+    def search_news(self) -> Table:
         # Defaults
         hl = getattr(self, "hl", None) or "en-US"
         gl = getattr(self, "gl", None) or "US"

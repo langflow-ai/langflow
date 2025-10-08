@@ -8,7 +8,7 @@ import orjson
 import yaml
 from defusedxml import ElementTree
 
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
@@ -89,7 +89,7 @@ def retrieve_file_paths(
     return [str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
 
 
-def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
+def partition_file_to_data(file_path: str, *, silent_errors: bool) -> JSON | None:
     # Use the partition function to load the file
     from unstructured.partition.auto import partition
 
@@ -134,7 +134,7 @@ def parse_pdf_to_text(file_path: str) -> str:
         return "\n\n".join([page.extract_text() for page in reader.pages])
 
 
-def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
+def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> JSON | None:
     try:
         if file_path.endswith(".pdf"):
             text = parse_pdf_to_text(file_path)

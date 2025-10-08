@@ -4,7 +4,7 @@ from lfx.schema.message import Message
 
 
 class ParseDataFrameComponent(Component):
-    display_name = "Parse DataFrame"
+    display_name = "Parse Table"
     description = (
         "Convert a DataFrame into plain text following a specified template. "
         "Each column in the DataFrame is treated as a possible template key, e.g. {col_name}."
@@ -15,7 +15,7 @@ class ParseDataFrameComponent(Component):
     replacement = ["processing.DataFrameOperations", "processing.TypeConverterComponent"]
 
     inputs = [
-        DataFrameInput(name="df", display_name="DataFrame", info="The DataFrame to convert to text rows."),
+        DataFrameInput(name="df", display_name="Table", info="The DataFrame to convert to text rows."),
         MultilineInput(
             name="template",
             display_name="Template",

@@ -2,8 +2,8 @@ from langchain_text_splitters import CharacterTextSplitter
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, HandleInput, IntInput, MessageTextInput, Output
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.schema.message import Message
 from lfx.utils.util import unescape_string
 
@@ -20,7 +20,7 @@ class SplitTextComponent(Component):
             name="data_inputs",
             display_name="Input",
             info="The data with texts to split in chunks.",
-            input_types=["Data", "DataFrame", "Message"],
+            input_types=["Data", "JSON", "DataFrame", "Table", "Message"],
             required=True,
         ),
         IntInput(
@@ -69,7 +69,7 @@ class SplitTextComponent(Component):
         Output(display_name="Chunks", name="dataframe", method="split_text"),
     ]
 
-    def _docs_to_data(self, docs) -> list[Data]:
+    def _docs_to_data(self, docs) -> list[JSON]:
         return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]
 
     def _fix_separator(self, separator: str) -> str:
@@ -137,5 +137,5 @@ class SplitTextComponent(Component):
             msg = f"Error splitting text: {e}"
             raise TypeError(msg) from e
 
-    def split_text(self) -> DataFrame:
+    def split_text(self) -> Table:
         return DataFrame(self._docs_to_data(self.split_text_base()))

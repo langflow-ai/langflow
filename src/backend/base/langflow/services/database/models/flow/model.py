@@ -13,9 +13,10 @@ from lfx.log.logger import logger
 from pydantic import BaseModel, ValidationInfo, field_serializer, field_validator
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import Text, UniqueConstraint, text
-from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+from sqlmodel import JSON as SQLModelJSON  # noqa: N811
+from sqlmodel import Column, Field, Relationship, SQLModel
 
-from langflow.schema.data import Data
+from langflow.schema.data import JSON
 
 if TYPE_CHECKING:
     from langflow.services.database.models.folder.model import Folder
@@ -185,11 +186,11 @@ class FlowBase(SQLModel):
 
 class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
-    data: dict | None = Field(default=None, sa_column=Column(JSON))
+    data: dict | None = Field(default=None, sa_column=Column(SQLModelJSON))
     user_id: UUID | None = Field(index=True, foreign_key="user.id", nullable=True)
     user: "User" = Relationship(back_populates="flows")
     icon: str | None = Field(default=None, nullable=True)
-    tags: list[str] | None = Field(sa_column=Column(JSON), default=[])
+    tags: list[str] | None = Field(sa_column=Column(SQLModelJSON), default=[])
     locked: bool | None = Field(default=False, nullable=True)
     folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     fs_path: str | None = Field(default=None, nullable=True)
@@ -204,7 +205,7 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
             "description": serialized.pop("description"),
             "updated_at": serialized.pop("updated_at"),
         }
-        return Data(data=data)
+        return JSON(data=data)
 
     __table_args__ = (
         UniqueConstraint("user_id", "name", name="unique_flow_name"),

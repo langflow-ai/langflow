@@ -9,7 +9,7 @@ from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import StrInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class PythonREPLToolComponent(LCToolComponent):
@@ -92,7 +92,7 @@ class PythonREPLToolComponent(LCToolComponent):
         self.status = f"Python REPL Tool created with global imports: {self.global_imports}"
         return tool
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         tool = self.build_tool()
         result = tool.run(self.code)
         return [Data(data={"result": result})]

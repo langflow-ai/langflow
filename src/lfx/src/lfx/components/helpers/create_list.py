@@ -1,7 +1,7 @@
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import StrInput
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.template.field.base import Output
 
 
@@ -23,18 +23,17 @@ class CreateListComponent(Component):
 
     outputs = [
         Output(display_name="Data List", name="list", method="create_list"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="Table", name="dataframe", method="as_dataframe"),
     ]
 
-    def create_list(self) -> list[Data]:
+    def create_list(self) -> list[JSON]:
         data = [Data(text=text) for text in self.texts]
         self.status = data
         return data
 
-    def as_dataframe(self) -> DataFrame:
+    def as_dataframe(self) -> Table:
         """Convert the list of Data objects into a DataFrame.
 
-        Returns:
-            DataFrame: A DataFrame containing the list data.
+        Returns: Table: A DataFrame containing the list data.
         """
         return DataFrame(self.create_list())

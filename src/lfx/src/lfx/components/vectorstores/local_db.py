@@ -10,7 +10,7 @@ from lfx.inputs.inputs import MultilineInput
 from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, TabInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.template.field.base import Output
 
 
@@ -75,7 +75,7 @@ class LocalDBComponent(LCVectorStoreComponent):
         HandleInput(
             name="ingest_data",
             display_name="Ingest Data",
-            input_types=["Data", "DataFrame"],
+            input_types=["Data", "JSON", "DataFrame", "Table"],
             is_list=True,
             info="Data to store. It will be embedded and indexed for semantic search.",
             show=True,
@@ -102,7 +102,7 @@ class LocalDBComponent(LCVectorStoreComponent):
         ),
     ]
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="perform_search"),
+        Output(display_name="Table", name="dataframe", method="perform_search"),
     ]
 
     def get_vector_store_directory(self, base_dir: str | Path) -> Path:
@@ -258,5 +258,5 @@ class LocalDBComponent(LCVectorStoreComponent):
         else:
             self.log("No documents to add to the Vector Store.")
 
-    def perform_search(self) -> DataFrame:
+    def perform_search(self) -> Table:
         return DataFrame(self.search_documents())

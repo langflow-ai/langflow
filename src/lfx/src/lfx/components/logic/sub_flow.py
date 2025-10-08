@@ -7,7 +7,7 @@ from lfx.graph.vertex.base import Vertex
 from lfx.helpers.flow import get_flow_inputs
 from lfx.io import DropdownInput, Output
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON
 from lfx.schema.dotdict import dotdict
 
 
@@ -23,7 +23,7 @@ class SubFlowComponent(Component):
         flow_data = await self.alist_flows()
         return [flow_data.data["name"] for flow_data in flow_data]
 
-    async def get_flow(self, flow_name: str) -> Data | None:
+    async def get_flow(self, flow_name: str) -> JSON | None:
         flow_datas = await self.alist_flows()
         for flow_data in flow_datas:
             if flow_data.data["name"] == flow_name:
@@ -89,7 +89,7 @@ class SubFlowComponent(Component):
 
     outputs = [Output(name="flow_outputs", display_name="Flow Outputs", method="generate_results")]
 
-    async def generate_results(self) -> list[Data]:
+    async def generate_results(self) -> list[JSON]:
         tweaks: dict = {}
         for field in self._attributes:
             if field != "flow_name" and "|" in field:
@@ -103,7 +103,7 @@ class SubFlowComponent(Component):
             flow_name=flow_name,
             output_type="all",
         )
-        data: list[Data] = []
+        data: list[JSON] = []
         if not run_outputs:
             return data
         run_output = run_outputs[0]

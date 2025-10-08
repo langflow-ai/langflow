@@ -8,7 +8,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DictInput, IntInput, MultilineInput, SecretStrInput
 from lfx.io import Output
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.message import Message
 
 
@@ -48,7 +48,7 @@ class SerpComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="fetch_content"),
+        Output(display_name="JSON", name="data", method="fetch_content"),
         Output(display_name="Text", name="text", method="fetch_content_text"),
     ]
 
@@ -62,15 +62,15 @@ class SerpComponent(Component):
             )
         return SerpAPIWrapper(serpapi_api_key=self.serpapi_api_key)
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         return self.fetch_content()
 
-    def fetch_content(self) -> list[Data]:
+    def fetch_content(self) -> list[JSON]:
         wrapper = self._build_wrapper(self.search_params)
 
         def search_func(
             query: str, params: dict[str, Any] | None = None, max_results: int = 5, max_snippet_length: int = 100
-        ) -> list[Data]:
+        ) -> list[JSON]:
             try:
                 local_wrapper = wrapper
                 if params:

@@ -6,6 +6,7 @@ from lfx.custom import Component
 from lfx.io import IntInput, MessageTextInput, Output
 from lfx.log.logger import logger
 from lfx.schema import DataFrame
+from lfx.schema.dataframe import Table
 
 
 class RSSReaderComponent(Component):
@@ -36,7 +37,7 @@ class RSSReaderComponent(Component):
 
     outputs = [Output(name="articles", display_name="Articles", method="read_rss")]
 
-    def read_rss(self) -> DataFrame:
+    def read_rss(self) -> Table:
         try:
             response = requests.get(self.rss_url, timeout=self.timeout)
             response.raise_for_status()

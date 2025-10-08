@@ -12,6 +12,7 @@ from lfx.base.data import BaseFileComponent
 from lfx.inputs import IntInput, NestedDictInput, StrInput
 from lfx.inputs.inputs import FloatInput
 from lfx.schema import Data
+from lfx.schema.data import JSON
 from lfx.utils.util import transform_localhost_url
 
 
@@ -108,7 +109,7 @@ class DoclingRemoteComponent(BaseFileComponent):
         transformed_url = transform_localhost_url(self.api_url)
         base_url = f"{transformed_url}/v1"
 
-        def _convert_document(client: httpx.Client, file_path: Path, options: dict[str, Any]) -> Data | None:
+        def _convert_document(client: httpx.Client, file_path: Path, options: dict[str, Any]) -> JSON | None:
             encoded_doc = base64.b64encode(file_path.read_bytes()).decode()
             payload = {
                 "options": options,

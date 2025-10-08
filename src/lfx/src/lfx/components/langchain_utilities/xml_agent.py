@@ -7,7 +7,7 @@ from lfx.inputs.inputs import (
     HandleInput,
     MultilineInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON
 
 
 class XMLAgentComponent(LCToolsAgentComponent):
@@ -54,7 +54,7 @@ Question: {input}
         ),
     ]
 
-    def get_chat_history_data(self) -> list[Data] | None:
+    def get_chat_history_data(self) -> list[JSON] | None:
         return self.chat_history
 
     def create_agent_runnable(self):

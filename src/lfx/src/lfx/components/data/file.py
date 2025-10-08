@@ -21,8 +21,8 @@ from lfx.base.data.base_file import BaseFileComponent
 from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
 from lfx.io import BoolInput, FileInput, IntInput, Output
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame  # noqa: TC001
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import Table  # noqa: TC001
 from lfx.schema.message import Message
 
 
@@ -282,7 +282,7 @@ class FileComponent(BaseFileComponent):
         )
         return file_path.lower().endswith(docling_exts)
 
-    def _process_docling_in_subprocess(self, file_path: str) -> Data | None:
+    def _process_docling_in_subprocess(self, file_path: str) -> JSON | None:
         """Run Docling in a separate OS process and map the result to a Data object.
 
         We avoid multiprocessing pickling by launching `python -c "<script>"` and
@@ -533,7 +533,7 @@ class FileComponent(BaseFileComponent):
             msg = "No files to process."
             raise ValueError(msg)
 
-        def process_file_standard(file_path: str, *, silent_errors: bool = False) -> Data | None:
+        def process_file_standard(file_path: str, *, silent_errors: bool = False) -> JSON | None:
             try:
                 return parse_text_file_to_data(file_path, silent_errors=silent_errors)
             except FileNotFoundError as e:
@@ -554,7 +554,7 @@ class FileComponent(BaseFileComponent):
             final_return: list[BaseFileComponent.BaseFile] = []
             for file in file_list:
                 file_path = str(file.path)
-                advanced_data: Data | None = self._process_docling_in_subprocess(file_path)
+                advanced_data: JSON | None = self._process_docling_in_subprocess(file_path)
 
                 # --- UNNEST: expand each element in `doc` to its own Data row
                 payload = getattr(advanced_data, "data", {}) or {}
@@ -589,7 +589,7 @@ class FileComponent(BaseFileComponent):
 
     # ------------------------------ Output helpers -----------------------------------
 
-    def load_files_helper(self) -> DataFrame:
+    def load_files_helper(self) -> Table:
         result = self.load_files()
 
         # Error condition - raise error if no text and an error is present
@@ -601,7 +601,7 @@ class FileComponent(BaseFileComponent):
 
         return result
 
-    def load_files_dataframe(self) -> DataFrame:
+    def load_files_dataframe(self) -> Table:
         """Load files using advanced Docling processing and export to DataFrame format."""
         self.markdown = False
         return self.load_files_helper()

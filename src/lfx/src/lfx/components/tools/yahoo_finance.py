@@ -10,7 +10,7 @@ from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import DropdownInput, IntInput, MessageTextInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class YahooFinanceMethod(Enum):
@@ -77,7 +77,7 @@ to access financial data and market information from Yahoo! Finance."""
         ),
     ]
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         return self._yahoo_finance_tool(
             self.symbol,
             self.method,
@@ -97,7 +97,7 @@ to access financial data and market information from Yahoo! Finance."""
         symbol: str,
         method: YahooFinanceMethod,
         num_news: int | None = 5,
-    ) -> list[Data]:
+    ) -> list[JSON]:
         try:
             import yfinance as yf
         except ImportError as e:

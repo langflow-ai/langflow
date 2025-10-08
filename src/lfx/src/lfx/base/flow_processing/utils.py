@@ -1,10 +1,10 @@
 from lfx.graph.schema import ResultData, RunOutputs
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.schema.message import Message
 
 
-def build_data_from_run_outputs(run_outputs: RunOutputs) -> list[Data]:
+def build_data_from_run_outputs(run_outputs: RunOutputs) -> list[JSON]:
     """Build a list of data from the given RunOutputs.
 
     Args:
@@ -23,7 +23,7 @@ def build_data_from_run_outputs(run_outputs: RunOutputs) -> list[Data]:
     return data
 
 
-def build_data_from_result_data(result_data: ResultData) -> list[Data]:
+def build_data_from_result_data(result_data: ResultData) -> list[JSON]:
     """Build a list of data from the given ResultData.
 
     Args:
@@ -62,7 +62,7 @@ def build_data_from_result_data(result_data: ResultData) -> list[Data]:
 
     if isinstance(result_data.results, dict):
         for name, result in result_data.results.items():
-            dataobj: Data | Message | None
+            dataobj: JSON | Message | None
             dataobj = result if isinstance(result, Message) else Data(data=result, text_key=name)
 
             data.append(dataobj)
@@ -71,7 +71,7 @@ def build_data_from_result_data(result_data: ResultData) -> list[Data]:
     return data
 
 
-def format_flow_output_data(data: list[Data]) -> str:
+def format_flow_output_data(data: list[JSON]) -> str:
     """Format the flow output data into a string.
 
     Args:

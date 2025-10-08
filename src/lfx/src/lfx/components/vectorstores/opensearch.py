@@ -15,7 +15,7 @@ from lfx.io import (
     SecretStrInput,
     StrInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 @vector_store_connection
@@ -219,7 +219,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         self.log(error_message)
         raise ValueError(error_message)
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         """Search for documents in the vector store based on the search input.
 
         If no search input is provided, retrieve all documents.

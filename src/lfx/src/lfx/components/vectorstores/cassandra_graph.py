@@ -12,7 +12,7 @@ from lfx.io import (
     MessageTextInput,
     SecretStrInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
@@ -186,7 +186,7 @@ class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
             return "mmr_traversal"
         return "traversal"
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         vector_store = self.build_vector_store()
 
         self.log(f"Search input: {self.search_query}")

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, HandleInput, IntInput, MultilineInput, Output
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 from lfx.utils.data_structure import get_data_structure
 
 if TYPE_CHECKING:
@@ -23,7 +23,7 @@ class LambdaFilterComponent(Component):
     inputs = [
         DataInput(
             name="data",
-            display_name="Data",
+            display_name="JSON",
             info="The structured data to filter or transform using a lambda function.",
             is_list=True,
             required=True,
@@ -63,7 +63,7 @@ class LambdaFilterComponent(Component):
 
     outputs = [
         Output(
-            display_name="Filtered Data",
+            display_name="Filtered JSON",
             name="filtered_data",
             method="filter_data",
         ),
@@ -78,7 +78,7 @@ class LambdaFilterComponent(Component):
         # Return False if the lambda function does not start with 'lambda' or does not contain a colon
         return lambda_text.strip().startswith("lambda") and ":" in lambda_text
 
-    async def filter_data(self) -> list[Data]:
+    async def filter_data(self) -> list[JSON]:
         self.log(str(self.data))
         data = self.data[0].data if isinstance(self.data, list) else self.data.data
 
@@ -106,9 +106,7 @@ class LambdaFilterComponent(Component):
         self.log(data_sample)
 
         prompt = f"""Given this data structure and examples, create a Python lambda function that
-                    implements the following instruction:
-
-                    Data Structure:
+                    implements the following instruction: JSON Structure:
                     {dump_structure}
 
                     Example Items:

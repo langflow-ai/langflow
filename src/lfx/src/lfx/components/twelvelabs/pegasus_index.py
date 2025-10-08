@@ -10,6 +10,7 @@ from lfx.custom import Component
 from lfx.inputs import DataInput, DropdownInput, SecretStrInput, StrInput
 from lfx.io import Output
 from lfx.schema import Data
+from lfx.schema.data import JSON
 
 
 class TwelveLabsError(Exception):
@@ -72,7 +73,11 @@ class PegasusIndexVideo(Component):
 
     outputs = [
         Output(
-            display_name="Indexed Data", name="indexed_data", method="index_videos", output_types=["Data"], is_list=True
+            display_name="Indexed JSON",
+            name="indexed_data",
+            method="index_videos",
+            output_types=["Data", "JSON"],
+            is_list=True,
         ),
     ]
 
@@ -208,7 +213,7 @@ class PegasusIndexVideo(Component):
             self.status = f"Upload complete for {video_name}. Task ID: {task_id}"
             return task_id
 
-    def index_videos(self) -> list[Data]:
+    def index_videos(self) -> list[JSON]:
         """Indexes each video and adds the video_id to its metadata."""
         if not self.videodata:
             self.status = "No video data provided."
@@ -223,7 +228,7 @@ class PegasusIndexVideo(Component):
             raise IndexCreationError(error_msg)
 
         client = TwelveLabs(api_key=self.api_key)
-        indexed_data_list: list[Data] = []
+        indexed_data_list: list[JSON] = []
 
         # Get or create the index
         try:

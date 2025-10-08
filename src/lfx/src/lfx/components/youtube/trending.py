@@ -7,7 +7,7 @@ from googleapiclient.errors import HttpError
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, SecretStrInput
 from lfx.log.logger import logger
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.template.field.base import Output
 
 HTTP_FORBIDDEN = 403
@@ -157,7 +157,7 @@ class YouTubeTrendingComponent(Component):
         finally:
             client.close()
 
-    def get_trending_videos(self) -> DataFrame:
+    def get_trending_videos(self) -> Table:
         """Retrieves trending videos from YouTube and returns as DataFrame."""
         try:
             # Validate max_results

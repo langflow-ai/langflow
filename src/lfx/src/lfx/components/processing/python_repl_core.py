@@ -4,7 +4,7 @@ from langchain_experimental.utilities import PythonREPL
 
 from lfx.custom.custom_component.component import Component
 from lfx.io import MultilineInput, Output, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class PythonREPLComponent(Component):
@@ -69,7 +69,7 @@ class PythonREPLComponent(Component):
             self.log(f"Successfully imported modules: {list(global_dict.keys())}")
             return global_dict
 
-    def run_python_repl(self) -> Data:
+    def run_python_repl(self) -> JSON:
         try:
             globals_ = self.get_globals(self.global_imports)
             python_repl = PythonREPL(_globals=globals_)

@@ -4,7 +4,7 @@ from langchain_core.vectorstores import VectorStore
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
 from lfx.io import DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class PineconeVectorStoreComponent(LCVectorStoreComponent):
@@ -91,7 +91,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
 
             return pinecone
 
-    def search_documents(self) -> list[Data]:
+    def search_documents(self) -> list[JSON]:
         """Search documents in the vector store."""
         try:
             if not self.search_query or not isinstance(self.search_query, str) or not self.search_query.strip():

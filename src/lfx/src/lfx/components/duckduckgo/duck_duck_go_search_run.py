@@ -2,8 +2,8 @@ from langchain_community.tools import DuckDuckGoSearchRun
 
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import IntInput, MessageTextInput
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON, Data
+from lfx.schema.dataframe import DataFrame, Table
 from lfx.template.field.base import Output
 
 
@@ -42,17 +42,17 @@ class DuckDuckGoSearchComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="fetch_content_dataframe"),
+        Output(display_name="Table", name="dataframe", method="fetch_content_dataframe"),
     ]
 
     def _build_wrapper(self) -> DuckDuckGoSearchRun:
         """Build the DuckDuckGo search wrapper."""
         return DuckDuckGoSearchRun()
 
-    def run_model(self) -> DataFrame:
+    def run_model(self) -> Table:
         return self.fetch_content_dataframe()
 
-    def fetch_content(self) -> list[Data]:
+    def fetch_content(self) -> list[JSON]:
         """Execute the search and return results as Data objects."""
         try:
             wrapper = self._build_wrapper()
@@ -82,11 +82,10 @@ class DuckDuckGoSearchComponent(Component):
             self.status = data_results
             return data_results
 
-    def fetch_content_dataframe(self) -> DataFrame:
+    def fetch_content_dataframe(self) -> Table:
         """Convert the search results to a DataFrame.
 
-        Returns:
-            DataFrame: A DataFrame containing the search results.
+        Returns: Table: A DataFrame containing the search results.
         """
         data = self.fetch_content()
         return DataFrame(data)

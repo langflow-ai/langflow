@@ -6,7 +6,7 @@ from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import BoolInput, IntInput, MessageTextInput, MultilineInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class WikipediaAPIComponent(LCToolComponent):
@@ -30,7 +30,7 @@ class WikipediaAPIComponent(LCToolComponent):
         ),
     ]
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         wrapper = self._build_wrapper()
         docs = wrapper.load(self.input_value)
         data = [Data.from_document(doc) for doc in docs]

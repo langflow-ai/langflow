@@ -9,7 +9,7 @@ from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import MultilineInput, SecretStrInput, StrInput
 from lfx.log.logger import logger
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 
 class NotionListPages(LCToolComponent):
@@ -52,7 +52,7 @@ class NotionListPages(LCToolComponent):
             "Leave empty for no filters or sorts.",
         )
 
-    def run_model(self) -> list[Data]:
+    def run_model(self) -> list[JSON]:
         result = self._query_notion_database(self.database_id, self.query_json)
 
         if isinstance(result, str):

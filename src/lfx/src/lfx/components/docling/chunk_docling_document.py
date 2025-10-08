@@ -8,6 +8,8 @@ from lfx.base.data.docling_utils import extract_docling_documents
 from lfx.custom import Component
 from lfx.io import DropdownInput, HandleInput, IntInput, MessageTextInput, Output, StrInput
 from lfx.schema import Data, DataFrame
+from lfx.schema.data import JSON
+from lfx.schema.dataframe import Table
 
 
 class ChunkDoclingDocumentComponent(Component):
@@ -20,9 +22,9 @@ class ChunkDoclingDocumentComponent(Component):
     inputs = [
         HandleInput(
             name="data_inputs",
-            display_name="Data or DataFrame",
+            display_name="JSON or Table",
             info="The data with documents to split in chunks.",
-            input_types=["Data", "DataFrame"],
+            input_types=["Data", "JSON", "DataFrame", "Table"],
             required=True,
         ),
         DropdownInput(
@@ -83,7 +85,7 @@ class ChunkDoclingDocumentComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="chunk_documents"),
+        Output(display_name="Table", name="dataframe", method="chunk_documents"),
     ]
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
@@ -111,10 +113,10 @@ class ChunkDoclingDocumentComponent(Component):
 
         return build_config
 
-    def _docs_to_data(self, docs) -> list[Data]:
+    def _docs_to_data(self, docs) -> list[JSON]:
         return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]
 
-    def chunk_documents(self) -> DataFrame:
+    def chunk_documents(self) -> Table:
         documents = extract_docling_documents(self.data_inputs, self.doc_key)
 
         chunker: BaseChunker
@@ -162,7 +164,7 @@ class ChunkDoclingDocumentComponent(Component):
         elif self.chunker == "HierarchicalChunker":
             chunker = HierarchicalChunker()
 
-        results: list[Data] = []
+        results: list[JSON] = []
         try:
             for doc in documents:
                 for chunk in chunker.chunk(dl_doc=doc):

@@ -4,6 +4,8 @@ from typing import Any
 from lfx.custom import Component
 from lfx.io import BoolInput, HandleInput, Output, TabInput
 from lfx.schema import Data, DataFrame, Message
+from lfx.schema.data import JSON
+from lfx.schema.dataframe import Table
 
 MIN_CSV_LINES = 2
 
@@ -20,15 +22,14 @@ def convert_to_message(v) -> Message:
     return v if isinstance(v, Message) else v.to_message()
 
 
-def convert_to_data(v: DataFrame | Data | Message | dict, *, auto_parse: bool) -> Data:
+def convert_to_data(v: Table | Data | Message | dict, *, auto_parse: bool) -> JSON:
     """Convert input to Data type.
 
     Args:
         v: Input to convert (Message, Data, DataFrame, or dict)
         auto_parse: Enable automatic parsing of structured data (JSON/CSV)
 
-    Returns:
-        Data: Converted Data object
+    Returns: JSON: Converted Data object
     """
     if isinstance(v, dict):
         return Data(v)
@@ -39,15 +40,14 @@ def convert_to_data(v: DataFrame | Data | Message | dict, *, auto_parse: bool) -
     return v if isinstance(v, Data) else v.to_data()
 
 
-def convert_to_dataframe(v: DataFrame | Data | Message | dict, *, auto_parse: bool) -> DataFrame:
+def convert_to_dataframe(v: Table | Data | Message | dict, *, auto_parse: bool) -> Table:
     """Convert input to DataFrame type.
 
     Args:
         v: Input to convert (Message, Data, DataFrame, or dict)
         auto_parse: Enable automatic parsing of structured data (JSON/CSV)
 
-    Returns:
-        DataFrame: Converted DataFrame object
+    Returns: Table: Converted DataFrame object
     """
     import pandas as pd
 
@@ -67,14 +67,13 @@ def convert_to_dataframe(v: DataFrame | Data | Message | dict, *, auto_parse: bo
     return v.to_dataframe()
 
 
-def parse_structured_data(data: Data) -> Data:
+def parse_structured_data(data: JSON) -> JSON:
     """Parse structured data (JSON, CSV) from Data's text field.
 
     Args:
-        data: Data object with text content to parse
+        data: JSON object with text content to parse
 
-    Returns:
-        Data: Modified Data object with parsed content or original if parsing fails
+    Returns: JSON: Modified Data object with parsed content or original if parsing fails
     """
     raw_text = data.get_text() or ""
     text = raw_text.lstrip("\ufeff").strip()
@@ -96,7 +95,7 @@ def parse_structured_data(data: Data) -> Data:
     return data
 
 
-def _try_parse_json(text: str) -> Data | None:
+def _try_parse_json(text: str) -> JSON | None:
     """Try to parse text as JSON and return Data object."""
     try:
         parsed = json.loads(text)
@@ -124,7 +123,7 @@ def _looks_like_csv(text: str) -> bool:
     return "," in header_line and len(lines) > 1
 
 
-def _parse_csv_to_data(text: str) -> Data:
+def _parse_csv_to_data(text: str) -> JSON:
     """Parse CSV text and return Data object."""
     from io import StringIO
 
@@ -147,7 +146,7 @@ class TypeConverterComponent(Component):
         HandleInput(
             name="input_data",
             display_name="Input",
-            input_types=["Message", "Data", "DataFrame"],
+            input_types=["Message", "Data", "JSON", "DataFrame", "Table"],
             info="Accept Message, Data or DataFrame as input",
             required=True,
         ),
@@ -195,7 +194,7 @@ class TypeConverterComponent(Component):
             elif field_value == "Data":
                 frontend_node["outputs"].append(
                     Output(
-                        display_name="Data Output",
+                        display_name="JSON Output",
                         name="data_output",
                         method="convert_to_data",
                     ).to_dict()
@@ -203,7 +202,7 @@ class TypeConverterComponent(Component):
             elif field_value == "DataFrame":
                 frontend_node["outputs"].append(
                     Output(
-                        display_name="DataFrame Output",
+                        display_name="Table Output",
                         name="dataframe_output",
                         method="convert_to_dataframe",
                     ).to_dict()
@@ -223,7 +222,7 @@ class TypeConverterComponent(Component):
         self.status = result
         return result
 
-    def convert_to_data(self) -> Data:
+    def convert_to_data(self) -> JSON:
         """Convert input to Data type."""
         input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data
 
@@ -235,7 +234,7 @@ class TypeConverterComponent(Component):
         self.status = result
         return result
 
-    def convert_to_dataframe(self) -> DataFrame:
+    def convert_to_dataframe(self) -> Table:
         """Convert input to DataFrame type."""
         input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data
 

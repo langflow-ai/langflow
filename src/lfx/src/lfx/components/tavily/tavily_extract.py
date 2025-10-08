@@ -4,7 +4,8 @@ from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, MessageTextInput, Output, SecretStrInput
 from lfx.log.logger import logger
 from lfx.schema import Data
-from lfx.schema.dataframe import DataFrame
+from lfx.schema.data import JSON
+from lfx.schema.dataframe import DataFrame, Table
 
 
 class TavilyExtractComponent(Component):
@@ -45,13 +46,13 @@ class TavilyExtractComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="fetch_content"),
+        Output(display_name="Table", name="dataframe", method="fetch_content"),
     ]
 
-    def run_model(self) -> DataFrame:
+    def run_model(self) -> Table:
         return self.fetch_content_dataframe()
 
-    def fetch_content(self) -> list[Data]:
+    def fetch_content(self) -> list[JSON]:
         """Fetches and processes extracted content into a list of Data objects."""
         try:
             # Split URLs by comma and clean them
@@ -112,6 +113,6 @@ class TavilyExtractComponent(Component):
             self.status = data_results
             return data_results
 
-    def fetch_content_dataframe(self) -> DataFrame:
+    def fetch_content_dataframe(self) -> Table:
         data = self.fetch_content()
         return DataFrame(data)

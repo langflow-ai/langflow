@@ -1,6 +1,6 @@
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output, SecretStrInput
-from lfx.schema.data import Data
+from lfx.schema.data import JSON, Data
 
 MAX_ELEMENT_PROMPTS = 5
 
@@ -54,7 +54,7 @@ class JigsawStackAIScraperComponent(Component):
         Output(display_name="AI Scraper Results", name="scrape_results", method="scrape"),
     ]
 
-    def scrape(self) -> Data:
+    def scrape(self) -> JSON:
         try:
             from jigsawstack import JigsawStack, JigsawStackError
         except ImportError as e:
