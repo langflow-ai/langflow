@@ -1,10 +1,11 @@
-import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
-import { GradientSave } from "@/icons/GradientSparkles";
-import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { lazy } from "react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
+import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
+import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
+import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
+import { GradientSave } from "@/icons/GradientSparkles";
 
 const iconCache = new Map<string, any>();
 
@@ -122,6 +123,7 @@ export const nodeColors: { [char: string]: string } = {
   Document: "#65a30d",
   Data: "#dc2626",
   Message: "#4f46e5",
+  number: "#7E22CF",
   Prompt: "#7c3aed",
   Embeddings: "#10b981",
   BaseLanguageModel: "#c026d3",
@@ -151,6 +153,7 @@ export const nodeColorsName: { [char: string]: string } = {
   embeddings: "teal",
   documentloaders: "lime",
   vectorstores: "yellow",
+  VectorStore: "yellow",
   vectorsearch: "yellow",
   textsplitters: "fuchsia",
   toolkits: "red",
@@ -166,6 +169,7 @@ export const nodeColorsName: { [char: string]: string } = {
   output_parsers: "yellow",
   retrievers: "yellow",
   str: "indigo",
+  number: "purple",
   Text: "indigo",
   unknown: "gray",
   Document: "lime",
@@ -209,6 +213,15 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Agents", name: "agents", icon: "Bot" },
   { display_name: "Models", name: "models", icon: "BrainCog" },
   { display_name: "Data", name: "data", icon: "Database" },
+  ...(ENABLE_KNOWLEDGE_BASES
+    ? [
+        {
+          display_name: "Knowledge Bases",
+          name: "knowledge_bases",
+          icon: "Library",
+        },
+      ]
+    : []),
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
   { display_name: "Processing", name: "processing", icon: "ListFilter" },
   { display_name: "Logic", name: "logic", icon: "ArrowRightLeft" },
@@ -228,6 +241,8 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "AI/ML API", name: "aiml", icon: "AIML" },
+  { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
   {
     display_name: "Language Models",
     name: "languagemodels",
@@ -235,62 +250,93 @@ export const SIDEBAR_BUNDLES = [
   },
   { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
   { display_name: "Memories", name: "memories", icon: "Cpu" },
-  { display_name: "AI/ML", name: "aiml", icon: "AI/ML" },
-  { display_name: "Anthropic", name: "anthropic", icon: "Anthropic" },
   { display_name: "Amazon", name: "amazon", icon: "Amazon" },
-  // Add apify
+  { display_name: "Anthropic", name: "anthropic", icon: "Anthropic" },
   { display_name: "Apify", name: "apify", icon: "Apify" },
-  { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
-  { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
+  { display_name: "arXiv", name: "arxiv", icon: "arXiv" },
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
   { display_name: "Azure", name: "azure", icon: "Azure" },
-  {
-    display_name: "DataStax",
-    name: "datastax",
-    icon: "AstraDB",
-  },
-  { display_name: "Docling", name: "docling", icon: "Docling" },
-  { display_name: "Gmail", name: "gmail", icon: "Gmail" },
-  { display_name: "GitHub", name: "github", icon: "Github" },
-  {
-    display_name: "Googlecalendar",
-    name: "googlecalendar",
-    icon: "Googlecalendar",
-  },
-  { display_name: "HuggingFace", name: "huggingface", icon: "HuggingFace" },
-  { display_name: "IBM", name: "ibm", icon: "WatsonxAI" },
-  { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
-  { display_name: "Olivya", name: "olivya", icon: "Olivya" },
-  { display_name: "Outlook", name: "outlook", icon: "Outlook" },
-  { display_name: "OpenAI", name: "openai", icon: "OpenAI" },
-  { display_name: "Notion", name: "Notion", icon: "Notion" },
-  { display_name: "Needle", name: "needle", icon: "Needle" },
-  { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
-  { display_name: "Vectara", name: "vectara", icon: "Vectara" },
-  { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
-  { display_name: "Google", name: "google", icon: "Google" },
-  { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
-  { display_name: "NotDiamond", name: "notdiamond", icon: "NotDiamond" },
-  { display_name: "Composio", name: "composio", icon: "Composio" },
+  { display_name: "Baidu", name: "baidu", icon: "BaiduQianfan" },
+  { display_name: "Bing", name: "bing", icon: "Bing" },
+  { display_name: "Cassandra", name: "cassandra", icon: "Cassandra" },
+  { display_name: "Chroma", name: "chroma", icon: "Chroma" },
+  { display_name: "ClickHouse", name: "clickhouse", icon: "Clickhouse" },
+  { display_name: "Cleanlab", name: "cleanlab", icon: "Cleanlab" },
+  { display_name: "Cloudflare", name: "cloudflare", icon: "Cloudflare" },
   { display_name: "Cohere", name: "cohere", icon: "Cohere" },
-  { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
-  { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
-  { display_name: "Git", name: "git", icon: "GitLoader" },
+  { display_name: "Composio", name: "composio", icon: "Composio" },
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
-  { display_name: "Mem0", name: "mem0", icon: "Mem0" },
-  { display_name: "Youtube", name: "youtube", icon: "YouTube" },
-  { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
-  { display_name: "Twelve Labs", name: "twelvelabs", icon: "TwelveLabs" },
+  { display_name: "Couchbase", name: "couchbase", icon: "Couchbase" },
+  { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
+  { display_name: "DataStax", name: "datastax", icon: "AstraDB" },
+  { display_name: "DeepSeek", name: "deepseek", icon: "DeepSeek" },
+  { display_name: "Docling", name: "docling", icon: "Docling" },
+  { display_name: "DuckDuckGo", name: "duckduckgo", icon: "DuckDuckGo" },
+  { display_name: "Elastic", name: "elastic", icon: "ElasticsearchStore" },
+  { display_name: "Exa", name: "exa", icon: "Exa" },
+  { display_name: "FAISS", name: "FAISS", icon: "FAISS" },
+  { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
+  { display_name: "Git", name: "git", icon: "GitLoader" },
+  { display_name: "Glean", name: "glean", icon: "Glean" },
+  { display_name: "Gmail", name: "gmail", icon: "Gmail" },
+  { display_name: "Google", name: "google", icon: "Google" },
+  { display_name: "Groq", name: "groq", icon: "Groq" },
   {
     display_name: "Home Assistant",
     name: "homeassistant",
     icon: "HomeAssistant",
   },
-  { display_name: "Cleanlab", name: "cleanlab", icon: "Cleanlab" },
-  { display_name: "Search", name: "search", icon: "Search" },
-  { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
+  { display_name: "Hugging Face", name: "huggingface", icon: "HuggingFace" },
+  { display_name: "IBM", name: "ibm", icon: "WatsonxAI" },
+  { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
+  { display_name: "JigsawStack", name: "jigsawstack", icon: "JigsawStack" },
+  { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
+  { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
+  { display_name: "LMStudio", name: "lmstudio", icon: "LMStudio" },
+  { display_name: "MariTalk", name: "maritalk", icon: "Maritalk" },
+  { display_name: "Mem0", name: "mem0", icon: "Mem0" },
+  { display_name: "Memories", name: "memories", icon: "Cpu" },
+  { display_name: "Milvus", name: "milvus", icon: "Milvus" },
+  { display_name: "MistralAI", name: "mistral", icon: "MistralAI" },
+  { display_name: "MongoDB", name: "mongodb", icon: "MongoDB" },
+  { display_name: "Needle", name: "needle", icon: "Needle" },
+  { display_name: "Not Diamond", name: "notdiamond", icon: "NotDiamond" },
+  { display_name: "Notion", name: "Notion", icon: "Notion" },
+  { display_name: "Novita", name: "novita", icon: "Novita" },
+  { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
+  { display_name: "Olivya", name: "olivya", icon: "Olivya" },
   { display_name: "Ollama", name: "ollama", icon: "Ollama" },
-  { display_name: "VertexAI", name: "vertexai", icon: "VertexAI" },
+  { display_name: "OpenAI", name: "openai", icon: "OpenAI" },
+  { display_name: "OpenRouter", name: "openrouter", icon: "OpenRouter" },
+  { display_name: "Perplexity", name: "perplexity", icon: "Perplexity" },
+  { display_name: "pgvector", name: "pgvector", icon: "cpu" },
+  { display_name: "Pinecone", name: "pinecone", icon: "Pinecone" },
+  { display_name: "Qdrant", name: "qdrant", icon: "Qdrant" },
+  { display_name: "Redis", name: "redis", icon: "Redis" },
+  { display_name: "SambaNova", name: "sambanova", icon: "SambaNova" },
+  { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
+  { display_name: "SearchApi", name: "searchapi", icon: "SearchAPI" },
+  { display_name: "SerpApi", name: "serpapi", icon: "SerpSearch" },
+  { display_name: "Serper", name: "serper", icon: "Serper" },
+  { display_name: "Supabase", name: "supabase", icon: "Supabase" },
+  { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },
+  { display_name: "TwelveLabs", name: "twelvelabs", icon: "TwelveLabs" },
+  { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
+  { display_name: "Upstash", name: "upstash", icon: "Upstash" },
+  { display_name: "Vectara", name: "vectara", icon: "Vectara" },
+  { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
+  { display_name: "Weaviate", name: "weaviate", icon: "Weaviate" },
+  { display_name: "Vertex AI", name: "vertexai", icon: "VertexAI" },
+  { display_name: "Wikipedia", name: "wikipedia", icon: "Wikipedia" },
+  {
+    display_name: "WolframAlpha",
+    name: "wolframalpha",
+    icon: "WolframAlphaAPI",
+  },
+  { display_name: "xAI", name: "xai", icon: "xAI" },
+  { display_name: "Yahoo! Finance", name: "yahoosearch", icon: "trending-up" },
+  { display_name: "YouTube", name: "youtube", icon: "YouTube" },
+  { display_name: "Zep", name: "zep", icon: "ZepMemory" },
 ];
 
 export const categoryIcons: Record<string, string> = {
@@ -350,7 +396,12 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   ChatOutput: "MessagesSquare",
   //Integration Icons
   Outlook: "Outlook",
-  AIML: "AI/ML",
+  Linear: "Linear",
+  Reddit: "Reddit",
+  Googlemaps: "Googlemaps",
+  Todoist: "Todoist",
+  Zoom: "Zoom",
+  AIML: "AIML",
   AgentQL: "AgentQL",
   LanguageModels: "BrainCircuit",
   EmbeddingModels: "Binary",
@@ -387,8 +438,11 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   FirecrawlScrapeApi: "Firecrawl",
   GitbookLoader: "GitBook",
   GoogleGenerativeAI: "GoogleGenerativeAI",
+  Googlesheets: "Googlesheets",
   GoogleSearchAPI: "Google",
   GoogleSearchAPIWrapper: "Google",
+  Googlemeet: "Googlemeet",
+  GoogleTasks: "GoogleTasks",
   GoogleSearchResults: "Google",
   GoogleSearchRun: "Google",
   GoogleSerperAPI: "Google",
@@ -507,7 +561,7 @@ export const getNodeIcon = async (name: string) => {
   if (dynamicIconImports[lucideIconName]) {
     try {
       return cacheAndReturn(lazy(dynamicIconImports[lucideIconName]));
-    } catch (e) {
+    } catch (_e) {
       // Fall through to next option
     }
   }

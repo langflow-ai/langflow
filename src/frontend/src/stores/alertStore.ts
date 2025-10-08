@@ -1,7 +1,7 @@
 import { uniqueId } from "lodash";
 import { create } from "zustand";
-import { AlertItemType } from "../types/alerts";
-import { AlertStoreType } from "../types/zustand/alert";
+import type { AlertItemType } from "../types/alerts";
+import type { AlertStoreType } from "../types/zustand/alert";
 import { customStringify } from "../utils/reactflowUtils";
 
 const useAlertStore = create<AlertStoreType>((set, get) => ({

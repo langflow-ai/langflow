@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { VertexBuildTypeAPI } from "../../types/api";
+import type { VertexBuildTypeAPI } from "../../types/api";
 import { isErrorLog } from "../../types/utils/typeCheckingUtils";
 
 const useValidationStatusString = (

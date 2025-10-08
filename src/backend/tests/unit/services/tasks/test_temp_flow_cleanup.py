@@ -98,6 +98,8 @@ async def test_cleanup_worker_run_with_exception(mocker):
     """Test CleanupWorker handles exceptions gracefully."""
     # Mock the logger to capture log calls
     mock_logger = mocker.patch("langflow.services.task.temp_flow_cleanup.logger")
+    mock_logger.adebug = mocker.AsyncMock()
+    mock_logger.awarning = mocker.AsyncMock()
 
     settings = get_settings_service().settings
     settings.public_flow_cleanup_interval = 601  # Minimum valid interval
@@ -112,6 +114,6 @@ async def test_cleanup_worker_run_with_exception(mocker):
     assert worker._stop_event.is_set()
 
     # Verify the expected log messages were called
-    mock_logger.debug.assert_any_call("Started database cleanup worker")
-    mock_logger.debug.assert_any_call("Stopping database cleanup worker...")
-    mock_logger.debug.assert_any_call("Database cleanup worker stopped")
+    mock_logger.adebug.assert_any_call("Started database cleanup worker")
+    mock_logger.adebug.assert_any_call("Stopping database cleanup worker...")
+    mock_logger.adebug.assert_any_call("Database cleanup worker stopped")

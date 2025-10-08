@@ -1,19 +1,21 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
+
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "the system must delete the handles from advanced fields when the code is updated",
-  { tag: ["@release"] },
+  { tag: ["@release", "@components"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
+
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("if else");
 
@@ -24,13 +26,11 @@ test(
         await page.getByTestId("add-component-button-if-else").click();
       });
 
-    await page.getByTestId("fit_view").click();
-    await zoomOut(page, 3);
+    await adjustScreenView(page, { numberOfZoomOut: 3 });
 
     await page.getByTestId("edit-button-modal").click();
 
-    await page.getByTestId("showmessage").click();
-
+    await page.getByTestId("showtrue_case_message").click();
     await page.getByText("Close").last().click();
 
     await page.getByTestId("sidebar-search-input").click();
@@ -49,7 +49,7 @@ test(
       .click();
 
     await page
-      .getByTestId("handle-conditionalrouter-shownode-alternative output-left")
+      .getByTestId("handle-conditionalrouter-shownode-case true-left")
       .click();
 
     await page.getByTestId("title-If-Else").click();

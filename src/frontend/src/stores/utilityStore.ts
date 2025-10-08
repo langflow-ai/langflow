@@ -1,7 +1,7 @@
-import { EventDeliveryType } from "@/constants/enums";
-import { Pagination, Tag } from "@/types/utils/types";
-import { UtilityStoreType } from "@/types/zustand/utility";
 import { create } from "zustand";
+import { EventDeliveryType } from "@/constants/enums";
+import type { Pagination, Tag } from "@/types/utils/types";
+import type { UtilityStoreType } from "@/types/zustand/utility";
 
 export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   clientId: "",
@@ -48,4 +48,13 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   eventDelivery: EventDeliveryType.POLLING,
   setEventDelivery: (eventDelivery: EventDeliveryType) =>
     set({ eventDelivery }),
+  webhookAuthEnable: true,
+  setWebhookAuthEnable: (webhookAuthEnable: boolean) =>
+    set({ webhookAuthEnable }),
+  defaultFolderName: "Starter Project",
+  setDefaultFolderName: (defaultFolderName: string) =>
+    set({ defaultFolderName }),
+  hideGettingStartedProgress: false,
+  setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) =>
+    set({ hideGettingStartedProgress }),
 }));

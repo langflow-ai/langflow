@@ -11,9 +11,9 @@ import ForwardedIconComponent from "../genericIconComponent";
 
 export default function ImageViewer({ image }: { image: string }) {
   const viewerRef = useRef(null);
-  const [errorDownloading, setErrordownloading] = useState(false);
+  const [_errorDownloading, _setErrordownloading] = useState(false);
   const setErrorList = useAlertStore((state) => state.setErrorData);
-  const [initialMsg, setInicialMsg] = useState("Please build your flow");
+  const [_initialMsg, _setInicialMsg] = useState("Please build your flow");
 
   useEffect(() => {
     try {

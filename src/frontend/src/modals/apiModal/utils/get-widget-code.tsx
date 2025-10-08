@@ -1,5 +1,5 @@
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
-import { GetCodeType } from "@/types/tweaks";
+import type { GetCodeType } from "@/types/tweaks";
 
 /**
  * Function to get the widget code for the API

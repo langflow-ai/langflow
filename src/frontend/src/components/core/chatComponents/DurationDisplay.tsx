@@ -1,5 +1,5 @@
-import { useDurationStore } from "@/stores/durationStore";
 import { useEffect } from "react";
+import { useDurationStore } from "@/stores/durationStore";
 import { AnimatedNumber } from "../../common/animatedNumbers";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import Loading from "../../ui/loading";

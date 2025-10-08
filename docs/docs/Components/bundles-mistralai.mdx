@@ -1,0 +1,60 @@
+---
+title: MistralAI
+slug: /bundles-mistralai
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **MistralAI** bundle.
+
+For more information about MistralAI features and functionality used by MistralAI components, see the [MistralAI documentation](https://docs.mistral.ai).
+
+## MistralAI text generation
+
+The **MistralAI** component generates text using MistralAI LLMs.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a MistralAI model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
+
+For more information, see [Language model components](/components-models).
+
+### MistralAI text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
+| model_name | String | Input parameter. The name of the Mistral AI model to use. Options include `open-mixtral-8x7b`, `open-mixtral-8x22b`, `mistral-small-latest`, `mistral-medium-latest`, `mistral-large-latest`, and `codestral-latest`. Default: `codestral-latest`. |
+| mistral_api_base | String | Input parameter. The base URL of the Mistral API. Defaults to `https://api.mistral.ai/v1`. |
+| api_key | SecretString | Input parameter. The Mistral API Key to use for authentication. |
+| temperature | Float | Input parameter. Controls randomness in the output. Default: 0.5. |
+| max_retries | Integer | Input parameter. Maximum number of retries for API calls. Default: 5. |
+| timeout | Integer | Input parameter. Timeout for API calls in seconds. Default: 60. |
+| max_concurrent_requests | Integer | Input parameter. Maximum number of concurrent API requests. Default: 3. |
+| top_p | Float | Input parameter. Nucleus sampling parameter. Default: 1. |
+| random_seed | Integer | Input parameter. Seed for random number generation. Default: 1. |
+| safe_mode | Boolean | Input parameter. Enables safe mode for content generation. |
+
+## MistralAI Embeddings
+
+The **MistralAI Embeddings** component generates embeddings using MistralAI models.
+
+For more information about using embedding model components in flows, see [Embedding model components](/components-embedding-models).
+
+### MistralAI Embeddings parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| model | String | Input parameter. The MistralAI model to use. Default: "mistral-embed". |
+| mistral_api_key | SecretString | Input parameter. The API key for authenticating with MistralAI. |
+| max_concurrent_requests | Integer | Input parameter. The maximum number of concurrent API requests. Default: 64. |
+| max_retries | Integer | Input parameter. The maximum number of retry attempts for failed requests. Default: 5. |
+| timeout | Integer | Input parameter. The request timeout in seconds. Default: 120. |
+| endpoint | String | Input parameter. The custom API endpoint URL. Default: `https://api.mistral.ai/v1/`. |

@@ -1,6 +1,6 @@
-import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
@@ -25,7 +25,7 @@ test(
       .getByRole("heading", { name: "Portfolio Website Code Generator" })
       .click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
 
@@ -37,7 +37,7 @@ test(
     await page.waitForTimeout(3000);
 
     await page.getByTestId("dropdown_str_model_name").first().click();
-    await page.getByTestId("refresh-dropdown-list-model_name").first().click();
+    await page.getByTestId("dropdown-option-0-container").first().click();
     await page.getByText("Loading Options").isVisible({ timeout: 5000 });
   },
 );

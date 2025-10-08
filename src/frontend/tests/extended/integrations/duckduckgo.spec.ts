@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -11,20 +12,22 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("duck");
 
-    await page.waitForSelector('[data-testid="searchDuckDuckGo Search"]', {
-      timeout: 3000,
-    });
+    await page.waitForSelector(
+      '[data-testid="disclosure-bundles-duckduckgo"]',
+      {
+        timeout: 3000,
+      },
+    );
 
     await page
-      .getByTestId("searchDuckDuckGo Search")
+      .getByTestId("duckduckgoDuckDuckGo Search")
       .hover()
       .then(async () => {
         await page
           .getByTestId("add-component-button-duckduckgo-search")
           .click();
       });
-
-    await page.getByTestId("fit_view").click();
+    await adjustScreenView(page);
 
     await page
       .getByTestId("popover-anchor-input-input_value")

@@ -1,9 +1,10 @@
-import { useMutationFunctionType } from "@/types/api";
-import { MCPServerType } from "@/types/mcp";
-import { UseMutationResult } from "@tanstack/react-query";
+import type { UseMutationResult } from "@tanstack/react-query";
+import type { useMutationFunctionType } from "@/types/api";
+import type { MCPServerType } from "@/types/mcp";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import type { getMCPServersResponse } from "./use-get-mcp-servers";
 
 interface PatchMCPServerResponse {
   message: string;
@@ -20,7 +21,7 @@ export const usePatchMCPServer: useMutationFunctionType<
     body: MCPServerType,
   ): Promise<PatchMCPServerResponse> {
     try {
-      let payload: Omit<MCPServerType, "name"> = {};
+      const payload: Omit<MCPServerType, "name"> = {};
 
       if (body.url) {
         payload.url = body.url;
@@ -34,10 +35,24 @@ export const usePatchMCPServer: useMutationFunctionType<
       if (body.env && Object.keys(body.env).length > 0) {
         payload.env = body.env;
       }
+      if (body.headers && Object.keys(body.headers).length > 0) {
+        payload.headers = body.headers;
+      }
 
       const res = await api.patch(
         `${getURL("MCP_SERVERS", undefined, true)}/${body.name}`,
         payload,
+      );
+
+      queryClient.setQueryData(
+        ["useGetMCPServers"],
+        (oldData: getMCPServersResponse = []) => {
+          return oldData.map((server) => {
+            return server.name === body.name
+              ? { ...server, toolsCount: null }
+              : server;
+          });
+        },
       );
 
       return {
@@ -59,6 +74,8 @@ export const usePatchMCPServer: useMutationFunctionType<
     MCPServerType
   > = mutate(["usePatchMCPServer"], patchMCPServer, {
     ...options,
+    retry: 0,
+
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({
         queryKey: ["useGetMCPServers"],

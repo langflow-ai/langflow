@@ -1,9 +1,9 @@
+import { type Connection, Handle, Position } from "@xyflow/react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
 import { nodeColorsName } from "@/utils/styleUtils";
-import { Connection, Handle, Position } from "@xyflow/react";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { useShallow } from "zustand/react/shallow";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
   isValidConnection,
@@ -184,9 +184,12 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     useShallow((state) => state.currentFlow?.locked),
   );
 
+  const edges = useFlowStore((state) => state.edges);
+
   const {
     setHandleDragging,
     setFilterType,
+    setFilterComponent,
     handleDragging,
     filterType,
     onConnect,
@@ -195,6 +198,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       (state) => ({
         setHandleDragging: state.setHandleDragging,
         setFilterType: state.setFilterType,
+        setFilterComponent: state.setFilterComponent,
         handleDragging: state.handleDragging,
         filterType: state.filterType,
         onConnect: state.onConnect,
@@ -266,13 +270,11 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     const openHandle = filterOpenHandle || draggingOpenHandle;
     const filterPresent = handleDragging || filterType;
 
-    const connectedEdge = useFlowStore
-      .getState()
-      .edges.find(
-        (edge) => edge.target === nodeId && edge.targetHandle === myId,
-      );
+    const connectedEdge = edges.find(
+      (edge) => edge.target === nodeId && edge.targetHandle === myId,
+    );
     const outputType = connectedEdge?.data?.sourceHandle?.output_types?.[0];
-    const connectedColor = outputType ? nodeColorsName[outputType] : "gray";
+    const connectedColor = (outputType && nodeColorsName[outputType]) || "gray";
 
     const isNullHandle =
       filterPresent && !(openHandle || ownDraggingHandle || ownFilterHandle);
@@ -344,6 +346,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     colors,
     colorName,
     tooltipTitle,
+    edges,
   ]);
 
   const handleMouseDown = useCallback(
@@ -364,10 +367,12 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     const nodes = useFlowStore.getState().nodes;
     setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
     setFilterType(currentFilter);
+    setFilterComponent("");
     if (filterOpenHandle && filterType) {
       onConnect(getConnection(filterType));
       setFilterType(undefined);
       setFilterEdge([]);
+      setFilterComponent("");
     }
   }, [
     myData,
@@ -375,6 +380,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     left,
     setFilterEdge,
     setFilterType,
+    setFilterComponent,
     currentFilter,
     filterOpenHandle,
     filterType,

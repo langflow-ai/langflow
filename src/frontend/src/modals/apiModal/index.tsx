@@ -4,17 +4,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { CustomAPIGenerator } from "@/customization/components/custom-api-generator";
+import { CustomLink } from "@/customization/components/custom-link";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useAuthStore from "@/stores/authStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { isEndpointNameValid } from "@/utils/utils";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import { cloneDeep } from "lodash";
-import { ChangeEvent, ReactNode, useEffect, useState } from "react";
+import { type ChangeEvent, type ReactNode, useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import IconComponent from "../../components/common/genericIconComponent";
 import { useTweaksStore } from "../../stores/tweaksStore";
@@ -33,7 +34,7 @@ export default function ApiModal({
   open?: boolean;
   setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
 }) {
-  const autoLogin = useAuthStore((state) => state.autoLogin);
+  const _autoLogin = useAuthStore((state) => state.autoLogin);
   const nodes = useFlowStore((state) => state.nodes);
   const [openTweaks, setOpenTweaks] = useState(false);
   const tweaks = useTweaksStore((state) => state.tweaks);
@@ -110,21 +111,17 @@ export default function ApiModal({
         <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
         <BaseModal.Header
           description={
-            autoLogin ? undefined : (
-              <>
-                <span className="pr-2">
-                  API access requires an API key. You can{" "}
-                  <a
-                    href="/settings/api-keys"
-                    className="text-accent-pink-foreground"
-                  >
-                    {" "}
-                    create an API key
-                  </a>{" "}
-                  in settings.
-                </span>
-              </>
-            )
+            <span className="pr-2">
+              API access requires an API key. You can{" "}
+              <CustomLink
+                to="/settings/api-keys"
+                className="text-accent-pink-foreground"
+              >
+                {" "}
+                create an API key
+              </CustomLink>{" "}
+              in settings.
+            </span>
           }
         >
           <IconComponent
@@ -138,7 +135,7 @@ export default function ApiModal({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 px-3"
+                className="h-8 select-none px-3"
                 onClick={() => setOpenTweaks(true)}
                 data-testid="tweaks-button"
               >
@@ -167,25 +164,7 @@ export default function ApiModal({
         setOpen={setOpenTweaks}
         size="medium-small-tall"
       >
-        <BaseModal.Header
-          description={
-            autoLogin ? undefined : (
-              <>
-                <span className="pr-2">
-                  API access requires an API key. You can{" "}
-                  <a
-                    href="/settings/api-keys"
-                    className="text-accent-pink-foreground"
-                  >
-                    {" "}
-                    create an API key
-                  </a>{" "}
-                  in settings.
-                </span>
-              </>
-            )
-          }
-        >
+        <BaseModal.Header>
           <IconComponent name="SlidersHorizontal" className="text-f h-6 w-6" />
           <span className="pl-2">Input Schema</span>
         </BaseModal.Header>

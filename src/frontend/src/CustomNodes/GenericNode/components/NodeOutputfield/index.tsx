@@ -1,7 +1,3 @@
-import { Badge } from "@/components/ui/badge";
-import { ICON_STROKE_WIDTH } from "@/constants/constants";
-import { useShortcutsStore } from "@/stores/shortcuts";
-import { targetHandleType } from "@/types/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import {
@@ -14,6 +10,10 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { Badge } from "@/components/ui/badge";
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { useShortcutsStore } from "@/stores/shortcuts";
+import type { targetHandleType } from "@/types/flow";
 import ForwardedIconComponent, {
   default as IconComponent,
 } from "../../../../components/common/genericIconComponent";
@@ -21,7 +21,7 @@ import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import { Button } from "../../../../components/ui/button";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { NodeOutputFieldComponentType } from "../../../../types/components";
+import type { NodeOutputFieldComponentType } from "../../../../types/components";
 import {
   getGroupOutputNodeId,
   scapedJSONStringfy,
@@ -34,11 +34,11 @@ import {
   logTypeIsError,
   logTypeIsUnknown,
 } from "../../../../utils/utils";
-import OutputComponent from "../OutputComponent";
 import HandleRenderComponent from "../handleRenderComponent";
+import OutputComponent from "../OutputComponent";
 import OutputModal from "../outputModal";
 
-const EyeIcon = memo(
+const _EyeIcon = memo(
   ({ hidden, className }: { hidden: boolean; className: string }) => (
     <IconComponent
       className={className}
@@ -195,7 +195,7 @@ function NodeOutputField({
     (value?: boolean) => {
       setNode(data.id, (oldNode) => {
         if (oldNode.type !== "genericNode") return oldNode;
-        let newNode = cloneDeep(oldNode);
+        const newNode = cloneDeep(oldNode);
         newNode.data = {
           ...newNode.data,
           node: {

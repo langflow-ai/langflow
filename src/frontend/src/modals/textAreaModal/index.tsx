@@ -6,7 +6,7 @@ import {
   EDIT_TEXT_PLACEHOLDER,
   TEXT_DIALOG_TITLE,
 } from "../../constants/constants";
-import { textModalPropsType } from "../../types/components";
+import type { textModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";

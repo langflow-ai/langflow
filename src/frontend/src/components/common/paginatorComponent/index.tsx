@@ -1,10 +1,10 @@
+import { useEffect, useState } from "react";
 import {
   PAGINATION_PAGE,
   PAGINATION_ROWS_COUNT,
   PAGINATION_SIZE,
 } from "@/constants/constants";
-import { useEffect, useState } from "react";
-import { PaginatorComponentType } from "../../../types/components";
+import type { PaginatorComponentType } from "../../../types/components";
 import IconComponent from "../../common/genericIconComponent";
 import { Button } from "../../ui/button";
 import {
@@ -36,7 +36,7 @@ export default function PaginatorComponent({
   const disableFirstPage = pageIndex <= 1;
   const disableLastPage = pageIndex === maxIndex;
 
-  const handleValueChange = (pageSize: string) => {
+  const _handleValueChange = (pageSize: string) => {
     setPageSize(Number(pageSize));
     setMaxPageIndex(pages ?? Math.ceil(totalRowsCount / Number(pageSize)));
     paginate(1, Number(pageSize));

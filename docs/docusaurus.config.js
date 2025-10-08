@@ -130,6 +130,28 @@ const config = {
   plugins: [
     ["docusaurus-node-polyfills", { excludeAliases: ["console"] }],
     "docusaurus-plugin-image-zoom",
+    ["./src/plugins/segment", { segmentPublicWriteKey: process.env.SEGMENT_PUBLIC_WRITE_KEY, allowedInDev: true }],
+    ["./src/plugins/scroll-tracking", {
+      segmentPublicWriteKey: process.env.SEGMENT_PUBLIC_WRITE_KEY,
+      allowedInDev: true,
+      selectors: [
+        {
+          selector: 'h1, h2, h3, h4, h5, h6',
+          eventName: 'Docs.langflow.org - Heading Viewed',
+          properties: {
+            element_type: 'heading'
+          }
+        },
+        {
+          selector: '.ch-codeblock',
+          eventName: 'Docs.langflow.org - Codeblock Viewed',
+          properties: {
+            element_type: 'code',
+            language: 'helper:codeLanguage'
+          }
+        }
+      ]
+    }],
     [
       "@docusaurus/plugin-client-redirects",
       {
@@ -141,6 +163,7 @@ const config = {
               "/👋 Welcome-to-Langflow",
               "/getting-started-welcome-to-langflow",
               "/guides-new-to-llms",
+              "/about-langflow",
             ],
           },
           {
@@ -155,7 +178,7 @@ const config = {
             from: "/getting-started-quickstart",
           },
           {
-            to: "concepts-overview",
+            to: "/concepts-overview",
             from: [
               "/workspace-overview",
               "/365085a8-a90a-43f9-a779-f8769ec7eca1",
@@ -181,55 +204,53 @@ const config = {
             ],
           },
           {
-            to: "/concepts-objects",
+            to: "/data-types",
             from: ["/guides-data-message", "/configuration-objects"],
           },
           {
-            to: "/blog-writer",
-            from: ["/starter-projects-blog-writer", "/tutorials-blog-writer"],
-          },
-          {
-            to: "/memory-chatbot",
+            to: "/concepts-flows",
             from: [
-              "/starter-projects-memory-chatbot",
-              "/tutorials-memory-chatbot",
-            ],
-          },
-          {
-            to: "/document-qa",
-            from: ["/starter-projects-document-qa", "/tutorials-document-qa"],
-          },
-          {
-            to: "/simple-agent",
-            from: [
+              "/travel-planning-agent",
+              "/starter-projects-travel-planning-agent",
+              "/tutorials-travel-planning-agent",
+              "/starter-projects-dynamic-agent/",
+              "/simple-agent",
               "/math-agent",
               "/starter-projects-simple-agent",
               "/starter-projects-math-agent",
               "/tutorials-math-agent",
-            ],
-          },
-          {
-            to: "/sequential-agent",
-            from: [
+              "/sequential-agent",
               "/starter-projects-sequential-agent",
               "/tutorials-sequential-agent",
+              "/memory-chatbot",
+              "/starter-projects-memory-chatbot",
+              "/tutorials-memory-chatbot",
+              "/financial-report-parser",
+              "/document-qa",
+              "/starter-projects-document-qa",
+              "/tutorials-document-qa",
+              "/blog-writer",
+              "/starter-projects-blog-writer",
+              "/tutorials-blog-writer",
+              "/basic-prompting",
+              "/starter-projects-basic-prompting",
+              "/vector-store-rag",
+              "/starter-projects-vector-store-rag",
             ],
           },
           {
-            to: "/travel-planning-agent",
+            to: "/components-bundle-components",
             from: [
-              "/starter-projects-travel-planning-agent",
-              "/tutorials-travel-planning-agent",
-              "/starter-projects-dynamic-agent/",
+              "/components-rag",
+              "/components-vector-stores",
+              "/components-loaders",
             ],
           },
           {
-            to: "/components-vector-stores",
-            from: "/components-rag",
-          },
-          {
-            to: "/configuration-authentication",
+            to: "/api-keys-and-authentication",
             from: [
+              "/configuration-api-keys",
+              "/configuration-authentication",
               "/configuration-security-best-practices",
               "/Configuration/configuration-security-best-practices",
             ],
@@ -245,37 +266,22 @@ const config = {
           },
           {
             to: "/concepts-publish",
-            from: ["/concepts-api", "/workspace-api"],
+            from: [
+              "/concepts-api",
+              "/workspace-api",
+            ],
           },
           {
             to: "/components-custom-components",
             from: "/components/custom",
           },
           {
-            to: "/components-bundle-components",
-            from: "/components-loaders",
-          },
-          {
             to: "/mcp-server",
             from: "/integrations-mcp",
           },
           {
-            to: "/integrations-nvidia-g-assist",
-            from: "/integrations-nvidia-system-assist",
-          },
-          {
             to: "/deployment-kubernetes-dev",
-            from: [
-              "/deployment-kubernetes",
-            ],
-          },
-          {
-            to: "/basic-prompting",
-            from: "/starter-projects-basic-prompting",
-          },
-          {
-            to: "/vector-store-rag",
-            from: "/starter-projects-vector-store-rag",
+            from: "/deployment-kubernetes",
           },
           {
             to: "/contributing-github-issues",
@@ -285,6 +291,70 @@ const config = {
             to: "/agents",
             from: "/agents-tool-calling-agent-component",
           },
+          {
+            to: "/concepts-publish",
+            from: "/embedded-chat-widget",
+          },
+          {
+            to: "/bundles-google",
+            from: [
+              "/integrations-setup-google-oauth-langflow",
+              "/integrations-google-big-query",
+            ],
+          },
+          {
+            to: "/bundles-vertexai",
+            from: "/integrations-setup-google-cloud-vertex-ai-langflow",
+          },
+          {
+            to: "/develop-application",
+            from: "/develop-overview",
+          },
+          {
+            to: "/data-types",
+            from: "/concepts-objects",
+          },
+          {
+            to: "/components-helpers",
+            from: "/components-memories",
+          },
+          {
+            to: "/bundles-apify",
+            from: "/integrations-apify",
+          },
+          {
+            to: "/bundles-assemblyai",
+            from: "/integrations-assemblyai",
+          },
+          {
+            to: "/bundles-cleanlab",
+            from: "/integrations-cleanlab",
+          },
+          {
+            to: "/bundles-composio",
+            from: "/integrations-composio",
+          },
+          {
+            to: "/bundles-docling",
+            from: "/integrations-docling",
+          },
+          {
+            to: "/bundles-notion",
+            from: [
+              "/integrations/notion/setup",
+              "/integrations/notion/notion-agent-meeting-notes",
+              "/integrations/notion/notion-agent-conversational",
+            ],
+          },
+          {
+            to: "/bundles-nvidia",
+            from: [
+              "/integrations-nvidia-ingest-wsl2",
+              "/integrations-nvidia-ingest",
+              "/integrations-nvidia-g-assist",
+              "/integrations-nvidia-system-assist",
+            ]
+          }
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
@@ -324,6 +394,8 @@ const config = {
             className: "header-github-link",
             target: "_blank",
             rel: null,
+            'data-event': 'Docs.langflow.org - Social Clicked',
+            'data-platform': 'github'
           },
           {
             position: "right",
@@ -331,6 +403,8 @@ const config = {
             className: "header-twitter-link",
             target: "_blank",
             rel: null,
+            'data-event': 'Docs.langflow.org - Social Clicked',
+            'data-platform': 'x'
           },
           {
             position: "right",
@@ -338,6 +412,8 @@ const config = {
             className: "header-discord-link",
             target: "_blank",
             rel: null,
+            'data-event': 'Docs.langflow.org - Social Clicked',
+            'data-platform': 'discord'
           },
         ],
       },
@@ -362,16 +438,10 @@ const config = {
       docs: {
         sidebar: {
           hideable: false,
+          autoCollapseCategories: true,
         },
       },
       footer: {
-        logo: {
-          alt: "Langflow",
-          src: "img/lf-docs-light.svg",
-          srcDark: "img/lf-docs-dark.svg",
-          width: 160,
-          height: 40,
-        },
         links: [
           {
             title: null,

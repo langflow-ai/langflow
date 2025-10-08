@@ -19,7 +19,11 @@
         "--loop",
         "asyncio",
         "--reload-include",
-        "./src/backend/*"
+        "./src/backend/*",
+        "--reload-include",
+        "./src/lfx/*",
+        "--reload-exclude",
+        "*.db*"
       ],
       "jinja": true,
       "justMyCode": false,
@@ -36,7 +40,7 @@
       "module": "langflow",
       "args": [
         "run",
-        "--path",
+        "--frontend-path",
         "${workspaceFolder}/src/backend/base/langflow/frontend",
         "--env-file",
         "${workspaceFolder}/.env"

@@ -1,4 +1,4 @@
-import { Message } from "../../messages";
+import type { Message } from "../../messages";
 
 export type MessagesStoreType = {
   messages: Message[];

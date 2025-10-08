@@ -67,14 +67,14 @@ export const useHandleWebsocketMessage = (
       }
       break;
 
-    case "flow.build.progress":
+    case "flow.build.progress": {
       const buildData = data.data;
       switch (buildData.event) {
         case "start":
           setIsBuilding(true);
           break;
 
-        case "start_vertex":
+        case "start_vertex": {
           updateBuildStatus([buildData.vertex_id], BuildStatus.BUILDING);
           const newEdges = edges.map((edge) => {
             if (buildData.vertex_id === edge.data?.targetHandle?.id) {
@@ -85,6 +85,7 @@ export const useHandleWebsocketMessage = (
           });
           setEdges(newEdges);
           break;
+        }
 
         case "end_vertex":
           updateBuildStatus([buildData.vertex_id], BuildStatus.BUILT);
@@ -116,6 +117,7 @@ export const useHandleWebsocketMessage = (
           break;
       }
       break;
+    }
 
     case "error":
       if (data.code === "api_key_missing") {

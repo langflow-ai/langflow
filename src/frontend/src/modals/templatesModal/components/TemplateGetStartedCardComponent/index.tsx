@@ -1,11 +1,11 @@
+import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import { useFolderStore } from "@/stores/foldersStore";
 import { updateIds } from "@/utils/reactflowUtils";
-import { useParams } from "react-router-dom";
-import { CardData } from "../../../../types/templates/types";
+import type { CardData } from "../../../../types/templates/types";
 
 export default function TemplateGetStartedCardComponent({
   bgImage,
@@ -42,7 +42,7 @@ export default function TemplateGetStartedCardComponent({
 
   return flow ? (
     <div
-      className="group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-3xl border focus-visible:border-ring"
+      className="group relative flex h-full min-h-[200px] w-full cursor-pointer flex-col overflow-hidden rounded-3xl border focus-visible:border-ring md:min-h-[250px]"
       tabIndex={1}
       onKeyDown={handleKeyDown}
       onClick={handleClick}

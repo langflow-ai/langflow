@@ -1,4 +1,4 @@
-import { AllNodeType } from "@/types/flow";
+import type { AllNodeType } from "@/types/flow";
 
 export type TweaksStoreType = {
   nodes: AllNodeType[];
