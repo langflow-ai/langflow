@@ -1,0 +1,206 @@
+---
+title: Deploy Langflow with Nginx and SSL
+slug: /deployment-nginx-ssl
+---
+
+Deploy Langflow on a Linux-based virtual machine using Nginx as a reverse proxy and Certbot (Let's Encrypt) for HTTPS configuration.
+
+## Prerequisites
+
+- A server with a dual-core CPU and at least 2 GB of RAM
+- Linux environment (Ubuntu/Debian-based systems)
+- Domain configured via DNS to point to your virtual machine's public IP
+- Root or sudo access to your server
+- Ensure your domain's A record points to your VM's external IP address.
+  For example, if your server's IP is `203.0.113.1`, configure your DNS:
+  ```
+  Type: A
+  Name: langflow
+  Value: 203.0.113.1
+  ```
+
+## Connect to your remote server with SSH
+
+1. Create an SSH key to connect to your server remotely.
+For example:
+
+    ```bash
+    ssh-keygen -t ed25519 -C "DANA@EXAMPLE.COM"
+    ```
+
+    Replace `DANA@EXAMPLE.COM` with the email address that you want to associate with the SSH key.
+
+2. In your terminal, follow the instructions to create your SSH key pair.
+This creates both a private and public key.
+To copy the public key from your terminal, enter the following command:
+
+    ```bash
+    cat ~/Downloads/host-lf.pub | pbcopy
+    ```
+
+3. In your remote server, add the SSH key you copied in the previous step.
+For example, if you are using a Digital Ocean cloud server, add this SSH key when the server is created, or with the [Digital Ocean control panel](https://docs.digitalocean.com/products/droplets/how-to/add-ssh-keys/).
+
+4. To connect to your server with SSH, enter the following command.
+
+    ```bash
+    ssh -i PATH_TO_PRIVATE_KEY/PRIVATE_KEY_NAME root@SERVER_IP_ADDRESS
+    ```
+
+    Replace the following:
+
+    * `PATH_TO_PRIVATE_KEY/PRIVATE_KEY_NAME`: The path to your private SSH key file that matches the public key you added to your server
+    * `SERVER_IP_ADDRESS`: Your server's IP address
+
+5. When prompted for a key fingerprint, type `yes`.
+
+The terminal output indicates if the connection succeeds or fails.
+The following response was returned after connecting to a Digital Ocean cloud server.
+
+    ```text
+     System information as of Wed Oct  8 21:40:43 UTC 2025
+
+      System load:  0.02              Processes:             103
+      Usage of /:   4.1% of 47.35GB   Users logged in:       1
+      Memory usage: 10%               IPv4 address for eth0: 165.227.176.236
+      Swap usage:   0%                IPv4 address for eth0: 10.17.0.5
+    ```
+
+## Install Langflow on your virtual machine
+
+With your connection with root permissions, install Langflow on your virtual machine.
+
+1. Install Langflow on your virtual machine.
+    ```bash
+    # Update system packages
+    sudo apt update && sudo apt upgrade -y
+
+    # Install Python and pip
+    sudo apt install python3 python3-pip python3-venv -y
+
+    # Install uv (fast Python package installer)
+    pip install uv
+
+    # Create a virtual environment for Langflow
+    python3 -m venv langflow-venv
+    source langflow-venv/bin/activate
+
+    # Install Langflow using uv
+    uv pip install langflow
+    ```
+
+2. Optionally, start Langflow.
+    ```
+    uv run langflow run --host 127.0.0.1 --port 7860 &
+    ```
+
+    Test access at your `http://YOUR_PUBLIC_IP:7860`.
+    Since Langflow is running on `localhost`, you should not be successful.
+    Instead, use Nginx as a reverse proxy to handle external access, and configure SSL for secure HTTPS access.
+
+## Install Nginx
+
+1. Install Nginx on your virtual machine.
+
+    ```bash
+    sudo apt install nginx -y
+    ```
+
+2. Start Nginx on your virtual machine.
+    ```bash
+    sudo systemctl start nginx
+    sudo systemctl enable nginx
+    ```
+
+    Result:
+    ```
+    Synchronizing state of nginx.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
+    Executing: /usr/lib/systemd/systemd-sysv-install enable nginx
+    ```
+
+3. Create an Nginx configuration file.
+Replace **DOMAIN_NAME** with your actual domain name, such as `langflow.example.com`.
+    ```bash
+    sudo nano /etc/nginx/sites-available/DOMAIN_NAME
+    ```
+
+4. Paste the following content to the configuration file you created at `/etc/nginx/sites-available/DOMAIN_NAME`.
+Replace **DOMAIN_NAME** with your actual domain name, such as `langflow.example.com`.
+    ```nginx
+    server {
+        listen 80;
+        server_name DOMAIN_NAME;
+
+        # Increase client body size for file uploads
+        client_max_body_size 100M;
+
+        location / {
+            proxy_pass http://127.0.0.1:7860/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            # WebSocket support for Langflow
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+
+            # Timeout settings for long-running flows
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 300s;
+
+            # Buffer settings
+            proxy_buffering off;
+            proxy_request_buffering off;
+        }
+    }
+    ```
+
+5. Create a symlink between the `/sites-available` and `/sites-enabled` directories to enable your site configuration.
+
+    ```bash
+    sudo ln -s /etc/nginx/sites-available/DOMAIN_NAME /etc/nginx/sites-enabled/DOMAIN_NAME
+    ```
+
+6. Check the Nginx configuration file's syntax.
+    ```
+    sudo nginx -t
+    ```
+
+7. Restart Nginx.
+    ```bash
+    sudo systemctl restart nginx
+    ```
+
+## Install Certbot and obtain SSL certificates
+
+1. Install Certbot and Nginx plugin.
+```bash
+sudo apt install certbot python3-certbot-nginx -y
+````
+
+2. Obtain the SSL certificate for `DOMAIN_NAME` from Let's Encrypt.
+    ```
+    sudo certbot --nginx -d DOMAIN_NAME
+    ```
+
+3. Start Langflow from the virtual environment.
+    ```bash
+    # Activate the virtual environment
+    source langflow-env/bin/activate
+
+    # Start Langflow in the background
+    langflow run --host 127.0.0.1 --port 7860 &
+    ```
+
+4. To test the deployment, navigate to `https://DOMAIN_NAME` in your browser.
+5. Verify the SSL certificate is working.
+
+## See also
+
+- [Deploy Langflow on a remote server with Caddy](/deployment-caddyfile)
+- [Deploy Langflow on Docker](/deployment-docker)
+- [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices)
+- [Langflow environment variables](/environment-variables)

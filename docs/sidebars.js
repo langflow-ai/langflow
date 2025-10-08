@@ -192,6 +192,11 @@ module.exports = {
               label: "Deploy Langflow on a remote server"
             },
             {
+              type: "doc",
+              id: "Deployment/deployment-nginx-ssl",
+              label: "Deploy Langflow with Nginx and SSL"
+            },
+            {
               type: "category",
               label: "Kubernetes",
               items: [
