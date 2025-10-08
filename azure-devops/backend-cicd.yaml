@@ -69,7 +69,7 @@ stages:
 
 - stage: Build
   displayName: 'Build Backend Image'
-  condition: and(succeeded(), in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI'))
+  condition: in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI')
   jobs:
   - template: templates/backend-build-template.yml
     parameters:
