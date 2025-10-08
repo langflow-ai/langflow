@@ -42,7 +42,7 @@ def output_error(error_message: str, *, verbose: bool, exception: Exception | No
 
     # Write to stdout (this might be redirected by the CLI's stdout capture)
     typer.echo(json.dumps(error_response))
-    
+
     # Flush to ensure output is written even if stdout is redirected
     sys.stdout.flush()
 
@@ -445,7 +445,7 @@ async def run(
         sys.stdout = original_stdout
         output_error(f"Failed to execute graph: {e}", verbose=verbosity > 0, exception=e)
         sys.stdout = temp_stdout
-        
+
         if temp_file_to_cleanup:
             try:
                 Path(temp_file_to_cleanup).unlink()

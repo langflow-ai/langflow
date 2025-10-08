@@ -190,7 +190,7 @@ class TestRunStarterProjects:
             # Check for actual langflow/lfx import errors (not just the word "langflow" in paths)
             assert "No module named 'langflow'" not in all_output, f"Langflow import error in {template_name}"
             assert "No module named 'lfx'" not in all_output, f"LFX import error in {template_name}"
-            
+
             # ModuleNotFoundError for langchain/other dependencies is expected and acceptable
             # Only fail if it's specifically about langflow or lfx modules
 
