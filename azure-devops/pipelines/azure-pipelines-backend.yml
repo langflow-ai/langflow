@@ -99,10 +99,7 @@ stages:
 
   - stage: Build
     displayName: 'Build and Push Backend Docker Image'
-    condition: and(succeeded(), or(
-      in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/develop'),
-      eq(variables['Build.Reason'], 'Manual')
-    ))
+    condition: and(succeeded(), or(in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/develop'), eq(variables['Build.Reason'], 'Manual')))
     jobs:
       - job: BuildAndPushBackendImage
         displayName: 'Build and Push Backend to ACR'
@@ -136,10 +133,7 @@ stages:
 
   - stage: UpdatePlatformCharts
     displayName: 'Update Platform Charts Image Tags'
-    condition: and(succeeded(), or(
-      in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/develop'),
-      eq(variables['Build.Reason'], 'Manual')
-    ))
+    condition: and(succeeded(), or(in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/develop'), eq(variables['Build.Reason'], 'Manual')))
     dependsOn: Build
     jobs:
       - job: UpdateImageTags
