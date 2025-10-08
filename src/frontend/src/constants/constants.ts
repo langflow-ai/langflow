@@ -1,6 +1,6 @@
 // src/constants/constants.ts
 
-import { customDefaultShotrcuts } from "@/customization/constants";
+import { customDefaultShortcuts } from "@/customization/constants";
 import custom from "../customization/config-constants";
 import type { languageMap } from "../types/components";
 
@@ -802,7 +802,7 @@ export const IS_MAC =
   typeof navigator !== "undefined" &&
   navigator.userAgent.toUpperCase().includes("MAC");
 
-export const defaultShortcuts = customDefaultShotrcuts;
+export const defaultShortcuts = customDefaultShortcuts;
 
 export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to display right now. Please check back later.`;
 
