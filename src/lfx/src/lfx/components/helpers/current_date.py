@@ -18,7 +18,7 @@ class CurrentDateComponent(Component):
         DropdownInput(
             name="timezone",
             display_name="Timezone",
-            options=list(available_timezones()),
+            options=sorted(available_timezones()),
             value="UTC",
             info="Select the timezone for the current date and time.",
             tool_mode=True,
