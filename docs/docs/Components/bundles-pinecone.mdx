@@ -1,0 +1,53 @@
+---
+title: Pinecone
+slug: /bundles-pinecone
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Pinecone** bundle.
+
+## Pinecone vector store
+
+The **Pinecone** component reads and writes to Pinecone vector stores using an instance of `PineconeVectorStore`.
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+<PartialVectorSearchResults />
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
+
+### Pinecone vector store parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Pinecone documentation](https://docs.pinecone.io/home) or inspect [component code](/concepts-components#component-code).
+
+| Name              | Type         | Description                               |
+| ----------------- | ------------ | ----------------------------------------- |
+| index_name        | String       | Input parameter. The name of the Pinecone index.                |
+| namespace         | String       | Input parameter. The namespace for the index.                   |
+| distance_strategy | String       | Input parameter. The strategy for calculating distance between vectors. |
+| pinecone_api_key  | SecretString | Input parameter. The API key for Pinecone.                      |
+| text_key          | String       | Input parameter. The key in the record to use as text.          |
+| search_query      | String       | Input parameter. The query for similarity search.               |
+| ingest_data       | Data         | Input parameter. The data to be ingested into the vector store. |
+| embedding         | Embeddings   | Input parameter. The embedding function to use.                 |
+| number_of_results | Integer      | Input parameter. The number of results to return in search.     |

@@ -1,13 +1,14 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select-custom";
-import { DEFAULT_FOLDER } from "@/constants/constants";
 import type { FolderType } from "@/pages/MainPage/entities";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import { handleSelectChange } from "../helpers/handle-select-change";
 import { FolderSelectItem } from "./folder-select-item";
@@ -27,6 +28,7 @@ export const SelectOptions = ({
   handleSelectFolderToRename: (folder: FolderType) => void;
   checkPathName: (folderId: string) => boolean;
 }) => {
+  const defaultFolderName = useUtilityStore((state) => state.defaultFolderName);
   return (
     <div>
       <Select
@@ -45,7 +47,9 @@ export const SelectOptions = ({
           <SelectTrigger
             className="w-fit"
             id={`options-trigger-${item.name}`}
-            data-testid="more-options-button"
+            data-testid={
+              "more-options-button" + `_${convertTestName(item?.name ?? "")}`
+            }
           >
             <IconComponent
               name={"MoreHorizontal"}
@@ -57,7 +61,7 @@ export const SelectOptions = ({
           </SelectTrigger>
         </ShadTooltip>
         <SelectContent align="end" alignOffset={-16} position="popper">
-          {item.name !== DEFAULT_FOLDER && (
+          {item.name !== defaultFolderName && (
             <SelectItem
               id="rename-button"
               value="rename"

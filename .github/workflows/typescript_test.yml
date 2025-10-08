@@ -64,7 +64,7 @@ on:
         default: ubuntu-latest
 
 env:
-  NODE_VERSION: "21"
+  NODE_VERSION: "22"
   PYTHON_VERSION: "3.13"
   # Define the directory where Playwright browsers will be installed.
   # This path is used for caching across workflows
@@ -379,6 +379,8 @@ jobs:
       - name: Checkout code
         if: ${{ steps.should_merge_reports.outputs.should_merge_reports == 'true' }}
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup Node.js
 
@@ -390,7 +392,7 @@ jobs:
       - name: Download blob reports from GitHub Actions Artifacts
 
         if: ${{ steps.should_merge_reports.outputs.should_merge_reports == 'true' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: all-blob-reports
           pattern: blob-report-*
