@@ -74,7 +74,8 @@ def main():
         print("Failed to build component index", file=sys.stderr)
         sys.exit(1)
 
-    # Determine output path
+    # Determine output path relative to script location (repo structure)
+    # This script is run during development/CI, not from installed package
     output_path = Path(__file__).parent.parent / "src" / "lfx" / "src" / "lfx" / "_assets" / "component_index.json"
 
     # Create directory if it doesn't exist
