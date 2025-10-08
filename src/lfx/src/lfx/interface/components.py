@@ -39,31 +39,15 @@ component_cache = ComponentCache()
 def _dev_mode() -> bool:
     """Detect if running in development mode.
 
-    Development mode is detected by:
-    1. LFX_DEV environment variable: "1"/"true"/"yes" = dev, "0"/"false"/"no" = prod
-    2. If LFX_DEV not set: Editable install = dev, otherwise = prod
+    Development mode must be explicitly enabled via the LFX_DEV environment variable.
+    When enabled, components are always rebuilt dynamically to reflect code changes.
+    When disabled or not set, the prebuilt index is used for fast startup.
 
     Returns:
-        True if in development mode, False otherwise
+        True if LFX_DEV is set to "1"/"true"/"yes", False otherwise
     """
-    # 1) Check env override (takes precedence)
     lfx_dev = os.getenv("LFX_DEV", "").lower()
-    if lfx_dev:
-        # Explicit setting: 1/true/yes = dev, 0/false/no = prod
-        if lfx_dev in {"1", "true", "yes"}:
-            return True
-        if lfx_dev in {"0", "false", "no"}:
-            return False
-
-    # 2) If no env var, use editable install heuristic
-    try:
-        import lfx
-
-        src = Path(inspect.getfile(lfx)).resolve()
-        # If the path doesn't contain site-packages, it's likely an editable install
-        return "site-packages" not in str(src)
-    except Exception:  # noqa: BLE001
-        return False
+    return lfx_dev in {"1", "true", "yes"}
 
 
 def _read_component_index(custom_path: str | None = None) -> dict | None:
