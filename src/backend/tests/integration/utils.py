@@ -134,11 +134,16 @@ async def run_flow(graph: Graph, run_input: Any | None = None, session_id: str |
 
     flow_id = str(uuid.uuid4())
 
-    results, _ = await run_graph_internal(graph, flow_id, session_id=session_id, inputs=graph_run_inputs)
-    outputs = {}
-    for r in results:
-        for out in r.outputs:
-            outputs |= out.results
+    try:
+        results, _ = await run_graph_internal(graph, flow_id, session_id=session_id, inputs=graph_run_inputs)
+        outputs = {}
+        for r in results:
+            for out in r.outputs:
+                outputs |= out.results
+    finally:
+        # Wait for all background tasks to complete to prevent task leaks
+        await _cleanup_graph_tasks(graph)
+
     return outputs
 
 
@@ -147,6 +152,33 @@ class ComponentInputHandle:
     clazz: type
     inputs: dict
     output_name: str
+
+
+async def _cleanup_graph_tasks(graph) -> None:
+    """Clean up all background tasks in the graph to prevent task leaks.
+
+    This waits for all background tasks in the graph and its vertices to complete,
+    including transaction logging tasks and trace ending tasks.
+    """
+    import asyncio
+
+    # Collect all tasks that need to be awaited
+    tasks_to_wait = []
+
+    # Add graph-level trace ending tasks
+    if hasattr(graph, "_end_trace_tasks") and graph._end_trace_tasks:
+        tasks_to_wait.extend(list(graph._end_trace_tasks))
+
+    # Add vertex-level transaction logging tasks
+    for vertex in graph.vertices:
+        if hasattr(vertex, "log_transaction_tasks") and vertex.log_transaction_tasks:
+            tasks_to_wait.extend(list(vertex.log_transaction_tasks))
+
+    # Wait for all tasks to complete
+    if tasks_to_wait:
+        # Use asyncio.gather to wait for all tasks, ignoring exceptions
+        # since we're just trying to clean up
+        await asyncio.gather(*tasks_to_wait, return_exceptions=True)
 
 
 async def run_single_component(
@@ -182,10 +214,16 @@ async def run_single_component(
     graph.prepare()
     graph_run_inputs = [InputValueRequest(input_value=run_input, type=input_type)] if run_input else []
 
-    _, _ = await run_graph_internal(
-        graph, flow_id, session_id=session_id, inputs=graph_run_inputs, outputs=[component_id]
-    )
-    return graph.get_vertex(component_id).built_object
+    try:
+        _, _ = await run_graph_internal(
+            graph, flow_id, session_id=session_id, inputs=graph_run_inputs, outputs=[component_id]
+        )
+        result = graph.get_vertex(component_id).built_object
+    finally:
+        # Wait for all background tasks to complete to prevent task leaks
+        await _cleanup_graph_tasks(graph)
+
+    return result
 
 
 def build_component_instance_for_tests(version: str, module: str, file_name: str, **kwargs):
