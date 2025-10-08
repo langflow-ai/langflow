@@ -31,7 +31,7 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 | Name | Type | Description |
 |------|------|-------------|
 | api_key | SecretString | Input parameter. Your CometAPI API Key for authentication. |
-| model_name | String | Input parameter. The id of the CometAPI model to use. Options include GPT, Claude, Gemini, Grok, DeepSeek, and Qwen series models. |
+| model_name | String | Input parameter. The id of the CometAPI model to use. The component automatically fetches the latest available models from CometAPI when you provide a valid API key. For information about supported models, see the [CometAPI documentation](https://www.cometapi.com/). |
 | input_value | String | Input parameter. The input text to send to the model. |
 | system_message | String | Input parameter. A system message that helps set the behavior of the assistant. |
 | max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
@@ -42,19 +42,6 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 | stream | Boolean | Input parameter. Whether to stream the response. Default: false. |
 | output_parser | OutputParser | Input parameter. The parser to use to parse the output of the model (advanced). |
 | model | LanguageModel | Output parameter. An instance of ChatOpenAI configured with CometAPI parameters. |
-
-### Supported Models
-
-CometAPI provides access to a wide range of state-of-the-art language models including:
-
-- **GPT Series**: gpt-5-chat-latest, chatgpt-4o-latest, gpt-4o-mini, and more
-- **Claude Series**: claude-opus-4-1, claude-sonnet-4, claude-3-5-haiku-latest, and more
-- **Gemini Series**: gemini-2.5-pro, gemini-2.5-flash, gemini-2.0-flash
-- **Grok Series**: grok-4-0709, grok-3, grok-3-mini
-- **DeepSeek Series**: deepseek-v3.1, deepseek-chat, deepseek-reasoner
-- **Qwen Series**: qwen3-30b-a3b, qwen3-coder-plus
-
-The component automatically fetches the latest available models from CometAPI when you provide a valid API key.
 
 ## Use CometAPI in a flow
 
