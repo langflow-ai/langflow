@@ -35,10 +35,10 @@ class CustomComponent(Component):
     name = "CustomComponent"
 
     outputs = [
-        Output(display_name="Test 1", name="test_1", method="hello_world", group_outputs=False),
-        Output(display_name="Test 2", name="test_2", method="hello_world", group_outputs=False),
-        Output(display_name="Test 3", name="test_3", method="hello_world", group_outputs=True),
-        Output(display_name="Test 4", name="test_4", method="hello_world", group_outputs=True),
+        Output(display_name="Test 1", name="test_1", method="hello_world", group_outputs=True),
+        Output(display_name="Test 2", name="test_2", method="hello_world", group_outputs=True),
+        Output(display_name="Test 3", name="test_3", method="hello_world", group_outputs=False),
+        Output(display_name="Test 4", name="test_4", method="hello_world", group_outputs=False),
         Output(display_name="Test 5", name="test_5", method="hello_world"),
         Output(display_name="Test 6", name="test_6", method="hello_world"),
     ]
