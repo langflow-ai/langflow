@@ -19,14 +19,20 @@ The following steps explain how to create an agent flow in Langflow from a blank
 For a prebuilt example, use the **Simple Agent** template or the [Langflow quickstart](/get-started-quickstart).
 
 1. Click **New Flow**, and then click **Blank Flow**.
+
 2. Add an **Agent** component to your flow.
-3. Enter a valid OpenAI API key.
 
-    The default model for the **Agent** component is an OpenAI model.
-    If you want to use a different provider, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
-    For more information, see [Agent component parameters](#agent-component-parameters).
+3. Select the provider and model that you want to use.
+The default model for the **Agent** component is an OpenAI model.
+If you want to use a different provider, edit the **Model Provider** and **Model Name** fields accordingly.
+If your preferred model isn't listed, type the complete model name into the **Model Name** field, and then select it from the **Model Name** menu.
+Make sure that the model is enabled/verified in your model provider account.
+For more information, see [Agent component parameters](#agent-component-parameters).
 
-4. Add [**Chat Input** and **Chat Output** components](/components-io) to your flow, and then connect them to the **Agent** component.
+4. Enter a valid credential for your selected model provider.
+Make sure that the credential has permission to call the selected model.
+
+5. Add [**Chat Input** and **Chat Output** components](/components-io) to your flow, and then connect them to the **Agent** component.
 
     At this point, you have created a basic LLM-based chat flow that you can test in the <Icon name="Play" aria-hidden="true" /> **Playground**.
     However, this flow only chats with the LLM.
@@ -34,8 +40,8 @@ For a prebuilt example, use the **Simple Agent** template or the [Langflow quick
 
     ![A basic agent chat flow with Chat Input, Agent, and Chat Output components.](/img/agent-example-add-chat.png)
 
-5. Add **News Search**, **URL**, and **Calculator** components to your flow.
-6. Enable **Tool Mode** in the **News Search**, **URL**, and **Calculator** components:
+6. Add **News Search**, **URL**, and **Calculator** components to your flow.
+7. Enable **Tool Mode** in the **News Search**, **URL**, and **Calculator** components:
 
     1. Click the **News Search** component to expose the [component's header menu](/concepts-components#component-menus), and then enable **Tool Mode**.
     2. Repeat for the **URL** and **Calculator** components.
@@ -86,9 +92,13 @@ You can configure the **Agent** component to use your preferred provider and mod
 Use the **Model Provider** (`agent_llm`) and **Model Name** (`llm_model`) settings to select the model provider and LLM that you want the agent to use.
 
 The **Agent** component includes many models from several popular model providers.
-To access other providers and models, set **Model Provider** to **Custom**, and then connect any [**Language Model** component](/components-models).
+To access other providers or models, you can do either of the following:
 
-If you need to generate embeddings in your flow, use an [**Embedding Model** component](/components-embedding-models).
+* Set **Model Provider** to **Connect other models**, and then connect any [language model component](/components-models).
+* Select your preferred provider, type the complete model name into the **Model Name** field, and then select your custom option from the **Model Name** menu.
+Make sure that the model is enabled/verified in your model provider account.
+
+If you need to generate embeddings in your flow, use an [embedding model component](/components-embedding-models).
 
 ### Model provider API key
 
@@ -99,7 +109,7 @@ You can enter the key directly, but it is recommended that you follow industry b
 For example, you can use a <Icon name="Globe" aria-hidden="true"/> [global variable](/configuration-global-variables) or [environment variables](/environment-variables).
 For more information, see [Add component API keys to Langflow](/api-keys-and-authentication#component-api-keys).
 
-If you select **Custom** as the model provider, authentication is handled in the incoming **Language Model** component.
+If you select **Connect other models** as the model provider, authentication is handled in the incoming language model component.
 
 ### Agent instructions and input
 
@@ -140,9 +150,9 @@ For more information, see [Store chat memory](/memory#store-chat-memory) and [**
 With the **Agent** component, the available parameters can change depending on the selected provider and model, including support for additional modes, arguments, or features like chat memory and temperature.
 For example:
 
-* **Current Date** (`add_current_date_tool`): When enabled (true), this setting adds a tool to the agent that can retrieve the current date.
-* **Handle Parse Errors** (`handle_parsing_errors`): When enabled (true), this setting allows the agent to fix errors, like typos, when analyzing user input.
-* **Verbose** (`verbose`): When enabled (true), this setting records detailed logging output for debugging and analysis.
+* **Current Date** (`add_current_date_tool`): When enabled (`true`), this setting adds a tool to the agent that can retrieve the current date.
+* **Handle Parse Errors** (`handle_parsing_errors`): When enabled (`true`), this setting allows the agent to fix errors, like typos, when analyzing user input.
+* **Verbose** (`verbose`): When enabled (`true`), this setting records detailed logging output for debugging and analysis.
 
 <PartialParams />
 

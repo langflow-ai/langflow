@@ -13,9 +13,8 @@ from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.folder.model import FolderCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
-from sqlalchemy import text
-
 from lfx.schema.schema import ResultDataResponse
+from sqlalchemy import text
 
 
 @pytest.fixture(scope="module")

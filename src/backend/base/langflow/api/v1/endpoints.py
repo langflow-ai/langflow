@@ -7,6 +7,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
+import orjson
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
@@ -25,7 +26,7 @@ from lfx.schema.schema import InputValueRequest
 from lfx.services.settings.service import SettingsService
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
+from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -79,6 +80,29 @@ async def flush_transaction_queue_background(transaction_queue: list) -> None:
     except Exception as exc:  # noqa: BLE001
         logger.error(f"Error in background transaction flush: {exc}")
         # Don't raise - this is a background task and errors shouldn't affect the API response
+
+
+async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIRequest:
+    """Parse SimplifiedAPIRequest from HTTP request body.
+
+    This function handles the case where FastAPI can't automatically parse the request body
+    due to the presence of a Request parameter in the endpoint signature.
+
+    Args:
+        http_request: The FastAPI Request object
+
+    Returns:
+        SimplifiedAPIRequest: Parsed request or default instance if parsing fails
+    """
+    try:
+        body = await http_request.body()
+        if body:
+            body_data = orjson.loads(body)
+            return SimplifiedAPIRequest(**body_data)
+        return SimplifiedAPIRequest()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Failed to parse request body: {exc}")
+        return SimplifiedAPIRequest()
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
@@ -311,6 +335,8 @@ async def simplified_run_flow(
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
+    context: dict | None = None,
+    http_request: Request,
 ):
     """Executes a specified flow by ID with support for streaming and telemetry.
 
@@ -323,7 +349,8 @@ async def simplified_run_flow(
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
         api_key_user (UserRead): Authenticated user from API key
-        request (Request): The incoming HTTP request
+        context (dict | None): Optional context to pass to the flow
+        http_request (Request): The incoming HTTP request for extracting global variables
 
     Returns:
         Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results
@@ -338,15 +365,34 @@ async def simplified_run_flow(
         - Tracks execution time and success/failure via telemetry
         - Handles graceful client disconnection in streaming mode
         - Provides detailed error handling with appropriate HTTP status codes
+        - Extracts global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+        - Merges extracted variables with the context parameter as "request_variables"
         - In streaming mode, uses EventManager to handle events:
             - "add_message": New messages during execution
             - "token": Individual tokens during streaming
             - "end": Final execution result
     """
     telemetry_service = get_telemetry_service()
-    input_request = input_request if input_request is not None else SimplifiedAPIRequest()
+
+    # If input_request is None, manually parse the request body
+    # This happens when FastAPI can't automatically parse it due to the Request parameter
+    if input_request is None:
+        input_request = await parse_input_request_from_body(http_request)
+
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
+
+    # Extract request-level variables from headers with prefix X-LANGFLOW-GLOBAL-VAR-*
+    request_variables = extract_global_variables_from_headers(http_request.headers)
+
+    # Merge request variables with existing context
+    if request_variables:
+        if context is None:
+            context = {"request_variables": request_variables}
+        else:
+            context = context.copy()  # Don't modify the original context
+            context["request_variables"] = request_variables
+
     start_time = time.perf_counter()
 
     if stream:
@@ -360,6 +406,7 @@ async def simplified_run_flow(
                 api_key_user=api_key_user,
                 event_manager=event_manager,
                 client_consumed_queue=asyncio_queue_client_consumed,
+                context=context,
             )
         )
 
@@ -375,11 +422,7 @@ async def simplified_run_flow(
 
     try:
         result = await simple_run_flow(
-            flow=flow,
-            input_request=input_request,
-            stream=stream,
-            api_key_user=api_key_user,
-            background_tasks=background_tasks,
+            flow=flow, input_request=input_request, stream=stream, api_key_user=api_key_user, context=context
         )
         end_time = time.perf_counter()
         background_tasks.add_task(

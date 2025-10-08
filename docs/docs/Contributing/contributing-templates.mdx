@@ -3,6 +3,8 @@ title: Contribute templates
 slug: /contributing-templates
 ---
 
+import Icon from "@site/src/components/icon";
+
 Follow these best practices when submitting a template to Langflow.
 
 For template formatting examples, see [`/starter_projects`](https://github.com/langflow-ai/langflow/tree/main/src/backend/base/langflow/initial_setup/starter_projects) in the Langflow repository.
@@ -44,10 +46,10 @@ Use icons from the [Lucide](https://lucide.dev/icons/) icon library.
 
 ### Flow
 
-Use only the components that are available in the **Components** menu in the visual editor.
-Don't use custom components.
+Use only <Icon name="Component" aria-hidden="true" /> **Core components** and <Icon name="Blocks" aria-hidden="true" /> **Bundles**.
+Don't use custom components that aren't part of the Langflow codebase.
 
-Include brief README, quickstart, or other essential details in a note. Notes accept Markdown syntax.
+Include brief README, quickstart, or other essential details in a <Icon name="StickyNote" aria-hidden="true"/> **Note**. Notes accept Markdown syntax.
 For example:
 
 ```text
