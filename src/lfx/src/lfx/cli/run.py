@@ -342,7 +342,6 @@ async def run(
 
     logger.info("Executing graph...")
     execution_start_time = time.time() if timing else None
-
     if verbose:
         logger.debug("Setting up execution environment")
         if inputs:
@@ -460,6 +459,9 @@ async def run(
                 logger.info(f"Cleaned up temporary file: {temp_file_to_cleanup}")
             except OSError:
                 pass
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+        output_error(f"Failed to execute graph: {e}", verbose=verbosity > 0, exception=e)
         raise typer.Exit(1) from e
     finally:
         # Ensure stdout/stderr are restored even if output_error fails
