@@ -13,14 +13,11 @@ from pathlib import Path
 import orjson
 
 
-def _get_lfx_version():
-    """Get the installed lfx version."""
-    try:
-        from importlib.metadata import version
+def _get_langflow_version():
+    """Get the installed langflow version."""
+    from importlib.metadata import version
 
-        return version("lfx")
-    except (ImportError, ModuleNotFoundError):
-        return "0.0.0+unknown"
+    return version("langflow")
 
 
 def build_component_index():
@@ -52,7 +49,7 @@ def build_component_index():
 
     # Build the index structure
     index = {
-        "version": _get_lfx_version(),
+        "version": _get_langflow_version(),
         "entries": entries,
     }
 
