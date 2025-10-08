@@ -163,12 +163,23 @@ class ServiceManager:
         return factories
 
 
-# Global service manager instance
-_service_manager = None
+# Global variables for lazy initialization
+_service_manager: ServiceManager | None = None
+_service_manager_lock = threading.Lock()
 
 
-def get_service_manager():
+def get_service_manager() -> ServiceManager:
+    """Get or create the service manager instance using lazy initialization.
+
+    This function ensures thread-safe lazy initialization of the service manager,
+    preventing automatic service creation during module import.
+
+    Returns:
+        ServiceManager: The singleton service manager instance.
+    """
     global _service_manager  # noqa: PLW0603
     if _service_manager is None:
-        _service_manager = ServiceManager()
+        with _service_manager_lock:
+            if _service_manager is None:
+                _service_manager = ServiceManager()
     return _service_manager
