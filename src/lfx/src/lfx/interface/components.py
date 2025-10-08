@@ -101,24 +101,19 @@ def _read_component_index(custom_path: str | None = None) -> dict | None:
             logger.warning("Component index integrity check failed")
             return None
 
-        # Version check: ensure index matches installed lfx version
-        try:
-            from importlib.metadata import version
+        # Version check: ensure index matches installed langflow version
+        from importlib.metadata import version
 
-            installed_version = version("lfx")
-            if blob.get("version") != installed_version:
-                logger.debug(
-                    f"Component index version mismatch: index={blob.get('version')}, installed={installed_version}"
-                )
-                return None
-        except Exception:  # noqa: BLE001
-            # If version check fails, still return blob (likely dev mode)
-            return blob
-        else:
-            return blob
+        installed_version = version("langflow")
+        if blob.get("version") != installed_version:
+            logger.debug(
+                f"Component index version mismatch: index={blob.get('version')}, installed={installed_version}"
+            )
+            return None
     except Exception as e:  # noqa: BLE001
         logger.debug(f"Failed to read component index: {e}")
         return None
+    return blob
 
 
 def _get_cache_path() -> Path:
@@ -143,16 +138,13 @@ def _save_generated_index(modules_dict: dict) -> None:
         entries = [[top_level, components] for top_level, components in modules_dict.items()]
 
         # Get version
-        try:
-            from importlib.metadata import version
+        from importlib.metadata import version
 
-            lfx_version = version("lfx")
-        except Exception:  # noqa: BLE001
-            lfx_version = "0.0.0+unknown"
+        langflow_version = version("langflow")
 
         # Build index structure
         index = {
-            "version": lfx_version,
+            "version": langflow_version,
             "entries": entries,
         }
 
