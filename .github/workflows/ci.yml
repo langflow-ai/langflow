@@ -209,6 +209,24 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: ./.github/changes-filter.yaml
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deps for coverage check
+        run: |
+          python -m pip install --upgrade pip
+          pip install --disable-pip-version-check --no-cache-dir pyyaml
+      - name: Validate Filter Coverage
+        continue-on-error: true
+        shell: bash
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          BASE_REF="${{ github.event.pull_request.base.ref || 'main' }}"
+          # Ensure base commit is present locally
+          git fetch --no-tags --depth=1 origin "$BASE_REF" || true
+          git fetch --no-tags --depth=1 origin "$BASE_SHA" || true
+          git diff --name-only "${BASE_SHA:-origin/$BASE_REF}"...HEAD | python scripts/check_changes_filter.py
 
   test-backend:
     needs: [path-filter, set-ci-condition]
@@ -326,7 +344,7 @@ jobs:
         test-templates,
         set-ci-condition,
         path-filter,
-        check-nightly-status
+        check-nightly-status,
       ]
 
     if: ${{ always() }}
@@ -337,9 +355,9 @@ jobs:
       # Skip nightly build check if only docs files changed
       DOCS_ONLY: ${{ needs.path-filter.outputs.docs-only }}
       EXIT_CODE: ${{ (contains(needs.*.result, 'failure') ||
-                      contains(needs.*.result, 'cancelled') ||
-                      (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch' && needs.path-filter.outputs.docs-only != 'true'))
-                      && '1' || '0' }}
+        contains(needs.*.result, 'cancelled') ||
+        (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch' && needs.path-filter.outputs.docs-only != 'true'))
+        && '1' || '0' }}
     steps:
       - name: "CI Success"
         run: |
