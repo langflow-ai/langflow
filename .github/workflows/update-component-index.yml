@@ -53,13 +53,25 @@ jobs:
           fi
 
       - name: Commit and push if changed
-        if: steps.check_changes.outputs.changed == 'true'
+        if: steps.check_changes.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add src/lfx/src/lfx/_assets/component_index.json
           git commit -m "chore: update component index [skip ci]"
           git push
+
+      - name: Comment on PR (community fork - cannot auto-update)
+        if: steps.check_changes.outputs.changed == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ Component index needs to be updated. Please run `uv run python scripts/build_component_index.py` locally and commit the changes.'
+            })
 
       - name: Comment on PR
         if: steps.check_changes.outputs.changed == 'true' && github.event_name == 'pull_request'
