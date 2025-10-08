@@ -142,8 +142,8 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
         const output = sourceNode.data.node.outputs?.find(
           (output) =>
             output.name === name &&  // if output name is the same as the source handle name
-            (((output.group_outputs ?? true) === true && output.selected) ||   // if output is grouped and it's selected (visible)
-              (output.group_outputs ?? true) === false),  // if output is not grouped (visible)
+            (((output.group_outputs ?? false) === false && output.selected) ||   // if output is grouped and it's selected (visible)
+              (output.group_outputs ?? false) === true),  // if output is not grouped (visible)
         );
 
         if (output) {
