@@ -1,3 +1,5 @@
+import { FEATURE_FLAGS } from "../config/constants";
+
 export const ENABLE_DARK_MODE = true;
 export const ENABLE_API = true;
 export const ENABLE_LANGFLOW_STORE = false;
@@ -16,6 +18,11 @@ export const ENABLE_IMAGE_ON_PLAYGROUND = false;
 export const ENABLE_MCP = true;
 export const ENABLE_MCP_NOTICE = false;
 export const ENABLE_KNOWLEDGE_BASES = true;
+
+// Runtime configurable feature flags
+export const ENABLE_CHAT = FEATURE_FLAGS.enableChat;
+export const ENABLE_AGENT_BUILDER = FEATURE_FLAGS.enableAgentBuilder;
+export const ENABLE_HEALTHCARE_COMPONENTS = FEATURE_FLAGS.enableHealthcareComponents;
 
 export const ENABLE_MCP_COMPOSER =
   process.env.LANGFLOW_MCP_COMPOSER_ENABLED === "true";

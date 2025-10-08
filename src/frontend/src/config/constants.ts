@@ -1,7 +1,7 @@
 // AI Studio Runtime Environment Configuration
 // This file replaces hardcoded values with runtime environment variables
 
-import { envConfig } from "./env";
+import { envConfig } from "./env/index";
 
 /**
  * Get backend URL from runtime environment
@@ -70,4 +70,12 @@ export const FEATURE_FLAGS = {
 export const ADVANCED_CONFIG = {
   maxFileSize: envConfig.maxFileSize,
   timeout: envConfig.timeout ? parseInt(envConfig.timeout, 10) : undefined,
+} as const;
+
+/**
+ * Proxy configuration for development
+ */
+export const PROXY_CONFIG = {
+  target: envConfig.proxyTarget || "http://localhost:7860",
+  port: envConfig.port ? parseInt(envConfig.port, 10) : 3000,
 } as const;
