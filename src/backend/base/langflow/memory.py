@@ -72,7 +72,18 @@ def get_messages(
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
-    return run_until_complete(aget_messages(sender, sender_name, session_id, context_id, order_by, order, flow_id, limit))
+    return run_until_complete(
+        aget_messages(
+            sender,
+            sender_name,
+            session_id,
+            context_id,
+            order_by,
+            order,
+            flow_id,
+            limit,
+        )
+    )
 
 
 async def aget_messages(
