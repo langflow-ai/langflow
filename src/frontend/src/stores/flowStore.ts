@@ -11,6 +11,8 @@ import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import { BROKEN_EDGES_WARNING } from "@/constants/constants";
+import { api } from "@/controllers/API/api";
+import { getURL } from "@/controllers/API/helpers/constants";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import {
   track,
@@ -58,6 +60,46 @@ import { useTweaksStore } from "./tweaksStore";
 import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
+// Helper function to update HandleInput outputs
+const updateHandleInputOutputs = (
+  targetNode: any,
+  targetHandle: any,
+  toolsValue: any[],
+  getState: () => any,
+  setState: (updates: any) => void,
+) => {
+  api
+    .post(getURL("CUSTOM_COMPONENT", { update: "update" }), {
+      code: targetNode.data.node.template.code?.value || "",
+      template: targetNode.data.node.template,
+      field: targetHandle.fieldName,
+      field_value: toolsValue,
+      tool_mode: targetNode.data.node.tool_mode || false,
+    })
+    .then((response) => {
+      const newTemplate = response.data;
+      newTemplate.last_updated = new Date().toISOString();
+
+      const updatedNode = cloneDeep(targetNode.data.node);
+      if ("template" in updatedNode) {
+        updatedNode.template = newTemplate.template;
+        updatedNode.outputs = newTemplate.outputs;
+        (updatedNode as any).last_updated = newTemplate.last_updated;
+      }
+
+      getState().setNode(targetNode.id, (oldNode) => ({
+        ...oldNode,
+        data: {
+          ...oldNode.data,
+          node: updatedNode,
+        },
+      }));
+    })
+    .catch((error) => {
+      console.error("Failed to update HandleInput outputs:", error);
+    });
+};
+
 const useFlowStore = create<FlowStoreType>((set, get) => ({
   playgroundPage: false,
   setPlaygroundPage: (playgroundPage) => {
@@ -381,6 +423,67 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
   },
   deleteEdge: (edgeId) => {
+    // Get edge info before deleting for potential HandleInput disconnection handling
+    const edgesToDelete = get().edges.filter((edge) =>
+      typeof edgeId === "string"
+        ? edge.id === edgeId
+        : edgeId.includes(edge.id),
+    );
+
+    // Handle disconnection for HandleInput fields with real_time_refresh
+    edgesToDelete.forEach((edge) => {
+      const targetHandle = edge.data?.targetHandle;
+      const targetNode = get().nodes.find((node) => node.id === edge.target);
+
+      if (targetNode?.data?.node?.template && targetHandle?.fieldName) {
+        const field = targetNode.data.node.template[targetHandle.fieldName];
+
+        // If this is a HandleInput with real_time_refresh=true, trigger update
+        if (field?._input_type === "HandleInput" && field?.real_time_refresh) {
+          // Get remaining edges after this deletion (excluding the ones being deleted)
+          const remainingEdges = get().edges.filter((e) => {
+            const edgeIds = typeof edgeId === "string" ? [edgeId] : edgeId;
+            return (
+              !edgeIds.includes(e.id) &&
+              e.target === edge.target &&
+              e.data?.targetHandle?.fieldName === targetHandle.fieldName
+            );
+          });
+
+          // Get remaining connected tool nodes with IDs
+          const remainingTools = remainingEdges
+            .map((e) => {
+              const sourceNode = get().nodes.find(
+                (node) => node.id === e.source,
+              );
+              return {
+                node: sourceNode?.data?.node,
+                id: sourceNode?.id,
+              };
+            })
+            .filter((item) => item.node);
+
+          // Update outputs with remaining tools
+          const toolsValue = remainingTools.map((item) => ({
+            id: item.id,
+            name:
+              item.node?.display_name ||
+              (item.node as any)?.type ||
+              "Unknown Tool",
+          }));
+
+          updateHandleInputOutputs(
+            targetNode,
+            targetHandle,
+            toolsValue,
+            get,
+            set,
+          );
+        }
+      }
+    });
+
+    // Actually delete the edges
     get().setEdges(
       get().edges.filter((edge) =>
         typeof edgeId === "string"
@@ -616,6 +719,58 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
       return newEdges;
     });
+
+    // Check if this connection triggers dynamic output updates
+    console.log("DEBUG: onConnect triggered with connection:", connection);
+    const targetHandle = scapeJSONParse(connection.targetHandle!);
+    const targetNode = get().nodes.find(
+      (node) => node.id === connection.target,
+    );
+
+    if (targetNode?.data?.node?.template && targetHandle?.fieldName) {
+      const field = targetNode.data.node.template[targetHandle.fieldName];
+
+      // If this is a HandleInput with real_time_refresh=true, trigger update
+      if (field?._input_type === "HandleInput" && field?.real_time_refresh) {
+        // Get all connected tools and update outputs
+        const allConnectedEdges = newEdges.filter((edge) => {
+          const edgeTargetHandle = edge.data?.targetHandle;
+          return (
+            edge.target === connection.target &&
+            edgeTargetHandle?.fieldName === targetHandle.fieldName
+          );
+        });
+
+        const connectedTools = allConnectedEdges
+          .map((edge) => {
+            const sourceNode = get().nodes.find(
+              (node) => node.id === edge.source,
+            );
+            return {
+              node: sourceNode?.data?.node,
+              id: sourceNode?.id,
+            };
+          })
+          .filter((item) => item.node);
+
+        const toolsValue = connectedTools.map((item) => ({
+          id: item.id,
+          name:
+            item.node?.display_name ||
+            (item.node as any)?.type ||
+            "Unknown Tool",
+        }));
+
+        console.log("DEBUG: Sending tools data to backend:", toolsValue);
+        updateHandleInputOutputs(
+          targetNode,
+          targetHandle,
+          toolsValue,
+          get,
+          set,
+        );
+      }
+    }
   },
   unselectAll: () => {
     const newNodes = cloneDeep(get().nodes);

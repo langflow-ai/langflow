@@ -8,10 +8,12 @@ if TYPE_CHECKING:
     from lfx.components.logic.conditional_router import ConditionalRouterComponent
     from lfx.components.logic.data_conditional_router import DataConditionalRouterComponent
     from lfx.components.logic.flow_tool import FlowToolComponent
+    from lfx.components.logic.llm_conditional_router import SmartRouterComponent
     from lfx.components.logic.loop import LoopComponent
     from lfx.components.logic.pass_message import PassMessageComponent
     from lfx.components.logic.run_flow import RunFlowComponent
     from lfx.components.logic.sub_flow import SubFlowComponent
+    from lfx.components.logic.tool_router import ToolRouterComponent
 
 _dynamic_imports = {
     "ConditionalRouterComponent": "conditional_router",
@@ -20,7 +22,9 @@ _dynamic_imports = {
     "LoopComponent": "loop",
     "PassMessageComponent": "pass_message",
     "RunFlowComponent": "run_flow",
+    "SmartRouterComponent": "llm_conditional_router",
     "SubFlowComponent": "sub_flow",
+    "ToolRouterComponent": "tool_router",
 }
 
 __all__ = [
@@ -30,7 +34,9 @@ __all__ = [
     "LoopComponent",
     "PassMessageComponent",
     "RunFlowComponent",
+    "SmartRouterComponent",
     "SubFlowComponent",
+    "ToolRouterComponent",
 ]
 
 
