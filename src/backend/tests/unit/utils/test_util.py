@@ -639,7 +639,7 @@ class TestUpdateSettings:
         """Test updating settings from YAML config."""
         mock_service = Mock()
         mock_settings = Mock()
-        
+
         # Create an async mock
         async def async_update_from_yaml(*_args, **_kwargs):
             return None
