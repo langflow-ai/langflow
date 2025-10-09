@@ -1,5 +1,4 @@
-"""
-Test for API Key Cross-Account Security Issue #10202
+"""Test for API Key Cross-Account Security Issue #10202
 
 This test reproduces the security vulnerability where an API key from one account
 can be used to execute flows from another account.
@@ -9,11 +8,9 @@ import pytest
 from httpx import AsyncClient
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key import ApiKeyCreate
-from langflow.services.database.models.flow.model import FlowCreate
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_db_service
 from sqlmodel import select
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 @pytest.fixture
@@ -75,12 +72,9 @@ async def second_user_flow(client: AsyncClient, second_user_logged_in_headers, s
     flow_data = {
         "name": "Second User Flow",
         "description": "A flow belonging to the second user",
-        "data": {
-            "nodes": [],
-            "edges": []
-        }
+        "data": {"nodes": [], "edges": []},
     }
-    
+
     response = await client.post("api/v1/flows/", json=flow_data, headers=second_user_logged_in_headers)
     assert response.status_code == 201, response.text
     flow = response.json()
@@ -95,18 +89,17 @@ async def test_cross_account_api_key_should_not_run_flow(
     active_user,
     second_user,
 ):
-    """
-    Test that reproduces the security vulnerability:
+    """Test that reproduces the security vulnerability:
     - User 1 creates an API key
     - User 2 creates a flow
     - User 1's API key should NOT be able to execute User 2's flow
-    
+
     EXPECTED BEHAVIOR: This should fail with a 403 or 404 error
     CURRENT BEHAVIOR: This succeeds (security vulnerability)
     """
     # Get the flow ID from second user
     flow_id = second_user_flow["id"]
-    
+
     # Try to run second user's flow with first user's API key
     headers = {"x-api-key": first_user_api_key}
     payload = {
@@ -116,9 +109,9 @@ async def test_cross_account_api_key_should_not_run_flow(
         "tweaks": {},
         "stream": False,
     }
-    
+
     response = await client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
-    
+
     # This SHOULD fail with 403 (Forbidden) or 404 (Not Found)
     # But currently it will succeed (status 200), which is the security issue
     assert response.status_code in [403, 404], (
@@ -134,13 +127,12 @@ async def test_same_account_api_key_should_run_own_flow(
     first_user_api_key: str,
     starter_project: dict,
 ):
-    """
-    Test that a user's API key CAN execute their own flows (legitimate use case).
+    """Test that a user's API key CAN execute their own flows (legitimate use case).
     This should continue to work after the security fix.
     """
     # Get the flow ID from the first user's starter project
     flow_id = starter_project["id"]
-    
+
     # Try to run first user's flow with first user's API key
     headers = {"x-api-key": first_user_api_key}
     payload = {
@@ -150,9 +142,9 @@ async def test_same_account_api_key_should_run_own_flow(
         "tweaks": {},
         "stream": False,
     }
-    
+
     response = await client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
-    
+
     # This SHOULD succeed
     assert response.status_code == 200, (
         f"Legitimate use case failed: User should be able to run their own flow with their API key. "
@@ -160,20 +152,18 @@ async def test_same_account_api_key_should_run_own_flow(
     )
 
 
-@pytest.mark.api_key_required  
+@pytest.mark.api_key_required
 async def test_cross_account_get_flow_should_not_work(
     client: AsyncClient,
     first_user_api_key: str,
     second_user_flow: dict,
 ):
-    """
-    Test that a user cannot retrieve another user's flow details using their API key.
-    """
+    """Test that a user cannot retrieve another user's flow details using their API key."""
     flow_id = second_user_flow["id"]
     headers = {"x-api-key": first_user_api_key}
-    
+
     response = await client.get(f"/api/v1/flows/{flow_id}", headers=headers)
-    
+
     # This should fail with 403 or 404
     assert response.status_code in [403, 404], (
         f"Security Issue: User 1's API key was able to retrieve User 2's flow details! "
