@@ -10,6 +10,7 @@ from lfx.utils.util import (
     get_base_classes,
     get_default_factory,
     get_formatted_type,
+    get_settings_service,
     get_type,
     get_type_from_union_literal,
     is_class_method,
@@ -26,7 +27,6 @@ from lfx.utils.util import (
     unescape_string,
     update_settings,
     update_verbose,
-    get_settings_service,
 )
 
 __all__ = [
@@ -41,6 +41,7 @@ __all__ = [
     "get_base_classes",
     "get_default_factory",
     "get_formatted_type",
+    "get_settings_service",
     "get_type",
     "get_type_from_union_literal",
     "is_class_method",
@@ -57,5 +58,4 @@ __all__ = [
     "unescape_string",
     "update_settings",
     "update_verbose",
-    "get_settings_service",
 ]
