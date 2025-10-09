@@ -1,10 +1,10 @@
 # noqa: INP001
 import asyncio
 import hashlib
-import os
 import logging
+import os
 from logging.config import fileConfig
-from typing import Any, Optional
+from typing import Any
 
 from alembic import context
 from sqlalchemy import pool
@@ -26,7 +26,7 @@ SHA256_BYTES_FOR_KEY = 8
 # This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
-    
+
 logger = logging.getLogger("alembic.env")
 
 NAMING_CONVENTION = {
@@ -85,8 +85,7 @@ def _i63_from_sha256(s: str) -> int:
     return int.from_bytes(h8, "big") & MAX_I63
 
 def _canonical_db_identity(url) -> str:
-    """
-    Build a non-sensitive, stable identity string for the target DB/role.
+    """Build a non-sensitive, stable identity string for the target DB/role.
     Avoids password and driver noise, normalizes case and default port.
     """
     # SQLAlchemy URL object
@@ -99,11 +98,10 @@ def _canonical_db_identity(url) -> str:
     # so we intentionally exclude drivername from the identity.
     return f"{host}:{port}/{dbname}:{user}"
 
-def _compute_lock_key(engine, namespace: Optional[str]) -> int:
-    """
-    Compute a transaction advisory lock key:
-      base = SHA256(canonical(host,port,db,user)) -> 63-bit
-      if namespace: XOR with SHA256(namespace) -> 63-bit
+def _compute_lock_key(engine, namespace: str | None) -> int:
+    """Compute a transaction advisory lock key:
+    base = SHA256(canonical(host,port,db,user)) -> 63-bit
+    if namespace: XOR with SHA256(namespace) -> 63-bit
     """
     url = engine.url
     base_key = _i63_from_sha256(_canonical_db_identity(url))
@@ -123,11 +121,11 @@ def _sqlite_do_connect(
     dbapi_connection.isolation_level = None
     # Set busy timeout at connection time to avoid race conditions
     dbapi_connection.execute(f"PRAGMA busy_timeout = {SQLITE_BUSY_TIMEOUT_MS}")
-    
+
 def _sqlite_do_begin(conn):
     # emit our own BEGIN
     conn.exec_driver_sql("BEGIN EXCLUSIVE")
-    
+
 def _do_run_migrations(connection):
     configure_kwargs = {
         "connection": connection,
@@ -167,11 +165,11 @@ def _do_run_migrations(connection):
                 connection.exec_driver_sql(f"SELECT pg_advisory_xact_lock({lock_key})")
             except Exception as e:
                 logger.error(f"Failed to acquire advisory lock: {e}")
-                raise 
- 
+                raise
+
         # Run migrations only once
         context.run_migrations()
-        
+
 async def _run_async_migrations() -> None:
     # Get database URL to determine dialect
     url = config.get_main_option("sqlalchemy.url")
@@ -213,4 +211,4 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-    
+
