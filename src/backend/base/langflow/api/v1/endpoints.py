@@ -83,6 +83,27 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
         return SimplifiedAPIRequest()
 
 
+async def get_flow_by_id_or_endpoint_name_with_user(
+    flow_id_or_name: str,
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
+) -> FlowRead:
+    """Dependency to get a flow by ID or endpoint name with user ownership validation.
+    
+    This ensures that users can only access flows they own, preventing cross-account access.
+    
+    Args:
+        flow_id_or_name: The flow ID (UUID) or endpoint name
+        api_key_user: The authenticated user from the API key
+        
+    Returns:
+        FlowRead: The flow if found and owned by the user
+        
+    Raises:
+        HTTPException: 404 if flow not found or user doesn't have access
+    """
+    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, str(api_key_user.id))
+
+
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
 async def get_all():
     """Retrieve all component types with compression for better performance.
@@ -303,7 +324,7 @@ async def run_flow_generator(
 async def simplified_run_flow(
     *,
     background_tasks: BackgroundTasks,
-    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
+    flow_id_or_name: str,
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
@@ -351,6 +372,9 @@ async def simplified_run_flow(
     if input_request is None:
         input_request = await parse_input_request_from_body(http_request)
 
+    # SECURITY FIX: Retrieve flow with user ownership validation
+    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, str(api_key_user.id))
+    
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
@@ -443,7 +467,6 @@ async def simplified_run_flow(
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)  # noqa: RUF100, FAST003
 async def webhook_run_flow(
     flow_id_or_name: str,
-    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     request: Request,
     background_tasks: BackgroundTasks,
 ):
@@ -451,7 +474,6 @@ async def webhook_run_flow(
 
     Args:
         flow_id_or_name (str): The flow ID or endpoint name.
-        flow (Flow): The flow to be executed.
         request (Request): The incoming HTTP request.
         background_tasks (BackgroundTasks): The background tasks manager.
 
@@ -467,7 +489,11 @@ async def webhook_run_flow(
     error_msg = ""
 
     # Get the appropriate user for webhook execution based on auth settings
+    # This will also validate flow ownership when auth is enabled
     webhook_user = await get_webhook_user(flow_id_or_name, request)
+    
+    # SECURITY FIX: Retrieve flow with user ownership validation
+    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, str(webhook_user.id))
 
     try:
         try:
