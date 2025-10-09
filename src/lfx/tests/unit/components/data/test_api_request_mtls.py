@@ -111,9 +111,7 @@ class TestAPIRequestComponentMTLS:
             # Verify SSL context was created
             assert ssl_context is not None
             mock_ssl.assert_called_once()
-            mock_context.load_cert_chain.assert_called_once_with(
-                certfile=str(cert_file), keyfile=None, password=None
-            )
+            mock_context.load_cert_chain.assert_called_once_with(certfile=str(cert_file), keyfile=None, password=None)
 
     # Test 6: Build SSL context with separate cert and key files
     def test_build_ssl_context_local_separate_files(self):
@@ -319,6 +317,4 @@ class TestAPIRequestComponentMTLS:
         # Mock the log method to capture warnings
         with patch.object(self.component, "log") as mock_log:
             self.component.validate_mtls_config()
-            mock_log.assert_called_once_with(
-                "WARNING: Server certificate verification is disabled. This is insecure!"
-            )
+            mock_log.assert_called_once_with("WARNING: Server certificate verification is disabled. This is insecure!")
