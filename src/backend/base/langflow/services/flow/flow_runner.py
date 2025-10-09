@@ -4,23 +4,20 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 from aiofile import async_open
-from loguru import logger
+from lfx.graph import Graph
+from lfx.graph.vertex.param_handler import ParameterHandler
+from lfx.log.logger import configure, logger
+from lfx.utils.util import update_settings
 from sqlmodel import delete, select, text
 
 from langflow.api.utils import cascade_delete_flow
-from langflow.graph import Graph
-from langflow.graph.vertex.param_handler import ParameterHandler
 from langflow.load.utils import replace_tweaks_with_env
-from langflow.logging.logger import configure
 from langflow.processing.process import process_tweaks, run_graph
-from langflow.services.auth.utils import (
-    get_password_hash,
-)
+from langflow.services.auth.utils import get_password_hash
 from langflow.services.cache.service import AsyncBaseCacheService
 from langflow.services.database.models import Flow, User, Variable
 from langflow.services.database.utils import initialize_database
 from langflow.services.deps import get_cache_service, get_storage_service, session_scope
-from langflow.utils.util import update_settings
 
 
 class LangflowRunnerExperimental:
@@ -48,7 +45,6 @@ class LangflowRunnerExperimental:
         log_file: str | None = None,
         log_rotation: str | None = None,
         disable_logs: bool = False,
-        async_log_file: bool = True,
     ):
         self.should_initialize_db = should_initialize_db
         log_file_path = Path(log_file) if log_file else None
@@ -57,7 +53,6 @@ class LangflowRunnerExperimental:
             log_file=log_file_path,
             log_rotation=log_rotation,
             disable=disable_logs,
-            async_file=async_log_file,
         )
 
     async def run(
@@ -76,7 +71,7 @@ class LangflowRunnerExperimental:
         tweaks_values: dict | None = None,
     ):
         try:
-            logger.info(f"Start Handling {session_id=}")
+            await logger.ainfo(f"Start Handling {session_id=}")
             await self.init_db_if_needed()
             # Update settings with cache and components path
             await update_settings(cache=cache)
@@ -118,7 +113,7 @@ class LangflowRunnerExperimental:
             result = await self.run_graph(input_value, input_type, output_type, session_id, graph, stream=stream)
         finally:
             await self.clear_flow_state(flow_dict)
-        logger.info(f"Finish Handling {session_id=}")
+        await logger.ainfo(f"Finish Handling {session_id=}")
         return result
 
     async def prepare_flow_and_add_to_db(
@@ -242,10 +237,10 @@ class LangflowRunnerExperimental:
 
     async def init_db_if_needed(self):
         if not await self.database_exists_check() and self.should_initialize_db:
-            logger.info("Initializing database...")
+            await logger.ainfo("Initializing database...")
             await initialize_database(fix_migration=True)
             self.should_initialize_db = False
-            logger.info("Database initialized.")
+            await logger.ainfo("Database initialized.")
 
     @staticmethod
     async def database_exists_check():
@@ -254,7 +249,7 @@ class LangflowRunnerExperimental:
                 result = await session.exec(text("SELECT version_num FROM public.alembic_version"))
                 return result.first() is not None
             except Exception as e:  # noqa: BLE001
-                logger.debug(f"Database check failed: {e}")
+                await logger.adebug(f"Database check failed: {e}")
                 return False
 
     @staticmethod

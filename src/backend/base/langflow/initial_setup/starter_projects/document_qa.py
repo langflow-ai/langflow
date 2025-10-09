@@ -1,8 +1,8 @@
-from langflow.components.data import FileComponent
-from langflow.components.input_output import ChatInput, ChatOutput
-from langflow.components.models import LanguageModelComponent
-from langflow.components.processing import PromptComponent
-from langflow.graph import Graph
+from lfx.components.data import FileComponent
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.components.models import LanguageModelComponent
+from lfx.components.processing import PromptComponent
+from lfx.graph import Graph
 
 
 def document_qa_graph(template: str | None = None):

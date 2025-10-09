@@ -1,5 +1,6 @@
-import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -49,10 +50,7 @@ test.describe("save component tests", () => {
         expect(true).toBeTruthy();
       }
 
-      // Log button element
-      await page.getByTestId("fit_view").click();
-
-      await zoomOut(page, 2);
+      await adjustScreenView(page, { numberOfZoomOut: 2 });
 
       await page.getByTestId("title-Agent Initializer").click({
         modifiers: ["Control"],

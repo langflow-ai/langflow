@@ -51,6 +51,7 @@ export type InputComponentType = {
   commandWidth?: string;
   blockAddNewGlobalVariable?: boolean;
   hasRefreshButton?: boolean;
+  allowCustomValue?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -68,6 +69,7 @@ export type DropDownComponent = {
   children?: ReactNode;
   name: string;
   dialogInputs?: any;
+  externalOptions?: any;
   toggle?: boolean;
 };
 export type ParameterComponentType = {

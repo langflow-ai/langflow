@@ -122,7 +122,7 @@ cross-platform-test.yml
 
 **Key Benefits:**
 - **Single File**: No complex workflow chains or parameter passing issues
-- **Unified Logic**: Same test matrix for all use cases  
+- **Unified Logic**: Same test matrix for all use cases
 - **Smart Routing**: Automatically determines install method based on trigger type
 - **Context-Aware**: Summary messages adapt to manual vs programmatic usage
 
@@ -154,11 +154,11 @@ build-if-needed:
 test-installation:
   steps:
     - name: Determine install method
-      # workflow_dispatch: maps boolean to install method  
+      # workflow_dispatch: maps boolean to install method
       # workflow_call: always uses wheel method
     - name: Install from PyPI
       if: steps.install-method.outputs.method == 'pypi'
-    - name: Install from wheels  
+    - name: Install from wheels
       if: steps.install-method.outputs.method == 'wheel'
 ```
 
