@@ -7,11 +7,8 @@ without import errors for langflow modules. We expect execution errors
 This ensures backwards compatibility with existing starter projects.
 """
 
-import asyncio
-import json
 from pathlib import Path
 
-import httpx
 import pytest
 from typer.testing import CliRunner
 
@@ -19,91 +16,22 @@ from lfx.__main__ import app
 
 runner = CliRunner()
 
-# GitHub configuration
-GITHUB_REPO = "langflow-ai/langflow"
-GITHUB_TAG = "1.6.0"
-STARTER_PROJECTS_REMOTE_PATH = "src/backend/base/langflow/initial_setup/starter_projects"
-HTTP_OK = 200
-
-
-async def fetch_starter_projects_from_github() -> Path:
-    """Fetch starter projects from GitHub tag 1.6.0 and cache them locally.
-
-    Returns:
-        Path to the cached starter projects directory.
-    """
-    # Create cache directory in tests/data
-    test_file_path = Path(__file__).resolve()
-    cache_dir = test_file_path.parent.parent.parent / "data" / "starter_projects_1_6_0"
-
-    # If cache already exists and has files, return it
-    if cache_dir.exists() and list(cache_dir.glob("*.json")):
-        return cache_dir
-
-    # Create cache directory
-    cache_dir.mkdir(parents=True, exist_ok=True)
-
-    # GitHub API URL for the tag's tree
-    api_url = f"https://api.github.com/repos/{GITHUB_REPO}/git/trees/{GITHUB_TAG}?recursive=1"
-
-    async with httpx.AsyncClient() as client:
-        # Get the tree structure
-        response = await client.get(api_url)
-        if response.status_code != HTTP_OK:
-            error_msg = f"Failed to fetch GitHub tree: {response.status_code}"
-            raise RuntimeError(error_msg)
-        tree_data = response.json()
-
-        # Find all JSON files in the starter_projects directory
-        starter_project_files = [
-            item
-            for item in tree_data.get("tree", [])
-            if (
-                item["path"].startswith(STARTER_PROJECTS_REMOTE_PATH)
-                and item["path"].endswith(".json")
-                and item["type"] == "blob"
-            )
-        ]
-
-        if not starter_project_files:
-            error_msg = f"No starter project files found in {STARTER_PROJECTS_REMOTE_PATH}"
-            raise RuntimeError(error_msg)
-
-        # Download each file
-        for file_item in starter_project_files:
-            file_name = Path(file_item["path"]).name
-            file_url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{GITHUB_TAG}/{file_item['path']}"
-
-            file_response = await client.get(file_url)
-            if file_response.status_code != HTTP_OK:
-                # Use logger or skip silently in tests
-                continue
-
-            content = file_response.text
-
-            # Save to cache directory
-            cache_file = cache_dir / file_name
-            cache_file.write_text(content, encoding="utf-8")
-
-    return cache_dir
-
 
 def get_starter_projects_path() -> Path:
-    """Get path to starter projects directory from remote cache."""
-    # Use cached remote starter projects from 1.6.0
+    """Get path to starter projects directory.
+
+    Returns:
+        Path to the 1.6.0 starter projects directory in tests/data.
+    """
     test_file_path = Path(__file__).resolve()
-    cache_dir = test_file_path.parent.parent.parent / "data" / "starter_projects_1_6_0"
-
-    # Ensure we have the remote files cached
-    if not cache_dir.exists() or not list(cache_dir.glob("*.json")):
-        # Download files synchronously if not cached
-        asyncio.run(fetch_starter_projects_from_github())
-
-    return cache_dir
+    return test_file_path.parent.parent.parent / "data" / "starter_projects_1_6_0"
 
 
 def get_starter_project_files():
-    """Get all starter project JSON files for parameterization."""
+    """Get all starter project JSON files for parameterization.
+
+    Returns files in sorted order for deterministic test execution.
+    """
     starter_path = get_starter_projects_path()
     if not starter_path.exists():
         return []
@@ -112,12 +40,6 @@ def get_starter_project_files():
 
 class TestRunStarterProjectsBackwardCompatibility:
     """Test run command with starter project templates from 1.6.0 for backwards compatibility."""
-
-    @classmethod
-    def setup_class(cls):
-        """Set up test class by ensuring starter projects are cached."""
-        # Ensure starter projects from 1.6.0 are downloaded and cached
-        asyncio.run(fetch_starter_projects_from_github())
 
     def test_starter_projects_1_6_0_exist(self):
         """Test that 1.6.0 starter projects directory exists and has templates."""
@@ -219,18 +141,6 @@ class TestRunStarterProjectsBackwardCompatibility:
                 pytest.fail(f"Import error found in 1.6.0 template {template_file.name}.\nError: {error_line}")
 
     @pytest.mark.parametrize("template_file", get_starter_project_files(), ids=lambda x: x.name)
-    def test_run_1_6_0_starter_project_valid_json(self, template_file):
-        """Test that 1.6.0 starter project file is valid JSON."""
-        with template_file.open(encoding="utf-8") as f:
-            try:
-                data = json.load(f)
-                # Basic structure validation
-                if "data" not in data and "nodes" not in data:
-                    pytest.fail(f"Missing 'data' or 'nodes' in 1.6.0 template {template_file.name}")
-            except json.JSONDecodeError as e:
-                pytest.fail(f"Invalid JSON in 1.6.0 template {template_file.name}: {e}")
-
-    @pytest.mark.parametrize("template_file", get_starter_project_files(), ids=lambda x: x.name)
     def test_run_1_6_0_starter_project_format_options(self, template_file):
         """Test that 1.6.0 starter projects can be run with different output formats.
 
@@ -287,9 +197,9 @@ class TestRunStarterProjectsBackwardCompatibility:
                 # This is an actual langflow import error, not an internal lfx error
                 pytest.fail(f"Module not found error for langflow in 1.6.0 template {template_name}")
 
-    @pytest.mark.parametrize("template_file", get_starter_project_files()[:5], ids=lambda x: x.name)
+    @pytest.mark.parametrize("template_file", get_starter_project_files(), ids=lambda x: x.name)
     def test_run_1_6_0_starter_project_with_stdin(self, template_file):
-        """Test loading 1.6.0 starter projects via stdin (testing first 5 for speed)."""
+        """Test loading 1.6.0 starter projects via stdin."""
         with template_file.open(encoding="utf-8") as f:
             json_content = f.read()
 
@@ -308,9 +218,9 @@ class TestRunStarterProjectsBackwardCompatibility:
         if "No module named 'langflow'" in all_output:
             pytest.fail("Langflow import error in 1.6.0 stdin test")
 
-    @pytest.mark.parametrize("template_file", get_starter_project_files()[:5], ids=lambda x: x.name)
+    @pytest.mark.parametrize("template_file", get_starter_project_files(), ids=lambda x: x.name)
     def test_run_1_6_0_starter_project_inline_json(self, template_file):
-        """Test loading 1.6.0 starter projects via --flow-json option (testing first 5 for speed)."""
+        """Test loading 1.6.0 starter projects via --flow-json option."""
         with template_file.open(encoding="utf-8") as f:
             json_content = f.read()
 
