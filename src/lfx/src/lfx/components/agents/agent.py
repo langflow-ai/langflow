@@ -179,6 +179,7 @@ class AgentComponent(ToolCallingAgentComponent):
 
         # Get memory data
         self.chat_history = await self.get_memory_data()
+        logger.debug(f"Chat history: {self.chat_history}")
         if isinstance(self.chat_history, Message):
             self.chat_history = [self.chat_history]
 
