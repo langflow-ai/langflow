@@ -69,7 +69,7 @@ stages:
 - stage: Build
   displayName: 'Build Backend Image'
   dependsOn: Test
-  condition: succeeded()
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   jobs:
   - template: templates/backend-build-template.yml
     parameters:

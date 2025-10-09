@@ -64,7 +64,7 @@ stages:
 - stage: Build
   displayName: 'Build Frontend Image'
   dependsOn: Test
-  condition: succeeded()
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   jobs:
   - template: templates/frontend-build-template.yml
     parameters:
