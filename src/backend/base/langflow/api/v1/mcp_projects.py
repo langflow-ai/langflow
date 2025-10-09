@@ -629,9 +629,10 @@ async def install_mcp_config(
                 raise HTTPException(status_code=500, detail=error_detail) from e
 
             # For OAuth/MCP Composer, use the special format
+            settings = get_settings_service().settings
             command = "uvx"
             args = [
-                "mcp-composer",
+                f"mcp-composer{settings.mcp_composer_version}",
                 "--mode",
                 "stdio",
                 "--sse-url",
