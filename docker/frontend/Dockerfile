@@ -2,7 +2,7 @@
 # Enhanced for monorepo structure and CI/CD optimization
 
 # Build stage
-FROM node:20-alpine AS frontend_build
+FROM node:22-alpine AS frontend_build
 
 # Build arguments
 ARG BUILD_VERSION

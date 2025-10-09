@@ -1,4 +1,11 @@
-# Getting Started with Create React App
+# AI Studio Frontend
+
+This project is the frontend for AI Studio, built with React and Vite.
+
+## Test Validation Status
+✅ Frontend test fixes applied to resolve import.meta syntax errors in Jest environment.
+
+## Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
