@@ -26,6 +26,7 @@ from lfx.utils.util import (
     unescape_string,
     update_settings,
     update_verbose,
+    get_settings_service,
 )
 
 __all__ = [
@@ -56,4 +57,5 @@ __all__ = [
     "unescape_string",
     "update_settings",
     "update_verbose",
+    "get_settings_service",
 ]

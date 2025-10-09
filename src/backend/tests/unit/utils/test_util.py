@@ -106,10 +106,10 @@ class TestBuildTemplateFromFunction:
         with pytest.raises(ValueError, match="TestName not found"):
             build_template_from_function("TestName", type_dict)
 
-    @patch("langflow.utils.util.parse")
-    @patch("langflow.utils.util.get_default_factory")
-    @patch("langflow.utils.util.get_base_classes")
-    @patch("langflow.utils.util.format_dict")
+    @patch("lfx.utils.util.parse")
+    @patch("lfx.utils.util.get_default_factory")
+    @patch("lfx.utils.util.get_base_classes")
+    @patch("lfx.utils.util.format_dict")
     def test_successful_template_build(
         self, mock_format_dict, mock_get_base_classes, mock_get_default_factory, mock_parse
     ):
@@ -160,9 +160,9 @@ class TestBuildTemplateFromFunction:
         type_dict = {"test_type": mock_loader}
 
         with (
-            patch("langflow.utils.util.parse") as mock_parse,
-            patch("langflow.utils.util.get_base_classes") as mock_get_base_classes,
-            patch("langflow.utils.util.format_dict") as mock_format_dict,
+            patch("lfx.utils.util.parse") as mock_parse,
+            patch("lfx.utils.util.get_base_classes") as mock_get_base_classes,
+            patch("lfx.utils.util.format_dict") as mock_format_dict,
         ):
             mock_parse.return_value = Mock(short_description="Test", params={})
             mock_get_base_classes.return_value = ["BaseClass"]
@@ -197,9 +197,9 @@ class TestBuildTemplateFromMethod:
         ):
             build_template_from_method("TestClass", "test_method", type_dict)
 
-    @patch("langflow.utils.util.parse")
-    @patch("langflow.utils.util.get_base_classes")
-    @patch("langflow.utils.util.format_dict")
+    @patch("lfx.utils.util.parse")
+    @patch("lfx.utils.util.get_base_classes")
+    @patch("lfx.utils.util.format_dict")
     def test_successful_method_template_build(self, mock_format_dict, mock_get_base_classes, mock_parse):
         """Test successful method template building."""
         # Create mock class with method
@@ -397,10 +397,10 @@ class TestFormatDict:
         test_dict = {"_type": "test_type", "field1": {"type": "str", "required": True}}
 
         with (
-            patch("langflow.utils.util.get_type") as mock_get_type,
-            patch("langflow.utils.util.should_show_field") as mock_show,
-            patch("langflow.utils.util.is_password_field") as mock_password,
-            patch("langflow.utils.util.is_multiline_field") as mock_multiline,
+            patch("lfx.utils.util.get_type") as mock_get_type,
+            patch("lfx.utils.util.should_show_field") as mock_show,
+            patch("lfx.utils.util.is_password_field") as mock_password,
+            patch("lfx.utils.util.is_multiline_field") as mock_multiline,
         ):
             mock_get_type.return_value = "str"
             mock_show.return_value = True
@@ -573,7 +573,7 @@ class TestUtilityFunctions:
         """Test adding options to specific fields."""
         value = {}
 
-        with patch("langflow.utils.util.constants") as mock_constants:
+        with patch("lfx.utils.util.constants") as mock_constants:
             mock_constants.OPENAI_MODELS = ["gpt-3.5-turbo", "gpt-4"]
 
             add_options_to_field(value, "OpenAI", "model_name")
@@ -616,8 +616,8 @@ class TestUpdateSettings:
     """Test cases for update_settings function."""
 
     @pytest.mark.asyncio
-    @patch("langflow.utils.util.initialize_settings_service")
-    @patch("langflow.utils.util.get_settings_service")
+    @patch("lfx.utils.util.initialize_settings_service")
+    @patch("lfx.utils.util.get_settings_service")
     async def test_update_settings_basic(self, mock_get_service, mock_init_service):
         """Test basic settings update."""
         mock_service = Mock()
@@ -635,8 +635,8 @@ class TestUpdateSettings:
         assert mock_settings.update_settings.called
 
     @pytest.mark.asyncio
-    @patch("langflow.utils.util.initialize_settings_service")
-    @patch("langflow.utils.util.get_settings_service")
+    @patch("lfx.utils.util.initialize_settings_service")
+    @patch("lfx.utils.util.get_settings_service")
     async def test_update_settings_from_yaml(self, mock_get_service, mock_init_service):
         """Test updating settings from YAML config."""
         mock_service = Mock()
