@@ -269,7 +269,6 @@ def run(
     """Run Langflow."""
     if env_file:
         load_dotenv(env_file, override=True)
-
     # Set default log level if not provided
     log_level_str = "info" if log_level is None else log_level.lower()
 
