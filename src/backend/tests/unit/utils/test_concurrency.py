@@ -168,8 +168,8 @@ class TestKeyedWorkerLockManager:
     def test_initialization(self):
         """Test proper initialization of KeyedWorkerLockManager."""
         with (
-            patch("langflow.utils.concurrency.user_cache_dir") as mock_cache_dir,
-            patch("langflow.utils.concurrency.Path") as mock_path,
+            patch("lfx.utils.concurrency.user_cache_dir") as mock_cache_dir,
+            patch("lfx.utils.concurrency.Path") as mock_path,
         ):
             mock_cache_dir.return_value = "/cache/dir"
             mock_path_instance = MagicMock()
@@ -240,7 +240,7 @@ class TestKeyedWorkerLockManager:
         """Test lock context manager with valid key."""
         manager = KeyedWorkerLockManager()
 
-        with patch("langflow.utils.concurrency.FileLock") as mock_filelock:
+        with patch("lfx.utils.concurrency.FileLock") as mock_filelock:
             mock_lock_instance = MagicMock()
             mock_filelock.return_value = mock_lock_instance
 
@@ -266,9 +266,9 @@ class TestKeyedWorkerLockManager:
     def test_lock_file_path_construction(self):
         """Test that lock file path is constructed correctly."""
         with (
-            patch("langflow.utils.concurrency.user_cache_dir") as mock_cache_dir,
-            patch("langflow.utils.concurrency.Path") as mock_path,
-            patch("langflow.utils.concurrency.FileLock") as mock_filelock,
+            patch("lfx.utils.concurrency.user_cache_dir") as mock_cache_dir,
+            patch("lfx.utils.concurrency.Path") as mock_path,
+            patch("lfx.utils.concurrency.FileLock") as mock_filelock,
         ):
             mock_cache_dir.return_value = "/cache"
             mock_locks_dir = MagicMock()
@@ -287,7 +287,7 @@ class TestKeyedWorkerLockManager:
         """Test that lock is properly released even when exception occurs."""
         manager = KeyedWorkerLockManager()
 
-        with patch("langflow.utils.concurrency.FileLock") as mock_filelock:
+        with patch("lfx.utils.concurrency.FileLock") as mock_filelock:
             mock_lock_instance = MagicMock()
             mock_filelock.return_value = mock_lock_instance
 
@@ -305,7 +305,7 @@ class TestKeyedWorkerLockManager:
         """Test that different keys create different file locks."""
         manager = KeyedWorkerLockManager()
 
-        with patch("langflow.utils.concurrency.FileLock") as mock_filelock:
+        with patch("lfx.utils.concurrency.FileLock") as mock_filelock:
             mock_filelock.return_value = MagicMock()
 
             with manager.lock("key1"):
@@ -365,12 +365,12 @@ class TestKeyedWorkerLockManager:
             assert results[2].endswith("_start")
             assert results[3].endswith("_end")
 
-    @patch("langflow.utils.concurrency.user_cache_dir")
+    @patch("lfx.utils.concurrency.user_cache_dir")
     def test_locks_directory_creation(self, mock_cache_dir):
         """Test that locks directory is created properly."""
         mock_cache_dir.return_value = "/test/cache"
 
-        with patch("langflow.utils.concurrency.Path") as mock_path:
+        with patch("lfx.utils.concurrency.Path") as mock_path:
             mock_path_instance = MagicMock()
             mock_path.return_value = mock_path_instance
 
