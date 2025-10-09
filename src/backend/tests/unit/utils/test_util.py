@@ -616,9 +616,8 @@ class TestUpdateSettings:
     """Test cases for update_settings function."""
 
     @pytest.mark.asyncio
-    @patch("lfx.utils.util.initialize_settings_service")
     @patch("lfx.utils.util.get_settings_service")
-    async def test_update_settings_basic(self, mock_get_service, mock_init_service):
+    async def test_update_settings_basic(self, mock_get_service):
         """Test basic settings update."""
         mock_service = Mock()
         mock_settings = Mock()
@@ -627,36 +626,33 @@ class TestUpdateSettings:
 
         await update_settings(cache="redis")
 
-        mock_init_service.assert_called_once()
-        # Function calls update_settings with each parameter individually
-        # Verify the service was initialized
-
-        # Check that update_settings was called (may be multiple times with different params)
+        # Verify the service was called and update_settings was called
+        mock_get_service.assert_called_once()
+        # The function calls update_settings multiple times with different parameters
         assert mock_settings.update_settings.called
+        # Check that our specific call was made
+        mock_settings.update_settings.assert_any_call(cache="redis")
 
     @pytest.mark.asyncio
-    @patch("lfx.utils.util.initialize_settings_service")
     @patch("lfx.utils.util.get_settings_service")
-    async def test_update_settings_from_yaml(self, mock_get_service, mock_init_service):
+    async def test_update_settings_from_yaml(self, mock_get_service):
         """Test updating settings from YAML config."""
         mock_service = Mock()
         mock_settings = Mock()
-        # Make update_from_yaml async
-        mock_settings.update_from_yaml = Mock(return_value=None)
-
+        
         # Create an async mock
         async def async_update_from_yaml(*_args, **_kwargs):
             return None
 
-        mock_settings.update_from_yaml = async_update_from_yaml
-
+        mock_settings.update_from_yaml = Mock(side_effect=async_update_from_yaml)
         mock_service.settings = mock_settings
         mock_get_service.return_value = mock_service
 
         await update_settings(config="config.yaml", dev=True)
 
-        # Just verify the service was initialized and function completed
-        mock_init_service.assert_called_once()
+        # Verify the service was called and update_from_yaml was called
+        mock_get_service.assert_called_once()
+        mock_settings.update_from_yaml.assert_called_once_with("config.yaml", dev=True)
 
 
 class TestUtilityMiscFunctions:
