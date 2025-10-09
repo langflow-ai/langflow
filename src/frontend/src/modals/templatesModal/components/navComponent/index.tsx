@@ -9,7 +9,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
+
 } from "@/components/ui/sidebar";
 import { cn } from "@/utils/utils";
 import { useIsMobile } from "../../../../hooks/use-mobile";
@@ -25,11 +25,7 @@ export function Nav({ categories, currentTab, setCurrentTab }: NavProps) {
           className={cn("relative flex items-center gap-2 px-2 py-3 md:px-4")}
           data-testid="modal-title"
         >
-          <SidebarTrigger
-            className={cn(
-              "flex h-8 shrink-0 items-center rounded-md text-lg font-semibold leading-none tracking-tight text-primary outline-none ring-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-1 md:hidden [&>svg]:size-4 [&>svg]:shrink-0",
-            )}
-          />
+
           <div
             className={cn(
               "text-base-semibold flex h-8 shrink-0 items-center rounded-md leading-none tracking-tight text-primary outline-none ring-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",

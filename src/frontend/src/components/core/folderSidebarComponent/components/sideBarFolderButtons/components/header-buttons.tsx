@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+
 import { useUpdateUser } from "@/controllers/API/queries/auth";
 import CustomGetStartedProgress from "@/customization/components/custom-get-started-progress";
 import useAuthStore from "@/stores/authStore";
@@ -71,9 +71,7 @@ export const HeaderButtons = ({
       )}
 
       <div className="flex shrink-0 items-center justify-between gap-2 pt-2">
-        <SidebarTrigger className="lg:hidden">
-          <IconComponent name="PanelLeftClose" className="h-4 w-4" />
-        </SidebarTrigger>
+
 
         <div className="flex-1 text-sm font-medium">Projects</div>
         <div className="flex items-center gap-1">

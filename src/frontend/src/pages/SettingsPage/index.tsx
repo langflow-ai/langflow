@@ -1,6 +1,6 @@
 import { Outlet, type To } from "react-router-dom";
 import SideBarButtonsComponent from "@/components/core/sidebarComponent";
-import { SidebarProvider } from "@/components/ui/sidebar";
+// SidebarProvider removed
 import { CustomStoreSidebar } from "@/customization/components/custom-store-sidebar";
 import {
   ENABLE_DATASTAX_LANGFLOW,
@@ -93,14 +93,12 @@ export default function SettingsPage(): JSX.Element {
       title="Settings"
       description="Manage the general settings for Langflow."
     >
-      <SidebarProvider width="15rem" defaultOpen={false}>
-        <SideBarButtonsComponent items={sidebarNavItems} />
-        <main className="flex flex-1 overflow-hidden">
-          <div className="flex flex-1 flex-col overflow-x-hidden pt-1">
-            <Outlet />
-          </div>
-        </main>
-      </SidebarProvider>
+      <SideBarButtonsComponent items={sidebarNavItems} />
+      <main className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 flex-col overflow-x-hidden pt-1">
+          <Outlet />
+        </div>
+      </main>
     </PageLayout>
   );
 }

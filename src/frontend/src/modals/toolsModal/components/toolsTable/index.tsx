@@ -15,7 +15,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  useSidebar,
+
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
 import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
@@ -47,7 +47,7 @@ export default function ToolsTable({
 
   const editedSelection = useRef<boolean>(false);
 
-  const { setOpen: setSidebarOpen } = useSidebar();
+  // Sidebar functionality has been removed
 
   const getRowId = useMemo(() => {
     return (params: any) => params.data.display_name ?? params.data.name;
@@ -258,7 +258,7 @@ export default function ToolsTable({
 
   const handleRowClicked = (event) => {
     setFocusedRow(event.data);
-    setSidebarOpen(true);
+    // Sidebar functionality has been removed
   };
 
   const handleGridReady = () => {
@@ -273,7 +273,7 @@ export default function ToolsTable({
   }, [focusedRow]);
 
   const handleClose = () => {
-    setSidebarOpen(false);
+    // Sidebar functionality has been removed
   };
 
   return (

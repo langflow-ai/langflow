@@ -38,7 +38,6 @@ import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import ViewPage from "./pages/ViewPage";
-import AgentBuilderPage from "./pages/AgentBuilderPage";
 import ConversationPage from "./pages/AgentBuilderPage/ConversationPage";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));

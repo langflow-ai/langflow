@@ -16,6 +16,7 @@ import useAlertStore from "@/stores/alertStore";
 import { useSidebar } from "@/contexts/sidebarContext";
 import { PanelLeft } from "lucide-react";
 import FlowMenu from "./components/FlowMenu";
+import Breadcrumb from "@/components/common/Breadcrumb";
 // import AutonomizeIcon from "@/icons/Autonomize";
 
 export default function AppHeader(): JSX.Element {
@@ -52,6 +53,12 @@ export default function AppHeader(): JSX.Element {
   //     : "hidden";
   // };
 
+  // Breadcrumb navigation
+  const breadcrumbItems = [
+    { label: "/" },
+    { label: "AI Agent Builder", href: "/agent-builder" },
+  ];
+
   return (
     <div
       className={`z-10 flex h-[48px] w-full items-center justify-between border-b pr-5 pl-2.5`}
@@ -86,10 +93,8 @@ export default function AppHeader(): JSX.Element {
             <img src={AutonomizeLogoUrl} alt="Autonomize Logo" />
           )}
         </Button>
-        <div 
-          className="text-white text-[12px] font-medium mt-2"
-        >
-         / AI Agent Builder
+        <div className="text-white text-[12px] font-medium mt-2">
+          <Breadcrumb items={breadcrumbItems} className="mb-6 text-white font-medium mt-2" />
         </div>
         {ENABLE_DATASTAX_LANGFLOW && (
           <>

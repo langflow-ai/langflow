@@ -8,7 +8,7 @@ import {
   DisclosureContent,
   DisclosureTrigger,
 } from "@/components/ui/disclosure";
-import { SidebarHeader, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarHeader } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import type { SidebarHeaderComponentProps } from "../types";
 import FeatureToggles from "./featureTogglesComponent";
@@ -37,9 +37,7 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
       {!ENABLE_NEW_SIDEBAR && (
         <Disclosure open={showConfig} onOpenChange={setShowConfig}>
           <div className="flex w-full items-center gap-2">
-            <SidebarTrigger className="text-muted-foreground">
-              <ForwardedIconComponent name="PanelLeftClose" />
-            </SidebarTrigger>
+
             <h3 className="flex-1 cursor-default text-sm font-semibold">
               Components
             </h3>

@@ -53,7 +53,7 @@ export default function Breadcrumb({ items, className }: BreadcrumbProps) {
                   </BreadcrumbPage>
                 )}
               </BreadcrumbItem>
-              {!isLast && <BreadcrumbSeparator>/</BreadcrumbSeparator>}
+              {/* {!isLast && <BreadcrumbSeparator>/</BreadcrumbSeparator>} */}
             </div>
           );
         })}

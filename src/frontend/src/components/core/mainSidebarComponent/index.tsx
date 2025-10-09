@@ -1,7 +1,7 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Home, Workflow, Package, Store, Play } from "lucide-react";
-import { useSidebar } from "@/contexts/sidebarContext";
+// Sidebar context has been removed
 
 interface SidebarItem {
   id: string;
@@ -11,7 +11,7 @@ interface SidebarItem {
 }
 
 const sidebarItems: SidebarItem[] = [
-  { id: 'aistudio', icon: Home, path: '/', label: 'AI Studio' },
+  { id: 'aistudio', icon: Home, path: '/agent-builder', label: 'AI Studio' },
   { id: 'agentmarketplace', icon: Workflow, path: '/flows', label: 'Agent Marketplace' },
   { id: 'integration', icon: Package, path: '/components', label: 'Integration' },
   { id: 'monitor', icon: Store, path: '/store', label: 'Monitor' },
@@ -20,7 +20,7 @@ const sidebarItems: SidebarItem[] = [
 export default function MainSidebar(): JSX.Element {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isCollapsed } = useSidebar();
+  const isCollapsed = false; // Sidebar is no longer collapsible
 
   const isActive = (path: string) => {
     if (path === '/') {
