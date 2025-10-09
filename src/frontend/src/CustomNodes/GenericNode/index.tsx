@@ -341,7 +341,9 @@ function GenericNode({
   useEffect(() => {
     const outputs = data?.node?.outputs || [];
     const nonGroupOutputs = outputs.filter((output) => !output.group_outputs);
-    const selectedNonGroupOutput = nonGroupOutputs.find((output) => output.selected);
+    const selectedNonGroupOutput = nonGroupOutputs.find(
+      (output) => output.selected,
+    );
     const defaultOutput = selectedNonGroupOutput || nonGroupOutputs[0];
 
     const hasManualSelection = !!data?.selected_output;
@@ -350,7 +352,11 @@ function GenericNode({
     const hasNoValidOutput = defaultOutput === undefined;
 
     // Skip auto-selection if output is manually selected, only one output exists with selection, or no valid output
-    if (hasManualSelection || (hasOneOrFewerOutputs && hasSelectedOutput) || hasNoValidOutput) {
+    if (
+      hasManualSelection ||
+      (hasOneOrFewerOutputs && hasSelectedOutput) ||
+      hasNoValidOutput
+    ) {
       return;
     }
 
