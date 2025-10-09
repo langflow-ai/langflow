@@ -145,7 +145,7 @@ class ChatOllamaComponent(LCModelComponent):
         # Mapping mirostat settings to their corresponding values
         mirostat_options = {"Mirostat": 1, "Mirostat 2.0": 2}
 
-        # Default to 0 for 'Disabled'
+        # Default to None for 'Disabled'
         mirostat_value = mirostat_options.get(self.mirostat, None)
 
         # Set mirostat_eta and mirostat_tau to None if mirostat is disabled
