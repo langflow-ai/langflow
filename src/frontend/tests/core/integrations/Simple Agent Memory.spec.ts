@@ -60,5 +60,3 @@ withEventDeliveryModes(
     expect(finalText.toLowerCase()).toContain("john doe");
   },
 );
-
-
