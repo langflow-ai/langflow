@@ -14,8 +14,8 @@ WORKDIR /app
 # Copy package files first for better layer caching
 COPY src/frontend/package.json src/frontend/package-lock.json ./
 
-# Install dependencies
-RUN npm ci --silent
+# Install all dependencies (including devDependencies needed for build)
+RUN npm ci --silent --include=dev
 
 # Copy configuration files
 COPY src/frontend/tsconfig.json \
@@ -39,12 +39,12 @@ ENV VITE_BUILD_VERSION=$BUILD_VERSION \
     NODE_ENV=$NODE_ENV
 
 # Build the application (no runtime environment variables needed at build time)
-RUN npm run build
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build
 
 # Copy runtime scripts to build directory
-RUN cp .env.example dist/ && \
-    cp env.sh dist/ && \
-    cp setup-nginx.sh dist/
+RUN cp .env.example build/ && \
+    cp env.sh build/ && \
+    cp setup-nginx.sh build/
 
 # Production stage
 FROM nginx:1.25-alpine
@@ -53,7 +53,7 @@ FROM nginx:1.25-alpine
 COPY src/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built application with runtime scripts from build stage
-COPY --from=frontend_build /app/dist /usr/share/nginx/html
+COPY --from=frontend_build /app/build /usr/share/nginx/html
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S aistudio && \
