@@ -145,6 +145,6 @@ class MessageCache:
         """
         return {
             "cached_sessions": len(self._cache),
-            "total_messages": sum(len(msgs) for msgs in self._cache.values()),
+            "total_messages": sum(map(len, self._cache.values())),
             "ttl_seconds": self.ttl_seconds,
         }
