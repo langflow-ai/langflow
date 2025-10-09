@@ -65,7 +65,7 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
         assert component._path() == "/tmp/test.csv"
 
     def test_get_local_path_with_local_file(self, component_class):
-        """Test _get_local_path returns path as-is for local files."""
+        """Test _get_local_path returns path as-is for local storage."""
         component = component_class()
         component.set_attributes(
             {
@@ -76,14 +76,19 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
             }
         )
 
-        # No mocks needed - testing pure logic
-        local_path = component._get_local_path()
-        assert local_path == "/tmp/test.csv"
-        # Should not have created temp file path
-        assert not hasattr(component, "_temp_file_path")
+        # Mock settings to indicate local storage
+        with patch("langflow.services.deps.get_settings_service") as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.settings.storage_type = "local"
+            mock_get_settings.return_value = mock_settings
+
+            local_path = component._get_local_path()
+            assert local_path == "/tmp/test.csv"
+            # Should not have created temp file path
+            assert not hasattr(component, "_temp_file_path")
 
     def test_get_local_path_with_s3_file(self, component_class):
-        """Test _get_local_path downloads storage files to temp."""
+        """Test _get_local_path downloads S3 files to temp."""
         component = component_class()
         s3_path = "flow_123/data.csv"
         component.set_attributes(
@@ -97,8 +102,14 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
 
         csv_content = b"col1,col2\n1,2\n3,4"
 
-        # Only mock storage read operations - real temp file creation and cleanup
-        with patch("langflow.base.data.storage_utils.read_file_bytes") as mock_read_bytes:
+        # Mock S3 storage and read operations - real temp file creation and cleanup
+        with (
+            patch("langflow.services.deps.get_settings_service") as mock_get_settings,
+            patch("langflow.base.data.storage_utils.read_file_bytes") as mock_read_bytes,
+        ):
+            mock_settings = MagicMock()
+            mock_settings.settings.storage_type = "s3"
+            mock_get_settings.return_value = mock_settings
             mock_read_bytes.return_value = csv_content
 
             # Real temp file creation
@@ -118,7 +129,7 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
             assert not Path(local_path).exists()
 
     def test_get_local_path_with_absolute_path_no_download(self, component_class):
-        """Test that absolute paths that exist locally are not downloaded."""
+        """Test that local files are used directly when storage is local."""
         component = component_class()
 
         # Create a real temp file to simulate existing local file
@@ -136,12 +147,17 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
                 }
             )
 
-            # No mocks needed - testing pure logic
-            local_path = component._get_local_path()
+            # Mock settings to indicate local storage
+            with patch("langflow.services.deps.get_settings_service") as mock_get_settings:
+                mock_settings = MagicMock()
+                mock_settings.settings.storage_type = "local"
+                mock_get_settings.return_value = mock_settings
 
-            # Should return original path without downloading
-            assert local_path == temp_file
-            assert not hasattr(component, "_temp_file_path")
+                local_path = component._get_local_path()
+
+                # Should return original path without downloading
+                assert local_path == temp_file
+                assert not hasattr(component, "_temp_file_path")
         finally:
             Path(temp_file).unlink()
 
@@ -196,8 +212,15 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
                 }
             )
 
-            # Only mock LangChain agent
-            with patch("langflow.components.langchain_utilities.csv_agent.create_csv_agent") as mock_create_agent:
+            # Mock settings and LangChain agent
+            with (
+                patch("langflow.services.deps.get_settings_service") as mock_get_settings,
+                patch("langflow.components.langchain_utilities.csv_agent.create_csv_agent") as mock_create_agent,
+            ):
+                mock_settings = MagicMock()
+                mock_settings.settings.storage_type = "local"
+                mock_get_settings.return_value = mock_settings
+
                 mock_agent = MagicMock()
                 mock_agent.invoke.return_value = {"output": "The sum is 3"}
                 mock_create_agent.return_value = mock_agent
@@ -230,11 +253,15 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
 
         csv_content = b"col1,col2\n1,2\n3,4"
 
-        # Only mock storage read and LangChain agent creation
+        # Mock S3 settings, storage read, and LangChain agent creation
         with (
+            patch("langflow.services.deps.get_settings_service") as mock_get_settings,
             patch("langflow.base.data.storage_utils.read_file_bytes") as mock_read_bytes,
             patch("langflow.components.langchain_utilities.csv_agent.create_csv_agent") as mock_create_agent,
         ):
+            mock_settings = MagicMock()
+            mock_settings.settings.storage_type = "s3"
+            mock_get_settings.return_value = mock_settings
             mock_read_bytes.return_value = csv_content
 
             mock_agent = MagicMock()
@@ -276,12 +303,16 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
         temp_file_path = None
 
         with (
+            patch("langflow.services.deps.get_settings_service") as mock_get_settings,
             patch("langflow.base.data.storage_utils.read_file_bytes") as mock_read_bytes,
             patch(
                 "langflow.components.langchain_utilities.csv_agent.create_csv_agent",
                 side_effect=Exception("Agent creation failed"),
             ),
         ):
+            mock_settings = MagicMock()
+            mock_settings.settings.storage_type = "s3"
+            mock_get_settings.return_value = mock_settings
             mock_read_bytes.return_value = csv_content
 
             with pytest.raises(Exception, match="Agent creation failed"):
@@ -314,7 +345,14 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
                 }
             )
 
-            with patch("langflow.components.langchain_utilities.csv_agent.create_csv_agent") as mock_create_agent:
+            with (
+                patch("langflow.services.deps.get_settings_service") as mock_get_settings,
+                patch("langflow.components.langchain_utilities.csv_agent.create_csv_agent") as mock_create_agent,
+            ):
+                mock_settings = MagicMock()
+                mock_settings.settings.storage_type = "local"
+                mock_get_settings.return_value = mock_settings
+
                 mock_agent = MagicMock()
                 mock_create_agent.return_value = mock_agent
 

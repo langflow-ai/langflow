@@ -35,21 +35,22 @@ class JsonAgentComponent(LCAgentComponent):
     ]
 
     def _get_local_path(self) -> Path:
-        """Get a local file path, downloading from storage if necessary.
+        """Get a local file path, downloading from S3 storage if necessary.
 
         Returns:
             Path: Local file path that can be used by LangChain
         """
+        from langflow.services.deps import get_settings_service
+
         file_path = self.path
+        settings = get_settings_service().settings
 
-        # If path looks like a storage path (flow_id/filename) and doesn't exist locally
-        if "/" in file_path and not Path(file_path).exists():
-            from langflow.base.data.storage_utils import read_file_bytes, parse_storage_path
+        # If using S3 storage, download the file to temp
+        if settings.storage_type == "s3":
+            from langflow.base.data.storage_utils import read_file_bytes
 
-            # Parse the storage path
-            parsed = parse_storage_path(file_path)
-            if parsed:
-                # Download to temp file
+            try:
+                # Download from S3 to temp file
                 file_bytes = run_until_complete(read_file_bytes(file_path))
 
                 # Create temp file with appropriate extension
@@ -61,8 +62,11 @@ class JsonAgentComponent(LCAgentComponent):
                 # Store temp path for cleanup
                 self._temp_file_path = temp_path
                 return Path(temp_path)
+            except Exception:
+                # If S3 download fails, fall back to treating it as a local path
+                pass
 
-        # Local file or absolute path - return as Path
+        # Local storage or fallback - return as Path
         return Path(file_path)
 
     def _cleanup_temp_file(self) -> None:

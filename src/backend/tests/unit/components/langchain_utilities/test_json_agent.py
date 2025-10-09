@@ -45,11 +45,16 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
         try:
             component.set_attributes({"llm": MagicMock(), "path": json_file})
 
-            # No mocks needed - testing pure logic
-            local_path = component._get_local_path()
-            assert isinstance(local_path, Path)
-            assert str(local_path) == json_file
-            assert not hasattr(component, "_temp_file_path")
+            # Mock settings to indicate local storage
+            with patch("langflow.services.deps.get_settings_service") as mock_get_settings:
+                mock_settings = MagicMock()
+                mock_settings.settings.storage_type = "local"
+                mock_get_settings.return_value = mock_settings
+
+                local_path = component._get_local_path()
+                assert isinstance(local_path, Path)
+                assert str(local_path) == json_file
+                assert not hasattr(component, "_temp_file_path")
         finally:
             Path(json_file).unlink()
 
@@ -61,8 +66,14 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
 
         json_content = b'{"key": "value", "number": 42}'
 
-        # Only mock storage read - real temp file creation
-        with patch("langflow.base.data.storage_utils.read_file_bytes") as mock_read_bytes:
+        # Mock S3 storage and read - real temp file creation
+        with (
+            patch("langflow.services.deps.get_settings_service") as mock_get_settings,
+            patch("langflow.base.data.storage_utils.read_file_bytes") as mock_read_bytes,
+        ):
+            mock_settings = MagicMock()
+            mock_settings.settings.storage_type = "s3"
+            mock_get_settings.return_value = mock_settings
             mock_read_bytes.return_value = json_content
 
             # Real temp file creation
@@ -90,7 +101,13 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
 
         yaml_content = b"key: value\nnumber: 42"
 
-        with patch("langflow.base.data.storage_utils.read_file_bytes") as mock_read_bytes:
+        with (
+            patch("langflow.services.deps.get_settings_service") as mock_get_settings,
+            patch("langflow.base.data.storage_utils.read_file_bytes") as mock_read_bytes,
+        ):
+            mock_settings = MagicMock()
+            mock_settings.settings.storage_type = "s3"
+            mock_get_settings.return_value = mock_settings
             mock_read_bytes.return_value = yaml_content
 
             local_path = component._get_local_path()
@@ -135,12 +152,17 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
         try:
             component.set_attributes({"llm": MagicMock(), "path": json_file, "verbose": False})
 
-            # Only mock LangChain agent components
+            # Mock settings and LangChain agent components
             with (
+                patch("langflow.services.deps.get_settings_service") as mock_get_settings,
                 patch("langflow.components.langchain_utilities.json_agent.JsonSpec") as mock_json_spec,
                 patch("langflow.components.langchain_utilities.json_agent.JsonToolkit") as mock_json_toolkit,
                 patch("langflow.components.langchain_utilities.json_agent.create_json_agent") as mock_create_agent,
             ):
+                mock_settings = MagicMock()
+                mock_settings.settings.storage_type = "local"
+                mock_get_settings.return_value = mock_settings
+
                 mock_spec = MagicMock()
                 mock_json_spec.from_file.return_value = mock_spec
                 mock_toolkit = MagicMock()
@@ -169,12 +191,17 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
             component.set_attributes({"llm": MagicMock(), "path": yaml_file, "verbose": True})
 
             with (
+                patch("langflow.services.deps.get_settings_service") as mock_get_settings,
                 patch("langflow.components.langchain_utilities.json_agent.JsonSpec") as mock_json_spec,
                 patch("langflow.components.langchain_utilities.json_agent.JsonToolkit") as mock_json_toolkit,
                 patch("langflow.components.langchain_utilities.json_agent.create_json_agent") as mock_create_agent,
                 patch("builtins.open", create=True),
                 patch("langflow.components.langchain_utilities.json_agent.yaml.safe_load") as mock_yaml_load,
             ):
+                mock_settings = MagicMock()
+                mock_settings.settings.storage_type = "local"
+                mock_get_settings.return_value = mock_settings
+
                 yaml_data = {"key": "value", "number": 42}
                 mock_yaml_load.return_value = yaml_data
 
@@ -201,11 +228,15 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
         json_content = b'{"users": []}'
 
         with (
+            patch("langflow.services.deps.get_settings_service") as mock_get_settings,
             patch("langflow.base.data.storage_utils.read_file_bytes") as mock_read_bytes,
             patch("langflow.components.langchain_utilities.json_agent.JsonSpec") as mock_json_spec,
             patch("langflow.components.langchain_utilities.json_agent.JsonToolkit") as mock_json_toolkit,
             patch("langflow.components.langchain_utilities.json_agent.create_json_agent") as mock_create_agent,
         ):
+            mock_settings = MagicMock()
+            mock_settings.settings.storage_type = "s3"
+            mock_get_settings.return_value = mock_settings
             mock_read_bytes.return_value = json_content
 
             mock_spec = MagicMock()
@@ -236,12 +267,16 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
         json_content = b'{"invalid'
 
         with (
+            patch("langflow.services.deps.get_settings_service") as mock_get_settings,
             patch("langflow.base.data.storage_utils.read_file_bytes") as mock_read_bytes,
             patch(
                 "langflow.components.langchain_utilities.json_agent.JsonSpec",
                 side_effect=Exception("Invalid JSON"),
             ),
         ):
+            mock_settings = MagicMock()
+            mock_settings.settings.storage_type = "s3"
+            mock_get_settings.return_value = mock_settings
             mock_read_bytes.return_value = json_content
 
             with pytest.raises(Exception):

@@ -543,18 +543,7 @@ class KnowledgeIngestionComponent(Component):
     # ---------------------------------------------------------------------
     async def build_kb_info(self) -> Data:
         """Main ingestion routine → returns a dict with KB metadata."""
-        # Check if we're in S3 mode - knowledge bases not supported in cloud
-        from langflow.services.deps import get_settings_service
-        
-        settings = get_settings_service().settings
-        if settings.storage_type == "s3":
-            msg = (
-                "Knowledge bases are not supported in S3/cloud mode. "
-                "Knowledge bases require local file system access for vector store persistence. "
-                "Please use cloud-based vector stores (Pinecone, Weaviate, etc.) or local storage mode."
-            )
-            raise ValueError(msg)
-        
+
         try:
             input_value = self.input_df[0] if isinstance(self.input_df, list) else self.input_df
             df_source: DataFrame = convert_to_dataframe(input_value)
