@@ -86,6 +86,7 @@ def _i63_from_sha256(s: str) -> int:
 
 def _canonical_db_identity(url) -> str:
     """Build a non-sensitive, stable identity string for the target DB/role.
+
     Avoids password and driver noise, normalizes case and default port.
     """
     # SQLAlchemy URL object
@@ -99,7 +100,8 @@ def _canonical_db_identity(url) -> str:
     return f"{host}:{port}/{dbname}:{user}"
 
 def _compute_lock_key(engine, namespace: str | None) -> int:
-    """Compute a transaction advisory lock key:
+    """Compute a transaction advisory lock key.
+
     base = SHA256(canonical(host,port,db,user)) -> 63-bit
     if namespace: XOR with SHA256(namespace) -> 63-bit
     """
@@ -163,8 +165,8 @@ def _do_run_migrations(connection):
             connection.exec_driver_sql(f"SET LOCAL lock_timeout = '{PG_LOCK_TIMEOUT}'")
             try:
                 connection.exec_driver_sql(f"SELECT pg_advisory_xact_lock({lock_key})")
-            except Exception as e:
-                logger.error(f"Failed to acquire advisory lock: {e}")
+            except Exception :
+                logger.exception("Failed to acquire advisory lock")
                 raise
 
         # Run migrations only once
