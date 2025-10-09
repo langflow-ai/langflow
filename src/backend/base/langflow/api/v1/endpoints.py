@@ -46,7 +46,7 @@ from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user, get_webhook_user
 from langflow.services.cache.utils import save_uploaded_file
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
@@ -81,27 +81,6 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
     except Exception as exc:  # noqa: BLE001
         logger.warning(f"Failed to parse request body: {exc}")
         return SimplifiedAPIRequest()
-
-
-async def get_flow_by_id_or_endpoint_name_with_user(
-    flow_id_or_name: str,
-    api_key_user: Annotated[UserRead, Depends(api_key_security)],
-) -> FlowRead:
-    """Dependency to get a flow by ID or endpoint name with user ownership validation.
-
-    This ensures that users can only access flows they own, preventing cross-account access.
-
-    Args:
-        flow_id_or_name: The flow ID (UUID) or endpoint name
-        api_key_user: The authenticated user from the API key
-
-    Returns:
-        FlowRead: The flow if found and owned by the user
-
-    Raises:
-        HTTPException: 404 if flow not found or user doesn't have access
-    """
-    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, str(api_key_user.id))
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
@@ -338,7 +317,7 @@ async def simplified_run_flow(
 
     Args:
         background_tasks (BackgroundTasks): FastAPI background task manager
-        flow (FlowRead | None): The flow to execute, loaded via dependency
+        flow_id_or_name (str): The flow ID or endpoint name to execute
         input_request (SimplifiedAPIRequest | None): Input parameters for the flow
         stream (bool): Whether to stream the response
         api_key_user (UserRead): Authenticated user from API key

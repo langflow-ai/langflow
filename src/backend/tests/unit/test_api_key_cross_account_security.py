@@ -1,4 +1,4 @@
-"""Test for API Key Cross-Account Security Issue #10202
+"""Test for API Key Cross-Account Security Issue #10202.
 
 This test reproduces the security vulnerability where an API key from one account
 can be used to execute flows from another account.
@@ -40,14 +40,14 @@ async def second_user(client):  # noqa: ARG001
             if user_to_delete:
                 await session.delete(user_to_delete)
                 await session.commit()
-    except Exception:
-        pass
+    except Exception:  # noqa: S110
+        pass  # Cleanup failures are not critical for tests
 
 
 @pytest.fixture
 async def second_user_logged_in_headers(client, second_user):
     """Get authentication headers for second user."""
-    login_data = {"username": second_user.username, "password": "testpassword2"}
+    login_data = {"username": second_user.username, "password": "testpassword2"}  # pragma: allowlist secret
     response = await client.post("api/v1/login", data=login_data)
     assert response.status_code == 200
     tokens = response.json()
@@ -56,17 +56,17 @@ async def second_user_logged_in_headers(client, second_user):
 
 
 @pytest.fixture
-async def first_user_api_key(client: AsyncClient, logged_in_headers, active_user):
+async def first_user_api_key(client: AsyncClient, logged_in_headers, active_user):  # noqa: ARG001
     """Create an API key for the first user."""
     api_key_data = ApiKeyCreate(name="first-user-api-key")
     response = await client.post("api/v1/api_key/", json=api_key_data.model_dump(), headers=logged_in_headers)
     assert response.status_code == 200, response.text
     data = response.json()
-    return data["api_key"]  # Return the unmasked API key
+    return data["api_key"]  # Return the unmasked API key  # pragma: allowlist secret
 
 
 @pytest.fixture
-async def second_user_flow(client: AsyncClient, second_user_logged_in_headers, second_user):
+async def second_user_flow(client: AsyncClient, second_user_logged_in_headers, second_user):  # noqa: ARG001
     """Create a flow owned by the second user."""
     # Create a simple flow
     flow_data = {
@@ -77,8 +77,7 @@ async def second_user_flow(client: AsyncClient, second_user_logged_in_headers, s
 
     response = await client.post("api/v1/flows/", json=flow_data, headers=second_user_logged_in_headers)
     assert response.status_code == 201, response.text
-    flow = response.json()
-    return flow
+    return response.json()
 
 
 @pytest.mark.api_key_required
@@ -89,10 +88,11 @@ async def test_cross_account_api_key_should_not_run_flow(
     active_user,
     second_user,
 ):
-    """Test that reproduces the security vulnerability:
+    """Test that reproduces the security vulnerability.
+
     - User 1 creates an API key
     - User 2 creates a flow
-    - User 1's API key should NOT be able to execute User 2's flow
+    - User 1's API key should NOT be able to execute User 2's flow.
 
     EXPECTED BEHAVIOR: This should fail with a 403 or 404 error
     CURRENT BEHAVIOR: This succeeds (security vulnerability)
@@ -128,6 +128,7 @@ async def test_same_account_api_key_should_run_own_flow(
     starter_project: dict,
 ):
     """Test that a user's API key CAN execute their own flows (legitimate use case).
+
     This should continue to work after the security fix.
     """
     # Get the flow ID from the first user's starter project

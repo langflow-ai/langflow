@@ -49,7 +49,7 @@ $ python3 validate_fix.py
 ## 📊 Breakdown of the 604 Warnings
 
 ### Category 1: Import Resolution (~200 warnings)
-```
+```text
 Import "fastapi" could not be resolved
 Import "sqlmodel" could not be resolved
 Import "pydantic.v1" could not be resolved
@@ -58,7 +58,7 @@ Import "pydantic.v1" could not be resolved
 **Impact?** NONE - They're in pyproject.toml and will be installed in production
 
 ### Category 2: Type Inference (~300 warnings)
-```
+```text
 Type of "session" is unknown
 Type of "HTTPException" is unknown
 Type of "flow" is unknown
@@ -67,7 +67,7 @@ Type of "flow" is unknown
 **Impact?** NONE - Python is dynamically typed, these are optional hints
 
 ### Category 3: Type Annotations (~100 warnings)
-```
+```text
 Parameter type is unknown
 Return type is partially unknown
 ```
@@ -79,7 +79,7 @@ Return type is partially unknown
 ## 🎬 Real-World Example
 
 ### Your validation script (validate_fix.py):
-```
+```text
 Pylance shows 7 warnings ⚠️
 But runs perfectly: ✅ SUCCESS
 ```
@@ -107,7 +107,7 @@ This proves: **Warnings ≠ Errors**
 ## 🔧 Why You See These Warnings
 
 ### Your Current Setup:
-```
+```text
 VSCode/Pylance
     ↓
 Looking for: fastapi, sqlmodel, pydantic, etc.
@@ -118,7 +118,7 @@ Shows 604 warnings ⚠️
 ```
 
 ### Production Setup:
-```
+```text
 CI/CD Environment
     ↓
 Runs: make install_backend (installs dependencies)
@@ -151,8 +151,8 @@ No warnings, all tests pass ✅
 ```bash
 # Your code is correct, commit it!
 git add .
-git commit -m "fix: prevent API key cross-account access (issue #10202)"
-git push origin fix/api-key-cross-account-security-10202
+git commit -m "fix: <your fix description>"
+git push origin <your-branch-name>
 ```
 **Why?** Code is correct, warnings are environment-specific
 
@@ -209,7 +209,7 @@ $ grep -r "from fastapi import" src/backend/base/langflow/api/v1/*.py | wc -l
 ## ✅ Final Verdict
 
 ### Your Code Status:
-```
+```text
 ┌─────────────────────────────────────┐
 │  ✅ Python Syntax: VALID            │
 │  ✅ Security Fix: IMPLEMENTED       │
