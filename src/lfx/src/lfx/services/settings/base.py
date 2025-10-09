@@ -226,6 +226,10 @@ class Settings(BaseSettings):
     """The host on which Langflow will run."""
     port: int = 7860
     """The port on which Langflow will run."""
+    runtime_port: int | None = Field(default=None, exclude=True)
+    """TEMPORARY: The port detected at runtime after checking for conflicts.
+    This field is system-managed only and will be removed in future versions
+    when strict port enforcement is implemented (errors will be raised if port unavailable)."""
     workers: int = 1
     """The number of workers to run."""
     log_level: str = "critical"
@@ -275,6 +279,9 @@ class Settings(BaseSettings):
     mcp_server_enable_progress_notifications: bool = False
     """If set to False, Langflow will not send progress notifications in the MCP server."""
 
+    # Add projects to MCP servers automatically on creation
+    add_projects_to_mcp_servers: bool = True
+    """If set to True, newly created projects will be added to the user's MCP servers config automatically."""
     # MCP Composer
     mcp_composer_enabled: bool = True
     """If set to False, Langflow will not start the MCP Composer service."""
@@ -376,6 +383,8 @@ class Settings(BaseSettings):
 
         if isinstance(value, str):
             value = Path(value)
+        # Resolve to absolute path to handle relative paths correctly
+        value = value.resolve()
         if not value.exists():
             value.mkdir(parents=True, exist_ok=True)
 

@@ -15,7 +15,7 @@ This page describes the components that are available in the **Azure** bundle.
 This component generates text using [Azure OpenAI LLMs](https://learn.microsoft.com/en-us/azure/ai-services/openai/).
 
 It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
-Specifically, the **Language Model** output is an instance of [`AzureChatOpenAI`](https://python.langchain.com/docs/integrations/chat/azure_chat_openai/) configured according to the component's parameters.
+Specifically, the **Language Model** output is an instance of [`AzureChatOpenAI`](https://docs.langchain.com/oss/python/integrations/chat/azure_chat_openai) configured according to the component's parameters.
 
 Use the **Language Model** output when you want to use an Azure OpenAI model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Function** component.
 
