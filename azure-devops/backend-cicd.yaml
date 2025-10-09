@@ -63,13 +63,13 @@ pr:
 stages:
 - stage: Test
   displayName: 'Backend Test and Validate'
-  condition: eq(variables['Build.Reason'], 'PullRequest')
   jobs:
   - template: templates/backend-test-template.yml
 
 - stage: Build
   displayName: 'Build Backend Image'
-  condition: in(variables['Build.Reason'], 'Manual', 'IndividualCI', 'BatchedCI')
+  dependsOn: Test
+  condition: succeeded()
   jobs:
   - template: templates/backend-build-template.yml
     parameters:
@@ -93,7 +93,7 @@ stages:
 - stage: SecurityScan
   displayName: 'Security Scanning'
   dependsOn: UpdatePlatformCharts
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  condition: succeeded()
   jobs:
   - template: templates/backend-security-template.yml
     parameters:
