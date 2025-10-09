@@ -165,7 +165,7 @@ class TestResample24kTo16k:
 
         # Verify resample was called with correct parameters
         mock_resample.assert_called_once()
-        (args,) = mock_resample.call_args
+        args, kwargs = mock_resample.call_args
         input_array, target_samples = args
 
         assert len(input_array) == 480
@@ -186,6 +186,7 @@ class TestWriteAudioToFile:
             patch("langflow.utils.voice_utils.logger") as mock_logger,
         ):
             mock_to_thread.return_value = None
+            mock_logger.ainfo = AsyncMock()
 
             await write_audio_to_file(audio_base64, "test.raw")
 
@@ -197,7 +198,7 @@ class TestWriteAudioToFile:
             assert args[2] == "test.raw"
 
             # Verify logging
-            mock_logger.info.assert_called_once_with(f"Wrote {len(audio_data)} bytes to test.raw")
+            mock_logger.ainfo.assert_called_once_with(f"Wrote {len(audio_data)} bytes to test.raw")
 
     @pytest.mark.asyncio
     async def test_write_audio_to_file_default_filename(self):
@@ -220,11 +221,12 @@ class TestWriteAudioToFile:
         invalid_base64 = "invalid base64 string!!!"
 
         with patch("langflow.utils.voice_utils.logger") as mock_logger:
+            mock_logger.aerror = AsyncMock()
             await write_audio_to_file(invalid_base64, "test.raw")
 
             # Should log error
-            mock_logger.error.assert_called_once()
-            error_msg = mock_logger.error.call_args[0][0]
+            mock_logger.aerror.assert_called_once()
+            error_msg = mock_logger.aerror.call_args[0][0]
             assert "Error writing audio to file:" in error_msg
 
     @pytest.mark.asyncio
@@ -259,12 +261,13 @@ class TestWriteAudioToFile:
             patch("langflow.utils.voice_utils.logger") as mock_logger,
         ):
             mock_to_thread.return_value = None
+            mock_logger.ainfo = AsyncMock()
 
             await write_audio_to_file(audio_base64, "empty.raw")
 
             # Should still work and log
             mock_to_thread.assert_called_once()
-            mock_logger.info.assert_called_once_with("Wrote 0 bytes to empty.raw")
+            mock_logger.ainfo.assert_called_once_with("Wrote 0 bytes to empty.raw")
 
     @pytest.mark.asyncio
     async def test_write_audio_to_file_large_audio(self):
@@ -277,13 +280,14 @@ class TestWriteAudioToFile:
             patch("langflow.utils.voice_utils.logger") as mock_logger,
         ):
             mock_to_thread.return_value = None
+            mock_logger.ainfo = AsyncMock()
 
             await write_audio_to_file(audio_base64, "large.raw")
 
             # Should handle large data correctly
             args = mock_to_thread.call_args[0]
             assert args[1] == large_audio
-            mock_logger.info.assert_called_once_with("Wrote 10000 bytes to large.raw")
+            mock_logger.ainfo.assert_called_once_with("Wrote 10000 bytes to large.raw")
 
 
 class TestWriteBytesToFile:
