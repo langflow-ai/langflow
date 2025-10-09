@@ -108,14 +108,17 @@ async def log_transaction(
         await logger.aerror(f"Error logging transaction: {exc!s}")
 
 
-async def flush_transaction_queue(transaction_queue: list[tuple[str | UUID, Any, str, Any | None, Any]]) -> None:
-    """Flush a queue of transactions to the database in batch.
+async def batch_insert_transactions_to_db(
+    transaction_queue: list[tuple[str | UUID, Any, str, Any | None, Any]], session
+) -> None:
+    """Batch insert transactions to the database.
 
     Takes a list of transaction tuples and processes them all at once to avoid
     database contention and deadlocks.
 
     Args:
         transaction_queue: List of tuples containing (flow_id, source, status, target, error)
+        session: Database session to use for insertion
     """
     if not transaction_queue:
         return
@@ -136,11 +139,10 @@ async def flush_transaction_queue(transaction_queue: list[tuple[str | UUID, Any,
 
     if transactions_to_log:
         try:
-            async with session_getter(get_db_service()) as session:
-                await crud_log_transactions_batch(session, transactions_to_log)
-                logger.debug(f"Flushed {len(transactions_to_log)} transactions to database")
+            await crud_log_transactions_batch(session, transactions_to_log)
+            logger.debug(f"Batch inserted {len(transactions_to_log)} transactions to database")
         except Exception as exc:  # noqa: BLE001
-            logger.error(f"Error flushing transaction queue: {exc!s}")
+            logger.error(f"Error batch inserting transactions: {exc!s}")
 
 
 async def log_vertex_build(
@@ -224,16 +226,17 @@ def prepare_vertex_build(
     )
 
 
-async def flush_vertex_build_queue(
-    vertex_build_queue: list[tuple[str | UUID, str, bool, Any, ResultDataResponse | dict, dict | None]],
+async def batch_insert_vertex_builds_to_db(
+    vertex_build_queue: list[tuple[str | UUID, str, bool, Any, ResultDataResponse | dict, dict | None]], session
 ) -> None:
-    """Flush a queue of vertex builds to the database in batch.
+    """Batch insert vertex builds to the database.
 
     Takes a list of vertex build tuples and processes them all at once to avoid
     database contention and deadlocks.
 
     Args:
         vertex_build_queue: List of tuples containing (flow_id, vertex_id, valid, params, data, artifacts)
+        session: Database session to use for insertion
     """
     if not vertex_build_queue:
         return
@@ -252,8 +255,7 @@ async def flush_vertex_build_queue(
 
     if vertex_builds_to_log:
         try:
-            async with session_getter(get_db_service()) as session:
-                await crud_log_vertex_builds_batch(session, vertex_builds_to_log)
-                logger.debug(f"Flushed {len(vertex_builds_to_log)} vertex builds to database")
+            await crud_log_vertex_builds_batch(session, vertex_builds_to_log)
+            logger.debug(f"Batch inserted {len(vertex_builds_to_log)} vertex builds to database")
         except Exception as exc:  # noqa: BLE001
-            logger.error(f"Error flushing vertex build queue: {exc!s}")
+            logger.error(f"Error batch inserting vertex builds: {exc!s}")
