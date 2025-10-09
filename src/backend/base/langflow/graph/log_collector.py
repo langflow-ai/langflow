@@ -95,8 +95,9 @@ class VertexBuildCollector:
         Returns:
             List of vertex build tuples ready for batch processing
         """
-        builds = self.builds.copy()
-        self.builds.clear()
+        # Fast swap of contents to avoid .copy() overhead and .clear() mutation cost.
+        builds = self.builds
+        self.builds = []
         return builds
 
 
