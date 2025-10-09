@@ -30,6 +30,7 @@ import HomePage from "./pages/MainPage/pages/homePage";
 import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
 import CollectionPage from "./pages/MainPage/pages/main-page";
 import SettingsPage from "./pages/SettingsPage";
+import AgentBuilderPage from "./pages/AgentBuilderPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
@@ -98,6 +99,10 @@ const router = createBrowserRouter(
                       )}
                     </Route>
                   )}
+                  <Route
+                    path="agent-builder/"
+                    element={<AgentBuilderPage key="agent-builder"/>}
+                  />
                   <Route
                     path="flows/"
                     element={<HomePage key="flows" type="flows" />}

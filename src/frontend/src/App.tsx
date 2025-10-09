@@ -4,6 +4,7 @@ import { RouterProvider } from "react-router-dom";
 import { LoadingPage } from "./pages/LoadingPage";
 import router from "./routes";
 import { useDarkStore } from "./stores/darkStore";
+import { SidebarProvider } from "./contexts/sidebarContext";
 
 export default function App() {
   const dark = useDarkStore((state) => state.dark);
@@ -15,8 +16,10 @@ export default function App() {
     }
   }, [dark]);
   return (
-    <Suspense fallback={<LoadingPage />}>
-      <RouterProvider router={router} />
-    </Suspense>
+    <SidebarProvider>
+      <Suspense fallback={<LoadingPage />}>
+        <RouterProvider router={router} />
+      </Suspense>
+    </SidebarProvider>
   );
 }

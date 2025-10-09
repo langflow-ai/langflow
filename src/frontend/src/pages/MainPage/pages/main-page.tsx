@@ -73,17 +73,9 @@ export default function CollectionPage(): JSX.Element {
             }}
           />
         )}
-      <main className="flex h-full w-full overflow-hidden">
+      <main className="flex h-full w-full bg-gradient-to-br overflow-auto">
         {flows && examples && folders ? (
-          <div
-            className={`relative mx-auto flex h-full w-full flex-col overflow-hidden`}
-          >
-            {flows?.length !== examples?.length || folders?.length > 1 ? (
-              <Outlet />
-            ) : (
-              <CustomEmptyPageCommunity setOpenModal={setOpenModal} />
-            )}
-          </div>
+          <Outlet />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <CustomLoader remSize={30} />
