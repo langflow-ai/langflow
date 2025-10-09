@@ -339,15 +339,28 @@ function GenericNode({
   );
 
   useEffect(() => {
-    if (
-      data?.selected_output ||
-      (data?.node?.outputs?.filter((output) => !output.group_outputs)?.length ??
-        0) <= 1
-    )
-      return;
-    handleSelectOutput(
-      data.node?.outputs?.find((output) => output.selected) || null,
+    const outputs = data?.node?.outputs || [];
+    const nonGroupOutputs = outputs.filter((output) => !output.group_outputs);
+    const selectedNonGroupOutput = nonGroupOutputs.find(
+      (output) => output.selected,
     );
+    const defaultOutput = selectedNonGroupOutput || nonGroupOutputs[0];
+
+    const hasManualSelection = !!data?.selected_output;
+    const hasOneOrFewerOutputs = nonGroupOutputs.length <= 1;
+    const hasSelectedOutput = !!selectedNonGroupOutput;
+    const hasNoValidOutput = defaultOutput === undefined;
+
+    // Skip auto-selection if output is manually selected, only one output exists with selection, or no valid output
+    if (
+      hasManualSelection ||
+      (hasOneOrFewerOutputs && hasSelectedOutput) ||
+      hasNoValidOutput
+    ) {
+      return;
+    }
+
+    handleSelectOutput(defaultOutput);
   }, [data.node?.outputs, data?.selected_output, handleSelectOutput]);
 
   const [hasChangedNodeDescription, setHasChangedNodeDescription] =

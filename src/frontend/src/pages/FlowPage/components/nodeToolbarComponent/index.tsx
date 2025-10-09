@@ -1,13 +1,13 @@
 import { useUpdateNodeInternals } from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { countHandlesFn } from "@/CustomNodes/helpers/count-handles";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ToggleShadComponent from "@/components/core/parameterRenderComponent/components/toggleShadComponent";
 import { Button } from "@/components/ui/button";
+import { LANGFLOW_SUPPORTED_TYPES } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
@@ -119,16 +119,30 @@ const NodeToolbarComponent = memo(
     );
     const addFlow = useAddFlow();
 
-    const hasGroupOutputs = data.node?.outputs?.some?.(
-      (output) => output.group_outputs,
-    );
-    const hasOutputs =
-      data.node?.outputs?.length && data.node?.outputs?.length > 1;
+    const groupOutputs =
+      data.node?.outputs?.filter?.(
+        (output) => (output.group_outputs ?? false) === false,
+      ) ?? [];
 
-    const hasSelectOutput = hasOutputs && !hasGroupOutputs;
+    const inputsWithHandle =
+      Object.values(data.node?.template ?? {}).filter((input) => {
+        return (
+          (!LANGFLOW_SUPPORTED_TYPES.has(input.type ?? "") ||
+            (input.input_types && input.input_types.length > 0)) &&
+          (!input.tool_mode || !data.node?.tool_mode) &&
+          !input.refresh_button &&
+          input.show &&
+          !input.advanced
+        );
+      }) ?? [];
+
+    const hasSelectOutput =
+      groupOutputs.length > 0 &&
+      groupOutputs.length === data.node?.outputs?.length;
     const hasOnlyOneOutput = data.node?.outputs?.length === 1;
 
-    const isMinimal = hasSelectOutput || hasOnlyOneOutput;
+    const isMinimal =
+      (hasSelectOutput || hasOnlyOneOutput) && inputsWithHandle.length <= 1;
 
     const [toolMode, setToolMode] = useState(
       () =>
