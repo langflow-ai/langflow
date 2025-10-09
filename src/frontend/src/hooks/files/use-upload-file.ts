@@ -58,7 +58,6 @@ const useUploadFile = ({
         // Check if file extension is allowed (for non-folder selection)
         if (!webkitdirectory) {
           const fileExtension = file.name.split(".").pop()?.toLowerCase();
-         const fileExtension = file.name.split(".").pop()?.toLowerCase();
          if (!fileExtension || (types && !types.includes(fileExtension))) {
            throw new Error(
              `File type ${fileExtension} not allowed. Allowed types: ${types?.join(", ")}`,
