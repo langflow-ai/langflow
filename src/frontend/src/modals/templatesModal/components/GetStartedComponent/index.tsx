@@ -49,9 +49,11 @@ export default function GetStartedComponent() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-8">
-      <BaseModal.Header description="Start with templates showcasing Langflow's Prompting, RAG, and Agent use cases.">
-        Get started
-      </BaseModal.Header>
+      <div className="sticky top-[-24px] z-10 -mx-6 -mt-6 bg-background/80 px-6 pb-4 pt-6 backdrop-blur-sm">
+        <BaseModal.Header description="Start with templates showcasing Langflow's Prompting, RAG, and Agent use cases.">
+          Get started
+        </BaseModal.Header>
+      </div>
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
         {cardData.map((card, index) => (
           <TemplateGetStartedCardComponent key={index} {...card} />
