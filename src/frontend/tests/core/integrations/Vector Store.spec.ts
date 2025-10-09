@@ -39,7 +39,7 @@ withEventDeliveryModes(
     });
 
     await page.waitForTimeout(500);
-   
+
     await adjustScreenView(page);
     // Astra DB tokens
     await page
