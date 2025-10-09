@@ -5,12 +5,17 @@ module.exports = {
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
     "\\.(css|less|scss|sass)$": "identity-obj-proxy",
+    "^@jsonquerylang/jsonquery$":
+      "<rootDir>/src/__mocks__/@jsonquerylang/jsonquery.js",
+    "^vanilla-jsoneditor$": "<rootDir>/src/__mocks__/vanilla-jsoneditor.js",
   },
   setupFilesAfterEnv: ["<rootDir>/src/setupTests.ts"],
+  setupFiles: ["<rootDir>/jest.setup.js"],
   testMatch: [
-    "<rootDir>/src/**/__tests__/**/*.{ts,tsx}",
+    "<rootDir>/src/**/__tests__/**/*.{test,spec}.{ts,tsx}",
     "<rootDir>/src/**/*.{test,spec}.{ts,tsx}",
   ],
+  testPathIgnorePatterns: ["/node_modules/", "test-utils.tsx"],
   transform: {
     "^.+\\.(ts|tsx)$": "ts-jest",
   },
@@ -19,7 +24,6 @@ module.exports = {
   transformIgnorePatterns: ["node_modules/(?!(.*\\.mjs$|@testing-library))"],
 
   // Coverage configuration
-  collectCoverage: true,
   collectCoverageFrom: [
     "src/**/*.{ts,tsx}",
     "!src/**/*.{test,spec}.{ts,tsx}",

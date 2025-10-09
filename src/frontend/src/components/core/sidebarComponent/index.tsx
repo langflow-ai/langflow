@@ -34,7 +34,7 @@ const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
             <SidebarMenu>
               {items.map((item, index) => (
                 <SidebarMenuItem key={index}>
-                  <CustomLink to={item.href!}>
+                  <CustomLink to={item.href!} replace>
                     <SidebarMenuButton
                       size="md"
                       isActive={

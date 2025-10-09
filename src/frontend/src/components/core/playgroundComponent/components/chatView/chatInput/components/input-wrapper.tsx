@@ -1,4 +1,5 @@
 import type React from "react";
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import {
   ENABLE_IMAGE_ON_PLAYGROUND,
   ENABLE_VOICE_ASSISTANT,
@@ -49,7 +50,31 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   currentFlowId,
   playgroundPage,
 }) => {
-  const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto custom-scroll`;
+  const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto`;
+
+  // Check if voice mode is available
+  const { data: config } = useGetConfig();
+
+  const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("textarea")) {
+      return;
+    }
+    inputRef.current?.focus();
+    inputRef.current?.setSelectionRange(
+      inputRef.current.value.length,
+      inputRef.current.value.length,
+    );
+  };
+
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("textarea")) {
+      return;
+    }
+    e.stopPropagation();
+    e.preventDefault();
+  };
 
   return (
     <div className="flex w-full flex-col-reverse">
@@ -74,9 +99,9 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
       <div
         data-testid="input-wrapper"
         className="flex flex-col w-full items-end gap-2 rounded-md border border-input bg-background p-2 hover:border-muted-foreground focus-within:border-primary"
+        onClick={onClick}
+        onMouseDown={onMouseDown}
       >
-        {/* Left side buttons */}
-
         {/* Text input area */}
         <div className="flex-1 w-full">
           <TextAreaWrapper
@@ -104,7 +129,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
             />
           </div>
           <div className="flex items-center gap-1">
-            {ENABLE_VOICE_ASSISTANT && (
+            {ENABLE_VOICE_ASSISTANT && config?.voice_mode_available && (
               <VoiceButton toggleRecording={() => setShowAudioInput(true)} />
             )}
             <ButtonSendWrapper

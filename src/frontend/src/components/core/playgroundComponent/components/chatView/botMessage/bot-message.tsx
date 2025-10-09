@@ -28,7 +28,7 @@ export const BotMessage = memo(
     const handleEditMessage = (message: string) => {
       updateMessageMutation(
         {
-          ...chat,
+          id: chat.id,
           files: convertFiles(chat.files),
           sender_name: chat.sender_name ?? "AI",
           text: message,

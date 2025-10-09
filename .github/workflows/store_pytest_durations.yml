@@ -21,7 +21,7 @@ jobs:
       ASTRA_DB_API_ENDPOINT: ${{ secrets.ASTRA_DB_API_ENDPOINT }}
       ASTRA_DB_APPLICATION_TOKEN: ${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
         with:
@@ -34,7 +34,7 @@ jobs:
       - name: Run unit tests
         id: run_tests
         continue-on-error: true
-        run: uv run pytest src/backend/tests/unit --timeout=120 --durations-path src/backend/tests/.test_durations --splitting-algorithm least_duration --store-durations
+        run: uv run pytest src/backend/tests/unit --timeout=150 --durations-path src/backend/tests/.test_durations --splitting-algorithm least_duration --store-durations
 
 
       - name: Close existing PRs

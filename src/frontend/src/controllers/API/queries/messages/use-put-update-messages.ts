@@ -27,11 +27,12 @@ export const useUpdateMessage: useMutationFunctionType<
       const messageIndex = messages.findIndex(
         (m: Message) => m.id === message.id,
       );
-      messages[messageIndex] = message;
-      sessionStorage.setItem(flowId, JSON.stringify(messages));
-      return {
-        data: message,
+      messages[messageIndex] = {
+        ...messages[messageIndex],
+        ...message,
+        flow_id: flowId,
       };
+      sessionStorage.setItem(flowId, JSON.stringify(messages));
     } else {
       const result = await api.put(
         `${getURL("MESSAGES")}/${message.id}`,

@@ -3,9 +3,6 @@ title: Flow management endpoints
 slug: /api-flows
 ---
 
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
-
 Use the `/flows` endpoint to create, read, update, and delete flows.
 
 If you want to use the Langflow API to run a flow, see [Flow trigger endpoints](/api-flows-run).
@@ -281,14 +278,14 @@ curl -X POST \
 
 Imports flows by uploading a [Langflow-compatible JSON file](/concepts-flows-import#langflow-json-file-contents).
 
-To specify a target project for the flow, include the query parameter `project_id`.
-The target `project_id` must already exist before uploading a flow. Call the [/api/v1/projects/](/api-projects#read-projects) endpoint for a list of available projects.
+To specify a target project for the flow, include the query parameter `folder_id`.
+The target `folder_id` must already exist before uploading a flow. Call the [/api/v1/projects/](/api-projects#read-projects) endpoint for a list of available folders and projects.
 
-This example uploads a local file named `agent-with-astra-db-tool.json` to a project specified by a `PROJECT_ID` variable:
+This example uploads a local file named `agent-with-astra-db-tool.json` to a folder specified by a `FOLDER_ID` variable:
 
 ```bash
 curl -X POST \
-  "$LANGFLOW_URL/api/v1/flows/upload/?project_id=$PROJECT_ID" \
+  "$LANGFLOW_URL/api/v1/flows/upload/?folder_id=$FOLDER_ID" \
   -H "accept: application/json" \
   -H "Content-Type: multipart/form-data" \
   -H "x-api-key: $LANGFLOW_API_KEY" \
@@ -311,5 +308,4 @@ curl -X POST \
   }
 ]
 ```
-
 </details>

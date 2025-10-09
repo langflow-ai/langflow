@@ -5,6 +5,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { SimpleSidebarProvider } from "@/components/ui/simple-sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
+import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -17,7 +18,10 @@ import { customStringify } from "@/utils/reactflowUtils";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import FlowBorderWrapperComponent from "./components/flowBorderWrapperComponent";
-import { FlowSidebarComponent } from "./components/flowSidebarComponent";
+import {
+  FlowSearchProvider,
+  FlowSidebarComponent,
+} from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
 import { MemoizedSidebarTrigger } from "./components/PageComponent/MemoizedComponents";
 import { PlaygroundSidebar } from "./components/PlaygroundSidebar";
@@ -180,10 +184,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
     <>
       <div className="flex h-full w-full">
         {currentFlow && (
-          <>
+          <FlowSearchProvider>
             <div className="flex h-full w-fit">
               <AnimatedConditional isOpen={!isFullscreen || !isOpen}>
-                <SidebarProvider width="17.5rem" defaultOpen={!isMobile}>
+                <SidebarProvider width="17.5rem" defaultOpen={!isMobile} segmentedSidebar={ENABLE_NEW_SIDEBAR}>
                   {!view && <FlowSidebarComponent isLoading={isLoading} />}
                   <MemoizedSidebarTrigger />
                 </SidebarProvider>
@@ -203,7 +207,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
             >
               <FlowBorderWrapperComponent setIsLoading={setIsLoading} />
             </SimpleSidebarProvider>
-          </>
+          </FlowSearchProvider>
         )}
       </div>
       {blocker.state === "blocked" && (

@@ -4,8 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
+import { CustomLink } from "@/customization/components/custom-link";
 import type { AuthSettingsType } from "@/types/mcp";
 import { AUTH_METHODS_ARRAY } from "@/utils/mcpUtils";
+import { toSpaceCase } from "@/utils/stringManipulation";
 import BaseModal from "../baseModal";
 
 interface AuthModalProps {
@@ -13,18 +15,22 @@ interface AuthModalProps {
   setOpen: (open: boolean) => void;
   authSettings?: AuthSettingsType;
   onSave: (authSettings: AuthSettingsType) => void;
+  installedClients?: string[];
+  autoInstall?: boolean;
 }
 
-const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
+const AuthModal = ({
+  open,
+  setOpen,
+  authSettings,
+  autoInstall,
+  onSave,
+  installedClients,
+}: AuthModalProps) => {
   const [authType, setAuthType] = useState<string>(
     authSettings?.auth_type || "none",
   );
   const [authFields, setAuthFields] = useState<{
-    apiKey?: string;
-    iamEndpoint?: string;
-    username?: string;
-    password?: string;
-    bearerToken?: string;
     oauthHost?: string;
     oauthPort?: string;
     oauthServerUrl?: string;
@@ -36,11 +42,6 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
     oauthMcpScope?: string;
     oauthProviderScope?: string;
   }>({
-    apiKey: authSettings?.api_key || "",
-    iamEndpoint: authSettings?.iam_endpoint || "",
-    username: authSettings?.username || "",
-    password: authSettings?.password || "",
-    bearerToken: authSettings?.bearer_token || "",
     oauthHost: authSettings?.oauth_host || "",
     oauthPort: authSettings?.oauth_port || "",
     oauthServerUrl: authSettings?.oauth_server_url || "",
@@ -58,11 +59,6 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
     if (authSettings) {
       setAuthType(authSettings.auth_type || "none");
       setAuthFields({
-        apiKey: authSettings.api_key || "",
-        iamEndpoint: authSettings.iam_endpoint || "",
-        username: authSettings.username || "",
-        password: authSettings.password || "",
-        bearerToken: authSettings.bearer_token || "",
         oauthHost: authSettings.oauth_host || "",
         oauthPort: authSettings.oauth_port || "",
         oauthServerUrl: authSettings.oauth_server_url || "",
@@ -92,16 +88,6 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
   const handleSave = () => {
     const authSettingsToSave: AuthSettingsType = {
       auth_type: authType,
-      ...(authType === "apikey" && { api_key: authFields.apiKey }),
-      ...(authType === "basic" && {
-        username: authFields.username,
-        password: authFields.password,
-      }),
-      ...(authType === "iam" && {
-        iam_endpoint: authFields.iamEndpoint,
-        api_key: authFields.apiKey,
-      }),
-      ...(authType === "bearer" && { bearer_token: authFields.bearerToken }),
       ...(authType === "oauth" && {
         oauth_host: authFields.oauthHost,
         oauth_port: authFields.oauthPort,
@@ -137,7 +123,7 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
         </div>
         <div className="flex h-full p-0 border-t rounded-none">
           {/* Left column - Radio buttons */}
-          <div className="flex flex-col p-4 gap-2 flex-1 items-start min-h-[400px]">
+          <div className="flex flex-col p-4 gap-2 flex-1 items-start min-h-[250px] transition-all">
             <span className="text-mmd font-medium text-muted-foreground">
               Auth type
             </span>
@@ -172,109 +158,28 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
           {authType !== "none" && (
             <div className="w-[70%] flex flex-col overflow-y-auto h-fit max-h-[400px] p-4">
               {authType === "apikey" && (
-                <div className="flex flex-col items-start gap-2">
-                  <Label htmlFor="api-key" className="!text-mmd font-medium">
-                    API Key Value
-                  </Label>
-                  <Input
-                    id="api-key"
-                    type="password"
-                    placeholder="Enter API Key"
-                    value={authFields.apiKey || ""}
-                    onChange={(e) =>
-                      handleAuthFieldChange("apiKey", e.target.value)
-                    }
-                  />
-                </div>
-              )}
-
-              {authType === "basic" && (
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="username" className="!text-mmd font-medium">
-                      Username
-                    </Label>
-                    <Input
-                      id="username"
-                      type="text"
-                      placeholder="Enter Username"
-                      value={authFields.username || ""}
-                      onChange={(e) =>
-                        handleAuthFieldChange("username", e.target.value)
-                      }
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="password" className="!text-mmd font-medium">
-                      Password
-                    </Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Enter Password"
-                      value={authFields.password || ""}
-                      onChange={(e) =>
-                        handleAuthFieldChange("password", e.target.value)
-                      }
-                    />
-                  </div>
-                </div>
-              )}
-
-              {authType === "bearer" && (
-                <div className="flex flex-col gap-2">
-                  <Label
-                    htmlFor="bearer-token"
-                    className="!text-mmd font-medium"
-                  >
-                    Bearer Token
-                  </Label>
-                  <Input
-                    id="bearer-token"
-                    type="password"
-                    placeholder="Enter Bearer Token"
-                    value={authFields.bearerToken || ""}
-                    onChange={(e) =>
-                      handleAuthFieldChange("bearerToken", e.target.value)
-                    }
-                  />
-                </div>
-              )}
-
-              {authType === "iam" && (
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <Label
-                      htmlFor="iam-endpoint"
-                      className="!text-mmd font-medium"
+                <span className="flex flex-col items-start gap-1 text-mmd text-muted-foreground">
+                  <p>
+                    Create a key in{" "}
+                    <CustomLink
+                      className="text-accent-pink-foreground underline inline-block"
+                      to="/settings/api-keys"
                     >
-                      IAM Endpoint
-                    </Label>
-                    <Input
-                      id="iam-endpoint"
-                      type="text"
-                      placeholder="Enter IAM Endpoint"
-                      value={authFields.iamEndpoint || ""}
-                      onChange={(e) =>
-                        handleAuthFieldChange("iamEndpoint", e.target.value)
-                      }
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="api-key" className="!text-mmd font-medium">
-                      API Key or Token
-                    </Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Enter API Key or Token"
-                      value={authFields.apiKey || ""}
-                      onChange={(e) =>
-                        handleAuthFieldChange("apiKey", e.target.value)
-                      }
-                    />
-                  </div>
-                </div>
+                      Settings
+                    </CustomLink>{" "}
+                    and include it in the{" "}
+                    <span className="font-semibold">install JSON</span>. Or,
+                    create a key automatically from the{" "}
+                    <span className="font-semibold">JSON tab</span>.
+                  </p>
+                  {autoInstall && (
+                    <p>
+                      <span className="font-semibold">Auto Install</span>{" "}
+                      creates and injects a key into the selected client profile
+                      on this machine.
+                    </p>
+                  )}
+                </span>
               )}
 
               {authType === "oauth" && (
@@ -475,7 +380,21 @@ const AuthModal = ({ open, setOpen, authSettings, onSave }: AuthModalProps) => {
           onClick: handleSave,
         }}
         className="p-4 border-t"
-      />
+      >
+        <div className="flex items-center text-accent-amber-foreground gap-2 text-sm pr-2">
+          <ForwardedIconComponent
+            name="AlertTriangle"
+            className="h-4 w-4 shrink-0 text-accent-amber-foreground"
+          />
+          <span className="text-mmd text-muted-foreground">
+            {installedClients && installedClients.length > 0
+              ? `Changing auth type requires reinstalling this server in ${installedClients
+                  .map((client) => toSpaceCase(client))
+                  .join(", ")} and any other clients where it's used.`
+              : "Changing auth type requires reinstalling this server in all clients where it's used."}
+          </span>
+        </div>
+      </BaseModal.Footer>
     </BaseModal>
   );
 };

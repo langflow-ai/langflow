@@ -40,6 +40,8 @@ export default function ChatInput({
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const chatValue = useUtilityStore((state) => state.chatValueStore);
 
+  const { scrollToBottom } = useStickToBottomContext();
+
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const [showAudioInput, setShowAudioInput] = useState(false);
@@ -165,8 +167,6 @@ export default function ChatInput({
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
 
   const { sendMessage } = useSendMessage();
-
-  const { scrollToBottom } = useStickToBottomContext();
 
   const send = async () => {
     const storedChatValue = chatValue;

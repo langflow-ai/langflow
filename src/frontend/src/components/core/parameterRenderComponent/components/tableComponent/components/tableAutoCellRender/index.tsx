@@ -6,6 +6,7 @@ import StringReader from "@/components/common/stringReaderComponent";
 import DateReader from "@/components/core/dateReaderComponent";
 import { Badge } from "@/components/ui/badge";
 import { cn, isTimeStampString } from "@/utils/utils";
+import InputGlobalComponent from "../../../inputGlobalComponent";
 import ToggleShadComponent from "../../../toggleShadComponent";
 
 interface CustomCellRender extends CustomCellRendererProps {
@@ -18,6 +19,7 @@ export default function TableAutoCellRender({
   colDef,
   formatter,
   api,
+  ...props
 }: CustomCellRender) {
   function getCellType() {
     let format: string = formatter ? formatter : typeof value;
@@ -59,6 +61,28 @@ export default function TableAutoCellRender({
               {value}
             </Badge>
           );
+        } else if (colDef?.context?.globalVariable) {
+          return (
+            <InputGlobalComponent
+              id="string-reader-global"
+              value={value ?? ""}
+              editNode={false}
+              handleOnNewValue={(newValue) => {
+                setValue?.(newValue.value);
+              }}
+              disabled={
+                !colDef?.onCellValueChanged &&
+                !api.getGridOption("onCellValueChanged")
+              }
+              load_from_db={true}
+              allowCustomValue={false}
+              password={false}
+              display_name=""
+              placeholder=""
+              isToolMode={false}
+              hasRefreshButton={false}
+            />
+          );
         } else {
           return (
             <StringReader
@@ -92,7 +116,12 @@ export default function TableAutoCellRender({
             }}
             editNode={true}
             id={"toggle" + colDef?.colId + uniqueId()}
-            disabled={false}
+            disabled={
+              colDef?.cellRendererParams?.isSingleToggleColumn &&
+              colDef?.cellRendererParams?.checkSingleToggleEditable
+                ? !colDef.cellRendererParams.checkSingleToggleEditable(props)
+                : false
+            }
           />
         ) : (
           <Badge

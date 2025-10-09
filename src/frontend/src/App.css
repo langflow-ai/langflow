@@ -223,3 +223,9 @@ code {
   -webkit-user-select: none;
   -ms-user-select: none;
 }
+
+/* Sidebar segmented layout utility */
+.sidebar-segmented {
+  max-width: calc(var(--sidebar-width) - (var(--sidebar-width-icon) + 0.1rem));
+  width: var(--sidebar-width);
+}
