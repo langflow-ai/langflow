@@ -114,9 +114,9 @@ All components produce output that is either sent to another component in the fl
 
 Some components can produce multiple types of output:
 
-* If the component emits all types at once, the component has multiple output ports in the visual editor. In component code, this is represented by `group_outputs=True`
+* If the component emits all types at once, the component has multiple output ports in the visual editor. In component code, this is represented by `group_outputs=False` (default) or omitting the `group_outputs` parameter.
 
-* If the component emits only one type, you must select the output type by clicking the output label near the output port, and then selecting the desired output type. In component code, this is represented by `group_outputs=False` or omitting the `group_outputs` parameter.
+* If the component emits only one type, you must select the output type by clicking the output label near the output port, and then selecting the desired output type. In component code, this is represented by `group_outputs=True`.
 
 For example, a language model component can output _either_ a **Model Response** or **Language Model**.
 The **Model Response** output produces [`Message`](/data-types#message) data that can be passed to another component's `Message` port.

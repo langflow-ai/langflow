@@ -151,24 +151,23 @@ outputs = [
 
 #### Output Grouping Behavior with `group_outputs`
 
-By default, components in Langflow that produce multiple outputs only allow one output selection in the visual editor.
-The component will have only one output port where the user can select the preferred output type.
+By default, components in Langflow that produce multiple outputs show all outputs simultaneously in the visual editor.
+The component will have one output port for each output, and the user can connect zero or more outputs to other components.
 
 This behavior is controlled by the `group_outputs` parameter:
 
-- **`group_outputs=False` (default)**: When a component has more than one output and `group_outputs` is `false` or not set, the outputs are grouped in the visual editor, and the user must select one.
+- **`group_outputs=True`**: When a component has more than one output and `group_outputs` is `true`, the outputs are grouped in the visual editor, and the user must select one.
 
     Use this option when the component is expected to return only one type of output when used in a flow.
 
-- **`group_outputs=True`**: All outputs are available simultaneously in the visual editor. The component has one output port for each output, and the user can connect zero or more outputs to other components.
+- **`group_outputs=False` (default)**: All outputs are available simultaneously in the visual editor. The component has one output port for each output, and the user can connect zero or more outputs to other components.
 
     Use this option when the component is expected to return multiple values that are used in parallel by downstream components or processes.
 
 <Tabs>
-<TabItem value="false" label="False or not set" default>
+<TabItem value="true" label="True" default>
 
-In this example, the visual editor provides a single output port, and the user can select one of the outputs.
-Since `group_outputs=False` is the default behavior, it doesn't need to be explicitly set in the component, as shown in this example:
+In this example, the visual editor provides a single output port, and the user can select one of the outputs:
 
 ```python
 outputs = [
@@ -176,21 +175,22 @@ outputs = [
         name="structured_output",
         display_name="Structured Output",
         method="build_structured_output",
+        group_outputs=True,
     ),
     Output(
         name="dataframe_output",
         display_name="DataFrame Output",
         method="build_structured_dataframe",
+        group_outputs=True,
     ),
 ]
 ```
 
 </TabItem>
-<TabItem value="true" label="True">
+<TabItem value="false" label="False or not set">
 
-In this example, all outputs are available simultaneously in the visual editor:
-
-2. `group_outputs=True`
+In this example, all outputs are available simultaneously in the visual editor.
+Since `group_outputs=False` is the default behavior, it doesn't need to be explicitly set in the component, as shown in this example:
 
 ```python
 outputs = [
@@ -198,13 +198,11 @@ outputs = [
         name="true_result",
         display_name="True",
         method="true_response",
-        group_outputs=True,
     ),
     Output(
         name="false_result",
         display_name="False",
         method="false_response",
-        group_outputs=True,
     ),
 ]
 ```
