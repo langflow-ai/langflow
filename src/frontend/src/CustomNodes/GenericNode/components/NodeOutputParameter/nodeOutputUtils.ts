@@ -25,7 +25,9 @@ export const shouldShowAllOutputs = (
 export const separateOutputsByGroup = (
   outputs: any[],
 ): { groupedOutputs: any[]; individualOutputs: any[] } => {
-  const groupedOutputs = outputs.filter((output: any) => (output.group_outputs ?? false) === false);
+  const groupedOutputs = outputs.filter(
+    (output: any) => (output.group_outputs ?? false) === false,
+  );
   const individualOutputs = outputs.filter(
     (output: any) => (output.group_outputs ?? false) === true,
   );

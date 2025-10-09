@@ -1,6 +1,10 @@
 import type { NodeDataType } from "@/types/flow";
 import { OutputParameter } from ".";
-import { getDisplayOutput, separateOutputsByGroup, shouldShowAllOutputs } from "./nodeOutputUtils";
+import {
+  getDisplayOutput,
+  separateOutputsByGroup,
+  shouldShowAllOutputs,
+} from "./nodeOutputUtils";
 
 export default function NodeOutputs({
   outputs,
