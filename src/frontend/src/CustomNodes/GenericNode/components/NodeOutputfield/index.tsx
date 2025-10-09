@@ -217,7 +217,7 @@ function NodeOutputField({
 
   useEffect(() => {
     const outputHasGroupOutputsFalse =
-      data.node?.outputs?.[index]?.group_outputs === false;
+      (data.node?.outputs?.[index]?.group_outputs ?? false) === false;
 
     if (disabledOutput && hidden && !outputHasGroupOutputsFalse) {
       handleUpdateOutputHide(false);
