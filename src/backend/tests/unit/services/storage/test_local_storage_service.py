@@ -1,10 +1,9 @@
 """Tests for LocalStorageService."""
 
-import pytest
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch
-import anyio
+from unittest.mock import Mock
 
+import anyio
+import pytest
 from langflow.services.storage.local import LocalStorageService
 
 
@@ -305,7 +304,7 @@ class TestLocalStorageServiceEdgeCases:
         """Test saving files with unicode content."""
         flow_id = "unicode_flow"
         file_name = "unicode.txt"
-        data = "Hello 世界 🌍".encode("utf-8")
+        data = "Hello 世界 🌍".encode()
 
         await local_storage_service.save_file(flow_id, file_name, data)
         retrieved = await local_storage_service.get_file(flow_id, file_name)

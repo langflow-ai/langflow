@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.components.langchain_utilities.json_agent import JsonAgentComponent
-
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -82,6 +81,7 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
             # Verify real temp file was created
             assert isinstance(local_path, Path)
             import tempfile
+
             temp_dir = tempfile.gettempdir()
             assert str(local_path).startswith(temp_dir)
             assert str(local_path).endswith(".json")
@@ -253,6 +253,7 @@ class TestJsonAgentComponent(ComponentTestBaseWithoutClient):
             # Verify temp file was created and cleaned up
             call_path = mock_json_spec.from_file.call_args[0][0]
             import tempfile
+
             temp_dir = tempfile.gettempdir()
             assert call_path.startswith(temp_dir)
             assert call_path.endswith(".json")

@@ -64,18 +64,15 @@ async def read_file_bytes(file_path: str, storage_service: StorageService | None
 
         flow_id, filename = parsed
         return await storage_service.get_file(flow_id, filename)
-    else:
-        path_obj = Path(file_path)
-        if not path_obj.exists():
-            msg = f"File not found: {file_path}"
-            raise FileNotFoundError(msg)
+    path_obj = Path(file_path)
+    if not path_obj.exists():
+        msg = f"File not found: {file_path}"
+        raise FileNotFoundError(msg)
 
-        return path_obj.read_bytes()
+    return path_obj.read_bytes()
 
 
-async def read_file_text(
-    file_path: str, encoding: str = "utf-8", storage_service: StorageService | None = None
-) -> str:
+async def read_file_text(file_path: str, encoding: str = "utf-8", storage_service: StorageService | None = None) -> str:
     """Read file text from either storage service or local filesystem.
 
     Args:

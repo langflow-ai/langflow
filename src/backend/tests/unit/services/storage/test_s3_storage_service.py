@@ -11,9 +11,9 @@ AWS credentials must be set as environment variables:
 
 import json
 import os
-import pytest
 from unittest.mock import Mock
 
+import pytest
 from langflow.services.storage.s3 import S3StorageService
 
 # Mark all tests in this module as requiring API keys
@@ -32,8 +32,6 @@ def aws_credentials():
     # Set default region if not provided
     if not os.environ.get("AWS_DEFAULT_REGION"):
         os.environ["AWS_DEFAULT_REGION"] = "us-west-2"
-
-    yield
 
     # No cleanup needed - we're using existing env vars
 
@@ -59,9 +57,7 @@ def mock_settings_service():
     )
 
     # Prefix from env - using standard LANGFLOW env var name
-    settings_service.settings.object_storage_prefix = os.environ.get(
-        "LANGFLOW_OBJECT_STORAGE_PREFIX", "test-files-1"
-    )
+    settings_service.settings.object_storage_prefix = os.environ.get("LANGFLOW_OBJECT_STORAGE_PREFIX", "test-files-1")
 
     # Tags from env - using standard LANGFLOW env var name
     default_tags = {"env": "test-1"}
@@ -95,6 +91,7 @@ async def s3_storage_service(mock_session_service, mock_settings_service, aws_cr
 def test_flow_id():
     """Unique flow ID for testing to avoid conflicts."""
     import uuid
+
     return f"test_flow_{uuid.uuid4().hex[:8]}"
 
 
@@ -295,6 +292,7 @@ class TestS3StorageServiceListOperations:
     async def test_list_files_excludes_other_flows(self, s3_storage_service, test_flow_id):
         """Test that list_files only returns files from the specified flow."""
         import uuid
+
         other_flow_id = f"test_flow_{uuid.uuid4().hex[:8]}"
 
         try:
@@ -424,7 +422,7 @@ class TestS3StorageServiceEdgeCases:
     async def test_save_file_with_unicode_content(self, s3_storage_service, test_flow_id):
         """Test saving files with unicode content."""
         file_name = "unicode.txt"
-        data = "Hello 世界 🌍".encode("utf-8")
+        data = "Hello 世界 🌍".encode()
 
         try:
             await s3_storage_service.save_file(test_flow_id, file_name, data)

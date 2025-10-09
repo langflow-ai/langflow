@@ -7,7 +7,6 @@ from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 from zipfile import ZipFile, is_zipfile
 
-from langflow.services.deps import get_settings_service
 import orjson
 import pandas as pd
 
@@ -16,6 +15,7 @@ from langflow.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
+from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from collections.abc import Callable

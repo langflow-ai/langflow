@@ -1,4 +1,3 @@
-import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -173,7 +172,11 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
 
         # Mock database and upload functions - let file operations run normally
         with (
-            patch("langflow.components.processing.save_file.upload_user_file", new_callable=AsyncMock, side_effect=Exception("Upload failed")),
+            patch(
+                "langflow.components.processing.save_file.upload_user_file",
+                new_callable=AsyncMock,
+                side_effect=Exception("Upload failed"),
+            ),
             patch("langflow.components.processing.save_file.session_scope") as mock_session,
             patch("langflow.components.processing.save_file.get_user_by_id", new_callable=AsyncMock) as mock_get_user,
         ):
@@ -183,6 +186,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
 
             # Capture temp file path before it gets cleaned up
             import tempfile
+
             temp_dir = Path(tempfile.gettempdir())
             temp_files_before = set(temp_dir.glob("test_output_*.csv"))
 

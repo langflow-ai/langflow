@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 from langflow.components.langchain_utilities.csv_agent import CSVAgentComponent
 from langflow.schema import Message
-
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -117,6 +116,7 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
 
             # Verify real temp file was created (use tempfile.gettempdir() for cross-platform)
             import tempfile
+
             temp_dir = tempfile.gettempdir()
             assert local_path.startswith(temp_dir)
             assert local_path.endswith(".csv")
@@ -278,6 +278,7 @@ class TestCSVAgentComponent(ComponentTestBaseWithoutClient):
             call_kwargs = mock_create_agent.call_args[1]
             created_path = call_kwargs["path"]
             import tempfile
+
             temp_dir = tempfile.gettempdir()
             assert created_path.startswith(temp_dir)
             assert created_path.endswith(".csv")

@@ -99,7 +99,7 @@ class VideoFileComponent(BaseFileComponent):
         """Process video files."""
         # Check if we're in S3 mode - video processing not supported in cloud
         from langflow.services.deps import get_settings_service
-        
+
         settings = get_settings_service().settings
         if settings.storage_type == "s3":
             msg = (
@@ -108,7 +108,7 @@ class VideoFileComponent(BaseFileComponent):
                 "Please use local storage mode or process videos locally before uploading."
             )
             raise ValueError(msg)
-        
+
         self.log(f"DEBUG: Processing video files: {len(file_list)}")
 
         if not file_list:
@@ -151,7 +151,7 @@ class VideoFileComponent(BaseFileComponent):
         """Load video files and return a list of Data objects."""
         # Check if we're in S3 mode - video processing not supported in cloud
         from langflow.services.deps import get_settings_service
-        
+
         settings = get_settings_service().settings
         if settings.storage_type == "s3":
             msg = (
@@ -160,7 +160,7 @@ class VideoFileComponent(BaseFileComponent):
                 "Please use local storage mode or process videos locally before uploading."
             )
             raise ValueError(msg)
-        
+
         try:
             self.log("DEBUG: Starting video file load")
             if not hasattr(self, "file_path") or not self.file_path:

@@ -196,7 +196,7 @@ class LocalDBComponent(LCVectorStoreComponent):
         """Builds the Chroma object."""
         # Check if we're in S3 mode - local vector stores not supported in cloud
         from langflow.services.deps import get_settings_service
-        
+
         settings = get_settings_service().settings
         if settings.storage_type == "s3":
             msg = (
@@ -205,7 +205,7 @@ class LocalDBComponent(LCVectorStoreComponent):
                 "Please use cloud-based vector stores (Pinecone, Weaviate, etc.) or local storage mode."
             )
             raise ValueError(msg)
-        
+
         try:
             from langchain_chroma import Chroma
         except ImportError as e:

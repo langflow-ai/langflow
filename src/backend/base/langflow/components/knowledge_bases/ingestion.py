@@ -543,7 +543,6 @@ class KnowledgeIngestionComponent(Component):
     # ---------------------------------------------------------------------
     async def build_kb_info(self) -> Data:
         """Main ingestion routine → returns a dict with KB metadata."""
-
         try:
             input_value = self.input_df[0] if isinstance(self.input_df, list) else self.input_df
             df_source: DataFrame = convert_to_dataframe(input_value)

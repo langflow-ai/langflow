@@ -91,7 +91,6 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
     @check_cached_vector_store
     def build_vector_store(self) -> Chroma:
         """Builds the Chroma object."""
-
         try:
             from chromadb import Client
             from langchain_chroma import Chroma

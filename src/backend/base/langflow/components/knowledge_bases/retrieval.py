@@ -184,7 +184,6 @@ class KnowledgeRetrievalComponent(Component):
         Returns:
             A DataFrame containing the data rows from the knowledge base.
         """
-
         # Get the current user
         async with session_scope() as db:
             if not self.user_id:

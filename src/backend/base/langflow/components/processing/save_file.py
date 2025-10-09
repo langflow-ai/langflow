@@ -80,10 +80,7 @@ class SaveToFileComponent(Component):
 
         # Create temp file - this will be cleaned up after upload
         with tempfile.NamedTemporaryFile(
-            mode='wb',
-            suffix=f'.{file_extension}',
-            prefix=f'{base_name}_',
-            delete=False
+            mode="wb", suffix=f".{file_extension}", prefix=f"{base_name}_", delete=False
         ) as tmp_file:
             temp_path = Path(tmp_file.name)
 

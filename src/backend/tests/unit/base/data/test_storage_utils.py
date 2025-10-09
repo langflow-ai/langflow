@@ -1,15 +1,14 @@
 """Tests for base/data/storage_utils.py - storage-aware file utilities."""
 
-import pytest
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
 from langflow.base.data.storage_utils import (
+    file_exists,
+    get_file_size,
     parse_storage_path,
     read_file_bytes,
     read_file_text,
-    get_file_size,
-    file_exists,
 )
 
 
@@ -269,7 +268,7 @@ class TestFileExists:
         mock_storage = Mock()
 
         async def mock_get_size(flow_id, filename):
-            raise FileNotFoundError()
+            raise FileNotFoundError
 
         mock_storage.get_file_size = mock_get_size
 

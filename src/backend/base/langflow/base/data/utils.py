@@ -11,9 +11,7 @@ import yaml
 from defusedxml import ElementTree
 
 from langflow.schema.data import Data
-from langflow.services.deps import get_settings_service, get_storage_service
-
-from .storage_utils import parse_storage_path
+from langflow.services.deps import get_settings_service
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
@@ -63,10 +61,10 @@ def parse_structured_text(text: str, file_path: str) -> str | dict | list:
             loaded_json = [normalize_text(item) if isinstance(item, str) else item for item in loaded_json]
         return orjson.dumps(loaded_json).decode("utf-8")
 
-    elif file_path.endswith((".yaml", ".yml")):
+    if file_path.endswith((".yaml", ".yml")):
         return yaml.safe_load(text)
 
-    elif file_path.endswith(".xml"):
+    if file_path.endswith(".xml"):
         xml_element = ElementTree.fromstring(text)
         return ElementTree.tostring(xml_element, encoding="unicode")
 
@@ -218,8 +216,6 @@ async def read_docx_file_async(file_path: str) -> str:
     """
     from docx import Document
 
-    from langflow.services.deps import get_settings_service
-
     from .storage_utils import read_file_bytes
 
     settings = get_settings_service().settings
@@ -298,8 +294,6 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
     For S3 storage, this will use async operations to fetch the file.
     For local storage, reads directly from filesystem.
     """
-    from langflow.services.deps import get_settings_service
-
     settings = get_settings_service().settings
 
     # If using S3 storage, we need to use async operations
