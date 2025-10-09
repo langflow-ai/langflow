@@ -66,6 +66,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
     @check_cached_vector_store
     def build_vector_store(self) -> FAISS:
         """Builds the FAISS object."""
+
         path = self.get_persist_directory()
         path.mkdir(parents=True, exist_ok=True)
 

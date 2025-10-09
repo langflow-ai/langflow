@@ -184,6 +184,18 @@ class KnowledgeRetrievalComponent(Component):
         Returns:
             A DataFrame containing the data rows from the knowledge base.
         """
+        # Check if we're in S3 mode - knowledge bases not supported in cloud
+        from langflow.services.deps import get_settings_service
+        
+        settings = get_settings_service().settings
+        if settings.storage_type == "s3":
+            msg = (
+                "Knowledge bases are not supported in S3/cloud mode. "
+                "Knowledge bases require local file system access for vector store persistence. "
+                "Please use cloud-based vector stores (Pinecone, Weaviate, etc.) or local storage mode."
+            )
+            raise ValueError(msg)
+        
         # Get the current user
         async with session_scope() as db:
             if not self.user_id:
