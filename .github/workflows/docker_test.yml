@@ -1,14 +1,7 @@
 name: Test Docker images
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "docker/**"
-      - "uv.lock"
-      - "pyproject.toml"
-      - "src/backend/**"
-      - ".github/workflows/docker_test.yml"
+  workflow_call:
   workflow_dispatch:
 
 env:
