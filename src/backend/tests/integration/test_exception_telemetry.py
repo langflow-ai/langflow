@@ -26,6 +26,11 @@ class TestExceptionTelemetryIntegration:
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.common_telemetry_fields = {
+            "langflow_version": "1.0.0",
+            "platform": "python_package",
+            "os": "darwin",
+        }
 
         # Mock successful response
         mock_response = MagicMock()
@@ -78,6 +83,11 @@ class TestExceptionTelemetryIntegration:
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.common_telemetry_fields = {
+            "langflow_version": "1.0.0",
+            "platform": "python_package",
+            "os": "darwin",
+        }
 
         # Mock the async queue and HTTP client
         telemetry_service.telemetry_queue = asyncio.Queue()
@@ -296,21 +306,21 @@ class TestTelemetryPayloadValidation:
             exception_type="ValueError",
             exception_message="Invalid input parameter",
             exception_context="handler",
-            stack_trace_hash="abc123def456",
+            stack_trace_hash="abc123def456",  # pragma: allowlist secret
             client_type="oss",
         )
 
         assert payload.exception_type == "ValueError"
         assert payload.exception_message == "Invalid input parameter"
         assert payload.exception_context == "handler"
-        assert payload.stack_trace_hash == "abc123def456"
+        assert payload.stack_trace_hash == "abc123def456"  # pragma: allowlist secret
 
         serialized = payload.model_dump(by_alias=True)
         expected = {
             "exceptionType": "ValueError",
             "exceptionMessage": "Invalid input parameter",
             "exceptionContext": "handler",
-            "stackTraceHash": "abc123def456",
+            "stackTraceHash": "abc123def456",  # pragma: allowlist secret
             "clientType": "oss",
         }
         assert serialized == expected
