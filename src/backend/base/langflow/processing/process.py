@@ -32,8 +32,14 @@ async def run_graph_internal(
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
     event_manager: EventManager | None = None,
-) -> tuple[list[RunOutputs], str, list]:
-    """Run the graph and generate the result."""
+    transaction_collector=None,
+    vertex_build_collector=None,
+) -> tuple[list[RunOutputs], str, list, list]:
+    """Run the graph and generate the result.
+
+    Returns:
+        Tuple of (run_outputs, session_id, transaction_queue, vertex_build_queue)
+    """
     inputs = inputs or []
     effective_session_id = session_id or flow_id
     components = []
@@ -60,10 +66,11 @@ async def run_graph_internal(
         event_manager=event_manager,
     )
 
-    # Get transaction queue for background processing without blocking the response
-    transaction_queue = graph.get_transaction_queue_for_background_flush()
+    # Get collected transactions and vertex builds from collectors
+    transaction_queue = transaction_collector.get_and_clear() if transaction_collector else []
+    vertex_build_queue = vertex_build_collector.get_and_clear() if vertex_build_collector else []
 
-    return run_outputs, effective_session_id, transaction_queue
+    return run_outputs, effective_session_id, transaction_queue, vertex_build_queue
 
 
 async def run_graph(
