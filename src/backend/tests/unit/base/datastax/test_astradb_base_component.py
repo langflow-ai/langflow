@@ -388,8 +388,10 @@ class TestCollectionData:
         mock_client = mock_client_class.return_value
         mock_client.get_database.return_value = mock_database
 
-        with patch.object(mock_component, "get_api_endpoint", return_value="https://test.endpoint.com"), \
-             patch.object(mock_component, "get_keyspace", return_value="default_keyspace"):
+        with (
+            patch.object(mock_component, "get_api_endpoint", return_value="https://test.endpoint.com"),
+            patch.object(mock_component, "get_keyspace", return_value="default_keyspace"),
+        ):
             count = mock_component.collection_data("test_collection")
             assert count == 100
 
@@ -548,8 +550,10 @@ class TestGetDatabaseObject:
         mock_client = mock_client_class.return_value
         mock_client.get_database.return_value = mock_database
 
-        with patch.object(mock_component, "get_api_endpoint", return_value="https://test.endpoint.com"), \
-             patch.object(mock_component, "get_keyspace", return_value="default_keyspace"):
+        with (
+            patch.object(mock_component, "get_api_endpoint", return_value="https://test.endpoint.com"),
+            patch.object(mock_component, "get_keyspace", return_value="default_keyspace"),
+        ):
             db = mock_component.get_database_object()
             assert db == mock_database
 
@@ -569,8 +573,10 @@ class TestGetDatabaseObject:
         """Test database object retrieval error handling."""
         mock_client_class.side_effect = Exception("Connection error")
 
-        with patch.object(mock_component, "get_api_endpoint", return_value="https://test.endpoint.com"), \
-             pytest.raises(ValueError, match="Error fetching database object"):
+        with (
+            patch.object(mock_component, "get_api_endpoint", return_value="https://test.endpoint.com"),
+            pytest.raises(ValueError, match="Error fetching database object"),
+        ):
             mock_component.get_database_object()
 
 
