@@ -24,19 +24,16 @@ class LMStudioModelComponent(LCModelComponent):
             base_url_value = base_url_dict.get("value")
             if base_url_load_from_db:
                 base_url_value = await self.get_variables(base_url_value, field_name)
-            elif not base_url_value:
-                # Check if we can access the default URL
-                base_url_value = "http://localhost:1234/v1"
-                try:
-                    async with httpx.AsyncClient() as client:
-                        response = await client.get(urljoin(base_url_value, "/v1/models"), timeout=2.0)
-                        response.raise_for_status()
-                except httpx.HTTPError:
-                    msg = (
-                        "Could not access the default LM Studio URL. Please, specify the 'Base URL' field."
-                    )
-                    self.log(msg)
-                    return build_config
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(urljoin(base_url_value, "/v1/models"), timeout=2.0)
+                    response.raise_for_status()
+            except httpx.HTTPError:
+                msg = (
+                    "Could not access the default LM Studio URL. Please, specify the 'Base URL' field."
+                )
+                self.log(msg)
+                return build_config
             build_config["model_name"]["options"] = await self.get_model(base_url_value)
 
         return build_config
