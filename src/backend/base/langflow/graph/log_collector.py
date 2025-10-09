@@ -55,8 +55,8 @@ class TransactionCollector:
         Returns:
             List of transaction tuples ready for batch processing
         """
-        transactions = self.transactions.copy()
-        self.transactions.clear()
+        transactions = self.transactions
+        self.transactions = []
         return transactions
 
 
