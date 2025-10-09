@@ -534,10 +534,10 @@ class Vertex:
         target: Vertex | None = None,
         error=None,
     ) -> None:
-        """Queue a transaction to be logged later in batch.
+        """Log a transaction using callbacks if available.
 
-        This avoids database contention during parallel vertex execution.
-        All transactions are flushed at the end of graph execution.
+        This method uses the graph's log callbacks to record transactions
+        for batch processing later.
 
         Args:
             flow_id: The ID of the flow
@@ -546,9 +546,9 @@ class Vertex:
             target: Optional target vertex
             error: Optional error information
         """
-        # Queue the transaction instead of logging immediately
-        if self.graph:
-            self.graph.queue_transaction(flow_id, source, status, target, error)
+        # Use callback for transaction logging if available
+        if self.graph and self.graph.log_callbacks:
+            self.graph.log_callbacks.log_transaction(flow_id, source, status, target, error)
 
     async def _get_result(
         self,
