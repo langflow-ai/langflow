@@ -50,8 +50,9 @@ class S3StorageService(StorageService):
             raise ImportError(msg) from exc
 
         # Create session - AWS credentials are picked up from environment variables
+        self._aioboto3 = aioboto3
         self.session = aioboto3.Session()
-        self._client = None
+        self._client = None  # Persisted for quick reuse
 
         self.set_ready()
         logger.info(
@@ -87,7 +88,10 @@ class S3StorageService(StorageService):
 
     def _get_client(self):
         """Get or create an S3 client using the async context manager."""
-        return self.session.client("s3")
+        if self._client is None:
+            # Only create the client once and cache it for future calls.
+            self._client = self.session.client("s3")
+        return self._client
 
     async def save_file(self, flow_id: str, file_name: str, data: bytes) -> None:
         """Save a file to S3.
