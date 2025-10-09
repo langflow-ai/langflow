@@ -7,12 +7,7 @@ from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vec
 from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
 from lfx.helpers.data import docs_to_data
 from lfx.inputs.inputs import FloatInput, NestedDictInput
-from lfx.io import (
-    DropdownInput,
-    HandleInput,
-    IntInput,
-    QueryInput,
-)
+from lfx.io import DropdownInput, IntInput, QueryInput
 from lfx.schema.data import Data
 from lfx.serialization import serialize
 from lfx.utils.version import get_version_info
@@ -30,14 +25,6 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
 
     inputs = [
         *AstraDBBaseComponent.inputs,
-        HandleInput(
-            name="embedding_model",
-            display_name="Embedding Model",
-            input_types=["Embeddings"],
-            info="Specify the Embedding Model. Not required for Astra Vectorize collections.",
-            required=False,
-            show=True,
-        ),
         *LCVectorStoreComponent.inputs,
         DropdownInput(
             name="search_method",

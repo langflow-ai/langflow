@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from .dotenv import Dotenv
     from .get_assistant import AssistantsGetAssistantName
     from .getenvvar import GetEnvVar
+    from .graph_rag import GraphRAGComponent
     from .list_assistants import AssistantsListAssistants
     from .run import AssistantsRun
 
@@ -33,6 +34,7 @@ _dynamic_imports = {
     "AstraVectorizeComponent": "astradb_vectorize",
     "Dotenv": "dotenv",
     "GetEnvVar": "getenvvar",
+    "GraphRAGComponent": "graph_rag",
 }
 
 __all__ = [
@@ -49,6 +51,7 @@ __all__ = [
     "AstraVectorizeComponent",
     "Dotenv",
     "GetEnvVar",
+    "GraphRAGComponent",
 ]
 
 
