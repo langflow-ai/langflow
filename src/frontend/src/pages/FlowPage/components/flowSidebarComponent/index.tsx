@@ -565,6 +565,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   return (
     <Sidebar
+      side="right"
       collapsible="offcanvas"
       data-testid="shad-sidebar"
       className="noflow select-none"

@@ -27,6 +27,7 @@ export type SidebarSection =
   | "search"
   | "components"
   | "bundles"
+  | "agents"
   | "mcp"
   | "add_note";
 

@@ -4,7 +4,7 @@ import { useShallow } from "zustand/react/shallow";
 import { Separator } from "@/components/ui/separator";
 import useFlowStore from "@/stores/flowStore";
 import CanvasControlsDropdown from "./CanvasControlsDropdown";
-import HelpDropdown from "./HelpDropdown";
+// import HelpDropdown from "./HelpDropdown";
 
 const CanvasControls = ({ children }: { children?: ReactNode }) => {
   const reactFlowStoreApi = useStoreApi();
@@ -36,7 +36,7 @@ const CanvasControls = ({ children }: { children?: ReactNode }) => {
       <span>
         <Separator orientation="vertical" />
       </span>
-      <HelpDropdown />
+      {/* <HelpDropdown /> */}
     </Panel>
   );
 };

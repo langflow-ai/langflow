@@ -114,6 +114,7 @@ import { YouTubeSvgIcon as YouTubeIcon } from "@/icons/Youtube";
 import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { JigsawStackIcon } from "./JigsawStack";
 import { WindsurfIcon } from "./Windsurf";
+import { AutonomizeIcon } from "@/icons/Autonomize";
 
 // Export the eagerly loaded icons map
 export const eagerIconsMapping = {
@@ -233,4 +234,5 @@ export const eagerIconsMapping = {
   xAI: XAIIcon,
   YouTube: YouTubeIcon,
   ZepMemory: ZepMemoryIcon,
+  Autonomize: AutonomizeIcon
 };
