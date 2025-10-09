@@ -14,7 +14,6 @@ from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
-from uuid import UUID
 
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.edge.base import CycleEdge, Edge
@@ -47,6 +46,7 @@ if TYPE_CHECKING:
 
     from lfx.custom.custom_component.component import Component
     from lfx.events.event_manager import EventManager
+    from lfx.graph.callbacks import LogCallbacks
     from lfx.graph.edge.schema import EdgeData
     from lfx.graph.schema import ResultData
     from lfx.schema.schema import InputValueRequest
@@ -67,6 +67,7 @@ class Graph:
         user_id: str | None = None,
         log_config: LogConfig | None = None,
         context: dict[str, Any] | None = None,
+        log_callbacks: LogCallbacks | None = None,
     ) -> None:
         """Initializes a new Graph instance.
 
@@ -74,6 +75,17 @@ class Graph:
         If only one is provided, a ValueError is raised. The context must be a dictionary if specified,
         otherwise a TypeError is raised. Internal data structures for vertices, edges, state management,
         run management, and tracing are set up during initialization.
+
+        Args:
+            start: The start component of the graph
+            end: The end component of the graph
+            flow_id: The flow ID
+            flow_name: The flow name
+            description: The flow description
+            user_id: The user ID
+            log_config: Configuration for logging
+            context: Additional context dictionary
+            log_callbacks: Optional callbacks for logging events
         """
         if log_config:
             configure(**log_config)
@@ -127,12 +139,13 @@ class Graph:
         self._call_order: list[str] = []
         self._snapshots: list[dict[str, Any]] = []
         self._end_trace_tasks: set[asyncio.Task] = set()
-        self._transaction_queue: list[tuple[str | UUID, Vertex, str, Vertex | None, Any]] = []
 
         if context and not isinstance(context, dict):
             msg = "Context must be a dictionary"
             raise TypeError(msg)
         self._context = dotdict(context or {})
+        # Store log callbacks for transaction and vertex build logging
+        self.log_callbacks = log_callbacks
         # Lazy initialization - only get tracing service when needed
         self._tracing_service: TracingService | None = None
         self._tracing_service_initialized = False
@@ -1049,52 +1062,6 @@ class Graph:
     def increment_update_count(self) -> None:
         self._updates += 1
 
-    def queue_transaction(
-        self,
-        flow_id: str | UUID,
-        source: Vertex,
-        status: str,
-        target: Vertex | None = None,
-        error: Any = None,
-    ) -> None:
-        """Queue a transaction to be logged later in batch.
-
-        This avoids database contention during parallel vertex execution.
-        """
-        self._transaction_queue.append((flow_id, source, status, target, error))
-
-    def get_transaction_queue_for_background_flush(self) -> list[tuple[str | UUID, Vertex, str, Vertex | None, Any]]:
-        """Get queued transactions for background processing and clear the queue.
-
-        This method returns a copy of the transaction queue and clears it immediately,
-        allowing the flow execution to complete without waiting for database operations.
-        The returned queue can be processed as a FastAPI background task.
-
-        Returns:
-            List of transaction tuples ready for background flushing
-        """
-        if not self._transaction_queue:
-            return []
-
-        transactions_to_flush = self._transaction_queue.copy()
-        self._transaction_queue.clear()
-        return transactions_to_flush
-
-    async def flush_transaction_logs(self) -> None:
-        """Flush all queued transactions to the database in a single batch.
-
-        This method should be called after flow execution completes.
-        """
-        if not self._transaction_queue:
-            return
-
-        from langflow.graph.utils import flush_transaction_queue
-
-        try:
-            await flush_transaction_queue(self._transaction_queue)
-        finally:
-            self._transaction_queue.clear()
-
     def __getstate__(self):
         # Get all attributes that are useful in runs.
         # We don't need to save the state_manager because it is
@@ -1181,6 +1148,7 @@ class Graph:
         flow_name: str | None = None,
         user_id: str | None = None,
         context: dict | None = None,
+        log_callbacks: LogCallbacks | None = None,
     ) -> Graph:
         """Creates a graph from a payload.
 
@@ -1190,6 +1158,7 @@ class Graph:
             flow_name: The flow name.
             user_id: The user ID.
             context: Optional context dictionary for request-specific data.
+            log_callbacks: Optional callbacks for logging events.
 
         Returns:
             Graph: The created graph.
@@ -1199,7 +1168,13 @@ class Graph:
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
-            graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id, context=context)
+            graph = cls(
+                flow_id=flow_id,
+                flow_name=flow_name,
+                user_id=user_id,
+                context=context,
+                log_callbacks=log_callbacks,
+            )
             graph.add_nodes_and_edges(vertices, edges)
         except KeyError as exc:
             logger.exception(exc)
@@ -1817,20 +1792,16 @@ class Graph:
             "used_frozen_result": False,
         }
 
-        try:
-            from langflow.graph.utils import log_vertex_build
-
-            await log_vertex_build(
-                flow_id=self.flow_id or "",
+        # Log vertex build error via callback if available
+        if self.flow_id and self.log_callbacks and self.log_callbacks.vertex_build:
+            self.log_callbacks.vertex_build(
+                flow_id=self.flow_id,
                 vertex_id=vertex_id or "errors",
                 valid=False,
                 params=params,
-                data=result_data_response,
+                result_dict=result_data_response,
                 artifacts={},
             )
-        except ImportError:
-            # langflow not available, skip logging
-            pass
 
     async def _execute_tasks(
         self, tasks: list[asyncio.Task], lock: asyncio.Lock, *, has_webhook_component: bool = False
@@ -1860,21 +1831,16 @@ class Graph:
                     t.cancel()
                 raise result
             if isinstance(result, VertexBuildResult):
-                if self.flow_id is not None:
-                    try:
-                        from langflow.graph.utils import log_vertex_build
-
-                        await log_vertex_build(
-                            flow_id=self.flow_id,
-                            vertex_id=result.vertex.id,
-                            valid=result.valid,
-                            params=result.params,
-                            data=result.result_dict,
-                            artifacts=result.artifacts,
-                        )
-                    except ImportError:
-                        # langflow not available, skip logging
-                        pass
+                # Use callback for vertex build logging if available
+                if self.flow_id is not None and self.log_callbacks:
+                    self.log_callbacks.log_vertex_build(
+                        self.flow_id,
+                        result.vertex.id,
+                        valid=result.valid,
+                        params=result.params,
+                        result_dict=result.result_dict,
+                        artifacts=result.artifacts,
+                    )
 
                 vertices.append(result.vertex)
             else:
