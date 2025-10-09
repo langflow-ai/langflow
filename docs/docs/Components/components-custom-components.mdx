@@ -165,7 +165,7 @@ This behavior is controlled by the `group_outputs` parameter:
     Use this option when the component is expected to return multiple values that are used in parallel by downstream components or processes.
 
 <Tabs>
-<TabItem value="true" label="True" default>
+<TabItem value="true" label="True">
 
 In this example, the visual editor provides a single output port, and the user can select one of the outputs:
 
@@ -187,7 +187,7 @@ outputs = [
 ```
 
 </TabItem>
-<TabItem value="false" label="False or not set">
+<TabItem value="false" label="False or not set" default>
 
 In this example, all outputs are available simultaneously in the visual editor.
 Since `group_outputs=False` is the default behavior, it doesn't need to be explicitly set in the component, as shown in this example:
