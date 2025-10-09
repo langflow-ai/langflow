@@ -207,27 +207,34 @@ jobs:
             chmod +x /root/deploy/ebs-staging-prod.sh
 
             if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
-              /root/deploy/ebs-staging-prod.sh \
-                --image forwardemailforaifirstdesk/langflow:staging-${{ steps.branch.outputs.branch_name }}-${{ steps.commit.outputs.commit_id }} \
-                --domain ${{env.STAGING_HOST}} \
-                --email ${{ github.event.inputs.email }} \
-                --env-file /root/.env-file \
-                --db-user ${{ secrets.POSTGRES_USER }} \
-                --db-password ${{ secrets.POSTGRES_PASSWD }} \
-                --db-name ${{ secrets.POSTGRES_DB }} \
-                --volume-name ${{ vars.STAGING_VOLUME_NAME }}
+              IMAGE="forwardemailforaifirstdesk/langflow:staging-${{ steps.branch.outputs.branch_name }}-${{ steps.commit.outputs.commit_id }}"
+              DOMAIN="${{env.STAGING_HOST}}"
+              EMAIL="${{ github.event.inputs.email }}"
+              ENV_FILE="/root/.env-file"
+              DB_USER="${{ secrets.POSTGRES_USER }}"
+              DB_PASSWORD="${{ secrets.POSTGRES_PASSWD }}"
+              DB_NAME="${{ secrets.POSTGRES_DB }}"
+              VOLUME_NAME="${{ vars.STAGING_VOLUME_NAME }}"
             else
-              /root/deploy/ebs-staging-prod.sh \
-                --image forwardemailforaifirstdesk/langflow:prod-${{ steps.branch.outputs.branch_name }}-${{ steps.commit.outputs.commit_id }} \
-                --domain ${{env.PROD_HOST}} \
-                --email ${{ github.event.inputs.email }} \
-                --env-file /root/.env-file \
-                --db-user ${{ secrets.PROD_POSTGRES_USER }} \
-                --db-password ${{ secrets.PROD_POSTGRES_PASSWD }} \
-                --db-name ${{ secrets.PROD_POSTGRES_DB }} \
-                --volume-name ${{ vars.PROD_VOLUME_NAME }}
+              IMAGE="forwardemailforaifirstdesk/langflow:prod-${{ steps.branch.outputs.branch_name }}-${{ steps.commit.outputs.commit_id }}"
+              DOMAIN="${{env.PROD_HOST}}"
+              EMAIL="${{ github.event.inputs.email }}"
+              ENV_FILE="/root/.env-file"
+              DB_USER="${{ secrets.PROD_POSTGRES_USER }}"
+              DB_PASSWORD="${{ secrets.PROD_POSTGRES_PASSWD }}"
+              DB_NAME="${{ secrets.PROD_POSTGRES_DB }}"
+              VOLUME_NAME="${{ vars.PROD_VOLUME_NAME }}"
             fi
 
+            /root/deploy/ebs-staging-prod.sh \
+              --image "$IMAGE" \
+              --domain "$DOMAIN" \
+              --email "$EMAIL" \
+              --env-file "$ENV_FILE" \
+              --db-user "$DB_USER" \
+              --db-password "$DB_PASSWORD" \
+              --db-name "$DB_NAME" \
+              --volume-name "$VOLUME_NAME"
       - name: Copy deploy_status.env from VM
         run: |
           sshpass -p "${{ secrets.VM_PASSWORD }}" scp -o StrictHostKeyChecking=no \
