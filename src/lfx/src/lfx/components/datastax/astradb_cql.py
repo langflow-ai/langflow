@@ -178,7 +178,9 @@ class AstraDBCQLToolComponent(AstraDBBaseComponent, LCToolComponent):
 
     def astra_rest(self, args):
         headers = {"Accept": "application/json", "X-Cassandra-Token": f"{self.token}"}
-        astra_url = f"{self.api_endpoint}/api/rest/v2/keyspaces/{self.keyspace}/{self.collection_name}/"
+        astra_url = (
+            f"{self.get_api_endpoint()}/api/rest/v2/keyspaces/{self.get_keyspace()}/{self.collection_name}/"
+        )
         where = {}
 
         for param in self.tools_params:
