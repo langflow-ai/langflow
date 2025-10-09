@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from lfx.graph.schema import RunOutputs
     from lfx.schema.schema import InputValueRequest
 
+    from langflow.graph.log_collector import TransactionCollector, VertexBuildCollector
+
 
 class Result(BaseModel):
     result: Any
@@ -32,8 +34,8 @@ async def run_graph_internal(
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
     event_manager: EventManager | None = None,
-    transaction_collector=None,
-    vertex_build_collector=None,
+    transaction_collector: TransactionCollector | None = None,
+    vertex_build_collector: VertexBuildCollector | None = None,
 ) -> tuple[list[RunOutputs], str, list, list]:
     """Run the graph and generate the result.
 
