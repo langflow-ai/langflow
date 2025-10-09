@@ -22,7 +22,6 @@ class LocalDBComponent(LCVectorStoreComponent):
     name = "LocalDB"
     icon = "database"
     legacy = True
-    replacement = ["knowledgebases.KnowledgeRetrieval", "knowledgebases.KnowledgeIngestion"]
 
     inputs = [
         TabInput(
