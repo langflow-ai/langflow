@@ -5,11 +5,13 @@ import type { StreamMessage } from "@/hooks/useAgentBuilderStream";
 interface StreamingMessagesProps {
   messages: StreamMessage[];
   isLoading: boolean;
+  onBuildAgent?: (workflow: any) => void;
 }
 
 export default function StreamingMessages({
   messages,
   isLoading,
+  onBuildAgent,
 }: StreamingMessagesProps) {
   if (messages.length === 0 && !isLoading) {
     return null;
@@ -18,7 +20,7 @@ export default function StreamingMessages({
   return (
     <div className="space-y-4">
       {messages.map((message) => (
-        <MessageItem key={message.id} message={message} />
+        <MessageItem key={message.id} message={message} onBuildAgent={onBuildAgent} />
       ))}
 
       {isLoading && (
@@ -31,7 +33,7 @@ export default function StreamingMessages({
   );
 }
 
-function MessageItem({ message }: { message: StreamMessage }) {
+function MessageItem({ message, onBuildAgent }: { message: StreamMessage; onBuildAgent?: (workflow: any) => void }) {
   switch (message.type) {
     case "user":
       return <UserMessage data={message.data} />;
@@ -40,7 +42,7 @@ function MessageItem({ message }: { message: StreamMessage }) {
     case "agent_found":
       return <AgentFoundMessage data={message.data} />;
     case "complete":
-      return <CompleteMessage data={message.data} />;
+      return <CompleteMessage data={message.data} onBuildAgent={onBuildAgent} />;
     case "error":
       return <ErrorMessage data={message.data} />;
     default:
@@ -116,9 +118,15 @@ function AgentFoundMessage({ data }: { data: any }) {
   );
 }
 
-function CompleteMessage({ data }: { data: any }) {
+function CompleteMessage({ data, onBuildAgent }: { data: any; onBuildAgent?: (workflow: any) => void }) {
   const workflow = data.workflow;
   const reasoning = data.reasoning;
+
+  const handleBuildClick = () => {
+    if (onBuildAgent && workflow) {
+      onBuildAgent(workflow);
+    }
+  };
 
   return (
     <div className="mb-3">
@@ -166,7 +174,10 @@ function CompleteMessage({ data }: { data: any }) {
                   )}
 
                   <div className="mt-4 flex gap-2">
-                    <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                    <button
+                      onClick={handleBuildClick}
+                      className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                    >
                       <div className="flex items-center gap-2">
                         <ForwardedIconComponent name="Play" className="h-4 w-4" />
                         Build Agent
