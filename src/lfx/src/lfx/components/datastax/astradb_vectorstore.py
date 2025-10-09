@@ -1,5 +1,3 @@
-from langchain_astradb import AstraDBVectorStore
-from langchain_astradb.utils.astradb import HybridSearchMode
 from langchain_core.documents import Document
 
 from lfx.base.datastax.astradb_base import AstraDBBaseComponent
@@ -20,8 +18,6 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
     documentation: str = "https://docs.datastax.com/en/langflow/astra-components.html"
     name = "AstraDB"
     icon: str = "AstraDB"
-
-    _cached_vector_store: AstraDBVectorStore | None = None
 
     inputs = [
         *AstraDBBaseComponent.inputs,
@@ -131,6 +127,7 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         }
 
         # Choose HybridSearchMode based on the selected param
+        from langchain_astradb.utils.astradb import HybridSearchMode
         hybrid_search_mode = HybridSearchMode.DEFAULT if self.search_method == "Hybrid Search" else HybridSearchMode.OFF
 
         # Attempt to build the Vector Store object

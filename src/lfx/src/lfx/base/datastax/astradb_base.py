@@ -2,12 +2,6 @@ import re
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 
-from astrapy import DataAPIClient, Database
-from astrapy.data.info.reranking import RerankServiceOptions
-from astrapy.info import CollectionDescriptor, CollectionLexicalOptions, CollectionRerankOptions
-from langchain_astradb import VectorServiceOptions
-from langchain_astradb.utils.astradb import _AstraDBCollectionEnvironment
-
 from lfx.custom.custom_component.component import Component
 from lfx.io import (
     BoolInput,
@@ -254,6 +248,7 @@ class AstraDBBaseComponent(Component):
     @classmethod
     def get_vectorize_providers(cls, token: str, environment: str | None = None, api_endpoint: str | None = None):
         try:
+            from astrapy import DataAPIClient
             # Get the admin object
             client = DataAPIClient(environment=environment)
             admin_client = client.get_admin()
@@ -287,6 +282,7 @@ class AstraDBBaseComponent(Component):
         environment: str | None = None,
         keyspace: str | None = None,
     ):
+        from astrapy import DataAPIClient
         client = DataAPIClient(environment=environment)
 
         # Get the admin object
@@ -325,6 +321,7 @@ class AstraDBBaseComponent(Component):
         # Build vectorize options, if needed
         vectorize_options = None
         if not dimension:
+            from langchain_astradb import VectorServiceOptions
             providers = cls.get_vectorize_providers(token=token, environment=environment, api_endpoint=api_endpoint)
             vectorize_options = VectorServiceOptions(
                 provider=providers.get(embedding_generation_provider, [None, []])[0],
@@ -349,6 +346,10 @@ class AstraDBBaseComponent(Component):
 
         # Add optional arguments if the reranker is set
         if reranker:
+            # Dynamic importing to avoid circular imports
+            from astrapy.data.info.reranking import RerankServiceOptions
+            from astrapy.info import CollectionLexicalOptions, CollectionRerankOptions
+
             # Split the reranker field into a provider a model name
             provider, _ = reranker.split("/")
             base_args["collection_rerank"] = CollectionRerankOptions(
@@ -356,10 +357,12 @@ class AstraDBBaseComponent(Component):
             )
             base_args["collection_lexical"] = CollectionLexicalOptions(analyzer="STANDARD")
 
+        from langchain_astradb.utils.astradb import _AstraDBCollectionEnvironment
         _AstraDBCollectionEnvironment(**base_args)
 
     @classmethod
     def get_database_list_static(cls, token: str, environment: str | None = None):
+        from astrapy import DataAPIClient
         client = DataAPIClient(environment=environment)
 
         # Get the admin object
@@ -466,6 +469,7 @@ class AstraDBBaseComponent(Component):
 
     def get_database_object(self, api_endpoint: str | None = None):
         try:
+            from astrapy import DataAPIClient
             client = DataAPIClient(environment=self.environment)
 
             return client.get_database(
@@ -477,9 +481,10 @@ class AstraDBBaseComponent(Component):
             msg = f"Error fetching database object: {e}"
             raise ValueError(msg) from e
 
-    def collection_data(self, collection_name: str, database: Database | None = None):
+    def collection_data(self, collection_name: str, database = None):
         try:
             if not database:
+                from astrapy import DataAPIClient
                 client = DataAPIClient(environment=self.environment)
 
                 database = client.get_database(
@@ -514,7 +519,7 @@ class AstraDBBaseComponent(Component):
             raise ValueError(msg) from e
 
     @classmethod
-    def get_provider_icon(cls, collection: CollectionDescriptor | None = None, provider_name: str | None = None) -> str:
+    def get_provider_icon(cls, collection = None, provider_name: str | None = None) -> str:
         # Get the provider name from the collection
         provider_name = provider_name or (
             collection.definition.vector.service.provider
@@ -734,6 +739,7 @@ class AstraDBBaseComponent(Component):
         """Set hybrid search options in the build configuration."""
         # Detect what hybrid options are available
         # Get the admin object
+        from astrapy import DataAPIClient
         client = DataAPIClient(environment=self.environment)
         admin_client = client.get_admin()
         db_admin = admin_client.get_database_admin(self.get_api_endpoint(), token=self.token)
