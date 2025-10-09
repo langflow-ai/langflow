@@ -23,6 +23,7 @@ export default function CustomInputFileComponent({
       disabled={disabled}
       fileTypes={fileTypes}
       isList={isList}
+      allowFolderSelection={true}
       tempFile={tempFile}
       editNode={editNode}
       id={`inputfile_${id}`}

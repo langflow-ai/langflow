@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
@@ -30,7 +30,10 @@ export default function InputFileComponent({
   tempFile = true,
   editNode = false,
   id,
-}: InputProps<string, FileComponentType>): JSX.Element {
+  allowFolderSelection = false,
+}: InputProps<string, FileComponentType> & {
+  allowFolderSelection?: boolean;
+}): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { validateFileSize } = useFileSizeValidator();
@@ -55,12 +58,15 @@ export default function InputFileComponent({
   const { mutateAsync, isPending } = usePostUploadFile();
 
   const handleButtonClick = (): void => {
-    createFileUpload({ multiple: isList, accept: fileTypes?.join(",") }).then(
+    createFileUpload({ 
+      multiple: isList, 
+      accept: fileTypes?.join(",")
+    }).then(
       (files) => {
         if (files.length === 0) return;
 
-        // For single file mode, only process the first file
-        const filesToProcess = isList ? files : [files[0]];
+        // Process files normally
+        const filesToProcess: File[] = isList ? files : [files[0]];
 
         // Validate all files
         for (const file of filesToProcess) {
@@ -244,6 +250,7 @@ export default function InputFileComponent({
                   disabled={isDisabled}
                   types={fileTypes}
                   isList={isList}
+                  allowFolderSelection={allowFolderSelection}
                 >
                   {(selectedFiles.length === 0 || isList) && (
                     <div data-testid="input-file-component" className="w-full">
