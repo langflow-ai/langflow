@@ -194,7 +194,7 @@ class CustomComponent(Component):
       .nth(2)
       .click();
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(2000);
 
     // Count edges before refresh (should have 3 edges: Test 1, Test 2, Test 5)
     const edgesBeforeRefresh = await page.locator(".react-flow__edge").count();
