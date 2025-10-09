@@ -304,11 +304,12 @@ class BaseFileComponent(Component, ABC):
                     parts.append(str(data_text))
                 elif isinstance(d.data, dict):
                     # convert the data dict to a readable string
-                    parts.append(orjson.dumps(d.data, default=str).decode())
+                    parts.append(orjson.dumps(d.data, option=orjson.OPT_INDENT_2, default=str).decode())
                 else:
                     parts.append(str(d))
-            except (AttributeError, TypeError, ValueError):
+            except Exception:  # noqa: BLE001
                 # Final fallback - just try to convert to string
+                # TODO: Consider downstream error case more. Should this raise an error?
                 parts.append(str(d))
 
         return Message(text=sep.join(parts), **metadata)
