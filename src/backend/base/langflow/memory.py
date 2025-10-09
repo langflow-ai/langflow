@@ -81,6 +81,8 @@ async def aget_messages(
 ) -> list[Message]:
     """Retrieves messages from the monitor service based on the provided filters.
 
+    If deferred writes are enabled, checks cache first before falling back to database.
+
     Args:
         sender (Optional[str]): The sender of the messages (e.g., "Machine" or "User")
         sender_name (Optional[str]): The name of the sender.
@@ -93,6 +95,26 @@ async def aget_messages(
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
+    from langflow.services.message_queue import get_message_queue_service
+
+    message_service = get_message_queue_service()
+
+    # Convert UUID to string for session_id if needed
+    session_id_str = str(session_id) if session_id else ""
+
+    if message_service.enabled and session_id_str:
+        # Use message service which checks cache first
+        return await message_service.get_messages(
+            session_id=session_id_str,
+            sender=sender,
+            sender_name=sender_name,
+            order_by=order_by,
+            order=order,
+            flow_id=flow_id,
+            limit=limit,
+        )
+
+    # Immediate mode or no session_id: query database directly
     async with session_scope() as session:
         stmt = _get_variable_query(sender, sender_name, session_id, order_by, order, flow_id, limit)
         messages = await session.exec(stmt)
@@ -125,8 +147,21 @@ async def aadd_messages(messages: Message | list[Message], flow_id: str | UUID |
 
     try:
         messages_models = [MessageTable.from_message(msg, flow_id=flow_id) for msg in messages]
-        async with session_scope() as session:
-            messages_models = await aadd_messagetables(messages_models, session)
+
+        # Check if deferred writes are enabled
+        from langflow.services.message_queue import get_message_queue_service
+
+        message_service = get_message_queue_service()
+
+        if message_service.enabled:
+            # Deferred mode: no session needed, just cache and queue
+            session_id = messages_models[0].session_id if messages_models else ""
+            messages_models = await message_service.add_messages(messages_models, session_id)
+        else:
+            # Immediate mode: use session
+            async with session_scope() as session:
+                messages_models = await aadd_messagetables(messages_models, session)
+
         return [await Message.create(**message.model_dump()) for message in messages_models]
     except Exception as e:
         await logger.aexception(e)
@@ -164,6 +199,34 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
 
 
 async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession):
+    """Add message tables to database with optional deferred writes.
+
+    If message_deferred_writes_enabled is True, messages are cached and queued
+    for background writing. Otherwise, they are written immediately.
+    """
+    from langflow.services.message_queue import get_message_queue_service
+
+    message_service = get_message_queue_service()
+
+    if message_service.enabled:
+        # Deferred mode: cache + queue for background write
+        # Extract session_id from first message (all messages in a batch share same session)
+        session_id = messages[0].session_id if messages else ""
+
+        # Add to cache and queue (non-blocking)
+        await message_service.add_messages(messages, session_id)
+
+        # Return messages immediately (no database wait)
+        new_messages = []
+        for msg in messages:
+            msg.properties = json.loads(msg.properties) if isinstance(msg.properties, str) else msg.properties  # type: ignore[arg-type]
+            msg.content_blocks = [json.loads(j) if isinstance(j, str) else j for j in msg.content_blocks]  # type: ignore[arg-type]
+            msg.category = msg.category or ""
+            new_messages.append(msg)
+
+        return [MessageRead.model_validate(message, from_attributes=True) for message in new_messages]
+
+    # Immediate mode: original behavior (write to database now)
     try:
         try:
             for message in messages:
