@@ -45,7 +45,7 @@ const useUploadFile = ({
           const fileExtension = file.name.split(".").pop()?.toLowerCase();
           return fileExtension && types.includes(fileExtension);
         });
-        
+
         if (validFiles.length === 0) {
           throw new Error(
             `No supported files found in folder. Allowed types: ${types?.join(", ")}`,

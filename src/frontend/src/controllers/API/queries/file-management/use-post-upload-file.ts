@@ -17,19 +17,19 @@ export const usePostUploadFileV2: useMutationFunctionType<
 
   const postUploadFileFn = async (payload: IPostUploadFile): Promise<any> => {
     const formData = new FormData();
-    
+
     // For files from folder selection, create a new File object with just the filename
     // to avoid including the folder path in the upload
     let fileToUpload = payload.file;
     if (payload.file.webkitRelativePath) {
       // Create a new File object with just the filename, not the full path
       fileToUpload = new File(
-        [payload.file], 
+        [payload.file],
         payload.file.name, // Use just the filename, not webkitRelativePath
-        { type: payload.file.type, lastModified: payload.file.lastModified }
+        { type: payload.file.type, lastModified: payload.file.lastModified },
       );
     }
-    
+
     formData.append("file", fileToUpload);
     const data = new Date().toISOString().split("Z")[0];
 

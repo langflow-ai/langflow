@@ -126,16 +126,22 @@ export default function DragFilesComponent({
         tabIndex={0}
       >
         <h3 className="text-sm font-semibold">
-          {isDragging 
-            ? (isFolderMode ? "Drop folder here" : "Drop files here")
-            : (isFolderMode ? "Click to select a folder" : "Click or drag files here")
-          }
+          {isDragging
+            ? isFolderMode
+              ? "Drop folder here"
+              : "Drop files here"
+            : isFolderMode
+              ? "Click to select a folder"
+              : "Click or drag files here"}
         </h3>
         {isFolderMode && (
           <div className="text-xs text-muted-foreground text-center max-w-md space-y-1">
-            <p>Select a folder to upload all supported files from that folder</p>
+            <p>
+              Select a folder to upload all supported files from that folder
+            </p>
             <p className="text-amber-600 dark:text-amber-400 font-medium">
-              ⚠️ Avoid folders with large hidden directories (.mypy_cache, .git, node_modules, etc.)
+              ⚠️ Avoid folders with large hidden directories (.mypy_cache, .git,
+              node_modules, etc.)
             </p>
           </div>
         )}

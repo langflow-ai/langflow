@@ -24,18 +24,27 @@ export default function FolderSelectionExample() {
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-4">
-          Folder Selection Example
-        </h2>
+        <h2 className="text-2xl font-bold mb-4">Folder Selection Example</h2>
         <p className="text-muted-foreground mb-6">
-          This example demonstrates the folder selection feature in the File Component.
-          Toggle between Files and Folder mode to see the difference:
+          This example demonstrates the folder selection feature in the File
+          Component. Toggle between Files and Folder mode to see the difference:
         </p>
         <ul className="list-disc list-inside text-sm text-muted-foreground mb-6 space-y-1">
-          <li><strong>Files mode:</strong> Select individual files (standard behavior)</li>
-          <li><strong>Folder mode:</strong> Select entire folders and recursively process all supported files</li>
-          <li>In folder mode, only files matching the specified types will be processed</li>
-          <li>Supports common document formats: PDF, TXT, DOC, DOCX, MD, etc.</li>
+          <li>
+            <strong>Files mode:</strong> Select individual files (standard
+            behavior)
+          </li>
+          <li>
+            <strong>Folder mode:</strong> Select entire folders and recursively
+            process all supported files
+          </li>
+          <li>
+            In folder mode, only files matching the specified types will be
+            processed
+          </li>
+          <li>
+            Supports common document formats: PDF, TXT, DOC, DOCX, MD, etc.
+          </li>
         </ul>
       </div>
 
@@ -49,7 +58,16 @@ export default function FolderSelectionExample() {
             file_path={filePath}
             handleOnNewValue={handleOnNewValue}
             disabled={false}
-            fileTypes={["pdf", "txt", "doc", "docx", "md", "rtf", "csv", "json"]}
+            fileTypes={[
+              "pdf",
+              "txt",
+              "doc",
+              "docx",
+              "md",
+              "rtf",
+              "csv",
+              "json",
+            ]}
             isList={true}
             tempFile={true}
             editNode={false}
@@ -62,8 +80,12 @@ export default function FolderSelectionExample() {
           <div className="p-4 bg-muted rounded-lg">
             <h3 className="font-medium mb-2">Selected Files:</h3>
             <div className="space-y-1 text-sm">
-              <div><strong>Value:</strong> {value}</div>
-              <div><strong>File Path:</strong> {filePath}</div>
+              <div>
+                <strong>Value:</strong> {value}
+              </div>
+              <div>
+                <strong>File Path:</strong> {filePath}
+              </div>
             </div>
           </div>
         )}
@@ -74,7 +96,10 @@ export default function FolderSelectionExample() {
         <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1">
           <li>Toggle the switch to enable Folder mode</li>
           <li>Click the upload area or drag a folder to select it</li>
-          <li>The component will recursively find all supported files in the folder</li>
+          <li>
+            The component will recursively find all supported files in the
+            folder
+          </li>
           <li>Only files matching the specified fileTypes will be processed</li>
           <li>All selected files will be uploaded and their paths returned</li>
         </ol>

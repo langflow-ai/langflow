@@ -58,93 +58,91 @@ export default function InputFileComponent({
   const { mutateAsync, isPending } = usePostUploadFile();
 
   const handleButtonClick = (): void => {
-    createFileUpload({ 
-      multiple: isList, 
-      accept: fileTypes?.join(",")
-    }).then(
-      (files) => {
-        if (files.length === 0) return;
+    createFileUpload({
+      multiple: isList,
+      accept: fileTypes?.join(","),
+    }).then((files) => {
+      if (files.length === 0) return;
 
-        // Process files normally
-        const filesToProcess: File[] = isList ? files : [files[0]];
+      // Process files normally
+      const filesToProcess: File[] = isList ? files : [files[0]];
 
-        // Validate all files
-        for (const file of filesToProcess) {
-          try {
-            validateFileSize(file);
-          } catch (e) {
-            if (e instanceof Error) {
-              setErrorData({
-                title: e.message,
-              });
-            }
-            return;
-          }
-          if (!checkFileType(file.name)) {
+      // Validate all files
+      for (const file of filesToProcess) {
+        try {
+          validateFileSize(file);
+        } catch (e) {
+          if (e instanceof Error) {
             setErrorData({
-              title: INVALID_FILE_ALERT,
-              list: [fileTypes?.join(", ") || ""],
+              title: e.message,
             });
-            return;
           }
+          return;
         }
+        if (!checkFileType(file.name)) {
+          setErrorData({
+            title: INVALID_FILE_ALERT,
+            list: [fileTypes?.join(", ") || ""],
+          });
+          return;
+        }
+      }
 
-        // Upload all files
-        Promise.all(
-          filesToProcess.map(
-            (file) =>
-              new Promise<{ file_name: string; file_path: string } | null>(
-                async (resolve) => {
-                  const data = await mutateAsync(
-                    { file, id: currentFlowId },
-                    {
-                      onError: (error) => {
-                        console.error(CONSOLE_ERROR_MSG);
-                        setErrorData({
-                          title: "Error uploading file",
-                          list: [error.response?.data?.detail],
-                        });
-                        resolve(null);
-                      },
+      // Upload all files
+      Promise.all(
+        filesToProcess.map(
+          (file) =>
+            new Promise<{ file_name: string; file_path: string } | null>(
+              async (resolve) => {
+                const data = await mutateAsync(
+                  { file, id: currentFlowId },
+                  {
+                    onError: (error) => {
+                      console.error(CONSOLE_ERROR_MSG);
+                      setErrorData({
+                        title: "Error uploading file",
+                        list: [error.response?.data?.detail],
+                      });
+                      resolve(null);
                     },
-                  );
-                  resolve({
-                    file_name: file.name,
-                    file_path: data.file_path,
-                  });
-                },
-              ),
-          ),
-        )
-          .then((results) => {
-            console.warn(results);
-            // Filter out any failed uploads
-            const successfulUploads = results.filter(
-              (r): r is { file_name: string; file_path: string } => r !== null,
+                  },
+                );
+                resolve({
+                  file_name: file.name,
+                  file_path: data.file_path,
+                });
+              },
+            ),
+        ),
+      )
+        .then((results) => {
+          console.warn(results);
+          // Filter out any failed uploads
+          const successfulUploads = results.filter(
+            (r): r is { file_name: string; file_path: string } => r !== null,
+          );
+
+          if (successfulUploads.length > 0) {
+            const fileNames = successfulUploads.map(
+              (result) => result.file_name,
+            );
+            const filePaths = successfulUploads.map(
+              (result) => result.file_path,
             );
 
-            if (successfulUploads.length > 0) {
-              const fileNames = successfulUploads.map(
-                (result) => result.file_name,
-              );
-              const filePaths = successfulUploads.map(
-                (result) => result.file_path,
-              );
-
-              // For single file mode, just use the first result
-              // For list mode, join with commas
-              handleOnNewValue({
-                value: isList ? fileNames : fileNames[0],
-                file_path: isList ? filePaths : filePaths[0],
-              });
-            }
-          })
-          .catch((e) => {
-            console.error(e);
-            // Error handling is done in the onError callback above
-          });
-      },
-    );
+            // For single file mode, just use the first result
+            // For list mode, join with commas
+            handleOnNewValue({
+              value: isList ? fileNames : fileNames[0],
+              file_path: isList ? filePaths : filePaths[0],
+            });
+          }
+        })
+        .catch((e) => {
+          console.error(e);
+          // Error handling is done in the onError callback above
+        });
+    });
   };
 
   const isDisabled = disabled || isPending;
