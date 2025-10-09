@@ -161,6 +161,64 @@ class TestRunStarterProjectsBackwardCompatibility:
             if len(result.output) == 0:
                 pytest.fail(f"No output for 1.6.0 template {template_file.name} with format {fmt}")
 
+    @pytest.mark.xfail(reason="CLI --format option doesn't apply to error messages")
+    @pytest.mark.parametrize("template_file", get_starter_project_files()[:1], ids=lambda x: x.name)
+    def test_run_1_6_0_format_option_applies_to_errors(self, template_file):
+        """Test that --format option applies to error messages.
+
+        Currently fails: Error messages are always returned as JSON regardless of --format.
+        This test documents the expected behavior for future CLI fixes.
+        """
+        import json as json_module
+
+        # Test with text format - errors should be plain text, not JSON
+        result = runner.invoke(
+            app,
+            ["run", "--format", "text", "--no-check-variables", str(template_file), "test"],
+        )
+
+        # If we get an error (which we expect due to missing API keys), it should be plain text
+        if result.exit_code != 0:
+            # Should NOT be valid JSON when format is "text"
+            try:
+                json_module.loads(result.output)
+                pytest.fail(
+                    "Error output is JSON format when --format text was specified. "
+                    "Error messages should respect the --format option."
+                )
+            except json_module.JSONDecodeError:
+                # This is the expected behavior - plain text error
+                pass
+
+    @pytest.mark.xfail(reason="CLI --format option doesn't apply when --verbose is used")
+    @pytest.mark.parametrize("template_file", get_starter_project_files()[:1], ids=lambda x: x.name)
+    def test_run_1_6_0_format_option_applies_with_verbose(self, template_file):
+        """Test that --format option applies even when --verbose is used.
+
+        Currently fails: --verbose output doesn't conform to --format specification.
+        This test documents the expected behavior for future CLI fixes.
+        """
+        import json as json_module
+
+        # Test with JSON format + verbose - all output should be valid JSON
+        result = runner.invoke(
+            app,
+            ["run", "--format", "json", "--verbose", "--no-check-variables", str(template_file), "test"],
+        )
+
+        # With --format json, even verbose output should be parseable as JSON
+        # (or at least the final output should be JSON without mixed text logs)
+        lines = result.output.strip().split("\n")
+        last_line = lines[-1] if lines else ""
+
+        try:
+            json_module.loads(last_line)
+        except json_module.JSONDecodeError:
+            pytest.fail(
+                "With --format json and --verbose, expected final output to be valid JSON. "
+                "Verbose logs should not interfere with JSON output format."
+            )
+
     @pytest.mark.xfail(
         reason="1.6.0 basic templates have langflow import issues - components expect langflow package to be available"
     )
