@@ -1,0 +1,210 @@
+id: urn:agent:genesis:clinical_validator:1
+name: Clinical Validator
+fullyQualifiedName: genesis.autonomize.ai.clinical_validator
+description: Validate clinical requests against medical guidelines and payer policies
+domain: autonomize.ai
+subDomain: clinical-validation
+version: 2.0.0
+environment: production
+agentOwner: clinical-validation@autonomize.ai
+agentOwnerDisplayName: Clinical Validation Team
+email: clinical-validation@autonomize.ai
+status: ACTIVE
+variables:
+- name: llm_provider
+  type: string
+  required: false
+  default: Azure OpenAI
+  description: LLM provider (AzureOpenAI, OpenAI, Anthropic, etc.)
+- name: model_name
+  type: string
+  required: false
+  default: gpt-4
+  description: Model name to use for validation
+- name: temperature
+  type: float
+  required: false
+  default: 0.1
+  description: Temperature for model generation
+- name: guideline_collections
+  type: string
+  required: false
+  default: clinical_guidelines,medical_policies
+  description: Comma-separated list of guideline collections to search
+- name: validate_relationships
+  type: boolean
+  required: false
+  default: true
+  description: Validate diagnosis-procedure relationships
+tags:
+- UM
+- clinical-validation
+- medical-necessity
+- guidelines
+- healthcare
+- quality-assurance
+kind: Single Agent
+agentGoal: Validate clinical requests against medical guidelines and payer policies to ensure medical necessity and appropriate
+  care
+targetUser: internal
+valueGeneration: DecisionSupport
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: ModelDrivenWorkflow
+toolsUse: true
+learningCapability: None
+sampleInput:
+  clinical_data:
+    patient:
+      age: 65
+      gender: female
+      diagnoses:
+      - M79.3 - Panniculitis
+      - R51.9 - Headache
+    requested_service: MRI Brain with contrast
+    service_code: '70553'
+    clinical_history: Patient presents with chronic headaches for 3 months
+    previous_treatments:
+    - NSAIDs
+    - Physical therapy
+  validation_type: medical_necessity
+components:
+- id: clinical-request
+  name: Clinical Request
+  kind: Data
+  type: genesis:chat_input
+  description: Clinical validation request with diagnosis and procedure
+  provides:
+  - useAs: input
+    in: validator-agent
+    description: Clinical information to validate
+- id: validator-agent-prompt
+  name: Agent Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Prompt template for agent instructions
+  config:
+    saved_prompt: clinical_validator_prompt_v1
+    template: 'You are a clinical validation specialist. Your role is to:
+
+
+      1. Validate diagnosis codes (ICD-10) accuracy
+
+      2. Verify procedure codes (CPT) appropriateness
+
+      3. Check medical necessity based on clinical guidelines
+
+      4. Identify any missing or conflicting information
+
+      5. Suggest appropriate alternatives if needed
+
+
+      Validation criteria:
+
+      - Diagnosis supports the requested procedure
+
+      - Treatment follows evidence-based guidelines
+
+      - Documentation is complete and accurate
+
+      - No contraindications present
+
+
+      Provide structured validation results with:
+
+      - Validation status (Valid/Invalid/Needs Review)
+
+      - Clinical rationale
+
+      - Guideline references
+
+      - Recommendations if applicable'
+  provides:
+  - useAs: system_prompt
+    in: validator-agent
+    description: System prompt for the agent
+- id: validator-agent
+  name: Clinical Validation Agent
+  kind: Agent
+  type: genesis:agent
+  description: Validates clinical appropriateness
+  config:
+    temperature: 0.1
+    max_tokens: 1500
+  provides:
+  - useAs: input
+    in: validation-output
+    description: Validation results
+- id: icd10-validator
+  name: ICD-10 Code Validator
+  kind: Model
+  type: genesis:icd10
+  description: Validate and extract ICD-10 diagnosis codes
+  config:
+    validate_relationships: true
+  provides:
+  - useAs: tools
+    in: validator-agent
+    description: Diagnosis code validation
+- id: cpt-validator
+  name: CPT Code Validator
+  kind: Model
+  type: genesis:cpt_code
+  description: Validate CPT procedure codes
+  config:
+    check_bundling: true
+  provides:
+  - useAs: tools
+    in: validator-agent
+    description: Procedure code validation
+- id: guidelines-search
+  name: Clinical Guidelines
+  kind: Tool
+  type: genesis:knowledge_hub_search
+  description: Search clinical practice guidelines
+  config:
+    collections:
+    - clinical_guidelines
+    - medical_policies
+    return_citations: true
+  provides:
+  - useAs: tools
+    in: validator-agent
+    description: Guidelines search tool
+- id: validation-output
+  name: Validation Results
+  kind: Data
+  type: genesis:chat_output
+  description: Display clinical validation results
+  config:
+    should_store_message: true
+outputs:
+- validation_status
+- clinical_rationale
+- guideline_citations
+- recommendations
+kpis:
+- name: Validation Accuracy
+  category: Quality
+  valueType: percentage
+  target: 97
+  unit: '%'
+  description: Accuracy of clinical validation decisions
+- name: Guideline Compliance
+  category: Quality
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Compliance with clinical practice guidelines
+- name: Validation Time
+  category: Performance
+  valueType: numeric
+  target: 4000
+  unit: ms
+  description: Average time to complete clinical validation
+- name: Code Accuracy
+  category: Quality
+  valueType: percentage
+  target: 98
+  unit: '%'
+  description: Accuracy of ICD-10 and CPT code validation

@@ -1,0 +1,174 @@
+id: urn:agent:genesis:eligibility_checker:1
+name: Eligibility Checker
+fullyQualifiedName: genesis.autonomize.ai.eligibility_checker
+description: Verify member eligibility and check benefit coverage for requested services
+domain: autonomize.ai
+subDomain: insurance-verification
+version: 1.0.0
+environment: production
+agentOwner: insurance-verification@autonomize.ai
+agentOwnerDisplayName: Insurance Verification Team
+email: insurance-verification@autonomize.ai
+status: ACTIVE
+variables:
+- name: llm_provider
+  type: string
+  required: false
+  default: Azure OpenAI
+  description: LLM provider (AzureOpenAI, OpenAI, Anthropic, etc.)
+- name: model_name
+  type: string
+  required: false
+  default: gpt-4
+  description: Model name to use for verification
+- name: temperature
+  type: float
+  required: false
+  default: 0.1
+  description: Temperature for model generation
+- name: verification_timeout
+  type: integer
+  required: false
+  default: 30
+  description: Timeout for eligibility verification in seconds
+- name: include_cost_details
+  type: boolean
+  required: false
+  default: true
+  description: Include detailed cost share calculations
+tags:
+- UM
+- eligibility
+- insurance
+- verification
+- benefits
+- healthcare
+kind: Single Agent
+agentGoal: Verify member eligibility and check benefit coverage for requested services
+targetUser: internal
+valueGeneration: InsightGeneration
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: ModelDrivenWorkflow
+toolsUse: true
+learningCapability: None
+sampleInput:
+  member_id: M123456789
+  service_date: '2024-03-15'
+  service_codes:
+  - '70553'
+  provider_npi: '1234567890'
+  line_of_business: Medicare
+promptConfiguration:
+  basePromptId: eligibility_check_v1
+  customPrompt: 'You are an insurance eligibility verification specialist. Your task is to:
+
+    1. Verify member eligibility status
+
+    2. Check coverage for specific services or procedures
+
+    3. Identify any authorization requirements
+
+    4. Calculate member cost share (copay, deductible, coinsurance)
+
+
+    Always provide accurate information and cite policy sources.
+
+    '
+  variables:
+    output_format: structured
+    include_policy_details: 'true'
+components:
+- id: member-input
+  name: Member Information
+  kind: Data
+  type: genesis:chat_input
+  description: Receive member ID and service details
+  provides:
+  - useAs: input
+    in: eligibility-agent
+    description: Member and service information
+- id: eligibility-agent-prompt
+  name: Agent Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Prompt template for agent instructions
+  config:
+    saved_prompt: eligibility_checker_prompt_v1
+    template: 'You are an insurance eligibility verification specialist. Your task is to:
+
+      1. Verify member eligibility status
+
+      2. Check coverage for specific services or procedures
+
+      3. Identify any authorization requirements
+
+      4. Calculate member cost share (copay, deductible, coinsurance)
+
+
+      Always provide accurate information and cite policy sources.'
+  provides:
+  - useAs: system_prompt
+    in: eligibility-agent
+    description: System prompt for the agent
+- id: eligibility-agent
+  name: Eligibility Verification Agent
+  kind: Agent
+  type: genesis:agent
+  description: Agent that verifies eligibility and benefits
+  config:
+    temperature: 0.1
+    max_tokens: 2000
+  provides:
+  - useAs: input
+    in: eligibility-output
+    description: Verification results
+- id: eligibility-lookup
+  name: Eligibility Lookup Service
+  kind: Tool
+  type: genesis:eligibility_component
+  description: Real-time eligibility verification service
+  config:
+    timeout: 30
+    retry_count: 3
+  provides:
+  - useAs: tools
+    in: eligibility-agent
+    description: Eligibility verification tool
+- id: eligibility-output
+  name: Eligibility Results
+  kind: Data
+  type: genesis:chat_output
+  description: Display eligibility verification results
+  config:
+    should_store_message: true
+outputs:
+- eligibility_status
+- coverage_details
+- authorization_requirements
+- member_cost_share
+kpis:
+- name: Verification Success Rate
+  category: Quality
+  valueType: percentage
+  target: 99
+  unit: '%'
+  description: Percentage of successful eligibility verifications
+- name: Response Time
+  category: Performance
+  valueType: numeric
+  target: 3000
+  unit: ms
+  description: Average time to complete eligibility check
+- name: Authorization Detection
+  category: Quality
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Accuracy in identifying authorization requirements
+- name: Cost Calculation Accuracy
+  category: Quality
+  valueType: percentage
+  target: 98
+  unit: '%'
+  description: Accuracy of member cost share calculations

@@ -1,0 +1,191 @@
+id: urn:agent:genesis:prior_auth:1
+name: Prior Authorization Agent
+fullyQualifiedName: genesis.autonomize.ai.prior_auth
+description: Process prior authorization requests accurately and efficiently using clinical guidelines
+domain: autonomize.ai
+subDomain: prior-authorization
+version: 2.0.0
+environment: production
+agentOwner: prior-auth@autonomize.ai
+agentOwnerDisplayName: Prior Authorization Team
+email: prior-auth@autonomize.ai
+status: ACTIVE
+variables:
+- name: llm_provider
+  type: string
+  required: false
+  default: Azure OpenAI
+  description: LLM provider (AzureOpenAI, OpenAI, Anthropic, etc.)
+- name: model_name
+  type: string
+  required: false
+  default: gpt-4
+  description: Model name to use for PA processing
+- name: temperature
+  type: float
+  required: false
+  default: 0.1
+  description: Temperature for model generation
+- name: policy_collections
+  type: string
+  required: false
+  default: clinical_policies,medical_guidelines
+  description: Comma-separated list of policy collections
+- name: similarity_threshold
+  type: float
+  required: false
+  default: 0.8
+  description: Similarity threshold for policy search
+tags:
+- UM
+- prior-authorization
+- clinical-review
+- medical-necessity
+- healthcare
+kind: Single Agent
+agentGoal: Process prior authorization requests accurately and efficiently using clinical guidelines and payer policies to
+  ensure timely patient care
+targetUser: internal
+valueGeneration: InsightGeneration
+interactionMode: MultiTurnConversation
+runMode: RealTime
+agencyLevel: ModelDrivenWorkflow
+toolsUse: true
+learningCapability: None
+sampleInput:
+  member_id: M123456789
+  service_requested: MRI Brain with contrast
+  service_code: '70553'
+  diagnosis: Chronic headaches - R51.9
+  provider_name: Dr. Jane Smith
+  provider_npi: '1234567890'
+  clinical_documentation: Patient has failed conservative treatment including NSAIDs and PT
+components:
+- id: pa-request
+  name: PA Request Input
+  kind: Data
+  type: genesis:chat_input
+  description: Prior authorization request details
+  provides:
+  - useAs: input
+    in: pa-agent
+    description: PA request information
+- id: pa-agent-prompt
+  name: Agent Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Prompt template for agent instructions
+  config:
+    saved_prompt: prior_auth_prompt_v1
+    template: 'You are a prior authorization specialist. Your responsibilities:
+
+
+      1. Review clinical documentation for medical necessity
+
+      2. Apply payer-specific authorization criteria
+
+      3. Check for alternative treatments if applicable
+
+      4. Determine approval, denial, or need for additional information
+
+      5. Provide clear rationale for decisions
+
+
+      Always base decisions on:
+
+      - Clinical guidelines and medical policies
+
+      - Member''s benefit plan
+
+      - Medical necessity criteria
+
+      - Supporting clinical documentation
+
+
+      Format responses with:
+
+      - Decision (Approved/Denied/Pending)
+
+      - Rationale with policy citations
+
+      - Required documentation if pending
+
+      - Authorization number if approved'
+  provides:
+  - useAs: system_prompt
+    in: pa-agent
+    description: System prompt for the agent
+- id: pa-agent
+  name: Prior Authorization Processor
+  kind: Agent
+  type: genesis:agent
+  description: Processes prior authorization requests
+  config:
+    temperature: 0.1
+    max_tokens: 2000
+  provides:
+  - useAs: input
+    in: pa-output
+    description: PA decision and details
+- id: pa-lookup
+  name: PA Guidelines Lookup
+  kind: Tool
+  type: genesis:pa_lookup
+  description: Look up prior authorization guidelines
+  config:
+    include_alternatives: true
+  provides:
+  - useAs: tools
+    in: pa-agent
+    description: PA guidelines tool
+- id: clinical-policies
+  name: Clinical Policy Search
+  kind: Tool
+  type: genesis:knowledge_hub_search
+  description: Search clinical policies and guidelines
+  config:
+    collections:
+    - clinical_policies
+    - medical_guidelines
+    similarity_threshold: 0.8
+  provides:
+  - useAs: tools
+    in: pa-agent
+    description: Policy search tool
+- id: pa-output
+  name: PA Decision Output
+  kind: Data
+  type: genesis:chat_output
+  description: Display PA decision and rationale
+  config:
+    should_store_message: true
+outputs:
+- authorization_decision
+- clinical_rationale
+- policy_citations
+- authorization_number
+kpis:
+- name: Approval Rate
+  category: Business
+  valueType: percentage
+  target: 75
+  unit: '%'
+  description: Percentage of PA requests approved
+- name: Processing Time
+  category: Performance
+  valueType: numeric
+  target: 5000
+  unit: ms
+  description: Average time to process PA request
+- name: Policy Compliance
+  category: Quality
+  valueType: percentage
+  target: 99
+  unit: '%'
+  description: Compliance with clinical policies
+- name: Decision Accuracy
+  category: Quality
+  valueType: percentage
+  target: 96
+  unit: '%'
+  description: Accuracy of PA decisions when audited

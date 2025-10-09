@@ -1,184 +1,266 @@
-import { useState } from "react";
-import { Search, Plus, Bot, Clock, Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
+import Breadcrumb from "@/components/common/Breadcrumb";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import TemplatesModal from "@/components/modals/templatesModal";
+import { useFolderStore } from "@/stores/foldersStore";
+import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
+import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { swatchColors } from "@/utils/styleUtils";
+import { cn, getNumberFromString } from "@/utils/utils";
+import { useGetTemplateStyle } from "@/pages/MainPage/utils/get-template-style";
+import { timeElapsed } from "@/pages/MainPage/utils/time-elapse";
+import type { FlowType } from "@/types/flow";
 
-interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  status: "Published" | "Draft";
-  timeAgo: string;
-  icon: string;
-}
+// Agent Table Row Component (reused from StudioHomePage)
+const AgentTableRow = ({
+  flow,
+  onDelete,
+  folderId,
+}: {
+  flow: FlowType;
+  onDelete: () => void;
+  folderId: string;
+}) => {
+  const navigate = useCustomNavigate();
+  const { getIcon } = useGetTemplateStyle(flow);
+  const [icon, setIcon] = useState<string>("");
 
-const mockAgents: Agent[] = [
-  {
-    id: "1",
-    name: "EHR Connectivity Agent",
-    description: "This agent is designed to help EHR providers like Epic, Cerner, and Allscripts...",
-    category: "Healthcare",
-    status: "Published",
-    timeAgo: "6 hrs ago",
-    icon: "🏥"
-  },
-  {
-    id: "2", 
-    name: "Benefits Check Agent",
-    description: "Quickly verify eligibility and coverage details to streamline patient care and reduce...",
-    category: "Insurance",
-    status: "Draft",
-    timeAgo: "1 day ago",
-    icon: "💼"
-  },
-  {
-    id: "3",
-    name: "Prior Auth Recommendation Agent", 
-    description: "Receive automated approval or denial recommendations based on medical necessity...",
-    category: "Authorization",
-    status: "Draft",
-    timeAgo: "6 hrs ago",
-    icon: "📋"
-  },
-  {
-    id: "4",
-    name: "Auth Guideline",
-    description: "Provides step-by-step authorization guidelines and requirements for various medical...",
-    category: "Guidelines",
-    status: "Published",
-    timeAgo: "2 hrs ago",
-    icon: "📖"
-  }
-];
+  useEffect(() => {
+    getIcon().then(setIcon);
+  }, [getIcon]);
 
-const AgentBuilderPage = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-
-  const filteredAgents = mockAgents.filter(agent => 
-    agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    agent.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const swatchIndex =
+    (flow.gradient && !isNaN(parseInt(flow.gradient))
+      ? parseInt(flow.gradient)
+      : getNumberFromString(flow.gradient ?? flow.id)) %
+    swatchColors.length;
 
   return (
-    <div className="h-full w-full bg-gradient-to-br from-purple-50 to-indigo-100 dark:from-purple-950 dark:to-indigo-950">
-      {/* Header */}
-      <div className="">
-        <div className="w-full px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                AI Agent Builder
-              </h1>
-            </div>
+    <TableRow className="group hover:bg-muted">
+      <TableCell className="w-16">
+        <div
+          className={cn(
+            "flex h-10 w-10 items-center justify-center rounded-lg",
+            swatchColors[swatchIndex]
+          )}
+        >
+          <ForwardedIconComponent
+            name={flow?.icon || icon}
+            aria-hidden="true"
+            className="h-5 w-5"
+          />
+        </div>
+      </TableCell>
+      <TableCell
+        className="cursor-pointer"
+        onClick={() => navigate(`/flow/${flow.id}/folder/${folderId}/`)}
+      >
+        <div className="flex flex-col">
+          <div className="font-medium">{flow.name}</div>
+          <div className="text-xs text-muted-foreground">
+            {flow.description}
           </div>
         </div>
-      </div>
-
-      <div className="w-full px-6 py-8 ">
-        {/* Welcome Section */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Bot className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Hi, What can I help you today?
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Build workflows from the library of AI Agents, or author your own custom AI Agent
-          </p>
-        </div>
-
-        {/* Search Bar */}
-        <div className="max-w-2xl mx-auto mb-8">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <Input
-              type="text"
-              placeholder="Describe your agent... e.g., 'Create an agent that can create a clinical summary from a patient chart'"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 pr-4 py-4 text-lg border-2 border-purple-200 focus:border-purple-500 rounded-xl bg-white dark:bg-gray-800 dark:border-purple-700"
-            />
-            <Button 
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-purple-600 hover:bg-purple-700 text-white px-6"
-              size="sm"
-            >
-              Start Manually
-            </Button>
-          </div>
-        </div>
-
-        {/* Agents Section */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Your Recent Agents (10)
-            </h3>
-            <Button variant="ghost" className="text-purple-600 hover:text-purple-700">
-              View All →
-            </Button>
-          </div>
-
-          {/* Agent Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredAgents.map((agent) => (
-              <Card key={agent.id} className="group hover:shadow-lg transition-all duration-200 border-2 hover:border-purple-200 bg-white dark:bg-gray-800">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center text-lg">
-                        {agent.icon}
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-purple-600 transition-colors">
-                          {agent.name}
-                        </CardTitle>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <Badge 
-                            variant={agent.status === "Published" ? "default" : "secondary"}
-                            className={agent.status === "Published" 
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" 
-                              : "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
-                            }
-                          >
-                            {agent.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Star className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
-                    {agent.description}
-                  </CardDescription>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400">
-                      <Clock className="w-4 h-4" />
-                      <span>{agent.timeAgo}</span>
-                    </div>
-                    <Button 
-                      size="sm" 
-                      className="bg-purple-600 hover:bg-purple-700 text-white"
-                    >
-                      Open
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+      </TableCell>
+      <TableCell className="text-xs text-muted-foreground">
+        {flow.updated_at
+          ? `Edited ${timeElapsed(flow.updated_at)} ago`
+          : "—"}
+      </TableCell>
+      <TableCell className="text-xs text-muted-foreground">
+        {flow.updated_at
+          ? new Date(flow.updated_at).toLocaleString()
+          : "—"}
+      </TableCell>
+      <TableCell className="text-right">
+        <button
+          className="cursor-pointer text-muted-foreground hover:text-foreground"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          aria-label="Delete"
+        >
+          <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
+        </button>
+      </TableCell>
+    </TableRow>
   );
 };
 
-export default AgentBuilderPage;
+export default function AgentBuilderPage() {
+  const navigate = useCustomNavigate();
+  const [promptValue, setPromptValue] = useState("");
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+
+  // Fetch folders and agents (same logic as StudioHomePage)
+  const myCollectionId = useFolderStore((s) => s.myCollectionId);
+  const folders = useFolderStore((s) => s.folders);
+  const folderId = myCollectionId || folders?.[0]?.id || "";
+
+  const [pageIndex, setPageIndex] = useState(1);
+  const pageSize = 5; // Show 5 agents per page
+  const { data: folderData, isLoading: agentsLoading } = useGetFolderQuery(
+    {
+      id: folderId,
+      page: pageIndex,
+      size: pageSize,
+      is_flow: true,
+    } as any,
+    { enabled: !!folderId },
+  );
+
+  // Delete mutation
+  const deleteMutation = useDeleteDeleteFlows();
+
+  const handleDeleteAgent = (flowId: string) => {
+    deleteMutation.mutate({ flow_ids: [flowId] });
+  };
+
+  const handlePromptSubmit = () => {
+    if (promptValue.trim()) {
+      // Navigate to conversation page with prompt
+      navigate("/agent-builder/conversation", { state: { prompt: promptValue } });
+    }
+  };
+
+  // Breadcrumb navigation
+  const breadcrumbItems = [
+    { label: "Dashboard", href: "/" },
+    { label: "Genesis Studio", href: "/studio-home", beta: true },
+    { label: "AI Agent Builder" },
+  ];
+
+  return (
+    <div className="flex h-full w-full overflow-y-auto">
+      <div className="mx-auto w-full max-w-7xl p-4 md:p-6 lg:p-8">
+        {/* Breadcrumb */}
+        <Breadcrumb items={breadcrumbItems} className="mb-6" />
+
+        {/* Hero Section */}
+        <div className="flex flex-col items-center justify-center mt-20 mb-12">
+          <h1 className="text-4xl font-bold mb-4">AI Agent Builder</h1>
+          <p className="text-xl mb-2">
+            Hi <span className="font-medium">User</span>, What can I help you today?
+          </p>
+          <p className="text-sm text-muted-foreground text-center max-w-2xl">
+            Build workflows from the library of AI Agents, or create your own custom agent from scratch
+          </p>
+        </div>
+
+        {/* Prompt Input Section */}
+        <div className="mb-6 max-w-4xl mx-auto">
+          <div className="relative">
+            <textarea
+              value={promptValue}
+              onChange={(e) => setPromptValue(e.target.value)}
+              placeholder="Describe what you want your agent to do..."
+              className="w-full min-h-[120px] p-4 pr-12 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handlePromptSubmit();
+                }
+              }}
+            />
+            <button
+              onClick={handlePromptSubmit}
+              className="absolute right-3 bottom-3 p-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!promptValue.trim()}
+              aria-label="Submit prompt"
+            >
+              <ForwardedIconComponent name="Send" className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="mt-3 text-center">
+            <button
+              onClick={() => setShowTemplatesModal(true)}
+              className="text-sm text-muted-foreground hover:text-foreground underline"
+            >
+              Or Start Manually
+            </button>
+          </div>
+        </div>
+
+        {/* Recent Agents Section */}
+        <div className="mt-16">
+          <div className="mb-3 text-base font-semibold">
+            Your Recent Agents ({folderData?.flows?.total || 0})
+          </div>
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-16"></TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead className="w-[200px]">Last Modified</TableHead>
+                    <TableHead className="w-[200px]">Last Published</TableHead>
+                    <TableHead className="w-[80px] text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {agentsLoading && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">
+                        Loading agents...
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!agentsLoading && (folderData?.flows?.items ?? []).length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">
+                        No agents found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!agentsLoading &&
+                    (folderData?.flows?.items ?? []).map((flow) => (
+                      <AgentTableRow
+                        key={flow.id}
+                        flow={flow}
+                        onDelete={() => handleDeleteAgent(flow.id)}
+                        folderId={folderId}
+                      />
+                    ))}
+                </TableBody>
+              </Table>
+              {folderData?.flows?.pages && folderData.flows.pages > 1 && (
+                <div className="flex items-center justify-end gap-2 border-t p-3 text-xs text-muted-foreground">
+                  {Array.from({ length: folderData.flows.pages }).map((_, i) => (
+                    <button
+                      key={i}
+                      className={
+                        "rounded-md px-2 py-1 " +
+                        (pageIndex === i + 1 ? "bg-muted text-foreground" : "hover:bg-muted")
+                      }
+                      onClick={() => setPageIndex(i + 1)}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Templates Modal */}
+      <TemplatesModal
+        isOpen={showTemplatesModal}
+        onClose={() => setShowTemplatesModal(false)}
+      />
+    </div>
+  );
+}

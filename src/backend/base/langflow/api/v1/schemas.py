@@ -486,3 +486,18 @@ class MCPProjectResponse(BaseModel):
 
 class MCPInstallRequest(BaseModel):
     client: str
+
+
+class AgentBuilderRequest(BaseModel):
+    """Request model for agent builder stream."""
+
+    prompt: str = Field(..., description="User request for building an agent/workflow")
+    context: dict[str, Any] | None = Field(default=None, description="Additional context for the request")
+
+
+class AgentBuilderResponse(BaseModel):
+    """Response model for agent builder (non-streaming)."""
+
+    agents_found: list[dict[str, Any]] = Field(default_factory=list, description="Relevant agents from knowledge base")
+    workflow: dict[str, Any] | None = Field(default=None, description="Generated workflow structure")
+    reasoning: str | None = Field(default=None, description="LLM reasoning for the workflow")
