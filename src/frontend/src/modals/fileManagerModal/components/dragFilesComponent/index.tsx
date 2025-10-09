@@ -132,9 +132,12 @@ export default function DragFilesComponent({
           }
         </h3>
         {isFolderMode && (
-          <p className="text-xs text-muted-foreground text-center max-w-md">
-            Select a folder to upload all supported files from that folder
-          </p>
+          <div className="text-xs text-muted-foreground text-center max-w-md space-y-1">
+            <p>Select a folder to upload all supported files from that folder</p>
+            <p className="text-amber-600 dark:text-amber-400 font-medium">
+              ⚠️ Avoid folders with large hidden directories (.mypy_cache, .git, node_modules, etc.)
+            </p>
+          </div>
         )}
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">

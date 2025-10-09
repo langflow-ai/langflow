@@ -45,28 +45,61 @@ export function createFileUpload(props?: {
       
       // Filter out hidden files and folders entirely when using folder selection
       if (props?.webkitdirectory) {
+        // Early exit if too many files (likely includes hidden directories)
+        if (files.length > 1000) {
+          console.warn(`Too many files detected (${files.length}). This likely includes hidden directories like .mypy_cache, .git, etc. Please select a folder without large hidden directories, or clean up hidden directories first.`);
+          cleanup();
+          resolve([]);
+          return;
+        }
         const originalCount = files.length;
         
         // First, let's see what we're dealing with
-        console.log('Before filtering - sample paths:', files.slice(0, 5).map(f => f.webkitRelativePath));
+        console.log('Before filtering - total files:', originalCount);
+        console.log('Sample paths before filtering:', files.slice(0, 10).map(f => f.webkitRelativePath));
+        
+        // Show a few .mypy_cache examples if they exist
+        const mypyCacheFiles = files.filter(f => f.webkitRelativePath.includes('.mypy_cache')).slice(0, 3);
+        if (mypyCacheFiles.length > 0) {
+          console.log('Found .mypy_cache files (sample):', mypyCacheFiles.map(f => f.webkitRelativePath));
+        }
         
         files = files.filter(file => {
-          const pathParts = file.webkitRelativePath.split('/');
+          const path = file.webkitRelativePath;
+          const pathParts = path.split('/');
           
-          // Filter out any file that has a hidden directory or file anywhere in its path
-          // This will exclude:
-          // - .DS_Store (hidden file)
-          // - .mypy_cache/anything (files inside hidden directories)
-          // - some/path/.hidden/file.txt (files inside nested hidden directories)
-          const hasHiddenPath = pathParts.some(part => 
-            part.startsWith('.') && part.length > 0
-          );
+          // Multiple approaches to catch hidden files/folders:
           
-          if (hasHiddenPath) {
-            console.log('Filtering out hidden path:', file.webkitRelativePath);
+          // 1. Check if path contains .mypy_cache specifically
+          if (path.includes('.mypy_cache')) {
+            console.log('Filtering out .mypy_cache file:', path);
+            return false;
           }
           
-          return !hasHiddenPath;
+          // 2. Check if any path part starts with '.'
+          const hasHiddenPath = pathParts.some(part => {
+            const startsWithDot = part.startsWith('.') && part.length > 0;
+            if (startsWithDot) {
+              console.log(`Found hidden part "${part}" in path: ${path}`);
+            }
+            return startsWithDot;
+          });
+          
+          if (hasHiddenPath) {
+            console.log('Filtering out hidden path:', path);
+            return false;
+          }
+          
+          // 3. Additional check for common hidden patterns
+          const hiddenPatterns = ['.DS_Store', '.git', '.vscode', '.idea', '__pycache__', '.pytest_cache'];
+          const hasHiddenPattern = hiddenPatterns.some(pattern => path.includes(pattern));
+          
+          if (hasHiddenPattern) {
+            console.log('Filtering out file with hidden pattern:', path);
+            return false;
+          }
+          
+          return true;
         });
         
         // Debug logging for folder selection
