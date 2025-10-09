@@ -1,5 +1,5 @@
 import base64
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import numpy as np
 import pytest
@@ -238,12 +238,14 @@ class TestWriteAudioToFile:
             patch("langflow.utils.voice_utils.logger") as mock_logger,
         ):
             mock_to_thread.side_effect = OSError("File write error")
+            # Mock the async logger methods
+            mock_logger.aerror = AsyncMock()
 
             await write_audio_to_file(audio_base64, "test.raw")
 
             # Should log error
-            mock_logger.error.assert_called_once()
-            error_msg = mock_logger.error.call_args[0][0]
+            mock_logger.aerror.assert_called_once()
+            error_msg = mock_logger.aerror.call_args[0][0]
             assert "Error writing audio to file:" in error_msg
 
     @pytest.mark.asyncio
