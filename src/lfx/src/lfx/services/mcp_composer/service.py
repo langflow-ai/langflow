@@ -417,9 +417,10 @@ class MCPComposerService(Service):
         startup_delay: float = 2.0,
     ) -> subprocess.Popen:
         """Start the MCP Composer subprocess for a specific project."""
+        settings = get_settings_service().settings
         cmd = [
             "uvx",
-            "mcp-composer",
+            f"mcp-composer{settings.mcp_composer_version}",
             "--mode",
             "sse",
             "--sse-url",
@@ -447,7 +448,7 @@ class MCPComposerService(Service):
                     "oauth_server_url": "OAUTH_SERVER_URL",
                     "oauth_callback_path": "OAUTH_CALLBACK_PATH",
                     "oauth_client_id": "OAUTH_CLIENT_ID",
-                    "oauth_client_secret": "OAUTH_CLIENT_SECRET",
+                    "oauth_client_secret": "OAUTH_CLIENT_SECRET",  # pragma: allowlist secret
                     "oauth_auth_url": "OAUTH_AUTH_URL",
                     "oauth_token_url": "OAUTH_TOKEN_URL",
                     "oauth_mcp_scope": "OAUTH_MCP_SCOPE",
