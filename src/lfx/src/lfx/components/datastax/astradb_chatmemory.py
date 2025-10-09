@@ -36,5 +36,5 @@ class AstraDBChatMemory(AstraDBBaseComponent, LCChatMemoryComponent):
             token=self.token,
             api_endpoint=self.get_api_endpoint(),
             namespace=self.get_keyspace(),
-            environment=self.environment
+            environment=self.environment,
         )
