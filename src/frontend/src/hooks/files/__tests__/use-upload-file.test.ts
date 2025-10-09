@@ -18,6 +18,8 @@ describe("useUploadFile", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockValidateFileSize.mockReset();
+    mockUploadFileMutation.mockReset();
 
     (customPostUploadFileV2 as jest.Mock).mockReturnValue({
       mutateAsync: mockUploadFileMutation,
@@ -136,8 +138,9 @@ describe("useUploadFile", () => {
 
       const uploadFile = result.current;
 
+      // When there's no dot, split(".").pop() returns the filename itself ("test")
       await expect(uploadFile({ files: [mockFile] })).rejects.toThrow(
-        "File type not allowed",
+        "File type test not allowed",
       );
 
       expect(mockUploadFileMutation).not.toHaveBeenCalled();
@@ -204,6 +207,8 @@ describe("useUploadFile", () => {
     });
 
     it("should handle upload mutation errors", async () => {
+      // Reset mockValidateFileSize from previous test
+      mockValidateFileSize.mockReset();
       mockUploadFileMutation.mockRejectedValue(new Error("Upload failed"));
 
       const mockFile = new File(["content"], "test.pdf", {
@@ -221,6 +226,12 @@ describe("useUploadFile", () => {
     });
 
     it("should allow any file type when types is undefined", async () => {
+      // Reset mocks to ensure clean state
+      mockValidateFileSize.mockReset();
+      mockUploadFileMutation
+        .mockReset()
+        .mockResolvedValue({ path: "file-id-123" });
+
       const mockFile = new File(["content"], "test.pdf", {
         type: "application/pdf",
       });
@@ -236,6 +247,12 @@ describe("useUploadFile", () => {
     });
 
     it("should handle case-insensitive file extensions", async () => {
+      // Reset mocks to ensure clean state
+      mockValidateFileSize.mockReset();
+      mockUploadFileMutation
+        .mockReset()
+        .mockResolvedValue({ path: "file-id-123" });
+
       const mockFile = new File(["content"], "test.PDF", {
         type: "application/pdf",
       });
