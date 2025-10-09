@@ -17,8 +17,6 @@ if TYPE_CHECKING:
     from lfx.graph.schema import RunOutputs
     from lfx.schema.schema import InputValueRequest
 
-    from langflow.graph.log_collector import TransactionCollector, VertexBuildCollector
-
 
 class Result(BaseModel):
     result: Any
@@ -34,13 +32,11 @@ async def run_graph_internal(
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
     event_manager: EventManager | None = None,
-    transaction_collector: TransactionCollector | None = None,
-    vertex_build_collector: VertexBuildCollector | None = None,
-) -> tuple[list[RunOutputs], str, list, list]:
+) -> tuple[list[RunOutputs], str]:
     """Run the graph and generate the result.
 
     Returns:
-        Tuple of (run_outputs, session_id, transaction_queue, vertex_build_queue)
+        Tuple of (run_outputs, session_id)
     """
     inputs = inputs or []
     effective_session_id = session_id or flow_id
@@ -68,11 +64,8 @@ async def run_graph_internal(
         event_manager=event_manager,
     )
 
-    # Get collected transactions and vertex builds from collectors
-    transaction_queue = transaction_collector.get_and_clear() if transaction_collector else []
-    vertex_build_queue = vertex_build_collector.get_and_clear() if vertex_build_collector else []
-
-    return run_outputs, effective_session_id, transaction_queue, vertex_build_queue
+    # Collectors handle the queues automatically now, no need to return them
+    return run_outputs, effective_session_id
 
 
 async def run_graph(
