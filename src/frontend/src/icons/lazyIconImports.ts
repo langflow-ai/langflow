@@ -30,6 +30,8 @@ export const lazyIconsMapping = {
     })),
   Azure: () =>
     import("@/icons/Azure").then((mod) => ({ default: mod.AzureIcon })),
+  Autonomize: () =>
+    import("@/icons/Autonomize").then((mod) => ({ default: mod.AutonomizeIcon })),
   Bing: () => import("@/icons/Bing").then((mod) => ({ default: mod.BingIcon })),
   BotMessageSquareIcon: () =>
     import("@/icons/BotMessageSquare").then((mod) => ({

@@ -7,7 +7,6 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import CustomAccountMenu from "@/customization/components/custom-AccountMenu";
-import CustomLangflowCounts from "@/customization/components/custom-langflow-counts";
 import { CustomOrgSelector } from "@/customization/components/custom-org-selector";
 import { CustomProductSelector } from "@/customization/components/custom-product-selector";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
@@ -17,6 +16,7 @@ import useAlertStore from "@/stores/alertStore";
 import { useSidebar } from "@/contexts/sidebarContext";
 import { PanelLeft } from "lucide-react";
 import FlowMenu from "./components/FlowMenu";
+// import AutonomizeIcon from "@/icons/Autonomize";
 
 export default function AppHeader(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
@@ -27,30 +27,30 @@ export default function AppHeader(): JSX.Element {
   const { toggleSidebar } = useSidebar();
   useTheme();
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node;
-      const isNotificationButton = notificationRef.current?.contains(target);
-      const isNotificationContent =
-        notificationContentRef.current?.contains(target);
+  // useEffect(() => {
+  //   function handleClickOutside(event: MouseEvent) {
+  //     const target = event.target as Node;
+  //     const isNotificationButton = notificationRef.current?.contains(target);
+  //     const isNotificationContent =
+  //       notificationContentRef.current?.contains(target);
 
-      if (!isNotificationButton && !isNotificationContent) {
-        setActiveState(null);
-      }
-    }
+  //     if (!isNotificationButton && !isNotificationContent) {
+  //       setActiveState(null);
+  //     }
+  //   }
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+  //   document.addEventListener("mousedown", handleClickOutside);
+  //   return () => {
+  //     document.removeEventListener("mousedown", handleClickOutside);
+  //   };
+  // }, []);
 
-  const getNotificationBadge = () => {
-    const baseClasses = "absolute h-1 w-1 rounded-full bg-destructive";
-    return notificationCenter
-      ? `${baseClasses} right-[0.3rem] top-[5px]`
-      : "hidden";
-  };
+  // const getNotificationBadge = () => {
+  //   const baseClasses = "absolute h-1 w-1 rounded-full bg-destructive";
+  //   return notificationCenter
+  //     ? `${baseClasses} right-[0.3rem] top-[5px]`
+  //     : "hidden";
+  // };
 
   return (
     <div
