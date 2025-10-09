@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
 from langchain_ollama import ChatOllama
-
 from lfx.components.ollama.ollama import ChatOllamaComponent
+
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -169,11 +169,9 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         field_value = None
         field_name = "model_name"
         component.base_url = None
-        with pytest.raises(
-            ValueError,
-            match=re.escape("Ollama is not running on the provided base URL. Please start Ollama and try again."),
-        ):
-            await component.update_build_config(build_config, field_value, field_name)
+        # Should not raise an error, just set empty options
+        updated_config = await component.update_build_config(build_config, field_value, field_name)
+        assert updated_config["model_name"]["options"] == []
 
     @pytest.mark.asyncio
     async def test_update_build_config_keep_alive(self):
@@ -344,3 +342,118 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         call_args = mock_chat_ollama.call_args[1]
         assert call_args["base_url"] == "http://host.docker.internal:11434"
         assert model == mock_model
+
+    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch("lfx.components.ollama.ollama.logger")
+    def test_build_model_strips_v1_suffix_and_logs_warning(self, mock_logger, mock_chat_ollama):
+        """Test that /v1 suffix is automatically stripped and a warning is logged."""
+        mock_model = MagicMock()
+        mock_chat_ollama.return_value = mock_model
+
+        component = ChatOllamaComponent()
+        component.base_url = "http://localhost:11434/v1"
+        component.model_name = "llama3.1"
+        component.mirostat = "Disabled"
+
+        model = component.build_model()
+
+        # Verify warning was logged
+        mock_logger.warning.assert_called_once()
+        warning_message = mock_logger.warning.call_args[0][0]
+        assert "Detected '/v1' suffix in base URL" in warning_message
+        assert "https://docs.ollama.com/openai#openai-compatibility" in warning_message
+
+        # Verify ChatOllama was called without /v1
+        call_args = mock_chat_ollama.call_args[1]
+        assert call_args["base_url"] == "http://localhost:11434"
+        assert model == mock_model
+
+    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch("lfx.components.ollama.ollama.logger")
+    def test_build_model_strips_v1_trailing_slash(self, mock_logger, mock_chat_ollama):
+        """Test that /v1/ suffix is also automatically stripped."""
+        mock_model = MagicMock()
+        mock_chat_ollama.return_value = mock_model
+
+        component = ChatOllamaComponent()
+        component.base_url = "http://localhost:11434/v1/"
+        component.model_name = "llama3.1"
+        component.mirostat = "Disabled"
+
+        model = component.build_model()
+
+        # Verify warning was logged
+        mock_logger.warning.assert_called_once()
+
+        # Verify ChatOllama was called without /v1
+        call_args = mock_chat_ollama.call_args[1]
+        assert call_args["base_url"] == "http://localhost:11434"
+        assert model == mock_model
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    async def test_is_valid_ollama_url_with_v1_suffix(self, mock_get):
+        """Test that is_valid_ollama_url strips /v1 suffix when validating."""
+        component = ChatOllamaComponent()
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+
+        result = await component.is_valid_ollama_url("http://localhost:11434/v1")
+
+        # Verify it called /api/tags without /v1
+        mock_get.assert_called_once()
+        called_url = mock_get.call_args[0][0]
+        assert called_url == "http://localhost:11434/api/tags"
+        assert result is True
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.post")
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    async def test_get_models_with_v1_suffix(self, mock_get, mock_post):
+        """Test that get_models strips /v1 suffix when fetching models."""
+        component = ChatOllamaComponent()
+        mock_get_response = AsyncMock()
+        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.json.return_value = {
+            component.JSON_MODELS_KEY: [
+                {component.JSON_NAME_KEY: "model1"},
+            ]
+        }
+        mock_get.return_value = mock_get_response
+
+        mock_post_response = AsyncMock()
+        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.json.return_value = {component.JSON_CAPABILITIES_KEY: [component.DESIRED_CAPABILITY]}
+        mock_post.return_value = mock_post_response
+
+        base_url = "http://localhost:11434/v1"
+        result = await component.get_models(base_url)
+
+        # Verify it called /api/tags without /v1
+        assert mock_get.call_count == 1
+        called_url = mock_get.call_args[0][0]
+        assert called_url == "http://localhost:11434/api/tags"
+        assert result == ["model1"]
+
+    @pytest.mark.asyncio
+    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    async def test_update_build_config_no_error_when_ollama_not_running(self, mock_get):
+        """Test that update_build_config doesn't throw error when Ollama isn't running."""
+        import httpx
+
+        component = ChatOllamaComponent()
+        mock_get.side_effect = httpx.RequestError("Connection error", request=None)
+
+        build_config = {
+            "base_url": {"load_from_db": False, "value": "http://localhost:11434"},
+            "model_name": {"options": []},
+            "tool_model_enabled": {"value": False},
+        }
+        field_value = "http://localhost:11434"
+        field_name = "base_url"
+        component.base_url = "http://localhost:11434"
+
+        # Should not raise an error, just set empty options
+        updated_config = await component.update_build_config(build_config, field_value, field_name)
+        assert updated_config["model_name"]["options"] == []
