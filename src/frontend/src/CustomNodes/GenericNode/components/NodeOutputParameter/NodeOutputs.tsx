@@ -60,7 +60,7 @@ export default function NodeOutputs({
     );
   }
 
-  // Handle individual outputs (group_outputs: false)
+  // Handle individual outputs (group_outputs: true)
   const renderIndividualOutputs = () => {
     return individualOutputs.map((output: any, idx: number) => (
       <OutputParameter
@@ -85,7 +85,7 @@ export default function NodeOutputs({
     ));
   };
 
-  // Handle grouped outputs (group_outputs: true) - show as dropdown
+  // Handle grouped outputs (group_outputs: false) - show as dropdown
   const renderGroupedOutputs = () => {
     if (groupedOutputs.length === 0) return null;
 
