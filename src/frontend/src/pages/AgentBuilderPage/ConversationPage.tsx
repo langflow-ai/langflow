@@ -151,7 +151,7 @@ export default function ConversationPage() {
   };
 
   return (
-    <div className="flex h-full w-full flex-col">
+    <div className="flex h-full w-full flex-col agent-builder-conversation-page">
 
       {/* Main Content - Split Layout when flow panel is open */}
       <div className="flex flex-1 overflow-hidden">

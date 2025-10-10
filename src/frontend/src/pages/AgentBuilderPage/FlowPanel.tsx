@@ -32,6 +32,16 @@ export default function FlowPanel({ flowId, yamlSpec, flowData, folderId, onClos
       <div className="border-b">
         <div className="flex px-4">
           <button
+            onClick={() => setActiveTab("visualization")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "visualization"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Agent Visualization
+          </button>
+          <button
             onClick={() => setActiveTab("specification")}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === "specification"
@@ -40,16 +50,6 @@ export default function FlowPanel({ flowId, yamlSpec, flowData, folderId, onClos
             }`}
           >
             Specification
-          </button>
-          <button
-            onClick={() => setActiveTab("visualization")}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "visualization"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Flow Visualization
           </button>
         </div>
       </div>
