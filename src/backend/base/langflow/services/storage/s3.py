@@ -69,6 +69,7 @@ class S3StorageService(StorageService):
         Returns:
             str: The full S3 key (e.g., 'files/flow_123/myfile.txt')
         """
+        # note: prefix already contains the / at the end
         return f"{self.prefix}{flow_id}/{file_name}"
 
     def resolve_component_path(self, logical_path: str) -> str:
