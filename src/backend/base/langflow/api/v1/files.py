@@ -22,6 +22,7 @@ router = APIRouter(tags=["Files"], prefix="/files")
 
 from langflow.api.security import get_flow_with_ownership
 
+
 # Secure dependency that validates flow ownership
 async def get_flow(
     flow_id: UUID,
@@ -66,9 +67,9 @@ async def upload_file(
 
 @router.get("/download/{flow_id}/{file_name}")
 async def download_file(
-    file_name: str, 
+    file_name: str,
     flow: Annotated[Flow, Depends(get_flow)],
-    storage_service: Annotated[StorageService, Depends(get_storage_service)]
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     flow_id_str = str(flow.id)
     extension = file_name.split(".")[-1]
@@ -96,10 +97,7 @@ async def download_file(
 
 
 @router.get("/images/{flow_id}/{file_name}")
-async def download_image(
-    file_name: str, 
-    flow: Annotated[Flow, Depends(get_flow)]
-):
+async def download_image(file_name: str, flow: Annotated[Flow, Depends(get_flow)]):
     storage_service = get_storage_service()
     extension = file_name.split(".")[-1]
     flow_id_str = str(flow.id)

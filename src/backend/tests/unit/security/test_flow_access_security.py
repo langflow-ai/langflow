@@ -1,21 +1,19 @@
-"""
-Security tests for flow access control and cross-account protection.
+"""Security tests for flow access control and cross-account protection.
 
-These tests validate that the token scope security fixes prevent 
+These tests validate that the token scope security fixes prevent
 unauthorized access to flows between different user accounts.
 """
 
-import pytest
 import uuid
-from fastapi import HTTPException
-from sqlmodel import select
 
+import pytest
+from fastapi import HTTPException
 from langflow.api.security import (
     get_flow_with_ownership,
     get_flow_with_ownership_by_name_or_id,
     get_public_flow_by_name_or_id,
 )
-from langflow.services.database.models.flow.model import Flow, AccessTypeEnum
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.database.models.user.model import User
 
 
@@ -55,9 +53,7 @@ class TestFlowAccessSecurity:
     @pytest.mark.asyncio
     async def test_get_flow_by_name_or_id_with_uuid(self, session, created_user, created_flow):
         """Test access by UUID with ownership validation."""
-        flow = await get_flow_with_ownership_by_name_or_id(
-            session, str(created_flow.id), created_user.id
-        )
+        flow = await get_flow_with_ownership_by_name_or_id(session, str(created_flow.id), created_user.id)
         assert flow.id == created_flow.id
 
     @pytest.mark.asyncio
@@ -68,9 +64,7 @@ class TestFlowAccessSecurity:
         session.add(created_flow)
         await session.commit()
 
-        flow = await get_flow_with_ownership_by_name_or_id(
-            session, "test_endpoint", created_user.id
-        )
+        flow = await get_flow_with_ownership_by_name_or_id(session, "test_endpoint", created_user.id)
         assert flow.id == created_flow.id
 
     @pytest.mark.asyncio
@@ -89,9 +83,7 @@ class TestFlowAccessSecurity:
 
         # Try to access by endpoint name as different user
         with pytest.raises(HTTPException) as exc_info:
-            await get_flow_with_ownership_by_name_or_id(
-                session, "test_endpoint", other_user.id
-            )
+            await get_flow_with_ownership_by_name_or_id(session, "test_endpoint", other_user.id)
         assert exc_info.value.status_code == 404
 
     @pytest.mark.asyncio
@@ -147,17 +139,15 @@ class TestFileEndpointSecurity:
         # This would require setting up authentication for the test client
         # The actual implementation would depend on your test setup
 
-    @pytest.mark.asyncio  
+    @pytest.mark.asyncio
     async def test_file_download_cross_account_blocked(self, client, created_user, created_flow):
         """Test that file download is blocked for non-owners."""
         # This would test the download endpoint with cross-account access attempt
-        pass
 
     @pytest.mark.asyncio
     async def test_file_list_cross_account_blocked(self, client, created_user, created_flow):
         """Test that file listing is blocked for non-owners."""
         # This would test the list files endpoint with cross-account access attempt
-        pass
 
 
 class TestBuildEndpointSecurity:
@@ -167,13 +157,11 @@ class TestBuildEndpointSecurity:
     async def test_build_flow_cross_account_blocked(self, client, created_user, created_flow):
         """Test that flow build is blocked for non-owners."""
         # This would test the build endpoint with cross-account access attempt
-        pass
 
     @pytest.mark.asyncio
     async def test_build_vertex_cross_account_blocked(self, client, created_user, created_flow):
         """Test that vertex build is blocked for non-owners."""
         # This would test the build vertex endpoint with cross-account access attempt
-        pass
 
 
 # Fixtures for testing
@@ -207,7 +195,6 @@ async def session():
     """Database session fixture."""
     # This would be provided by your existing test setup
     # The actual implementation depends on your test configuration
-    pass
 
 
 @pytest.fixture
@@ -215,4 +202,3 @@ async def client():
     """HTTP client fixture."""
     # This would be provided by your existing test setup
     # The actual implementation depends on your test configuration
-    pass

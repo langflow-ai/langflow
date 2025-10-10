@@ -38,7 +38,6 @@ from langflow.api.v1.schemas import (
 )
 from langflow.exceptions.component import ComponentBuildError
 from langflow.services.chat.service import ChatService
-from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import (
     get_chat_service,
     get_queue_service,
@@ -166,7 +165,7 @@ async def build_flow(
     """
     # First verify the flow exists and user owns it
     from langflow.api.security import get_flow_with_ownership
-    
+
     async with session_scope() as session:
         flow = await get_flow_with_ownership(session, flow_id, current_user.id)
 
