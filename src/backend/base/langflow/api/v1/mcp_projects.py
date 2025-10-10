@@ -423,9 +423,7 @@ async def update_project_mcp_settings(
 
             # Query flows in the project with ownership validation
             flows = (
-                await session.exec(
-                    select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id)
-                )
+                await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id))
             ).all()
             flows_to_update = {x.id: x for x in request.settings}
 
