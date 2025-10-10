@@ -83,7 +83,7 @@ const router = createBrowserRouter(
                 <Route path="" element={<CollectionPage />}>
                   <Route
                     index
-                    element={<CustomNavigate replace to={"flows"} />}
+                    element={<CustomNavigate replace to={"agent-builder"} />}
                   />
                   {ENABLE_FILE_MANAGEMENT && (
                     <Route path="assets">

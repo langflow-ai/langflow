@@ -26,7 +26,16 @@ export default function GetStartedComponent() {
       icon: "MessagesSquare",
       category: "prompting",
       flow: filteredExamples.find(
-        (example) => example.name === "Basic Prompting",
+        (example) => example.name === "Ask Auto Agent"
+      ),
+    },
+    {
+      bgImage: multiAgent,
+      bgHorizontalImage: multiAgentHorizontal,
+      icon: "Bot",
+      category: "Agents",
+      flow: filteredExamples.find(
+        (example) => example.name === "Simple Agent"
       ),
     },
     {
@@ -35,15 +44,8 @@ export default function GetStartedComponent() {
       icon: "Database",
       category: "RAG",
       flow: filteredExamples.find(
-        (example) => example.name === "Vector Store RAG",
+        (example) => example.name === "Document Retrieval Agent"
       ),
-    },
-    {
-      bgImage: multiAgent,
-      bgHorizontalImage: multiAgentHorizontal,
-      icon: "Bot",
-      category: "Agents",
-      flow: filteredExamples.find((example) => example.name === "Simple Agent"),
     },
   ];
 
