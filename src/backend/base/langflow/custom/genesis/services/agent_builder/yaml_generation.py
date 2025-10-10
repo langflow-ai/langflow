@@ -40,10 +40,14 @@ class YAMLGenerationEngine:
             # Generate components section
             components = self._generate_components_section(assembly_result.components)
 
+            # Generate agent goal from task analysis
+            agent_goal = f"Perform {task_analysis.primary_task} tasks in the {task_analysis.domain} domain"
+
             # Combine into full YAML
             yaml_content = f"""name: {agent_metadata['name']}
 description: {agent_metadata['description']}
 domain: {task_analysis.domain}
+agentGoal: {agent_goal}
 
 components:
 {components}
@@ -178,6 +182,7 @@ metadata:
         return f"""name: Fallback Agent
 description: Auto-generated agent for request - generation failed
 domain: general
+agentGoal: Process user requests with fallback configuration
 
 components:
 - id: input

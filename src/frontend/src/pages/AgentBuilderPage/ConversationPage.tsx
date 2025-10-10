@@ -1,20 +1,16 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import Breadcrumb from "@/components/common/Breadcrumb";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useAgentBuilderStream } from "@/hooks/useAgentBuilderStream";
 import StreamingMessages from "@/components/AgentBuilder/StreamingMessages";
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useConvertSpec } from "@/controllers/API/queries/spec/use-convert-spec";
 import { usePostAddFlow } from "@/controllers/API/queries/flows/use-post-add-flow";
 import useAlertStore from "@/stores/alertStore";
-import { api } from "@/controllers/API/api";
 import { useFolderStore } from "@/stores/foldersStore";
 import FlowPanel from "./FlowPanel";
 
 export default function ConversationPage() {
   const location = useLocation();
-  const navigate = useCustomNavigate();
   const [promptValue, setPromptValue] = useState("");
   const [showFlowPanel, setShowFlowPanel] = useState(false);
   const [flowData, setFlowData] = useState<any>(null);
@@ -38,7 +34,8 @@ export default function ConversationPage() {
     if (initialPrompt) {
       startStream(initialPrompt);
     }
-  }, [initialPrompt, startStream]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPrompt]);
 
   const handlePromptSubmit = () => {
     if (promptValue.trim()) {
@@ -91,25 +88,17 @@ export default function ConversationPage() {
   }, [isDragging]);
 
   const handleBuildAgent = async (workflow: any) => {
-    // Get the first agent's YAML from workflow.agents_used
-    const firstAgent = workflow.agents_used?.[0];
+    // Use the yaml_config from the streamed workflow data
+    const yamlContent = workflow.yaml_config;
 
-    if (!firstAgent || !firstAgent.file_path) {
-      setErrorData({ title: "No agent data available to build" });
+    if (!yamlContent) {
+      setErrorData({ title: "No YAML data available to build agent" });
       return;
     }
 
     try {
-      // Read the YAML file content from the knowledge base
-      const yamlPath = firstAgent.file_path;
-
-      // Fetch YAML content from backend using authenticated API
-      const response = await api.get(`/api/v1/agent-builder/read-yaml`, {
-        params: { file_path: yamlPath },
-      });
-
-      const yamlContent = response.data.content;
-      setYamlSpec(yamlContent); // Store for Specification tab
+      // Store YAML for Specification tab
+      setYamlSpec(yamlContent);
 
       // Convert spec to flow JSON
       const result = await convertSpecMutation.mutateAsync({
@@ -124,15 +113,19 @@ export default function ConversationPage() {
 
         try {
           const createdFlow = await createFlowMutation.mutateAsync({
-            name: firstAgent.name || workflow.name || "Generated Agent",
-            description: firstAgent.description || workflow.description || "Agent created by AI Agent Builder",
+            name: workflow.metadata?.domain
+              ? `${workflow.metadata.domain} Agent`
+              : "Generated Agent",
+            description: workflow.metadata
+              ? `Auto-generated ${workflow.metadata.domain} agent for ${workflow.metadata.primary_task}`
+              : "Agent created by AI Agent Builder",
             data: result.flow.data, // Extract just the data field (nodes/edges/viewport)
             is_component: false,
             folder_id: folderId,
             endpoint_name: undefined,
             icon: undefined,
             gradient: undefined,
-            tags: firstAgent.tags || undefined,
+            tags: undefined,
             mcp_enabled: undefined,
           });
 
@@ -157,28 +150,8 @@ export default function ConversationPage() {
     }
   };
 
-  // Breadcrumb navigation
-  const breadcrumbItems = [
-    { label: "Dashboard", href: "/" },
-    { label: "Genesis Studio", href: "/studio-home", beta: true },
-    { label: "AI Agent Builder", href: "/agent-builder" },
-    { label: "Conversation" },
-  ];
-
   return (
     <div className="flex h-full w-full flex-col">
-      {/* Header with Breadcrumb */}
-      {/* <div className="border-b bg-background px-4 py-3 md:px-6">
-        <div className="flex items-center justify-between">
-          <Breadcrumb items={breadcrumbItems} />
-          <button
-            onClick={() => navigate("/agent-builder")}
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            New Conversation
-          </button>
-        </div>
-      </div> */}
 
       {/* Main Content - Split Layout when flow panel is open */}
       <div className="flex flex-1 overflow-hidden">
