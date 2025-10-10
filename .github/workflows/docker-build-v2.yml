@@ -54,7 +54,7 @@ env:
 jobs:
   build-base:
     name: Build Base Package
-    if: inputs.release_type == 'base'
+    if: ${{ inputs.release_type == 'base' }}
     strategy:
       matrix:
         include:
@@ -82,7 +82,7 @@ jobs:
         id: version
         run: |
           echo "Extracting base version from pyproject.toml"
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
+          version=$(uv tree 2>/dev/null | grep '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
           echo "Using version: $version"
           echo version=$version >> $GITHUB_OUTPUT
 
@@ -122,6 +122,7 @@ jobs:
           file: ./docker/build_and_push_base.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -133,12 +134,13 @@ jobs:
           file: ./docker/build_and_push_base.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   build-main:
     name: Build Main Package
-    if: inputs.release_type == 'main'
+    if: ${{ inputs.release_type == 'main' }}
     strategy:
       matrix:
         include:
@@ -166,7 +168,7 @@ jobs:
         id: version
         run: |
           echo "Extracting main version from pyproject.toml"
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//' | head -n 1)
+          version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
           echo "Using version: $version"
           echo version=$version >> $GITHUB_OUTPUT
 
@@ -206,6 +208,7 @@ jobs:
           file: ./docker/build_and_push.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -217,12 +220,13 @@ jobs:
           file: ./docker/build_and_push.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   build-main-ep:
     name: Build Main EP Package
-    if: inputs.release_type == 'main-ep'
+    if: ${{ inputs.release_type == 'main-ep' }}
     strategy:
       matrix:
         include:
@@ -250,7 +254,7 @@ jobs:
         id: version
         run: |
           echo "Extracting main version from pyproject.toml"
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//' | head -n 1)
+          version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
           echo "Using version: $version"
           echo version=$version >> $GITHUB_OUTPUT
 
@@ -290,6 +294,7 @@ jobs:
           file: ./docker/build_and_push_ep.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -301,12 +306,13 @@ jobs:
           file: ./docker/build_and_push_ep.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   build-main-all:
     name: Build Main All Package
-    if: inputs.release_type == 'main-all'
+    if: ${{ inputs.release_type == 'main-all' }}
     strategy:
       matrix:
         include:
@@ -333,7 +339,7 @@ jobs:
         id: version
         run: |
           echo "Extracting main version from pyproject.toml"
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//' | head -n 1)
+          version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
           echo "Using version: $version"
           echo version=$version >> $GITHUB_OUTPUT
 
@@ -373,6 +379,7 @@ jobs:
           file: ./docker/build_and_push_with_extras.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -384,6 +391,7 @@ jobs:
           file: ./docker/build_and_push_with_extras.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -391,7 +399,7 @@ jobs:
     name: Create Multi-Arch Manifest
     needs: [build-base, build-main, build-main-ep, build-main-all]
     runs-on: ubuntu-latest
-    if: always() && inputs.push_to_registry && (needs.build-base.result == 'success' || needs.build-main.result == 'success' || needs.build-main-ep.result == 'success' || needs.build-main-all.result == 'success')
+    if: ${{ always() && inputs.push_to_registry && (needs.build-base.result == 'success' || needs.build-main.result == 'success' || needs.build-main-ep.result == 'success' || needs.build-main-all.result == 'success') }}
     steps:
       - name: Setup Environment
         uses: astral-sh/setup-uv@v6
@@ -410,9 +418,9 @@ jobs:
         id: version
         run: |
           if [[ "${{ inputs.release_type }}" == "base" ]]; then
-            version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
+            version=$(uv tree 2>/dev/null | grep '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
           else
-            version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//' | head -n 1)
+            version=$(uv tree 2>/dev/null | grep '^langflow' | grep -v '^langflow-base' | cut -d' ' -f2 | sed 's/^v//')
           fi
           echo "Using version: $version"
           echo version=$version >> $GITHUB_OUTPUT
