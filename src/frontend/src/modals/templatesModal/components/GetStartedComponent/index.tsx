@@ -51,7 +51,7 @@ export default function GetStartedComponent() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-8">
-      <BaseModal.Header description="Start with templates showcasing Langflow's Prompting, RAG, and Agent use cases.">
+      <BaseModal.Header description="Start with templates showcasing Ask auto, simple extraction and document retrieval agent.">
         Get started
       </BaseModal.Header>
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
