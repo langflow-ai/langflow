@@ -88,16 +88,16 @@ async def get_flow_by_id_or_endpoint_name_with_user(
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
 ) -> FlowRead:
     """Dependency to get a flow by ID or endpoint name with user ownership validation.
-    
+
     This ensures that users can only access flows they own, preventing cross-account access.
-    
+
     Args:
         flow_id_or_name: The flow ID (UUID) or endpoint name
         api_key_user: The authenticated user from the API key
-        
+
     Returns:
         FlowRead: The flow if found and owned by the user
-        
+
     Raises:
         HTTPException: 404 if flow not found or user doesn't have access
     """
@@ -374,7 +374,7 @@ async def simplified_run_flow(
 
     # SECURITY FIX: Retrieve flow with user ownership validation
     flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, str(api_key_user.id))
-    
+
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
@@ -491,7 +491,7 @@ async def webhook_run_flow(
     # Get the appropriate user for webhook execution based on auth settings
     # This will also validate flow ownership when auth is enabled
     webhook_user = await get_webhook_user(flow_id_or_name, request)
-    
+
     # SECURITY FIX: Retrieve flow with user ownership validation
     flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, str(webhook_user.id))
 
