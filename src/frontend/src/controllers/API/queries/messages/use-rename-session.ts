@@ -25,8 +25,6 @@ export const useUpdateSessionName: useMutationFunctionType<
 > = ({ flowId, useLocalStorage }, options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
-  const flowId = useGetFlowId();
-
   const updateSessionApi = async (data: UpdateSessionParams) => {
     if (!flowId) {
       throw new Error("Flow ID is required");
