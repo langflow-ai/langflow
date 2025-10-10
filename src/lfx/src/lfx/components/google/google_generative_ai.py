@@ -37,9 +37,10 @@ class ChatGoogleGenerativeAIFixed(ChatGoogleGenerativeAI):
         # Pre-process messages to ensure tool/function messages have names
         fixed_messages = []
         for message in messages:
+            fixed_message = message
             if isinstance(message, ToolMessage) and not message.name:
                 # Create a new ToolMessage with a default name
-                tool_message = ToolMessage(
+                fixed_message = ToolMessage(
                     content=message.content,
                     name="tool_response",
                     tool_call_id=getattr(message, "tool_call_id", None),
@@ -47,8 +48,8 @@ class ChatGoogleGenerativeAIFixed(ChatGoogleGenerativeAI):
                 )
             elif isinstance(message, FunctionMessage) and not message.name:
                 # Create a new FunctionMessage with a default name
-                tool_message = FunctionMessage(content=message.content, name="function_response")
-            fixed_messages.append(tool_message)
+                fixed_message = FunctionMessage(content=message.content, name="function_response")
+            fixed_messages.append(fixed_message)
 
         # Call the parent's method with fixed messages
         return super()._prepare_request(fixed_messages, **kwargs)
