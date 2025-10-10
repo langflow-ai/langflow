@@ -7,6 +7,7 @@ import {
   ReactFlow,
   reconnectEdge,
   type SelectionDragHandler,
+  useUpdateNodeInternals,
 } from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import {
@@ -112,6 +113,7 @@ export default function Page({
   const setReactFlowInstance = useFlowStore(
     (state) => state.setReactFlowInstance,
   );
+  const updateNodeInternals = useUpdateNodeInternals();
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const isEmptyFlow = useRef(nodes.length === 0);
@@ -222,6 +224,10 @@ export default function Page({
   useEffect(() => {
     useFlowStore.setState({ autoSaveFlow });
   }, [autoSaveFlow]);
+
+  useEffect(() => {
+    useFlowStore.setState({ updateNodeInternals });
+  }, [updateNodeInternals]);
 
   function handleUndo(e: KeyboardEvent) {
     if (!isWrappedWithClass(e, "noflow")) {

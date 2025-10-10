@@ -115,13 +115,15 @@ class StructuredOutputComponent(Component):
     outputs = [
         Output(
             name="structured_output",
-            display_name="Structured Output",
+            display_name="JSON Output",
             method="build_structured_output",
+            types=["JSON"],
         ),
         Output(
             name="dataframe_output",
-            display_name="Structured Output",
+            display_name="Table Output",
             method="build_structured_dataframe",
+            types=["Table"],
         ),
     ]
 

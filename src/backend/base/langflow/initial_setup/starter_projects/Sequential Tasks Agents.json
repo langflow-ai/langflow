@@ -364,7 +364,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "0.3.77"
+                    "version": "0.3.78"
                   },
                   {
                     "name": "pydantic",
@@ -1012,7 +1012,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "0.3.77"
+                    "version": "0.3.78"
                   },
                   {
                     "name": "pydantic",
@@ -2408,7 +2408,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "0.3.77"
+                    "version": "0.3.78"
                   },
                   {
                     "name": "pydantic",
@@ -3045,7 +3045,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.77"
+                    "version": "0.3.78"
                   },
                   {
                     "name": "pydantic",

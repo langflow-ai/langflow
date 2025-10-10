@@ -161,20 +161,50 @@ class TypeConverterComponent(Component):
         TabInput(
             name="output_type",
             display_name="Output Type",
-            options=["Message", "Data", "DataFrame"],
+            options=["Message", "JSON", "Table"],
             info="Select the desired output data type",
             real_time_refresh=True,
             value="Message",
         ),
     ]
 
+    # Define ONLY ONE default output - __init__ will set the correct one
     outputs = [
         Output(
             display_name="Message Output",
             name="message_output",
             method="convert_to_message",
-        )
+            types=["Message"],
+        ),
     ]
+
+    def __init__(self, **data):
+        """Initialize and set the correct output based on output_type."""
+        super().__init__(**data)
+
+        # Get the current output_type value (from template or default)
+        output_type = getattr(self, 'output_type', 'Message')
+
+        # Set the correct output based on output_type
+        if output_type in ("Data", "JSON"):
+            self.outputs = [
+                Output(
+                    display_name="JSON Output",
+                    name="data_output",
+                    method="convert_to_data",
+                    types=["JSON"],
+                )
+            ]
+        elif output_type in ("DataFrame", "Table"):
+            self.outputs = [
+                Output(
+                    display_name="Table Output",
+                    name="dataframe_output",
+                    method="convert_to_dataframe",
+                    types=["Table"],
+                )
+            ]
+        # else: keep Message output (already set)
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Dynamically show only the relevant output based on the selected output type."""
@@ -182,29 +212,32 @@ class TypeConverterComponent(Component):
             # Start with empty outputs
             frontend_node["outputs"] = []
 
-            # Add only the selected output type
+            # Add only the selected output type WITH TYPES SPECIFIED
             if field_value == "Message":
                 frontend_node["outputs"].append(
                     Output(
                         display_name="Message Output",
                         name="message_output",
                         method="convert_to_message",
+                        types=["Message"],  # ← CRITICAL: specify types!
                     ).to_dict()
                 )
-            elif field_value == "Data":
+            elif field_value in ("Data", "JSON"):
                 frontend_node["outputs"].append(
                     Output(
                         display_name="JSON Output",
                         name="data_output",
                         method="convert_to_data",
+                        types=["JSON"],  # ← CRITICAL: specify types!
                     ).to_dict()
                 )
-            elif field_value == "DataFrame":
+            elif field_value in ("DataFrame", "Table"):
                 frontend_node["outputs"].append(
                     Output(
                         display_name="Table Output",
                         name="dataframe_output",
                         method="convert_to_dataframe",
+                        types=["Table"],  # ← CRITICAL: specify types!
                     ).to_dict()
                 )
 

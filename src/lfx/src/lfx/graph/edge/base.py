@@ -80,25 +80,54 @@ class Edge:
         else:
             self._validate_handles(source, target)
 
+    def _types_are_compatible(self, source_type: str, target_type: str) -> bool:
+        """Check if two types are compatible, considering type migrations."""
+        if source_type == target_type:
+            return True
+
+        # Type migration mappings (bidirectional)
+        migrations = {
+            'Data': 'JSON',
+            'JSON': 'Data',
+            'DataFrame': 'Table',
+            'Table': 'DataFrame',
+        }
+
+        return migrations.get(source_type) == target_type
+
     def _validate_handles(self, source, target) -> None:
         if self.target_handle.input_types is None:
-            self.valid_handles = self.target_handle.type in self.source_handle.output_types
+            self.valid_handles = any(
+                self._types_are_compatible(output_type, self.target_handle.type)
+                for output_type in self.source_handle.output_types
+            )
         elif self.target_handle.type is None:
             # ! This is not a good solution
             # This is a loop edge
             # If the target_handle.type is None, it means it's a loop edge
             # and we should check if the source_handle.output_types is not empty
             # and if the target_handle.input_types is empty or if any of the source_handle.output_types
-            # is in the target_handle.input_types
+            # is in the target_handle.input_types (considering type migrations)
             self.valid_handles = bool(self.source_handle.output_types) and (
                 not self.target_handle.input_types
-                or any(output_type in self.target_handle.input_types for output_type in self.source_handle.output_types)
+                or any(
+                    self._types_are_compatible(output_type, input_type)
+                    for output_type in self.source_handle.output_types
+                    for input_type in self.target_handle.input_types
+                )
             )
 
         elif self.source_handle.output_types is not None:
             self.valid_handles = (
-                any(output_type in self.target_handle.input_types for output_type in self.source_handle.output_types)
-                or self.target_handle.type in self.source_handle.output_types
+                any(
+                    self._types_are_compatible(output_type, input_type)
+                    for output_type in self.source_handle.output_types
+                    for input_type in self.target_handle.input_types
+                )
+                or any(
+                    self._types_are_compatible(output_type, self.target_handle.type)
+                    for output_type in self.source_handle.output_types
+                )
             )
 
         if not self.valid_handles:

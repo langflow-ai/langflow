@@ -114,7 +114,7 @@
                   },
                   {
                     "name": "scrapegraph_py",
-                    "version": "1.31.0"
+                    "version": "1.33.0"
                   }
                 ],
                 "total_dependencies": 2
@@ -905,7 +905,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "0.3.77"
+                    "version": "0.3.78"
                   },
                   {
                     "name": "pydantic",

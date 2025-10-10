@@ -339,12 +339,20 @@ function GenericNode({
   );
 
   useEffect(() => {
+    console.log("🔍 [GenericNode] Output selection useEffect triggered for:", data.node?.display_name);
+    console.log("  - selected_output:", data?.selected_output);
+    console.log("  - outputs count:", data?.node?.outputs?.length);
+    console.log("  - outputs:", data?.node?.outputs?.map(o => ({ name: o.name, display_name: o.display_name, types: o.types, selected: o.selected })));
+
     if (
       data?.selected_output ||
       (data?.node?.outputs?.filter((output) => !output.group_outputs)?.length ??
         0) <= 1
-    )
+    ) {
+      console.log("  - RETURNING EARLY because:", data?.selected_output ? "selected_output exists" : "only 1 output");
       return;
+    }
+    console.log("  - Calling handleSelectOutput");
     handleSelectOutput(
       data.node?.outputs?.find((output) => output.selected) || null,
     );

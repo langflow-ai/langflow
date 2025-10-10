@@ -75,16 +75,21 @@ export function checkWebhookInput(nodes: Node[]) {
 }
 
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
-  let newEdges: EdgeType[] = cloneDeep(
-    edges.map((edge) => ({ ...edge, selected: false, animated: false })),
-  );
+  const processedEdges: EdgeType[] = [];
+
   edges.forEach((edge) => {
+    // Start with a fresh copy of the edge
+    let processedEdge: EdgeType = {
+      ...edge,
+      selected: false,
+      animated: false,
+    };
+
     // check if the source and target node still exists
     const sourceNode = nodes.find((node) => node.id === edge.source);
     const targetNode = nodes.find((node) => node.id === edge.target);
     if (!sourceNode || !targetNode) {
-      newEdges = newEdges.filter((edg) => edg.id !== edge.id);
-      return;
+      return; // Skip this edge - node not found
     }
     // check if the source and target handle still exists
     const sourceHandle = edge.sourceHandle; //right
@@ -127,11 +132,23 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
       }
-      if (
-        scapedJSONStringfy(id) !== targetHandle ||
-        (targetNode.data.node?.tool_mode && isToolMode)
-      ) {
-        newEdges = newEdges.filter((e) => e.id !== edge.id);
+      const reconstructed = scapedJSONStringfy(id);
+      const isToolModeConflict = targetNode.data.node?.tool_mode && isToolMode;
+
+      if (reconstructed !== targetHandle) {
+        // CRITICAL FIX: Only update the data.targetHandle object, NOT the targetHandle string
+        // Changing targetHandle string breaks ReactFlow's ability to find the handle
+        processedEdge = {
+          ...processedEdge,
+          // DO NOT CHANGE: targetHandle: reconstructed,
+          data: {
+            ...processedEdge.data!,
+            targetHandle: id as targetHandleType,
+          },
+        };
+      } else if (isToolModeConflict) {
+        // Skip edge if there's a tool mode conflict
+        return;
       }
     }
     if (sourceHandle) {
@@ -150,6 +167,10 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
                   (output) => !output.group_outputs,
                 )?.length ?? 0) <= 1) &&
               output.name === name,
+          ) ??
+          // Fallback: if no output found and all have group_outputs, match by name
+          sourceNode.data.node!.outputs?.find(
+            (output) => output.name === name,
           );
 
         if (output) {
@@ -163,18 +184,41 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             dataType: sourceNode.data.type,
           };
 
-          if (scapedJSONStringfy(id) !== sourceHandle) {
-            newEdges = newEdges.filter((e) => e.id !== edge.id);
+          const reconstructed = scapedJSONStringfy(id);
+          if (reconstructed !== sourceHandle) {
+            // CRITICAL FIX: Only update the data.sourceHandle object, NOT the sourceHandle string
+            // Changing sourceHandle string breaks ReactFlow's ability to find the handle
+            processedEdge = {
+              ...processedEdge,
+              // DO NOT CHANGE: sourceHandle: reconstructed,
+              data: {
+                ...processedEdge.data!,
+                sourceHandle: id,
+              },
+            };
+
           }
         } else {
-          newEdges = newEdges.filter((e) => e.id !== edge.id);
+          return; // Skip this edge - output not found
         }
       }
     }
 
-    newEdges = filterHiddenFieldsEdges(edge, newEdges, targetNode);
+    // Check if edge should be filtered by hidden fields
+    const processedTargetHandle = processedEdge.data?.targetHandle;
+    if (processedTargetHandle) {
+      const fieldName = processedTargetHandle.fieldName;
+      const nodeTemplates = targetNode.data.node!.template;
+      if (nodeTemplates[fieldName]?.show === false) {
+        return; // Skip this edge - hidden field
+      }
+    }
+
+    // Add the processed edge to the result
+    processedEdges.push(processedEdge);
   });
-  return newEdges;
+
+  return processedEdges;
 }
 
 export function clearHandlesFromAdvancedFields(
@@ -216,24 +260,61 @@ const isAdvancedField = (data: APIClassType, fieldName: string): boolean => {
   return field && "advanced" in field && field.advanced === true;
 };
 
-export function filterHiddenFieldsEdges(
-  edge: EdgeType,
-  newEdges: EdgeType[],
-  targetNode: AllNodeType,
-) {
-  if (targetNode) {
-    const targetHandle = edge.data?.targetHandle;
-    if (!targetHandle) return newEdges;
 
-    const fieldName = targetHandle.fieldName;
-    const nodeTemplates = targetNode.data.node!.template;
-
-    // Only check the specific field the edge is connected to
-    if (nodeTemplates[fieldName]?.show === false) {
-      newEdges = newEdges.filter((e) => e.id !== edge.id);
-    }
+/**
+ * Check if two handles match, considering type migrations (Data→JSON, DataFrame→Table).
+ * This allows edges saved with old types to be compatible with new types.
+ */
+function handlesMatch(expectedHandle: string, actualHandle: string): boolean {
+  if (expectedHandle === actualHandle) {
+    return true;
   }
-  return newEdges;
+
+  // Parse both handles to compare their components
+  const expected = scapeJSONParse(expectedHandle);
+  const actual = scapeJSONParse(actualHandle);
+
+  // Check all properties except output_types
+  if (
+    expected.id !== actual.id ||
+    expected.name !== actual.name ||
+    expected.dataType !== actual.dataType
+  ) {
+    return false;
+  }
+
+  // Compare output_types with migration tolerance
+  const expectedTypes = expected.output_types || [];
+  const actualTypes = actual.output_types || [];
+
+  if (expectedTypes.length !== actualTypes.length) {
+    return false;
+  }
+
+  // Map of old types to new types for migration compatibility
+  const typeMigrations: Record<string, string> = {
+    'Data': 'JSON',
+    'DataFrame': 'Table',
+  };
+
+  // Check if types match exactly or via migration
+  for (let i = 0; i < expectedTypes.length; i++) {
+    const expectedType = expectedTypes[i];
+    const actualType = actualTypes[i];
+
+    if (expectedType === actualType) {
+      continue; // Exact match
+    }
+
+    // Check if actual type is the migrated version of expected type
+    if (typeMigrations[actualType] === expectedType || typeMigrations[expectedType] === actualType) {
+      continue; // Migration match
+    }
+
+    return false; // No match
+  }
+
+  return true;
 }
 
 export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
@@ -301,16 +382,20 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
         targetNode.type === "genericNode"
       ) {
         const dataType = targetNode.data.type;
-        const outputTypes =
-          targetNode.data.node!.outputs?.find(
+        const output = targetNode.data.node!.outputs?.find(
             (output) => output.name === targetHandleObject.name,
-          )?.types ?? [];
+          );
+        const outputTypes = output?.types ?? [];
+
+        // For single-type outputs, use types directly
+        // For multi-type outputs, use selected if it exists
+        const finalTypes = outputTypes.length === 1 ? outputTypes : (output?.selected ? [output.selected] : outputTypes);
 
         id = {
           dataType: dataType ?? "",
           name: targetHandleObject.name,
           id: targetNode.data.id,
-          output_types: outputTypes,
+          output_types: finalTypes,
         };
       } else {
         id = {
@@ -323,7 +408,17 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
           id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
       }
-      if (scapedJSONStringfy(id) !== targetHandle) {
+      const expectedHandle = scapedJSONStringfy(id);
+      const isMatch = handlesMatch(expectedHandle, targetHandle);
+
+      if (!isMatch) {
+        console.log("❌ Target handle mismatch:", {
+          edge: `${edge.source} -> ${edge.target}`,
+          expected: expectedHandle,
+          actual: targetHandle,
+          expectedParsed: scapeJSONParse(expectedHandle),
+          actualParsed: scapeJSONParse(targetHandle),
+        });
         newEdges = newEdges.filter((e) => e.id !== edge.id);
         BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
       }
@@ -345,7 +440,7 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
             output_types: outputTypes,
             dataType: sourceNode.data.type,
           };
-          if (scapedJSONStringfy(id) !== sourceHandle) {
+          if (!handlesMatch(scapedJSONStringfy(id), sourceHandle)) {
             newEdges = newEdges.filter((e) => e.id !== edge.id);
             BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
           }

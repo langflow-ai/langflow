@@ -542,7 +542,7 @@
                 "group_outputs": false,
                 "method": "retrieve_data",
                 "name": "retrieve_data",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
                   "Table"

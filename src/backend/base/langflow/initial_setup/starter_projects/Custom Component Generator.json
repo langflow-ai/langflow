@@ -865,7 +865,7 @@
                 "name": "page_results",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -1221,7 +1221,7 @@
                 "name": "page_results",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -1583,7 +1583,7 @@
                 "name": "page_results",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               },

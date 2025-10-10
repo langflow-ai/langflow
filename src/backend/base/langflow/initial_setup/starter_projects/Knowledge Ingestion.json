@@ -119,7 +119,7 @@
                 "group_outputs": false,
                 "method": "split_text",
                 "name": "dataframe",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
                   "Table"
@@ -393,7 +393,7 @@
                 "group_outputs": false,
                 "method": "fetch_content",
                 "name": "page_results",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
                   "Table"
@@ -794,7 +794,7 @@
                 "group_outputs": false,
                 "method": "build_kb_info",
                 "name": "dataframe_output",
-                "selected": "Data",
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
                   "JSON"

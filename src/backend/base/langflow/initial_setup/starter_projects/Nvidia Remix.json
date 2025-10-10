@@ -98,7 +98,7 @@
             "id": "RemixDocumentation-DEIws",
             "name": "dataframe_output",
             "output_types": [
-              "DataFrame"
+              "Table"
             ]
           },
           "targetHandle": {
@@ -115,7 +115,7 @@
         "id": "reactflow__edge-RemixDocumentation-DEIws{œdataTypeœ:œRemixDocumentationœ,œidœ:œRemixDocumentation-DEIwsœ,œnameœ:œdataframe_outputœ,œoutput_typesœ:[œDataFrameœ]}-FAISS-Uz8O4{œfieldNameœ:œingest_dataœ,œidœ:œFAISS-Uz8O4œ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "RemixDocumentation-DEIws",
-        "sourceHandle": "{œdataTypeœ: œRemixDocumentationœ, œidœ: œRemixDocumentation-DEIwsœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œRemixDocumentationœ, œidœ: œRemixDocumentation-DEIwsœ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œTableœ]}",
         "target": "FAISS-Uz8O4",
         "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œFAISS-Uz8O4œ, œinputTypesœ: [œDataœ, œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
       },
@@ -774,7 +774,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "0.3.77"
+                    "version": "0.3.78"
                   },
                   {
                     "name": "pydantic",
@@ -1602,10 +1602,10 @@
                 "name": "dataframe_output",
                 "options": null,
                 "required_inputs": null,
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -1618,10 +1618,10 @@
                 "name": "data_output",
                 "options": null,
                 "required_inputs": null,
-                "selected": "Data",
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -2388,7 +2388,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "0.3.77"
+                    "version": "0.3.78"
                   },
                   {
                     "name": "lfx",

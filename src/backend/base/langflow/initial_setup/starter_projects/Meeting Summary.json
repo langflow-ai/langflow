@@ -347,7 +347,7 @@
                 "group_outputs": false,
                 "method": "poll_transcription_job",
                 "name": "transcription_result",
-                "selected": "Data",
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
                   "JSON"
@@ -2324,7 +2324,7 @@
                 "group_outputs": false,
                 "method": "create_transcription_job",
                 "name": "transcript_id",
-                "selected": "Data",
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
                   "JSON"
@@ -2333,7 +2333,7 @@
               }
             ],
             "pinned": false,
-            "score": 0.000018578044550916993,
+            "score": 1.8578044550916993e-05,
             "template": {
               "_type": "Component",
               "api_key": {

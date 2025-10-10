@@ -1140,7 +1140,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "0.3.77"
+                    "version": "0.3.78"
                   },
                   {
                     "name": "pydantic",
@@ -1796,7 +1796,7 @@
                   },
                   {
                     "name": "boto3",
-                    "version": "1.40.44"
+                    "version": "1.40.45"
                   },
                   {
                     "name": "google",

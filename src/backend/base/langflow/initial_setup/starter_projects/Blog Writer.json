@@ -992,7 +992,7 @@
                 "group_outputs": false,
                 "method": "fetch_content",
                 "name": "page_results",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
                   "Table"

@@ -6,36 +6,8 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-wR04N",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "search_query",
-            "id": "ArXivComponent-kaCFr",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-wR04N{œdataTypeœ:œChatInputœ,œidœ:œChatInput-wR04Nœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-kaCFr{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-kaCFrœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-wR04N",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-wR04Nœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ArXivComponent-kaCFr",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-kaCFrœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "ParserComponent",
-            "id": "ParserComponent-pMFw3",
+            "id": "ParserComponent-ZPP0f",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -43,19 +15,139 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-TpVA0",
+            "id": "LanguageModelComponent-0pzq0",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParserComponent-pMFw3{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-pMFw3œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-TpVA0{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-TpVA0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParserComponent-ZPP0f{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-ZPP0fœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-0pzq0{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-0pzq0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ParserComponent-pMFw3",
-        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-pMFw3œ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-TpVA0",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-TpVA0œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ParserComponent-ZPP0f",
+        "sourceHandle": "{œdataTypeœ: œParserComponentœ, œidœ: œParserComponent-ZPP0fœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "LanguageModelComponent-0pzq0",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-0pzq0œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "LoopComponent",
+            "id": "LoopComponent-c0j5t",
+            "name": "item",
+            "output_types": [
+              "JSON"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_data",
+            "id": "ParserComponent-ZPP0f",
+            "inputTypes": [
+              "DataFrame",
+              "Table",
+              "Data",
+              "JSON"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-LoopComponent-c0j5t{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-c0j5tœ,œnameœ:œitemœ,œoutput_typesœ:[œJSONœ]}-ParserComponent-ZPP0f{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-ZPP0fœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "LoopComponent-c0j5t",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-c0j5tœ, œnameœ: œitemœ, œoutput_typesœ: [œJSONœ]}",
+        "target": "ParserComponent-ZPP0f",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-ZPP0fœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "LoopComponent",
+            "id": "LoopComponent-c0j5t",
+            "name": "done",
+            "output_types": [
+              "Table"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-d5rJR",
+            "inputTypes": [
+              "Data",
+              "JSON",
+              "DataFrame",
+              "Table",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-LoopComponent-c0j5t{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-c0j5tœ,œnameœ:œdoneœ,œoutput_typesœ:[œTableœ]}-ChatOutput-d5rJR{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-d5rJRœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "LoopComponent-c0j5t",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-c0j5tœ, œnameœ: œdoneœ, œoutput_typesœ: [œTableœ]}",
+        "target": "ChatOutput-d5rJR",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-d5rJRœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-rdvYk",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "search_query",
+            "id": "ArXivComponent-wFpLS",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-rdvYk{œdataTypeœ:œChatInputœ,œidœ:œChatInput-rdvYkœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-wFpLS{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-wFpLSœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-rdvYk",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-rdvYkœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ArXivComponent-wFpLS",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-wFpLSœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ArXivComponent",
+            "id": "ArXivComponent-wFpLS",
+            "name": "dataframe",
+            "output_types": [
+              "Table"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "LoopComponent-c0j5t",
+            "inputTypes": [
+              "DataFrame",
+              "Table"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-ArXivComponent-wFpLS{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-wFpLSœ,œnameœ:œdataframeœ,œoutput_typesœ:[œTableœ]}-LoopComponent-c0j5t{œfieldNameœ:œdataœ,œidœ:œLoopComponent-c0j5tœ,œinputTypesœ:[œDataFrameœ,œTableœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "ArXivComponent-wFpLS",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-wFpLSœ, œnameœ: œdataframeœ, œoutput_typesœ: [œTableœ]}",
+        "target": "LoopComponent-c0j5t",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-c0j5tœ, œinputTypesœ: [œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +155,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-TpVA0",
+            "id": "LanguageModelComponent-0pzq0",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -71,7 +163,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "TypeConverterComponent-JpCqV",
+            "id": "TypeConverterComponent-DYj5D",
             "inputTypes": [
               "Message",
               "Data",
@@ -82,293 +174,41 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-TpVA0{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-TpVA0œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-TypeConverterComponent-JpCqV{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-JpCqVœ,œinputTypesœ:[œMessageœ,œDataœ,œJSONœ,œDataFrameœ,œTableœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LanguageModelComponent-0pzq0{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-0pzq0œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-TypeConverterComponent-DYj5D{œfieldNameœ:œinput_dataœ,œidœ:œTypeConverterComponent-DYj5Dœ,œinputTypesœ:[œMessageœ,œDataœ,œJSONœ,œDataFrameœ,œTableœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "LanguageModelComponent-TpVA0",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-TpVA0œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "TypeConverterComponent-JpCqV",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-JpCqVœ, œinputTypesœ: [œMessageœ, œDataœ, œJSONœ, œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "ArXivComponent",
-            "id": "ArXivComponent-kaCFr",
-            "name": "dataframe",
-            "output_types": [
-              "Table"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "data",
-            "id": "LoopComponent-RSpiw",
-            "inputTypes": [
-              "DataFrame",
-              "Table"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__ArXivComponent-kaCFr{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-kaCFrœ,œnameœ:œdataframeœ,œoutput_typesœ:[œDataFrameœ]}-LoopComponent-RSpiw{œfieldNameœ:œdataœ,œidœ:œLoopComponent-RSpiwœ,œinputTypesœ:[œDataFrameœ,œTableœ],œtypeœ:œotherœ}",
-        "source": "ArXivComponent-kaCFr",
-        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-kaCFrœ, œnameœ: œdataframeœ, œoutput_typesœ: [œTableœ]}",
-        "target": "LoopComponent-RSpiw",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-RSpiwœ, œinputTypesœ: [œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
+        "source": "LanguageModelComponent-0pzq0",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-0pzq0œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "TypeConverterComponent-DYj5D",
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œTypeConverterComponent-DYj5Dœ, œinputTypesœ: [œMessageœ, œDataœ, œJSONœ, œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
           "sourceHandle": {
             "dataType": "TypeConverterComponent",
-            "id": "TypeConverterComponent-JpCqV",
+            "id": "TypeConverterComponent-DYj5D",
             "name": "data_output",
-            "output_types": [
-              "Data"
-            ]
+            "output_types": []
           },
           "targetHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-RSpiw",
-            "name": "item",
-            "output_types": [
-              "Data"
-            ]
-          }
-        },
-        "id": "xy-edge__TypeConverterComponent-JpCqV{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-JpCqVœ,œnameœ:œdata_outputœ,œoutput_typesœ:[œDataœ]}-LoopComponent-RSpiw{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-RSpiwœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
-        "source": "TypeConverterComponent-JpCqV",
-        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-JpCqVœ, œnameœ: œdata_outputœ, œoutput_typesœ: [œDataœ]}",
-        "target": "LoopComponent-RSpiw",
-        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-RSpiwœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "LoopComponent",
-            "id": "LoopComponent-RSpiw",
-            "name": "done",
-            "output_types": [
-              "Table"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-fX2wX",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__LoopComponent-RSpiw{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-RSpiwœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataFrameœ]}-ChatOutput-fX2wX{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-fX2wXœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œotherœ}",
-        "source": "LoopComponent-RSpiw",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-RSpiwœ, œnameœ: œdoneœ, œoutput_typesœ: [œTableœ]}",
-        "target": "ChatOutput-fX2wX",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-fX2wXœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "LoopComponent",
-            "id": "LoopComponent-RSpiw",
+            "id": "LoopComponent-c0j5t",
             "name": "item",
             "output_types": [
               "JSON"
             ]
-          },
-          "targetHandle": {
-            "fieldName": "input_data",
-            "id": "ParserComponent-pMFw3",
-            "inputTypes": [
-              "DataFrame",
-              "Table",
-              "Data",
-              "JSON"
-            ],
-            "type": "other"
           }
         },
-        "id": "xy-edge__LoopComponent-RSpiw{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-RSpiwœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParserComponent-pMFw3{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-pMFw3œ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
-        "source": "LoopComponent-RSpiw",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-RSpiwœ, œnameœ: œitemœ, œoutput_typesœ: [œJSONœ]}",
-        "target": "ParserComponent-pMFw3",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œParserComponent-pMFw3œ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__TypeConverterComponent-DYj5D{œdataTypeœ:œTypeConverterComponentœ,œidœ:œTypeConverterComponent-DYj5Dœ,œnameœ:œdata_outputœ,œoutput_typesœ:[œJSONœ]}-LoopComponent-c0j5t{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-c0j5tœ,œnameœ:œitemœ,œoutput_typesœ:[œJSONœ]}",
+        "source": "TypeConverterComponent-DYj5D",
+        "sourceHandle": "{œdataTypeœ: œTypeConverterComponentœ, œidœ: œTypeConverterComponent-DYj5Dœ, œnameœ: œdata_outputœ, œoutput_typesœ: []}",
+        "target": "LoopComponent-c0j5t",
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-c0j5tœ, œnameœ: œitemœ, œoutput_typesœ: [œJSONœ]}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ArXivComponent-kaCFr",
-          "node": {
-            "base_classes": [
-              "DataFrame"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Search and retrieve papers from arXiv.org",
-            "display_name": "arXiv",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "search_query",
-              "search_type",
-              "max_results"
-            ],
-            "frozen": false,
-            "icon": "arXiv",
-            "legacy": false,
-            "lf_version": "1.4.3",
-            "metadata": {
-              "code_hash": "905b085167f2",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "defusedxml",
-                    "version": "0.7.1"
-                  },
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 2
-              },
-              "module": "lfx.components.arxiv.arxiv.ArXivComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Table",
-                "group_outputs": false,
-                "method": "search_papers_dataframe",
-                "name": "dataframe",
-                "selected": "DataFrame",
-                "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import urllib.request\nfrom urllib.parse import urlparse\nfrom xml.etree.ElementTree import Element\n\nfrom defusedxml.ElementTree import fromstring\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import DropdownInput, IntInput, MessageTextInput, Output\nfrom lfx.schema.data import JSON, Data\nfrom lfx.schema.dataframe import DataFrame, Table\n\n\nclass ArXivComponent(Component):\n    display_name = \"arXiv\"\n    description = \"Search and retrieve papers from arXiv.org\"\n    icon = \"arXiv\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"search_query\",\n            display_name=\"Search Query\",\n            info=\"The search query for arXiv papers (e.g., 'quantum computing')\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Field\",\n            info=\"The field to search in\",\n            options=[\"all\", \"title\", \"abstract\", \"author\", \"cat\"],  # cat is for category\n            value=\"all\",\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"Maximum number of results to return\",\n            value=10,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Table\", name=\"dataframe\", method=\"search_papers_dataframe\"),\n    ]\n\n    def build_query_url(self) -> str:\n        \"\"\"Build the arXiv API query URL.\"\"\"\n        base_url = \"http://export.arxiv.org/api/query?\"\n\n        # Build the search query\n        search_query = f\"{self.search_type}:{self.search_query}\"\n\n        # URL parameters\n        params = {\n            \"search_query\": search_query,\n            \"max_results\": str(self.max_results),\n        }\n\n        # Convert params to URL query string\n        query_string = \"&\".join([f\"{k}={urllib.parse.quote(str(v))}\" for k, v in params.items()])\n\n        return base_url + query_string\n\n    def parse_atom_response(self, response_text: str) -> list[dict]:\n        \"\"\"Parse the Atom XML response from arXiv.\"\"\"\n        # Parse XML safely using defusedxml\n        root = fromstring(response_text)\n\n        # Define namespace dictionary for XML parsing\n        ns = {\"atom\": \"http://www.w3.org/2005/Atom\", \"arxiv\": \"http://arxiv.org/schemas/atom\"}\n\n        papers = []\n        # Process each entry (paper)\n        for entry in root.findall(\"atom:entry\", ns):\n            paper = {\n                \"id\": self._get_text(entry, \"atom:id\", ns),\n                \"title\": self._get_text(entry, \"atom:title\", ns),\n                \"summary\": self._get_text(entry, \"atom:summary\", ns),\n                \"published\": self._get_text(entry, \"atom:published\", ns),\n                \"updated\": self._get_text(entry, \"atom:updated\", ns),\n                \"authors\": [author.find(\"atom:name\", ns).text for author in entry.findall(\"atom:author\", ns)],\n                \"arxiv_url\": self._get_link(entry, \"alternate\", ns),\n                \"pdf_url\": self._get_link(entry, \"related\", ns),\n                \"comment\": self._get_text(entry, \"arxiv:comment\", ns),\n                \"journal_ref\": self._get_text(entry, \"arxiv:journal_ref\", ns),\n                \"primary_category\": self._get_category(entry, ns),\n                \"categories\": [cat.get(\"term\") for cat in entry.findall(\"atom:category\", ns)],\n            }\n            papers.append(paper)\n\n        return papers\n\n    def _get_text(self, element: Element, path: str, ns: dict) -> str | None:\n        \"\"\"Safely extract text from an XML element.\"\"\"\n        el = element.find(path, ns)\n        return el.text.strip() if el is not None and el.text else None\n\n    def _get_link(self, element: Element, rel: str, ns: dict) -> str | None:\n        \"\"\"Get link URL based on relation type.\"\"\"\n        for link in element.findall(\"atom:link\", ns):\n            if link.get(\"rel\") == rel:\n                return link.get(\"href\")\n        return None\n\n    def _get_category(self, element: Element, ns: dict) -> str | None:\n        \"\"\"Get primary category.\"\"\"\n        cat = element.find(\"arxiv:primary_category\", ns)\n        return cat.get(\"term\") if cat is not None else None\n\n    def run_model(self) -> Table:\n        return self.search_papers_dataframe()\n\n    def search_papers(self) -> list[JSON]:\n        \"\"\"Search arXiv and return results.\"\"\"\n        try:\n            # Build the query URL\n            url = self.build_query_url()\n\n            # Validate URL scheme and host\n            parsed_url = urlparse(url)\n            if parsed_url.scheme not in {\"http\", \"https\"}:\n                error_msg = f\"Invalid URL scheme: {parsed_url.scheme}\"\n                raise ValueError(error_msg)\n            if parsed_url.hostname != \"export.arxiv.org\":\n                error_msg = f\"Invalid host: {parsed_url.hostname}\"\n                raise ValueError(error_msg)\n\n            # Create a custom opener that only allows http/https schemes\n            class RestrictedHTTPHandler(urllib.request.HTTPHandler):\n                def http_open(self, req):\n                    return super().http_open(req)\n\n            class RestrictedHTTPSHandler(urllib.request.HTTPSHandler):\n                def https_open(self, req):\n                    return super().https_open(req)\n\n            # Build opener with restricted handlers\n            opener = urllib.request.build_opener(RestrictedHTTPHandler, RestrictedHTTPSHandler)\n            urllib.request.install_opener(opener)\n\n            # Make the request with validated URL using restricted opener\n            response = opener.open(url)\n            response_text = response.read().decode(\"utf-8\")\n\n            # Parse the response\n            papers = self.parse_atom_response(response_text)\n\n            # Convert to Data objects\n            results = [Data(data=paper) for paper in papers]\n            self.status = results\n        except (urllib.error.URLError, ValueError) as e:\n            error_data = Data(data={\"error\": f\"Request error: {e!s}\"})\n            self.status = error_data\n            return [error_data]\n        else:\n            return results\n\n    def search_papers_dataframe(self) -> Table:\n        \"\"\"Convert the Arxiv search results to a DataFrame.\n\n        Returns: Table: A DataFrame containing the search results.\n        \"\"\"\n        data = self.search_papers()\n        return DataFrame(data)\n"
-              },
-              "max_results": {
-                "_input_type": "IntInput",
-                "advanced": false,
-                "display_name": "Max Results",
-                "dynamic": false,
-                "info": "Maximum number of results to return",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "max_results",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 3
-              },
-              "search_query": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Search Query",
-                "dynamic": false,
-                "info": "The search query for arXiv papers (e.g., 'quantum computing')",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "search_query",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "search_type": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Search Field",
-                "dynamic": false,
-                "info": "The field to search in",
-                "name": "search_type",
-                "options": [
-                  "all",
-                  "title",
-                  "abstract",
-                  "author",
-                  "cat"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "all"
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "ArXivComponent"
-        },
-        "dragging": false,
-        "id": "ArXivComponent-kaCFr",
-        "measured": {
-          "height": 369,
-          "width": 320
-        },
-        "position": {
-          "x": 81.59312530546094,
-          "y": 3.9397854556273906
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "ChatInput-wR04N",
+          "id": "ChatInput-rdvYk",
           "node": {
             "base_classes": [
               "Message"
@@ -609,7 +449,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-wR04N",
+        "id": "ChatInput-rdvYk",
         "measured": {
           "height": 204,
           "width": 320
@@ -623,7 +463,7 @@
       },
       {
         "data": {
-          "id": "note-el94x",
+          "id": "note-I5Q9b",
           "node": {
             "description": "# **Langflow Loop Component Template - ArXiv search result Translator** \nThis template translates research paper summaries on ArXiv into Portuguese and summarizes them. \n Using **Langflow’s looping mechanism**, the template iterates through multiple research papers, translates them with the **OpenAI** model component, and outputs an aggregated version of all translated papers.  \n\n## Quickstart \n 1. Add your OpenAI API key to the **Language Model** component. \n2. In the **Playground**, enter a query related to a research topic (for example, “Quantum Computing Advancements”).  \n\n  The flow fetches a list of research papers from ArXiv matching the query. Each paper in the retrieved list is processed one-by-one using the Langflow **Loop component**. \n\n  The abstract of each paper is translated into Portuguese by the **OpenAI** model component. \n\n Once all papers are translated, the system aggregates them into a **single structured output**.",
             "display_name": "",
@@ -634,7 +474,7 @@
         },
         "dragging": false,
         "height": 647,
-        "id": "note-el94x",
+        "id": "note-I5Q9b",
         "measured": {
           "height": 647,
           "width": 576
@@ -650,7 +490,7 @@
       },
       {
         "data": {
-          "id": "ParserComponent-pMFw3",
+          "id": "ParserComponent-ZPP0f",
           "node": {
             "base_classes": [
               "Message"
@@ -824,7 +664,7 @@
           "type": "ParserComponent"
         },
         "dragging": false,
-        "id": "ParserComponent-pMFw3",
+        "id": "ParserComponent-ZPP0f",
         "measured": {
           "height": 329,
           "width": 320
@@ -833,12 +673,12 @@
           "x": 977.8947250857177,
           "y": -173.67385012931547
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "LanguageModelComponent-TpVA0",
+          "id": "LanguageModelComponent-0pzq0",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -862,7 +702,7 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "last_updated": "2025-10-08T20:27:44.010Z",
+            "last_updated": "2025-10-10T19:46:00.777Z",
             "legacy": false,
             "lf_version": "1.4.3",
             "metadata": {
@@ -943,7 +783,7 @@
                 "dynamic": false,
                 "info": "Model Provider API key",
                 "input_types": [],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -952,7 +792,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1151,7 +991,7 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-TpVA0",
+        "id": "LanguageModelComponent-0pzq0",
         "measured": {
           "height": 534,
           "width": 320
@@ -1165,299 +1005,7 @@
       },
       {
         "data": {
-          "id": "TypeConverterComponent-JpCqV",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "category": "processing",
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Convert between different types (Message, Data, DataFrame)",
-            "display_name": "Type Convert",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "input_data",
-              "output_type"
-            ],
-            "frozen": false,
-            "icon": "repeat",
-            "key": "TypeConverterComponent",
-            "legacy": false,
-            "metadata": {
-              "code_hash": "0210d294d70a",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  },
-                  {
-                    "name": "pandas",
-                    "version": "2.2.3"
-                  }
-                ],
-                "total_dependencies": 2
-              },
-              "module": "lfx.components.processing.converter.TypeConverterComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Data Output",
-                "group_outputs": false,
-                "hidden": null,
-                "method": "convert_to_data",
-                "name": "data_output",
-                "options": null,
-                "required_inputs": null,
-                "selected": "Data",
-                "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "score": 0.007568328950209746,
-            "template": {
-              "_type": "Component",
-              "auto_parse": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Auto Parse",
-                "dynamic": false,
-                "info": "Detect and convert JSON/CSV strings automatically.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "auto_parse",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import json\nfrom typing import Any\n\nfrom lfx.custom import Component\nfrom lfx.io import BoolInput, HandleInput, Output, TabInput\nfrom lfx.schema import Data, DataFrame, Message\nfrom lfx.schema.data import JSON\nfrom lfx.schema.dataframe import Table\n\nMIN_CSV_LINES = 2\n\n\ndef convert_to_message(v) -> Message:\n    \"\"\"Convert input to Message type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        Message: Converted Message object\n    \"\"\"\n    return v if isinstance(v, Message) else v.to_message()\n\n\ndef convert_to_data(v: Table | Data | Message | dict, *, auto_parse: bool) -> JSON:\n    \"\"\"Convert input to Data type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n        auto_parse: Enable automatic parsing of structured data (JSON/CSV)\n\n    Returns: JSON: Converted Data object\n    \"\"\"\n    if isinstance(v, dict):\n        return Data(v)\n    if isinstance(v, Message):\n        data = Data(data={\"text\": v.data[\"text\"]})\n        return parse_structured_data(data) if auto_parse else data\n\n    return v if isinstance(v, Data) else v.to_data()\n\n\ndef convert_to_dataframe(v: Table | Data | Message | dict, *, auto_parse: bool) -> Table:\n    \"\"\"Convert input to DataFrame type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n        auto_parse: Enable automatic parsing of structured data (JSON/CSV)\n\n    Returns: Table: Converted DataFrame object\n    \"\"\"\n    import pandas as pd\n\n    if isinstance(v, dict):\n        return DataFrame([v])\n    if isinstance(v, DataFrame):\n        return v\n    # Handle pandas DataFrame\n    if isinstance(v, pd.DataFrame):\n        # Convert pandas DataFrame to our DataFrame by creating Data objects\n        return DataFrame(data=v)\n\n    if isinstance(v, Message):\n        data = Data(data={\"text\": v.data[\"text\"]})\n        return parse_structured_data(data).to_dataframe() if auto_parse else data.to_dataframe()\n    # For other types, call to_dataframe method\n    return v.to_dataframe()\n\n\ndef parse_structured_data(data: JSON) -> JSON:\n    \"\"\"Parse structured data (JSON, CSV) from Data's text field.\n\n    Args:\n        data: JSON object with text content to parse\n\n    Returns: JSON: Modified Data object with parsed content or original if parsing fails\n    \"\"\"\n    raw_text = data.get_text() or \"\"\n    text = raw_text.lstrip(\"\\ufeff\").strip()\n\n    # Try JSON parsing first\n    parsed_json = _try_parse_json(text)\n    if parsed_json is not None:\n        return parsed_json\n\n    # Try CSV parsing\n    if _looks_like_csv(text):\n        try:\n            return _parse_csv_to_data(text)\n        except Exception:  # noqa: BLE001\n            # Heuristic misfire or malformed CSV — keep original data\n            return data\n\n    # Return original data if no parsing succeeded\n    return data\n\n\ndef _try_parse_json(text: str) -> JSON | None:\n    \"\"\"Try to parse text as JSON and return Data object.\"\"\"\n    try:\n        parsed = json.loads(text)\n\n        if isinstance(parsed, dict):\n            # Single JSON object\n            return Data(data=parsed)\n        if isinstance(parsed, list) and all(isinstance(item, dict) for item in parsed):\n            # Array of JSON objects - create Data with the list\n            return Data(data={\"records\": parsed})\n\n    except (json.JSONDecodeError, ValueError):\n        pass\n\n    return None\n\n\ndef _looks_like_csv(text: str) -> bool:\n    \"\"\"Simple heuristic to detect CSV content.\"\"\"\n    lines = text.strip().split(\"\\n\")\n    if len(lines) < MIN_CSV_LINES:\n        return False\n\n    header_line = lines[0]\n    return \",\" in header_line and len(lines) > 1\n\n\ndef _parse_csv_to_data(text: str) -> JSON:\n    \"\"\"Parse CSV text and return Data object.\"\"\"\n    from io import StringIO\n\n    import pandas as pd\n\n    # Parse CSV to DataFrame, then convert to list of dicts\n    parsed_df = pd.read_csv(StringIO(text))\n    records = parsed_df.to_dict(orient=\"records\")\n\n    return Data(data={\"records\": records})\n\n\nclass TypeConverterComponent(Component):\n    display_name = \"Type Convert\"\n    description = \"Convert between different types (Message, Data, DataFrame)\"\n    documentation: str = \"https://docs.langflow.org/components-processing#type-convert\"\n    icon = \"repeat\"\n\n    inputs = [\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"Input\",\n            input_types=[\"Message\", \"Data\", \"JSON\", \"DataFrame\", \"Table\"],\n            info=\"Accept Message, Data or DataFrame as input\",\n            required=True,\n        ),\n        BoolInput(\n            name=\"auto_parse\",\n            display_name=\"Auto Parse\",\n            info=\"Detect and convert JSON/CSV strings automatically.\",\n            advanced=True,\n            value=False,\n            required=False,\n        ),\n        TabInput(\n            name=\"output_type\",\n            display_name=\"Output Type\",\n            options=[\"Message\", \"Data\", \"DataFrame\"],\n            info=\"Select the desired output data type\",\n            real_time_refresh=True,\n            value=\"Message\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message Output\",\n            name=\"message_output\",\n            method=\"convert_to_message\",\n        )\n    ]\n\n    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:\n        \"\"\"Dynamically show only the relevant output based on the selected output type.\"\"\"\n        if field_name == \"output_type\":\n            # Start with empty outputs\n            frontend_node[\"outputs\"] = []\n\n            # Add only the selected output type\n            if field_value == \"Message\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Message Output\",\n                        name=\"message_output\",\n                        method=\"convert_to_message\",\n                    ).to_dict()\n                )\n            elif field_value == \"Data\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"JSON Output\",\n                        name=\"data_output\",\n                        method=\"convert_to_data\",\n                    ).to_dict()\n                )\n            elif field_value == \"DataFrame\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Table Output\",\n                        name=\"dataframe_output\",\n                        method=\"convert_to_dataframe\",\n                    ).to_dict()\n                )\n\n        return frontend_node\n\n    def convert_to_message(self) -> Message:\n        \"\"\"Convert input to Message type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_message(input_value)\n        self.status = result\n        return result\n\n    def convert_to_data(self) -> JSON:\n        \"\"\"Convert input to Data type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_data(input_value, auto_parse=self.auto_parse)\n        self.status = result\n        return result\n\n    def convert_to_dataframe(self) -> Table:\n        \"\"\"Convert input to DataFrame type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_dataframe(input_value, auto_parse=self.auto_parse)\n        self.status = result\n        return result\n"
-              },
-              "input_data": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Input",
-                "dynamic": false,
-                "info": "Accept Message, Data or DataFrame as input",
-                "input_types": [
-                  "Message",
-                  "Data",
-                  "JSON",
-                  "DataFrame",
-                  "Table"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "input_data",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "output_type": {
-                "_input_type": "TabInput",
-                "advanced": false,
-                "display_name": "Output Type",
-                "dynamic": false,
-                "info": "Select the desired output data type",
-                "name": "output_type",
-                "options": [
-                  "Message",
-                  "Data",
-                  "DataFrame"
-                ],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "tab",
-                "value": "Data"
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "TypeConverterComponent"
-        },
-        "dragging": false,
-        "id": "TypeConverterComponent-JpCqV",
-        "measured": {
-          "height": 262,
-          "width": 320
-        },
-        "position": {
-          "x": 1862.6410760135172,
-          "y": 352.5532847926838
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "LoopComponent-RSpiw",
-          "node": {
-            "base_classes": [
-              "JSON",
-              "Table"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs.",
-            "display_name": "Loop",
-            "documentation": "https://docs.langflow.org/components-logic#loop",
-            "edited": false,
-            "field_order": [
-              "data"
-            ],
-            "frozen": false,
-            "icon": "infinity",
-            "legacy": false,
-            "metadata": {
-              "code_hash": "861f13fa2d25",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "lfx.components.logic.loop.LoopComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": true,
-                "cache": true,
-                "display_name": "Item",
-                "group_outputs": true,
-                "method": "item_output",
-                "name": "item",
-                "selected": "Data",
-                "tool_mode": true,
-                "types": [
-                  "JSON"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Done",
-                "group_outputs": true,
-                "method": "done_output",
-                "name": "done",
-                "selected": "DataFrame",
-                "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import HandleInput\nfrom lfx.schema.data import JSON, Data\nfrom lfx.schema.dataframe import DataFrame, Table\nfrom lfx.template.field.base import Output\n\n\nclass LoopComponent(Component):\n    display_name = \"Loop\"\n    description = (\n        \"Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs.\"\n    )\n    documentation: str = \"https://docs.langflow.org/components-logic#loop\"\n    icon = \"infinity\"\n\n    inputs = [\n        HandleInput(\n            name=\"data\",\n            display_name=\"Inputs\",\n            info=\"The initial list of Data objects or DataFrame to iterate over.\",\n            input_types=[\"DataFrame\", \"Table\"],\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Item\", name=\"item\", method=\"item_output\", allows_loop=True, group_outputs=True),\n        Output(display_name=\"Done\", name=\"done\", method=\"done_output\", group_outputs=True),\n    ]\n\n    def initialize_data(self) -> None:\n        \"\"\"Initialize the data list, context index, and aggregated list.\"\"\"\n        if self.ctx.get(f\"{self._id}_initialized\", False):\n            return\n\n        # Ensure data is a list of Data objects\n        data_list = self._validate_data(self.data)\n\n        # Store the initial data and context variables\n        self.update_ctx(\n            {\n                f\"{self._id}_data\": data_list,\n                f\"{self._id}_index\": 0,\n                f\"{self._id}_aggregated\": [],\n                f\"{self._id}_initialized\": True,\n            }\n        )\n\n    def _validate_data(self, data):\n        \"\"\"Validate and return a list of Data objects.\"\"\"\n        if isinstance(data, DataFrame):\n            return data.to_data_list()\n        if isinstance(data, Data):\n            return [data]\n        if isinstance(data, list) and all(isinstance(item, Data) for item in data):\n            return data\n        msg = \"The 'data' input must be a DataFrame, a list of Data objects, or a single Data object.\"\n        raise TypeError(msg)\n\n    def evaluate_stop_loop(self) -> bool:\n        \"\"\"Evaluate whether to stop item or done output.\"\"\"\n        current_index = self.ctx.get(f\"{self._id}_index\", 0)\n        data_length = len(self.ctx.get(f\"{self._id}_data\", []))\n        return current_index > data_length\n\n    def item_output(self) -> JSON:\n        \"\"\"Output the next item in the list or stop if done.\"\"\"\n        self.initialize_data()\n        current_item = Data(text=\"\")\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n        else:\n            # Get data list and current index\n            data_list, current_index = self.loop_variables()\n            if current_index < len(data_list):\n                # Output current item and increment index\n                try:\n                    current_item = data_list[current_index]\n                except IndexError:\n                    current_item = Data(text=\"\")\n            self.aggregated_output()\n            self.update_ctx({f\"{self._id}_index\": current_index + 1})\n\n        # Now we need to update the dependencies for the next run\n        self.update_dependency()\n        return current_item\n\n    def update_dependency(self):\n        item_dependency_id = self.get_incoming_edge_by_target_param(\"item\")\n        if item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:\n            self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)\n\n    def done_output(self) -> Table:\n        \"\"\"Trigger the done output when iteration is complete.\"\"\"\n        self.initialize_data()\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n            self.start(\"done\")\n\n            aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n\n            return DataFrame(aggregated)\n        self.stop(\"done\")\n        return DataFrame([])\n\n    def loop_variables(self):\n        \"\"\"Retrieve loop variables from context.\"\"\"\n        return (\n            self.ctx.get(f\"{self._id}_data\", []),\n            self.ctx.get(f\"{self._id}_index\", 0),\n        )\n\n    def aggregated_output(self) -> list[JSON]:\n        \"\"\"Return the aggregated list once all items are processed.\"\"\"\n        self.initialize_data()\n\n        # Get data list and aggregated list\n        data_list = self.ctx.get(f\"{self._id}_data\", [])\n        aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n        loop_input = self.item\n        if loop_input is not None and not isinstance(loop_input, str) and len(aggregated) <= len(data_list):\n            aggregated.append(loop_input)\n            self.update_ctx({f\"{self._id}_aggregated\": aggregated})\n        return aggregated\n"
-              },
-              "data": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Inputs",
-                "dynamic": false,
-                "info": "The initial list of Data objects or DataFrame to iterate over.",
-                "input_types": [
-                  "DataFrame",
-                  "Table"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "data",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "LoopComponent"
-        },
-        "id": "LoopComponent-RSpiw",
-        "measured": {
-          "height": 242,
-          "width": 320
-        },
-        "position": {
-          "x": 536.6237686919103,
-          "y": 189.6580992486955
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "ChatOutput-fX2wX",
+          "id": "ChatOutput-d5rJR",
           "node": {
             "base_classes": [
               "Message"
@@ -1702,23 +1250,481 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-fX2wX",
+        "id": "ChatOutput-d5rJR",
         "measured": {
           "height": 48,
           "width": 192
         },
         "position": {
-          "x": 1297.6695265923975,
-          "y": 562.4336543138228
+          "x": 1114.292558554883,
+          "y": 387.70654325921004
         },
         "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "LoopComponent-c0j5t",
+          "node": {
+            "base_classes": [
+              "JSON",
+              "Table"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs.",
+            "display_name": "Loop",
+            "documentation": "https://docs.langflow.org/components-logic#loop",
+            "edited": false,
+            "field_order": [
+              "data"
+            ],
+            "frozen": false,
+            "icon": "infinity",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "861f13fa2d25",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
+              },
+              "module": "lfx.components.logic.loop.LoopComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": true,
+                "cache": true,
+                "display_name": "Item",
+                "group_outputs": true,
+                "method": "item_output",
+                "name": "item",
+                "selected": "JSON",
+                "tool_mode": true,
+                "types": [
+                  "JSON"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Done",
+                "group_outputs": true,
+                "method": "done_output",
+                "name": "done",
+                "selected": "Table",
+                "tool_mode": true,
+                "types": [
+                  "Table"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import HandleInput\nfrom lfx.schema.data import JSON, Data\nfrom lfx.schema.dataframe import DataFrame, Table\nfrom lfx.template.field.base import Output\n\n\nclass LoopComponent(Component):\n    display_name = \"Loop\"\n    description = (\n        \"Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs.\"\n    )\n    documentation: str = \"https://docs.langflow.org/components-logic#loop\"\n    icon = \"infinity\"\n\n    inputs = [\n        HandleInput(\n            name=\"data\",\n            display_name=\"Inputs\",\n            info=\"The initial list of Data objects or DataFrame to iterate over.\",\n            input_types=[\"DataFrame\", \"Table\"],\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Item\", name=\"item\", method=\"item_output\", allows_loop=True, group_outputs=True),\n        Output(display_name=\"Done\", name=\"done\", method=\"done_output\", group_outputs=True),\n    ]\n\n    def initialize_data(self) -> None:\n        \"\"\"Initialize the data list, context index, and aggregated list.\"\"\"\n        if self.ctx.get(f\"{self._id}_initialized\", False):\n            return\n\n        # Ensure data is a list of Data objects\n        data_list = self._validate_data(self.data)\n\n        # Store the initial data and context variables\n        self.update_ctx(\n            {\n                f\"{self._id}_data\": data_list,\n                f\"{self._id}_index\": 0,\n                f\"{self._id}_aggregated\": [],\n                f\"{self._id}_initialized\": True,\n            }\n        )\n\n    def _validate_data(self, data):\n        \"\"\"Validate and return a list of Data objects.\"\"\"\n        if isinstance(data, DataFrame):\n            return data.to_data_list()\n        if isinstance(data, Data):\n            return [data]\n        if isinstance(data, list) and all(isinstance(item, Data) for item in data):\n            return data\n        msg = \"The 'data' input must be a DataFrame, a list of Data objects, or a single Data object.\"\n        raise TypeError(msg)\n\n    def evaluate_stop_loop(self) -> bool:\n        \"\"\"Evaluate whether to stop item or done output.\"\"\"\n        current_index = self.ctx.get(f\"{self._id}_index\", 0)\n        data_length = len(self.ctx.get(f\"{self._id}_data\", []))\n        return current_index > data_length\n\n    def item_output(self) -> JSON:\n        \"\"\"Output the next item in the list or stop if done.\"\"\"\n        self.initialize_data()\n        current_item = Data(text=\"\")\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n        else:\n            # Get data list and current index\n            data_list, current_index = self.loop_variables()\n            if current_index < len(data_list):\n                # Output current item and increment index\n                try:\n                    current_item = data_list[current_index]\n                except IndexError:\n                    current_item = Data(text=\"\")\n            self.aggregated_output()\n            self.update_ctx({f\"{self._id}_index\": current_index + 1})\n\n        # Now we need to update the dependencies for the next run\n        self.update_dependency()\n        return current_item\n\n    def update_dependency(self):\n        item_dependency_id = self.get_incoming_edge_by_target_param(\"item\")\n        if item_dependency_id not in self.graph.run_manager.run_predecessors[self._id]:\n            self.graph.run_manager.run_predecessors[self._id].append(item_dependency_id)\n\n    def done_output(self) -> Table:\n        \"\"\"Trigger the done output when iteration is complete.\"\"\"\n        self.initialize_data()\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n            self.start(\"done\")\n\n            aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n\n            return DataFrame(aggregated)\n        self.stop(\"done\")\n        return DataFrame([])\n\n    def loop_variables(self):\n        \"\"\"Retrieve loop variables from context.\"\"\"\n        return (\n            self.ctx.get(f\"{self._id}_data\", []),\n            self.ctx.get(f\"{self._id}_index\", 0),\n        )\n\n    def aggregated_output(self) -> list[JSON]:\n        \"\"\"Return the aggregated list once all items are processed.\"\"\"\n        self.initialize_data()\n\n        # Get data list and aggregated list\n        data_list = self.ctx.get(f\"{self._id}_data\", [])\n        aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n        loop_input = self.item\n        if loop_input is not None and not isinstance(loop_input, str) and len(aggregated) <= len(data_list):\n            aggregated.append(loop_input)\n            self.update_ctx({f\"{self._id}_aggregated\": aggregated})\n        return aggregated\n"
+              },
+              "data": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Inputs",
+                "dynamic": false,
+                "info": "The initial list of Data objects or DataFrame to iterate over.",
+                "input_types": [
+                  "DataFrame",
+                  "Table"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "data",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "LoopComponent"
+        },
+        "id": "LoopComponent-c0j5t",
+        "measured": {
+          "height": 242,
+          "width": 320
+        },
+        "position": {
+          "x": 507.59775709173937,
+          "y": 87.51211634834702
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ArXivComponent-wFpLS",
+          "node": {
+            "base_classes": [
+              "Table"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Search and retrieve papers from arXiv.org",
+            "display_name": "arXiv",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "search_query",
+              "search_type",
+              "max_results"
+            ],
+            "frozen": false,
+            "icon": "arXiv",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "db0b639c631b",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "defusedxml",
+                    "version": "0.7.1"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 2
+              },
+              "module": "lfx.components.arxiv.arxiv.ArXivComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Table",
+                "group_outputs": false,
+                "method": "search_papers_dataframe",
+                "name": "dataframe",
+                "selected": "Table",
+                "tool_mode": true,
+                "types": [
+                  "Table"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import urllib.request\nfrom urllib.parse import urlparse\nfrom xml.etree.ElementTree import Element\n\nfrom defusedxml.ElementTree import fromstring\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import DropdownInput, IntInput, MessageTextInput, Output\nfrom lfx.schema.data import JSON, Data\nfrom lfx.schema.dataframe import DataFrame, Table\n\n\nclass ArXivComponent(Component):\n    display_name = \"arXiv\"\n    description = \"Search and retrieve papers from arXiv.org\"\n    icon = \"arXiv\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"search_query\",\n            display_name=\"Search Query\",\n            info=\"The search query for arXiv papers (e.g., 'quantum computing')\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Field\",\n            info=\"The field to search in\",\n            options=[\"all\", \"title\", \"abstract\", \"author\", \"cat\"],  # cat is for category\n            value=\"all\",\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"Maximum number of results to return\",\n            value=10,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Table\", name=\"dataframe\", method=\"search_papers_dataframe\", types=[\"Table\"]),\n    ]\n\n    def build_query_url(self) -> str:\n        \"\"\"Build the arXiv API query URL.\"\"\"\n        base_url = \"http://export.arxiv.org/api/query?\"\n\n        # Build the search query\n        search_query = f\"{self.search_type}:{self.search_query}\"\n\n        # URL parameters\n        params = {\n            \"search_query\": search_query,\n            \"max_results\": str(self.max_results),\n        }\n\n        # Convert params to URL query string\n        query_string = \"&\".join([f\"{k}={urllib.parse.quote(str(v))}\" for k, v in params.items()])\n\n        return base_url + query_string\n\n    def parse_atom_response(self, response_text: str) -> list[dict]:\n        \"\"\"Parse the Atom XML response from arXiv.\"\"\"\n        # Parse XML safely using defusedxml\n        root = fromstring(response_text)\n\n        # Define namespace dictionary for XML parsing\n        ns = {\"atom\": \"http://www.w3.org/2005/Atom\", \"arxiv\": \"http://arxiv.org/schemas/atom\"}\n\n        papers = []\n        # Process each entry (paper)\n        for entry in root.findall(\"atom:entry\", ns):\n            paper = {\n                \"id\": self._get_text(entry, \"atom:id\", ns),\n                \"title\": self._get_text(entry, \"atom:title\", ns),\n                \"summary\": self._get_text(entry, \"atom:summary\", ns),\n                \"published\": self._get_text(entry, \"atom:published\", ns),\n                \"updated\": self._get_text(entry, \"atom:updated\", ns),\n                \"authors\": [author.find(\"atom:name\", ns).text for author in entry.findall(\"atom:author\", ns)],\n                \"arxiv_url\": self._get_link(entry, \"alternate\", ns),\n                \"pdf_url\": self._get_link(entry, \"related\", ns),\n                \"comment\": self._get_text(entry, \"arxiv:comment\", ns),\n                \"journal_ref\": self._get_text(entry, \"arxiv:journal_ref\", ns),\n                \"primary_category\": self._get_category(entry, ns),\n                \"categories\": [cat.get(\"term\") for cat in entry.findall(\"atom:category\", ns)],\n            }\n            papers.append(paper)\n\n        return papers\n\n    def _get_text(self, element: Element, path: str, ns: dict) -> str | None:\n        \"\"\"Safely extract text from an XML element.\"\"\"\n        el = element.find(path, ns)\n        return el.text.strip() if el is not None and el.text else None\n\n    def _get_link(self, element: Element, rel: str, ns: dict) -> str | None:\n        \"\"\"Get link URL based on relation type.\"\"\"\n        for link in element.findall(\"atom:link\", ns):\n            if link.get(\"rel\") == rel:\n                return link.get(\"href\")\n        return None\n\n    def _get_category(self, element: Element, ns: dict) -> str | None:\n        \"\"\"Get primary category.\"\"\"\n        cat = element.find(\"arxiv:primary_category\", ns)\n        return cat.get(\"term\") if cat is not None else None\n\n    def run_model(self) -> Table:\n        return self.search_papers_dataframe()\n\n    def search_papers(self) -> list[JSON]:\n        \"\"\"Search arXiv and return results.\"\"\"\n        try:\n            # Build the query URL\n            url = self.build_query_url()\n\n            # Validate URL scheme and host\n            parsed_url = urlparse(url)\n            if parsed_url.scheme not in {\"http\", \"https\"}:\n                error_msg = f\"Invalid URL scheme: {parsed_url.scheme}\"\n                raise ValueError(error_msg)\n            if parsed_url.hostname != \"export.arxiv.org\":\n                error_msg = f\"Invalid host: {parsed_url.hostname}\"\n                raise ValueError(error_msg)\n\n            # Create a custom opener that only allows http/https schemes\n            class RestrictedHTTPHandler(urllib.request.HTTPHandler):\n                def http_open(self, req):\n                    return super().http_open(req)\n\n            class RestrictedHTTPSHandler(urllib.request.HTTPSHandler):\n                def https_open(self, req):\n                    return super().https_open(req)\n\n            # Build opener with restricted handlers\n            opener = urllib.request.build_opener(RestrictedHTTPHandler, RestrictedHTTPSHandler)\n            urllib.request.install_opener(opener)\n\n            # Make the request with validated URL using restricted opener\n            response = opener.open(url)\n            response_text = response.read().decode(\"utf-8\")\n\n            # Parse the response\n            papers = self.parse_atom_response(response_text)\n\n            # Convert to Data objects\n            results = [Data(data=paper) for paper in papers]\n            self.status = results\n        except (urllib.error.URLError, ValueError) as e:\n            error_data = Data(data={\"error\": f\"Request error: {e!s}\"})\n            self.status = error_data\n            return [error_data]\n        else:\n            return results\n\n    def search_papers_dataframe(self) -> Table:\n        \"\"\"Convert the Arxiv search results to a DataFrame.\n\n        Returns: Table: A DataFrame containing the search results.\n        \"\"\"\n        data = self.search_papers()\n        return DataFrame(data)\n"
+              },
+              "max_results": {
+                "_input_type": "IntInput",
+                "advanced": false,
+                "display_name": "Max Results",
+                "dynamic": false,
+                "info": "Maximum number of results to return",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_results",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 3
+              },
+              "search_query": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Search Query",
+                "dynamic": false,
+                "info": "The search query for arXiv papers (e.g., 'quantum computing')",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "search_query",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "search_type": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Search Field",
+                "dynamic": false,
+                "external_options": {},
+                "info": "The field to search in",
+                "name": "search_type",
+                "options": [
+                  "all",
+                  "title",
+                  "abstract",
+                  "author",
+                  "cat"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "all"
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "ArXivComponent"
+        },
+        "dragging": false,
+        "id": "ArXivComponent-wFpLS",
+        "measured": {
+          "height": 369,
+          "width": 320
+        },
+        "position": {
+          "x": 80.8814609817436,
+          "y": 59.616027786452875
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "description": "Convert between different types (Message, Data, DataFrame)",
+          "display_name": "Type Convert",
+          "id": "TypeConverterComponent-DYj5D",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Convert between different types (Message, Data, DataFrame)",
+            "display_name": "Type Convert",
+            "documentation": "https://docs.langflow.org/components-processing#type-convert",
+            "edited": false,
+            "field_order": [
+              "input_data",
+              "auto_parse",
+              "output_type"
+            ],
+            "frozen": false,
+            "icon": "repeat",
+            "last_updated": "2025-10-10T19:46:08.596Z",
+            "legacy": false,
+            "metadata": {
+              "code_hash": "1942e63b33a8",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  },
+                  {
+                    "name": "pandas",
+                    "version": "2.2.3"
+                  }
+                ],
+                "total_dependencies": 2
+              },
+              "module": "lfx.components.processing.converter.TypeConverterComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Message Output",
+                "group_outputs": false,
+                "method": "convert_to_message",
+                "name": "message_output",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "auto_parse": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Auto Parse",
+                "dynamic": false,
+                "info": "Detect and convert JSON/CSV strings automatically.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "auto_parse",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import json\nfrom typing import Any\n\nfrom lfx.custom import Component\nfrom lfx.io import BoolInput, HandleInput, Output, TabInput\nfrom lfx.schema import Data, DataFrame, Message\nfrom lfx.schema.data import JSON\nfrom lfx.schema.dataframe import Table\n\nMIN_CSV_LINES = 2\n\n\ndef convert_to_message(v) -> Message:\n    \"\"\"Convert input to Message type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n\n    Returns:\n        Message: Converted Message object\n    \"\"\"\n    return v if isinstance(v, Message) else v.to_message()\n\n\ndef convert_to_data(v: Table | Data | Message | dict, *, auto_parse: bool) -> JSON:\n    \"\"\"Convert input to Data type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n        auto_parse: Enable automatic parsing of structured data (JSON/CSV)\n\n    Returns: JSON: Converted Data object\n    \"\"\"\n    if isinstance(v, dict):\n        return Data(v)\n    if isinstance(v, Message):\n        data = Data(data={\"text\": v.data[\"text\"]})\n        return parse_structured_data(data) if auto_parse else data\n\n    return v if isinstance(v, Data) else v.to_data()\n\n\ndef convert_to_dataframe(v: Table | Data | Message | dict, *, auto_parse: bool) -> Table:\n    \"\"\"Convert input to DataFrame type.\n\n    Args:\n        v: Input to convert (Message, Data, DataFrame, or dict)\n        auto_parse: Enable automatic parsing of structured data (JSON/CSV)\n\n    Returns: Table: Converted DataFrame object\n    \"\"\"\n    import pandas as pd\n\n    if isinstance(v, dict):\n        return DataFrame([v])\n    if isinstance(v, DataFrame):\n        return v\n    # Handle pandas DataFrame\n    if isinstance(v, pd.DataFrame):\n        # Convert pandas DataFrame to our DataFrame by creating Data objects\n        return DataFrame(data=v)\n\n    if isinstance(v, Message):\n        data = Data(data={\"text\": v.data[\"text\"]})\n        return parse_structured_data(data).to_dataframe() if auto_parse else data.to_dataframe()\n    # For other types, call to_dataframe method\n    return v.to_dataframe()\n\n\ndef parse_structured_data(data: JSON) -> JSON:\n    \"\"\"Parse structured data (JSON, CSV) from Data's text field.\n\n    Args:\n        data: JSON object with text content to parse\n\n    Returns: JSON: Modified Data object with parsed content or original if parsing fails\n    \"\"\"\n    raw_text = data.get_text() or \"\"\n    text = raw_text.lstrip(\"\\ufeff\").strip()\n\n    # Try JSON parsing first\n    parsed_json = _try_parse_json(text)\n    if parsed_json is not None:\n        return parsed_json\n\n    # Try CSV parsing\n    if _looks_like_csv(text):\n        try:\n            return _parse_csv_to_data(text)\n        except Exception:  # noqa: BLE001\n            # Heuristic misfire or malformed CSV — keep original data\n            return data\n\n    # Return original data if no parsing succeeded\n    return data\n\n\ndef _try_parse_json(text: str) -> JSON | None:\n    \"\"\"Try to parse text as JSON and return Data object.\"\"\"\n    try:\n        parsed = json.loads(text)\n\n        if isinstance(parsed, dict):\n            # Single JSON object\n            return Data(data=parsed)\n        if isinstance(parsed, list) and all(isinstance(item, dict) for item in parsed):\n            # Array of JSON objects - create Data with the list\n            return Data(data={\"records\": parsed})\n\n    except (json.JSONDecodeError, ValueError):\n        pass\n\n    return None\n\n\ndef _looks_like_csv(text: str) -> bool:\n    \"\"\"Simple heuristic to detect CSV content.\"\"\"\n    lines = text.strip().split(\"\\n\")\n    if len(lines) < MIN_CSV_LINES:\n        return False\n\n    header_line = lines[0]\n    return \",\" in header_line and len(lines) > 1\n\n\ndef _parse_csv_to_data(text: str) -> JSON:\n    \"\"\"Parse CSV text and return Data object.\"\"\"\n    from io import StringIO\n\n    import pandas as pd\n\n    # Parse CSV to DataFrame, then convert to list of dicts\n    parsed_df = pd.read_csv(StringIO(text))\n    records = parsed_df.to_dict(orient=\"records\")\n\n    return Data(data={\"records\": records})\n\n\nclass TypeConverterComponent(Component):\n    display_name = \"Type Convert\"\n    description = \"Convert between different types (Message, Data, DataFrame)\"\n    documentation: str = \"https://docs.langflow.org/components-processing#type-convert\"\n    icon = \"repeat\"\n\n    inputs = [\n        HandleInput(\n            name=\"input_data\",\n            display_name=\"Input\",\n            input_types=[\"Message\", \"Data\", \"JSON\", \"DataFrame\", \"Table\"],\n            info=\"Accept Message, Data or DataFrame as input\",\n            required=True,\n        ),\n        BoolInput(\n            name=\"auto_parse\",\n            display_name=\"Auto Parse\",\n            info=\"Detect and convert JSON/CSV strings automatically.\",\n            advanced=True,\n            value=False,\n            required=False,\n        ),\n        TabInput(\n            name=\"output_type\",\n            display_name=\"Output Type\",\n            options=[\"Message\", \"JSON\", \"Table\"],\n            info=\"Select the desired output data type\",\n            real_time_refresh=True,\n            value=\"Message\",\n        ),\n    ]\n\n    # Define ONLY ONE default output - __init__ will set the correct one\n    outputs = [\n        Output(\n            display_name=\"Message Output\",\n            name=\"message_output\",\n            method=\"convert_to_message\",\n            types=[\"Message\"],\n        ),\n    ]\n\n    def __init__(self, **data):\n        \"\"\"Initialize and set the correct output based on output_type.\"\"\"\n        super().__init__(**data)\n\n        # Get the current output_type value (from template or default)\n        output_type = getattr(self, 'output_type', 'Message')\n\n        # Set the correct output based on output_type\n        if output_type in (\"Data\", \"JSON\"):\n            self.outputs = [\n                Output(\n                    display_name=\"JSON Output\",\n                    name=\"data_output\",\n                    method=\"convert_to_data\",\n                    types=[\"JSON\"],\n                )\n            ]\n        elif output_type in (\"DataFrame\", \"Table\"):\n            self.outputs = [\n                Output(\n                    display_name=\"Table Output\",\n                    name=\"dataframe_output\",\n                    method=\"convert_to_dataframe\",\n                    types=[\"Table\"],\n                )\n            ]\n        # else: keep Message output (already set)\n\n    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:\n        \"\"\"Dynamically show only the relevant output based on the selected output type.\"\"\"\n        if field_name == \"output_type\":\n            # Start with empty outputs\n            frontend_node[\"outputs\"] = []\n\n            # Add only the selected output type WITH TYPES SPECIFIED\n            if field_value == \"Message\":\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Message Output\",\n                        name=\"message_output\",\n                        method=\"convert_to_message\",\n                        types=[\"Message\"],  # ← CRITICAL: specify types!\n                    ).to_dict()\n                )\n            elif field_value in (\"Data\", \"JSON\"):\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"JSON Output\",\n                        name=\"data_output\",\n                        method=\"convert_to_data\",\n                        types=[\"JSON\"],  # ← CRITICAL: specify types!\n                    ).to_dict()\n                )\n            elif field_value in (\"DataFrame\", \"Table\"):\n                frontend_node[\"outputs\"].append(\n                    Output(\n                        display_name=\"Table Output\",\n                        name=\"dataframe_output\",\n                        method=\"convert_to_dataframe\",\n                        types=[\"Table\"],  # ← CRITICAL: specify types!\n                    ).to_dict()\n                )\n\n        return frontend_node\n\n    def convert_to_message(self) -> Message:\n        \"\"\"Convert input to Message type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_message(input_value)\n        self.status = result\n        return result\n\n    def convert_to_data(self) -> JSON:\n        \"\"\"Convert input to Data type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_data(input_value, auto_parse=self.auto_parse)\n        self.status = result\n        return result\n\n    def convert_to_dataframe(self) -> Table:\n        \"\"\"Convert input to DataFrame type.\"\"\"\n        input_value = self.input_data[0] if isinstance(self.input_data, list) else self.input_data\n\n        # Handle string input by converting to Message first\n        if isinstance(input_value, str):\n            input_value = Message(text=input_value)\n\n        result = convert_to_dataframe(input_value, auto_parse=self.auto_parse)\n        self.status = result\n        return result\n"
+              },
+              "input_data": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "Accept Message, Data or DataFrame as input",
+                "input_types": [
+                  "Message",
+                  "Data",
+                  "JSON",
+                  "DataFrame",
+                  "Table"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_data",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "output_type": {
+                "_input_type": "TabInput",
+                "advanced": false,
+                "display_name": "Output Type",
+                "dynamic": false,
+                "info": "Select the desired output data type",
+                "load_from_db": false,
+                "name": "output_type",
+                "options": [
+                  "Message",
+                  "JSON",
+                  "Table"
+                ],
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "tab",
+                "value": "JSON"
+              }
+            },
+            "tool_mode": false
+          },
+          "selected_output": "data_output",
+          "showNode": true,
+          "type": "TypeConverterComponent"
+        },
+        "dragging": false,
+        "id": "TypeConverterComponent-DYj5D",
+        "measured": {
+          "height": 262,
+          "width": 320
+        },
+        "position": {
+          "x": 1879.569427792827,
+          "y": 238.97699365415951
+        },
+        "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -36.991081894787726,
-      "y": 264.5414391871,
-      "zoom": 0.6157635217557752
+      "x": 264.06947710011843,
+      "y": 382.95334340066097,
+      "zoom": 0.42647234092591474
     }
   },
   "description": "This template iterates over search results using LoopComponent and translates each result into Portuguese automatically. 🚀",

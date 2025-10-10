@@ -301,7 +301,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "0.3.77"
+                    "version": "0.3.78"
                   }
                 ],
                 "total_dependencies": 3
@@ -318,7 +318,7 @@
                 "group_outputs": false,
                 "method": "run_batch",
                 "name": "batch_results",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
                   "Table"
@@ -554,7 +554,7 @@
                 "group_outputs": false,
                 "method": "get_video_comments",
                 "name": "comments",
-                "selected": "DataFrame",
+                "selected": "Table",
                 "tool_mode": true,
                 "types": [
                   "Table"
@@ -768,7 +768,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "0.3.77"
+                    "version": "0.3.78"
                   },
                   {
                     "name": "pydantic",
