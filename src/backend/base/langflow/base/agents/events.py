@@ -297,7 +297,6 @@ async def handle_on_chain_stream(
     return agent_message, start_time
 
 
-
 class ToolEventHandler(Protocol):
     async def __call__(
         self,
