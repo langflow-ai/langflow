@@ -154,15 +154,3 @@ async def created_flow(session, created_user):
     return flow
 
 
-@pytest.fixture
-async def session():
-    """Database session fixture."""
-    # This would be provided by your existing test setup
-    # The actual implementation depends on your test configuration
-
-
-@pytest.fixture
-async def client():
-    """HTTP client fixture."""
-    # This would be provided by your existing test setup
-    # The actual implementation depends on your test configuration
