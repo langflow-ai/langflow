@@ -258,7 +258,7 @@ override-dependencies = [
     "python-pptx>=1.0.2",
 ]
 index = [
-    { name = "pytorch", url = "https://download.pytorch.org/whl/cpu"},
+    { url = "https://download.pytorch.org/whl/cpu"},
     { url = "https://pypi.org/simple"}
 ]
 
