@@ -5,7 +5,11 @@ from uuid import uuid4
 import pytest
 from langflow.custom import Component
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
-from lfx.components.agents import ALTKAgentComponent
+from lfx.base.models.openai_constants import (
+    OPENAI_CHAT_MODEL_NAMES,
+    OPENAI_REASONING_MODEL_NAMES,
+)
+from lfx.components.agents.altk_agent import ALTKAgentComponent
 from lfx.components.tools.calculator import CalculatorToolComponent
 
 from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
@@ -60,6 +64,9 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert isinstance(updated_config["agent_llm"]["options"], list)
         assert len(updated_config["agent_llm"]["options"]) > 0
         assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS)
+        assert (
+            updated_config["agent_llm"]["external_options"]["fields"]["data"]["node"]["name"] == "connect_other_models"
+        )
 
         # Verify model_name field is populated for OpenAI
 
@@ -115,12 +122,10 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
         )
 
         response = await agent.message_response()
-        response_text = str(response.data.get("text", ""))
-        assert "4" in response_text
+        assert "4" in response.data.get("text")
 
     @pytest.mark.api_key_required
     @pytest.mark.no_blockbuster
-    @pytest.mark.slow
     async def test_agent_component_with_all_openai_models(self):
         # Mock inputs
         api_key = os.getenv("OPENAI_API_KEY")
@@ -128,10 +133,9 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
 
         # Iterate over all OpenAI models
         failed_models = []
-        openai_chat_model_names = ["gpt-4", "gpt-4o", "gpt-4o-mini"]
-        for model_name in openai_chat_model_names:
+        for model_name in OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES:
             # Initialize the agent with mocked inputs
-            tools = [CalculatorToolComponent().build_tool()]
+            tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
             agent = ALTKAgentComponent(
                 tools=tools,
                 input_value=input_value,
@@ -140,18 +144,15 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
                 agent_llm="OpenAI",
                 _session_id=str(uuid4()),
                 response_processing_size_threshold=1,
-                verbose=True,
             )
 
             response = await agent.message_response()
-            response_text = str(response.data.get("text", ""))
-            if "4" not in response_text:
+            if "4" not in response.data.get("text"):
                 failed_models.append(model_name)
         assert not failed_models, f"The following models failed the test: {failed_models}"
 
     @pytest.mark.api_key_required
     @pytest.mark.no_blockbuster
-    @pytest.mark.slow
     async def test_agent_component_with_all_anthropic_models(self):
         # Mock inputs
         api_key = os.getenv("ANTHROPIC_API_KEY")
