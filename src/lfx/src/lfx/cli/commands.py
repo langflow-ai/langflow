@@ -85,10 +85,7 @@ def serve_command(
         cat my_flow.json | lfx serve --stdin
         echo '{"nodes": [...]}' | lfx serve --stdin
     """
-    # Configure logging with the specified level and import logger
-    from lfx.log.logger import configure, logger
-
-    configure(log_level=log_level)
+    from lfx.log.logger import logger
 
     verbose_print = create_verbose_printer(verbose=verbose)
 
@@ -226,9 +223,9 @@ def serve_command(
 
                 validation_errors = validate_global_variables_for_env(graph)
                 if validation_errors:
-                    logger.error("Global variable validation failed:")
+                    typer.echo("Global variable validation failed:", err=True)
                     for error in validation_errors:
-                        logger.error(f"  - {error}")
+                        typer.echo(f"  - {error}", err=True)
                     raise typer.Exit(1)
             else:
                 logger.info("Global variable validation skipped")
