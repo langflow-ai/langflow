@@ -168,7 +168,7 @@ export default function ConversationPage() {
   return (
     <div className="flex h-full w-full flex-col">
       {/* Header with Breadcrumb */}
-      <div className="border-b bg-background px-4 py-3 md:px-6">
+      {/* <div className="border-b bg-background px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
           <Breadcrumb items={breadcrumbItems} />
           <button
@@ -178,7 +178,7 @@ export default function ConversationPage() {
             New Conversation
           </button>
         </div>
-      </div>
+      </div> */}
 
       {/* Main Content - Split Layout when flow panel is open */}
       <div className="flex flex-1 overflow-hidden">
