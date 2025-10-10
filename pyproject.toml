@@ -136,7 +136,6 @@ dependencies = [
     "torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp311-cp311-win_amd64.whl ; sys_platform == 'win32' and python_version == '3.11'",
     "torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp312-cp312-win_amd64.whl ; sys_platform == 'win32' and python_version == '3.12'",
     "torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp313-cp313-win_amd64.whl ; sys_platform == 'win32' and python_version == '3.13'",
-    "torch==2.8.0; sys_platform == 'darwin'",
     "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
     "mlx-vlm==0.3.3; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
     "easyocr>=1.7.2,<2.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
@@ -215,9 +214,6 @@ members = [
 [tool.hatch.build.targets.wheel]
 packages = ["src/backend/langflow"]
 
-[tool.hatch.metadata]
-allow-direct-references = true
-
 [project.urls]
 Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
@@ -268,10 +264,6 @@ postgresql = [
 override-dependencies = [
     # temporary force a newer python-pptx
     "python-pptx>=1.0.2",
-]
-index = [
-    { url = "https://pypi.org/simple"},
-    { url = "https://download.pytorch.org/whl/cpu"}
 ]
 
 [project.scripts]
