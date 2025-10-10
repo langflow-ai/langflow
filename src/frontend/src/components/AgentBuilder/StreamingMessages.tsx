@@ -68,7 +68,11 @@ function ThinkingMessage({ data }: { data: any }) {
   return (
     <div className="flex items-start gap-3 mb-3">
       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-        <ForwardedIconComponent name="Brain" className="h-4 w-4 text-primary" />
+        <img
+          src="/favicon-new.ico"
+          alt="AI"
+          className="h-4 w-4"
+        />
       </div>
       <div className="flex-1">
         <div className="text-sm text-muted-foreground">
@@ -154,72 +158,42 @@ function CompleteMessage({ data, onBuildAgent, isFlowBuilt }: { data: any; onBui
   // Show full card view before building
   return (
     <div className="mb-3">
-      <Card className="bg-secondary-bg">
-        <CardContent className="p-6">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <ForwardedIconComponent name="CheckCircle2" className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold">Workflow Generated!</h3>
-              {reasoning && (
-                <p className="mt-2 text-sm text-muted-foreground">{reasoning}</p>
-              )}
+      <div className="rounded-lg bg-muted/30 p-6">
+        <p className="text-sm text-foreground mb-3">Perfect! Updating your agent with:</p>
 
-              {workflow && (
-                <div className="mt-4 space-y-3">
-                  <div>
-                    <h4 className="text-title text-sm font-medium">Workflow: {workflow.name}</h4>
-                    <p className="text-xs text-muted-foreground">
-                      {workflow.description}
-                    </p>
-                  </div>
-
-                  {workflow.components && workflow.components.length > 0 && (
-                    <div>
-                      <h5 className="text-xs font-medium text-muted-foreground mb-2">
-                        Components ({workflow.components.length}):
-                      </h5>
-                      <div className="flex flex-wrap gap-2">
-                        {workflow.components.map((comp: any, idx: number) => (
-                          <div
-                            key={idx}
-                            className="flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-xs"
-                          >
-                            <ForwardedIconComponent
-                              name={getComponentIcon(comp.type)}
-                              className="h-3 w-3"
-                            />
-                            <span>{comp.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      onClick={handleBuildClick}
-                      className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                    >
-                      <div className="flex items-center gap-2">
-                        <ForwardedIconComponent name="Play" className="h-4 w-4" />
-                        Build Agent
-                      </div>
-                    </button>
-                    <button className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">
-                      <div className="flex items-center gap-2">
-                        <ForwardedIconComponent name="Edit" className="h-4 w-4" />
-                        Edit Plan
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+        {reasoning && (
+          <div className="mb-3">
+            <p className="text-sm text-muted-foreground">{reasoning}</p>
           </div>
-        </CardContent>
-      </Card>
+        )}
+
+        {workflow && (
+          <>
+            <p className="text-sm font-medium text-foreground mb-2">Your Agent Flow:</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              {workflow.description || workflow.name}
+            </p>
+
+            <p className="text-sm text-foreground mb-4">
+              Would you like me to show this visually in the Agent Builder canvas?
+            </p>
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleBuildClick}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 flex items-center gap-2"
+              >
+                <ForwardedIconComponent name="CheckCircle2" className="h-4 w-4" />
+                Build Agent
+              </button>
+              <button className="rounded-md bg-muted px-4 py-2 text-sm font-medium hover:bg-muted/80 flex items-center gap-2">
+                <ForwardedIconComponent name="Edit" className="h-4 w-4" />
+                Edit Plan
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
