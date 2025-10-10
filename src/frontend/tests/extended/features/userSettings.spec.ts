@@ -14,7 +14,9 @@ test(
   { tag: ["@release"] },
 
   async ({ page }) => {
-    await page.goto("/");
+    await awaitBootstrapTest(page, {
+      skipModal: true,
+    });
     await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,
     });
@@ -42,7 +44,9 @@ test(
     const randomName2 = Math.random().toString(36).substring(2);
     const randomName3 = Math.random().toString(36).substring(2);
 
-    await page.goto("/");
+    await awaitBootstrapTest(page, {
+      skipModal: true,
+    });
     await page.getByTestId("user-profile-settings").click();
     await page.getByText("Settings").click();
     await page.getByText("Global Variables").click();
@@ -134,7 +138,9 @@ test(
 );
 
 test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
-  await page.goto("/");
+  await awaitBootstrapTest(page, {
+    skipModal: true,
+  });
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,
   });
@@ -172,7 +178,9 @@ test(
   "should interact with API Keys",
   { tag: ["@release", "@api"] },
   async ({ page }) => {
-    await page.goto("/");
+    await awaitBootstrapTest(page, {
+      skipModal: true,
+    });
     await page.getByTestId("user-profile-settings").click();
     await page.getByText("Settings").click();
     await page.getByText("Langflow API").first().click();
