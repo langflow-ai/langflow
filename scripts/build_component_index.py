@@ -54,8 +54,8 @@ def build_component_index():
         # Run the async function
         components_result = asyncio.run(import_langflow_components())
         modules_dict = components_result.get("components", {})
-
-        print(f"Successfully loaded {len(modules_dict)} component categories")
+        components_count = sum(len(v) for v in modules_dict.values())
+        print(f"Discovered {components_count} components across {len(modules_dict)} categories")
 
         # Convert modules_dict to entries format and sort for determinism
         # Sort by category name (top_level) to ensure consistent ordering
