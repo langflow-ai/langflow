@@ -42,55 +42,60 @@ class SemanticSearchEngine:
         Uses Azure Search for semantic matching, then enriches with local KB data.
         """
         try:
+            # Generate embeddings for the text query
+            query_vector = await self._generate_embeddings(subtask_query)
+
             # Get Azure Search service
             azure_search = get_azure_search_service()
 
-            # Build search query from capabilities
-            if required_capabilities:
-                # Search by capabilities using Azure Search
-                search_results = await azure_search.search_capability_embeddings(
-                    query=subtask_query,
-                    capabilities=required_capabilities,
-                    top=top_k
-                )
+            # Use the combined search method that handles both semantic and capability matching
+            search_results = await azure_search.search_components(
+                query_text=subtask_query,
+                query_vector=query_vector,
+                capabilities=required_capabilities if required_capabilities else None,
+                top_k=top_k
+            )
 
-                matches = []
-                for result in search_results:
-                    # Get component details from local KB
-                    component_key = result.get('component_key')
-                    if component_key and component_key in self.kb_loader.component_kb:
-                        component_spec = self.kb_loader.component_kb[component_key]
-                        score = result.get('@search.score', 0.5)
+            matches = []
+            for result in search_results:
+                # Get component details from local KB
+                component_key = result.get('component_key')
+                if component_key and component_key in self.kb_loader.component_kb:
+                    component_spec = self.kb_loader.component_kb[component_key]
+                    score = result.get('@search.score', 0.5)
 
-                        matches.append(ComponentMatch(
-                            component_spec=component_spec,
-                            overall_score=float(score)
-                        ))
+                    matches.append(ComponentMatch(
+                        component_spec=component_spec,
+                        overall_score=float(score)
+                    ))
 
-                return matches
-
-            else:
-                # Fallback: search component embeddings directly
-                search_results = await azure_search.search_component_embeddings(
-                    query=subtask_query,
-                    top=top_k
-                )
-
-                matches = []
-                for result in search_results:
-                    component_key = result.get('component_key')
-                    if component_key and component_key in self.kb_loader.component_kb:
-                        component_spec = self.kb_loader.component_kb[component_key]
-                        score = result.get('@search.score', 0.5)
-
-                        matches.append(ComponentMatch(
-                            component_spec=component_spec,
-                            overall_score=float(score)
-                        ))
-
-                return matches
+            return matches
 
         except Exception as e:
             self.logger.error(f"Error in semantic search: {e}")
             # Return empty list on error - service should continue
             return []
+
+    async def _generate_embeddings(self, text: str) -> List[float]:
+        """
+        Generate embeddings for text using SentenceTransformers.
+
+        Uses the same model as the original genesis-agents-cli for compatibility.
+        """
+        try:
+            from sentence_transformers import SentenceTransformer
+
+            # Use the same model as original genesis-agents-cli (384 dimensions)
+            model = SentenceTransformer('all-MiniLM-L6-v2')
+            embeddings = model.encode(text, normalize_embeddings=True)
+
+            return embeddings.tolist()
+
+        except ImportError:
+            self.logger.error("SentenceTransformers not available for embedding generation")
+            # Return zero vector as fallback
+            return [0.0] * 384  # all-MiniLM-L6-v2 dimension
+        except Exception as e:
+            self.logger.error(f"Error generating embeddings: {e}")
+            # Return zero vector as fallback
+            return [0.0] * 384
