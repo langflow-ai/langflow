@@ -44,13 +44,39 @@ jobs:
       - name: Check if index changed
         id: check_changes
         run: |
-          git add -N src/lfx/src/lfx/_assets/component_index.json
-          if git diff --quiet --exit-code -- src/lfx/src/lfx/_assets/component_index.json; then
+          INDEX_FILE="src/lfx/src/lfx/_assets/component_index.json"
+          git add -N "$INDEX_FILE"
+
+          if git diff --quiet --exit-code -- "$INDEX_FILE"; then
             echo "changed=false" >> $GITHUB_OUTPUT
-            echo "No changes to component index"
+            echo "✅ No changes to component index"
           else
             echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Component index was updated"
+            echo "📝 Component index was updated"
+            echo ""
+
+            # Show diff statistics
+            echo "Diff statistics:"
+            git diff --stat -- "$INDEX_FILE"
+            echo ""
+
+            # Compare SHA256 hashes
+            if command -v jq >/dev/null 2>&1; then
+              OLD_SHA=$(git show HEAD:"$INDEX_FILE" 2>/dev/null | jq -r '.sha256 // "N/A"')
+              NEW_SHA=$(jq -r '.sha256 // "N/A"' "$INDEX_FILE")
+              echo "SHA256 hash:"
+              echo "  Old: $OLD_SHA"
+              echo "  New: $NEW_SHA"
+              echo ""
+
+              # Count components (not just categories)
+              OLD_COMPONENTS=$(git show HEAD:"$INDEX_FILE" 2>/dev/null | jq '[.entries[] | .[1] | keys | length] | add' 2>/dev/null || echo "N/A")
+              NEW_COMPONENTS=$(jq '[.entries[] | .[1] | keys | length] | add' "$INDEX_FILE" 2>/dev/null || echo "N/A")
+              OLD_CATEGORIES=$(git show HEAD:"$INDEX_FILE" 2>/dev/null | jq '.entries | length' 2>/dev/null || echo "N/A")
+              NEW_CATEGORIES=$(jq '.entries | length' "$INDEX_FILE" 2>/dev/null || echo "N/A")
+              echo "Components: $OLD_COMPONENTS → $NEW_COMPONENTS"
+              echo "Categories: $OLD_CATEGORIES → $NEW_CATEGORIES"
+            fi
           fi
 
       - name: Commit and push if changed
