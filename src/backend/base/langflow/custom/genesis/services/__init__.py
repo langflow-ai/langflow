@@ -120,6 +120,26 @@ def register_genesis_services():
         except (ImportError, ValueError, AttributeError) as e:
             failed_services.append(f"PromptService: {e}")
 
+        # Try to register Azure Search Service
+        try:
+            from .azure_search.factory import AzureSearchServiceFactory
+
+            factory = AzureSearchServiceFactory()
+            service_manager.register_factory(factory)
+            registered_services.append(factory.service_class.__name__)
+        except (ImportError, ValueError, AttributeError) as e:
+            failed_services.append(f"AzureSearchService: {e}")
+
+        # Try to register Agent Builder Service
+        try:
+            from .agent_builder.factory import AgentBuilderServiceFactory
+
+            factory = AgentBuilderServiceFactory()
+            service_manager.register_factory(factory)
+            registered_services.append(factory.service_class.__name__)
+        except (ImportError, ValueError, AttributeError) as e:
+            failed_services.append(f"AgentBuilderService: {e}")
+
         # Report results
         if registered_services:
             logger.info("✅ Custom services registered successfully:")

@@ -35,105 +35,14 @@ async def stream_agent_builder_events(request: AgentBuilderRequest) -> AsyncGene
         yield str(StreamData(event="thinking", data={"message": "Analyzing your request..."}))
         await asyncio.sleep(0.5)  # Simulate processing
 
-        # Step 2: Search knowledge base
-        yield str(StreamData(event="thinking", data={"message": "Searching knowledge base for relevant agents..."}))
-        await asyncio.sleep(0.3)
+        # Step 2-5: Use Agent Builder Service for complete pipeline
+        from langflow.custom.genesis.services.deps import get_agent_builder_service
 
-        kb_service = get_knowledge_base_service()
-        matching_agents: list[AgentMetadata] = kb_service.search_agents(request.prompt, top_k=5)
+        agent_builder_service = get_agent_builder_service()
 
-        if not matching_agents:
-            yield str(
-                StreamData(
-                    event="error",
-                    data={"error": "No matching agents found in knowledge base. Please try a different query."},
-                )
-            )
-            return
-
-        yield str(
-            StreamData(
-                event="thinking",
-                data={"message": f"Found {len(matching_agents)} relevant agents in knowledge base."},
-            )
-        )
-        await asyncio.sleep(0.2)
-
-        # Step 3: Stream each found agent
-        for i, agent in enumerate(matching_agents, 1):
-            yield str(
-                StreamData(
-                    event="thinking",
-                    data={"message": f"Analyzing agent {i}/{len(matching_agents)}: {agent.name}"},
-                )
-            )
-            await asyncio.sleep(0.2)
-
-            yield str(
-                StreamData(
-                    event="agent_found",
-                    data={
-                        "agent": agent.to_dict(),
-                        "index": i,
-                        "total": len(matching_agents),
-                    },
-                )
-            )
-            await asyncio.sleep(0.1)
-
-        # Step 4: Prepare agent data for LLM (POC - without actual LLM call)
-        yield str(StreamData(event="thinking", data={"message": "Generating workflow recommendation..."}))
-        await asyncio.sleep(0.5)
-
-        # POC: Simple workflow generation without LLM
-        # In next phase, we'll integrate actual LLM here
-        workflow = {
-            "name": "Generated Workflow",
-            "description": f"Workflow based on: {request.prompt}",
-            "components": [
-                {"id": "input-1", "type": "ChatInput", "name": "User Input"},
-            ],
-            "agents_used": [agent.to_dict() for agent in matching_agents[:3]],  # Use top 3
-        }
-
-        # Add agents as components
-        for i, agent in enumerate(matching_agents[:3]):
-            workflow["components"].append(
-                {
-                    "id": f"agent-{i+1}",
-                    "type": "Agent",
-                    "name": agent.name,
-                    "config": {
-                        "agent_id": agent.id,
-                        "description": agent.description,
-                    },
-                }
-            )
-
-        # Add output
-        workflow["components"].append({"id": "output-1", "type": "ChatOutput", "name": "Result"})
-
-        yield str(
-            StreamData(
-                event="thinking",
-                data={"message": "Workflow generated successfully! Ready to build."},
-            )
-        )
-        await asyncio.sleep(0.3)
-
-        # Step 5: Send complete response
-        yield str(
-            StreamData(
-                event="complete",
-                data={
-                    "workflow": workflow,
-                    "agents_count": len(matching_agents),
-                    "reasoning": f"Based on your request '{request.prompt}', I've identified {len(matching_agents)} "
-                    f"relevant agents and created a workflow using the top 3: "
-                    f"{', '.join(a.name for a in matching_agents[:3])}",
-                },
-            )
-        )
+        # Stream the complete agent building pipeline
+        async for event in agent_builder_service.build_streaming(request.prompt):
+            yield str(event)
 
     except Exception as e:
         logger.exception(f"Error in agent builder stream: {e}")

@@ -246,6 +246,11 @@ postgresql = [
     "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
 ]
 
+azure = [
+    "azure-search-documents>=11.4.0,<12.0.0",
+    "azure-identity>=1.15.0,<2.0.0",
+]
+
 [tool.uv]
 override-dependencies = [
     # temporary force a newer python-pptx
