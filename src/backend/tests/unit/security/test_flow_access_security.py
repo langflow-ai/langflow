@@ -13,7 +13,7 @@ from langflow.api.security import (
     get_flow_with_ownership_by_name_or_id,
     get_public_flow_by_name_or_id,
 )
-from langflow.services.database.models.flow.model import AccessTypeEnum
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.database.models.user.model import User
 
 
@@ -21,7 +21,7 @@ from langflow.services.database.models.user.model import User
 @pytest.fixture
 async def created_user(session):
     """Create a test user."""
-    user = User(username="test_user", email="test@example.com")
+    user = User(username="test_user", password="test1234", email="test@example.com")  # noqa: S106
     session.add(user)
     await session.commit()
     await session.refresh(user)

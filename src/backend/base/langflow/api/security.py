@@ -58,12 +58,16 @@ async def get_flow_with_ownership_by_name_or_id(
     Raises:
         HTTPException: 404 if flow not found or not owned by user
     """
-    except ValueError:
+    try:
+        # Try to parse as UUID first
+        flow_uuid = UUID(flow_id_or_name)
+        return await get_flow_with_ownership(session, flow_uuid, user_id)
+    except ValueError as exc:
         # Not a UUID, treat as endpoint name
         stmt = select(Flow).where(Flow.endpoint_name == flow_id_or_name, Flow.user_id == user_id)
         flow = (await session.exec(stmt)).first()
         if not flow:
-            raise HTTPException(status_code=404, detail="Flow not found") from None
+            raise HTTPException(status_code=404, detail="Flow not found") from exc
         return flow
 
 
