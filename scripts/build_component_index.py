@@ -78,10 +78,10 @@ def main():
     # Create directory if it doesn't exist
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Write the index with pretty formatting for readability in PRs
-    print(f"\nWriting index to {output_path}")
-    # orjson.dumps with OPT_INDENT_2 for pretty printing
-    json_bytes = orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2)
+    # Always minify to reduce file size and git history bloat (from 83k to ~5k lines)
+    # The index is auto-generated and can be inspected with `jq` if needed
+    print(f"\nWriting minified index to {output_path}")
+    json_bytes = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
     output_path.write_text(json_bytes.decode("utf-8"), encoding="utf-8")
 
     print("\nIndex successfully written!")
