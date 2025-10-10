@@ -32,7 +32,7 @@ export default function MainSidebar(): JSX.Element {
   return (
     <div 
       className={`
-        flex h-full flex-col bg-gray-50 border-r border-gray-200 shadow-sm transition-all duration-300 ease-in-out
+        flex h-full flex-col bg-white border-r border-gray-200 shadow-sm transition-all duration-300 ease-in-out
         ${isCollapsed ? 'w-16' : 'w-60'}
       `}
     >
@@ -52,8 +52,8 @@ export default function MainSidebar(): JSX.Element {
                   : 'h-10 w-full justify-start gap-3 px-3'
                 }
                 ${active 
-                  ? 'bg-blue-100 text-blue-600 shadow-sm' 
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  ? 'bg-secondary-bg text-primary-blue shadow-sm' 
+                  : 'text-text-grey hover:bg-secondary-bg hover:text-primary-blue'
                 }
               `}
               title={isCollapsed ? item.label : undefined}

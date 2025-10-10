@@ -42,12 +42,12 @@ export default function TemplateGetStartedCardComponent({
 
   return flow ? (
     <div
-      className="group relative flex h-full min-h-[200px] w-full cursor-pointer flex-col overflow-hidden rounded-3xl border focus-visible:border-ring md:min-h-[250px]"
+      className="group relative flex h-full min-h-[200px] bg-theme-gredient w-full cursor-pointer flex-col overflow-hidden rounded-3xl border focus-visible:border-ring md:min-h-[250px]"
       tabIndex={1}
       onKeyDown={handleKeyDown}
       onClick={handleClick}
     >
-      <div className="absolute inset-2 h-[calc(100%-16px)] w-[calc(100%-16px)] overflow-hidden rounded-2xl">
+      {/* <div className="absolute inset-2 h-[calc(100%-16px)] w-[calc(100%-16px)] overflow-hidden rounded-2xl">
         <img
           src={bgImage}
           alt={`${flow.name} Spiral`}
@@ -58,7 +58,7 @@ export default function TemplateGetStartedCardComponent({
           alt={`${flow.name} Horizontal`}
           className="block h-full w-full object-cover transition-all duration-300 group-hover:scale-[102%] group-focus-visible:scale-[102%] lg:hidden"
         />
-      </div>
+      </div> */}
       <div className="card-shine-effect absolute inset-2 flex h-[calc(100%-16px)] min-w-[calc(100%-16px)] flex-col items-start gap-1 rounded-2xl p-4 text-white md:gap-3 lg:gap-4 lg:py-6">
         <div className="flex items-center gap-2 text-zinc-400 mix-blend-plus-lighter">
           <ForwardedIconComponent name={icon} className="h-4 w-4" />
@@ -67,7 +67,7 @@ export default function TemplateGetStartedCardComponent({
           </span>
         </div>
         <div className="flex w-full items-center justify-between">
-          <h3 className="line-clamp-3 text-lg font-bold lg:text-xl">
+          <h3 className="line-clamp-3 text-lg text-white font-bold lg:text-xl">
             {flow.name}
           </h3>
           <ForwardedIconComponent
