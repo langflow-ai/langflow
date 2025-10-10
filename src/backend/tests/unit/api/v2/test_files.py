@@ -547,8 +547,6 @@ def aws_credentials():
     if not os.environ.get("AWS_DEFAULT_REGION"):
         os.environ["AWS_DEFAULT_REGION"] = "us-west-2"
 
-    yield
-
     # No cleanup needed - we're using existing env vars
 
 
@@ -625,7 +623,8 @@ async def s3_files_client_fixture(
             # Configure S3 storage
             monkeypatch.setenv("LANGFLOW_STORAGE_TYPE", "s3")
             monkeypatch.setenv(
-                "LANGFLOW_OBJECT_STORAGE_BUCKET_NAME", os.environ.get("LANGFLOW_OBJECT_STORAGE_BUCKET_NAME", "langflow-ci")
+                "LANGFLOW_OBJECT_STORAGE_BUCKET_NAME",
+                os.environ.get("LANGFLOW_OBJECT_STORAGE_BUCKET_NAME", "langflow-ci"),
             )
             # Use unique prefix per test run to avoid conflicts
             test_prefix = f"test-files-api-{uuid.uuid4().hex[:8]}"

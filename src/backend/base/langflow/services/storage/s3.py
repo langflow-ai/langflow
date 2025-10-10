@@ -138,9 +138,8 @@ class S3StorageService(StorageService):
             if error_code == "InvalidAccessKeyId":
                 msg = "Invalid AWS credentials. Please check your AWS access key and secret key"
                 raise PermissionError(msg) from e
-            else:
-                msg = f"Failed to save file to S3: {error_msg}"
-                raise RuntimeError(msg) from e
+            msg = f"Failed to save file to S3: {error_msg}"
+            raise RuntimeError(msg) from e
 
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """Retrieve a file from S3.

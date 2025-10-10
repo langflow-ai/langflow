@@ -317,7 +317,7 @@ async def delete_files_batch(
 
         # Track storage deletion failures
         storage_failures = []
-        
+
         # Delete all files from the storage service
         for file in files:
             # Extract just the filename from the path (strip user_id prefix)
@@ -328,29 +328,27 @@ async def delete_files_batch(
                 # Log the storage error but continue with database deletion
                 storage_failures.append(f"{file_name}: {storage_error}")
                 await logger.awarning(
-                    "Failed to delete file %s from storage (will still remove from database): %s", 
-                    file_name, 
-                    storage_error
+                    "Failed to delete file %s from storage (will still remove from database): %s",
+                    file_name,
+                    storage_error,
                 )
                 # For S3 bucket errors, log more specifically
                 if "NoSuchBucket" in str(storage_error):
                     await logger.aerror(
-                        "S3 bucket does not exist for file %s. File will be removed from database but may still exist in storage.", 
-                        file_name
+                        "S3 bucket does not exist for file %s. File will be removed from database but may still exist in storage.",
+                        file_name,
                     )
-            
+
             # Always delete from database regardless of storage deletion result
             await session.delete(file)
 
         # Delete all files from the database
         await session.commit()  # Commit deletion
-        
+
         # If there were storage failures, include them in the response
         if storage_failures:
             await logger.awarning(
-                "Batch delete completed with %d storage failures: %s", 
-                len(storage_failures), 
-                storage_failures
+                "Batch delete completed with %d storage failures: %s", len(storage_failures), storage_failures
             )
 
     except Exception as e:
@@ -486,18 +484,17 @@ async def download_file(
             if file_content is None:
                 raise HTTPException(status_code=404, detail="File not found")
             return await read_file_content(file_content, decode=True)
+        # For streaming, use the appropriate method based on storage type
+        if hasattr(storage_service, "get_file_stream"):
+            # S3 storage - use streaming method
+            file_stream = storage_service.get_file_stream(flow_id=str(current_user.id), file_name=file_name)
+            byte_stream = file_stream
         else:
-            # For streaming, use the appropriate method based on storage type
-            if hasattr(storage_service, 'get_file_stream'):
-                # S3 storage - use streaming method
-                file_stream = storage_service.get_file_stream(flow_id=str(current_user.id), file_name=file_name)
-                byte_stream = file_stream
-            else:
-                # Local storage - get file and convert to stream
-                file_content = await storage_service.get_file(flow_id=str(current_user.id), file_name=file_name)
-                if file_content is None:
-                    raise HTTPException(status_code=404, detail="File not found")
-                byte_stream = byte_stream_generator(file_content)
+            # Local storage - get file and convert to stream
+            file_content = await storage_service.get_file(flow_id=str(current_user.id), file_name=file_name)
+            if file_content is None:
+                raise HTTPException(status_code=404, detail="File not found")
+            byte_stream = byte_stream_generator(file_content)
 
         # Create the filename with extension
         file_extension = Path(file.path).suffix
@@ -553,7 +550,7 @@ async def delete_file(
 
         # Extract just the filename from the path (strip user_id prefix)
         file_name = file_to_delete.path.split("/")[-1]
-        
+
         # Delete the file from the storage service first
         # If this fails, we don't want to delete from the database
         try:
@@ -562,21 +559,19 @@ async def delete_file(
             # Log the storage error but don't fail the entire operation
             # This handles cases like missing buckets, network issues, etc.
             await logger.awarning(
-                "Failed to delete file %s from storage (will still remove from database): %s", 
-                file_name, 
-                storage_error
+                "Failed to delete file %s from storage (will still remove from database): %s", file_name, storage_error
             )
             # For S3 bucket errors, we might want to be more specific
             if "NoSuchBucket" in str(storage_error):
                 await logger.aerror(
-                    "S3 bucket does not exist for file %s. File will be removed from database but may still exist in storage.", 
-                    file_name
+                    "S3 bucket does not exist for file %s. File will be removed from database but may still exist in storage.",
+                    file_name,
                 )
 
         # Delete from the database (this should always succeed if we got this far)
         await session.delete(file_to_delete)
         await session.commit()
-        
+
         return {"detail": f"File {file_to_delete.name} deleted successfully"}
 
     except HTTPException:
@@ -604,7 +599,7 @@ async def delete_all_files(
 
         # Track storage deletion failures
         storage_failures = []
-        
+
         # Delete all files from the storage service
         for file in files:
             # Extract just the filename from the path (strip user_id prefix)
@@ -615,29 +610,27 @@ async def delete_all_files(
                 # Log the storage error but continue with database deletion
                 storage_failures.append(f"{file_name}: {storage_error}")
                 await logger.awarning(
-                    "Failed to delete file %s from storage (will still remove from database): %s", 
-                    file_name, 
-                    storage_error
+                    "Failed to delete file %s from storage (will still remove from database): %s",
+                    file_name,
+                    storage_error,
                 )
                 # For S3 bucket errors, log more specifically
                 if "NoSuchBucket" in str(storage_error):
                     await logger.aerror(
-                        "S3 bucket does not exist for file %s. File will be removed from database but may still exist in storage.", 
-                        file_name
+                        "S3 bucket does not exist for file %s. File will be removed from database but may still exist in storage.",
+                        file_name,
                     )
-            
+
             # Always delete from database regardless of storage deletion result
             await session.delete(file)
 
         # Delete all files from the database
         await session.commit()  # Commit deletion
-        
+
         # If there were storage failures, include them in the response
         if storage_failures:
             await logger.awarning(
-                "Batch delete completed with %d storage failures: %s", 
-                len(storage_failures), 
-                storage_failures
+                "Batch delete completed with %d storage failures: %s", len(storage_failures), storage_failures
             )
 
     except Exception as e:

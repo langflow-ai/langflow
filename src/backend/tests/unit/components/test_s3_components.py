@@ -1,15 +1,15 @@
-"""
-S3-specific test class for components that work with S3 storage.
+"""S3-specific test class for components that work with S3 storage.
 
 This test class focuses on components that are compatible with S3 storage.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from langflow.components.data.file import FileComponent
-from langflow.components.processing.save_file import SaveFileComponent
 from langflow.components.langchain_utilities.csv_agent import CSVAgentComponent
 from langflow.components.langchain_utilities.json_agent import JSONAgentComponent
+from langflow.components.processing.save_file import SaveFileComponent
 
 
 class TestS3CompatibleComponents:
@@ -34,15 +34,15 @@ class TestS3CompatibleComponents:
         """Test FileComponent with S3 paths."""
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             component = FileComponent()
-            
+
             # Test S3 path detection
             s3_path = "user_123/document.pdf"
             component.file_path = s3_path
-            
+
             # Mock the storage utils
             with patch("langflow.base.data.storage_utils.read_file_bytes", return_value=b"file content"):
                 result = await component.load_files()
-                
+
                 # Should process S3 file successfully
                 assert result is not None
 
@@ -51,24 +51,29 @@ class TestS3CompatibleComponents:
         """Test SaveFileComponent with S3 storage."""
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             component = SaveFileComponent()
-            
+
             # Mock database and storage services
             with (
                 patch("langflow.components.processing.save_file.session_scope") as mock_session,
-                patch("langflow.components.processing.save_file.get_user_by_id", new_callable=AsyncMock) as mock_get_user,
-                patch("langflow.components.processing.save_file.upload_user_file", new_callable=AsyncMock) as mock_upload,
+                patch(
+                    "langflow.components.processing.save_file.get_user_by_id", new_callable=AsyncMock
+                ) as mock_get_user,
+                patch(
+                    "langflow.components.processing.save_file.upload_user_file", new_callable=AsyncMock
+                ) as mock_upload,
             ):
                 mock_get_user.return_value = MagicMock()
                 mock_upload.return_value = "s3_file.txt"
-                
+
                 # Test with DataFrame
-                from langflow.schema import DataFrame, Data
+                from langflow.schema import Data, DataFrame
+
                 test_data = DataFrame(data=[Data(data={"text": "test content"})])
                 component.data = test_data
                 component.file_name = "test_output.csv"
-                
+
                 result = await component.save_to_file()
-                
+
                 # Should upload to S3 successfully
                 assert "saved successfully" in result.text
                 assert "s3_file.txt" in result.text
@@ -78,16 +83,12 @@ class TestS3CompatibleComponents:
         """Test CSVAgentComponent with S3 files."""
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             component = CSVAgentComponent()
-            component.set_attributes({
-                "llm": MagicMock(),
-                "path": "user_123/data.csv",
-                "verbose": False
-            })
-            
+            component.set_attributes({"llm": MagicMock(), "path": "user_123/data.csv", "verbose": False})
+
             # Mock storage utils
             with patch("langflow.base.data.storage_utils.read_file_bytes", return_value=b"name,age\nJohn,30"):
                 local_path = component._get_local_path()
-                
+
                 # Should handle S3 path correctly
                 assert local_path is not None
 
@@ -96,16 +97,12 @@ class TestS3CompatibleComponents:
         """Test JSONAgentComponent with S3 files."""
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             component = JSONAgentComponent()
-            component.set_attributes({
-                "llm": MagicMock(),
-                "path": "user_123/data.json",
-                "verbose": False
-            })
-            
+            component.set_attributes({"llm": MagicMock(), "path": "user_123/data.json", "verbose": False})
+
             # Mock storage utils
             with patch("langflow.base.data.storage_utils.read_file_bytes", return_value=b'{"key": "value"}'):
                 local_path = component._get_local_path()
-                
+
                 # Should handle S3 path correctly
                 assert local_path is not None
 
@@ -115,7 +112,7 @@ class TestS3CompatibleComponents:
         with patch("langflow.services.deps.get_settings_service", return_value=local_settings):
             component = FileComponent()
             component.file_path = "/local/path/file.txt"
-            
+
             # Should work with local paths
             assert component.file_path == "/local/path/file.txt"
 
@@ -124,16 +121,12 @@ class TestS3CompatibleComponents:
         """Test S3 path parsing in components."""
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             # Test various S3 path formats
-            test_paths = [
-                "user_123/file.txt",
-                "flow_456/document.pdf",
-                "user_789/folder/subfolder/file.json"
-            ]
-            
+            test_paths = ["user_123/file.txt", "flow_456/document.pdf", "user_789/folder/subfolder/file.json"]
+
             for path in test_paths:
                 component = FileComponent()
                 component.file_path = path
-                
+
                 # Should accept S3 paths
                 assert component.file_path == path
 
@@ -143,11 +136,11 @@ class TestS3CompatibleComponents:
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             component = FileComponent()
             component.file_path = "user_123/large_file.csv"
-            
+
             # Mock the download process
             with patch("langflow.base.data.storage_utils.read_file_bytes", return_value=b"csv,content\n1,2"):
                 result = await component.load_files()
-                
+
                 # Should process downloaded content
                 assert result is not None
 
@@ -157,9 +150,11 @@ class TestS3CompatibleComponents:
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             component = FileComponent()
             component.file_path = "user_123/nonexistent.txt"
-            
+
             # Mock S3 error
-            with patch("langflow.base.data.storage_utils.read_file_bytes", side_effect=FileNotFoundError("File not found")):
+            with patch(
+                "langflow.base.data.storage_utils.read_file_bytes", side_effect=FileNotFoundError("File not found")
+            ):
                 with pytest.raises(FileNotFoundError):
                     await component.load_files()
 
@@ -169,16 +164,16 @@ class TestS3CompatibleComponents:
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             component = FileComponent()
             component.file_path = "user_123/large_file.txt"
-            
+
             # Mock streaming
             async def mock_stream():
                 yield b"chunk1"
                 yield b"chunk2"
                 yield b"chunk3"
-            
+
             with patch("langflow.base.data.storage_utils.read_file_bytes", return_value=b"chunk1chunk2chunk3"):
                 result = await component.load_files()
-                
+
                 # Should handle streaming content
                 assert result is not None
 
@@ -188,12 +183,12 @@ class TestS3CompatibleComponents:
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             component = FileComponent()
             component.file_path = "user_123/metadata_file.json"
-            
+
             # Mock file with metadata
             file_content = b'{"name": "test", "size": 1024, "type": "application/json"}'
             with patch("langflow.base.data.storage_utils.read_file_bytes", return_value=file_content):
                 result = await component.load_files()
-                
+
                 # Should preserve metadata
                 assert result is not None
 
@@ -202,22 +197,22 @@ class TestS3CompatibleComponents:
         """Test concurrent S3 operations."""
         with patch("langflow.services.deps.get_settings_service", return_value=s3_settings):
             import asyncio
-            
+
             async def process_file(file_path):
                 component = FileComponent()
                 component.file_path = file_path
                 with patch("langflow.base.data.storage_utils.read_file_bytes", return_value=b"content"):
                     return await component.load_files()
-            
+
             # Test concurrent file processing
             tasks = [
                 process_file("user_123/file1.txt"),
                 process_file("user_123/file2.txt"),
-                process_file("user_123/file3.txt")
+                process_file("user_123/file3.txt"),
             ]
-            
+
             results = await asyncio.gather(*tasks)
-            
+
             # All should succeed
             assert len(results) == 3
             assert all(result is not None for result in results)
