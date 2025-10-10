@@ -60,7 +60,9 @@ async def first_user_api_key(client: AsyncClient, logged_in_headers, active_user
     """Create an API key for the first user."""
     api_key_data = ApiKeyCreate(name="first-user-api-key")
     response = await client.post(
-        "api/v1/api_key/", json=api_key_data.model_dump(mode="json"), headers=logged_in_headers
+        "api/v1/api_key/",
+        json=api_key_data.model_dump(mode="json"),
+        headers=logged_in_headers,
     )
     assert response.status_code == 200, response.text
     data = response.json()
