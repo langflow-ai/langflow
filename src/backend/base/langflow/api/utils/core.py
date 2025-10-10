@@ -169,12 +169,15 @@ async def _get_flow_name(flow_id: uuid.UUID, user_id: uuid.UUID | None = None) -
 
             flow = await get_flow_with_ownership(session, flow_id, user_id)
         else:
-            # Fallback to non-validated access (for backward compatibility)
-            # WARNING: This should only be used for public flows or internal operations
-            flow = await session.get(Flow, flow_id)
-            if flow is None:
-                msg = f"Flow {flow_id} not found"
-                raise ValueError(msg)
+            # No user_id provided - this should only happen for public flows
+            # Use explicit public flow validation for security
+            from langflow.api.security import get_public_flow_by_name_or_id
+            try:
+                flow = await get_public_flow_by_name_or_id(session, str(flow_id))
+            except HTTPException as exc:
+                # If it's not a public flow and no user_id, this is a security error
+                msg = f"Flow {flow_id} not found or access denied"
+                raise ValueError(msg) from exc
     return flow.name
 
 
@@ -227,12 +230,15 @@ async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession
         )
         flow = await get_flow_with_ownership(session, flow_id, user_uuid)
     else:
-        # Fallback to non-validated access (for backward compatibility)
-        # WARNING: This should only be used for public flows or internal operations
-        flow = await session.get(Flow, flow_id)
-        if not flow:
-            msg = "Invalid flow ID"
-            raise ValueError(msg)
+        # No requesting_user_id provided - this should only happen for public flows
+        # Use explicit public flow validation for security
+        from langflow.api.security import get_public_flow_by_name_or_id
+        try:
+            flow = await get_public_flow_by_name_or_id(session, str(flow_id))
+        except HTTPException as exc:
+            # If it's not a public flow and no user_id, this is a security error
+            msg = f"Flow {flow_id} not found or access denied"
+            raise ValueError(msg) from exc
 
     if not flow.data:
         msg = "Flow has no data"

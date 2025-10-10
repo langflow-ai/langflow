@@ -62,6 +62,7 @@ async def retrieve_vertices_order(
     data: Annotated[FlowDataRequest | None, Body(embed=True)] | None = None,
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
+    current_user: CurrentActiveUser,
     session: DbSession,
 ) -> VerticesOrderResponse:
     """Retrieve the vertices order for a given flow.
@@ -72,6 +73,7 @@ async def retrieve_vertices_order(
         data (Optional[FlowDataRequest], optional): The flow data. Defaults to None.
         stop_component_id (str, optional): The ID of the stop component. Defaults to None.
         start_component_id (str, optional): The ID of the start component. Defaults to None.
+        current_user (Any): The current user dependency.
         session (AsyncSession, optional): The session dependency.
 
     Returns:
@@ -80,6 +82,12 @@ async def retrieve_vertices_order(
     Raises:
         HTTPException: If there is an error checking the build status.
     """
+    # SECURITY: Validate flow ownership before proceeding
+    from langflow.api.security import get_flow_with_ownership
+
+    async with session_scope() as temp_session:
+        await get_flow_with_ownership(temp_session, flow_id, current_user.id)
+
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
@@ -266,6 +274,12 @@ async def build_vertex(
         HTTPException: If there is an error building the vertex.
 
     """
+    # SECURITY: Validate flow ownership before accessing cache
+    from langflow.api.security import get_flow_with_ownership
+
+    async with session_scope() as temp_session:
+        await get_flow_with_ownership(temp_session, flow_id, current_user.id)
+
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
     flow_id_str = str(flow_id)
@@ -275,6 +289,7 @@ async def build_vertex(
     start_time = time.perf_counter()
     error_message = None
     try:
+        # Now safe to proceed with cached graph - ownership validated above
         graph: Graph = await chat_service.get_cache(flow_id_str)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Graph not found") from exc
@@ -288,6 +303,7 @@ async def build_vertex(
                 flow_id=flow_id,
                 session=await anext(get_session()),
                 chat_service=chat_service,
+                requesting_user_id=str(current_user.id),
             )
         else:
             graph = cache.get("result")
