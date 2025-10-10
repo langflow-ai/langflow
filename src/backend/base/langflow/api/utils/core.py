@@ -172,6 +172,7 @@ async def _get_flow_name(flow_id: uuid.UUID, user_id: uuid.UUID | None = None) -
             # No user_id provided - this should only happen for public flows
             # Use explicit public flow validation for security
             from langflow.api.security import get_public_flow_by_name_or_id
+
             try:
                 flow = await get_public_flow_by_name_or_id(session, str(flow_id))
             except HTTPException as exc:
@@ -233,6 +234,7 @@ async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession
         # No requesting_user_id provided - this should only happen for public flows
         # Use explicit public flow validation for security
         from langflow.api.security import get_public_flow_by_name_or_id
+
         try:
             flow = await get_public_flow_by_name_or_id(session, str(flow_id))
         except HTTPException as exc:
