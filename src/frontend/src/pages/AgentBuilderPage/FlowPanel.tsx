@@ -61,7 +61,7 @@ export default function FlowPanel({ flowId, yamlSpec, flowData, folderId, onClos
         )}
 
         {activeTab === "visualization" && (
-          <div className="h-full">
+          <div className="h-full agent-builder-flow-view">
             {/* Direct canvas component without iframe */}
             <FlowPage view={true} flowId={flowId} folderId={folderId} />
           </div>

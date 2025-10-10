@@ -130,6 +130,28 @@ function CompleteMessage({ data, onBuildAgent, isFlowBuilt }: { data: any; onBui
     }
   };
 
+  // Show simplified view when flow is built
+  if (isFlowBuilt && workflow?.components && workflow.components.length > 0) {
+    return (
+      <div className="mb-3">
+        <div className="bg-secondary-bg rounded-lg bg-muted/50 p-4">
+          <p className="text-sm text-muted-foreground">Here's your visual workflow on the canvas:</p>
+          <ul className="space-y-1.5 mb-4">
+            {workflow.components.map((comp: any, idx: number) => (
+              <li key={idx} className="text-sm text-muted-foreground">
+                <span>- {comp.name}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm font-medium mb-4">
+            You can drag and drop nodes to edit, or run it in the Playground to test.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show full card view before building
   return (
     <div className="mb-3">
       <Card className="bg-secondary-bg">
@@ -175,41 +197,23 @@ function CompleteMessage({ data, onBuildAgent, isFlowBuilt }: { data: any; onBui
                     </div>
                   )}
 
-                  {/* Show buttons only if flow is not built yet */}
-                  {!isFlowBuilt && (
-                    <div className="mt-4 flex gap-2">
-                      <button
-                        onClick={handleBuildClick}
-                        className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                      >
-                        <div className="flex items-center gap-2">
-                          <ForwardedIconComponent name="Play" className="h-4 w-4" />
-                          Build Agent
-                        </div>
-                      </button>
-                      <button className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">
-                        <div className="flex items-center gap-2">
-                          <ForwardedIconComponent name="Edit" className="h-4 w-4" />
-                          Edit Plan
-                        </div>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Show summary when flow is built */}
-                  {isFlowBuilt && workflow.components && workflow.components.length > 0 && (
-                    <div className="mt-4 rounded-lg bg-muted/50 p-4">
-                      <p className="text-sm font-medium mb-3">Here's your visual workflow on the canvas:</p>
-                      <ul className="space-y-1.5">
-                        {workflow.components.map((comp: any, idx: number) => (
-                          <li key={idx} className="text-sm text-muted-foreground flex items-center gap-2">
-                            <span className="text-primary">-</span>
-                            <span>{comp.name}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={handleBuildClick}
+                      className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                    >
+                      <div className="flex items-center gap-2">
+                        <ForwardedIconComponent name="Play" className="h-4 w-4" />
+                        Build Agent
+                      </div>
+                    </button>
+                    <button className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">
+                      <div className="flex items-center gap-2">
+                        <ForwardedIconComponent name="Edit" className="h-4 w-4" />
+                        Edit Plan
+                      </div>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
