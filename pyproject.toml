@@ -214,6 +214,9 @@ members = [
 [tool.hatch.build.targets.wheel]
 packages = ["src/backend/langflow"]
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [project.urls]
 Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
