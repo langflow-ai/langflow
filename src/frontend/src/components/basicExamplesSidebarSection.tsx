@@ -1,45 +1,21 @@
-import React, { useState, useRef, useCallback } from "react";
+import React from "react";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
-import { Input } from "@/components/ui/input";
-import SidebarDraggableComponent from "@/pages/FlowPage/components/flowSidebarComponent/components/sidebarDraggableComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import { Plus } from "lucide-react";
+import { useSearchContext } from "@/pages/FlowPage/components/flowSidebarComponent";
+// import { useSearchContext } from "../index";
 
 const BasicExamplesSidebarSection: React.FC = () => {
   const examples = useFlowsManagerStore((state) => state.examples);
   const paste = useFlowStore((state) => state.paste);
-  const [search, setSearch] = useState("");
-  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
-  const [order, setOrder] = useState<number[]>(examples ? examples.map((_, i) => i) : []);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  
-  // Update order if examples change
-  React.useEffect(() => {
-    setOrder(examples ? examples.map((_, i) => i) : []);
-  }, [examples]);
+  const { search } = useSearchContext();
 
+  // Filter examples based on the global search from sidebar
   const filteredExamples = examples
-    ? order
-        .map((i) => examples[i])
-        .filter((example) =>
-          example.name.toLowerCase().includes(search.toLowerCase())
-        )
+    ? examples.filter((example) =>
+        example.name.toLowerCase().includes((search ?? "").toLowerCase())
+      )
     : [];
-
-  // Drag and drop handlers
-  const handleDragStart = (idx: number) => setDraggedIdx(idx);
-  const handleDragOver = (idx: number) => {
-    if (draggedIdx === null || draggedIdx === idx) return;
-    setOrder((prev) => {
-      const newOrder = [...prev];
-      const [removed] = newOrder.splice(draggedIdx, 1);
-      newOrder.splice(idx, 0, removed);
-      return newOrder;
-    });
-    setDraggedIdx(idx);
-  };
-  const handleDragEnd = () => setDraggedIdx(null);
 
   // Handler to add full flow
   const handleAddFullFlow = (example) => {
@@ -86,82 +62,53 @@ const BasicExamplesSidebarSection: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-2 p-3">
-      {/* Search Bar */}
-      <div className="relative w-full flex-1 mb-2">
-        <ForwardedIconComponent
-          name="Search"
-          className="absolute inset-y-0 left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-primary"
-        />
-        <Input
-          ref={searchInputRef}
-          type="search"
-          className="w-full rounded-lg bg-background pl-8 text-sm"
-          placeholder="Search templates..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-      <div className="flex flex-col gap-1 py-2">
+      <div className="flex flex-col gap-2 py-1">
         {filteredExamples.length > 0 ? (
-          filteredExamples.map((example, idx) => (
+          filteredExamples.map((example) => (
             <div
               key={example.id}
-              draggable
-              onDragStart={() => handleDragStart(idx)}
-              onDragOver={(e) => {
-                e.preventDefault();
-                handleDragOver(idx);
-              }}
-              onDragEnd={handleDragEnd}
-              className="bg-muted rounded-md"
-              style={{ opacity: draggedIdx === idx ? 0.5 : 1 }}
+              className="relative group"
             >
-              <ShadTooltip content={example.name} side="right">
-                <SidebarDraggableComponent
-                  sectionName="basic_examples"
-                  apiClass={{
-                    display_name: example.name,
-                    description: example.description,
-                    icon: example.icon,
-                    id: example.id,
-                    template: {},
-                    documentation: "",
+              <div
+                draggable
+                onDragStart={e => {
+                  const data = JSON.stringify(example);
+                  e.dataTransfer.setData("basicExample", data);
+                  e.dataTransfer.setData("text/plain", data);
+                }}
+                className="bg-muted hover:bg-muted/80 rounded-md p-2 cursor-grab active:cursor-grabbing transition-colors border border-border/50 hover:border-border flex items-center justify-between group"
+                title={example.description}
+              >
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  {example.icon && (
+                    <span className="text-sm flex-shrink-0">{example.icon}</span>
+                  )}
+                  <span 
+                    className="text-sm font-medium text-foreground truncate"
+                    title={example.name}
+                  >
+                    {example.name}
+                  </span>
+                </div>
+                
+                {/* Plus Icon - Only visible on hover */}
+                <button
+                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-background/80 rounded-sm flex-shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAddFullFlow(example);
                   }}
-                  icon={example.icon ?? "Unknown"}
-                  onDragStart={(event) => {
-                    // Ensure example has display_name property to prevent errors
-                    const exampleWithDisplayName = {
-                      ...example,
-                      display_name: example.name || example.id
-                    };
-                    // Format data properly for the drop handler
-                    const data = JSON.stringify({
-                      type: "genericNode",
-                      node: {
-                        ...exampleWithDisplayName,
-                        template: example.template || {}
-                      }
-                    });
-                    event.dataTransfer.setData("basicExample", data);
-                    event.dataTransfer.setData("application/json", data);
-                    event.dataTransfer.setData("text/plain", data);
-                  }}
-                  color="#e5e7eb"
-                  itemName={example.id}
-                  error={false}
-                  display_name={example.name}
-                  official={true}
-                  beta={false}
-                  legacy={false}
-                  disabled={false}
-                  // Add full flow on + button click
-                  onClickPlus={() => handleAddFullFlow(example)}
-                />
-              </ShadTooltip>
+                  title="Add full flow"
+                >
+                  <Plus className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                </button>
+              </div>
             </div>
           ))
         ) : (
-          <div className="text-muted-foreground text-xs px-2 py-4">No examples found.</div>
+          <div className="text-muted-foreground text-xs px-2 py-4">
+            {search ? "No examples match your search." : "No examples found."}
+          </div>
         )}
       </div>
     </div>
