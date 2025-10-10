@@ -13,8 +13,34 @@ from langflow.api.security import (
     get_flow_with_ownership_by_name_or_id,
     get_public_flow_by_name_or_id,
 )
-from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
+from langflow.services.database.models.flow.model import AccessTypeEnum
 from langflow.services.database.models.user.model import User
+
+
+# Fixtures for testing
+@pytest.fixture
+async def created_user(session):
+    """Create a test user."""
+    user = User(username="test_user", email="test@example.com")
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return user
+
+
+@pytest.fixture
+async def created_flow(session, created_user):
+    """Create a test flow owned by test user."""
+    flow = Flow(
+        name="Test Flow",
+        user_id=created_user.id,
+        data={"nodes": [], "edges": []},
+        access_type=AccessTypeEnum.PRIVATE,
+    )
+    session.add(flow)
+    await session.commit()
+    await session.refresh(flow)
+    return flow
 
 
 class TestFlowAccessSecurity:
@@ -126,31 +152,3 @@ class TestFlowAccessSecurity:
         with pytest.raises(HTTPException) as exc_info:
             await get_public_flow_by_name_or_id(session, "private_endpoint")
         assert exc_info.value.status_code == 404
-
-
-# Fixtures for testing
-@pytest.fixture
-async def created_user(session):
-    """Create a test user."""
-    user = User(username="test_user", email="test@example.com")
-    session.add(user)
-    await session.commit()
-    await session.refresh(user)
-    return user
-
-
-@pytest.fixture
-async def created_flow(session, created_user):
-    """Create a test flow owned by test user."""
-    flow = Flow(
-        name="Test Flow",
-        user_id=created_user.id,
-        data={"nodes": [], "edges": []},
-        access_type=AccessTypeEnum.PRIVATE,
-    )
-    session.add(flow)
-    await session.commit()
-    await session.refresh(flow)
-    return flow
-
-
