@@ -119,13 +119,19 @@ make backend
 ```
 
 > [!TIP]
-> **Component Development Mode**: By default, Langflow uses a prebuilt component index for fast startup (~10ms). If you're actively developing or modifying components, set `LFX_DEV=1` to enable dynamic component loading, which rebuilds components on every restart to reflect your changes:
+> **Component Development Mode**: By default, Langflow uses a prebuilt component index for fast startup (~10ms). If you're actively developing or modifying components, enable dynamic component loading with `LFX_DEV`:
 >
 > ```bash
+> # Load all components dynamically
 > LFX_DEV=1 make backend
+>
+> # Load only specific component modules (faster dev workflow)
+> LFX_DEV=mistral,openai,anthropic make backend
 > ```
 >
-> Without `LFX_DEV=1`, component changes require rebuilding the index:
+> The list mode is particularly useful when working on specific integrations, as it significantly speeds up startup time by only loading the components you need.
+>
+> Without `LFX_DEV`, component changes require rebuilding the index:
 >
 > ```bash
 > uv run python scripts/build_component_index.py
