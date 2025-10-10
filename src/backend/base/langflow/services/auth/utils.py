@@ -332,8 +332,7 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
         # The get_user_by_flow_id_or_endpoint_name with requesting_user_id will already
         # validate ownership, so if we get here, the user doesn't own the flow
         raise HTTPException(
-            status_code=403,
-            detail="Access denied: You can only execute webhooks for flows you own"
+            status_code=403, detail="Access denied: You can only execute webhooks for flows you own"
         ) from exc
     except Exception as exc:
         raise HTTPException(status_code=404, detail="Flow not found") from exc
