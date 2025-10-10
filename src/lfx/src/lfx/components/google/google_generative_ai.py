@@ -35,7 +35,7 @@ class ChatGoogleGenerativeAIFixed:
         for message in messages:
             if isinstance(message, ToolMessage) and not message.name:
                 # Create a new ToolMessage with a default name
-                message = ToolMessage(
+                tool_message = ToolMessage(
                     content=message.content,
                     name="tool_response",
                     tool_call_id=getattr(message, "tool_call_id", None),
@@ -43,8 +43,8 @@ class ChatGoogleGenerativeAIFixed:
                 )
             elif isinstance(message, FunctionMessage) and not message.name:
                 # Create a new FunctionMessage with a default name
-                message = FunctionMessage(content=message.content, name="function_response")
-            fixed_messages.append(message)
+                tool_message = FunctionMessage(content=message.content, name="function_response")
+            fixed_messages.append(tool_message)
 
         # Call the original method with fixed messages
         return self._model._prepare_request(fixed_messages, **kwargs)
