@@ -21,23 +21,29 @@ from langflow.services.storage.service import StorageService
 router = APIRouter(tags=["Files"], prefix="/files")
 
 
-# Secure dependency that validates flow ownership
-async def get_flow(
+# Internal secure dependency that validates flow ownership
+async def _get_flow_with_validation(
     flow_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
-):
+) -> Flow:
+    """Internal dependency for flow ownership validation."""
     return await get_flow_with_ownership(session, flow_id, current_user.id)
 
 
 @router.post("/upload/{flow_id}", status_code=HTTPStatus.CREATED)
 async def upload_file(
     *,
+    flow_id: UUID,
     file: UploadFile,
-    flow: Annotated[Flow, Depends(get_flow)],
+    current_user: CurrentActiveUser,
+    session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> UploadFileResponse:
+    # SECURITY: Validate flow ownership before proceeding
+    flow = await _get_flow_with_validation(flow_id, current_user, session)
+
     try:
         max_file_size_upload = settings_service.settings.max_file_size_upload
     except Exception as e:
@@ -63,9 +69,13 @@ async def upload_file(
 @router.get("/download/{flow_id}/{file_name}")
 async def download_file(
     file_name: str,
-    flow: Annotated[Flow, Depends(get_flow)],
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+    session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
+    # SECURITY: Validate flow ownership before proceeding
+    flow = await _get_flow_with_validation(flow_id, current_user, session)
     flow_id_str = str(flow.id)
     extension = file_name.split(".")[-1]
 
@@ -92,7 +102,15 @@ async def download_file(
 
 
 @router.get("/images/{flow_id}/{file_name}")
-async def download_image(file_name: str, flow: Annotated[Flow, Depends(get_flow)]):
+async def download_image(
+    file_name: str,
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+):
+    # SECURITY: Validate flow ownership before proceeding
+    flow = await _get_flow_with_validation(flow_id, current_user, session)
+
     storage_service = get_storage_service()
     extension = file_name.split(".")[-1]
     flow_id_str = str(flow.id)
@@ -159,9 +177,14 @@ async def list_profile_pictures():
 
 @router.get("/list/{flow_id}")
 async def list_files(
-    flow: Annotated[Flow, Depends(get_flow)],
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+    session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
+    # SECURITY: Validate flow ownership before proceeding
+    flow = await _get_flow_with_validation(flow_id, current_user, session)
+
     try:
         files = await storage_service.list_files(flow_id=str(flow.id))
     except Exception as e:
@@ -173,9 +196,14 @@ async def list_files(
 @router.delete("/delete/{flow_id}/{file_name}")
 async def delete_file(
     file_name: str,
-    flow: Annotated[Flow, Depends(get_flow)],
+    flow_id: UUID,
+    current_user: CurrentActiveUser,
+    session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
+    # SECURITY: Validate flow ownership before proceeding
+    flow = await _get_flow_with_validation(flow_id, current_user, session)
+
     try:
         await storage_service.delete_file(flow_id=str(flow.id), file_name=file_name)
     except Exception as e:

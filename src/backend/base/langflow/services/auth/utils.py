@@ -281,8 +281,10 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
 
     if not settings_service.auth_settings.WEBHOOK_AUTH_ENABLE:
         # When webhook auth is disabled, run webhook as the flow owner without requiring API key
+        # SECURITY NOTE: This intentionally bypasses ownership validation for webhooks when auth is disabled
+        # This allows public webhooks to execute, which is the intended behavior for this mode
         try:
-            flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
+            flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id, requesting_user_id=None)
             if flow_owner is None:
                 raise HTTPException(status_code=404, detail="Flow not found")
             return flow_owner  # noqa: TRY300
@@ -320,18 +322,23 @@ async def get_webhook_user(flow_id: str, request: Request) -> UserRead:
         logger.error(f"Webhook API key validation error: {exc}")
         raise HTTPException(status_code=403, detail="API key authentication failed") from exc
 
-    # Get flow owner to check if authenticated user owns this flow
+    # SECURITY: Validate that the authenticated user owns the flow
+    # Use requesting_user_id to enforce ownership validation
     try:
-        flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
+        flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id, requesting_user_id=authenticated_user.id)
         if flow_owner is None:
             raise HTTPException(status_code=404, detail="Flow not found")
-    except HTTPException:
-        raise
+    except HTTPException as exc:
+        # The get_user_by_flow_id_or_endpoint_name with requesting_user_id will already
+        # validate ownership, so if we get here, the user doesn't own the flow
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: You can only execute webhooks for flows you own"
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=404, detail="Flow not found") from exc
 
-    if flow_owner.id != authenticated_user.id:
-        raise HTTPException(status_code=403, detail="Access denied: You can only execute webhooks for flows you own")
+    # At this point, ownership has been validated by get_user_by_flow_id_or_endpoint_name
 
     return authenticated_user
 

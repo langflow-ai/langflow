@@ -423,10 +423,12 @@ async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | N
     new_flow_id = uuid.uuid5(uuid.NAMESPACE_DNS, new_id)
 
     # Get the user associated with the flow
+    # SECURITY NOTE: This is intentionally using requesting_user_id=None because
+    # we've already validated the flow is PUBLIC above at line 418
     try:
         from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 
-        user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
+        user = await get_user_by_flow_id_or_endpoint_name(str(flow_id), requesting_user_id=None)
 
     except Exception as exc:
         await logger.aexception(f"Error getting user for public flow {flow_id}")
