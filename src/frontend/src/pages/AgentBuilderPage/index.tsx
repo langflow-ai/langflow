@@ -89,7 +89,7 @@ const AgentCard = ({
               ? `Edited ${timeElapsed(flow.updated_at)} ago`
               : "Never edited"}
           </span>
-          <Badge variant="secondary" className="text-xs">
+          <Badge variant="secondary" className="text-xs bg-success-bg text-success-text px-2 py-[6px] hover:bg-success-bg hover:text-success-text">
             Published
           </Badge>
         </div>
@@ -151,7 +151,7 @@ export default function AgentBuilderPage() {
         </div>
 
         {/* Hero Section */}
-        <div className="flex flex-col items-center justify-center mt-20 mb-12">
+        <div className="flex flex-col items-center justify-center mt-20 mb-12 max-w-[876px] mx-auto">
           <p className="text-xl mb-2">
             Hi <span className="font-medium">User</span>, What can I help you today?
           </p>
@@ -161,13 +161,13 @@ export default function AgentBuilderPage() {
         </div>
 
         {/* Prompt Input Section */}
-        <div className="mb-6 max-w-4xl mx-auto">
+        <div className="max-w-[876px] mx-auto">
           <div className="relative">
             <textarea
               value={promptValue}
               onChange={(e) => setPromptValue(e.target.value)}
               placeholder="Describe what you want your agent to do..."
-              className="w-full min-h-[120px] p-4 pr-12 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              className="w-full min-h-[120px] p-4 pr-12 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -177,7 +177,7 @@ export default function AgentBuilderPage() {
             />
             <button
               onClick={handlePromptSubmit}
-              className="absolute right-3 bottom-3 p-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="absolute right-3 bottom-3 p-2 rounded-md bg-primary-blue text-primary-foreground disabled:opacity-50 disabled:pointer-events-none"
               disabled={!promptValue.trim()}
               aria-label="Submit prompt"
             >
@@ -187,7 +187,7 @@ export default function AgentBuilderPage() {
           <div className="mt-3 text-center">
             <button
               onClick={() => setShowTemplatesModal(true)}
-              className="text-sm text-muted-foreground hover:text-foreground underline"
+              className="text-sm text-primary-blue font-medium"
             >
               Or Start Manually
             </button>
@@ -195,14 +195,15 @@ export default function AgentBuilderPage() {
         </div>
 
         {/* Recent Agents Section */}
-        <div className="mt-16">
+        <div className="mt-4 pt-4 max-w-[876px] mx-auto border-t border-[#efefef]">
           <div className="flex items-center justify-between mb-6">
             <div className="text-base font-semibold">
               Your Recent Agents ({folderData?.flows?.total || 0})
             </div>
             {(folderData?.flows?.items ?? []).length > 4 && (
               <Button
-                variant="outline"
+                variant="default"
+                type="button"
                 size="sm"
                 onClick={() => setShowAllAgents(!showAllAgents)}
               >
@@ -224,7 +225,7 @@ export default function AgentBuilderPage() {
           )}
           
           {!agentsLoading && agentsToShow.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {agentsToShow.map((flow) => (
                 <AgentCard
                   key={flow.id}

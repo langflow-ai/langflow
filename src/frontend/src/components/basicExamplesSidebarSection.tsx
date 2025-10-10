@@ -76,7 +76,7 @@ const BasicExamplesSidebarSection: React.FC = () => {
                   e.dataTransfer.setData("basicExample", data);
                   e.dataTransfer.setData("text/plain", data);
                 }}
-                className="bg-muted hover:bg-muted/80 rounded-md p-2 cursor-grab active:cursor-grabbing transition-colors border border-border/50 hover:border-border flex items-center justify-between group"
+                className="bg-secondary-bg rounded-md p-2 cursor-grab active:cursor-grabbing transition-colors border border-border/50 hover:border-border flex items-center justify-between group"
                 title={example.description}
               >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
