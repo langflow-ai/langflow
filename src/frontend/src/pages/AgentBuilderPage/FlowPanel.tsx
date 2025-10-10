@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SpecificationView from "./SpecificationView";
+import FlowPage from "../FlowPage";
 
 interface FlowPanelProps {
   flowId: string;
@@ -12,9 +13,6 @@ interface FlowPanelProps {
 
 export default function FlowPanel({ flowId, yamlSpec, flowData, folderId, onClose }: FlowPanelProps) {
   const [activeTab, setActiveTab] = useState<"specification" | "visualization">("visualization");
-
-  // Construct the flow URL
-  const flowUrl = `/flow/${flowId}/folder/${folderId}/`;
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -64,12 +62,8 @@ export default function FlowPanel({ flowId, yamlSpec, flowData, folderId, onClos
 
         {activeTab === "visualization" && (
           <div className="h-full">
-            {/* Embed flow editor using iframe */}
-            <iframe
-              src={flowUrl}
-              className="w-full h-full border-0"
-              title="Flow Visualization"
-            />
+            {/* Direct canvas component without iframe */}
+            <FlowPage view={true} flowId={flowId} folderId={folderId} />
           </div>
         )}
       </div>
