@@ -208,13 +208,16 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
-    await page.getByTestId("side_nav_options_all-templates").click({ timeout: 30000 });
-    await page.getByRole("heading", { name: "Basic Prompting" }).click({ timeout: 30000 });
+    await page
+      .getByTestId("side_nav_options_all-templates")
+      .click({ timeout: 30000 });
+    await page
+      .getByRole("heading", { name: "Basic Prompting" })
+      .click({ timeout: 30000 });
 
     await expect(page.getByTestId("sidebar-search-input")).toBeVisible({
       timeout: 30000,
     });
-
 
     // Now navigate to user settings
     await page.getByTestId("user-profile-settings").click({ timeout: 30000 });
@@ -227,7 +230,10 @@ test(
 
     // Navigate to Global Variables
     await page.getByText("Global Variables").click({ timeout: 30000 });
-    await page.getByText("Global Variables").nth(2).isVisible({ timeout: 30000 });
+    await page
+      .getByText("Global Variables")
+      .nth(2)
+      .isVisible({ timeout: 30000 });
     await page
       .getByText("Global Variables", { exact: true })
       .nth(1)
