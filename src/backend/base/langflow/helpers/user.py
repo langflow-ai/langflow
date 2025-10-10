@@ -28,11 +28,9 @@ async def get_user_by_flow_id_or_endpoint_name(
 
         # If requesting_user_id is provided, try to get flow with ownership validation first
         if requesting_user_id:
-            try:
+            import contextlib
+            with contextlib.suppress(HTTPException):
                 flow = await get_flow_with_ownership_by_name_or_id(session, flow_id_or_name, requesting_user_id)
-            except HTTPException:
-                # If ownership fails, try public flow access
-                pass
 
         # If no flow found with ownership, try public access
         if flow is None:

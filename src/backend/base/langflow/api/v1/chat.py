@@ -170,7 +170,7 @@ async def build_flow(
         flow = await get_flow_with_ownership(session, flow_id, current_user.id)
 
     job_id = await start_flow_build(
-        flow_id=flow_id,
+        flow_id=flow.id,
         background_tasks=background_tasks,
         inputs=inputs,
         data=data,

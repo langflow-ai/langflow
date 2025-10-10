@@ -221,7 +221,7 @@ async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession
     if requesting_user_id:
         from langflow.api.security import get_flow_with_ownership
 
-        flow = await get_flow_with_ownership(session, flow_id, UUID(requesting_user_id))
+        flow = await get_flow_with_ownership(session, flow_id, uuid.UUID(requesting_user_id))
     else:
         # Fallback to non-validated access (for backward compatibility)
         # WARNING: This should only be used for public flows or internal operations

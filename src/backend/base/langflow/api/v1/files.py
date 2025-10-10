@@ -11,6 +11,7 @@ from fastapi.responses import StreamingResponse
 from lfx.services.settings.service import SettingsService
 from lfx.utils.helpers import build_content_type_from_extension
 
+from langflow.api.security import get_flow_with_ownership
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.database.models.flow.model import Flow
@@ -18,10 +19,6 @@ from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(tags=["Files"], prefix="/files")
-
-
-from langflow.api.security import get_flow_with_ownership
-
 
 # Secure dependency that validates flow ownership
 async def get_flow(
@@ -37,7 +34,6 @@ async def upload_file(
     *,
     file: UploadFile,
     flow: Annotated[Flow, Depends(get_flow)],
-    current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> UploadFileResponse:
@@ -50,8 +46,6 @@ async def upload_file(
         raise HTTPException(
             status_code=413, detail=f"File size is larger than the maximum file size {max_file_size_upload}MB."
         )
-
-    # Security check already performed by get_flow dependency
 
     try:
         file_content = await file.read()

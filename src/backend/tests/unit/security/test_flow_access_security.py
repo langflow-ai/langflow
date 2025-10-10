@@ -28,7 +28,7 @@ class TestFlowAccessSecurity:
         assert flow.user_id == created_user.id
 
     @pytest.mark.asyncio
-    async def test_get_flow_with_ownership_invalid_owner(self, session, created_user, created_flow):
+    async def test_get_flow_with_ownership_invalid_owner(self, session, created_flow):
         """Test that non-owner cannot access flow."""
         # Create another user
         other_user = User(username="other_user", email="other@test.com")
@@ -68,7 +68,7 @@ class TestFlowAccessSecurity:
         assert flow.id == created_flow.id
 
     @pytest.mark.asyncio
-    async def test_get_flow_by_endpoint_name_cross_account_blocked(self, session, created_user, created_flow):
+    async def test_get_flow_by_endpoint_name_cross_account_blocked(self, session, created_flow):
         """Test that cross-account access by endpoint name is blocked."""
         # Create another user
         other_user = User(username="other_user", email="other@test.com")
@@ -87,7 +87,7 @@ class TestFlowAccessSecurity:
         assert exc_info.value.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_public_flow_access_by_any_user(self, session, created_user, created_flow):
+    async def test_public_flow_access_by_any_user(self, session, created_flow):
         """Test that public flows can be accessed by any user."""
         # Create another user
         other_user = User(username="other_user", email="other@test.com")
@@ -110,7 +110,7 @@ class TestFlowAccessSecurity:
         assert flow.id == created_flow.id
 
     @pytest.mark.asyncio
-    async def test_private_flow_not_accessible_as_public(self, session, created_user, created_flow):
+    async def test_private_flow_not_accessible_as_public(self, session, created_flow):
         """Test that private flows cannot be accessed via public flow function."""
         # Ensure flow is private
         created_flow.access_type = AccessTypeEnum.PRIVATE
@@ -126,42 +126,6 @@ class TestFlowAccessSecurity:
         with pytest.raises(HTTPException) as exc_info:
             await get_public_flow_by_name_or_id(session, "private_endpoint")
         assert exc_info.value.status_code == 404
-
-
-class TestFileEndpointSecurity:
-    """Test suite for file endpoint security."""
-
-    @pytest.mark.asyncio
-    async def test_file_upload_cross_account_blocked(self, client, created_user, created_flow):
-        """Test that file upload is blocked for non-owners."""
-        # Create another user and get their token
-        other_user = User(username="other_user", email="other@test.com")
-        # This would require setting up authentication for the test client
-        # The actual implementation would depend on your test setup
-
-    @pytest.mark.asyncio
-    async def test_file_download_cross_account_blocked(self, client, created_user, created_flow):
-        """Test that file download is blocked for non-owners."""
-        # This would test the download endpoint with cross-account access attempt
-
-    @pytest.mark.asyncio
-    async def test_file_list_cross_account_blocked(self, client, created_user, created_flow):
-        """Test that file listing is blocked for non-owners."""
-        # This would test the list files endpoint with cross-account access attempt
-
-
-class TestBuildEndpointSecurity:
-    """Test suite for build endpoint security."""
-
-    @pytest.mark.asyncio
-    async def test_build_flow_cross_account_blocked(self, client, created_user, created_flow):
-        """Test that flow build is blocked for non-owners."""
-        # This would test the build endpoint with cross-account access attempt
-
-    @pytest.mark.asyncio
-    async def test_build_vertex_cross_account_blocked(self, client, created_user, created_flow):
-        """Test that vertex build is blocked for non-owners."""
-        # This would test the build vertex endpoint with cross-account access attempt
 
 
 # Fixtures for testing
