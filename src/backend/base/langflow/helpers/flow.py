@@ -48,6 +48,7 @@ async def load_flow(
     user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
 ) -> Graph:
     from lfx.graph.graph.base import Graph
+    from langflow.api.security import get_flow_with_ownership
 
     from langflow.processing.process import process_tweaks
 
@@ -61,7 +62,12 @@ async def load_flow(
             raise ValueError(msg)
 
     async with session_scope() as session:
-        graph_data = flow.data if (flow := await session.get(Flow, flow_id)) else None
+        # Use secure validation to ensure ownership
+        user_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+        flow_uuid = UUID(flow_id) if isinstance(flow_id, str) else flow_id
+        flow = await get_flow_with_ownership(session, flow_uuid, user_uuid)
+        graph_data = flow.data
+        
     if not graph_data:
         msg = f"Flow {flow_id} not found"
         raise ValueError(msg)
@@ -277,21 +283,24 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
     ]
 
 
-async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | UUID | None = None) -> FlowRead | None:
+async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | UUID) -> FlowRead | None:
+    """Get flow by ID or endpoint name with MANDATORY user ownership validation.
+    
+    Args:
+        flow_id_or_name: Flow UUID string or endpoint name
+        user_id: UUID of the user (MANDATORY for security)
+        
+    Returns:
+        FlowRead: Flow object if found and owned by user
+        
+    Raises:
+        HTTPException: If flow not found or not owned by user
+    """
+    from langflow.api.security import get_flow_with_ownership_by_name_or_id
+    
     async with session_scope() as session:
-        endpoint_name = None
-        try:
-            flow_id = UUID(flow_id_or_name)
-            flow = await session.get(Flow, flow_id)
-        except ValueError:
-            endpoint_name = flow_id_or_name
-            stmt = select(Flow).where(Flow.endpoint_name == endpoint_name)
-            if user_id:
-                uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
-                stmt = stmt.where(Flow.user_id == uuid_user_id)
-            flow = (await session.exec(stmt)).first()
-        if flow is None:
-            raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
+        user_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+        flow = await get_flow_with_ownership_by_name_or_id(session, flow_id_or_name, user_uuid)
         return FlowRead.model_validate(flow, from_attributes=True)
 
 

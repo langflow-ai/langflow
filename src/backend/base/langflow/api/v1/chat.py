@@ -164,11 +164,11 @@ async def build_flow(
     Returns:
         Dict with job_id that can be used to poll for build status
     """
-    # First verify the flow exists
+    # First verify the flow exists and user owns it
+    from langflow.api.security import get_flow_with_ownership
+    
     async with session_scope() as session:
-        flow = await session.get(Flow, flow_id)
-        if not flow:
-            raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+        flow = await get_flow_with_ownership(session, flow_id, current_user.id)
 
     job_id = await start_flow_build(
         flow_id=flow_id,

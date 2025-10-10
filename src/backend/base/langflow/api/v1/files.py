@@ -20,21 +20,15 @@ from langflow.services.storage.service import StorageService
 router = APIRouter(tags=["Files"], prefix="/files")
 
 
-# Create dep that gets the flow_id from the request
-# then finds it in the database and returns it while
-# using the current user as the owner
+from langflow.api.security import get_flow_with_ownership
+
+# Secure dependency that validates flow ownership
 async def get_flow(
     flow_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
 ):
-    # AttributeError: 'SelectOfScalar' object has no attribute 'first'
-    flow = await session.get(Flow, flow_id)
-    if not flow:
-        raise HTTPException(status_code=404, detail="Flow not found")
-    if flow.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You don't have access to this flow")
-    return flow
+    return await get_flow_with_ownership(session, flow_id, current_user.id)
 
 
 @router.post("/upload/{flow_id}", status_code=HTTPStatus.CREATED)
@@ -56,8 +50,7 @@ async def upload_file(
             status_code=413, detail=f"File size is larger than the maximum file size {max_file_size_upload}MB."
         )
 
-    if flow.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You don't have access to this flow")
+    # Security check already performed by get_flow dependency
 
     try:
         file_content = await file.read()
@@ -73,9 +66,11 @@ async def upload_file(
 
 @router.get("/download/{flow_id}/{file_name}")
 async def download_file(
-    file_name: str, flow_id: UUID, storage_service: Annotated[StorageService, Depends(get_storage_service)]
+    file_name: str, 
+    flow: Annotated[Flow, Depends(get_flow)],
+    storage_service: Annotated[StorageService, Depends(get_storage_service)]
 ):
-    flow_id_str = str(flow_id)
+    flow_id_str = str(flow.id)
     extension = file_name.split(".")[-1]
 
     if not extension:
@@ -101,10 +96,13 @@ async def download_file(
 
 
 @router.get("/images/{flow_id}/{file_name}")
-async def download_image(file_name: str, flow_id: UUID):
+async def download_image(
+    file_name: str, 
+    flow: Annotated[Flow, Depends(get_flow)]
+):
     storage_service = get_storage_service()
     extension = file_name.split(".")[-1]
-    flow_id_str = str(flow_id)
+    flow_id_str = str(flow.id)
 
     if not extension:
         raise HTTPException(status_code=500, detail=f"Extension not found for file {file_name}")

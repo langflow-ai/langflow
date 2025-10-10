@@ -150,12 +150,30 @@ def format_elapsed_time(elapsed_time: float) -> str:
     return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def _get_flow_name(flow_id: uuid.UUID) -> str:
+async def _get_flow_name(flow_id: uuid.UUID, user_id: uuid.UUID | None = None) -> str:
+    """Get flow name with optional ownership validation.
+    
+    Args:
+        flow_id: UUID of the flow
+        user_id: UUID of the user (optional, for ownership validation)
+        
+    Returns:
+        str: Flow name
+        
+    Raises:
+        ValueError: If flow not found or access denied
+    """
     async with session_scope() as session:
-        flow = await session.get(Flow, flow_id)
-        if flow is None:
-            msg = f"Flow {flow_id} not found"
-            raise ValueError(msg)
+        if user_id:
+            from langflow.api.security import get_flow_with_ownership
+            flow = await get_flow_with_ownership(session, flow_id, user_id)
+        else:
+            # Fallback to non-validated access (for backward compatibility)
+            # WARNING: This should only be used for public flows or internal operations
+            flow = await session.get(Flow, flow_id)
+            if flow is None:
+                msg = f"Flow {flow_id} not found"
+                raise ValueError(msg)
     return flow.name
 
 
@@ -184,11 +202,36 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
 
 
 async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession, **kwargs):
-    """Build and cache the graph."""
-    flow: Flow | None = await session.get(Flow, flow_id)
-    if not flow or not flow.data:
-        msg = "Invalid flow ID"
+    """Build graph from database with optional ownership validation.
+    
+    Args:
+        flow_id: UUID of the flow
+        session: Database session
+        **kwargs: Additional arguments including optional 'requesting_user_id' for validation
+        
+    Returns:
+        Graph: Built graph object
+        
+    Raises:
+        ValueError: If flow not found or access denied
+    """
+    requesting_user_id = kwargs.get("requesting_user_id")
+    
+    if requesting_user_id:
+        from langflow.api.security import get_flow_with_ownership
+        flow = await get_flow_with_ownership(session, flow_id, UUID(requesting_user_id))
+    else:
+        # Fallback to non-validated access (for backward compatibility)
+        # WARNING: This should only be used for public flows or internal operations
+        flow: Flow | None = await session.get(Flow, flow_id)
+        if not flow:
+            msg = "Invalid flow ID"
+            raise ValueError(msg)
+            
+    if not flow.data:
+        msg = "Flow has no data"
         raise ValueError(msg)
+        
     kwargs["user_id"] = kwargs.get("user_id") or str(flow.user_id)
     return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, **kwargs)
 
