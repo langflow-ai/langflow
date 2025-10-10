@@ -473,6 +473,8 @@ async def webhook_run_flow(
 
     # SECURITY FIX: Retrieve flow with user ownership validation
     flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, str(webhook_user.id))
+    if not flow:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
     try:
         try:
