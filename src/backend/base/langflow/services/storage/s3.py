@@ -131,15 +131,16 @@ class S3StorageService(StorageService):
 
             if error_code == "NoSuchBucket":
                 msg = f"S3 bucket '{self.bucket_name}' does not exist"
-                raise ValueError(msg) from e
+                raise FileNotFoundError(msg) from e
             if error_code == "AccessDenied":
                 msg = "Access denied to S3 bucket. Please check your AWS credentials and bucket permissions"
                 raise PermissionError(msg) from e
             if error_code == "InvalidAccessKeyId":
                 msg = "Invalid AWS credentials. Please check your AWS access key and secret key"
-                raise ValueError(msg) from e
-            msg = f"Failed to save file to S3: {error_msg}"
-            raise RuntimeError(msg) from e
+                raise PermissionError(msg) from e
+            else:
+                msg = f"Failed to save file to S3: {error_msg}"
+                raise RuntimeError(msg) from e
 
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """Retrieve a file from S3.
