@@ -257,12 +257,7 @@ override-dependencies = [
     # temporary force a newer python-pptx
     "python-pptx>=1.0.2",
 ]
-
-[tool.uv.index]
-# Optional name for the index.
-name = "pytorch"
-# Required URL for the index.
-url = "https://download.pytorch.org/whl/cpu"
+index = [{name = "pytorch", url = "https://download.pytorch.org/whl/cpu"}]
 
 [project.scripts]
 langflow = "langflow.langflow_launcher:main"
