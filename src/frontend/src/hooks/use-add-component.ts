@@ -20,12 +20,6 @@ export function useAddComponent() {
       type: string,
       position?: { x: number; y: number },
     ) => {
-      // Add null check for component to prevent TypeError
-      if (!component) {
-        console.error("Component is undefined in addComponent");
-        return;
-      }
-      
       track("Component Added", { componentType: component.display_name });
 
       const {

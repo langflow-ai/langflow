@@ -80,6 +80,8 @@ import {
 } from "./MemoizedComponents";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
+import useAddFlow from "@/hooks/flows/use-add-flow";
+import { useNavigate } from "react-router-dom";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -127,6 +129,8 @@ export default function Page({
   const lastCopiedSelection = useFlowStore(
     (state) => state.lastCopiedSelection,
   );
+    const addFlow = useAddFlow();
+  const navigate = useNavigate();
   const setLastCopiedSelection = useFlowStore(
     (state) => state.setLastCopiedSelection,
   );
@@ -488,6 +492,21 @@ export default function Page({
       if (grabbingElement.length > 0) {
         document.body.removeChild(grabbingElement[0]);
       }
+
+        // Handle dropping a basic example template
+      const basicExampleType = Array.from(event.dataTransfer.types).find(
+        (type) => type.toLowerCase() === "basicexample"
+      );
+      if (basicExampleType) {
+        const example = JSON.parse(event.dataTransfer.getData(basicExampleType));
+        if (example && example.data) {
+          updateIds(example.data);
+          // Merge nodes and edges into current flow
+          setNodes((prevNodes) => [...prevNodes, ...example.data.nodes]);
+          setEdges((prevEdges) => [...prevEdges, ...example.data.edges]);
+        }
+        return;
+      }
       if (event.dataTransfer.types.some((type) => isSupportedNodeTypes(type))) {
         takeSnapshot();
 
@@ -526,8 +545,10 @@ export default function Page({
         });
       }
     },
-    [takeSnapshot, addComponent],
+    [takeSnapshot, addComponent,addFlow, navigate],
   );
+
+
 
   const onEdgeUpdateStart = useCallback(() => {
     edgeUpdateSuccessful.current = false;
