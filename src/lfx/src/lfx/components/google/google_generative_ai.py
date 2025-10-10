@@ -12,6 +12,51 @@ from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
 
 
+class ChatGoogleGenerativeAIFixed:
+    """Custom ChatGoogleGenerativeAI that fixes function response name issues for Gemini."""
+    
+    def __init__(self, *args, **kwargs):
+        """Initialize with fix for empty function response names in ToolMessage and FunctionMessage."""
+        try:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+        except ImportError as e:
+            msg = "The 'langchain_google_genai' package is required to use the Google Generative AI model."
+            raise ImportError(msg) from e
+            
+        # Create the base ChatGoogleGenerativeAI instance
+        self._model = ChatGoogleGenerativeAI(*args, **kwargs)
+        
+    def _prepare_request(self, messages, **kwargs):
+        """Override request preparation to fix empty function response names."""
+        from langchain_core.messages import ToolMessage, FunctionMessage
+        
+        # Pre-process messages to ensure tool/function messages have names
+        fixed_messages = []
+        for message in messages:
+            if isinstance(message, ToolMessage) and not message.name:
+                # Create a new ToolMessage with a default name
+                message = ToolMessage(
+                    content=message.content,
+                    name="tool_response",
+                    tool_call_id=getattr(message, 'tool_call_id', None),
+                    artifact=getattr(message, 'artifact', None)
+                )
+            elif isinstance(message, FunctionMessage) and not message.name:
+                # Create a new FunctionMessage with a default name  
+                message = FunctionMessage(
+                    content=message.content,
+                    name="function_response"
+                )
+            fixed_messages.append(message)
+            
+        # Call the original method with fixed messages
+        return self._model._prepare_request(fixed_messages, **kwargs)
+        
+    def __getattr__(self, name):
+        """Delegate all other attributes to the wrapped model."""
+        return getattr(self._model, name)
+
+
 class GoogleGenerativeAIComponent(LCModelComponent):
     display_name = "Google Generative AI"
     description = "Generate text using Google Generative AI."
@@ -74,12 +119,6 @@ class GoogleGenerativeAIComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        try:
-            from langchain_google_genai import ChatGoogleGenerativeAI
-        except ImportError as e:
-            msg = "The 'langchain_google_genai' package is required to use the Google Generative AI model."
-            raise ImportError(msg) from e
-
         google_api_key = self.api_key
         model = self.model_name
         max_output_tokens = self.max_output_tokens
@@ -88,7 +127,8 @@ class GoogleGenerativeAIComponent(LCModelComponent):
         top_p = self.top_p
         n = self.n
 
-        return ChatGoogleGenerativeAI(
+        # Use the fixed version that handles empty function response names for Gemini compatibility
+        return ChatGoogleGenerativeAIFixed(
             model=model,
             max_output_tokens=max_output_tokens or None,
             temperature=temperature,
