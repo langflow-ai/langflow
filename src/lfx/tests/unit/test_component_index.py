@@ -8,59 +8,105 @@ import orjson
 import pytest
 
 from lfx.interface.components import (
-    _dev_mode,
     _get_cache_path,
+    _parse_dev_mode,
     _read_component_index,
     _save_generated_index,
     import_langflow_components,
 )
 
 
-class TestDevMode:
-    """Tests for _dev_mode() function."""
+class TestParseDevMode:
+    """Tests for _parse_dev_mode() function."""
 
     def test_dev_mode_not_set(self, monkeypatch):
         """Test default behavior when LFX_DEV is not set."""
         monkeypatch.delenv("LFX_DEV", raising=False)
-        assert _dev_mode() is False
+        enabled, modules = _parse_dev_mode()
+        assert enabled is False
+        assert modules is None
 
     def test_dev_mode_enabled_with_1(self, monkeypatch):
         """Test dev mode enabled with LFX_DEV=1."""
         monkeypatch.setenv("LFX_DEV", "1")
-        assert _dev_mode() is True
+        enabled, modules = _parse_dev_mode()
+        assert enabled is True
+        assert modules is None  # Load all modules
 
     def test_dev_mode_enabled_with_true(self, monkeypatch):
         """Test dev mode enabled with LFX_DEV=true."""
         monkeypatch.setenv("LFX_DEV", "true")
-        assert _dev_mode() is True
+        enabled, modules = _parse_dev_mode()
+        assert enabled is True
+        assert modules is None
 
     def test_dev_mode_enabled_with_yes(self, monkeypatch):
         """Test dev mode enabled with LFX_DEV=yes."""
         monkeypatch.setenv("LFX_DEV", "yes")
-        assert _dev_mode() is True
+        enabled, modules = _parse_dev_mode()
+        assert enabled is True
+        assert modules is None
 
     def test_dev_mode_disabled_with_0(self, monkeypatch):
         """Test dev mode disabled with LFX_DEV=0."""
         monkeypatch.setenv("LFX_DEV", "0")
-        assert _dev_mode() is False
+        enabled, modules = _parse_dev_mode()
+        assert enabled is False
+        assert modules is None
 
     def test_dev_mode_disabled_with_false(self, monkeypatch):
         """Test dev mode disabled with LFX_DEV=false."""
         monkeypatch.setenv("LFX_DEV", "false")
-        assert _dev_mode() is False
+        enabled, modules = _parse_dev_mode()
+        assert enabled is False
+        assert modules is None
 
-    def test_dev_mode_disabled_with_random(self, monkeypatch):
-        """Test dev mode disabled with random value."""
-        monkeypatch.setenv("LFX_DEV", "random")
-        assert _dev_mode() is False
+    def test_dev_mode_disabled_with_empty(self, monkeypatch):
+        """Test dev mode disabled with empty value."""
+        monkeypatch.setenv("LFX_DEV", "")
+        enabled, modules = _parse_dev_mode()
+        assert enabled is False
+        assert modules is None
 
     def test_dev_mode_case_insensitive(self, monkeypatch):
         """Test that env var is case insensitive."""
         monkeypatch.setenv("LFX_DEV", "TRUE")
-        assert _dev_mode() is True
+        enabled, modules = _parse_dev_mode()
+        assert enabled is True
+        assert modules is None
 
         monkeypatch.setenv("LFX_DEV", "YES")
-        assert _dev_mode() is True
+        enabled, modules = _parse_dev_mode()
+        assert enabled is True
+        assert modules is None
+
+    def test_dev_mode_single_module(self, monkeypatch):
+        """Test dev mode with a single module filter."""
+        monkeypatch.setenv("LFX_DEV", "mistral")
+        enabled, modules = _parse_dev_mode()
+        assert enabled is True
+        assert modules == ["mistral"]
+
+    def test_dev_mode_multiple_modules(self, monkeypatch):
+        """Test dev mode with multiple module filters."""
+        monkeypatch.setenv("LFX_DEV", "mistral,openai,anthropic")
+        enabled, modules = _parse_dev_mode()
+        assert enabled is True
+        assert modules == ["mistral", "openai", "anthropic"]
+
+    def test_dev_mode_modules_with_spaces(self, monkeypatch):
+        """Test dev mode filters spaces correctly."""
+        monkeypatch.setenv("LFX_DEV", "mistral, openai , anthropic")
+        enabled, modules = _parse_dev_mode()
+        assert enabled is True
+        assert modules == ["mistral", "openai", "anthropic"]
+
+    def test_dev_mode_modules_case_normalized(self, monkeypatch):
+        """Test that module names are lowercased."""
+        monkeypatch.setenv("LFX_DEV", "Mistral,OpenAI")
+        enabled, modules = _parse_dev_mode()
+        assert enabled is True
+        assert modules == ["mistral", "openai"]
 
 
 class TestReadComponentIndex:

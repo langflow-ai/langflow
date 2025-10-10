@@ -36,18 +36,36 @@ class ComponentCache:
 component_cache = ComponentCache()
 
 
-def _dev_mode() -> bool:
-    """Detect if running in development mode.
+def _parse_dev_mode() -> tuple[bool, list[str] | None]:
+    """Parse LFX_DEV to determine dev mode and which modules to load.
 
     Development mode must be explicitly enabled via the LFX_DEV environment variable.
     When enabled, components are always rebuilt dynamically to reflect code changes.
     When disabled or not set, the prebuilt index is used for fast startup.
 
+    Supports two modes:
+    - Boolean mode: LFX_DEV=1/true/yes loads all modules dynamically
+    - List mode: LFX_DEV=mistral,openai,anthropic loads only specified modules
+
     Returns:
-        True if LFX_DEV is set to "1"/"true"/"yes", False otherwise
+        Tuple of (dev_mode_enabled, module_list)
+        - If module_list is None, load all modules
+        - If module_list is a list, only load those specific modules
     """
-    lfx_dev = os.getenv("LFX_DEV", "").lower()
-    return lfx_dev in {"1", "true", "yes"}
+    lfx_dev = os.getenv("LFX_DEV", "").strip()
+    if not lfx_dev:
+        return (False, None)
+
+    # Boolean mode: "1", "true", "yes"
+    if lfx_dev.lower() in {"1", "true", "yes"}:
+        return (True, None)  # Load all modules
+
+    # List mode: comma-separated values
+    modules = [m.strip().lower() for m in lfx_dev.split(",") if m.strip()]
+    if modules:
+        return (True, modules)
+
+    return (False, None)
 
 
 def _read_component_index(custom_path: str | None = None) -> dict | None:
@@ -182,7 +200,8 @@ async def import_langflow_components(settings_service: Optional["SettingsService
     should_save_index = False
 
     # Fast path: load from prebuilt index if not in dev mode
-    if not _dev_mode():
+    dev_mode_enabled, target_modules = _parse_dev_mode()
+    if not dev_mode_enabled:
         # Get custom index path from settings if available
         custom_index_path = None
         if settings_service and settings_service.settings.components_index_path:
@@ -237,8 +256,21 @@ async def import_langflow_components(settings_service: Optional["SettingsService
     module_names = []
     for _, modname, _ in pkgutil.walk_packages(components_pkg.__path__, prefix=components_pkg.__name__ + "."):
         # Skip if the module is in the deactivated folder
-        if "deactivated" not in modname:
-            module_names.append(modname)
+        if "deactivated" in modname:
+            continue
+
+        # If specific modules requested, filter by top-level module name
+        if target_modules:
+            # Extract top-level: "lfx.components.mistral.xyz" -> "mistral"
+            parts = modname.split(".")
+            if len(parts) > MIN_MODULE_PARTS and parts[2].lower() not in target_modules:
+                continue
+
+        module_names.append(modname)
+
+    if target_modules:
+        await logger.adebug(f"LFX_DEV module filter active: loading only {target_modules}")
+        await logger.adebug(f"Found {len(module_names)} modules matching filter")
 
     if not module_names:
         return {"components": modules_dict}
