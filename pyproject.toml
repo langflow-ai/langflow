@@ -257,6 +257,7 @@ override-dependencies = [
     # temporary force a newer python-pptx
     "python-pptx>=1.0.2",
 ]
+index-strategy = "unsafe-best-match"
 index = [
     { url = "https://pypi.org/simple"},
     { url = "https://download.pytorch.org/whl/cpu"}
