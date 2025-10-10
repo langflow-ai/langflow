@@ -1,4 +1,5 @@
-import { Pagination, Tag } from "@/types/utils/types";
+import type { EventDeliveryType } from "@/constants/enums";
+import type { Pagination, Tag } from "@/types/utils/types";
 
 export type UtilityStoreType = {
   selectedItems: any[];
@@ -19,10 +20,18 @@ export type UtilityStoreType = {
   setWebhookPollingInterval: (webhookPollingInterval: number) => void;
   chatValueStore: string;
   setChatValueStore: (value: string) => void;
-  dismissAll: boolean;
-  setDismissAll: (dismissAll: boolean) => void;
   currentSessionId: string;
   setCurrentSessionId: (sessionId: string) => void;
   setClientId: (clientId: string) => void;
   clientId: string;
+  eventDelivery: EventDeliveryType;
+  setEventDelivery: (eventDelivery: EventDeliveryType) => void;
+  serializationMaxItemsLength: number;
+  setSerializationMaxItemsLength: (serializationMaxItemsLength: number) => void;
+  webhookAuthEnable: boolean;
+  setWebhookAuthEnable: (webhookAuthEnable: boolean) => void;
+  defaultFolderName: string;
+  setDefaultFolderName: (defaultFolderName: string) => void;
+  hideGettingStartedProgress: boolean;
+  setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) => void;
 };

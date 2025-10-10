@@ -1,13 +1,13 @@
 "use client";
-import { BorderTrail } from "@/components/core/border-trail";
-import { ContentBlock } from "@/types/chat";
-import { cn } from "@/utils/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
+import { BorderTrail } from "@/components/core/border-trail";
+import type { ContentBlock } from "@/types/chat";
+import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import { Separator } from "../../ui/separator";
 import ContentDisplay from "./ContentDisplay";
@@ -85,7 +85,7 @@ export function ContentBlockDisplay({
                   name={headerIcon}
                   className={cn(
                     "h-4 w-4",
-                    state !== "partial" && "text-status-green",
+                    state !== "partial" && "text-accent-emerald-foreground",
                   )}
                   strokeWidth={1.5}
                 />
@@ -101,7 +101,7 @@ export function ContentBlockDisplay({
                 <Markdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeMathjax]}
-                  className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
+                  className="inline-block w-fit max-w-full text-sm font-semibold text-primary"
                 >
                   {headerTitle}
                 </Markdown>
@@ -169,7 +169,7 @@ export function ContentBlockDisplay({
                         className="overflow-hidden pl-4 pt-[16px] font-medium"
                       >
                         <Markdown
-                          className="text-[14px] font-semibold text-foreground"
+                          className="text-sm font-semibold text-foreground"
                           remarkPlugins={[remarkGfm]}
                           linkTarget="_blank"
                           rehypePlugins={[rehypeMathjax]}

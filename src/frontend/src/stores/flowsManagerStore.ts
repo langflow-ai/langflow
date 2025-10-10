@@ -1,8 +1,8 @@
-import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
 import { cloneDeep } from "lodash";
 import { create } from "zustand";
-import { FlowType } from "../types/flow";
-import {
+import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
+import type { FlowType } from "../types/flow";
+import type {
   FlowsManagerStoreType,
   UseUndoRedoOptions,
 } from "../types/zustand/flowsManager";
@@ -130,11 +130,13 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   setSelectedFlowsComponentsCards: (selectedFlowsComponentsCards: string[]) => {
     set({ selectedFlowsComponentsCards });
   },
-  flowToCanvas: null,
-  setFlowToCanvas: async (flowToCanvas: FlowType | null) => {
-    await new Promise<void>((resolve) => {
-      set({ flowToCanvas });
-      resolve();
+  resetStore: () => {
+    set({
+      flows: [],
+      currentFlow: undefined,
+      currentFlowId: "",
+      searchFlowsComponents: "",
+      selectedFlowsComponentsCards: [],
     });
   },
 }));

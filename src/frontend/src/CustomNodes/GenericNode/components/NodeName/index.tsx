@@ -1,18 +1,18 @@
-import { Input } from "@/components/ui/input";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import useFlowStore from "@/stores/flowStore";
-import { VertexBuildTypeAPI } from "@/types/api";
-import { cn } from "@/utils/utils";
 import { useEffect, useState } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Input } from "@/components/ui/input";
+import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { cn } from "@/utils/utils";
 
 export default function NodeName({
   display_name,
   selected,
   nodeId,
   showNode,
-  validationStatus,
-  isOutdated,
   beta,
+  legacy,
   editNameDescription,
   toggleEditNameDescription,
   setHasChangedNodeDescription,
@@ -21,9 +21,8 @@ export default function NodeName({
   selected?: boolean;
   nodeId: string;
   showNode: boolean;
-  validationStatus: VertexBuildTypeAPI | null;
-  isOutdated: boolean;
   beta: boolean;
+  legacy?: boolean;
   editNameDescription: boolean;
   toggleEditNameDescription: () => void;
   setHasChangedNodeDescription: (hasChanged: boolean) => void;
@@ -77,7 +76,7 @@ export default function NodeName({
   };
 
   return editNameDescription ? (
-    <div className="m-[1px] w-full">
+    <div className="w-full">
       <Input
         onBlur={handleBlur}
         value={nodeName}
@@ -85,33 +84,43 @@ export default function NodeName({
         onChange={onChange}
         data-testid={`input-title-${display_name}`}
         onKeyDown={handleKeyDown}
-        className="py-1"
+        className="px-2 py-0"
       />
     </div>
   ) : (
-    <div className="group flex w-full items-center gap-1">
+    <div className="group my-px flex flex-1 items-center gap-2 overflow-hidden">
       <div
         data-testid={"title-" + display_name}
         className={cn(
-          "nodoubleclick w-full truncate font-medium text-primary",
+          "nodoubleclick truncate font-medium text-primary",
           showNode ? "cursor-text" : "cursor-default",
         )}
       >
         <div className="flex cursor-grab items-center gap-2">
-          <span
-            className={cn(
-              "max-w-44 cursor-grab truncate text-[14px]",
-              validationStatus?.data?.duration && "max-w-36",
-              beta && "max-w-36",
-              validationStatus?.data?.duration && beta && "max-w-20",
-              isOutdated && "max-w-40",
-              !showNode && "max-w-28",
-            )}
-          >
+          <span className={cn("cursor-grab truncate text-sm")}>
             {display_name}
           </span>
+          {legacy && (
+            <div className="shrink-0">
+              <div className="flex items-center text-xxs justify-center rounded-sm border border-accent-amber text-accent-amber-foreground px-1">
+                Legacy
+              </div>
+            </div>
+          )}
         </div>
       </div>
+      {beta && (
+        <div className="shrink-0">
+          <ShadTooltip content="Beta component">
+            <div className="flex h-4 w-4 items-center justify-center rounded-sm border border-accent-purple-foreground p-0.5">
+              <ForwardedIconComponent
+                name="FlaskConical"
+                className="text-accent-purple-foreground"
+              />
+            </div>
+          </ShadTooltip>
+        </div>
+      )}
     </div>
   );
 }

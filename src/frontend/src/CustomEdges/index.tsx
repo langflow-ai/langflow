@@ -1,6 +1,11 @@
+import {
+  BaseEdge,
+  type EdgeProps,
+  getBezierPath,
+  Position,
+} from "@xyflow/react";
 import useFlowStore from "@/stores/flowStore";
 import { scapeJSONParse } from "@/utils/reactflowUtils";
-import { BaseEdge, EdgeProps, getBezierPath, Position } from "@xyflow/react";
 
 export function DefaultEdge({
   sourceHandleId,
@@ -56,16 +61,7 @@ export function DefaultEdge({
     targetY: targetYNew,
   });
 
-  const {
-    animated,
-    selectable,
-    deletable,
-    sourcePosition,
-    targetPosition,
-    pathOptions,
-    selected,
-    ...domSafeProps
-  } = props;
+  const { animated, selectable, deletable, selected, ...domSafeProps } = props;
 
   return (
     <BaseEdge

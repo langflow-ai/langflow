@@ -1,5 +1,6 @@
-import { VoiceStoreType } from "@/types/zustand/voice/voice.types";
 import { create } from "zustand";
+import { OPENAI_VOICES } from "@/constants/constants";
+import type { VoiceStoreType } from "@/types/zustand/voice/voice.types";
 
 export const useVoiceStore = create<VoiceStoreType>((set, get) => ({
   voices: [],
@@ -19,16 +20,7 @@ export const useVoiceStore = create<VoiceStoreType>((set, get) => ({
       value: string;
     }[],
   ) => set({ providersList }),
-  openaiVoices: [
-    { name: "alloy", value: "alloy" },
-    { name: "ash", value: "ash" },
-    { name: "ballad", value: "ballad" },
-    { name: "coral", value: "coral" },
-    { name: "echo", value: "echo" },
-    { name: "sage", value: "sage" },
-    { name: "shimmer", value: "shimmer" },
-    { name: "verse", value: "verse" },
-  ],
+  openaiVoices: OPENAI_VOICES,
   setOpenaiVoices: (
     openaiVoices: {
       name: string;
@@ -37,4 +29,10 @@ export const useVoiceStore = create<VoiceStoreType>((set, get) => ({
   ) => set({ openaiVoices }),
   soundDetected: false,
   setSoundDetected: (soundDetected: boolean) => set({ soundDetected }),
+  isVoiceAssistantActive: false,
+  setIsVoiceAssistantActive: (isVoiceAssistantActive: boolean) =>
+    set({ isVoiceAssistantActive }),
+  newSessionCloseVoiceAssistant: false,
+  setNewSessionCloseVoiceAssistant: (newSessionCloseVoiceAssistant: boolean) =>
+    set({ newSessionCloseVoiceAssistant }),
 }));

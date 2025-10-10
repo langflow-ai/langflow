@@ -1,26 +1,31 @@
+import type { ColDef, ColGroupDef } from "ag-grid-community";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { FlowSettingsPropsType } from "@/types/components";
-import { ColDef, ColGroupDef } from "ag-grid-community";
-import { useCallback, useEffect, useState } from "react";
+import { convertUTCToLocalTimezone } from "@/utils/utils";
 import BaseModal from "../baseModal";
 
 export default function FlowLogsModal({
-  open,
-  setOpen,
-}: FlowSettingsPropsType): JSX.Element {
+  children,
+}: {
+  children: React.ReactNode;
+}): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const [open, setOpen] = useState(false);
 
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const [rows, setRows] = useState<any>([]);
+  const [searchParams] = useSearchParams();
+  const flowIdFromUrl = searchParams.get("id");
 
   const { data, isLoading, refetch } = useGetTransactionsQuery({
-    id: currentFlowId,
+    id: currentFlowId ?? flowIdFromUrl,
     params: {
       page: pageIndex,
       size: pageSize,
@@ -31,6 +36,13 @@ export default function FlowLogsModal({
   useEffect(() => {
     if (data) {
       const { columns, rows } = data;
+
+      if (data?.rows?.length > 0) {
+        data.rows.map((row: any) => {
+          row.timestamp = convertUTCToLocalTimezone(row.timestamp);
+        });
+      }
+
       setColumns(columns.map((col) => ({ ...col, editable: true })));
       setRows(rows);
     }
@@ -49,6 +61,7 @@ export default function FlowLogsModal({
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="x-large">
+      <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
       <BaseModal.Header description="Inspect component executions.">
         <div className="flex w-full justify-between">
           <div className="flex h-fit w-32 items-center">

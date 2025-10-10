@@ -1,7 +1,3 @@
-import { Badge } from "@/components/ui/badge";
-import { ICON_STROKE_WIDTH } from "@/constants/constants";
-import { useShortcutsStore } from "@/stores/shortcuts";
-import { targetHandleType } from "@/types/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import {
@@ -14,6 +10,10 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { Badge } from "@/components/ui/badge";
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { useShortcutsStore } from "@/stores/shortcuts";
+import type { targetHandleType } from "@/types/flow";
 import ForwardedIconComponent, {
   default as IconComponent,
 } from "../../../../components/common/genericIconComponent";
@@ -21,7 +21,7 @@ import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import { Button } from "../../../../components/ui/button";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { NodeOutputFieldComponentType } from "../../../../types/components";
+import type { NodeOutputFieldComponentType } from "../../../../types/components";
 import {
   getGroupOutputNodeId,
   scapedJSONStringfy,
@@ -34,12 +34,11 @@ import {
   logTypeIsError,
   logTypeIsUnknown,
 } from "../../../../utils/utils";
-import OutputComponent from "../OutputComponent";
 import HandleRenderComponent from "../handleRenderComponent";
+import OutputComponent from "../OutputComponent";
 import OutputModal from "../outputModal";
 
-// Memoize IconComponent instances
-const EyeIcon = memo(
+const _EyeIcon = memo(
   ({ hidden, className }: { hidden: boolean; className: string }) => (
     <IconComponent
       className={className}
@@ -52,51 +51,6 @@ const EyeIcon = memo(
 const SnowflakeIcon = memo(() => (
   <IconComponent className="h-5 w-5 text-ice" name="Snowflake" />
 ));
-
-// Memoize Button components
-const HideShowButton = memo(
-  ({
-    disabled,
-    onClick,
-    hidden,
-    isToolMode,
-    title,
-  }: {
-    disabled: boolean;
-    onClick: () => void;
-    hidden: boolean;
-    isToolMode: boolean;
-    title: string;
-  }) => (
-    <Button
-      disabled={disabled}
-      unstyled
-      onClick={onClick}
-      data-testid={`input-inspection-${title.toLowerCase()}`}
-      className="cursor-pointer"
-    >
-      <ShadTooltip
-        content={disabled ? null : hidden ? "Show output" : "Hide output"}
-      >
-        <div>
-          <EyeIcon
-            hidden={hidden}
-            className={cn(
-              "icon-size",
-              disabled
-                ? isToolMode
-                  ? "text-placeholder-foreground opacity-60"
-                  : "text-placeholder-foreground hover:text-foreground"
-                : isToolMode
-                  ? "text-background hover:text-secondary-hover"
-                  : "text-placeholder-foreground hover:text-primary-hover",
-            )}
-          />
-        </div>
-      </ShadTooltip>
-    </Button>
-  ),
-);
 
 const InspectButton = memo(
   forwardRef(
@@ -135,10 +89,10 @@ const InspectButton = memo(
           className={cn(
             "icon-size",
             isToolMode
-              ? displayOutputPreview && !unknownOutput
+              ? displayOutputPreview && !unknownOutput && !disabled
                 ? "text-background hover:text-secondary-hover"
                 : "cursor-not-allowed text-placeholder-foreground opacity-80"
-              : displayOutputPreview && !unknownOutput
+              : displayOutputPreview && !unknownOutput && !disabled
                 ? "text-foreground hover:text-primary-hover"
                 : "cursor-not-allowed text-placeholder-foreground opacity-60",
             errorOutput ? "text-destructive" : "",
@@ -163,23 +117,24 @@ function NodeOutputField({
   index,
   type,
   outputName,
+  outputs,
   outputProxy,
   lastOutput,
   colorName,
   isToolMode = false,
+  showHiddenOutputs,
+  hidden,
+  handleSelectOutput,
 }: NodeOutputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const updateNodeInternals = useUpdateNodeInternals();
 
-  // Use selective store subscriptions
-  const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const flowPool = useFlowStore((state) => state.flowPool);
   const myData = useTypesStore((state) => state.data);
 
-  // Memoize computed values
   const { flowPoolId, internalOutputName } = useMemo(() => {
     if (data.node?.flow && outputProxy) {
       const realOutput = getGroupOutputNodeId(
@@ -213,6 +168,12 @@ function NodeOutputField({
     [flowPool, flowPoolId, flowPoolNode?.data, internalOutputName],
   );
 
+  const emptyOutput = useMemo(() => {
+    return Object.keys(flowPoolNode?.data?.outputs ?? {})?.every(
+      (key) => flowPoolNode?.data?.outputs[key]?.message?.length === 0,
+    );
+  }, [flowPoolNode?.data?.outputs]);
+
   const disabledOutput = useMemo(
     () => edges.some((edge) => edge.sourceHandle === scapedJSONStringfy(id)),
     [edges, id],
@@ -234,7 +195,7 @@ function NodeOutputField({
     (value?: boolean) => {
       setNode(data.id, (oldNode) => {
         if (oldNode.type !== "genericNode") return oldNode;
-        let newNode = cloneDeep(oldNode);
+        const newNode = cloneDeep(oldNode);
         newNode.data = {
           ...newNode.data,
           node: {
@@ -255,10 +216,19 @@ function NodeOutputField({
   );
 
   useEffect(() => {
-    if (disabledOutput && data.node?.outputs![index].hidden) {
+    const outputHasGroupOutputsFalse =
+      data.node?.outputs?.[index]?.group_outputs === false;
+
+    if (disabledOutput && hidden && !outputHasGroupOutputsFalse) {
       handleUpdateOutputHide(false);
     }
-  }, [disabledOutput, data.node?.outputs, handleUpdateOutputHide, index]);
+  }, [
+    disabledOutput,
+    handleUpdateOutputHide,
+    hidden,
+    data.node?.outputs,
+    index,
+  ]);
 
   const [openOutputModal, setOpenOutputModal] = useState(false);
 
@@ -305,11 +275,9 @@ function NodeOutputField({
       return (
         <HandleRenderComponent
           left={true}
-          nodes={nodes}
           tooltipTitle={tooltipTitle}
           id={id}
           title={title}
-          edges={edges}
           nodeId={data.id}
           myData={myData}
           colors={colors}
@@ -321,11 +289,9 @@ function NodeOutputField({
       );
     }
   }, [
-    nodes,
     tooltipTitle,
     id,
     title,
-    edges,
     data.id,
     myData,
     colors,
@@ -339,11 +305,9 @@ function NodeOutputField({
     () => (
       <HandleRenderComponent
         left={false}
-        nodes={nodes}
         tooltipTitle={tooltipTitle}
         id={id}
         title={title}
-        edges={edges}
         nodeId={data.id}
         myData={myData}
         colors={colors}
@@ -354,11 +318,9 @@ function NodeOutputField({
       />
     ),
     [
-      nodes,
       tooltipTitle,
       id,
       title,
-      edges,
       data.id,
       myData,
       colors,
@@ -369,13 +331,17 @@ function NodeOutputField({
     ],
   );
 
+  const disabledInspectButton =
+    !displayOutputPreview || unknownOutput || emptyOutput;
+
+  if (!showHiddenOutputs && hidden) return <></>;
   if (!showNode) return <>{Handle}</>;
 
   return (
     <div
       ref={ref}
       className={cn(
-        "relative mt-1 flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
+        "relative flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
         lastOutput ? "rounded-b-[0.69rem]" : "",
         isToolMode && "bg-primary",
       )}
@@ -388,17 +354,10 @@ function NodeOutputField({
               <ForwardedIconComponent name="Infinity" className="h-4 w-4" />
             </Badge>
           )}
-          <HideShowButton
-            disabled={disabledOutput}
-            onClick={() => handleUpdateOutputHide()}
-            hidden={!!data.node?.outputs![index].hidden}
-            isToolMode={isToolMode}
-            title={title}
-          />
         </div>
 
         {data.node?.frozen && (
-          <div className="pr-1">
+          <div className="pr-1" data-testid="frozen-icon">
             <SnowflakeIcon />
           </div>
         )}
@@ -407,6 +366,7 @@ function NodeOutputField({
           <span className={data.node?.frozen ? "text-ice" : ""}>
             <MemoizedOutputComponent
               proxy={outputProxy}
+              outputs={outputs}
               idx={index}
               types={type?.split("|") ?? []}
               selected={
@@ -418,13 +378,15 @@ function NodeOutputField({
               frozen={data.node?.frozen}
               name={title ?? type}
               isToolMode={isToolMode}
+              handleSelectOutput={handleSelectOutput}
+              outputName={data.node?.key as string}
             />
           </span>
 
           <ShadTooltip
             content={
               displayOutputPreview
-                ? unknownOutput
+                ? unknownOutput || emptyOutput
                   ? "Output can't be displayed"
                   : "Inspect output"
                 : "Please build the component first"
@@ -435,20 +397,18 @@ function NodeOutputField({
               <OutputModal
                 open={openOutputModal}
                 setOpen={setOpenOutputModal}
-                disabled={!displayOutputPreview || unknownOutput}
+                disabled={disabledInspectButton}
                 nodeId={flowPoolId}
                 outputName={internalOutputName}
               >
                 <InspectButton
-                  disabled={!displayOutputPreview || unknownOutput}
+                  disabled={disabledInspectButton}
                   displayOutputPreview={displayOutputPreview}
                   unknownOutput={unknownOutput ?? false}
                   errorOutput={errorOutput ?? false}
                   isToolMode={isToolMode}
                   title={title}
-                  onClick={() => {
-                    //just to trigger the memoization
-                  }}
+                  onClick={() => {}}
                   id={data?.type}
                 />
               </OutputModal>

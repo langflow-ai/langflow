@@ -12,7 +12,8 @@ export const useStartConversation = (
   const currentHost = window.location.hostname;
   const currentPort = window.location.port;
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const url = `${protocol}//${currentHost}:${currentPort}/api/v1/voice/ws/flow_as_tool/${flowId}/${currentSessionId}`;
+  const url = `${protocol}//${currentHost}:${currentPort}/api/v1/voice/ws/flow_tts/${flowId}/${currentSessionId?.toString()}`;
+  //const url = `${protocol}//${currentHost}:${currentPort}/api/v1/voice/ws/flow_as_tool/${flowId}/${currentSessionId?.toString()}`;
 
   try {
     if (wsRef.current?.readyState === WebSocket.CONNECTING) {
@@ -26,6 +27,8 @@ export const useStartConversation = (
     const audioSettings = JSON.parse(
       getLocalStorage("lf_audio_settings_playground") || "{}",
     );
+    const _audioLanguage =
+      getLocalStorage("lf_audio_language_playground") || "en-US";
 
     wsRef.current = new WebSocket(url);
 
@@ -42,17 +45,20 @@ export const useStartConversation = (
                 : "",
           }),
         );
+
+        // For flow_tts endpoint, we need to use the proper session update format
         if (audioSettings.provider !== "elevenlabs") {
           wsRef.current.send(
             JSON.stringify({
-              type: "session.update",
-              session: {
-                voice: audioSettings.voice,
-              },
+              type: "voice.settings",
+              voice: audioSettings.voice || "echo",
+              provider: audioSettings.provider || "openai",
             }),
           );
         }
-        startRecording();
+        setTimeout(() => {
+          startRecording();
+        }, 300);
       }
     };
 

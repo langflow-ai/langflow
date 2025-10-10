@@ -1,0 +1,269 @@
+---
+title: About bundles
+slug: /components-bundle-components
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Bundles contain custom components that support specific third-party integrations with Langflow.
+You add them to your flows and configure them in the same way as Langflow's core components.
+
+To browse bundles, click <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the visual editor.
+
+## Bundle maintenance and documentation
+
+Many bundled components are developed by third-party contributors to the Langflow codebase.
+
+Some providers contribute documentation with their bundles, whereas others document their bundles in their own documentation.
+Some bundles have no documentation.
+
+To find documentation for a specific bundled component, browse the Langflow docs and your provider's documentation.
+If available, you can also find links to relevant documentation, such as API endpoints, through the component itself:
+
+1. Click the component to expose the [component's header menu](/concepts-components#component-menus).
+2. Click <Icon name="Ellipsis" aria-hidden="true" /> **More**.
+3. Select **Docs**.
+
+The Langflow documentation focuses on using bundles within flows.
+For that reason, it focuses on the Langflow-specific configuration steps for bundled components.
+For information about provider-specific features or APIs, see the provider's documentation.
+
+## Component parameters
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<PartialParams />
+
+## Core components and bundles
+
+:::tip
+The Langflow documentation doesn't list all bundles or components in bundles.
+For the most accurate and up-to-date list of bundles and components for your version of Langflow, check <Icon name="Blocks" aria-hidden="true" /> **Bundles** in the visual editor.
+
+If you can't find a component that you used in an earlier version of Langflow, it may have been removed or marked as a [legacy component](#legacy-bundles).
+:::
+
+Langflow offers generic <Icon name="Component" aria-hidden="true" /> **Core components** in addition to third-party, provider-specific bundles.
+
+If you are looking for a specific service or integration, you can <Icon name="Search" aria-hidden="true" /> **Search** components in the visual editor.
+
+If all else fails, you can always create your own [custom components](/components-custom-components).
+
+## Legacy bundles
+
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
+
+<PartialLegacy />
+
+The following bundles include only legacy components.
+
+### CrewAI bundle
+
+Replace the following legacy CrewAI components with other agentic components, such as the [**Agent** component](/components-agents).
+
+<details>
+<summary>CrewAI Agent</summary>
+
+This component represents CrewAI agents, allowing for the creation of specialized AI agents with defined roles goals and capabilities within a crew.
+For more information, see the [CrewAI agents documentation](https://docs.crewai.com/core-concepts/Agents/).
+
+This component accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| role | Role | Input parameter. The role of the agent. |
+| goal | Goal | Input parameter. The objective of the agent. |
+| backstory | Backstory | Input parameter. The backstory of the agent. |
+| tools | Tools | Input parameter. The tools at the agent's disposal. |
+| llm | Language Model | Input parameter. The language model that runs the agent. |
+| memory | Memory | Input parameter. This determines whether the agent should have memory or not. |
+| verbose | Verbose | Input parameter. This enables verbose output. |
+| allow_delegation | Allow Delegation | Input parameter. This determines whether the agent is allowed to delegate tasks to other agents. |
+| allow_code_execution | Allow Code Execution | Input parameter. This determines whether the agent is allowed to execute code. |
+| kwargs | kwargs | Input parameter. Additional keyword arguments for the agent. |
+| output | Agent | Output parameter. The constructed CrewAI Agent object. |
+
+</details>
+
+<details>
+<summary>CrewAI Hierarchical Crew, CrewAI Hierarchical Task</summary>
+
+The **CrewAI Hierarchical Crew** component represents a group of agents managing how they should collaborate and the tasks they should perform in a hierarchical structure. This component allows for the creation of a crew with a manager overseeing the task execution.
+For more information, see the [CrewAI hierarchical crew documentation](https://docs.crewai.com/how-to/Hierarchical/).
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| agents | Agents | Input parameter. The list of Agent objects representing the crew members. |
+| tasks | Tasks | Input parameter. The list of HierarchicalTask objects representing the tasks to be executed. |
+| manager_llm | Manager LLM | Input parameter. The language model for the manager agent. |
+| manager_agent | Manager Agent | Input parameter. The specific agent to act as the manager. |
+| verbose | Verbose | Input parameter. This enables verbose output for detailed logging. |
+| memory | Memory | Input parameter. The memory configuration for the crew. |
+| use_cache | Use Cache | Input parameter. This enables caching of results. |
+| max_rpm | Max RPM | Input parameter. This sets the maximum requests per minute. |
+| share_crew | Share Crew | Input parameter. This determines if the crew information is shared among agents. |
+| function_calling_llm | Function Calling LLM | Input parameter. The language model for function calling. |
+| crew | Crew | Output parameter. The constructed Crew object with hierarchical task execution. |
+
+</details>
+
+<details>
+<summary>CrewAI Sequential Crew, CrewAI Sequential Task</summary>
+
+The **CrewAI Sequential Crew** component represents a group of agents with tasks that are executed sequentially. This component allows for the creation of a crew that performs tasks in a specific order.
+For more information, see the [CrewAI sequential crew documentation](https://docs.crewai.com/how-to/Sequential/).
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| tasks | Tasks | Input parameter. The list of SequentialTask objects representing the tasks to be executed. |
+| verbose | Verbose | Input parameter. This enables verbose output for detailed logging. |
+| memory | Memory | Input parameter. The memory configuration for the crew. |
+| use_cache | Use Cache | Input parameter. This enables caching of results. |
+| max_rpm | Max RPM | Input parameter. This sets the maximum requests per minute. |
+| share_crew | Share Crew | Input parameter. This determines if the crew information is shared among agents. |
+| function_calling_llm | Function Calling LLM | Input parameter. The language model for function calling. |
+| crew | Crew | Output parameter. The constructed Crew object with sequential task execution. |
+
+</details>
+
+<details>
+<summary>CrewAI Sequential Task Agent</summary>
+
+This component creates a CrewAI Task and its associated agent allowing for the definition of sequential tasks with specific agent roles and capabilities.
+For more information, see the [CrewAI sequential agents documentation](https://docs.crewai.com/how-to/Sequential/).
+
+It accepts the following parameters:
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| role | Role | Input parameter. The role of the agent. |
+| goal | Goal | Input parameter. The objective of the agent. |
+| backstory | Backstory | Input parameter. The backstory of the agent. |
+| tools | Tools | Input parameter. The tools at the agent's disposal. |
+| llm | Language Model | Input parameter. The language model that runs the agent. |
+| memory | Memory | Input parameter. This determines whether the agent should have memory or not. |
+| verbose | Verbose | Input parameter. This enables verbose output. |
+| allow_delegation | Allow Delegation | Input parameter. This determines whether the agent is allowed to delegate tasks to other agents. |
+| allow_code_execution | Allow Code Execution | Input parameter. This determines whether the agent is allowed to execute code. |
+| agent_kwargs | Agent kwargs | Input parameter. The additional kwargs for the agent. |
+| task_description | Task Description | Input parameter. The descriptive text detailing the task's purpose and execution. |
+| expected_output | Expected Task Output | Input parameter. The clear definition of the expected task outcome. |
+| async_execution | Async Execution | Input parameter. Boolean flag indicating asynchronous task execution. |
+| previous_task | Previous Task | Input parameter. The previous task in the sequence for chaining. |
+| task_output | Sequential Task | Output parameter. The list of SequentialTask objects representing the created tasks. |
+
+</details>
+
+### Embeddings bundle
+
+* **Embedding Similarity**: Replaced by built-in similarity search functionality in vector store components.
+* **Text Embedder**: Replaced by the embedding model components.
+
+### Vector Stores bundle
+
+This bundle contains only the legacy **Local DB** component.
+All other vector store components can be found within their respective provider-specific bundles, such as the [**DataStax** bundle](/bundles-datastax).
+
+<details>
+<summary>Local DB</summary>
+
+Replace the **Local DB** component with the **Chroma DB** vector store component (in the **Chroma** bundle) or another vector store component.
+
+The **Local DB** component reads and writes to a persistent, in-memory Chroma DB instance intended for use with Langflow.
+It has separate modes for reads and writes, automatic collection management, and default persistence in your Langflow cache directory.
+
+Set the **Mode** parameter to reflect the operation you want the component to perform, and then configure the other parameters accordingly.
+Some parameters are only available for one mode.
+
+<Tabs>
+<TabItem value="ingest" label="Ingest">
+
+To create or write to your local Chroma vector store, use **Ingest** mode.
+
+The following parameters are available in **Ingest** mode:
+
+| Name | Type | Description |
+|------|------|-------------|
+| **Name Your Collection** (`collection_name`) | String | Input parameter. The name for your Chroma vector store collection. Default: `langflow`. Only available in **Ingest** mode. |
+| **Persist Directory** (`persist_directory`) | String | Input parameter. The base directory where you want to create and persist the vector store. If you use the **Local DB** component in multiple flows or to create multiple collections, collections are stored at `$PERSISTENT_DIRECTORY/vector_stores/$COLLECTION_NAME`. If not specified, the default location is your Langflow configuration directory. For more information, see [Memory management options](/memory). |
+| **Embedding** (`embedding`) | Embeddings | Input parameter. The embedding function to use for the vector store. |
+| **Allow Duplicates** (`allow_duplicates`) | Boolean | Input parameter. If `true` (default), writes don't check for existing duplicates in the collection, allowing you to store multiple copies of the same content. If `false`, writes won't add documents that match existing documents already present in the collection. If `false`, it can strictly enforce deduplication by searching the entire collection or only search the number of records, specified in `limit`. Only available in **Ingest** mode. |
+| **Ingest Data** (`ingest_data`) | Data or DataFrame | Input parameter. The records to write to the collection. Records are embedded and indexed for semantic search. Only available in **Ingest** mode. |
+| **Limit** (`limit`) | Integer | Input parameter. Limit the number of records to compare when **Allow Duplicates** is `false`. This can help improve performance when writing to large collections, but it can result in some duplicate records. Only available in **Ingest** mode. |
+
+</TabItem>
+<TabItem value="retrieve" label="Retrieve">
+
+To read from your local Chroma vector store, use **Retrieve** mode.
+
+The following parameters are available in **Retrieve** mode:
+
+| Name | Type | Description |
+|------|------|-------------|
+| **Persist Directory** (`persist_directory`) | String | Input parameter. The base directory where you want to create and persist the vector store. If you use the **Local DB** component in multiple flows or to create multiple collections, collections are stored at `$PERSISTENT_DIRECTORY/vector_stores/$COLLECTION_NAME`. If not specified, the default location is your Langflow configuration directory. For more information, see [Memory management options](/memory). |
+| **Existing Collections** (`existing_collections`) | String | Input parameter. Select a previously-created collection to search. Only available in **Retrieve** mode. |
+| **Embedding** (`embedding`) | Embeddings | Input parameter. The embedding function to use for the vector store. |
+| **Search Type** (`search_type`) | String | Input parameter. The type of search to perform, either `Similarity` or `MMR`. Only available in **Retrieve** mode. |
+| **Search Query** (`search_query`) | String | Input parameter. Enter a query for similarity search. Only available in **Retrieve** mode. |
+| **Number of Results** (`number_of_results`) | Integer | Input parameter. Number of search results to return. Default: 10. Only available in **Retrieve** mode. |
+
+</TabItem>
+</Tabs>
+
+</details>
+
+### Zep bundle
+
+<details>
+<summary>Zep Chat Memory</summary>
+
+The **Zep Chat Memory** component is a legacy component.
+Replace this component with the [**Message History** component](/components-helpers#message-history).
+
+This component creates a `ZepChatMessageHistory` instance, enabling storage and retrieval of chat messages using Zep, a memory server for LLMs.
+
+It accepts the following parameters:
+
+| Name          | Type          | Description                                               |
+|---------------|---------------|-----------------------------------------------------------|
+| url           | MessageText   | Input parameter. The URL of the Zep instance. Required. |
+| api_key       | SecretString  | Input parameter. The API Key for authentication with the Zep instance. |
+| api_base_path | Dropdown      | Input parameter. The API version to use. Options include api/v1 or api/v2. |
+| session_id    | MessageText   | Input parameter. The unique identifier for the chat session. Optional. |
+| message_history | BaseChatMessageHistory  | Output parameter. An instance of ZepChatMessageHistory for the session. |
+
+</details>
+
+## See also
+
+* [LangWatch observability and evaluation](/integrations-langwatch)
+
+
+
+<!-- Not documented but in Langflow as of 1.5.11 -->
+<!--
+* AgentQL
+* Confluence
+* Firecrawl
+* Git
+* Home Assistant
+* Jigsawstack
+* LangWatch (Mentioned on integrations-langwatch.mdx)
+* Needle
+* Not Diamond
+* Olivya
+* Scrape Graph AI
+* SerpApi (Mentioned on components-tools.mdx)
+* Tavily (Mentioned on components-tools.mdx)
+* Twelve Labs (Mentioned on concepts-file-management.mdx and components-data.mdx)
+* Unstructured
+* WolframAlpha
+* yfinance/Yahoo! Search (Mentioned on components-tools.mdx)
+* YouTube (Mentioned on concepts-file-management.mdx and components-data.mdx)
+-->

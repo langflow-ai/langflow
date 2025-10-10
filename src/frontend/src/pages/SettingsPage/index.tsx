@@ -1,15 +1,16 @@
+import { Outlet, type To } from "react-router-dom";
 import SideBarButtonsComponent from "@/components/core/sidebarComponent";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { CustomStoreSidebar } from "@/customization/components/custom-store-sidebar";
 import {
   ENABLE_DATASTAX_LANGFLOW,
+  ENABLE_LANGFLOW_STORE,
   ENABLE_PROFILE_ICONS,
 } from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
-import { Outlet } from "react-router-dom";
 import ForwardedIconComponent from "../../components/common/genericIconComponent";
 import PageLayout from "../../components/common/pageLayout";
-
 export default function SettingsPage(): JSX.Element {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const hasStore = useStoreStore((state) => state.hasStore);
@@ -37,6 +38,16 @@ export default function SettingsPage(): JSX.Element {
   }
 
   sidebarNavItems.push(
+    {
+      title: "MCP Servers",
+      href: "/settings/mcp-servers",
+      icon: (
+        <ForwardedIconComponent
+          name="Mcp"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
     {
       title: "Global Variables",
       href: "/settings/global-variables",
@@ -70,36 +81,15 @@ export default function SettingsPage(): JSX.Element {
     },
   );
 
+  // TODO: Remove this on cleanup
   if (!ENABLE_DATASTAX_LANGFLOW) {
-    const langflowItems = [
-      {
-        title: "Langflow API Keys",
-        href: "/settings/api-keys",
-        icon: (
-          <ForwardedIconComponent
-            name="Key"
-            className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
-          />
-        ),
-      },
-      {
-        title: "Langflow Store",
-        href: "/settings/store",
-        icon: (
-          <ForwardedIconComponent
-            name="Store"
-            className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
-          />
-        ),
-      },
-    ];
-
+    const langflowItems = CustomStoreSidebar(true, ENABLE_LANGFLOW_STORE);
     sidebarNavItems.splice(2, 0, ...langflowItems);
   }
 
   return (
     <PageLayout
-      backTo={"/"}
+      backTo={-1 as To}
       title="Settings"
       description="Manage the general settings for Langflow."
     >

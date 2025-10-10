@@ -1,6 +1,6 @@
-import { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
-import { BuildStatus } from "../../constants/enums";
-import { APIClassType, OutputFieldType } from "../api/index";
+import type { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
+import type { BuildStatus } from "../../constants/enums";
+import type { APIClassType, OutputFieldType } from "../api/index";
 
 export type PaginatedFlowsType = {
   items: FlowType[];
@@ -33,6 +33,7 @@ export type FlowType = {
   locked?: boolean | null;
   public?: boolean;
   access_type?: "PUBLIC" | "PRIVATE" | "PROTECTED";
+  mcp_enabled?: boolean;
 };
 
 export type GenericNodeType = Node<NodeDataType, "genericNode">;
@@ -67,6 +68,7 @@ export type NodeDataType = {
   output_types?: string[];
   selected_output_type?: string;
   buildStatus?: BuildStatus;
+  selected_output?: string;
 };
 
 export type EdgeType = Edge<EdgeDataType, "default">;

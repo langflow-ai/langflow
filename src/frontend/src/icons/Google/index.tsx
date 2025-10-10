@@ -1,4 +1,5 @@
-import React, { forwardRef } from "react";
+import type React from "react";
+import { forwardRef } from "react";
 import SvgGoogle from "./Google";
 
 export const GoogleIcon = forwardRef<

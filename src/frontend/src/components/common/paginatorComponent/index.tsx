@@ -1,10 +1,10 @@
+import { useEffect, useState } from "react";
 import {
   PAGINATION_PAGE,
   PAGINATION_ROWS_COUNT,
   PAGINATION_SIZE,
 } from "@/constants/constants";
-import { useEffect, useState } from "react";
-import { PaginatorComponentType } from "../../../types/components";
+import type { PaginatorComponentType } from "../../../types/components";
 import IconComponent from "../../common/genericIconComponent";
 import { Button } from "../../ui/button";
 import {
@@ -36,7 +36,7 @@ export default function PaginatorComponent({
   const disableFirstPage = pageIndex <= 1;
   const disableLastPage = pageIndex === maxIndex;
 
-  const handleValueChange = (pageSize: string) => {
+  const _handleValueChange = (pageSize: string) => {
     setPageSize(Number(pageSize));
     setMaxPageIndex(pages ?? Math.ceil(totalRowsCount / Number(pageSize)));
     paginate(1, Number(pageSize));
@@ -44,7 +44,7 @@ export default function PaginatorComponent({
 
   return (
     <div className="flex flex-1 items-center justify-between px-6">
-      <div className="flex items-center justify-end gap-1 text-[13px] text-secondary-foreground">
+      <div className="flex items-center justify-end gap-1 text-mmd text-secondary-foreground">
         {(pageIndex - 1) * pageSize + 1}-
         {Math.min(totalRowsCount, (pageIndex - 1) * pageSize + pageSize)}{" "}
         <span className="text-muted-foreground">
@@ -57,14 +57,14 @@ export default function PaginatorComponent({
         </span>
       </div>
       <div className={"flex items-center gap-2"}>
-        <div className="flex items-center gap-1 text-[13px] text-secondary-foreground">
+        <div className="flex items-center gap-1 text-mmd text-secondary-foreground">
           <Select
             onValueChange={(value) => paginate(Number(value), size)}
             value={pageIndex.toString()}
           >
             <SelectTrigger
               direction="up"
-              className="h-7 w-fit gap-1 border-none p-1 pl-1.5 text-[13px] focus:border-none focus:ring-0 focus:!ring-offset-0"
+              className="h-7 w-fit gap-1 border-none p-1 pl-1.5 text-mmd focus:border-none focus:ring-0 focus:!ring-offset-0"
             >
               <SelectValue placeholder="1" />
             </SelectTrigger>

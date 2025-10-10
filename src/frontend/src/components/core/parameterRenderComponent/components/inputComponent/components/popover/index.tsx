@@ -1,3 +1,7 @@
+import { PopoverAnchor } from "@radix-ui/react-popover";
+
+import { X } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
@@ -14,9 +18,6 @@ import {
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { cn } from "@/utils/utils";
-import { PopoverAnchor } from "@radix-ui/react-popover";
-import { X } from "lucide-react";
-import { ReactNode, useMemo, useState } from "react";
 
 const OptionBadge = ({
   option,
@@ -56,14 +57,13 @@ const OptionBadge = ({
     className={cn("flex items-center gap-1 truncate", className)}
   >
     <div className="truncate">{option}</div>
-    <div>
-      <X
-        className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive"
-        onClick={(e) =>
-          onRemove(e as unknown as React.MouseEvent<HTMLButtonElement>)
-        }
-        data-testid="remove-icon-badge"
-      />
+    <div
+      data-testid="remove-icon-badge"
+      onClick={(e) =>
+        onRemove(e as unknown as React.MouseEvent<HTMLButtonElement>)
+      }
+    >
+      <X className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive" />
     </div>
   </Badge>
 );
@@ -106,14 +106,14 @@ const SelectionIndicator = ({ isSelected }: { isSelected: boolean }) => (
       isSelected ? "opacity-100" : "opacity-0",
     )}
   >
-    <div className="absolute opacity-100 transition-all group-hover:opacity-0">
+    <div className="absolute opacity-100 transition-all group-hover/popover-item:opacity-0">
       <ForwardedIconComponent
         name="Check"
         className="mr-2 h-4 w-4 text-primary"
         aria-hidden="true"
       />
     </div>
-    <div className="absolute opacity-0 transition-all group-hover:opacity-100">
+    <div className="absolute opacity-0 transition-all group-hover/popover-item:opacity-100">
       <ForwardedIconComponent
         name="X"
         className="mr-2 h-4 w-4 text-status-red"
@@ -138,7 +138,7 @@ const getInputClassName = (
       "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
     password && "text-clip pr-14",
     blockAddNewGlobalVariable && "text-clip pr-8",
-    selectedOptions?.length >= 0 && "cursor-default",
+    selectedOptions?.length > 0 && "cursor-default",
   );
 };
 
@@ -146,15 +146,18 @@ const getAnchorClassName = (
   editNode: boolean,
   disabled: boolean,
   isFocused: boolean,
+  allowCustomValue: boolean,
 ) => {
-  return cn(
-    "primary-input noflow nopan nodelete nodrag border-1 flex h-full min-h-[2.375rem] cursor-default flex-wrap items-center px-2",
-    editNode && "min-h-7 p-0 px-1",
-    editNode && disabled && "min-h-5 border-muted",
-    disabled && "bg-muted text-muted",
-    isFocused &&
-      "border-foreground ring-1 ring-foreground hover:border-foreground",
-  );
+  return allowCustomValue
+    ? cn(
+        "primary-input noflow nopan nodelete nodrag border-1 flex h-full min-h-[2.375rem] cursor-default flex-wrap items-center px-2",
+        editNode && "min-h-7 p-0 px-1",
+        editNode && disabled && "min-h-5 border-muted",
+        disabled && "bg-muted text-muted",
+        isFocused &&
+          "border-foreground ring-1 ring-foreground hover:border-foreground",
+      )
+    : "flex items-center gap-2 w-full h-full min-h-[2.375rem]";
 };
 
 const CustomInputPopover = ({
@@ -186,13 +189,23 @@ const CustomInputPopover = ({
   popoverWidth,
   commandWidth,
   blockAddNewGlobalVariable,
+  hasRefreshButton,
+  allowCustomValue,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+  const [cursor, setCursor] = useState<number | null>(null);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
   const PopoverContentInput = editNode
     ? PopoverContent
     : PopoverContentWithoutPortal;
+
+  // Restore cursor position after value changes
+  useEffect(() => {
+    if (cursor !== null && refInput.current) {
+      refInput.current.setSelectionRange(cursor, cursor);
+    }
+  }, [cursor, value]);
 
   const handleRemoveOption = (
     optionToRemove: string,
@@ -227,10 +240,19 @@ const CustomInputPopover = ({
       <PopoverAnchor>
         <div
           data-testid={`anchor-${id}`}
-          className={getAnchorClassName(editNode, disabled, isFocused)}
-          onClick={() => !nodeStyle && !disabled && setShowOptions(true)}
+          className={getAnchorClassName(
+            editNode,
+            disabled,
+            isFocused,
+            allowCustomValue,
+          )}
+          onClick={() =>
+            (!allowCustomValue || !nodeStyle) &&
+            !disabled &&
+            setShowOptions(true)
+          }
         >
-          {selectedOptions?.length > 0 ? (
+          {!disabled && selectedOptions?.length > 0 ? (
             <div className="mr-5 flex flex-wrap gap-2">
               {selectedOptions.map((option) => (
                 <OptionBadge
@@ -241,7 +263,7 @@ const CustomInputPopover = ({
                 />
               ))}
             </div>
-          ) : selectedOption?.length > 0 ? (
+          ) : !disabled && selectedOption?.length > 0 ? (
             <ShadTooltip content={selectedOption} side="left">
               <div
                 style={{
@@ -255,15 +277,18 @@ const CustomInputPopover = ({
                   className={cn(
                     editNode && "text-xs",
                     nodeStyle
-                      ? "max-w-60 rounded-[3px] px-1 font-mono"
+                      ? "max-w-56 rounded-[3px] px-1 font-mono"
                       : "bg-muted",
+                    hasRefreshButton && "max-w-48",
                   )}
                 />
               </div>
             </ShadTooltip>
           ) : null}
 
-          {!selectedOption?.length && !selectedOptions?.length && (
+          {allowCustomValue &&
+          ((!selectedOption?.length && !selectedOptions?.length) ||
+            disabled) ? (
             <input
               autoComplete="off"
               onFocus={() => setIsFocused(true)}
@@ -275,7 +300,7 @@ const CustomInputPopover = ({
                 onInputLostFocus?.();
                 setIsFocused(false);
               }}
-              value={value || ""}
+              value={disabled ? "" : value || ""}
               disabled={disabled}
               required={required}
               className={getInputClassName(
@@ -286,16 +311,21 @@ const CustomInputPopover = ({
                 blockAddNewGlobalVariable,
               )}
               placeholder={
-                selectedOptions?.length > 0 || selectedOption ? "" : placeholder
+                !disabled && (selectedOptions?.length > 0 || selectedOption)
+                  ? ""
+                  : placeholder
               }
-              onChange={(e) => onChange?.(e.target.value)}
+              onChange={(e) => {
+                setCursor(e.target.selectionStart);
+                onChange?.(e.target.value);
+              }}
               onKeyDown={(e) => {
                 handleKeyDown?.(e);
                 if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
               }}
               data-testid={editNode ? id + "-edit" : id}
             />
-          )}
+          ) : null}
         </div>
       </PopoverAnchor>
 
@@ -326,7 +356,7 @@ const CustomInputPopover = ({
                   key={option + id}
                   value={option}
                   onSelect={handleOptionSelect}
-                  className="group"
+                  className="group/popover-item"
                 >
                   <CommandItemContent
                     option={option}

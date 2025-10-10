@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -25,6 +25,21 @@ test(
 
     await page.getByTestId("inputlist_str_urls_0").fill("test test test test");
 
+    // Test cursor position preservation
+    const input = page.getByTestId("inputlist_str_urls_0");
+    await input.click();
+    await input.press("Home"); // Move cursor to start
+    await input.press("ArrowRight"); // Move cursor to position 1
+    await input.press("ArrowRight"); // Move cursor to position 2
+    await input.pressSequentially("XD", { delay: 100 }); // Type at position 2
+
+    const cursorValue = await input.inputValue();
+    if (!cursorValue.startsWith("teXD")) {
+      expect(false).toBeTruthy();
+    }
+
+    await page.getByTestId("inputlist_str_urls_0").fill("test test test test");
+
     await page.getByTestId("input-list-plus-btn_urls-0").click();
 
     await page.getByTestId("input-list-plus-btn_urls-0").click();
@@ -38,8 +53,7 @@ test(
       .fill("test2 test2 test2 test2");
 
     await page.getByTestId("div-generic-node").click();
-    await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("advanced-button-modal").click();
+    await page.getByTestId("edit-button-modal").last().click();
 
     const value0 = await page.getByTestId("inputlist_str_urls_0").inputValue();
     const value1 = await page.getByTestId("inputlist_str_urls_1").inputValue();

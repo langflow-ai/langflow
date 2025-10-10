@@ -8,4 +8,5 @@ export type SidebarOpenViewProps = {
   visibleSession: string | undefined;
   selectedViewField: { type: string; id: string } | undefined;
   playgroundPage: boolean;
+  setActiveSession: (session: string) => void;
 };

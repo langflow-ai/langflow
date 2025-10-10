@@ -1,6 +1,7 @@
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
 import { useEffect, useState } from "react";
-import { InputProps, TabComponentType } from "../../types";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
+import { testIdCase } from "@/utils/utils";
+import type { InputProps, TabComponentType } from "../../types";
 
 export default function TabComponent({
   id,
@@ -47,8 +48,9 @@ export default function TabComponent({
             <TabsTrigger
               key={`${id}_tab_${index}`}
               value={tab}
-              className="flex-1"
+              className="block flex-1 truncate px-2"
               disabled={disabled}
+              data-testid={`tab_${index}_${testIdCase(tab)}`}
             >
               {tab}
             </TabsTrigger>

@@ -1,16 +1,16 @@
 import * as Form from "@radix-ui/react-form";
 import { Eye, EyeOff } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
+import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { CONTROL_NEW_USER } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
-import {
+import type {
+  inputHandlerEventType,
   UserInputType,
   UserManagementType,
-  inputHandlerEventType,
 } from "../../types/components";
-import { nodeIconsLucide } from "../../utils/styleUtils";
 import BaseModal from "../baseModal";
 
 export default function UserManagementModal({
@@ -25,7 +25,6 @@ export default function UserManagementModal({
   onConfirm,
   asChild,
 }: UserManagementType) {
-  const Icon: any = nodeIconsLucide[icon];
   const [pwdVisible, setPwdVisible] = useState(false);
   const [confirmPwdVisible, setConfirmPwdVisible] = useState(false);
   const [open, setOpen] = useState(false);
@@ -72,8 +71,8 @@ export default function UserManagementModal({
       <BaseModal.Trigger asChild={asChild}>{children}</BaseModal.Trigger>
       <BaseModal.Header description={titleHeader}>
         <span className="pr-2">{title}</span>
-        <Icon
-          name="icon"
+        <IconComponent
+          name={icon}
           className="h-6 w-6 pl-1 text-foreground"
           aria-hidden="true"
         />

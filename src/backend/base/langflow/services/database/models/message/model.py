@@ -3,9 +3,9 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
 
-from pydantic import field_serializer, field_validator
+from pydantic import ConfigDict, field_serializer, field_validator
 from sqlalchemy import Text
-from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.properties import Properties
@@ -13,7 +13,6 @@ from langflow.schema.validators import str_to_timestamp_validator
 
 if TYPE_CHECKING:
     from langflow.schema.message import Message
-    from langflow.services.database.models.flow.model import Flow
 
 
 class MessageBase(SQLModel):
@@ -32,11 +31,16 @@ class MessageBase(SQLModel):
     category: str = Field(default="message")
     content_blocks: list[ContentBlock] = Field(default_factory=list)
 
-    @field_validator("timestamp", mode="before")
-    @classmethod
-    def validate_timestamp(cls, value):
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, value):
+        if isinstance(value, datetime):
+            if value.tzinfo is None:
+                value = value.replace(tzinfo=timezone.utc)
+            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
         if isinstance(value, str):
-            return datetime.fromisoformat(value)
+            # Make sure the timestamp is in UTC
+            value = datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
+            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
         return value
 
     @field_validator("files", mode="before")
@@ -111,37 +115,20 @@ class MessageBase(SQLModel):
 
 
 class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
+    model_config = ConfigDict(validate_assignment=True, arbitrary_types_allowed=True)
     __tablename__ = "message"
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    flow_id: UUID | None = Field(default=None, foreign_key="flow.id")
-    flow: "Flow" = Relationship(back_populates="messages")
+
+    flow_id: UUID | None = Field(default=None)
     files: list[str] = Field(sa_column=Column(JSON))
-    properties: Properties = Field(default_factory=lambda: Properties().model_dump(), sa_column=Column(JSON))  # type: ignore[assignment]
+    properties: dict | Properties = Field(default_factory=lambda: Properties().model_dump(), sa_column=Column(JSON))  # type: ignore[assignment]
     category: str = Field(sa_column=Column(Text))
-    content_blocks: list[ContentBlock] = Field(default_factory=list, sa_column=Column(JSON))  # type: ignore[assignment]
+    content_blocks: list[dict | ContentBlock] = Field(default_factory=list, sa_column=Column(JSON))  # type: ignore[assignment]
 
     # We need to make sure the datetimes have timezone after running session.refresh
     # because we are losing the timezone information when we save the message to the database
     # and when we read it back. We use field_validator to make sure the datetimes have timezone
     # after running session.refresh
-    @field_validator("timestamp", mode="after")
-    @classmethod
-    def validate_timestamp(cls, value):
-        if isinstance(value, datetime):
-            return value.replace(tzinfo=timezone.utc)
-        return value
-
-    @field_serializer("timestamp")
-    def serialize_timestamp(self, value, _info):
-        if isinstance(value, datetime):
-            if value.tzinfo is None:
-                value = value.replace(tzinfo=timezone.utc)
-            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
-        if isinstance(value, str):
-            # Make sure the timestamp is in UTC
-            value = datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
-            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
-        return value
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -152,7 +139,7 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
             value = UUID(value)
         return value
 
-    @field_validator("properties", "content_blocks")
+    @field_validator("properties", "content_blocks", mode="before")
     @classmethod
     def validate_properties_or_content_blocks(cls, value):
         if isinstance(value, list):
@@ -164,18 +151,15 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
         return value
 
     @field_serializer("properties", "content_blocks")
-    def serialize_properties_or_content_blocks(self, value) -> dict | list[dict]:
+    @classmethod
+    def serialize_properties_or_content_blocks(cls, value) -> dict | list[dict]:
         if isinstance(value, list):
-            return [self.serialize_properties_or_content_blocks(item) for item in value]
+            return [cls.serialize_properties_or_content_blocks(item) for item in value]
         if hasattr(value, "model_dump"):
             return value.model_dump()
         if isinstance(value, str):
             return json.loads(value)
         return value
-
-    # Needed for Column(JSON)
-    class Config:
-        arbitrary_types_allowed = True
 
 
 class MessageRead(MessageBase):

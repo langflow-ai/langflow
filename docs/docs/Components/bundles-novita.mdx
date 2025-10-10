@@ -1,0 +1,35 @@
+---
+title: Novita
+slug: /bundles-novita
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Novita** bundle.
+
+## Novita AI
+
+This component generates text using [Novita's language models](https://novita.ai/docs/guides/llm-api).
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use a Novita model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component.
+
+For more information, see [Language model components](/components-models).
+
+### Novita AI parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your Novita AI API Key. |
+| model | String | Input parameter. The id of the Novita AI model to use. |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.7. |
+| top_p | Float | Input parameter. Controls the nucleus sampling. Range: [0.0, 1.0]. Default: 1.0. |
+| frequency_penalty | Float | Input parameter. Controls the frequency penalty. Range: [0.0, 2.0]. Default: 0.0. |
+| presence_penalty | Float | Input parameter. Controls the presence penalty. Range: [0.0, 2.0]. Default: 0.0. |

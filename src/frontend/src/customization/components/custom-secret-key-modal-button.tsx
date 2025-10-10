@@ -2,11 +2,11 @@ import { getModalPropsApiKey } from "@/pages/SettingsPage/pages/ApiKeysPage/help
 
 export const SecretKeyModalButton = ({
   userId,
+  modalProps,
 }: {
   userId: string;
+  modalProps;
 }): JSX.Element => {
-  const modalProps = getModalPropsApiKey();
-
   return <></>;
 };
 

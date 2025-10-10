@@ -1,12 +1,14 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GRADIENT_CLASS } from "@/constants/constants";
+import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { getCurlWebhookCode } from "@/modals/apiModal/utils/get-curl-code";
 import ComponentTextModal from "@/modals/textAreaModal";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Input } from "../../../../ui/input";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
-import { InputProps, TextAreaComponentType } from "../../types";
+import type { InputProps, TextAreaComponentType } from "../../types";
 import { getIconName } from "../inputComponent/components/helpers/get-icon-name";
 
 const inputClasses = {
@@ -20,6 +22,10 @@ const inputClasses = {
 };
 
 const WEBHOOK_VALUE = "CURL_WEBHOOK";
+const MCP_SSE_VALUE = "MCP_SSE";
+
+const { protocol, host } = customGetHostProtocol();
+const URL_MCP_SSE = `${protocol}//${host}/api/v1/mcp/sse`;
 
 const externalLinkIconClasses = {
   gradient: ({
@@ -69,9 +75,16 @@ export default function TextAreaComponent({
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const webhookAuthEnable = useUtilityStore((state) => state.webhookAuthEnable);
+  const [cursor, setCursor] = useState<number | null>(null);
 
   const isWebhook = useMemo(
     () => nodeInformationMetadata?.nodeType === "webhook",
+    [nodeInformationMetadata?.nodeType],
+  );
+
+  const _isMCPSSE = useMemo(
+    () => nodeInformationMetadata?.nodeType === "mcp_sse",
     [nodeInformationMetadata?.nodeType],
   );
 
@@ -79,13 +92,29 @@ export default function TextAreaComponent({
     if (isWebhook && value === WEBHOOK_VALUE) {
       const curlWebhookCode = getCurlWebhookCode({
         flowId: nodeInformationMetadata?.flowId!,
-        isAuth: nodeInformationMetadata?.isAuth!,
+        webhookAuthEnable,
         flowName: nodeInformationMetadata?.flowName!,
         format: "singleline",
       });
       handleOnNewValue({ value: curlWebhookCode });
+    } else if (value === MCP_SSE_VALUE) {
+      const mcpSSEUrl = `${URL_MCP_SSE}`;
+      handleOnNewValue({ value: mcpSSEUrl });
     }
-  }, [isWebhook]);
+  }, [
+    isWebhook,
+    value,
+    nodeInformationMetadata,
+    handleOnNewValue,
+    webhookAuthEnable,
+  ]);
+
+  // Restore cursor position after value changes
+  useEffect(() => {
+    if (cursor !== null && inputRef.current) {
+      inputRef.current.setSelectionRange(cursor, cursor);
+    }
+  }, [cursor, value]);
 
   const getInputClassName = () => {
     return cn(
@@ -98,6 +127,7 @@ export default function TextAreaComponent({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCursor(e.target.selectionStart);
     handleOnNewValue({ value: e.target.value });
   };
 
@@ -105,7 +135,7 @@ export default function TextAreaComponent({
     if (isWebhook) {
       const curlWebhookCode = getCurlWebhookCode({
         flowId: nodeInformationMetadata?.flowId!,
-        isAuth: nodeInformationMetadata?.isAuth!,
+        webhookAuthEnable,
         flowName: nodeInformationMetadata?.flowName!,
         format,
       });

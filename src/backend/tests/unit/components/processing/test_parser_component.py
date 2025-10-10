@@ -1,7 +1,9 @@
+import re
+
 import pytest
-from langflow.components.processing.parser import ParserComponent
-from langflow.schema import Data, DataFrame
-from langflow.schema.message import Message
+from lfx.components.processing.parser import ParserComponent
+from lfx.schema import Data, DataFrame
+from lfx.schema.message import Message
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -17,7 +19,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         """Return the default kwargs for the component."""
         return {
             "input_data": DataFrame({"Name": ["John"], "Age": [30], "Country": ["USA"]}),
-            "template": "Name: {Name}, Age: {Age}, Country: {Country}",
+            "pattern": "Name: {Name}, Age: {Age}, Country: {Country}",
             "sep": "\n",
             "stringify": False,
             "clean_data": False,
@@ -44,7 +46,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         data = Data(text="Hello World")
         kwargs = {
             "input_data": data,
-            "template": "text: {text}",
+            "pattern": "text: {text}",
             "sep": "\n",
             "stringify": False,
         }
@@ -62,7 +64,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         data_frame = DataFrame({"Name": ["John", "Jane"], "Age": [30, 25]})
         kwargs = {
             "input_data": data_frame,
-            "stringify": True,
+            "mode": "Stringify",
             "clean_data": False,
         }
         component = component_class(**kwargs)
@@ -101,7 +103,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         message = Message(text="Test message content")
         kwargs = {
             "input_data": message,
-            "stringify": True,
+            "mode": "Stringify",
         }
         component = component_class(**kwargs)
 
@@ -115,11 +117,15 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
     def test_clean_data_with_stringify(self, component_class):
         # Arrange
         data_frame = DataFrame(
-            {"Name": ["John", "Jane\n", "\nBob"], "Age": [30, None, 25], "Notes": ["Good\n\nPerson", "", "Nice\n"]}
+            {
+                "Name": ["John", "Jane\n", "\nBob"],
+                "Age": [30, None, 25],
+                "Notes": ["Good\n\nPerson", "", "Nice\n"],
+            }
         )
         kwargs = {
             "input_data": data_frame,
-            "stringify": True,
+            "mode": "Stringify",
             "clean_data": True,
         }
         component = component_class(**kwargs)
@@ -150,26 +156,32 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         # Arrange
         kwargs = {
             "input_data": 123,  # Invalid input type
-            "template": "{value}",
+            "pattern": "{value}",
             "sep": "\n",
         }
         component = component_class(**kwargs)
 
         # Act & Assert
-        with pytest.raises(ValueError, match="Unsupported input type: <class 'int'>. Expected DataFrame or Data."):
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Unsupported input type: <class 'int'>. Expected DataFrame or Data."),
+        ):
             component.parse_combined_text()
 
     def test_none_input(self, component_class):
         # Arrange
         kwargs = {
             "input_data": None,
-            "template": "{value}",
+            "pattern": "{value}",
             "sep": "\n",
         }
         component = component_class(**kwargs)
 
         # Act & Assert
-        with pytest.raises(ValueError, match="Unsupported input type: <class 'NoneType'>. Expected DataFrame or Data."):
+        with pytest.raises(
+            ValueError,
+            match=re.escape("Unsupported input type: <class 'NoneType'>. Expected DataFrame or Data."),
+        ):
             component.parse_combined_text()
 
     def test_invalid_template(self, component_class):
@@ -177,7 +189,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         data_frame = DataFrame({"Name": ["John"]})
         kwargs = {
             "input_data": data_frame,
-            "template": "{InvalidColumn}",  # Invalid column name
+            "pattern": "{InvalidColumn}",  # Invalid column name
             "sep": "\n",
             "stringify": False,
         }
@@ -197,9 +209,9 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         )
         kwargs = {
             "input_data": data_frame,
-            "template": "{Name} is {Age} years old",
+            "pattern": "{Name} is {Age} years old",
             "sep": " | ",
-            "stringify": False,
+            "mode": "Parser",
         }
         component = component_class(**kwargs)
 

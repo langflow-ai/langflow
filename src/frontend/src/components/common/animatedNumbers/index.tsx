@@ -1,6 +1,11 @@
-import { cn } from "@/utils/utils";
-import { motion, SpringOptions, useSpring, useTransform } from "framer-motion";
+import {
+  motion,
+  type SpringOptions,
+  useSpring,
+  useTransform,
+} from "framer-motion";
 import { useEffect, useState } from "react";
+import { cn } from "@/utils/utils";
 
 type AnimatedNumberProps = {
   value: number;

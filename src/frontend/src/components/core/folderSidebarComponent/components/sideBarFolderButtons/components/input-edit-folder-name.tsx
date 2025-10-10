@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import { FolderType } from "@/pages/MainPage/entities";
+import type { FolderType } from "@/pages/MainPage/entities";
 
 export const InputEditFolderName = ({
   handleEditFolderName,
@@ -33,7 +33,7 @@ export const InputEditFolderName = ({
   return (
     <>
       <Input
-        className="h-6 flex-1 focus:border-0"
+        className="h-6 flex-1 text-xs focus:border-0"
         onChange={(e) => {
           handleEditFolderName(e, item.name);
         }}
@@ -59,8 +59,8 @@ export const InputEditFolderName = ({
           refInput.current?.blur();
         }}
         value={foldersNames[item.name]}
-        id={`input-folder-${item.name}`}
-        data-testid={`input-folder`}
+        id={`input-project-${item.name}`}
+        data-testid={`input-project`}
       />
     </>
   );

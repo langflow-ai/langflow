@@ -33,12 +33,12 @@
 	V473.944C1006.106,429.714,970.286,393.894,926.056,393.75z"/>
 <path opacity="0.2" enable-background="new    " d="M882.306,393.75H437.5V1400h444.806c44.23-0.144,80.05-35.964,80.194-80.194
 	V473.944C962.356,429.714,926.536,393.894,882.306,393.75z"/>
-<linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="167.2057" y1="1420.9117" x2="795.2943" y2="333.0883" gradientTransform="matrix(1 0 0 -1 0 1752)">
+<linearGradient id="SVGWORD_1_" gradientUnits="userSpaceOnUse" x1="167.2057" y1="1420.9117" x2="795.2943" y2="333.0883" gradientTransform="matrix(1 0 0 -1 0 1752)">
 	<stop  offset="0" style="stop-color:#2368C4"/>
 	<stop  offset="0.5" style="stop-color:#1A5DBE"/>
 	<stop  offset="1" style="stop-color:#1146AC"/>
 </linearGradient>
-<path fill="url(#SVGID_1_)" d="M80.194,393.75h802.112c44.29,0,80.194,35.904,80.194,80.194v802.113
+<path fill="url(#SVGWORD_1_)" d="M80.194,393.75h802.112c44.29,0,80.194,35.904,80.194,80.194v802.113
 	c0,44.29-35.904,80.194-80.194,80.194H80.194c-44.29,0-80.194-35.904-80.194-80.194V473.944C0,429.654,35.904,393.75,80.194,393.75z
 	"/>
 <path fill="#FFFFFF" d="M329.088,1008.788c1.575,12.381,2.625,23.144,3.106,32.375h1.837c0.7-8.75,2.158-19.294,4.375-31.631

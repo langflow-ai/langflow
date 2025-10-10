@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
@@ -9,7 +9,6 @@ withEventDeliveryModes(
   "Simple Agent",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(); //@TODO understand this behavior
     test.skip(
       !process?.env?.OPENAI_API_KEY,
 
@@ -26,19 +25,21 @@ withEventDeliveryModes(
     await page.getByRole("heading", { name: "Simple Agent" }).first().click();
     await initialGPTsetup(page);
 
-    await page.getByTestId("textarea_str_input_value").first().fill("Hello");
-
-    await page.getByTestId("button_run_chat output").last().click();
-
-    await page.waitForSelector("text=built successfully", {
-      timeout: 10000 * 60 * 3,
-    });
-
     await page.getByTestId("playground-btn-flow-io").click();
 
-    await page.waitForSelector('[data-testid="button-send"]', {
-      timeout: 3000,
-    });
+    await page
+      .getByTestId("input-chat-playground")
+      .last()
+      .fill("Hello, tell me about Langflow.");
+
+    await page.getByTestId("button-send").last().click();
+
+    const stopButton = page.getByRole("button", { name: "Stop" });
+    await stopButton.waitFor({ state: "visible", timeout: 30000 });
+
+    if (await stopButton.isVisible()) {
+      await expect(stopButton).toBeHidden({ timeout: 120000 });
+    }
 
     const textContents = await page.getByTestId("div-chat-message").innerText();
 
@@ -46,6 +47,6 @@ withEventDeliveryModes(
     expect(await page.getByTestId("duration-display").last().isVisible());
     expect(await page.getByTestId("icon-check").nth(0).isVisible());
     expect(await page.getByTestId("icon-Check").nth(0).isVisible());
-    expect(textContents.length).toBeGreaterThan(10);
+    expect(textContents.length).toBeGreaterThan(30);
   },
 );

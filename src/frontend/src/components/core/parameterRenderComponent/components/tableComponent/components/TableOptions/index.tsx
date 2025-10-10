@@ -1,7 +1,7 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
-import { TableOptionsTypeAPI } from "@/types/api";
+import type { TableOptionsTypeAPI } from "@/types/api";
 import { cn } from "@/utils/utils";
 
 export default function TableOptions({
@@ -10,6 +10,7 @@ export default function TableOptions({
   deleteRow,
   hasSelection,
   stateChange,
+  paginationInfo,
   addRow,
   tableOptions,
 }: {
@@ -20,6 +21,7 @@ export default function TableOptions({
   hasSelection: boolean;
   stateChange: boolean;
   tableOptions?: TableOptionsTypeAPI;
+  paginationInfo?: string;
 }): JSX.Element {
   return (
     <div className={cn("absolute bottom-3 left-6")}>
@@ -119,6 +121,13 @@ export default function TableOptions({
             </Button>
           </ShadTooltip>
         </div>
+        {paginationInfo && (
+          <div className="ml-2 text-xs text-muted-foreground">
+            <ShadTooltip content="Pagination Info">
+              <span>{paginationInfo}</span>
+            </ShadTooltip>
+          </div>
+        )}
       </div>
     </div>
   );
