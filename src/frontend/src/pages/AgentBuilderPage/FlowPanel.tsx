@@ -57,7 +57,7 @@ export default function FlowPanel({ flowId, yamlSpec, flowData, folderId, onClos
       {/* Tab Content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === "specification" && (
-          <SpecificationView flowData={flowData} />
+          <SpecificationView flowData={flowData} yamlSpec={yamlSpec} />
         )}
 
         {activeTab === "visualization" && (
