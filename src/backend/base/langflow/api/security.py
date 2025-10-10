@@ -3,13 +3,14 @@
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlmodel import AsyncSession, select
+from sqlmodel import select
 
+from langflow.api.utils import DbSession
 from langflow.services.database.models.flow.model import Flow
 
 
 async def get_flow_with_ownership(
-    session: AsyncSession,
+    session: DbSession,
     flow_id: UUID,
     user_id: UUID,
 ) -> Flow:
@@ -38,7 +39,7 @@ async def get_flow_with_ownership(
 
 
 async def get_flow_with_ownership_by_name_or_id(
-    session: AsyncSession,
+    session: DbSession,
     flow_id_or_name: str,
     user_id: UUID,
 ) -> Flow:
@@ -72,7 +73,7 @@ async def get_flow_with_ownership_by_name_or_id(
 
 
 async def get_public_flow_by_name_or_id(
-    session: AsyncSession,
+    session: DbSession,
     flow_id_or_name: str,
 ) -> Flow:
     """Get public flow by ID or endpoint name without ownership validation.
