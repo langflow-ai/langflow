@@ -42,6 +42,7 @@ import McpSidebarGroup from "./components/McpSidebarGroup";
 import MemoizedSidebarGroup from "./components/sidebarBundles";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
+import BasicExamplesSidebarSection from "@/components/basicExamplesSidebarSection";
 import SidebarSegmentedNav from "./components/sidebarSegmentedNav";
 import { applyBetaFilter } from "./helpers/apply-beta-filter";
 import { applyComponentFilter } from "./helpers/apply-component-filter";
@@ -500,6 +501,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     [],
   );
 
+  const showAgents = ENABLE_NEW_SIDEBAR && activeSection === "agents";
+
   const hasCoreComponents = useMemo(() => {
     const categoriesWithItems = CATEGORIES.filter(
       (item) =>
@@ -651,6 +654,11 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                         showConfig={showConfig}
                         setShowConfig={setShowConfig}
                       />
+                    )}
+                    {showAgents && (
+                      <div className="px-2">
+                        <BasicExamplesSidebarSection />
+                      </div>
                     )}
                     {showBundles && (
                       <MemoizedSidebarGroup
