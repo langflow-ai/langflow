@@ -208,18 +208,20 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page
+      .getByTestId("side_nav_options_all-templates")
+      .click({ timeout: 30000 });
+    await page
+      .getByRole("heading", { name: "Basic Prompting" })
+      .click({ timeout: 30000 });
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
+    await expect(page.getByTestId("sidebar-search-input")).toBeVisible({
+      timeout: 30000,
     });
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     // Now navigate to user settings
-    await page.getByTestId("user-profile-settings").click();
-    await page.getByTestId("menu_settings_button").click();
+    await page.getByTestId("user-profile-settings").click({ timeout: 30000 });
+    await page.getByTestId("menu_settings_button").click({ timeout: 30000 });
 
     // Verify we're on the settings page
     await expect(page.getByText("General").nth(2)).toBeVisible({
@@ -227,15 +229,18 @@ test(
     });
 
     // Navigate to Global Variables
-    await page.getByText("Global Variables").click();
-    await page.getByText("Global Variables").nth(2);
+    await page.getByText("Global Variables").click({ timeout: 30000 });
+    await page
+      .getByText("Global Variables")
+      .nth(2)
+      .isVisible({ timeout: 30000 });
     await page
       .getByText("Global Variables", { exact: true })
       .nth(1)
-      .isVisible();
+      .isVisible({ timeout: 30000 });
 
     // Click the back button - this should take us back to the flow, not to the main settings page
-    await page.getByTestId("back_page_button").click();
+    await page.getByTestId("back_page_button").click({ timeout: 30000 });
 
     // Verify we're back on the flow page, not the settings main page
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
@@ -246,6 +251,8 @@ test(
     expect(page.url()).toMatch(/\/flow\//);
 
     // Verify we can see flow-specific elements
-    await expect(page.getByTestId("sidebar-search-input")).toBeVisible();
+    await expect(page.getByTestId("sidebar-search-input")).toBeVisible({
+      timeout: 30000,
+    });
   },
 );
