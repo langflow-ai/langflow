@@ -218,6 +218,7 @@ async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession
     """
     requesting_user_id = kwargs.get("requesting_user_id")
 
+    flow: Flow | None = None
     if requesting_user_id:
         from langflow.api.security import get_flow_with_ownership
 
@@ -228,7 +229,7 @@ async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession
     else:
         # Fallback to non-validated access (for backward compatibility)
         # WARNING: This should only be used for public flows or internal operations
-        flow: Flow | None = await session.get(Flow, flow_id)
+        flow = await session.get(Flow, flow_id)
         if not flow:
             msg = "Invalid flow ID"
             raise ValueError(msg)
