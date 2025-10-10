@@ -6,12 +6,14 @@ interface StreamingMessagesProps {
   messages: StreamMessage[];
   isLoading: boolean;
   onBuildAgent?: (workflow: any) => void;
+  isFlowBuilt?: boolean;
 }
 
 export default function StreamingMessages({
   messages,
   isLoading,
   onBuildAgent,
+  isFlowBuilt = false,
 }: StreamingMessagesProps) {
   if (messages.length === 0 && !isLoading) {
     return null;
@@ -20,7 +22,7 @@ export default function StreamingMessages({
   return (
     <div className="space-y-4">
       {messages.map((message) => (
-        <MessageItem key={message.id} message={message} onBuildAgent={onBuildAgent} />
+        <MessageItem key={message.id} message={message} onBuildAgent={onBuildAgent} isFlowBuilt={isFlowBuilt} />
       ))}
 
       {isLoading && (
@@ -33,7 +35,7 @@ export default function StreamingMessages({
   );
 }
 
-function MessageItem({ message, onBuildAgent }: { message: StreamMessage; onBuildAgent?: (workflow: any) => void }) {
+function MessageItem({ message, onBuildAgent, isFlowBuilt }: { message: StreamMessage; onBuildAgent?: (workflow: any) => void; isFlowBuilt?: boolean }) {
   switch (message.type) {
     case "user":
       return <UserMessage data={message.data} />;
@@ -42,7 +44,7 @@ function MessageItem({ message, onBuildAgent }: { message: StreamMessage; onBuil
     case "agent_found":
       return <AgentFoundMessage data={message.data} />;
     case "complete":
-      return <CompleteMessage data={message.data} onBuildAgent={onBuildAgent} />;
+      return <CompleteMessage data={message.data} onBuildAgent={onBuildAgent} isFlowBuilt={isFlowBuilt} />;
     case "error":
       return <ErrorMessage data={message.data} />;
     default:
@@ -55,7 +57,7 @@ function UserMessage({ data }: { data: any }) {
     <div className="flex justify-end mb-4">
       <div className="max-w-[80%]">
         <div className="rounded-lg bg-muted px-4 py-3">
-          <p className="text-sm">{data.message}</p>
+          <p className="text-sm text-text-grey">{data.message}</p>
         </div>
       </div>
     </div>
@@ -118,7 +120,7 @@ function AgentFoundMessage({ data }: { data: any }) {
   );
 }
 
-function CompleteMessage({ data, onBuildAgent }: { data: any; onBuildAgent?: (workflow: any) => void }) {
+function CompleteMessage({ data, onBuildAgent, isFlowBuilt }: { data: any; onBuildAgent?: (workflow: any) => void; isFlowBuilt?: boolean }) {
   const workflow = data.workflow;
   const reasoning = data.reasoning;
 
@@ -130,7 +132,7 @@ function CompleteMessage({ data, onBuildAgent }: { data: any; onBuildAgent?: (wo
 
   return (
     <div className="mb-3">
-      <Card className="border-2 border-primary">
+      <Card className="bg-secondary-bg">
         <CardContent className="p-6">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
@@ -145,7 +147,7 @@ function CompleteMessage({ data, onBuildAgent }: { data: any; onBuildAgent?: (wo
               {workflow && (
                 <div className="mt-4 space-y-3">
                   <div>
-                    <h4 className="text-sm font-medium">Workflow: {workflow.name}</h4>
+                    <h4 className="text-title text-sm font-medium">Workflow: {workflow.name}</h4>
                     <p className="text-xs text-muted-foreground">
                       {workflow.description}
                     </p>
@@ -173,23 +175,41 @@ function CompleteMessage({ data, onBuildAgent }: { data: any; onBuildAgent?: (wo
                     </div>
                   )}
 
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      onClick={handleBuildClick}
-                      className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                    >
-                      <div className="flex items-center gap-2">
-                        <ForwardedIconComponent name="Play" className="h-4 w-4" />
-                        Build Agent
-                      </div>
-                    </button>
-                    <button className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">
-                      <div className="flex items-center gap-2">
-                        <ForwardedIconComponent name="Edit" className="h-4 w-4" />
-                        Edit Plan
-                      </div>
-                    </button>
-                  </div>
+                  {/* Show buttons only if flow is not built yet */}
+                  {!isFlowBuilt && (
+                    <div className="mt-4 flex gap-2">
+                      <button
+                        onClick={handleBuildClick}
+                        className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                      >
+                        <div className="flex items-center gap-2">
+                          <ForwardedIconComponent name="Play" className="h-4 w-4" />
+                          Build Agent
+                        </div>
+                      </button>
+                      <button className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">
+                        <div className="flex items-center gap-2">
+                          <ForwardedIconComponent name="Edit" className="h-4 w-4" />
+                          Edit Plan
+                        </div>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Show summary when flow is built */}
+                  {isFlowBuilt && workflow.components && workflow.components.length > 0 && (
+                    <div className="mt-4 rounded-lg bg-muted/50 p-4">
+                      <p className="text-sm font-medium mb-3">Here's your visual workflow on the canvas:</p>
+                      <ul className="space-y-1.5">
+                        {workflow.components.map((comp: any, idx: number) => (
+                          <li key={idx} className="text-sm text-muted-foreground flex items-center gap-2">
+                            <span className="text-primary">-</span>
+                            <span>{comp.name}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

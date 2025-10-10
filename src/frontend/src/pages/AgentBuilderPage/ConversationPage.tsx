@@ -167,6 +167,7 @@ export default function ConversationPage() {
                 messages={messages}
                 isLoading={isLoading}
                 onBuildAgent={handleBuildAgent}
+                isFlowBuilt={showFlowPanel}
               />
             </div>
           </div>

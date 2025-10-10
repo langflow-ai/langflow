@@ -153,7 +153,7 @@ export default function AgentBuilderPage() {
         {/* Hero Section */}
         <div className="flex flex-col items-center justify-center mt-20 mb-12 max-w-[876px] mx-auto">
           <p className="text-xl mb-2">
-            Hi <span className="font-medium">User</span>, What can I help you today?
+            Hi <span className="font-medium">Rishi</span>, What can I help you today?
           </p>
           <p className="text-sm text-muted-foreground text-center max-w-2xl">
             Build workflows from the library of AI Agents, or create your own custom agent from scratch
@@ -165,9 +165,10 @@ export default function AgentBuilderPage() {
           <div className="relative">
             <textarea
               value={promptValue}
+              rows={1}
               onChange={(e) => setPromptValue(e.target.value)}
               placeholder="Describe what you want your agent to do..."
-              className="w-full min-h-[120px] p-4 pr-12 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none"
+              className="w-full p-4 pr-12 rounded-lg border border-input bg-background text-sm focus:outline-none"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -177,7 +178,7 @@ export default function AgentBuilderPage() {
             />
             <button
               onClick={handlePromptSubmit}
-              className="absolute right-3 bottom-3 p-2 rounded-md bg-primary-blue text-primary-foreground disabled:opacity-50 disabled:pointer-events-none"
+              className="absolute right-3 bottom-4 p-2 rounded-md bg-primary-blue text-primary-foreground disabled:opacity-50 disabled:pointer-events-none"
               disabled={!promptValue.trim()}
               aria-label="Submit prompt"
             >
