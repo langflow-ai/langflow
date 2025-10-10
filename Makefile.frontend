@@ -74,7 +74,7 @@ tests_frontend: ## run frontend tests
 ifeq ($(UI), true)
 	@cd $(FRONTEND_DIR) && npx playwright test --ui --project=chromium
 else
-	@cd $(FRONTEND_DIR) && npx playwright test --project=chromium && npx nyc report --reporter=html --report-dir=coverage/playwright
+	@cd $(FRONTEND_DIR) && npx playwright test --project=chromium
 endif
 
 ######################
@@ -171,9 +171,13 @@ test_frontend_coverage_open: test_frontend_coverage ## run tests with coverage a
 ######################
 
 # Run Jest and Playwright tests, merge coverage reports and open coverage report in browser
+frontend_tests_coverage: test_frontend_coverage tests_frontend
+	@echo "Merge coverage reports..."
+	@cd $(FRONTEND_DIR) && cp /coverage/jest/coverage-final.json /.nyc_output/jest-coverage-final.json && npx nyc report --reporter=html --report-dir=coverage/combined
+
 frontend_tests_coverage_open: test_frontend_coverage tests_frontend
 	@echo "Merge coverage reports..."
-	@cd $(FRONTEND_DIR) && npx nyc
+	@cd $(FRONTEND_DIR) && cp /coverage/jest/coverage-final.json /.nyc_output/jest-coverage-final.json && npx nyc report --reporter=html --report-dir=coverage/combined && open /coverage/combined/index.html
 
 
 ######################
