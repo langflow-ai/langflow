@@ -320,6 +320,9 @@ class ChainEventHandler(Protocol):
         agent_message: Message,
         send_message_method: SendMessageFunctionType,
         start_time: float,
+        *,
+        had_streaming: bool = False,
+        event_manager: Any = None,
     ) -> tuple[Message, float]: ...
 
 
