@@ -13,15 +13,15 @@
     --foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --background: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --muted: 240 5% 96%; /* hsl(240, 5%, 96%) */
-    --muted-foreground: 240 4% 46%; /* hsl(240, 4%, 46%) */
+    --muted-foreground: #6f6f6f;/* hsl(240, 4%, 46%) */
     --card: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --card-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --popover: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --popover-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --border: 240 6% 90%; /* hsl(240, 6%, 90%) */
-    --input: 240 6% 90%; /* hsl(240, 6%, 90%) */
+    --input: #EBE8FF; /* hsl(240, 6%, 90%) */
     --primary-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
-    --primary: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --primary: #350E84; /* hsl(0, 0%, 0%) */
     --secondary: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --secondary-foreground: 240 4% 16%; /* hsl(240, 4%, 16%) */
     --accent: 240 5% 96%; /* hsl(240, 5%, 96%) */

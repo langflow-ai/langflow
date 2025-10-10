@@ -73,7 +73,7 @@ export default function TemplatesModal({
               <BaseModal.Footer>
                 <div className="flex w-full flex-col justify-between gap-4 pb-4 sm:flex-row sm:items-center">
                   <div className="flex flex-col items-start justify-center">
-                    <div className="font-semibold">Start from scratch</div>
+                    <div className="font-semibold text-title">Start from scratch</div>
                     <div className="text-sm text-muted-foreground">
                       Begin with a fresh flow to build from scratch.
                     </div>
