@@ -59,7 +59,7 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add src/lfx/src/lfx/_assets/component_index.json
-          git commit -m "chore: update component index [skip ci]"
+          git commit -m "chore: update component index"
 
           # Retry push with rebase if needed (handles concurrent PR updates)
           for i in {1..3}; do
