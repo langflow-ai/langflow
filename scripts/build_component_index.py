@@ -20,6 +20,23 @@ def _get_langflow_version():
     return version("langflow")
 
 
+def _normalize_for_determinism(obj):
+    """Recursively normalize data structures for deterministic serialization.
+
+    Sorts dictionaries by key and lists (where semantically appropriate) to ensure
+    the same input always produces the same JSON output.
+    """
+    if isinstance(obj, dict):
+        # Recursively normalize all dict values and return sorted by keys
+        return {k: _normalize_for_determinism(v) for k, v in sorted(obj.items())}
+    if isinstance(obj, list):
+        # Recursively normalize list items
+        # Keep list order as-is since some lists are ordered (like field_order)
+        return [_normalize_for_determinism(item) for item in obj]
+    # Primitive types, return as-is
+    return obj
+
+
 def build_component_index():
     """Build the component index by scanning all modules in lfx.components.
 
@@ -40,8 +57,14 @@ def build_component_index():
 
         print(f"Successfully loaded {len(modules_dict)} component categories")
 
-        # Convert modules_dict back to entries format for the index
-        entries = [[top_level, components] for top_level, components in modules_dict.items()]
+        # Convert modules_dict to entries format and sort for determinism
+        # Sort by category name (top_level) to ensure consistent ordering
+        entries = []
+        for category_name in sorted(modules_dict.keys()):
+            # Sort components within each category by component name
+            components_dict = modules_dict[category_name]
+            sorted_components = {comp_name: components_dict[comp_name] for comp_name in sorted(components_dict.keys())}
+            entries.append([category_name, sorted_components])
 
     except (ImportError, AttributeError) as e:
         print(f"Failed to import components: {e}", file=sys.stderr)
@@ -53,9 +76,13 @@ def build_component_index():
         "entries": entries,
     }
 
+    # Normalize the entire structure for deterministic output
+    index = _normalize_for_determinism(index)
+
     # Calculate hash for integrity verification
     # Note: We calculate hash without the sha256 field itself
     # orjson.dumps returns bytes and handles Enums automatically
+    # OPT_SORT_KEYS ensures consistent key ordering in the final JSON
     payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
     index["sha256"] = hashlib.sha256(payload).hexdigest()
 
