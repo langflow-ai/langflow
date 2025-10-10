@@ -721,7 +721,7 @@ export default function Page({
                 <FlowToolbar />
               </>
             )}
-              <SelectionMenu
+            <SelectionMenu
               lastSelection={lastSelection}
               isVisible={selectionMenuVisible}
               nodes={lastSelection?.nodes}

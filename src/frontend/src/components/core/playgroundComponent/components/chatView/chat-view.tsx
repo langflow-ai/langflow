@@ -18,111 +18,111 @@ import { ErrorMessage } from "./errorMessage/error-message";
 import { UserMessage } from "./userMessage/user-message";
 
 export default function ChatView(): JSX.Element {
-	const inputs = useFlowStore((state) => state.inputs);
-	const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-	const playgroundPage = usePlaygroundStore((state) => state.isPlayground);
-	const visibleSession = usePlaygroundStore((state) => state.selectedSession);
-	const currentFlowId = useGetFlowId();
+  const inputs = useFlowStore((state) => state.inputs);
+  const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const playgroundPage = usePlaygroundStore((state) => state.isPlayground);
+  const visibleSession = usePlaygroundStore((state) => state.selectedSession);
+  const currentFlowId = useGetFlowId();
 
-	const nodes = useFlowStore((state) => state.nodes);
-	const chatInput = inputs.find((input) => input.type === "ChatInput");
-	const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
+  const nodes = useFlowStore((state) => state.nodes);
+  const chatInput = inputs.find((input) => input.type === "ChatInput");
+  const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
 
-	const isBuilding = useFlowStore((state) => state.isBuilding);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
 
-	const inputTypes = inputs.map((obj) => obj.type);
-	const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
-	const isTabHidden = useTabVisibility();
+  const inputTypes = inputs.map((obj) => obj.type);
+  const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
+  const isTabHidden = useTabVisibility();
 
-	const { data: messages = [] } = useGetMessagesQuery({
-		id: currentFlowId,
-		session_id: visibleSession,
-	});
+  const { data: messages = [] } = useGetMessagesQuery({
+    id: currentFlowId,
+    session_id: visibleSession,
+  });
 
-	//build chat history
-	useEffect(() => {
-		if (messages.length === 0 && !isBuilding && chatInputNode && isTabHidden) {
-			setChatValueStore(
-				chatInputNode.data.node.template["input_value"].value ?? "",
-			);
-		}
-	}, [messages, isBuilding, chatInputNode, isTabHidden, setChatValueStore]);
+  //build chat history
+  useEffect(() => {
+    if (messages.length === 0 && !isBuilding && chatInputNode && isTabHidden) {
+      setChatValueStore(
+        chatInputNode.data.node.template["input_value"].value ?? "",
+      );
+    }
+  }, [messages, isBuilding, chatInputNode, isTabHidden, setChatValueStore]);
 
-	const { files, setFiles, handleFiles } = useCustomUseFileHandler(realFlowId);
-	const [isDragging, setIsDragging] = useState(false);
+  const { files, setFiles, handleFiles } = useCustomUseFileHandler(realFlowId);
+  const [isDragging, setIsDragging] = useState(false);
 
-	const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
-		setIsDragging,
-		!!playgroundPage,
-	);
+  const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
+    setIsDragging,
+    !!playgroundPage,
+  );
 
-	const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
-		if (!ENABLE_IMAGE_ON_PLAYGROUND && playgroundPage) {
-			e.stopPropagation();
-			return;
-		}
-		e.preventDefault();
-		e.stopPropagation();
-		if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-			handleFiles(e.dataTransfer.files);
-			e.dataTransfer.clearData();
-		}
-		setIsDragging(false);
-	};
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!ENABLE_IMAGE_ON_PLAYGROUND && playgroundPage) {
+      e.stopPropagation();
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
+      e.dataTransfer.clearData();
+    }
+    setIsDragging(false);
+  };
 
-	const isVoiceAssistantActive = useVoiceStore(
-		(state) => state.isVoiceAssistantActive,
-	);
+  const isVoiceAssistantActive = useVoiceStore(
+    (state) => state.isVoiceAssistantActive,
+  );
 
-	console.log("messages", messages);
+  console.log("messages", messages);
 
-	return (
-		<StickToBottom
-			className={cn(
-				"flex h-full flex-1 flex-col rounded-md",
-				!isVoiceAssistantActive && "pointer-events-auto",
-			)}
-			onDragOver={dragOver}
-			onDragEnter={dragEnter}
-			onDragLeave={dragLeave}
-			onDrop={onDrop}
-			resize="smooth"
-			initial="instant"
-			mass={1}
-		>
-			<StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden p-4">
-				<div className="flex flex-col place-self-center max-w-[768px] w-full">
-					{messages?.map((chat, index) =>
-						chat.category === "error" ? (
-							<ErrorMessage chat={chat} key={`${chat.id}-${index}`} />
-						) : chat.sender === "User" ? (
-							<UserMessage
-								chat={chat}
-								lastMessage={messages.length - 1 === index}
-								key={`${chat.id}-${index}`}
-								playgroundPage={playgroundPage}
-							/>
-						) : (
-							<BotMessage
-								chat={chat}
-								lastMessage={messages.length - 1 === index}
-								key={`${chat.id}-${index}`}
-								playgroundPage={playgroundPage}
-							/>
-						),
-					)}
-				</div>
-			</StickToBottom.Content>
+  return (
+    <StickToBottom
+      className={cn(
+        "flex h-full flex-1 flex-col rounded-md",
+        !isVoiceAssistantActive && "pointer-events-auto",
+      )}
+      onDragOver={dragOver}
+      onDragEnter={dragEnter}
+      onDragLeave={dragLeave}
+      onDrop={onDrop}
+      resize="smooth"
+      initial="instant"
+      mass={1}
+    >
+      <StickToBottom.Content className="flex flex-col min-h-full overflow-x-hidden p-4">
+        <div className="flex flex-col place-self-center max-w-[768px] w-full">
+          {messages?.map((chat, index) =>
+            chat.category === "error" ? (
+              <ErrorMessage chat={chat} key={`${chat.id}-${index}`} />
+            ) : chat.sender === "User" ? (
+              <UserMessage
+                chat={chat}
+                lastMessage={messages.length - 1 === index}
+                key={`${chat.id}-${index}`}
+                playgroundPage={playgroundPage}
+              />
+            ) : (
+              <BotMessage
+                chat={chat}
+                lastMessage={messages.length - 1 === index}
+                key={`${chat.id}-${index}`}
+                playgroundPage={playgroundPage}
+              />
+            ),
+          )}
+        </div>
+      </StickToBottom.Content>
 
-			<div className="m-auto w-full max-w-[768px] p-4">
-				<CustomChatInput
-					playgroundPage={!!playgroundPage}
-					noInput={!inputTypes.includes("ChatInput")}
-					files={files}
-					setFiles={setFiles}
-					isDragging={isDragging}
-				/>
-			</div>
-		</StickToBottom>
-	);
+      <div className="m-auto w-full max-w-[768px] p-4">
+        <CustomChatInput
+          playgroundPage={!!playgroundPage}
+          noInput={!inputTypes.includes("ChatInput")}
+          files={files}
+          setFiles={setFiles}
+          isDragging={isDragging}
+        />
+      </div>
+    </StickToBottom>
+  );
 }

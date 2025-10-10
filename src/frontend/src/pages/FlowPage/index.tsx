@@ -187,7 +187,11 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           <FlowSearchProvider>
             <div className="flex h-full w-fit">
               <AnimatedConditional isOpen={!isFullscreen || !isOpen}>
-                <SidebarProvider width="17.5rem" defaultOpen={!isMobile} segmentedSidebar={ENABLE_NEW_SIDEBAR}>
+                <SidebarProvider
+                  width="17.5rem"
+                  defaultOpen={!isMobile}
+                  segmentedSidebar={ENABLE_NEW_SIDEBAR}
+                >
                   {!view && <FlowSidebarComponent isLoading={isLoading} />}
                   <MemoizedSidebarTrigger />
                 </SidebarProvider>
