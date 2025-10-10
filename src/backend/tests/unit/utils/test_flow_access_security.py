@@ -19,17 +19,17 @@ from langflow.services.database.models.user.model import User
 
 # Fixtures for testing
 @pytest.fixture
-async def created_user(session):
+async def created_user(async_session):
     """Create a test user."""
     user = User(username="test_user", password="test1234", email="test@example.com")  # noqa: S106
-    session.add(user)
-    await session.commit()
-    await session.refresh(user)
+    async_session.add(user)
+    await async_session.commit()
+    await async_session.refresh(user)
     return user
 
 
 @pytest.fixture
-async def created_flow(session, created_user):
+async def created_flow(async_session, created_user):
     """Create a test flow owned by test user."""
     flow = Flow(
         name="Test Flow",
@@ -37,9 +37,9 @@ async def created_flow(session, created_user):
         data={"nodes": [], "edges": []},
         access_type=AccessTypeEnum.PRIVATE,
     )
-    session.add(flow)
-    await session.commit()
-    await session.refresh(flow)
+    async_session.add(flow)
+    await async_session.commit()
+    await async_session.refresh(flow)
     return flow
 
 
@@ -47,108 +47,108 @@ class TestFlowAccessSecurity:
     """Test suite for flow access security."""
 
     @pytest.mark.asyncio
-    async def test_get_flow_with_ownership_valid_owner(self, session, created_user, created_flow):
+    async def test_get_flow_with_ownership_valid_owner(self, async_session, created_user, created_flow):
         """Test that flow owner can access their own flow."""
-        flow = await get_flow_with_ownership(session, created_flow.id, created_user.id)
+        flow = await get_flow_with_ownership(async_session, created_flow.id, created_user.id)
         assert flow.id == created_flow.id
         assert flow.user_id == created_user.id
 
     @pytest.mark.asyncio
-    async def test_get_flow_with_ownership_invalid_owner(self, session, created_flow):
+    async def test_get_flow_with_ownership_invalid_owner(self, async_session, created_flow):
         """Test that non-owner cannot access flow."""
         # Create another user
-        other_user = User(username="other_user", email="other@test.com")
-        session.add(other_user)
-        await session.commit()
-        await session.refresh(other_user)
+        other_user = User(username="other_user", password="abc123", email="other@test.com")  # noqa: S106
+        async_session.add(other_user)
+        await async_session.commit()
+        await async_session.refresh(other_user)
 
         # Try to access flow as different user
         with pytest.raises(HTTPException) as exc_info:
-            await get_flow_with_ownership(session, created_flow.id, other_user.id)
+            await get_flow_with_ownership(async_session, created_flow.id, other_user.id)
         assert exc_info.value.status_code == 404
         assert "Flow not found" in str(exc_info.value.detail)
 
     @pytest.mark.asyncio
-    async def test_get_flow_with_ownership_nonexistent_flow(self, session, created_user):
+    async def test_get_flow_with_ownership_nonexistent_flow(self, async_session, created_user):
         """Test that nonexistent flow raises 404."""
         fake_flow_id = uuid.uuid4()
         with pytest.raises(HTTPException) as exc_info:
-            await get_flow_with_ownership(session, fake_flow_id, created_user.id)
+            await get_flow_with_ownership(async_session, fake_flow_id, created_user.id)
         assert exc_info.value.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_get_flow_by_name_or_id_with_uuid(self, session, created_user, created_flow):
+    async def test_get_flow_by_name_or_id_with_uuid(self, async_session, created_user, created_flow):
         """Test access by UUID with ownership validation."""
-        flow = await get_flow_with_ownership_by_name_or_id(session, str(created_flow.id), created_user.id)
+        flow = await get_flow_with_ownership_by_name_or_id(async_session, str(created_flow.id), created_user.id)
         assert flow.id == created_flow.id
 
     @pytest.mark.asyncio
-    async def test_get_flow_by_name_or_id_with_endpoint_name(self, session, created_user, created_flow):
+    async def test_get_flow_by_name_or_id_with_endpoint_name(self, async_session, created_user, created_flow):
         """Test access by endpoint name with ownership validation."""
         # Set endpoint name
         created_flow.endpoint_name = "test_endpoint"
-        session.add(created_flow)
-        await session.commit()
+        async_session.add(created_flow)
+        await async_session.commit()
 
-        flow = await get_flow_with_ownership_by_name_or_id(session, "test_endpoint", created_user.id)
+        flow = await get_flow_with_ownership_by_name_or_id(async_session, "test_endpoint", created_user.id)
         assert flow.id == created_flow.id
 
     @pytest.mark.asyncio
-    async def test_get_flow_by_endpoint_name_cross_account_blocked(self, session, created_flow):
+    async def test_get_flow_by_endpoint_name_cross_account_blocked(self, async_session, created_flow):
         """Test that cross-account access by endpoint name is blocked."""
         # Create another user
-        other_user = User(username="other_user", email="other@test.com")
-        session.add(other_user)
-        await session.commit()
-        await session.refresh(other_user)
+        other_user = User(username="other_user", password="abc123", email="other@test.com")  # noqa: S106
+        async_session.add(other_user)
+        await async_session.commit()
+        await async_session.refresh(other_user)
 
         # Set endpoint name
         created_flow.endpoint_name = "test_endpoint"
-        session.add(created_flow)
-        await session.commit()
+        async_session.add(created_flow)
+        await async_session.commit()
 
         # Try to access by endpoint name as different user
         with pytest.raises(HTTPException) as exc_info:
-            await get_flow_with_ownership_by_name_or_id(session, "test_endpoint", other_user.id)
+            await get_flow_with_ownership_by_name_or_id(async_session, "test_endpoint", other_user.id)
         assert exc_info.value.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_public_flow_access_by_any_user(self, session, created_flow):
+    async def test_public_flow_access_by_any_user(self, async_session, created_flow):
         """Test that public flows can be accessed by any user."""
         # Create another user
-        other_user = User(username="other_user", email="other@test.com")
-        session.add(other_user)
-        await session.commit()
-        await session.refresh(other_user)
+        other_user = User(username="other_user", password="abc123", email="other@test.com")  # noqa: S106
+        async_session.add(other_user)
+        await async_session.commit()
+        await async_session.refresh(other_user)
 
         # Make flow public
         created_flow.access_type = AccessTypeEnum.PUBLIC
         created_flow.endpoint_name = "public_endpoint"
-        session.add(created_flow)
-        await session.commit()
+        async_session.add(created_flow)
+        await async_session.commit()
 
         # Access public flow by UUID
-        flow = await get_public_flow_by_name_or_id(session, str(created_flow.id))
+        flow = await get_public_flow_by_name_or_id(async_session, str(created_flow.id))
         assert flow.id == created_flow.id
 
         # Access public flow by endpoint name
-        flow = await get_public_flow_by_name_or_id(session, "public_endpoint")
+        flow = await get_public_flow_by_name_or_id(async_session, "public_endpoint")
         assert flow.id == created_flow.id
 
     @pytest.mark.asyncio
-    async def test_private_flow_not_accessible_as_public(self, session, created_flow):
+    async def test_private_flow_not_accessible_as_public(self, async_session, created_flow):
         """Test that private flows cannot be accessed via public flow function."""
         # Ensure flow is private
         created_flow.access_type = AccessTypeEnum.PRIVATE
         created_flow.endpoint_name = "private_endpoint"
-        session.add(created_flow)
-        await session.commit()
+        async_session.add(created_flow)
+        await async_session.commit()
 
         # Try to access private flow as public
         with pytest.raises(HTTPException) as exc_info:
-            await get_public_flow_by_name_or_id(session, str(created_flow.id))
+            await get_public_flow_by_name_or_id(async_session, str(created_flow.id))
         assert exc_info.value.status_code == 404
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_public_flow_by_name_or_id(session, "private_endpoint")
+            await get_public_flow_by_name_or_id(async_session, "private_endpoint")
         assert exc_info.value.status_code == 404

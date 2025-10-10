@@ -262,8 +262,12 @@ async def generate_flow_events(
             )
 
         if not flow_name:
-            result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
+            result = await fresh_session.exec(
+                select(Flow.name).where(Flow.id == flow_id, Flow.user_id == current_user.id)
+            )
             flow_name = result.first()
+            if not flow_name:
+                raise HTTPException(status_code=404, detail="Flow not found")
 
         return await build_graph_from_data(
             flow_id=flow_id_str,

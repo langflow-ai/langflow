@@ -32,7 +32,8 @@ async def get_flow_with_ownership(
         HTTPException: 404 if flow not found or not owned by user
     """
     stmt = select(Flow).where(Flow.id == flow_id, Flow.user_id == user_id)
-    flow = (await session.exec(stmt)).first()
+    result = await session.execute(stmt)
+    flow = result.scalar_one_or_none()
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
     return flow

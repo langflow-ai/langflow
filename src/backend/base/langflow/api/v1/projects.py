@@ -443,7 +443,11 @@ async def update_project(
 
         concat_project_components = project.components + project.flows
 
-        flows_ids = (await session.exec(select(Flow.id).where(Flow.folder_id == existing_project.id))).all()
+        flows_ids = (
+            await session.exec(
+                select(Flow.id).where(Flow.folder_id == existing_project.id, Flow.user_id == current_user.id)
+            )
+        ).all()
 
         excluded_flows = list(set(flows_ids) - set(project.flows))
 
@@ -575,7 +579,7 @@ async def download_file(
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
 
-        flows_query = select(Flow).where(Flow.folder_id == project_id)
+        flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id)
         flows_result = await session.exec(flows_query)
         flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows_result.all()]
 
