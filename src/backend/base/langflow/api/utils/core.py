@@ -222,9 +222,7 @@ async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession
         from langflow.api.security import get_flow_with_ownership
 
         user_uuid = (
-            requesting_user_id
-            if isinstance(requesting_user_id, uuid.UUID)
-            else uuid.UUID(str(requesting_user_id))
+            requesting_user_id if isinstance(requesting_user_id, uuid.UUID) else uuid.UUID(str(requesting_user_id))
         )
         flow = await get_flow_with_ownership(session, flow_id, user_uuid)
     else:
