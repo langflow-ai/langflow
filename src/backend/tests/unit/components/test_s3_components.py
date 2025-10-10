@@ -152,11 +152,13 @@ class TestS3CompatibleComponents:
             component.file_path = "user_123/nonexistent.txt"
 
             # Mock S3 error
-            with patch(
-                "langflow.base.data.storage_utils.read_file_bytes", side_effect=FileNotFoundError("File not found")
+            with (
+                patch(
+                    "langflow.base.data.storage_utils.read_file_bytes", side_effect=FileNotFoundError("File not found")
+                ),
+                pytest.raises(FileNotFoundError),
             ):
-                with pytest.raises(FileNotFoundError):
-                    await component.load_files()
+                await component.load_files()
 
     @pytest.mark.asyncio
     async def test_s3_streaming_operations(self, s3_settings):
