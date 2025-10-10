@@ -18,7 +18,7 @@ class LoopComponent(Component):
             name="data",
             display_name="Inputs",
             info="The initial list of Data objects or DataFrame to iterate over.",
-            input_types=["DataFrame", "Table"],
+            input_types=["DataFrame", "Table", "JSON", "Data"],
         ),
     ]
 
@@ -49,11 +49,11 @@ class LoopComponent(Component):
         """Validate and return a list of Data objects."""
         if isinstance(data, DataFrame):
             return data.to_data_list()
-        if isinstance(data, Data):
+        if isinstance(data, (Data, JSON)):
             return [data]
-        if isinstance(data, list) and all(isinstance(item, Data) for item in data):
+        if isinstance(data, list) and all(isinstance(item, (Data, JSON)) for item in data):
             return data
-        msg = "The 'data' input must be a DataFrame, a list of Data objects, or a single Data object."
+        msg = "The 'data' input must be a DataFrame, a list of Data/JSON objects, or a single Data/JSON object."
         raise TypeError(msg)
 
     def evaluate_stop_loop(self) -> bool:

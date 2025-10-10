@@ -278,3 +278,4 @@ class TypeConverterComponent(Component):
         result = convert_to_dataframe(input_value, auto_parse=self.auto_parse)
         self.status = result
         return result
+
