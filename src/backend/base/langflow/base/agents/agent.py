@@ -160,9 +160,12 @@ class LCAgentComponent(Component):
             if all(isinstance(m, Message) for m in self.chat_history):
                 input_dict["chat_history"] = data_to_messages([m.to_data() for m in self.chat_history])
 
-        if hasattr(lc_message, "content") and isinstance(lc_message.content, list):
-            if all(isinstance(m, Message) for m in self.chat_history):
-                input_dict["chat_history"] = data_to_messages([m.to_data() for m in self.chat_history])
+        if (
+            hasattr(lc_message, "content")
+            and isinstance(lc_message.content, list)
+            and all(isinstance(m, Message) for m in self.chat_history)
+        ):
+            input_dict["chat_history"] = data_to_messages([m.to_data() for m in self.chat_history])
 
         if lc_message and hasattr(lc_message, "content") and isinstance(lc_message.content, list):
             # ! Because the input has to be a string, we must pass the images in the chat_history
