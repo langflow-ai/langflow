@@ -60,7 +60,20 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add src/lfx/src/lfx/_assets/component_index.json
           git commit -m "chore: update component index [skip ci]"
-          git push
+
+          # Retry push with rebase if needed (handles concurrent PR updates)
+          for i in {1..3}; do
+            if git push; then
+              echo "Successfully pushed changes"
+              exit 0
+            fi
+            echo "Push failed, attempt $i/3. Rebasing and retrying..."
+            git pull --rebase
+            sleep 2
+          done
+
+          echo "Failed to push after 3 attempts"
+          exit 1
 
       - name: Comment on PR (community fork - cannot auto-update)
         if: steps.check_changes.outputs.changed == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
