@@ -141,20 +141,36 @@ class AgentBuilderService(Service):
             search_engine = self._get_search_engine()
             component_matches = []
 
+            # Initialize chain context for chain-aware search
+            chain_context = {
+                'previous_outputs': [],
+                'chain_capabilities': [],
+                'position': None
+            }
+
             # Search for each subtask
             for i, subtask in enumerate(task_analysis.subtasks):
+                # Set chain position for context-aware search
+                if i == 0:
+                    chain_context['position'] = 'start'
+                elif i == len(task_analysis.subtasks) - 1:
+                    chain_context['position'] = 'end'
+                else:
+                    chain_context['position'] = 'middle'
+
                 yield StreamData(event="thinking", data={
                     "phase": "component_search",
                     "message": f"Searching for subtask {i+1}/{len(task_analysis.subtasks)}: {subtask.name}",
                     "progress": f"{40 + (i * 10)}%"
                 })
 
-                # Search for components matching this subtask
+                # Search for components matching this subtask with chain context
                 matches = await search_engine.search_components(
                     subtask_query=subtask.description,
                     required_capabilities=subtask.required_capabilities,
                     data_types=subtask.data_types,
                     component_category=subtask.component_category,
+                    chain_context=chain_context,
                     top_k=3
                 )
 
@@ -162,6 +178,10 @@ class AgentBuilderService(Service):
                     # Take the best match for this subtask
                     best_match = matches[0]
                     component_matches.append(best_match)
+
+                    # Update chain context for next component (chain-aware search)
+                    chain_context['previous_outputs'].extend(best_match.component_spec.output_data_types)
+                    chain_context['chain_capabilities'].extend(best_match.component_spec.capabilities)
 
                     yield StreamData(event="thinking", data={
                         "phase": "component_search",
