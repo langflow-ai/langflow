@@ -14,7 +14,7 @@ from lfx.schema.dotdict import dotdict
 
 class ChatGoogleGenerativeAIFixed:
     """Custom ChatGoogleGenerativeAI that fixes function response name issues for Gemini."""
-    
+
     def __init__(self, *args, **kwargs):
         """Initialize with fix for empty function response names in ToolMessage and FunctionMessage."""
         try:
@@ -22,14 +22,14 @@ class ChatGoogleGenerativeAIFixed:
         except ImportError as e:
             msg = "The 'langchain_google_genai' package is required to use the Google Generative AI model."
             raise ImportError(msg) from e
-            
+
         # Create the base ChatGoogleGenerativeAI instance
         self._model = ChatGoogleGenerativeAI(*args, **kwargs)
-        
+
     def _prepare_request(self, messages, **kwargs):
         """Override request preparation to fix empty function response names."""
-        from langchain_core.messages import ToolMessage, FunctionMessage
-        
+        from langchain_core.messages import FunctionMessage, ToolMessage
+
         # Pre-process messages to ensure tool/function messages have names
         fixed_messages = []
         for message in messages:
@@ -38,20 +38,17 @@ class ChatGoogleGenerativeAIFixed:
                 message = ToolMessage(
                     content=message.content,
                     name="tool_response",
-                    tool_call_id=getattr(message, 'tool_call_id', None),
-                    artifact=getattr(message, 'artifact', None)
+                    tool_call_id=getattr(message, "tool_call_id", None),
+                    artifact=getattr(message, "artifact", None),
                 )
             elif isinstance(message, FunctionMessage) and not message.name:
-                # Create a new FunctionMessage with a default name  
-                message = FunctionMessage(
-                    content=message.content,
-                    name="function_response"
-                )
+                # Create a new FunctionMessage with a default name
+                message = FunctionMessage(content=message.content, name="function_response")
             fixed_messages.append(message)
-            
+
         # Call the original method with fixed messages
         return self._model._prepare_request(fixed_messages, **kwargs)
-        
+
     def __getattr__(self, name):
         """Delegate all other attributes to the wrapped model."""
         return getattr(self._model, name)
