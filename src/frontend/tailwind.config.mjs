@@ -170,6 +170,15 @@ const config = {
         "accent-pink-foreground": "hsl(var(--accent-pink-foreground))",
         "accent-purple-foreground": "hsl(var(--accent-purple-foreground))",
         "accent-red-foreground": "hsl(var(--accent-red-foreground))",
+        // Autonomize theme colors
+        "autonomize-primary": "hsl(var(--autonomize-primary))",
+        "autonomize-secondary": "hsl(var(--autonomize-secondary))",
+        "autonomize-gradient": "var(--autonomize-gradient)",
+        "autonomize-header-bg": "var(--autonomize-header-bg)",
+        "autonomize-sidebar-bg": "var(--autonomize-sidebar-bg)",
+        "autonomize-text": "hsl(var(--autonomize-text))",
+        "autonomize-sidebar": "hsl(var(--autonomize-sidebar))",
+        "autonomize-header": "hsl(var(--autonomize-header))",
         filter: {
           foreground: "var(--filter-foreground)",
           background: "var(--filter-background)",

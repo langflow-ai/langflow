@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import AppHeader from "@/components/core/appHeaderComponent";
+import MainSidebar from "@/components/core/mainSidebarComponent";
 import useTheme from "@/customization/hooks/use-custom-theme";
 
 export function DashboardWrapperPage() {
@@ -9,6 +10,7 @@ export function DashboardWrapperPage() {
     <div className="flex h-screen w-full flex-col overflow-hidden">
       <AppHeader />
       <div className="flex w-full flex-1 flex-row overflow-hidden">
+        <MainSidebar />
         <Outlet />
       </div>
     </div>

@@ -30,6 +30,7 @@ import HomePage from "./pages/MainPage/pages/homePage";
 import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
 import CollectionPage from "./pages/MainPage/pages/main-page";
 import SettingsPage from "./pages/SettingsPage";
+import AgentBuilderPage from "./pages/AgentBuilderPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
@@ -37,6 +38,7 @@ import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import ViewPage from "./pages/ViewPage";
+import ConversationPage from "./pages/AgentBuilderPage/ConversationPage";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
@@ -81,7 +83,7 @@ const router = createBrowserRouter(
                 <Route path="" element={<CollectionPage />}>
                   <Route
                     index
-                    element={<CustomNavigate replace to={"flows"} />}
+                    element={<CustomNavigate replace to={"agent-builder"} />}
                   />
                   {ENABLE_FILE_MANAGEMENT && (
                     <Route path="assets">
@@ -98,6 +100,10 @@ const router = createBrowserRouter(
                       )}
                     </Route>
                   )}
+                  <Route
+                    path="agent-builder/"
+                    element={<AgentBuilderPage key="agent-builder"/>}
+                  />
                   <Route
                     path="flows/"
                     element={<HomePage key="flows" type="flows" />}
@@ -154,6 +160,8 @@ const router = createBrowserRouter(
                   {CustomRoutesStore()}
                 </Route>
                 {CustomRoutesStorePages()}
+                <Route path="agent-builder" element={<AgentBuilderPage />} />
+                <Route path="agent-builder/conversation" element={<ConversationPage />} />
                 <Route path="account">
                   <Route path="delete" element={<DeleteAccountPage />}></Route>
                 </Route>

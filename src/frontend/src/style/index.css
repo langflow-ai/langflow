@@ -48,6 +48,19 @@
 
     --accent-purple-foreground: 271 81% 56%;
 
+    /* Autonomize branding colors */
+    --autonomize-primary: 262 97% 57%; /* Deep purple */
+    --autonomize-secondary: 295 100% 75%; /* Light purple */
+    --autonomize-gradient: linear-gradient(135deg, hsl(262, 97%, 57%) 0%, hsl(295, 100%, 75%) 100%);
+    --autonomize-header-bg: 262 97% 57%; /* Header background */
+    --autonomize-sidebar-bg: 262 85% 45%; /* Sidebar background */
+    --autonomize-text-on-purple: 0 0% 100%; /* White text on purple */
+    
+    /* Additional Autonomize classes for Tailwind */
+    --autonomize-sidebar: 262 85% 45%; /* For bg-autonomize-sidebar */
+    --autonomize-header: 262 97% 57%; /* For bg-autonomize-header */
+    --autonomize-text: 0 0% 100%; /* For text-autonomize-text */
+
     --tooltip: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --tooltip-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
 

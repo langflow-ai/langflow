@@ -1,0 +1,230 @@
+id: urn:agent:genesis:provider_check:1
+name: Provider Check Agent
+fullyQualifiedName: genesis.autonomize.ai.provider_check
+description: Verify provider network participation status using payer provider directory systems
+domain: autonomize.ai
+subDomain: provider-validation
+version: 1.0.0
+environment: production
+agentOwner: provider-validation@autonomize.ai
+agentOwnerDisplayName: Provider Validation Team
+email: provider-validation@autonomize.ai
+status: ACTIVE
+variables:
+- name: llm_provider
+  type: string
+  required: false
+  default: Azure OpenAI
+  description: LLM provider (AzureOpenAI, OpenAI, Anthropic, etc.)
+- name: model_name
+  type: string
+  required: false
+  default: gpt-4
+  description: Model name to use for validation
+- name: temperature
+  type: float
+  required: false
+  default: 0.1
+  description: Temperature for model generation
+- name: provider_api_timeout
+  type: integer
+  required: false
+  default: 5000
+  description: Timeout for provider directory API calls (ms)
+- name: cache_duration
+  type: integer
+  required: false
+  default: 86400
+  description: Provider status cache duration in seconds
+tags:
+- UM
+- provider-validation
+- network-check
+- healthcare
+- prior-authorization
+- reusable
+kind: Single Agent
+agentGoal: Verify the network participation status of requesting, referring, and treating providers using payer provider directory
+  systems
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: DataDrivenWorkflow
+toolsUse: true
+learningCapability: None
+sampleInput:
+  requesting_provider_npi: '1234567890'
+  referring_provider_npi: 0987654321
+  treating_provider_npi: '1234567890'
+  service_date: '2024-03-15'
+  line_of_business: Medicare
+reusability:
+  asTools: true
+  standalone: true
+  provides:
+    toolName: ProviderNetworkChecker
+    toolDescription: Checks if providers are in-network or out-of-network
+    inputSchema:
+      type: object
+      properties:
+        requesting_provider_npi:
+          type: string
+          description: NPI of requesting provider
+        referring_provider_npi:
+          type: string
+          description: NPI of referring provider
+        treating_provider_npi:
+          type: string
+          description: NPI of treating/servicing provider
+        service_date:
+          type: string
+          description: Date of service for network status
+        line_of_business:
+          type: string
+          description: LOB (Medicare, Medicaid, Commercial)
+      required:
+      - treating_provider_npi
+    outputSchema:
+      type: object
+      properties:
+        network_status:
+          type: object
+          properties:
+            requesting_provider:
+              type: object
+            referring_provider:
+              type: object
+            treating_provider:
+              type: object
+        routing_recommendation:
+          type: string
+        requires_review:
+          type: boolean
+  dependencies: []
+components:
+- id: provider-input
+  name: Provider Information
+  kind: Data
+  type: genesis:chat_input
+  description: Provider NPIs and service information
+  provides:
+  - useAs: input
+    in: provider-check-agent
+    description: Provider details to validate
+- id: provider-check-agent-prompt
+  name: Agent Instructions
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Prompt template for agent instructions
+  config:
+    saved_prompt: provider_check_prompt_v1
+    template: "You are a provider network validation specialist. Your responsibilities:\n\n1. Verify network participation\
+      \ status for all providers\n2. Check provider credentials and specialties\n3. Validate provider-service compatibility\n\
+      4. Identify any network restrictions or requirements\n5. Determine routing based on network status\n\nFor each provider,\
+      \ check:\n- Network participation status (In-Network/Out-of-Network)\n- Effective dates of participation\n- Specialty\
+      \ alignment with requested service\n- Any network tier or restrictions\n- Provider facility affiliations\n\nUse the\
+      \ Provider Directory API to get real-time network status.\n\nRouting logic:\n- All providers in-network: Standard review\n\
+      - Any out-of-network: Enhanced review required\n- Missing provider info: Manual review\n\nOutput format:\n{\n  \"network_status\"\
+      : {\n    \"requesting_provider\": {\n      \"npi\": \"1234567890\",\n      \"name\": \"Dr. Smith\",\n      \"status\"\
+      : \"In-Network\",\n      \"specialty\": \"Internal Medicine\",\n      \"effective_date\": \"2020-01-01\",\n      \"\
+      tier\": \"Preferred\"\n    },\n    \"referring_provider\": {...},\n    \"treating_provider\": {...}\n  },\n  \"all_in_network\"\
+      : true/false,\n  \"routing_recommendation\": \"standard_review/enhanced_review/manual_review\",\n  \"review_notes\"\
+      : \"explanation\"\n}"
+  provides:
+  - useAs: system_prompt
+    in: provider-check-agent
+    description: System prompt for the agent
+- id: provider-check-agent
+  name: Provider Network Validation Agent
+  kind: Agent
+  type: genesis:agent
+  description: Validates provider network participation
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 1500
+    handle_parsing_errors: true
+    max_iterations: 8
+    verbose: true
+  provides:
+  - useAs: input
+    in: provider-output
+    description: Provider validation results
+- id: provider-directory
+  name: Provider Directory API
+  kind: Tool
+  type: genesis:api_component
+  description: Access payer provider directory
+  asTools: true
+  config:
+    endpoint: providers/network-status
+    method: POST
+    headers:
+      Content-Type: application/json
+    timeout: 5000
+    cache_enabled: true
+    cache_duration: 86400
+    description: Check provider network participation status
+    request_schema:
+      type: object
+      properties:
+        npi:
+          type: string
+        service_date:
+          type: string
+        line_of_business:
+          type: string
+    response_schema:
+      type: object
+      properties:
+        network_status:
+          type: string
+        provider_details:
+          type: object
+  provides:
+  - useAs: tools
+    in: provider-check-agent
+    description: Provider network lookup tool
+- id: provider-output
+  name: Provider Network Status
+  kind: Data
+  type: genesis:chat_output
+  description: Display provider network validation results
+  config:
+    should_store_message: true
+outputs:
+- network_status_summary
+- in_network_out_network_flags
+- routing_recommendation
+- provider_details
+kpis:
+- name: Network Match Accuracy
+  category: Quality
+  valueType: percentage
+  target: 99
+  unit: '%'
+  description: Accuracy of provider network status determination
+- name: API Response Time
+  category: Performance
+  valueType: numeric
+  target: 2000
+  unit: ms
+  description: Average time to verify all providers
+- name: Review Routing Accuracy
+  category: Quality
+  valueType: percentage
+  target: 98
+  unit: '%'
+  description: Percentage of correctly routed cases based on network status
+- name: Cache Hit Rate
+  category: Efficiency
+  valueType: percentage
+  target: 75
+  unit: '%'
+  description: Percentage of provider lookups served from cache
+securityInfo:
+  visibility: Private
+  confidentiality: Medium
+  gdprSensitive: false

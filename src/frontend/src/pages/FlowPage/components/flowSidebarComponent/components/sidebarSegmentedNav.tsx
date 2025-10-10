@@ -41,6 +41,12 @@ export const NAV_ITEMS: NavItem[] = [
     tooltip: "MCP",
   },
   {
+    id: "agents",
+    icon: "Bot",
+    label: "Agents",
+    tooltip: "Agents",
+  },
+  {
     id: "bundles",
     icon: "blocks",
     label: "Bundles",
@@ -76,7 +82,7 @@ const SidebarSegmentedNav = () => {
           <div key={item.id}>
             {item.id === "add_note" && <Separator className="w-full" />}
             <SidebarMenuItem className="px-1">
-              <ShadTooltip content={item.tooltip} side="right">
+              <ShadTooltip content={item.tooltip} side="bottom">
                 <SidebarMenuButton
                   size="md"
                   onClick={(e) => {

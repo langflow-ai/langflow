@@ -4,7 +4,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+
 import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
 import { useGetDownloadFlows } from "@/controllers/API/queries/flows/use-get-download-flows";
 import { ENABLE_MCP } from "@/customization/feature-flags";
@@ -97,17 +97,7 @@ const HeaderComponent = ({
         className="flex items-center pb-4 text-sm font-medium"
         data-testid="mainpage_title"
       >
-        <div className="h-7 w-10 transition-all group-data-[open=true]/sidebar-wrapper:md:w-0 lg:hidden">
-          <div className="relative left-0 opacity-100 transition-all group-data-[open=true]/sidebar-wrapper:md:opacity-0">
-            <SidebarTrigger>
-              <ForwardedIconComponent
-                name="PanelLeftOpen"
-                aria-hidden="true"
-                className=""
-              />
-            </SidebarTrigger>
-          </div>
-        </div>
+
         {folderName}
       </div>
       {!isEmptyFolder && (
