@@ -65,7 +65,10 @@ async def load_flow(
         user_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
         flow_uuid = UUID(flow_id) if isinstance(flow_id, str) else flow_id
         if not user_uuid:
-            msg = f"User ID {user_id} does not have permission to access flow {flow_id}"
+            msg = f"User ID {user_id} is not a valid UUID"
+            raise ValueError(msg)
+        if not flow_uuid:
+            msg = f"Flow ID {flow_id} is not a valid UUID"
             raise ValueError(msg)
         flow = await get_flow_with_ownership(session, flow_uuid, user_uuid)
         graph_data = flow.data
