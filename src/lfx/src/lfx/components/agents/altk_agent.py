@@ -11,12 +11,13 @@ from altk.post_tool_reflection_toolkit.core.toolkit import CodeGenerationRunInpu
 from altk.toolkit_core.core.toolkit import AgentPhase
 from altk.toolkit_core.llm import get_llm
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
-from langchain.callbacks.base import BaseCallbackHandler
 from langchain_anthropic.chat_models import ChatAnthropic
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.runnables import Runnable, RunnableBinding
+from langchain_core.tools import BaseTool
 from langchain_openai.chat_models.base import ChatOpenAI
+from pydantic import Field
 
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.callback import AgentAsyncHandler
@@ -50,39 +51,83 @@ def set_advanced_true(component_input):
 MODEL_PROVIDERS_LIST = ["Anthropic", "OpenAI"]
 
 
-class PostToolCallbackHandler(BaseCallbackHandler):
-    """A callback handler to process tool outputs.
+class PostToolProcessor(BaseTool):
+    """A tool output processor to process tool outputs.
 
-    This callback handler overrides the on_tool_end method and
+    This wrapper intercepts the tool execution output and
     if the tool output is a JSON, it invokes an ALTK component
     to extract information from the JSON by generating Python code.
     """
 
-    def __init__(self, user_query: str, agent: Runnable, response_processing_size_threshold: int):
-        self.user_query = user_query
-        self.agent = agent
-        self.response_processing_size_threshold = response_processing_size_threshold
+    name: str = Field(...)
+    description: str = Field(...)
+    wrapped_tool: BaseTool = Field(...)
+    user_query: str = Field(...)
+    agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor = Field(...)
+    response_processing_size_threshold: int = Field(...)
+
+    def __init__(
+        self, wrapped_tool: BaseTool, user_query: str, agent, response_processing_size_threshold: int, **kwargs
+    ):
+        super().__init__(
+            name=wrapped_tool.name,
+            description=wrapped_tool.description,
+            wrapped_tool=wrapped_tool,
+            user_query=user_query,
+            agent=agent,
+            response_processing_size_threshold=response_processing_size_threshold,
+            **kwargs,
+        )
+
+    def _execute_tool(self, *args, **kwargs) -> str:
+        """Execute the wrapped tool with proper error handling."""
+        try:
+            # Try with config parameter first (newer LangChain versions)
+            if hasattr(self.wrapped_tool, "_run"):
+                # Ensure config is provided for StructuredTool
+                if "config" not in kwargs:
+                    kwargs["config"] = {}
+                return self.wrapped_tool._run(*args, **kwargs)
+            return self.wrapped_tool.run(*args, **kwargs)
+        except TypeError as e:
+            if "config" in str(e):
+                # Fallback: try without config for older tools
+                kwargs.pop("config", None)
+                if hasattr(self.wrapped_tool, "_run"):
+                    return self.wrapped_tool._run(*args, **kwargs)
+                return self.wrapped_tool.run(*args, **kwargs)
+            raise
+
+    def _run(self, *args: Any, **kwargs: Any) -> str:
+        # Run the wrapped tool
+        result = self._execute_tool(*args, **kwargs)
+
+        # Run postprocessing and return the output
+        return self.process_tool_response(result)
 
     def _get_tool_response_str(self, tool_response) -> str | None:
         if isinstance(tool_response, str):
             tool_response_str = tool_response
-        elif isinstance(tool_response, (dict, list)):
-            tool_response_str = str(tool_response)
         elif isinstance(tool_response, Data):
             tool_response_str = str(tool_response.data)
         elif isinstance(tool_response, list) and all(isinstance(item, Data) for item in tool_response):
             # get only the first element, not 100% sure if it should be the first or the last
             tool_response_str = str(tool_response[0].data)
+        elif isinstance(tool_response, (dict, list)):
+            tool_response_str = str(tool_response)
         else:
             tool_response_str = None
         return tool_response_str
 
     def _get_altk_llm_object(self) -> Any:
         # Extract the LLM model and map it to altk model inputs
-        for step in self.agent.steps:
-            if isinstance(step, RunnableBinding) and isinstance(step.bound, BaseChatModel):
-                llm_object = step.bound
-                break
+        llm_object: BaseChatModel | None = None
+        steps = getattr(self.agent, "steps", None)
+        if steps:
+            for step in steps:
+                if isinstance(step, RunnableBinding) and isinstance(step.bound, BaseChatModel):
+                    llm_object = step.bound
+                    break
         if isinstance(llm_object, ChatAnthropic):
             # litellm needs the prefix to the model name for anthropic
             model_name = f"anthropic/{llm_object.model}"
@@ -100,8 +145,8 @@ class PostToolCallbackHandler(BaseCallbackHandler):
 
         return llm_client_obj
 
-    def on_tool_end(self, tool_response: str, **_kwargs) -> None:
-        logger.info("Calling on_tool_end of PostToolCallbackHandler")
+    def process_tool_response(self, tool_response: str, **_kwargs) -> None:
+        logger.info("Calling process_tool_response of PostToolProcessor")
         tool_response_str = self._get_tool_response_str(tool_response)
 
         try:
@@ -120,8 +165,9 @@ class PostToolCallbackHandler(BaseCallbackHandler):
                 config = CodeGenerationComponentConfig(llm_client=llm_client_obj, use_docker_sandbox=False)
 
                 middleware = CodeGenerationComponent(config=config)
-                nl_query = self.user_query
-                input_data = CodeGenerationRunInput(messages=[], nl_query=nl_query, tool_response=tool_response_json)
+                input_data = CodeGenerationRunInput(
+                    messages=[], nl_query=self.user_query, tool_response=tool_response_json
+                )
                 output = None
                 try:
                     output = middleware.process(input_data, AgentPhase.RUNTIME)
@@ -294,6 +340,25 @@ class ALTKAgentComponent(AgentComponent):
         self,
         agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
     ) -> Message:
+        input_dict: dict[str, str | list[BaseMessage]] = {
+            "input": self.input_value.to_lc_message() if isinstance(self.input_value, Message) else self.input_value
+        }
+        user_query = input_dict["input"].content if hasattr(input_dict["input"], "content") else input_dict["input"]
+        if self.enable_post_tool_reflection:
+            wrapped_tools = [
+                PostToolProcessor(
+                    wrapped_tool=tool,
+                    user_query=user_query,
+                    agent=agent,
+                    response_processing_size_threshold=self.response_processing_size_threshold,
+                )
+                if not isinstance(tool, PostToolProcessor)
+                else tool
+                for tool in self.tools
+            ]
+        else:
+            wrapped_tools = self.tools
+
         if isinstance(agent, AgentExecutor):
             runnable = agent
         else:
@@ -309,9 +374,8 @@ class ALTKAgentComponent(AgentComponent):
                 max_iterations=max_iterations,
                 return_intermediate_steps=True,
             )
-        input_dict: dict[str, str | list[BaseMessage]] = {
-            "input": self.input_value.to_lc_message() if isinstance(self.input_value, Message) else self.input_value
-        }
+        runnable.tools = wrapped_tools
+
         if hasattr(self, "system_prompt"):
             input_dict["system_prompt"] = self.system_prompt
         if hasattr(self, "chat_history") and self.chat_history:
@@ -348,18 +412,6 @@ class ALTKAgentComponent(AgentComponent):
         )
         try:
             callbacks_to_be_used = [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]
-            if self.enable_post_tool_reflection:
-                if hasattr(input_dict["input"], "content"):
-                    callbacks_to_be_used.append(
-                        PostToolCallbackHandler(
-                            input_dict["input"].content, agent, self.response_processing_size_threshold
-                        )
-                    )
-                elif isinstance(input_dict["input"], str):
-                    callbacks_to_be_used.append(
-                        PostToolCallbackHandler(input_dict["input"], agent, self.response_processing_size_threshold)
-                    )
-
             result = await process_agent_events(
                 runnable.astream_events(
                     input_dict,
