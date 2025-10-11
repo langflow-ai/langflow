@@ -383,7 +383,7 @@ MOCK_TOOL_TEMPLATES = {
             "weekly_schedule": {
                 "monday": {"start": "08:00", "end": "17:00", "lunch": "12:00-13:00"},
                 "tuesday": {"start": "08:00", "end": "17:00", "lunch": "12:00-13:00"},
-                "wednesday": {"start": "08:00", "end": "12:00", "lunch": null},
+                "wednesday": {"start": "08:00", "end": "12:00", "lunch": None},
                 "thursday": {"start": "08:00", "end": "17:00", "lunch": "12:00-13:00"},
                 "friday": {"start": "08:00", "end": "16:00", "lunch": "12:00-13:00"}
             },
