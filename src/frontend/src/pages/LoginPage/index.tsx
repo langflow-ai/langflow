@@ -1,5 +1,5 @@
 import * as Form from "@radix-ui/react-form";
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
@@ -16,6 +16,8 @@ import type {
   loginInputStateType,
 } from "../../types/components";
 import AutonomizeIcon from "@/icons/Autonomize";
+import { envConfig } from "@/config/env";
+import KeycloakService from "@/services/keycloak";
 
 export default function LoginPage(): JSX.Element {
   const [inputState, setInputState] =
@@ -32,6 +34,20 @@ export default function LoginPage(): JSX.Element {
   }
 
   const { mutate } = useLoginUser();
+
+  // Handle Keycloak login
+  const handleKeycloakLogin = async () => {
+    try {
+      const keycloakService = KeycloakService.getInstance();
+      await keycloakService.login();
+    } catch (error) {
+      console.error("Keycloak login failed:", error);
+      setErrorData({
+        title: "Authentication Error",
+        list: ["Failed to initialize Keycloak authentication. Please try again."],
+      });
+    }
+  };
 
   function signIn() {
     const user: LoginType = {
@@ -72,9 +88,24 @@ export default function LoginPage(): JSX.Element {
             // className="mb-4 h-10 w-10 scale-[1.5]"
           />
           <span className="mb-6 text-2xl font-semibold text-primary">
-            Sign in to Langflow
+            Sign in to AI Studio
           </span>
-          <div className="mb-3 w-full">
+
+          {/* Keycloak Login */}
+          {envConfig.keycloakEnabled ? (
+            <div className="w-full">
+              <Button
+                className="w-full"
+                type="button"
+                onClick={handleKeycloakLogin}
+              >
+                Sign in with Keycloak
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* Traditional Login Form */}
+              <div className="mb-3 w-full">
             <Form.Field name="username">
               <Form.Label className="data-[invalid]:label-invalid">
                 Username <span className="font-medium text-destructive">*</span>
@@ -134,7 +165,9 @@ export default function LoginPage(): JSX.Element {
                 Don't have an account?&nbsp;<b>Sign Up</b>
               </Button>
             </CustomLink>
-          </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </Form.Root>
