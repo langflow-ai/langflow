@@ -274,8 +274,8 @@ async def handle_on_chain_stream(
     agent_message: Message,
     send_message_method: SendMessageFunctionType,
     start_time: float,
-    *, 
-    had_streaming: bool = False, # noqa: ARG001
+    *,
+    had_streaming: bool = False,  # noqa: ARG001
     event_manager=None,
 ) -> tuple[Message, float]:
     data_chunk = event["data"].get("chunk", {})
