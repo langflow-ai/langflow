@@ -55,7 +55,37 @@ class ComponentMapper:
         self.MCP_MAPPINGS = {
             "genesis:mcp_tool": {
                 "component": "MCPTools",
-                "config": {},
+                "config": {
+                    "connection_mode": "Stdio",  # Default to Stdio for backward compatibility
+                    "url": "",
+                    "headers": {},
+                    "timeout_seconds": 30,
+                    "sse_read_timeout_seconds": 30,
+                    "command": "",
+                    "args": [],
+                    "env": {}
+                },
+                "dataType": "MCPTools"
+            },
+            "genesis:mcp_sse_tool": {
+                "component": "MCPTools",
+                "config": {
+                    "connection_mode": "SSE",
+                    "url": "",
+                    "headers": {},
+                    "timeout_seconds": 30,
+                    "sse_read_timeout_seconds": 30
+                },
+                "dataType": "MCPTools"
+            },
+            "genesis:mcp_stdio_tool": {
+                "component": "MCPTools",
+                "config": {
+                    "connection_mode": "Stdio",
+                    "command": "",
+                    "args": [],
+                    "env": {}
+                },
                 "dataType": "MCPTools"
             },
             "genesis:mcp_client": {
@@ -298,7 +328,10 @@ class ComponentMapper:
             "genesis:eligibility_component",
             "genesis:encoder_pro",
             "genesis:calculator",
-            "genesis:api_component"
+            "genesis:api_component",
+            "genesis:mcp_tool",
+            "genesis:mcp_sse_tool",
+            "genesis:mcp_stdio_tool"
         ]
 
         return spec_type in tool_types
