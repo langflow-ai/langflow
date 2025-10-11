@@ -126,6 +126,28 @@ class ComponentMapper:
             "genesis:knowledge_hub_search": {"component": "KnowledgeHubSearch", "config": {}, "dataType": "KnowledgeHubSearch"},
             "genesis:calculator": {"component": "Calculator", "config": {}},
 
+            # API Components - Native HTTP request support with secure header handling
+            # Note: Headers support sensitive data like API keys, auth tokens, etc.
+            # Use environment variables or secure configuration for sensitive headers
+            "genesis:api_request": {
+                "component": "APIRequest",
+                "config": {
+                    "timeout": 30,
+                    "follow_redirects": True,
+                    "headers": [{"key": "Content-Type", "value": "application/json"}]
+                },
+                "dataType": "Data"
+            },
+            "genesis:http_request": {
+                "component": "APIRequest",
+                "config": {
+                    "timeout": 30,
+                    "follow_redirects": True,
+                    "headers": [{"key": "Content-Type", "value": "application/json"}]
+                },
+                "dataType": "Data"
+            },
+
             # Domain-specific tools -> MCP Tools Component (simplified approach)
             "genesis:encoder_pro": {"component": "MCPTools", "config": {"tool_name": "encoder_pro", "description": "Medical coding and validation tool"}, "dataType": "MCPTools"},
             "genesis:pa_lookup": {"component": "MCPTools", "config": {"tool_name": "pa_lookup", "description": "Prior authorization lookup tool"}, "dataType": "MCPTools"},
@@ -272,6 +294,11 @@ class ComponentMapper:
                 "input_field": None,
                 "output_field": "response",
                 "output_types": ["DataFrame"]
+            },
+            "APIRequest": {
+                "input_field": "url_input",
+                "output_field": "data",
+                "output_types": ["Data"]
             },
             "CustomComponent": {
                 "input_field": "input_value",

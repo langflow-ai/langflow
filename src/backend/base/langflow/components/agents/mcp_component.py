@@ -1924,6 +1924,913 @@ MOCK_TOOL_TEMPLATES = {
                 "last_training_date": "2024-01-01"
             }
         }
+    },
+
+    # NEW MCP TOOLS FOR PROVIDER ENABLEMENT & UTILIZATION MANAGEMENT
+
+    # Provider Enablement - Compliance Documentation Tools
+    "provider_notes_api": {
+        "name": "Provider Notes API Access",
+        "description": "Access provider clinical notes and documentation from EHR systems for compliance auditing",
+        "input_schema": {
+            "provider_id": {"type": "string", "description": "Provider identifier or NPI"},
+            "date_range": {"type": "string", "description": "Date range for notes retrieval"},
+            "note_type": {"type": "string", "description": "Type of clinical notes", "enum": ["progress", "assessment", "procedure", "discharge", "all"]},
+            "compliance_scope": {"type": "string", "description": "Compliance scope", "enum": ["full", "attestation_only", "template_check"]}
+        },
+        "mock_response": {
+            "provider_id": "NPI_1234567890",
+            "provider_name": "Dr. Sarah Johnson, MD",
+            "notes_retrieved": 234,
+            "date_range": "2024-09-11 to 2024-10-11",
+            "clinical_notes": [
+                {
+                    "note_id": "NOTE_20241011_001",
+                    "note_type": "progress",
+                    "patient_id": "PAT123456",
+                    "date_created": "2024-10-11T09:30:00Z",
+                    "content": "Patient continues to show improvement with current treatment plan. Vital signs stable.",
+                    "attestation_status": "complete",
+                    "template_compliance": 0.92,
+                    "required_elements": ["assessment", "plan", "signature", "date"],
+                    "missing_elements": []
+                },
+                {
+                    "note_id": "NOTE_20241010_003",
+                    "note_type": "assessment",
+                    "patient_id": "PAT123457",
+                    "date_created": "2024-10-10T14:15:00Z",
+                    "content": "Initial assessment reveals acute condition requiring immediate intervention.",
+                    "attestation_status": "incomplete",
+                    "template_compliance": 0.67,
+                    "required_elements": ["assessment", "plan", "signature", "date", "medical_necessity"],
+                    "missing_elements": ["medical_necessity", "signature"]
+                }
+            ],
+            "compliance_summary": {
+                "total_notes": 234,
+                "compliant_notes": 198,
+                "compliance_rate": 0.846,
+                "common_missing_elements": ["signature", "medical_necessity", "follow_up_plan"]
+            }
+        }
+    },
+
+    "audit_database_connector": {
+        "name": "Audit Database Connector",
+        "description": "Access historical audit data and compliance templates for comparison analysis",
+        "input_schema": {
+            "provider_id": {"type": "string", "description": "Provider identifier"},
+            "audit_type": {"type": "string", "description": "Type of audit", "enum": ["compliance", "quality", "utilization", "all"]},
+            "time_period": {"type": "string", "description": "Time period for audit history"},
+            "template_category": {"type": "string", "description": "Template category filter"}
+        },
+        "mock_response": {
+            "provider_id": "NPI_1234567890",
+            "audit_history": [
+                {
+                    "audit_id": "AUDIT_20241001_001",
+                    "audit_type": "compliance",
+                    "audit_date": "2024-10-01",
+                    "compliance_score": 0.88,
+                    "findings": 12,
+                    "critical_issues": 2,
+                    "status": "resolved",
+                    "follow_up_required": False
+                },
+                {
+                    "audit_id": "AUDIT_20240901_001",
+                    "audit_type": "quality",
+                    "audit_date": "2024-09-01",
+                    "compliance_score": 0.92,
+                    "findings": 8,
+                    "critical_issues": 0,
+                    "status": "closed",
+                    "follow_up_required": False
+                }
+            ],
+            "compliance_templates": [
+                {
+                    "template_id": "TEMP_CMS_001",
+                    "template_name": "CMS Documentation Requirements",
+                    "version": "2024.1",
+                    "required_elements": ["patient_id", "diagnosis", "treatment_plan", "provider_signature", "date"],
+                    "optional_elements": ["family_history", "social_history"],
+                    "compliance_criteria": {
+                        "minimum_score": 0.85,
+                        "required_element_weight": 0.7,
+                        "documentation_quality_weight": 0.3
+                    }
+                }
+            ],
+            "audit_trends": {
+                "compliance_trend": "improving",
+                "average_score_last_6_months": 0.89,
+                "most_common_issues": ["missing_signatures", "incomplete_assessment", "inadequate_documentation"]
+            }
+        }
+    },
+
+    "healthcare_compliance_nlp": {
+        "name": "Healthcare Compliance NLP Processor",
+        "description": "Advanced NLP engine specialized for healthcare compliance analysis and attestation element identification",
+        "input_schema": {
+            "document_text": {"type": "string", "description": "Clinical document text for analysis"},
+            "analysis_type": {"type": "string", "description": "Type of analysis", "enum": ["attestation", "compliance", "template_match", "all"]},
+            "regulatory_standard": {"type": "string", "description": "Regulatory standard", "enum": ["CMS", "Joint_Commission", "HIPAA", "all"]},
+            "confidence_threshold": {"type": "float", "description": "Minimum confidence for element identification"}
+        },
+        "mock_response": {
+            "analysis_id": "NLP_COMP_20241011_001",
+            "document_length": 1247,
+            "processing_time_ms": 892,
+            "attestation_elements": {
+                "identified_elements": [
+                    {"element": "patient_identification", "confidence": 0.98, "location": "header"},
+                    {"element": "chief_complaint", "confidence": 0.94, "location": "paragraph_1"},
+                    {"element": "assessment", "confidence": 0.92, "location": "paragraph_3"},
+                    {"element": "treatment_plan", "confidence": 0.89, "location": "paragraph_4"}
+                ],
+                "missing_elements": [
+                    {"element": "provider_signature", "required": True, "criticality": "high"},
+                    {"element": "medical_necessity", "required": True, "criticality": "medium"}
+                ]
+            },
+            "compliance_analysis": {
+                "overall_compliance_score": 0.76,
+                "regulatory_adherence": {
+                    "CMS": 0.78,
+                    "Joint_Commission": 0.82,
+                    "HIPAA": 0.95
+                },
+                "documentation_quality": {
+                    "completeness": 0.74,
+                    "clarity": 0.88,
+                    "medical_terminology_accuracy": 0.96
+                }
+            },
+            "recommendations": [
+                "Add provider electronic signature to meet CMS requirements",
+                "Include explicit medical necessity statement",
+                "Improve documentation completeness for better compliance scores"
+            ]
+        }
+    },
+
+    "template_matching_engine": {
+        "name": "Template Matching Engine",
+        "description": "Machine learning-powered template matching for compliance standards verification",
+        "input_schema": {
+            "document_content": {"type": "string", "description": "Document content for template matching"},
+            "template_library": {"type": "array", "description": "Template library to match against"},
+            "matching_algorithm": {"type": "string", "description": "Matching algorithm", "enum": ["semantic", "structural", "hybrid"]},
+            "match_threshold": {"type": "float", "description": "Minimum match score threshold"}
+        },
+        "mock_response": {
+            "matching_id": "MATCH_20241011_001",
+            "document_id": "DOC_12345",
+            "template_matches": [
+                {
+                    "template_id": "TEMP_PROGRESS_NOTE_001",
+                    "template_name": "Standard Progress Note Template",
+                    "match_score": 0.94,
+                    "confidence": 0.91,
+                    "matched_sections": [
+                        {"section": "subjective", "match_score": 0.96},
+                        {"section": "objective", "match_score": 0.93},
+                        {"section": "assessment", "match_score": 0.92},
+                        {"section": "plan", "match_score": 0.95}
+                    ],
+                    "missing_sections": [],
+                    "compliance_rating": "excellent"
+                },
+                {
+                    "template_id": "TEMP_CMS_EVAL_001",
+                    "template_name": "CMS Evaluation Template",
+                    "match_score": 0.87,
+                    "confidence": 0.84,
+                    "matched_sections": [
+                        {"section": "history", "match_score": 0.89},
+                        {"section": "examination", "match_score": 0.91},
+                        {"section": "decision_making", "match_score": 0.81}
+                    ],
+                    "missing_sections": ["medical_necessity_statement"],
+                    "compliance_rating": "good"
+                }
+            ],
+            "best_match": {
+                "template_id": "TEMP_PROGRESS_NOTE_001",
+                "overall_score": 0.94,
+                "recommendation": "Document follows standard progress note format well"
+            },
+            "improvement_suggestions": [
+                "Consider adding medical necessity statement for CMS compliance",
+                "Enhance objective findings documentation",
+                "Include specific follow-up timeline"
+            ]
+        }
+    },
+
+    # Utilization Management - Healthcare System Integration Tools
+    "his_integration": {
+        "name": "Hospital Information System Integration",
+        "description": "Access comprehensive hospital information system data for patient records and clinical information",
+        "input_schema": {
+            "patient_id": {"type": "string", "description": "Patient identifier"},
+            "admission_id": {"type": "string", "description": "Hospital admission identifier"},
+            "data_scope": {"type": "string", "description": "Scope of data", "enum": ["admission", "clinical", "financial", "all"]},
+            "include_realtime": {"type": "boolean", "description": "Include real-time data updates"}
+        },
+        "mock_response": {
+            "patient_id": "PAT789012",
+            "admission_id": "ADM_20241005_001",
+            "admission_details": {
+                "admission_date": "2024-10-05T08:30:00Z",
+                "admission_type": "emergency",
+                "attending_physician": "Dr. Michael Chen",
+                "primary_diagnosis": "Community-acquired pneumonia",
+                "secondary_diagnoses": ["Hypertension", "Type 2 diabetes"],
+                "current_location": "Medical Floor - Room 234B",
+                "length_of_stay_days": 6
+            },
+            "clinical_status": {
+                "current_condition": "stable",
+                "activity_level": "ambulating_with_assistance",
+                "diet_orders": "regular_diet",
+                "oxygen_requirement": "room_air",
+                "iv_access": "saline_lock",
+                "isolation_precautions": "standard"
+            },
+            "care_team": [
+                {"role": "attending_physician", "name": "Dr. Michael Chen", "service": "internal_medicine"},
+                {"role": "resident", "name": "Dr. Sarah Kim", "service": "internal_medicine"},
+                {"role": "nurse", "name": "Jennifer Lopez, RN", "unit": "4_west"},
+                {"role": "case_manager", "name": "Maria Santos, MSW", "department": "utilization_management"}
+            ],
+            "utilization_metrics": {
+                "expected_los": 4,
+                "current_los": 6,
+                "variance_days": 2,
+                "acuity_score": 65,
+                "discharge_barriers": ["awaiting_skilled_nursing_placement"],
+                "estimated_discharge_date": "2024-10-12"
+            }
+        }
+    },
+
+    "ehr_clinical_data": {
+        "name": "EHR Clinical Data Access",
+        "description": "Access electronic health record systems for detailed clinical information and patient history",
+        "input_schema": {
+            "patient_id": {"type": "string", "description": "Patient identifier"},
+            "data_categories": {"type": "array", "description": "Clinical data categories to retrieve"},
+            "time_range": {"type": "string", "description": "Time range for clinical data"},
+            "include_trends": {"type": "boolean", "description": "Include trending data analysis"}
+        },
+        "mock_response": {
+            "patient_id": "PAT789012",
+            "medical_history": {
+                "allergies": [
+                    {"allergen": "Penicillin", "reaction": "Rash", "severity": "moderate"},
+                    {"allergen": "Shellfish", "reaction": "Anaphylaxis", "severity": "severe"}
+                ],
+                "chronic_conditions": [
+                    {"condition": "Hypertension", "onset_date": "2018-03-15", "status": "controlled"},
+                    {"condition": "Type 2 Diabetes", "onset_date": "2020-07-22", "status": "controlled"},
+                    {"condition": "Hyperlipidemia", "onset_date": "2019-11-08", "status": "controlled"}
+                ],
+                "surgical_history": [
+                    {"procedure": "Cholecystectomy", "date": "2021-05-14", "surgeon": "Dr. Williams"}
+                ]
+            },
+            "current_medications": [
+                {"medication": "Lisinopril 10mg", "frequency": "daily", "start_date": "2024-01-15"},
+                {"medication": "Metformin 500mg", "frequency": "twice_daily", "start_date": "2024-01-15"},
+                {"medication": "Atorvastatin 20mg", "frequency": "daily", "start_date": "2024-01-15"}
+            ],
+            "recent_vitals": {
+                "blood_pressure": {"systolic": 128, "diastolic": 82, "timestamp": "2024-10-11T08:00:00Z"},
+                "heart_rate": {"value": 76, "rhythm": "regular", "timestamp": "2024-10-11T08:00:00Z"},
+                "temperature": {"value": 98.6, "route": "oral", "timestamp": "2024-10-11T08:00:00Z"},
+                "oxygen_saturation": {"value": 98, "room_air": True, "timestamp": "2024-10-11T08:00:00Z"}
+            },
+            "clinical_trends": {
+                "vital_signs_stability": "stable_last_24h",
+                "pain_score_trend": "decreasing",
+                "functional_status": "improving",
+                "laboratory_trends": "normalizing"
+            }
+        }
+    },
+
+    "lis_integration": {
+        "name": "Laboratory Information System Integration",
+        "description": "Access laboratory information systems for lab results and diagnostic data analysis",
+        "input_schema": {
+            "patient_id": {"type": "string", "description": "Patient identifier"},
+            "test_categories": {"type": "array", "description": "Laboratory test categories"},
+            "date_range": {"type": "string", "description": "Date range for lab results"},
+            "include_critical_values": {"type": "boolean", "description": "Include critical value alerts"}
+        },
+        "mock_response": {
+            "patient_id": "PAT789012",
+            "lab_results": [
+                {
+                    "test_name": "Complete Blood Count",
+                    "collection_date": "2024-10-11T06:00:00Z",
+                    "resulted_date": "2024-10-11T08:30:00Z",
+                    "results": {
+                        "wbc": {"value": 8.2, "units": "K/uL", "reference_range": "4.0-11.0", "status": "normal"},
+                        "hemoglobin": {"value": 12.8, "units": "g/dL", "reference_range": "12.0-16.0", "status": "normal"},
+                        "platelets": {"value": 285, "units": "K/uL", "reference_range": "150-450", "status": "normal"}
+                    },
+                    "interpretation": "Normal complete blood count"
+                },
+                {
+                    "test_name": "Basic Metabolic Panel",
+                    "collection_date": "2024-10-11T06:00:00Z",
+                    "resulted_date": "2024-10-11T07:45:00Z",
+                    "results": {
+                        "glucose": {"value": 145, "units": "mg/dL", "reference_range": "70-100", "status": "high"},
+                        "creatinine": {"value": 1.1, "units": "mg/dL", "reference_range": "0.7-1.3", "status": "normal"},
+                        "sodium": {"value": 138, "units": "mEq/L", "reference_range": "136-145", "status": "normal"}
+                    },
+                    "interpretation": "Mild hyperglycemia, otherwise normal"
+                }
+            ],
+            "critical_values": [],
+            "trending_data": {
+                "glucose_trend": "stable_elevated",
+                "kidney_function": "stable",
+                "inflammatory_markers": "improving"
+            },
+            "pending_results": [
+                {"test_name": "Blood Culture", "expected_result_time": "2024-10-12T06:00:00Z"}
+            ]
+        }
+    },
+
+    "vitals_monitoring_system": {
+        "name": "Vitals Monitoring System Access",
+        "description": "Access patient monitoring systems for real-time and historical vital signs data",
+        "input_schema": {
+            "patient_id": {"type": "string", "description": "Patient identifier"},
+            "monitoring_type": {"type": "string", "description": "Type of monitoring", "enum": ["continuous", "spot_check", "trending", "all"]},
+            "time_window": {"type": "string", "description": "Time window for vital signs data"},
+            "include_alerts": {"type": "boolean", "description": "Include clinical alerts and alarms"}
+        },
+        "mock_response": {
+            "patient_id": "PAT789012",
+            "monitoring_status": "continuous",
+            "current_vitals": {
+                "blood_pressure": {
+                    "systolic": 126,
+                    "diastolic": 78,
+                    "mean_arterial_pressure": 94,
+                    "timestamp": "2024-10-11T10:30:00Z",
+                    "method": "automated_cuff"
+                },
+                "heart_rate": {
+                    "rate": 74,
+                    "rhythm": "sinus_rhythm",
+                    "quality": "good",
+                    "timestamp": "2024-10-11T10:30:00Z"
+                },
+                "respiratory_rate": {
+                    "rate": 16,
+                    "pattern": "regular",
+                    "effort": "unlabored",
+                    "timestamp": "2024-10-11T10:30:00Z"
+                },
+                "oxygen_saturation": {
+                    "spo2": 98,
+                    "oxygen_delivery": "room_air",
+                    "perfusion_index": 2.1,
+                    "timestamp": "2024-10-11T10:30:00Z"
+                },
+                "temperature": {
+                    "value": 98.4,
+                    "route": "oral",
+                    "timestamp": "2024-10-11T10:30:00Z"
+                }
+            },
+            "vital_trends": {
+                "blood_pressure_trend": "stable",
+                "heart_rate_variability": "normal",
+                "respiratory_pattern": "stable",
+                "temperature_trend": "afebrile"
+            },
+            "alerts": [],
+            "clinical_assessment": {
+                "hemodynamic_stability": "stable",
+                "respiratory_status": "adequate",
+                "neurological_status": "alert_oriented",
+                "overall_acuity": "low"
+            }
+        }
+    },
+
+    "medical_necessity_engine": {
+        "name": "Medical Necessity Assessment Engine",
+        "description": "Advanced clinical decision support engine for medical necessity determination and level of care assessment",
+        "input_schema": {
+            "patient_data": {"type": "object", "description": "Comprehensive patient clinical data"},
+            "assessment_type": {"type": "string", "description": "Type of assessment", "enum": ["admission", "continued_stay", "discharge_planning"]},
+            "clinical_criteria": {"type": "string", "description": "Clinical criteria set to apply"},
+            "payer_guidelines": {"type": "string", "description": "Specific payer guidelines"}
+        },
+        "mock_response": {
+            "assessment_id": "MN_20241011_001",
+            "patient_id": "PAT789012",
+            "assessment_type": "continued_stay",
+            "medical_necessity_score": 0.68,
+            "recommendation": "discharge_planning_appropriate",
+            "level_of_care_analysis": {
+                "current_level": "acute_inpatient",
+                "appropriate_level": "skilled_nursing_facility",
+                "rationale": "Patient clinically stable, ambulating, no longer requires acute level monitoring",
+                "alternative_settings": [
+                    {"setting": "skilled_nursing_facility", "appropriateness": 0.92},
+                    {"setting": "home_health", "appropriateness": 0.76},
+                    {"setting": "outpatient_follow_up", "appropriateness": 0.84}
+                ]
+            },
+            "clinical_indicators": {
+                "stability_indicators": [
+                    {"indicator": "vital_signs_stable", "status": True, "weight": 0.3},
+                    {"indicator": "laboratory_values_stable", "status": True, "weight": 0.2},
+                    {"indicator": "no_acute_deterioration", "status": True, "weight": 0.4}
+                ],
+                "functional_status": {
+                    "mobility": "ambulatory_with_assistance",
+                    "activities_of_daily_living": "modified_independent",
+                    "cognitive_status": "alert_oriented"
+                },
+                "discharge_barriers": [
+                    {"barrier": "placement_coordination", "severity": "moderate", "estimated_resolution": "24-48_hours"}
+                ]
+            },
+            "cost_benefit_analysis": {
+                "current_daily_cost": 2340.50,
+                "alternative_setting_cost": 485.75,
+                "potential_daily_savings": 1854.75,
+                "quality_impact": "maintained_or_improved"
+            }
+        }
+    },
+
+    "healthcare_data_exchange": {
+        "name": "Healthcare Data Exchange Platform",
+        "description": "Healthcare interoperability platform for accessing multi-source clinical data and care coordination",
+        "input_schema": {
+            "patient_id": {"type": "string", "description": "Patient identifier"},
+            "data_sources": {"type": "array", "description": "Healthcare data sources to query"},
+            "exchange_networks": {"type": "array", "description": "HIE networks to access"},
+            "care_coordination_scope": {"type": "string", "description": "Scope of care coordination data"}
+        },
+        "mock_response": {
+            "patient_id": "PAT789012",
+            "exchange_query_id": "HIE_20241011_001",
+            "participating_organizations": [
+                {
+                    "organization": "Metro Regional Medical Center",
+                    "network": "CommonWell",
+                    "data_available": ["encounters", "medications", "allergies", "lab_results"],
+                    "last_encounter": "2024-10-05"
+                },
+                {
+                    "organization": "Community Health Partners",
+                    "network": "Carequality",
+                    "data_available": ["primary_care_visits", "immunizations", "care_plans"],
+                    "last_encounter": "2024-09-15"
+                }
+            ],
+            "care_coordination_data": {
+                "care_transitions": [
+                    {
+                        "transition_date": "2024-10-05",
+                        "from_setting": "emergency_department",
+                        "to_setting": "inpatient_acute_care",
+                        "transition_reason": "admission_for_pneumonia",
+                        "care_team_communication": "complete"
+                    }
+                ],
+                "care_gaps": [
+                    {
+                        "gap_type": "preventive_care",
+                        "description": "Mammography screening overdue",
+                        "priority": "medium",
+                        "due_date": "2024-08-15"
+                    }
+                ],
+                "medication_reconciliation": {
+                    "discrepancies_found": 1,
+                    "home_medications": 8,
+                    "hospital_medications": 6,
+                    "discontinued_medications": 2,
+                    "new_medications": 1
+                }
+            },
+            "quality_metrics": {
+                "data_completeness": 0.91,
+                "data_freshness": 0.88,
+                "interoperability_score": 0.94
+            }
+        }
+    },
+
+    # Utilization Management - Appeals Processing Tools
+    "appeal_letters_api": {
+        "name": "Appeal Letters API Access",
+        "description": "Access member and provider appeal letters from appeals management systems",
+        "input_schema": {
+            "appeal_id": {"type": "string", "description": "Appeal identifier"},
+            "member_id": {"type": "string", "description": "Member identifier (optional)"},
+            "appeal_type": {"type": "string", "description": "Type of appeal", "enum": ["medical_pa", "pharmacy_pa", "claim_denial", "coverage_determination"]},
+            "include_attachments": {"type": "boolean", "description": "Include supporting documentation"}
+        },
+        "mock_response": {
+            "appeal_id": "APP_20241011_001",
+            "member_id": "MEM123456",
+            "appeal_type": "medical_pa",
+            "submission_details": {
+                "submission_date": "2024-10-11T09:00:00Z",
+                "submission_method": "online_portal",
+                "submitter_type": "member",
+                "urgency_level": "standard"
+            },
+            "appeal_content": {
+                "primary_letter": {
+                    "content": "I am writing to appeal the denial of my MRI scan of the lumbar spine. My physician Dr. Smith has recommended this imaging due to persistent lower back pain that has not responded to 6 weeks of conservative treatment including physical therapy and medication. The pain is affecting my ability to work and perform daily activities. I believe this scan is medically necessary to determine the cause of my ongoing symptoms and guide appropriate treatment.",
+                    "word_count": 67,
+                    "language": "English",
+                    "sentiment": "formal_concerned"
+                },
+                "supporting_arguments": [
+                    "Failed conservative treatment for 6 weeks",
+                    "Physician recommendation for imaging",
+                    "Impact on daily functioning and work",
+                    "Medical necessity for diagnosis and treatment planning"
+                ],
+                "clinical_references": [
+                    "Dr. Smith's referral letter dated 2024-09-15",
+                    "Physical therapy progress notes",
+                    "Medication trial documentation"
+                ]
+            },
+            "attachments": [
+                {
+                    "attachment_id": "ATT_001",
+                    "type": "physician_letter",
+                    "description": "Dr. Smith's clinical justification letter",
+                    "date": "2024-09-15"
+                },
+                {
+                    "attachment_id": "ATT_002",
+                    "type": "treatment_records",
+                    "description": "Physical therapy progress notes",
+                    "date": "2024-09-01"
+                }
+            ],
+            "processing_status": {
+                "current_status": "received",
+                "assigned_reviewer": "Review Team A",
+                "target_completion_date": "2024-10-25",
+                "priority_level": "standard"
+            }
+        }
+    },
+
+    "denial_reasons_database": {
+        "name": "Denial Reasons Database Access",
+        "description": "Access original denial reasons and decision documentation for linkage analysis",
+        "input_schema": {
+            "denial_id": {"type": "string", "description": "Original denial identifier"},
+            "member_id": {"type": "string", "description": "Member identifier"},
+            "service_type": {"type": "string", "description": "Type of denied service"},
+            "denial_date_range": {"type": "string", "description": "Date range for denial search"}
+        },
+        "mock_response": {
+            "denial_id": "DENY_20241001_001",
+            "member_id": "MEM123456",
+            "denial_details": {
+                "denial_date": "2024-10-01T14:30:00Z",
+                "service_denied": "MRI Lumbar Spine without contrast",
+                "service_code": "72148",
+                "requesting_provider": "Dr. Smith, MD",
+                "denial_category": "medical_necessity"
+            },
+            "denial_reasoning": {
+                "primary_reason": "Insufficient documentation of medical necessity",
+                "secondary_reasons": [
+                    "Conservative treatment duration not adequately documented",
+                    "Clinical indication not clearly established"
+                ],
+                "clinical_criteria_not_met": [
+                    "6 weeks of documented conservative treatment",
+                    "Red flag symptoms requiring urgent imaging",
+                    "Neurological deficits documented"
+                ],
+                "policy_references": [
+                    "Medical Policy MP-IMG-001: Lumbar Spine MRI Coverage Criteria",
+                    "Clinical Guidelines CG-MSK-003: Conservative Treatment Requirements"
+                ]
+            },
+            "review_details": {
+                "reviewing_physician": "Dr. Johnson, MD",
+                "review_date": "2024-10-01T14:30:00Z",
+                "review_type": "clinical_review",
+                "peer_review_required": False,
+                "decision_confidence": 0.87
+            },
+            "denial_codes": [
+                {"code": "MN001", "description": "Medical necessity not established"},
+                {"code": "CT002", "description": "Conservative treatment requirements not met"}
+            ],
+            "member_notification": {
+                "notification_date": "2024-10-01T16:00:00Z",
+                "notification_method": "mail_and_portal",
+                "appeal_deadline": "2024-11-01",
+                "appeal_instructions_provided": True
+            }
+        }
+    },
+
+    "policies_database": {
+        "name": "Policies Database Access",
+        "description": "Access comprehensive healthcare policies and guidelines for relevant policy identification and matching",
+        "input_schema": {
+            "service_code": {"type": "string", "description": "Medical service or procedure code"},
+            "policy_category": {"type": "string", "description": "Policy category", "enum": ["medical", "pharmacy", "coverage", "clinical"]},
+            "search_terms": {"type": "array", "description": "Keywords for policy search"},
+            "include_archived": {"type": "boolean", "description": "Include archived policies"}
+        },
+        "mock_response": {
+            "search_query": "MRI lumbar spine medical necessity",
+            "policies_found": 3,
+            "relevant_policies": [
+                {
+                    "policy_id": "MP-IMG-001",
+                    "policy_title": "Lumbar Spine MRI Coverage Criteria",
+                    "version": "2024.2",
+                    "effective_date": "2024-07-01",
+                    "policy_type": "medical_necessity",
+                    "relevance_score": 0.96,
+                    "coverage_criteria": {
+                        "covered_indications": [
+                            "Red flag symptoms (fever, neurological deficits, bowel/bladder dysfunction)",
+                            "Failed conservative treatment for 6+ weeks",
+                            "Persistent or worsening symptoms despite appropriate treatment",
+                            "Suspected serious underlying pathology"
+                        ],
+                        "documentation_requirements": [
+                            "Clinical history and physical examination findings",
+                            "Documentation of conservative treatment trials",
+                            "Symptom severity and functional impact assessment",
+                            "Provider clinical justification"
+                        ],
+                        "exclusions": [
+                            "Routine screening without clinical indication",
+                            "Imaging for chronic stable conditions without change",
+                            "Repeat imaging without clinical progression"
+                        ]
+                    }
+                },
+                {
+                    "policy_id": "CG-MSK-003",
+                    "policy_title": "Musculoskeletal Conservative Treatment Requirements",
+                    "version": "2024.1",
+                    "effective_date": "2024-06-15",
+                    "policy_type": "clinical_guideline",
+                    "relevance_score": 0.89,
+                    "treatment_requirements": {
+                        "first_line_treatments": [
+                            "NSAIDs or acetaminophen for pain management",
+                            "Activity modification and ergonomic assessment",
+                            "Physical therapy evaluation and treatment"
+                        ],
+                        "duration_requirements": {
+                            "minimum_conservative_trial": "6_weeks",
+                            "documentation_frequency": "weekly_progress_notes",
+                            "outcome_measures": "pain_scales_functional_assessment"
+                        }
+                    }
+                }
+            ],
+            "policy_updates": {
+                "recent_changes": [
+                    {
+                        "policy_id": "MP-IMG-001",
+                        "change_date": "2024-07-01",
+                        "change_description": "Updated conservative treatment duration from 4 to 6 weeks"
+                    }
+                ],
+                "upcoming_changes": []
+            }
+        }
+    },
+
+    "evidence_database": {
+        "name": "Referenced Evidence Database",
+        "description": "Access clinical evidence and supporting documentation for comprehensive analysis",
+        "input_schema": {
+            "evidence_type": {"type": "string", "description": "Type of evidence", "enum": ["clinical_studies", "guidelines", "protocols", "literature"]},
+            "medical_condition": {"type": "string", "description": "Medical condition or clinical topic"},
+            "search_terms": {"type": "array", "description": "Evidence search terms"},
+            "evidence_level": {"type": "string", "description": "Level of evidence", "enum": ["systematic_review", "rct", "cohort", "case_series", "expert_opinion"]}
+        },
+        "mock_response": {
+            "search_query": "lumbar spine MRI diagnostic accuracy low back pain",
+            "evidence_results": [
+                {
+                    "evidence_id": "EV_20241011_001",
+                    "title": "Diagnostic Accuracy of MRI for Lumbar Spine Pathology in Chronic Low Back Pain",
+                    "source": "Journal of Spine Medicine",
+                    "publication_date": "2024-08-15",
+                    "evidence_level": "systematic_review",
+                    "relevance_score": 0.94,
+                    "key_findings": [
+                        "MRI sensitivity 87% for disc herniation detection",
+                        "Specificity 92% for nerve root compression",
+                        "Clinical correlation essential for treatment planning",
+                        "Conservative treatment trial recommended before imaging"
+                    ],
+                    "clinical_implications": "MRI most beneficial after failed conservative treatment to guide surgical planning"
+                },
+                {
+                    "evidence_id": "EV_20241011_002",
+                    "title": "Conservative Treatment Effectiveness in Acute Low Back Pain",
+                    "source": "Physical Medicine & Rehabilitation Journal",
+                    "publication_date": "2024-06-20",
+                    "evidence_level": "rct",
+                    "relevance_score": 0.88,
+                    "key_findings": [
+                        "Physical therapy effective in 68% of patients within 6 weeks",
+                        "Combined therapy (PT + medication) superior to single modality",
+                        "Early imaging not associated with improved outcomes",
+                        "Patient education improves treatment adherence"
+                    ],
+                    "clinical_implications": "Six-week conservative trial is evidence-based standard of care"
+                }
+            ],
+            "clinical_guidelines": [
+                {
+                    "guideline_id": "GL_SPINE_001",
+                    "organization": "American College of Radiology",
+                    "title": "ACR Appropriateness Criteria for Low Back Pain",
+                    "recommendation_strength": "strong",
+                    "relevant_recommendations": [
+                        "Conservative treatment trial of 6+ weeks before imaging",
+                        "MRI appropriate for persistent symptoms after conservative care",
+                        "Clinical correlation required for imaging interpretation"
+                    ]
+                }
+            ],
+            "evidence_quality": {
+                "overall_strength": "high",
+                "consistency_across_studies": 0.91,
+                "clinical_applicability": 0.94,
+                "recency_score": 0.89
+            }
+        }
+    },
+
+    "healthcare_appeals_nlp": {
+        "name": "Healthcare Appeals NLP Processing Engine",
+        "description": "Advanced NLP engine specialized for healthcare appeals processing and medical terminology analysis",
+        "input_schema": {
+            "appeal_text": {"type": "string", "description": "Appeal letter text content"},
+            "processing_mode": {"type": "string", "description": "Processing mode", "enum": ["summarization", "argument_extraction", "sentiment_analysis", "comprehensive"]},
+            "medical_domain": {"type": "string", "description": "Medical domain focus"},
+            "output_length": {"type": "string", "description": "Desired output length", "enum": ["brief", "standard", "detailed"]}
+        },
+        "mock_response": {
+            "processing_id": "NLP_APP_20241011_001",
+            "appeal_id": "APP_20241011_001",
+            "text_analysis": {
+                "word_count": 247,
+                "reading_level": "12th_grade",
+                "sentiment_score": 0.72,
+                "urgency_indicators": ["persistent_pain", "affecting_work", "daily_activities"],
+                "medical_terminology_density": 0.34
+            },
+            "key_arguments_extracted": [
+                {
+                    "argument": "Failed conservative treatment",
+                    "supporting_evidence": "6 weeks of physical therapy and medication",
+                    "strength": 0.89,
+                    "medical_relevance": 0.94
+                },
+                {
+                    "argument": "Physician recommendation",
+                    "supporting_evidence": "Dr. Smith has recommended this imaging",
+                    "strength": 0.87,
+                    "medical_relevance": 0.91
+                },
+                {
+                    "argument": "Functional impact",
+                    "supporting_evidence": "affecting my ability to work and perform daily activities",
+                    "strength": 0.83,
+                    "medical_relevance": 0.78
+                }
+            ],
+            "medical_entities": [
+                {"entity": "MRI lumbar spine", "type": "procedure", "confidence": 0.98},
+                {"entity": "lower back pain", "type": "symptom", "confidence": 0.96},
+                {"entity": "physical therapy", "type": "treatment", "confidence": 0.94},
+                {"entity": "Dr. Smith", "type": "provider", "confidence": 0.92}
+            ],
+            "summary": {
+                "executive_summary": "Member appeals denial of lumbar spine MRI, citing 6 weeks of failed conservative treatment including physical therapy and medication. Physician has recommended imaging for persistent pain affecting work and daily activities.",
+                "key_points": [
+                    "Conservative treatment trial completed",
+                    "Physician support for imaging request",
+                    "Documented functional impairment",
+                    "Seeking diagnostic clarification"
+                ],
+                "clinical_context": "Chronic low back pain with failed conservative management"
+            }
+        }
+    },
+
+    "intelligent_linking_engine": {
+        "name": "Intelligent Linking Engine",
+        "description": "Machine learning engine for intelligent linking between appeals, denials, policies, and evidence",
+        "input_schema": {
+            "source_content": {"type": "string", "description": "Source content for linking analysis"},
+            "target_databases": {"type": "array", "description": "Target databases to link against"},
+            "linking_algorithms": {"type": "array", "description": "Linking algorithms to apply"},
+            "confidence_threshold": {"type": "float", "description": "Minimum confidence for automated linking"}
+        },
+        "mock_response": {
+            "linking_session_id": "LINK_20241011_001",
+            "source_document_id": "APP_20241011_001",
+            "linking_results": {
+                "denial_linkages": [
+                    {
+                        "denial_id": "DENY_20241001_001",
+                        "confidence_score": 0.96,
+                        "match_factors": [
+                            {"factor": "member_id_match", "weight": 0.3, "score": 1.0},
+                            {"factor": "service_code_match", "weight": 0.25, "score": 1.0},
+                            {"factor": "temporal_proximity", "weight": 0.2, "score": 0.91},
+                            {"factor": "clinical_context_similarity", "weight": 0.25, "score": 0.94}
+                        ],
+                        "linkage_rationale": "Perfect match on member ID and service code with high clinical similarity"
+                    }
+                ],
+                "policy_linkages": [
+                    {
+                        "policy_id": "MP-IMG-001",
+                        "policy_title": "Lumbar Spine MRI Coverage Criteria",
+                        "confidence_score": 0.93,
+                        "relevance_factors": [
+                            {"factor": "service_type_match", "score": 1.0},
+                            {"factor": "clinical_criteria_alignment", "score": 0.89},
+                            {"factor": "coverage_context_match", "score": 0.91}
+                        ],
+                        "applicable_criteria": [
+                            "Conservative treatment requirements",
+                            "Medical necessity documentation",
+                            "Clinical indication standards"
+                        ]
+                    },
+                    {
+                        "policy_id": "CG-MSK-003",
+                        "policy_title": "Conservative Treatment Requirements",
+                        "confidence_score": 0.87,
+                        "relevance_factors": [
+                            {"factor": "treatment_pathway_match", "score": 0.94},
+                            {"factor": "duration_requirements_match", "score": 0.83}
+                        ]
+                    }
+                ],
+                "evidence_linkages": [
+                    {
+                        "evidence_id": "EV_20241011_001",
+                        "title": "Diagnostic Accuracy of MRI for Lumbar Spine Pathology",
+                        "confidence_score": 0.89,
+                        "relevance_type": "diagnostic_utility",
+                        "supporting_points": [
+                            "Validates clinical appropriateness of requested imaging",
+                            "Supports medical necessity argument",
+                            "Demonstrates evidence-based practice"
+                        ]
+                    }
+                ]
+            },
+            "linking_quality_metrics": {
+                "overall_confidence": 0.92,
+                "cross_reference_completeness": 0.94,
+                "temporal_consistency": 0.96,
+                "clinical_coherence": 0.91
+            },
+            "automated_summary": {
+                "primary_connections": "Appeal directly relates to denial DENY_20241001_001 for same service and member",
+                "policy_alignment": "Appeal arguments align with MP-IMG-001 coverage criteria requirements",
+                "evidence_support": "Clinical evidence supports appropriateness of requested imaging after conservative treatment"
+            }
+        }
     }
 }
 
