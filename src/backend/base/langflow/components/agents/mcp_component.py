@@ -189,6 +189,646 @@ MOCK_TOOL_TEMPLATES = {
             "red_flags": [],
             "follow_up_needed": "3-5 days if symptoms persist"
         }
+    },
+
+    # HIGH PRIORITY: Patient Experience Tools
+    "call_center_logs": {
+        "name": "Call Center Logs Access",
+        "description": "Access call center logs, transcripts, and metadata for patient feedback analysis",
+        "input_schema": {
+            "date_range": {"type": "string", "description": "Date range for logs (e.g., '7d', '30d', '6m')"},
+            "call_type": {"type": "string", "description": "Type of call", "enum": ["appointment", "billing", "clinical", "complaint", "all"]},
+            "member_id": {"type": "string", "description": "Specific member ID (optional)"},
+            "sentiment_filter": {"type": "string", "description": "Filter by sentiment", "enum": ["positive", "negative", "neutral", "all"]}
+        },
+        "mock_response": {
+            "total_calls": 1247,
+            "date_range": "2024-01-01 to 2024-01-15",
+            "call_summary": {
+                "appointment_calls": 523,
+                "billing_calls": 312,
+                "clinical_calls": 298,
+                "complaint_calls": 114
+            },
+            "sentiment_breakdown": {
+                "positive": 0.42,
+                "neutral": 0.35,
+                "negative": 0.23
+            },
+            "sample_transcripts": [
+                {
+                    "call_id": "CALL_20240115_001",
+                    "timestamp": "2024-01-15T09:30:00Z",
+                    "duration_minutes": 8.5,
+                    "call_type": "appointment",
+                    "sentiment": "positive",
+                    "summary": "Patient successfully scheduled follow-up appointment, expressed satisfaction with provider",
+                    "keywords": ["appointment", "schedule", "satisfied", "follow-up"]
+                },
+                {
+                    "call_id": "CALL_20240115_002",
+                    "timestamp": "2024-01-15T11:15:00Z",
+                    "duration_minutes": 12.3,
+                    "call_type": "billing",
+                    "sentiment": "negative",
+                    "summary": "Patient concerned about unexpected charges, issue escalated to billing department",
+                    "keywords": ["billing", "charges", "confused", "escalated"]
+                }
+            ],
+            "common_issues": [
+                {"issue": "Long wait times", "frequency": 0.34},
+                {"issue": "Billing confusion", "frequency": 0.28},
+                {"issue": "Appointment scheduling", "frequency": 0.21}
+            ]
+        }
+    },
+
+    "survey_responses": {
+        "name": "Survey Response Access",
+        "description": "Access patient survey responses across multiple survey types and platforms",
+        "input_schema": {
+            "survey_type": {"type": "string", "description": "Type of survey", "enum": ["satisfaction", "post_visit", "annual", "experience", "all"]},
+            "date_range": {"type": "string", "description": "Date range for responses"},
+            "response_status": {"type": "string", "description": "Response completion status", "enum": ["complete", "partial", "abandoned", "all"]},
+            "score_range": {"type": "string", "description": "Filter by score range (e.g., '1-3', '4-5')"}
+        },
+        "mock_response": {
+            "total_responses": 2834,
+            "response_rate": 0.67,
+            "survey_period": "2024-01-01 to 2024-01-15",
+            "average_scores": {
+                "overall_satisfaction": 4.2,
+                "provider_communication": 4.5,
+                "appointment_scheduling": 3.8,
+                "facility_cleanliness": 4.6,
+                "wait_time_satisfaction": 3.4
+            },
+            "response_distribution": {
+                "5_stars": 0.45,
+                "4_stars": 0.28,
+                "3_stars": 0.15,
+                "2_stars": 0.08,
+                "1_star": 0.04
+            },
+            "recent_responses": [
+                {
+                    "response_id": "SURV_20240115_001",
+                    "survey_type": "post_visit",
+                    "overall_score": 5,
+                    "completion_date": "2024-01-15T14:30:00Z",
+                    "feedback_text": "Excellent care, doctor was very thorough and explained everything clearly",
+                    "department": "Primary Care",
+                    "provider": "Dr. Smith"
+                },
+                {
+                    "response_id": "SURV_20240115_002",
+                    "survey_type": "satisfaction",
+                    "overall_score": 2,
+                    "completion_date": "2024-01-15T16:45:00Z",
+                    "feedback_text": "Long wait time, difficult to get appointment",
+                    "department": "Cardiology",
+                    "provider": "Dr. Johnson"
+                }
+            ],
+            "trending_topics": [
+                {"topic": "wait_times", "sentiment": "negative", "frequency": 0.42},
+                {"topic": "staff_friendliness", "sentiment": "positive", "frequency": 0.38},
+                {"topic": "appointment_availability", "sentiment": "negative", "frequency": 0.31}
+            ]
+        }
+    },
+
+    "complaint_management": {
+        "name": "Complaint Management System",
+        "description": "Access formal complaints, grievances, and resolution data from CRM systems",
+        "input_schema": {
+            "complaint_status": {"type": "string", "description": "Status of complaint", "enum": ["open", "investigating", "resolved", "escalated", "all"]},
+            "severity_level": {"type": "string", "description": "Complaint severity", "enum": ["low", "medium", "high", "critical"]},
+            "date_range": {"type": "string", "description": "Date range for complaints"},
+            "department": {"type": "string", "description": "Department involved (optional)"}
+        },
+        "mock_response": {
+            "total_complaints": 89,
+            "period": "2024-01-01 to 2024-01-15",
+            "status_breakdown": {
+                "open": 23,
+                "investigating": 31,
+                "resolved": 28,
+                "escalated": 7
+            },
+            "severity_distribution": {
+                "low": 0.34,
+                "medium": 0.45,
+                "high": 0.18,
+                "critical": 0.03
+            },
+            "average_resolution_time_days": 8.5,
+            "departments_most_complaints": [
+                {"department": "Billing", "count": 32},
+                {"department": "Scheduling", "count": 21},
+                {"department": "Clinical Care", "count": 18},
+                {"department": "Customer Service", "count": 12}
+            ],
+            "recent_complaints": [
+                {
+                    "complaint_id": "COMP_20240115_001",
+                    "submitted_date": "2024-01-15T10:00:00Z",
+                    "severity": "high",
+                    "status": "investigating",
+                    "department": "Billing",
+                    "summary": "Patient charged for services not received, insurance claim processed incorrectly",
+                    "complainant_type": "patient",
+                    "assigned_to": "Billing Manager"
+                },
+                {
+                    "complaint_id": "COMP_20240115_002",
+                    "submitted_date": "2024-01-15T14:30:00Z",
+                    "severity": "medium",
+                    "status": "open",
+                    "department": "Clinical Care",
+                    "summary": "Patient dissatisfied with wait time for specialist referral",
+                    "complainant_type": "patient",
+                    "assigned_to": "Patient Relations"
+                }
+            ],
+            "complaint_categories": [
+                {"category": "Billing/Financial", "percentage": 0.36},
+                {"category": "Access/Scheduling", "percentage": 0.24},
+                {"category": "Quality of Care", "percentage": 0.20},
+                {"category": "Communication", "percentage": 0.20}
+            ]
+        }
+    },
+
+    "ehr_calendar_access": {
+        "name": "EHR Calendar Access",
+        "description": "Access electronic health record system for provider scheduling and availability",
+        "input_schema": {
+            "provider_id": {"type": "string", "description": "Provider identifier or NPI"},
+            "date_range": {"type": "string", "description": "Date range for availability check"},
+            "appointment_type": {"type": "string", "description": "Type of appointment", "enum": ["routine", "urgent", "follow_up", "new_patient", "procedure"]},
+            "location": {"type": "string", "description": "Clinic location (optional)"}
+        },
+        "mock_response": {
+            "provider_id": "NPI_1234567890",
+            "provider_name": "Dr. Jane Smith",
+            "specialty": "Internal Medicine",
+            "location": "Main Clinic - Building A",
+            "availability_summary": {
+                "total_slots_available": 47,
+                "next_available": "2024-01-17T09:00:00Z",
+                "earliest_routine": "2024-01-22T14:30:00Z",
+                "earliest_urgent": "2024-01-16T16:00:00Z"
+            },
+            "weekly_schedule": {
+                "monday": {"start": "08:00", "end": "17:00", "lunch": "12:00-13:00"},
+                "tuesday": {"start": "08:00", "end": "17:00", "lunch": "12:00-13:00"},
+                "wednesday": {"start": "08:00", "end": "12:00", "lunch": null},
+                "thursday": {"start": "08:00", "end": "17:00", "lunch": "12:00-13:00"},
+                "friday": {"start": "08:00", "end": "16:00", "lunch": "12:00-13:00"}
+            },
+            "available_slots": [
+                {
+                    "date": "2024-01-17",
+                    "time": "09:00",
+                    "duration_minutes": 30,
+                    "appointment_type": "routine",
+                    "status": "available"
+                },
+                {
+                    "date": "2024-01-17",
+                    "time": "09:30",
+                    "duration_minutes": 30,
+                    "appointment_type": "routine",
+                    "status": "available"
+                },
+                {
+                    "date": "2024-01-17",
+                    "time": "14:00",
+                    "duration_minutes": 60,
+                    "appointment_type": "new_patient",
+                    "status": "available"
+                }
+            ],
+            "upcoming_appointments": [
+                {
+                    "date": "2024-01-16",
+                    "time": "10:00",
+                    "patient_name": "John Doe",
+                    "appointment_type": "follow_up",
+                    "reason": "Diabetes management"
+                }
+            ]
+        }
+    },
+
+    "email_service": {
+        "name": "Email Communication Service",
+        "description": "Email service for comprehensive patient communication and appointment management",
+        "input_schema": {
+            "recipient": {"type": "string", "description": "Recipient email address"},
+            "message_type": {"type": "string", "description": "Type of email", "enum": ["appointment_confirmation", "reminder", "follow_up", "survey", "newsletter", "custom"]},
+            "template_id": {"type": "string", "description": "Email template identifier (optional)"},
+            "personalization_data": {"type": "object", "description": "Data for email personalization"}
+        },
+        "mock_response": {
+            "email_id": "EMAIL_20240115_001",
+            "status": "sent",
+            "sent_timestamp": "2024-01-15T10:30:00Z",
+            "recipient": "patient@example.com",
+            "subject": "Appointment Confirmation - Dr. Smith on Jan 22, 2024",
+            "message_type": "appointment_confirmation",
+            "delivery_status": {
+                "delivered": True,
+                "opened": False,
+                "clicked": False,
+                "bounce": False,
+                "complaint": False
+            },
+            "tracking_metrics": {
+                "delivery_time_seconds": 2.3,
+                "estimated_read_time": "45 seconds",
+                "mobile_friendly": True,
+                "accessibility_score": 0.95
+            },
+            "email_content": {
+                "preview_text": "Your appointment with Dr. Smith is confirmed for January 22, 2024 at 2:30 PM",
+                "personalization_applied": [
+                    "patient_name",
+                    "provider_name",
+                    "appointment_date",
+                    "appointment_time",
+                    "location"
+                ],
+                "call_to_action": "Add to Calendar",
+                "attachments": ["appointment_prep_instructions.pdf"]
+            },
+            "campaign_data": {
+                "campaign_id": "APPT_CONFIRM_2024",
+                "segment": "scheduled_patients",
+                "a_b_test_variant": "standard"
+            }
+        }
+    },
+
+    "sms_gateway": {
+        "name": "SMS Gateway Service",
+        "description": "SMS messaging service for patient communication and notifications",
+        "input_schema": {
+            "phone_number": {"type": "string", "description": "Recipient phone number"},
+            "message_type": {"type": "string", "description": "Type of SMS", "enum": ["appointment_reminder", "confirmation", "follow_up", "health_tip", "urgent", "survey"]},
+            "message_content": {"type": "string", "description": "SMS message content"},
+            "send_time": {"type": "string", "description": "Scheduled send time (optional)"}
+        },
+        "mock_response": {
+            "message_id": "SMS_20240115_001",
+            "status": "sent",
+            "sent_timestamp": "2024-01-15T10:30:00Z",
+            "phone_number": "+1-555-123-4567",
+            "message_type": "appointment_reminder",
+            "message_content": "Reminder: You have an appointment with Dr. Smith tomorrow at 2:30 PM. Reply CONFIRM to confirm or CANCEL to reschedule. Main Clinic, 123 Health St.",
+            "character_count": 147,
+            "segment_count": 1,
+            "delivery_status": {
+                "delivered": True,
+                "delivery_time_seconds": 1.8,
+                "carrier": "Verizon",
+                "country_code": "US"
+            },
+            "response_tracking": {
+                "response_expected": True,
+                "response_received": False,
+                "response_deadline": "2024-01-16T14:30:00Z",
+                "auto_response_enabled": True
+            },
+            "cost_data": {
+                "cost_per_message": 0.0075,
+                "currency": "USD",
+                "billing_category": "patient_communications"
+            },
+            "compliance": {
+                "opt_in_status": "confirmed",
+                "opt_in_date": "2024-01-10T09:00:00Z",
+                "do_not_disturb_respected": True,
+                "hipaa_compliant": True
+            }
+        }
+    },
+
+    # MEDIUM PRIORITY: Clinical & Analytics Tools
+    "appointment_analytics": {
+        "name": "Appointment Analytics Platform",
+        "description": "Analytics platform for tracking appointment scheduling performance and KPIs",
+        "input_schema": {
+            "metric_type": {"type": "string", "description": "Type of metric", "enum": ["scheduling", "cancellation", "no_show", "satisfaction", "utilization", "all"]},
+            "time_period": {"type": "string", "description": "Analysis time period", "enum": ["daily", "weekly", "monthly", "quarterly"]},
+            "department": {"type": "string", "description": "Department filter (optional)"},
+            "provider_id": {"type": "string", "description": "Specific provider analysis (optional)"}
+        },
+        "mock_response": {
+            "analysis_period": "2024-01-01 to 2024-01-15",
+            "total_appointments": 3247,
+            "key_metrics": {
+                "scheduling_efficiency": 0.87,
+                "no_show_rate": 0.12,
+                "cancellation_rate": 0.08,
+                "average_booking_lead_time_days": 12.5,
+                "same_day_availability": 0.23,
+                "patient_satisfaction_score": 4.3
+            },
+            "department_performance": [
+                {
+                    "department": "Primary Care",
+                    "appointments": 1523,
+                    "no_show_rate": 0.10,
+                    "satisfaction": 4.4,
+                    "utilization": 0.92
+                },
+                {
+                    "department": "Cardiology",
+                    "appointments": 456,
+                    "no_show_rate": 0.15,
+                    "satisfaction": 4.2,
+                    "utilization": 0.88
+                },
+                {
+                    "department": "Orthopedics",
+                    "appointments": 387,
+                    "no_show_rate": 0.13,
+                    "satisfaction": 4.1,
+                    "utilization": 0.85
+                }
+            ],
+            "trending_metrics": {
+                "appointment_volume_trend": "increasing",
+                "no_show_trend": "stable",
+                "satisfaction_trend": "improving",
+                "wait_time_trend": "decreasing"
+            },
+            "recommendations": [
+                "Implement automated reminder system to reduce no-shows",
+                "Expand same-day scheduling availability",
+                "Focus on orthopedics department satisfaction improvement"
+            ]
+        }
+    },
+
+    "patient_feedback_analytics": {
+        "name": "Patient Feedback Analytics",
+        "description": "Advanced patient feedback and satisfaction tracking system for navigation quality improvement",
+        "input_schema": {
+            "feedback_source": {"type": "string", "description": "Source of feedback", "enum": ["surveys", "calls", "online", "in_person", "all"]},
+            "sentiment_analysis": {"type": "boolean", "description": "Include sentiment analysis"},
+            "time_period": {"type": "string", "description": "Analysis period"},
+            "department_filter": {"type": "string", "description": "Filter by department (optional)"}
+        },
+        "mock_response": {
+            "analysis_period": "2024-01-01 to 2024-01-15",
+            "total_feedback_items": 1847,
+            "overall_sentiment_score": 0.72,
+            "sentiment_distribution": {
+                "very_positive": 0.34,
+                "positive": 0.28,
+                "neutral": 0.23,
+                "negative": 0.12,
+                "very_negative": 0.03
+            },
+            "feedback_themes": [
+                {
+                    "theme": "staff_communication",
+                    "sentiment": "positive",
+                    "frequency": 0.45,
+                    "average_score": 4.3,
+                    "sample_comments": [
+                        "Nurses were very helpful and explained everything",
+                        "Doctor listened carefully to my concerns"
+                    ]
+                },
+                {
+                    "theme": "wait_times",
+                    "sentiment": "negative",
+                    "frequency": 0.38,
+                    "average_score": 2.1,
+                    "sample_comments": [
+                        "Waited 45 minutes past appointment time",
+                        "Long delays in emergency department"
+                    ]
+                },
+                {
+                    "theme": "facility_cleanliness",
+                    "sentiment": "positive",
+                    "frequency": 0.31,
+                    "average_score": 4.6,
+                    "sample_comments": [
+                        "Very clean and well-maintained facilities",
+                        "Impressive attention to hygiene protocols"
+                    ]
+                }
+            ],
+            "department_feedback": [
+                {
+                    "department": "Emergency",
+                    "feedback_count": 523,
+                    "average_sentiment": 0.65,
+                    "primary_concerns": ["wait_times", "communication", "triage_process"]
+                },
+                {
+                    "department": "Outpatient Surgery",
+                    "feedback_count": 298,
+                    "average_sentiment": 0.84,
+                    "primary_concerns": ["pre_op_instructions", "post_op_care", "scheduling"]
+                }
+            ],
+            "improvement_opportunities": [
+                "Reduce wait times in primary care (target: <15 min)",
+                "Enhance communication training for emergency staff",
+                "Implement real-time feedback collection system"
+            ],
+            "trending_topics": {
+                "emerging_positive": ["telehealth_experience", "appointment_flexibility"],
+                "emerging_negative": ["parking_availability", "phone_system_navigation"]
+            }
+        }
+    },
+
+    "ehr_care_plans": {
+        "name": "EHR Care Plans Access",
+        "description": "Access electronic health record care plans and clinical protocols",
+        "input_schema": {
+            "patient_id": {"type": "string", "description": "Patient identifier"},
+            "care_plan_type": {"type": "string", "description": "Type of care plan", "enum": ["chronic_disease", "post_acute", "preventive", "wellness", "all"]},
+            "active_only": {"type": "boolean", "description": "Return only active care plans"},
+            "include_goals": {"type": "boolean", "description": "Include care plan goals and outcomes"}
+        },
+        "mock_response": {
+            "patient_id": "PAT123456",
+            "total_care_plans": 3,
+            "active_care_plans": 2,
+            "last_updated": "2024-01-15T08:00:00Z",
+            "care_plans": [
+                {
+                    "care_plan_id": "CP_DIABETES_001",
+                    "plan_type": "chronic_disease",
+                    "condition": "Type 2 Diabetes Mellitus",
+                    "status": "active",
+                    "start_date": "2023-06-15",
+                    "next_review_date": "2024-03-15",
+                    "care_team": [
+                        {"role": "Primary Care Provider", "name": "Dr. Jane Smith"},
+                        {"role": "Diabetes Educator", "name": "Sarah Johnson, RN"},
+                        {"role": "Nutritionist", "name": "Mike Chen, RD"}
+                    ],
+                    "goals": [
+                        {
+                            "goal": "HbA1c < 7%",
+                            "target_date": "2024-06-15",
+                            "current_value": "7.2%",
+                            "status": "in_progress"
+                        },
+                        {
+                            "goal": "Weight loss 10 lbs",
+                            "target_date": "2024-04-15",
+                            "current_value": "-6 lbs",
+                            "status": "on_track"
+                        }
+                    ],
+                    "interventions": [
+                        "Metformin 500mg twice daily",
+                        "Blood glucose monitoring 2x daily",
+                        "Nutritionist consultation monthly",
+                        "Exercise plan: 30 min walking 5x/week"
+                    ],
+                    "next_actions": [
+                        "Lab work scheduled for 2024-01-22",
+                        "Follow-up appointment with Dr. Smith on 2024-01-29"
+                    ]
+                },
+                {
+                    "care_plan_id": "CP_HYPERTENSION_001",
+                    "plan_type": "chronic_disease",
+                    "condition": "Hypertension",
+                    "status": "active",
+                    "start_date": "2023-08-20",
+                    "next_review_date": "2024-02-20",
+                    "care_team": [
+                        {"role": "Primary Care Provider", "name": "Dr. Jane Smith"},
+                        {"role": "Pharmacist", "name": "David Lee, PharmD"}
+                    ],
+                    "goals": [
+                        {
+                            "goal": "Blood pressure < 130/80",
+                            "target_date": "2024-05-20",
+                            "current_value": "138/85",
+                            "status": "needs_adjustment"
+                        }
+                    ],
+                    "interventions": [
+                        "Lisinopril 10mg once daily",
+                        "Home blood pressure monitoring",
+                        "DASH diet consultation",
+                        "Sodium restriction < 2g daily"
+                    ]
+                }
+            ],
+            "quality_measures": {
+                "diabetes_control": "needs_improvement",
+                "hypertension_control": "adequate",
+                "medication_adherence_score": 0.78,
+                "care_plan_completion_rate": 0.85
+            }
+        }
+    },
+
+    "medication_records": {
+        "name": "Medication Records Access",
+        "description": "Access detailed medication information for patient questions and medication management",
+        "input_schema": {
+            "patient_id": {"type": "string", "description": "Patient identifier"},
+            "medication_name": {"type": "string", "description": "Specific medication name (optional)"},
+            "active_only": {"type": "boolean", "description": "Return only active medications"},
+            "include_history": {"type": "boolean", "description": "Include medication history and changes"}
+        },
+        "mock_response": {
+            "patient_id": "PAT123456",
+            "total_medications": 8,
+            "active_medications": 5,
+            "last_updated": "2024-01-15T10:00:00Z",
+            "current_medications": [
+                {
+                    "medication_id": "MED_001",
+                    "name": "Metformin",
+                    "generic_name": "Metformin Hydrochloride",
+                    "strength": "500mg",
+                    "dosage_form": "tablet",
+                    "directions": "Take 1 tablet by mouth twice daily with meals",
+                    "quantity": 60,
+                    "days_supply": 30,
+                    "refills_remaining": 3,
+                    "prescriber": "Dr. Jane Smith",
+                    "pharmacy": "CVS Pharmacy #1234",
+                    "date_prescribed": "2023-12-15",
+                    "last_filled": "2024-01-10",
+                    "next_refill_due": "2024-02-09",
+                    "indication": "Type 2 Diabetes Mellitus",
+                    "status": "active"
+                },
+                {
+                    "medication_id": "MED_002",
+                    "name": "Lisinopril",
+                    "generic_name": "Lisinopril",
+                    "strength": "10mg",
+                    "dosage_form": "tablet",
+                    "directions": "Take 1 tablet by mouth once daily",
+                    "quantity": 30,
+                    "days_supply": 30,
+                    "refills_remaining": 5,
+                    "prescriber": "Dr. Jane Smith",
+                    "pharmacy": "CVS Pharmacy #1234",
+                    "date_prescribed": "2023-11-20",
+                    "last_filled": "2024-01-05",
+                    "next_refill_due": "2024-02-04",
+                    "indication": "Hypertension",
+                    "status": "active"
+                }
+            ],
+            "medication_alerts": [
+                {
+                    "alert_type": "refill_reminder",
+                    "medication": "Metformin",
+                    "message": "Refill due in 5 days",
+                    "priority": "medium"
+                },
+                {
+                    "alert_type": "interaction_check",
+                    "medications": ["Metformin", "Lisinopril"],
+                    "message": "No significant interactions detected",
+                    "priority": "low"
+                }
+            ],
+            "adherence_data": {
+                "overall_adherence_score": 0.85,
+                "medications_on_schedule": 4,
+                "medications_delayed": 1,
+                "missed_doses_last_30_days": 3,
+                "adherence_trend": "improving"
+            },
+            "medication_history": [
+                {
+                    "action": "prescribed",
+                    "medication": "Metformin 500mg",
+                    "date": "2023-12-15",
+                    "provider": "Dr. Jane Smith",
+                    "reason": "Initial diabetes management"
+                },
+                {
+                    "action": "dosage_increased",
+                    "medication": "Lisinopril 5mg to 10mg",
+                    "date": "2024-01-02",
+                    "provider": "Dr. Jane Smith",
+                    "reason": "Blood pressure not at target"
+                }
+            ]
+        }
     }
 }
 
