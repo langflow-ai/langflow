@@ -1926,6 +1926,145 @@ MOCK_TOOL_TEMPLATES = {
         }
     },
 
+    # NEW MCP TOOLS FOR CLINICAL DOCUMENT SUMMARIZATION
+    "medical_terminology_database": {
+        "name": "Medical Terminology Database",
+        "description": "Access comprehensive medical terminology database for term definitions and plain language explanations",
+        "input_schema": {
+            "medical_term": {"type": "string", "description": "Medical term to look up"},
+            "context": {"type": "string", "description": "Clinical context for the term"},
+            "target_audience": {"type": "string", "description": "Target audience level", "enum": ["patient", "provider", "general_public"]},
+            "include_synonyms": {"type": "boolean", "description": "Include alternative terms and synonyms"}
+        },
+        "mock_response": {
+            "term": "myocardial infarction",
+            "category": "cardiology",
+            "plain_language_definition": "heart attack - when blood flow to part of the heart muscle is blocked",
+            "technical_definition": "Death of heart muscle tissue due to insufficient blood supply, typically caused by coronary artery occlusion",
+            "synonyms": ["heart attack", "MI", "coronary event"],
+            "related_terms": [
+                {"term": "angina", "relationship": "warning_sign"},
+                {"term": "coronary artery disease", "relationship": "underlying_cause"},
+                {"term": "cardiac arrest", "relationship": "potential_complication"}
+            ],
+            "patient_explanation": "A heart attack happens when one of the blood vessels that feeds your heart gets blocked. This stops oxygen from reaching part of your heart muscle, which can damage it.",
+            "reading_level": "grade_8",
+            "usage_frequency": "common",
+            "severity_indicator": "serious"
+        }
+    },
+
+    "health_literacy_engine": {
+        "name": "Health Literacy Assessment Engine",
+        "description": "Advanced engine for assessing and adjusting content to appropriate health literacy levels",
+        "input_schema": {
+            "text_content": {"type": "string", "description": "Text content to analyze for health literacy"},
+            "target_reading_level": {"type": "string", "description": "Target reading level", "enum": ["elementary", "middle_school", "high_school", "college"]},
+            "content_type": {"type": "string", "description": "Type of healthcare content", "enum": ["discharge_summary", "medication_instructions", "procedure_explanation", "test_results"]},
+            "simplification_level": {"type": "string", "description": "Level of simplification needed", "enum": ["minimal", "moderate", "extensive"]}
+        },
+        "mock_response": {
+            "analysis_id": "HL_20241011_001",
+            "original_reading_level": "college_graduate",
+            "current_complexity_score": 0.89,
+            "readability_metrics": {
+                "flesch_reading_ease": 32.1,
+                "flesch_kincaid_grade": 14.2,
+                "gunning_fog_index": 16.7,
+                "automated_readability_index": 15.3
+            },
+            "simplified_content": "Your blood test shows your blood sugar is higher than normal. This means your body isn't controlling sugar well right now. You need to take medicine and change what you eat to help fix this.",
+            "target_reading_level_achieved": "grade_8",
+            "simplification_changes": [
+                {"original": "hyperglycemia", "simplified": "high blood sugar", "reason": "medical_jargon"},
+                {"original": "glucose metabolism dysfunction", "simplified": "your body isn't controlling sugar well", "reason": "complex_medical_concept"},
+                {"original": "pharmacological intervention", "simplified": "take medicine", "reason": "technical_language"}
+            ],
+            "complexity_reduction": 0.67,
+            "health_literacy_score": "appropriate_for_target",
+            "recommendations": [
+                "Add visual aids to explain blood sugar concepts",
+                "Include specific examples of foods to avoid",
+                "Provide simple action steps with checkboxes"
+            ]
+        }
+    },
+
+    "clinical_context_analyzer": {
+        "name": "Clinical Context Analyzer",
+        "description": "Analyzes clinical documents to extract key medical information and context for accurate summarization",
+        "input_schema": {
+            "document_content": {"type": "string", "description": "Clinical document content to analyze"},
+            "document_type": {"type": "string", "description": "Type of clinical document", "enum": ["discharge_summary", "progress_note", "lab_results", "radiology_report", "procedure_note"]},
+            "extraction_focus": {"type": "array", "description": "Areas to focus extraction on", "items": {"enum": ["diagnoses", "treatments", "medications", "follow_up", "test_results", "procedures"]}},
+            "priority_level": {"type": "string", "description": "Information priority level", "enum": ["critical_only", "important", "comprehensive"]}
+        },
+        "mock_response": {
+            "analysis_id": "CCA_20241011_001",
+            "document_type": "discharge_summary",
+            "extraction_summary": {
+                "primary_diagnosis": {
+                    "code": "K35.9",
+                    "description": "Acute appendicitis, unspecified",
+                    "plain_language": "infected appendix that needed surgery",
+                    "severity": "moderate"
+                },
+                "procedures_performed": [
+                    {
+                        "procedure": "Laparoscopic appendectomy",
+                        "date": "2024-10-10",
+                        "outcome": "successful",
+                        "plain_language": "minimally invasive surgery to remove appendix using small incisions"
+                    }
+                ],
+                "medications": [
+                    {
+                        "name": "Acetaminophen",
+                        "dosage": "650mg every 6 hours",
+                        "purpose": "pain management",
+                        "plain_language": "medicine for pain relief",
+                        "important_notes": "take with food if stomach upset"
+                    }
+                ],
+                "key_findings": [
+                    "Surgery completed without complications",
+                    "Patient tolerated procedure well",
+                    "No signs of infection at discharge"
+                ],
+                "timeline": [
+                    {"date": "2024-10-09", "event": "Emergency department visit", "description": "Patient arrived with abdominal pain"},
+                    {"date": "2024-10-10", "event": "Surgery performed", "description": "Successful appendix removal"},
+                    {"date": "2024-10-11", "event": "Discharge", "description": "Patient ready to go home"}
+                ],
+                "follow_up_requirements": [
+                    {
+                        "type": "surgical_follow_up",
+                        "timeframe": "1-2 weeks",
+                        "provider": "surgeon",
+                        "purpose": "check healing and remove stitches if needed"
+                    }
+                ],
+                "warning_signs": [
+                    "Fever over 101°F",
+                    "Increased pain at surgical site",
+                    "Redness or drainage from incisions",
+                    "Nausea or vomiting that prevents eating"
+                ]
+            },
+            "clinical_priorities": {
+                "immediate_concerns": [],
+                "short_term_monitoring": ["surgical_site_healing", "pain_management"],
+                "long_term_considerations": ["return_to_normal_activities"]
+            },
+            "patient_education_needs": [
+                "wound_care_instructions",
+                "activity_restrictions",
+                "medication_compliance",
+                "when_to_call_doctor"
+            ]
+        }
+    },
+
     # NEW MCP TOOLS FOR PROVIDER ENABLEMENT & UTILIZATION MANAGEMENT
 
     # Provider Enablement - Compliance Documentation Tools

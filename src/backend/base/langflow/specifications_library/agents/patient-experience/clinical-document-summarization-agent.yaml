@@ -1,0 +1,289 @@
+id: urn:agent:genesis:patient-experience:clinical-document-summarization:1.0.0
+name: Clinical Document Summarization Agent
+fullyQualifiedName: genesis.autonomize.ai.clinical-document-summarization
+description: Analyzes and summarizes clinical documents using plain language accessible to high school reading levels. Transforms complex medical terminology into patient-friendly explanations while maintaining clinical accuracy.
+domain: autonomize.ai
+subDomain: patient-experience
+version: 1.0.0
+environment: production
+agentOwner: patient-experience@autonomize.ai
+agentOwnerDisplayName: Patient Experience Team
+email: patient-experience@autonomize.ai
+status: ACTIVE
+
+variables:
+- name: reading_level
+  type: string
+  required: false
+  default: "high_school"
+  description: Target reading level for summaries (elementary, middle_school, high_school, college)
+- name: summary_length
+  type: string
+  required: false
+  default: "medium"
+  description: Length of summary output (brief, medium, detailed, comprehensive)
+- name: include_key_points
+  type: boolean
+  required: false
+  default: true
+  description: Include bulleted key points section in summary
+- name: medical_term_explanations
+  type: boolean
+  required: false
+  default: true
+  description: Include explanations for medical terms used
+
+tags:
+- patient-experience
+- document-summarization
+- plain-language
+- clinical-documents
+- health-literacy
+- patient-education
+- medical-terminology
+- accessibility
+
+reusability:
+  asTools: false
+
+sampleInput:
+  document_type: "discharge_summary"
+  patient_id: "PAT123456"
+  summary_preferences: "high_school_level"
+  include_next_steps: true
+  file_content: "Patient underwent successful appendectomy on 2024-10-10..."
+
+sampleOutput:
+  summary_id: "SUMM_20241011_001"
+  patient_id: "PAT123456"
+  document_type: "discharge_summary"
+  plain_language_summary: "You had surgery to remove your appendix on October 10th. The surgery went well with no problems..."
+  key_points: ["Surgery was successful", "No complications occurred", "Follow-up needed in 2 weeks"]
+  medical_terms_explained: [{"term": "appendectomy", "definition": "surgery to remove the appendix"}]
+  reading_level_achieved: "grade_10"
+  next_steps: ["Take prescribed medications", "Rest for 1 week", "See doctor in 2 weeks"]
+
+kind: Single Agent
+agentGoal: Transform complex clinical documents into clear, patient-friendly summaries that help patients understand their health information at an appropriate reading level
+targetUser: patient
+valueGeneration: PatientEmpowerment
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+
+components:
+- id: document-input
+  name: Clinical Document Input
+  kind: Input
+  type: genesis:chat_input
+  description: Receive clinical document processing requests with file content and summarization preferences
+  provides:
+  - useAs: input_value
+    in: document-summarization-agent
+    description: Provide document content and processing parameters
+
+- id: file-loader
+  name: Clinical Document File Loader
+  kind: Tool
+  type: genesis:file_input
+  description: Load and parse clinical documents from various file formats including PDFs, Word docs, and text files
+  config:
+    advanced_mode: true
+    markdown: true
+    supported_formats: ["pdf", "docx", "txt", "html", "md"]
+    extract_text: true
+  provides:
+  - useAs: tools
+    in: document-summarization-agent
+    description: Enable file loading and text extraction capabilities
+
+- id: medical-terminology-database
+  name: Medical Terminology Database
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access comprehensive medical terminology database for term definitions and plain language explanations
+  asTools: true
+  config:
+    tool_name: medical_terminology_database
+    description: |
+      Access medical terminology and plain language definitions.
+      Provides:
+      - Medical term definitions and explanations
+      - Plain language translations of medical terminology
+      - Reading level assessments for medical content
+      - Synonym suggestions for complex terms
+      - Patient-friendly explanations database
+  provides:
+  - useAs: tools
+    in: document-summarization-agent
+    description: Enable medical terminology lookup and plain language translation
+
+- id: health-literacy-engine
+  name: Health Literacy Assessment Engine
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Advanced engine for assessing and adjusting content to appropriate health literacy levels
+  asTools: true
+  config:
+    tool_name: health_literacy_engine
+    description: |
+      Health literacy assessment and content adaptation engine.
+      Provides:
+      - Reading level analysis and assessment
+      - Content complexity scoring
+      - Plain language conversion algorithms
+      - Vocabulary simplification suggestions
+      - Readability improvement recommendations
+  provides:
+  - useAs: tools
+    in: document-summarization-agent
+    description: Enable health literacy assessment and content adaptation
+
+- id: clinical-context-analyzer
+  name: Clinical Context Analyzer
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analyzes clinical documents to extract key medical information and context for accurate summarization
+  asTools: true
+  config:
+    tool_name: clinical_context_analyzer
+    description: |
+      Clinical document analysis and context extraction.
+      Provides:
+      - Medical concept identification and extraction
+      - Clinical timeline reconstruction
+      - Key finding prioritization
+      - Treatment plan identification
+      - Follow-up requirement extraction
+  provides:
+  - useAs: tools
+    in: document-summarization-agent
+    description: Enable clinical context analysis and medical information extraction
+
+- id: summarization-prompt
+  name: Clinical Document Summarization Prompt
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Specialized prompt template for creating patient-friendly clinical document summaries
+  config:
+    template: |
+      You are a healthcare communication specialist who helps patients understand their medical information.
+
+      Your task is to summarize the following clinical document in plain language that a high school student can understand.
+
+      Document Type: {document_type}
+      Original Content: {document_content}
+      Target Reading Level: {reading_level}
+      Summary Length: {summary_length}
+      Include Key Points: {include_key_points}
+      Explain Medical Terms: {medical_term_explanations}
+
+      Guidelines:
+      1. Use simple, everyday words instead of medical jargon
+      2. Explain any medical terms you must use
+      3. Keep sentences short and clear
+      4. Use active voice when possible
+      5. Focus on what matters most to the patient
+      6. Include actionable next steps if mentioned
+      7. Maintain clinical accuracy while simplifying language
+
+      Create a summary that includes:
+      - Main findings in plain language
+      - Key points (if requested)
+      - Medical term explanations (if requested)
+      - Next steps or recommendations
+      - Timeline of important events
+
+      Remember: The goal is to help patients understand their health information clearly and feel empowered to participate in their care.
+  provides:
+  - useAs: prompt
+    in: document-summarization-agent
+    description: Provide structured prompt for clinical document summarization
+
+- id: document-summarization-agent
+  name: Clinical Document Summarization Agent
+  kind: Agent
+  type: genesis:agent
+  description: Intelligent agent that processes clinical documents and creates patient-friendly summaries at appropriate reading levels
+  config:
+    system_message: |
+      You are a healthcare communication specialist with expertise in making medical information accessible to patients.
+      Your role is to:
+      1. Analyze clinical documents and extract key medical information
+      2. Translate complex medical terminology into plain language
+      3. Create clear, accurate summaries at appropriate reading levels
+      4. Maintain clinical accuracy while improving accessibility
+      5. Provide explanations for medical terms when needed
+
+      Use your tools to:
+      - Load and parse clinical documents from various file formats
+      - Look up medical terminology and find plain language alternatives
+      - Assess and adjust content for appropriate health literacy levels
+      - Extract clinical context and prioritize key information
+
+      Focus on creating summaries that:
+      - Help patients understand their health status
+      - Explain what happened during their care
+      - Clarify what they need to do next
+      - Use language they can easily understand
+      - Maintain medical accuracy and completeness
+
+      Always prioritize patient understanding and empowerment while preserving essential medical information.
+  provides:
+  - useAs: agent
+    in: document-output
+    description: Process clinical documents and generate patient-friendly summaries
+
+- id: document-output
+  name: Clinical Document Summary Output
+  kind: Output
+  type: genesis:chat_output
+  description: Present comprehensive clinical document summaries in patient-friendly language with explanations and next steps
+  provides: []
+
+outputs:
+- name: plain_language_summary
+  type: string
+  description: Main summary of clinical document in patient-friendly language
+- name: key_points
+  type: array
+  description: Bulleted list of most important points from the document
+- name: medical_terms_explained
+  type: array
+  description: List of medical terms with plain language definitions
+- name: reading_level_achieved
+  type: string
+  description: Actual reading level achieved in the summary
+- name: next_steps
+  type: array
+  description: Clear action items and follow-up instructions for the patient
+
+kpis:
+- name: Reading Level Accuracy
+  description: Percentage of summaries achieving target reading level
+  target: "> 90%"
+  measurement: percentage
+- name: Medical Accuracy Score
+  description: Clinical accuracy rating of simplified summaries
+  target: "> 95%"
+  measurement: percentage
+- name: Patient Comprehension Rate
+  description: Percentage of patients reporting improved understanding
+  target: "> 85%"
+  measurement: percentage
+- name: Processing Time
+  description: Average time to generate clinical document summary
+  target: "< 3 minutes"
+  measurement: minutes
+- name: Health Literacy Improvement
+  description: Improvement in health literacy scores after using summaries
+  target: "> 25%"
+  measurement: percentage
+
+securityInfo:
+  visibility: external
+  confidentialityLevel: high
+  gdprSensitive: true
+  complianceRequirements: ["HIPAA", "SOC2", "HITECH"]

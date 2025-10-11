@@ -9,7 +9,7 @@ from langflow.services.spec.component_template_service import component_template
 from langflow.services.database.models.flow import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
-from langflow.api.utils import DbSession
+from langflow.services.deps import get_session
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from datetime import datetime, timezone
