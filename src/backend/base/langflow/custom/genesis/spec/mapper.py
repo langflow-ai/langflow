@@ -56,14 +56,15 @@ class ComponentMapper:
             "genesis:mcp_tool": {
                 "component": "MCPTools",
                 "config": {
-                    "connection_mode": "Stdio",  # Default to Stdio for backward compatibility
+                    # For backward compatibility with existing tool_name-only configurations
+                    # Provide a default command that enables STDIO mode detection
+                    "command": "echo '{\"tools\": [], \"capabilities\": {}}'",  # Default JSON response for compatibility
+                    "args": [],
+                    "env": {},
                     "url": "",
                     "headers": {},
                     "timeout_seconds": 30,
-                    "sse_read_timeout_seconds": 30,
-                    "command": "",
-                    "args": [],
-                    "env": {}
+                    "sse_read_timeout_seconds": 30
                 },
                 "dataType": "MCPTools"
             },
