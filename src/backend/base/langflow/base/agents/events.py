@@ -288,16 +288,15 @@ async def handle_on_chain_stream(
         start_time = perf_counter()
     elif isinstance(data_chunk, AIMessageChunk):
         output_text = _extract_output_text(data_chunk.content)
-        if output_text and output_text.strip():
-            # For streaming, send token event instead of add_message
-            if event_manager:
-                await asyncio.to_thread(
-                    event_manager.on_token,
-                    data={
-                        "chunk": output_text,
-                        "id": str(agent_message.id),
-                    },
-                )
+        # For streaming, send token event instead of add_message
+        if output_text and output_text.strip() and event_manager:
+            await asyncio.to_thread(
+                event_manager.on_token,
+                data={
+                    "chunk": output_text,
+                    "id": str(agent_message.id),
+                },
+            )
         if not agent_message.text:
             # Starts the timer when the first message is starting to be generated
             start_time = perf_counter()
