@@ -35,12 +35,12 @@ specifications_library/
 └── README.md                   # This file
 ```
 
-## Current Specifications (16)
+## Current Specifications (17)
 
 ### By Complexity
 - **Simple (3-4 components)**: `document-processor`, `classification-agent`, `medication-extractor`
 - **Medium (4-6 components)**: `benefit-check-agent`, `clinical-processing-agent`, `guideline-retrieval-agent`
-- **Complex (6+ components)**: `accumulator-check-agent`, `eligibility-checker`, `extraction-agent`, `appointment-concierge-agent`
+- **Complex (6+ components)**: `accumulator-check-agent`, `eligibility-checker`, `extraction-agent`, `appointment-concierge-agent`, `virtual-health-navigator-agent`
 
 ### By Use Case
 - **Document Processing**: `document-processor`, `attach-document-agent`
@@ -48,7 +48,7 @@ specifications_library/
 - **Healthcare Analysis**: `accumulator-check-agent`, `benefit-check-agent`, `eligibility-checker`
 - **Clinical Support**: `guideline-check-agent`, `guideline-retrieval-agent`, `clinical-processing-agent`
 - **Data Extraction**: `extraction-agent`, `medication-extractor`
-- **Patient Experience**: `post-visit-qa-agent`, `patient-feedback-analyzer-agent`, `appointment-concierge-agent`
+- **Patient Experience**: `post-visit-qa-agent`, `patient-feedback-analyzer-agent`, `appointment-concierge-agent`, `virtual-health-navigator-agent`
 
 ## Component Types Available
 
