@@ -239,7 +239,7 @@ backend: setup_env install_backend ## run the backend in development mode
 	@-kill -9 $$(lsof -t -i:7860) || true
 ifdef login
 	@echo "Running backend autologin is $(login)";
-	LANGFLOW_AUTO_LOGIN=$(login) uv run uvicorn \
+	LANGFLOW_AUTO_LOGIN=$(login) uv run python -m uvicorn \
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
 		--port $(port) \
@@ -249,7 +249,7 @@ ifdef login
 		$(if $(workers),--workers $(workers),)
 else
 	@echo "Running backend respecting the $(env) file";
-	uv run uvicorn \
+	uv run python -m uvicorn \
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
 		--port $(port) \

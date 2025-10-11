@@ -118,16 +118,9 @@ class ComponentMapper:
             "genesis:azure_openai": {"component": "AzureOpenAIModel", "config": {}},
             "genesis:anthropic": {"component": "AnthropicModel", "config": {}},
 
-            # CrewAI Components
-            "genesis:crewai_agent": {"component": "CrewAIAgentComponent", "config": {}},
-            "genesis:crewai_sequential_task": {"component": "SequentialTaskComponent", "config": {}},
-            "genesis:crewai_sequential_crew": {"component": "SequentialCrewComponent", "config": {}},
-            "genesis:crewai_hierarchical_task": {"component": "HierarchicalTaskComponent", "config": {}},
-            "genesis:crewai_hierarchical_crew": {"component": "HierarchicalCrewComponent", "config": {}},
-            "genesis:crewai_task_agent": {"component": "SequentialTaskAgentComponent", "config": {}},
-            # Legacy CrewAI mappings (for backward compatibility)
-            "genesis:sequential_crew": {"component": "SequentialCrewComponent", "config": {}},
-            "genesis:hierarchical_crew": {"component": "HierarchicalCrewComponent", "config": {}}
+            # CrewAI
+            "genesis:sequential_crew": {"component": "CrewAIAgent", "config": {}},
+            "genesis:hierarchical_crew": {"component": "HierarchicalCrew", "config": {}}
         }
 
     def map_component(self, spec_type: str) -> Dict[str, Any]:
@@ -283,37 +276,6 @@ class ComponentMapper:
                 "input_field": "template",
                 "output_field": "prompt",
                 "output_types": ["Message"]
-            },
-            # CrewAI Component I/O Mappings
-            "CrewAIAgentComponent": {
-                "input_field": "role",
-                "output_field": "agent",
-                "output_types": ["Agent"]
-            },
-            "SequentialTaskComponent": {
-                "input_field": "task_description",
-                "output_field": "task",
-                "output_types": ["SequentialTask"]
-            },
-            "SequentialCrewComponent": {
-                "input_field": "tasks",
-                "output_field": "crew_output",
-                "output_types": ["Message"]
-            },
-            "HierarchicalTaskComponent": {
-                "input_field": "task_description",
-                "output_field": "task",
-                "output_types": ["HierarchicalTask"]
-            },
-            "HierarchicalCrewComponent": {
-                "input_field": "tasks",
-                "output_field": "crew_output",
-                "output_types": ["Message"]
-            },
-            "SequentialTaskAgentComponent": {
-                "input_field": "task_description",
-                "output_field": "agent",
-                "output_types": ["Agent"]
             }
         }
 

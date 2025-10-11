@@ -19,11 +19,12 @@ A comprehensive library of agent specifications, patterns, and documentation for
 
 ```
 specifications_library/
-├── agents/                     # Agent specifications by complexity
+├── agents/                     # Healthcare agent specifications by pattern
 │   ├── simple/                 # Basic linear agents (3 components)
 │   ├── prompted/               # Agents with external prompts
 │   ├── single-tool/            # Agents with one tool
 │   ├── multi-tool/             # Agents with multiple tools
+│   ├── patient-experience/     # Patient-focused agents
 │   └── enterprise/             # Full production metadata
 ├── documentation/              # Complete documentation
 │   ├── schema/                 # YAML schema reference
@@ -34,12 +35,12 @@ specifications_library/
 └── README.md                   # This file
 ```
 
-## Current Specifications (13)
+## Current Specifications (16)
 
 ### By Complexity
 - **Simple (3-4 components)**: `document-processor`, `classification-agent`, `medication-extractor`
 - **Medium (4-6 components)**: `benefit-check-agent`, `clinical-processing-agent`, `guideline-retrieval-agent`
-- **Complex (6+ components)**: `accumulator-check-agent`, `eligibility-checker`, `extraction-agent`
+- **Complex (6+ components)**: `accumulator-check-agent`, `eligibility-checker`, `extraction-agent`, `appointment-concierge-agent`
 
 ### By Use Case
 - **Document Processing**: `document-processor`, `attach-document-agent`
@@ -47,6 +48,7 @@ specifications_library/
 - **Healthcare Analysis**: `accumulator-check-agent`, `benefit-check-agent`, `eligibility-checker`
 - **Clinical Support**: `guideline-check-agent`, `guideline-retrieval-agent`, `clinical-processing-agent`
 - **Data Extraction**: `extraction-agent`, `medication-extractor`
+- **Patient Experience**: `post-visit-qa-agent`, `patient-feedback-analyzer-agent`, `appointment-concierge-agent`
 
 ## Component Types Available
 

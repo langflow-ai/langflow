@@ -15,6 +15,7 @@ This catalog documents common patterns found in agent specifications. Each patte
 | [Agent with Single Tool](#3-agent-with-single-tool) | Medium | 4-5 | Data retrieval, API calls | External data needs |
 | [Multi-Tool Agent](#4-multi-tool-agent) | Complex | 6+ | Complex workflows, multiple APIs | Advanced automation |
 | [Enterprise Agent](#5-enterprise-agent) | Enterprise | Variable | Production deployments | Governance, monitoring |
+| [Multi-Agent Workflow](#6-multi-agent-workflow) | Advanced | 8+ | Specialized agent collaboration | Complex problem-solving |
 
 ---
 
@@ -525,6 +526,376 @@ tags:
 - **Reusability**: Tool interface for other agents
 - **Compliance**: Audit trails and documentation
 - **Configuration**: Environment-specific variables
+
+---
+
+## 6. Multi-Agent Workflow
+
+**Pattern**: Input → Coordination → Multiple Specialized Agents → Output
+**Complexity**: Advanced (8+ components)
+**Best For**: Complex problem-solving requiring specialized agent collaboration
+
+### When to Use
+- Complex workflows requiring multiple specializations
+- Tasks that benefit from agent expertise division
+- Sequential processing with specialized handoffs
+- Hierarchical decision-making processes
+- Problems requiring research, analysis, and synthesis
+
+### Structure
+
+#### Sequential Multi-Agent
+```
+[Chat Input] → [Sequential Crew] → [Chat Output]
+                      ↓
+    [Researcher Agent] → [Analyst Agent] → [Synthesizer Agent]
+           ↑                 ↑                    ↑
+    [Research Tools]  [Analysis Tools]  [Formatting Tools]
+```
+
+#### Hierarchical Multi-Agent
+```
+[Chat Input] → [Hierarchical Crew] → [Chat Output]
+                      ↓
+         [Manager Agent (GPT-4)]
+                ↓         ↓
+    [Specialist 1]  [Specialist 2]  [Specialist 3]
+         ↑              ↑               ↑
+   [Domain Tools]  [Domain Tools]  [Domain Tools]
+```
+
+### Components Required
+
+#### CrewAI-Based Implementation
+1. `genesis:chat_input` - User input
+2. `genesis:sequential_crew` OR `genesis:hierarchical_crew` - Coordination
+3. Multiple `genesis:crewai_agent` - Specialized agents
+4. `genesis:sequential_task` OR `genesis:hierarchical_task` - Task definitions
+5. Multiple `genesis:mcp_tool` OR `genesis:knowledge_hub_search` - Specialized tools
+6. `genesis:chat_output` - Results display
+
+#### Flow-Based Implementation
+1. `genesis:chat_input` - User input
+2. `genesis:conditional_router` - Route to appropriate agent
+3. Multiple `genesis:agent` - Specialized agents
+4. `genesis:sub_flow` - Sub-workflows for complex agents
+5. Tools and prompts per agent
+6. `genesis:chat_output` - Results display
+
+### CrewAI Template
+
+```yaml
+name: Multi-Agent Research Workflow
+description: Collaborative agents for complex research and analysis
+version: "1.0.0"
+agentGoal: Conduct comprehensive research and analysis using specialized agent collaboration
+
+kind: Multi Agent
+toolsUse: true
+agencyLevel: CollaborativeWorkflow
+
+components:
+  - id: input
+    type: genesis:chat_input
+    name: Research Request
+    description: User research question or topic
+    provides:
+      - in: crew-coordinator
+        useAs: input
+        description: Send request to crew
+
+  - id: crew-coordinator
+    type: genesis:sequential_crew
+    name: Research Crew
+    description: Coordinates research workflow
+    config:
+      process: sequential
+      verbose: true
+      memory: true
+      max_rpm: 100
+    provides:
+      - in: output
+        useAs: input
+        description: Send final results
+
+  - id: researcher-agent
+    type: genesis:crewai_agent
+    name: Research Specialist
+    description: Conducts initial research and data gathering
+    config:
+      role: "Senior Research Analyst"
+      goal: "Gather comprehensive information on the given topic"
+      backstory: "You are an experienced researcher with expertise in finding reliable sources and extracting key insights."
+      memory: true
+      verbose: true
+      allow_delegation: false
+    provides:
+      - in: crew-coordinator
+        useAs: agents
+        description: Provide research capability
+
+  - id: analyst-agent
+    type: genesis:crewai_agent
+    name: Data Analyst
+    description: Analyzes and synthesizes research findings
+    config:
+      role: "Senior Data Analyst"
+      goal: "Analyze research data and identify patterns and insights"
+      backstory: "You are a skilled analyst who excels at finding patterns in data and drawing meaningful conclusions."
+      memory: true
+      verbose: true
+      allow_delegation: false
+    provides:
+      - in: crew-coordinator
+        useAs: agents
+        description: Provide analysis capability
+
+  - id: synthesizer-agent
+    type: genesis:crewai_agent
+    name: Content Synthesizer
+    description: Creates final comprehensive report
+    config:
+      role: "Content Strategist"
+      goal: "Synthesize research and analysis into clear, actionable insights"
+      backstory: "You are an expert at taking complex information and presenting it in clear, compelling formats."
+      memory: true
+      verbose: true
+      allow_delegation: false
+    provides:
+      - in: crew-coordinator
+        useAs: agents
+        description: Provide synthesis capability
+
+  - id: research-tools
+    type: genesis:knowledge_hub_search
+    name: Research Database
+    description: Access to research databases and knowledge base
+    asTools: true
+    provides:
+      - in: researcher-agent
+        useAs: tools
+        description: Provide research tools
+
+  - id: analysis-tools
+    type: genesis:mcp_tool
+    name: Analysis Engine
+    description: Data analysis and statistical tools
+    asTools: true
+    config:
+      tool_name: analysis_engine
+      description: Statistical analysis and data processing tools
+    provides:
+      - in: analyst-agent
+        useAs: tools
+        description: Provide analysis tools
+
+  - id: research-task
+    type: genesis:sequential_task
+    name: Research Task
+    description: Initial research and data gathering
+    config:
+      description: "Research the given topic thoroughly, gathering information from reliable sources"
+      expected_output: "Comprehensive research summary with key findings and sources"
+      agent: researcher-agent
+    provides:
+      - in: crew-coordinator
+        useAs: tasks
+        description: Define research task
+
+  - id: analysis-task
+    type: genesis:sequential_task
+    name: Analysis Task
+    description: Analyze research findings
+    config:
+      description: "Analyze the research findings and identify key patterns, trends, and insights"
+      expected_output: "Detailed analysis with conclusions and recommendations"
+      agent: analyst-agent
+    provides:
+      - in: crew-coordinator
+        useAs: tasks
+        description: Define analysis task
+
+  - id: synthesis-task
+    type: genesis:sequential_task
+    name: Synthesis Task
+    description: Create final report
+    config:
+      description: "Synthesize research and analysis into a comprehensive, actionable report"
+      expected_output: "Final report with executive summary, findings, and recommendations"
+      agent: synthesizer-agent
+    provides:
+      - in: crew-coordinator
+        useAs: tasks
+        description: Define synthesis task
+
+  - id: output
+    type: genesis:chat_output
+    name: Research Report
+    description: Final comprehensive research report
+    config:
+      should_store_message: true
+```
+
+### Hierarchical Template
+
+```yaml
+name: Hierarchical Support Workflow
+description: Manager-led agent team for complex customer support
+version: "1.0.0"
+agentGoal: Provide expert customer support through hierarchical agent coordination
+
+kind: Multi Agent
+toolsUse: true
+agencyLevel: HierarchicalWorkflow
+
+components:
+  - id: input
+    type: genesis:chat_input
+    name: Support Request
+    description: Customer support inquiry
+    provides:
+      - in: support-crew
+        useAs: input
+        description: Send request to support team
+
+  - id: support-crew
+    type: genesis:hierarchical_crew
+    name: Support Team
+    description: Hierarchical support team with manager oversight
+    config:
+      process: hierarchical
+      verbose: true
+      memory: true
+      manager_llm: "gpt-4"
+    provides:
+      - in: output
+        useAs: input
+        description: Send support response
+
+  - id: manager-agent
+    type: genesis:crewai_agent
+    name: Support Manager
+    description: Manages support team and handles complex escalations
+    config:
+      role: "Customer Support Manager"
+      goal: "Ensure customer issues are resolved efficiently and effectively"
+      backstory: "Experienced support manager with expertise in team coordination and complex issue resolution"
+      memory: true
+      verbose: true
+      allow_delegation: true
+    provides:
+      - in: support-crew
+        useAs: manager_agent
+        description: Provide management oversight
+
+  - id: technical-agent
+    type: genesis:crewai_agent
+    name: Technical Specialist
+    description: Handles technical support issues
+    config:
+      role: "Technical Support Specialist"
+      goal: "Resolve technical issues and provide expert guidance"
+      backstory: "Technical expert with deep product knowledge and troubleshooting skills"
+      memory: true
+      verbose: true
+    provides:
+      - in: support-crew
+        useAs: agents
+        description: Provide technical expertise
+
+  - id: billing-agent
+    type: genesis:crewai_agent
+    name: Billing Specialist
+    description: Handles billing and account issues
+    config:
+      role: "Billing Support Specialist"
+      goal: "Resolve billing inquiries and account issues"
+      backstory: "Billing expert with knowledge of payment systems and account management"
+      memory: true
+      verbose: true
+    provides:
+      - in: support-crew
+        useAs: agents
+        description: Provide billing expertise
+
+  - id: output
+    type: genesis:chat_output
+    name: Support Response
+    description: Comprehensive support response
+    config:
+      should_store_message: true
+```
+
+### Best Practices
+
+#### Agent Design
+1. **Clear Role Definition**: Each agent should have a specific, well-defined role
+2. **Complementary Skills**: Agents should have complementary rather than overlapping capabilities
+3. **Tool Specialization**: Assign tools that match each agent's expertise
+4. **Model Selection**: Use appropriate models (GPT-4 for managers, GPT-3.5 for specialists)
+
+#### Coordination Strategy
+1. **Sequential for Handoffs**: Use sequential crews for linear workflows
+2. **Hierarchical for Complex Decisions**: Use hierarchical crews for complex decision-making
+3. **Clear Task Definitions**: Define specific, measurable tasks for each agent
+4. **Output Specifications**: Specify expected outputs for each task
+
+#### Performance Optimization
+1. **Memory Management**: Enable memory for context retention across agents
+2. **Tool Efficiency**: Assign minimal necessary tools to each agent
+3. **Rate Limiting**: Configure appropriate rate limits for API calls
+4. **Caching**: Enable caching for repeated operations
+
+### Common Use Cases
+
+#### Research and Analysis
+- Market research with multiple data sources
+- Academic research with literature review
+- Business intelligence gathering
+- Competitive analysis
+
+#### Customer Support
+- Multi-tier support with escalation
+- Domain-specific support routing
+- Complex issue resolution
+- Knowledge base maintenance
+
+#### Content Creation
+- Research → Writing → Editing → Publishing
+- Multi-language content creation
+- Brand consistency across content
+- Technical documentation
+
+#### Decision Making
+- Multi-criteria decision analysis
+- Risk assessment workflows
+- Compliance verification
+- Strategic planning
+
+### Component Mapping Requirements
+
+**New Mappings Needed:**
+```
+WARNING - NEW MAPPING REQUIRED
+
+Components needing spec mappers:
+1. genesis:crewai_agent → CrewAIAgentComponent
+2. genesis:sequential_task → SequentialTaskComponent
+3. genesis:hierarchical_task → HierarchicalTaskComponent
+4. genesis:sequential_task_agent → SequentialTaskAgentComponent
+
+Location: /Users/jagveersingh/Developer/studio/ai-studio/src/backend/base/langflow/components/crewai/
+```
+
+### Validation Checklist
+
+- [ ] Each agent has unique, specific role
+- [ ] Tasks are clearly defined with expected outputs
+- [ ] Coordination mechanism is appropriate (sequential vs hierarchical)
+- [ ] Tools are properly assigned to relevant agents
+- [ ] Memory and verbose settings are consistent
+- [ ] Rate limiting and performance settings are configured
+- [ ] Agent collaboration pattern is clearly documented
 
 ---
 

@@ -258,68 +258,25 @@ Step 4: Validate Specification
 
 BEFORE saving the specification:
 
-1. Check for Validation Module:
-   - Search in: /Users/jagveersingh/Developer/studio/ai-studio/src/backend/base/langflow/
-   - Look for spec validation module or function
-   - Common locations:
-     - spec/validator.py
-     - spec/validation.py
-     - utils/spec_validator.py
-     - validation/spec.py
+1. Use Existing Validation Service:
+   - Location: /Users/jagveersingh/Developer/studio/ai-studio/src/backend/base/langflow/services/spec/service.py
+   - The SpecService class has a validate_spec(spec_yaml) method
+   - This is the proper validation function used by the API endpoint /api/v1/spec/validate
 
-2. If Validation Function EXISTS:
-   - Import and use the validation function
-   - Run validation: validate_spec(spec_data)
-   - Check for validation errors
-   - Fix any errors found
+2. Validation Process:
+   - Load specification YAML content
+   - Use SpecService().validate_spec(spec_yaml) method
+   - Check validation result for errors and warnings
+   - Fix any errors found in specification
    - Re-validate until passes
    - Report validation results
 
-3. If Validation Function DOES NOT EXIST:
-   - Create validation function in appropriate module
-   - Location: /Users/jagveersingh/Developer/studio/ai-studio/src/backend/base/langflow/spec/validator.py
-   - Implement comprehensive validation:
-
-def validate_specification(spec_dict):
-    """
-    Validate agent specification against schema rules.
-    Returns (is_valid, errors_list)
-    """
-    errors = []
-    
-    # Validate metadata
-    - Check id format (URN pattern)
-    - Check required fields exist
-    - Validate email format
-    - Check valid status value
-    
-    # Validate kind and characteristics
-    - Check valid kind value
-    - Check valid agencyLevel
-    - Validate other enum fields
-    
-    # Validate components
-    - Check all component types are known
-    - Validate component structure
-    - Check required component fields
-    - Validate configuration against component schema
-    
-    # Validate relationships
-    - Check provides.useAs values
-    - Verify provides.in references exist
-    - Check for circular dependencies
-    - Validate edge creation logic
-    
-    # Validate tags and categorization
-    - Check tags are valid strings
-    - Verify domain/subDomain values
-    
-    return len(errors) == 0, errors
-
-   - Create validation schema/rules
-   - Add detailed error messages
-   - Test with existing specs
-   - Document validation function
+3. Validation Implementation Details:
+   - SpecService.validate_spec() returns: {"valid": bool, "errors": list, "warnings": list}
+   - Validates basic structure: required fields (name, description, agentGoal, components)
+   - Validates component structure and types
+   - Checks component mappings and provides relationships
+   - No need to create separate validation function
 
 4. Validation Output:
    - If PASS: Proceed to save specification
@@ -513,23 +470,22 @@ Complexity: [estimation]
 
 Discuss feasibility and alternatives.
 
-Case 5: Validation Function Missing
+Case 5: Using Existing Validation Service
 
-If no validation function exists:
+The validation function already exists in the SpecService:
 
-ACTION REQUIRED - CREATE VALIDATOR
+VALIDATION SERVICE AVAILABLE
 
-Create: /Users/jagveersingh/Developer/studio/ai-studio/src/backend/base/langflow/spec/validator.py
+Location: /Users/jagveersingh/Developer/studio/ai-studio/src/backend/base/langflow/services/spec/service.py
 
-Implement:
-- validate_specification(spec_dict) function
-- Comprehensive validation rules
-- Clear error messages
-- Schema compliance checking
-- Component type validation
-- Relationship validation
+Implementation:
+- SpecService.validate_spec(spec_yaml) method
+- Comprehensive validation rules already implemented
+- Returns {"valid": bool, "errors": list, "warnings": list}
+- Used by API endpoint /api/v1/spec/validate
+- Validates structure, components, and relationships
 
-Test with existing specifications before using.
+Use this existing service for all specification validation.
 
 ---
 
