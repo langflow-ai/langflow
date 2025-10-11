@@ -136,6 +136,11 @@ class ComponentMapper:
             "genesis:form_recognizer": {"component": "AzureDocumentIntelligenceComponent", "config": {}, "dataType": "AzureDocumentIntelligenceComponent"},
             "genesis:document_intelligence": {"component": "AzureDocumentIntelligenceComponent", "config": {}, "dataType": "AzureDocumentIntelligenceComponent"},
 
+            # AssemblyAI transcription components
+            "genesis:audio_transcription": {"component": "AssemblyAITranscriptionJobCreator", "config": {}, "dataType": "Data"},
+            "genesis:transcription_poll": {"component": "AssemblyAITranscriptionJobPoller", "config": {}, "dataType": "Data"},
+            "genesis:transcription_lemur": {"component": "AssemblyAILeMUR", "config": {}, "dataType": "Message"},
+
             # Data processing tools
             "genesis:data_transformer": {"component": "MCPTools", "config": {"tool_name": "data_transformer", "description": "Data transformation and standardization tool"}, "dataType": "MCPTools"},
 
