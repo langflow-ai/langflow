@@ -16,6 +16,11 @@ Genesis components are the building blocks of agent specifications. Each compone
 | [`genesis:prompt_template`](#genesisprompt_template) | Prompt management | Prompt | → Agents |
 | [`genesis:mcp_tool`](#genesismcp_tool) | External API/tool access | Tool | → Agents |
 | [`genesis:knowledge_hub_search`](#genesisknowledge_hub_search) | Internal knowledge search | Tool | → Agents |
+| [`genesis:crewai_agent`](#genesiscrewai_agent) | CrewAI specialized agent | Agent | ↔ Tasks, Tools |
+| [`genesis:crewai_sequential_task`](#genesiscrewai_sequential_task) | Sequential task definition | Task | → Agents |
+| [`genesis:crewai_sequential_crew`](#genesiscrewai_sequential_crew) | Sequential workflow coordinator | Coordinator | ↔ Tasks, Agents |
+| [`genesis:crewai_hierarchical_task`](#genesiscrewai_hierarchical_task) | Hierarchical task definition | Task | → Agents |
+| [`genesis:crewai_hierarchical_crew`](#genesiscrewai_hierarchical_crew) | Hierarchical workflow coordinator | Coordinator | ↔ Tasks, Agents |
 
 ---
 
@@ -938,6 +943,295 @@ system_prompt: |
   Always cite the specific guidelines found and their relevance to the case.
 ```
 
+---
+
+## `genesis:crewai_agent`
+
+**Purpose**: CrewAI specialized agent with role-based capabilities
+**Category**: Agent
+**Use Cases**: Multi-agent workflows, specialized agent roles, team coordination
+
+### Configuration Schema
+
+```yaml
+id: string                        # Required: Unique identifier
+name: string                      # Required: Display name
+type: "genesis:crewai_agent"     # Required: Component type
+description: string              # Required: Purpose description
+kind: "Agent"                    # Optional: Component category
+config:                          # Required: CrewAI agent configuration
+  role: string                     # Required: Agent's role definition
+  goal: string                     # Required: Agent's objective
+  backstory: string                # Required: Agent's context and expertise
+  llm: string                      # Optional: LLM model to use
+  memory: boolean                  # Optional: Enable memory capabilities
+  allow_delegation: boolean        # Optional: Allow task delegation
+  verbose: boolean                 # Optional: Enable verbose logging
+provides: array                  # Required: Output connections
+```
+
+### Connection Patterns
+
+**Connects TO**: Tasks, tools, other agents
+**Connects FROM**: Sequential/Hierarchical crews
+**Connection Types**:
+- `useAs: "agent"` - Assigned to tasks
+- `useAs: "tools"` - Receives tool capabilities
+
+### Configuration Options
+
+#### `role`
+- **Type**: string
+- **Required**: Yes
+- **Purpose**: Define the agent's role and expertise area
+- **Example**: "Insurance Eligibility Specialist"
+
+#### `goal`
+- **Type**: string
+- **Required**: Yes
+- **Purpose**: Specific objective for the agent
+- **Example**: "Verify patient insurance coverage and benefits for requested appointments"
+
+#### `backstory`
+- **Type**: string
+- **Required**: Yes
+- **Purpose**: Context about agent's expertise and approach
+- **Example**: "You are an experienced insurance specialist with deep knowledge of healthcare benefits..."
+
+### Example Usage
+
+```yaml
+- id: eligibility-agent
+  type: genesis:crewai_agent
+  name: Insurance Eligibility Agent
+  description: Specialist agent for insurance verification
+  config:
+    role: Insurance Eligibility Specialist
+    goal: Verify patient insurance coverage and benefits
+    backstory: |
+      You are an experienced insurance eligibility specialist with deep knowledge of
+      healthcare benefits verification. You excel at interpreting coverage details
+      and identifying potential issues before appointments are scheduled.
+    llm: Azure OpenAI
+    memory: true
+    allow_delegation: false
+    verbose: false
+  provides:
+    - useAs: agent
+      in: eligibility-verification-task
+      description: Assign agent to verification task
+```
+
+---
+
+## `genesis:crewai_sequential_task`
+
+**Purpose**: Task definition for sequential execution by CrewAI agents
+**Category**: Task
+**Use Cases**: Define specific tasks for agents in sequential workflows
+
+### Configuration Schema
+
+```yaml
+id: string                               # Required: Unique identifier
+name: string                             # Required: Display name
+type: "genesis:crewai_sequential_task"  # Required: Component type
+description: string                     # Required: Purpose description
+kind: "Task"                            # Optional: Component category
+config:                                 # Required: Task configuration
+  description: string                     # Required: Task description
+  expected_output: string                 # Required: Expected output format
+provides: array                         # Required: Output connections
+```
+
+### Connection Patterns
+
+**Connects TO**: Next task in sequence
+**Connects FROM**: Agents (task assignment)
+**Connection Types**:
+- `useAs: "input"` - Passes output to next task
+- `useAs: "agent"` - Receives agent assignment
+
+### Configuration Options
+
+#### `description`
+- **Type**: string (multiline)
+- **Required**: Yes
+- **Purpose**: Detailed task instructions for the agent
+- **Should Include**: Steps to follow, requirements, guidelines
+
+#### `expected_output`
+- **Type**: string (multiline)
+- **Required**: Yes
+- **Purpose**: Format and content expected from task completion
+- **Should Include**: Output structure, required information, format specifications
+
+### Example Usage
+
+```yaml
+- id: eligibility-verification-task
+  type: genesis:crewai_sequential_task
+  name: Insurance Eligibility Verification Task
+  description: Task for verifying patient insurance eligibility
+  config:
+    description: |
+      Verify patient insurance eligibility for the requested appointment type.
+
+      Steps:
+      1. Extract insurance information from request
+      2. Use insurance verification tool to check coverage
+      3. Verify benefits for specific appointment type
+      4. Check for any prior authorization requirements
+      5. Document eligibility status and coverage details
+    expected_output: |
+      Insurance eligibility verification report including:
+      - Eligibility status (active/inactive)
+      - Coverage details for appointment type
+      - Copay/deductible information
+      - Prior authorization requirements
+      - Effective dates and limitations
+  provides:
+    - useAs: input
+      in: appointment-scheduling-task
+      description: Pass eligibility results to scheduling
+```
+
+---
+
+## `genesis:crewai_sequential_crew`
+
+**Purpose**: Coordinates sequential execution of tasks by multiple agents
+**Category**: Coordinator
+**Use Cases**: Multi-agent workflows, task orchestration, sequential processing
+
+### Configuration Schema
+
+```yaml
+id: string                               # Required: Unique identifier
+name: string                             # Required: Display name
+type: "genesis:crewai_sequential_crew"  # Required: Component type
+description: string                     # Required: Purpose description
+kind: "Coordinator"                     # Optional: Component category
+config:                                 # Optional: Crew configuration
+  verbose: boolean                        # Optional: Enable verbose logging
+  memory: boolean                         # Optional: Enable crew memory
+  manager_llm: string                     # Optional: LLM for management
+  planning: boolean                       # Optional: Enable planning mode
+  planning_llm: string                    # Optional: LLM for planning
+provides: array                         # Required: Output connections
+```
+
+### Connection Patterns
+
+**Connects TO**: Output components
+**Connects FROM**: Tasks and agents (coordination)
+**Connection Types**:
+- `useAs: "input"` - Receives final results
+- Tasks connect to crew for coordination
+
+### Configuration Options
+
+#### `verbose`
+- **Type**: boolean
+- **Default**: false
+- **Purpose**: Enable detailed logging of crew execution
+
+#### `memory`
+- **Type**: boolean
+- **Default**: false
+- **Purpose**: Enable memory across task executions
+
+#### `planning`
+- **Type**: boolean
+- **Default**: false
+- **Purpose**: Enable planning mode for complex workflows
+
+### Example Usage
+
+```yaml
+- id: sequential-crew-coordinator
+  type: genesis:crewai_sequential_crew
+  name: Appointment Concierge Crew
+  description: Coordinates sequential execution of appointment tasks
+  config:
+    verbose: false
+    memory: true
+    manager_llm: Azure OpenAI
+    planning: true
+    planning_llm: Azure OpenAI
+  provides:
+    - useAs: input
+      in: appointment-results-output
+      description: Send crew execution results to output
+```
+
+---
+
+## `genesis:crewai_hierarchical_task`
+
+**Purpose**: Task definition for hierarchical execution with manager oversight
+**Category**: Task
+**Use Cases**: Complex tasks requiring manager coordination and oversight
+
+### Configuration Schema
+
+```yaml
+id: string                                  # Required: Unique identifier
+name: string                                # Required: Display name
+type: "genesis:crewai_hierarchical_task"   # Required: Component type
+description: string                        # Required: Purpose description
+kind: "Task"                               # Optional: Component category
+config:                                    # Required: Task configuration
+  description: string                        # Required: Task description
+  expected_output: string                    # Required: Expected output format
+provides: array                            # Required: Output connections
+```
+
+Similar to sequential tasks but designed for hierarchical crew coordination.
+
+---
+
+## `genesis:crewai_hierarchical_crew`
+
+**Purpose**: Coordinates hierarchical execution with manager agent oversight
+**Category**: Coordinator
+**Use Cases**: Complex workflows requiring management hierarchy and delegation
+
+### Configuration Schema
+
+```yaml
+id: string                                  # Required: Unique identifier
+name: string                                # Required: Display name
+type: "genesis:crewai_hierarchical_crew"   # Required: Component type
+description: string                        # Required: Purpose description
+kind: "Coordinator"                        # Optional: Component category
+config:                                    # Optional: Crew configuration
+  verbose: boolean                           # Optional: Enable verbose logging
+  memory: boolean                            # Optional: Enable crew memory
+  manager_llm: string                        # Optional: Manager LLM model
+provides: array                            # Required: Output connections
+```
+
+### When to Use CrewAI Components
+
+**Use CrewAI Sequential Pattern when**:
+- Multiple specialized agents needed
+- Clear task handoffs required
+- Sequential processing workflow
+- Agent expertise separation desired
+
+**Use CrewAI Hierarchical Pattern when**:
+- Manager oversight required
+- Complex delegation needed
+- Quality control important
+- Dynamic task assignment needed
+
+**Use Standard Agent Pattern when**:
+- Single agent sufficient
+- Simple workflow
+- No coordination needed
+- Prototyping or basic use cases
+
 ## Component Selection Guide
 
 ### Decision Matrix
@@ -950,6 +1244,10 @@ system_prompt: |
 | Complex prompts | `genesis:prompt_template` | Use for reusable or complex prompts |
 | External data | `genesis:mcp_tool` | For APIs, databases, calculations |
 | Internal search | `genesis:knowledge_hub_search` | For knowledge base access |
+| Multi-agent workflows | `genesis:crewai_agent` | Specialized agents with roles |
+| Task definition | `genesis:crewai_sequential_task` | Define tasks for agents |
+| Sequential coordination | `genesis:crewai_sequential_crew` | Coordinate task sequence |
+| Hierarchical coordination | `genesis:crewai_hierarchical_crew` | Manager-led coordination |
 
 ### Common Component Combinations
 
@@ -977,6 +1275,13 @@ chat_input → agent → chat_output
 chat_input → agent → chat_output
              ↑
     prompt + tool1 + tool2 + tool3
+```
+
+#### CrewAI Multi-Agent Workflow (8+ components)
+```
+chat_input → task1 → agent1 → task2 → agent2 → crew → chat_output
+             ↑                ↑                   ↑
+           prompt1           prompt2            tools
 ```
 
 ## Validation Rules
