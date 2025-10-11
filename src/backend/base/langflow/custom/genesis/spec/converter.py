@@ -21,6 +21,153 @@ from .resolver import VariableResolver
 logger = logging.getLogger(__name__)
 
 
+# Tool name to MCP server mapping registry
+TOOL_NAME_TO_SERVER_MAPPING = {
+    # Healthcare EHR Tools
+    "ehr_patient_records": {
+        "server_name": "healthcare_ehr_server",
+        "tool_filter": "ehr_patient_records",
+        "description": "Healthcare EHR system for patient records access"
+    },
+    "ehr_calendar_access": {
+        "server_name": "healthcare_ehr_server",
+        "tool_filter": "ehr_calendar_access",
+        "description": "Healthcare EHR system for provider scheduling"
+    },
+    "ehr_care_plans": {
+        "server_name": "healthcare_ehr_server",
+        "tool_filter": "ehr_care_plans",
+        "description": "Healthcare EHR system for care plans access"
+    },
+
+    # Pharmacy and Claims Tools
+    "pharmacy_claims_ncpdp": {
+        "server_name": "pharmacy_claims_server",
+        "tool_filter": "pharmacy_claims_ncpdp",
+        "description": "NCPDP pharmacy claims data access"
+    },
+    "medication_records": {
+        "server_name": "pharmacy_claims_server",
+        "tool_filter": "medication_records",
+        "description": "Medication information and prescription access"
+    },
+    "healthcare_claims_database": {
+        "server_name": "claims_analytics_server",
+        "tool_filter": "healthcare_claims_database",
+        "description": "Healthcare claims database for analytics"
+    },
+
+    # Insurance and Eligibility Tools
+    "insurance_eligibility_check": {
+        "server_name": "insurance_services_server",
+        "tool_filter": "insurance_eligibility_check",
+        "description": "Real-time insurance eligibility verification"
+    },
+    "insurance_plan_rules": {
+        "server_name": "insurance_services_server",
+        "tool_filter": "insurance_plan_rules",
+        "description": "Insurance plan benefits and coverage information"
+    },
+
+    # Member Management Tools
+    "member_management_system": {
+        "server_name": "member_services_server",
+        "tool_filter": "member_management_system",
+        "description": "Member demographics and management system"
+    },
+
+    # Communication Tools
+    "sms_gateway": {
+        "server_name": "communication_services_server",
+        "tool_filter": "sms_gateway",
+        "description": "SMS messaging service"
+    },
+    "email_service": {
+        "server_name": "communication_services_server",
+        "tool_filter": "email_service",
+        "description": "Email communication service"
+    },
+
+    # Analytics and Feedback Tools
+    "call_center_logs": {
+        "server_name": "analytics_server",
+        "tool_filter": "call_center_logs",
+        "description": "Call center logs and conversation analytics"
+    },
+    "survey_responses": {
+        "server_name": "analytics_server",
+        "tool_filter": "survey_responses",
+        "description": "Patient survey response analytics"
+    },
+    "complaint_management": {
+        "server_name": "analytics_server",
+        "tool_filter": "complaint_management",
+        "description": "Complaint and grievance management system"
+    },
+    "patient_feedback_analytics": {
+        "server_name": "analytics_server",
+        "tool_filter": "patient_feedback_analytics",
+        "description": "Patient feedback and satisfaction analytics"
+    },
+    "appointment_analytics": {
+        "server_name": "analytics_server",
+        "tool_filter": "appointment_analytics",
+        "description": "Appointment scheduling analytics and KPIs"
+    },
+
+    # Specialized Healthcare Tools
+    "healthcare_nlp_sentiment": {
+        "server_name": "healthcare_ai_server",
+        "tool_filter": "healthcare_nlp_sentiment",
+        "description": "Healthcare-specific NLP sentiment analysis"
+    },
+    "ml_theme_extraction": {
+        "server_name": "healthcare_ai_server",
+        "tool_filter": "ml_theme_extraction",
+        "description": "Machine learning theme extraction for healthcare"
+    },
+    "symptom_checker_api": {
+        "server_name": "healthcare_ai_server",
+        "tool_filter": "symptom_checker_api",
+        "description": "Clinical symptom analysis and triage"
+    },
+    "navigation_ml_analytics": {
+        "server_name": "healthcare_ai_server",
+        "tool_filter": "navigation_ml_analytics",
+        "description": "ML-powered healthcare navigation analytics"
+    },
+
+    # Directory and Reference Tools
+    "healthcare_facility_directory": {
+        "server_name": "healthcare_directory_server",
+        "tool_filter": "healthcare_facility_directory",
+        "description": "Healthcare facility and provider directory"
+    },
+
+    # Care Coordination Tools
+    "ehr_systems_integration": {
+        "server_name": "care_coordination_server",
+        "tool_filter": "ehr_systems_integration",
+        "description": "Multi-EHR systems integration for care coordination"
+    },
+    "referral_management_systems": {
+        "server_name": "care_coordination_server",
+        "tool_filter": "referral_management_systems",
+        "description": "Referral management and coordination systems"
+    },
+    "hie_integration": {
+        "server_name": "care_coordination_server",
+        "tool_filter": "hie_integration",
+        "description": "Health Information Exchange integration"
+    },
+    "care_management_platforms": {
+        "server_name": "care_coordination_server",
+        "tool_filter": "care_management_platforms",
+        "description": "Care management and coordination platforms"
+    }
+}
+
+
 def _get_component_template_service():
     """Lazy import to avoid circular dependency."""
     try:

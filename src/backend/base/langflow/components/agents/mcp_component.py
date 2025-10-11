@@ -27,12 +27,183 @@ from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 
 
+# Mock tool templates for healthcare tools when no MCP server is available
+MOCK_TOOL_TEMPLATES = {
+    # Healthcare EHR Tools
+    "ehr_patient_records": {
+        "name": "EHR Patient Records",
+        "description": "Access patient electronic health records for the specific visit",
+        "input_schema": {
+            "patient_id": {"type": "string", "description": "Patient identifier"},
+            "visit_date": {"type": "string", "description": "Visit date (YYYY-MM-DD format)"},
+            "record_type": {"type": "string", "description": "Type of record to retrieve", "enum": ["visit_notes", "discharge_summary", "all"]}
+        },
+        "mock_response": {
+            "patient_id": "PAT123456",
+            "visit_date": "2024-01-15",
+            "visit_notes": [
+                {
+                    "timestamp": "2024-01-15T10:30:00Z",
+                    "provider": "Dr. Smith",
+                    "note_type": "Assessment",
+                    "content": "Patient presents with stable chronic conditions. Medication adherence improved."
+                }
+            ],
+            "diagnoses": ["Type 2 Diabetes Mellitus", "Hypertension", "Hyperlipidemia"],
+            "medications": [
+                {"name": "Metformin", "dosage": "500mg", "frequency": "twice daily"},
+                {"name": "Lisinopril", "dosage": "10mg", "frequency": "once daily"}
+            ],
+            "vital_signs": {"bp": "130/80", "pulse": "72", "temp": "98.6F"},
+            "status": "active"
+        }
+    },
+
+    "pharmacy_claims_ncpdp": {
+        "name": "Pharmacy Claims NCPDP",
+        "description": "Access pharmacy claims data to retrieve medication fill history and refill patterns",
+        "input_schema": {
+            "member_id": {"type": "string", "description": "Member identifier"},
+            "date_range": {"type": "string", "description": "Date range for claims (e.g., '90d', '6m', '1y')"},
+            "medication_filter": {"type": "string", "description": "Filter by specific medication or drug class"}
+        },
+        "mock_response": {
+            "member_id": "MEM789012",
+            "claims_period": "2023-10-15 to 2024-01-15",
+            "prescriptions": [
+                {
+                    "ndc": "00093-0058-01",
+                    "medication": "Metformin HCl 500mg",
+                    "fill_date": "2024-01-10",
+                    "days_supply": 30,
+                    "quantity": 60,
+                    "pharmacy": "CVS Pharmacy #1234",
+                    "prescriber": "Dr. Smith"
+                }
+            ],
+            "adherence_metrics": {
+                "pdc_diabetes": 0.85,
+                "pdc_hypertension": 0.72,
+                "refill_gaps": ["Lisinopril: 5-day gap in December"]
+            },
+            "total_claims": 12
+        }
+    },
+
+    "insurance_eligibility_check": {
+        "name": "Insurance Eligibility Check",
+        "description": "Real-time insurance eligibility verification and benefits checking",
+        "input_schema": {
+            "member_id": {"type": "string", "description": "Insurance member ID"},
+            "provider_npi": {"type": "string", "description": "Provider NPI number"},
+            "service_type": {"type": "string", "description": "Type of service", "enum": ["office_visit", "specialist", "diagnostic", "procedure"]}
+        },
+        "mock_response": {
+            "member_id": "INS456789",
+            "eligibility_status": "active",
+            "coverage_effective_date": "2024-01-01",
+            "plan_name": "Health Plus Premium",
+            "copay_office_visit": "$25",
+            "copay_specialist": "$50",
+            "deductible_remaining": "$750",
+            "out_of_pocket_max": "$5000",
+            "prior_auth_required": False,
+            "benefits": {
+                "office_visits": "Covered after copay",
+                "preventive_care": "100% covered",
+                "prescription_drugs": "Covered with formulary"
+            }
+        }
+    },
+
+    "member_management_system": {
+        "name": "Member Management System",
+        "description": "Access member demographics and management system for patient information",
+        "input_schema": {
+            "member_id": {"type": "string", "description": "Member identifier"},
+            "info_type": {"type": "string", "description": "Type of information requested", "enum": ["demographics", "contact", "preferences", "all"]}
+        },
+        "mock_response": {
+            "member_id": "MEM123456",
+            "demographics": {
+                "name": "John Doe",
+                "date_of_birth": "1985-06-15",
+                "gender": "Male",
+                "address": "123 Main St, Anytown, ST 12345"
+            },
+            "contact_preferences": {
+                "email": "john.doe@email.com",
+                "phone": "555-123-4567",
+                "preferred_method": "email",
+                "language": "English"
+            },
+            "care_team": {
+                "primary_care_provider": "Dr. Jane Smith",
+                "care_coordinator": "Sarah Johnson, RN"
+            },
+            "risk_score": 65,
+            "last_updated": "2024-01-15T08:00:00Z"
+        }
+    },
+
+    "healthcare_nlp_sentiment": {
+        "name": "Healthcare NLP Sentiment Analysis",
+        "description": "Advanced NLP engine optimized for healthcare feedback sentiment analysis",
+        "input_schema": {
+            "text_content": {"type": "string", "description": "Text content to analyze"},
+            "analysis_type": {"type": "string", "description": "Type of analysis", "enum": ["sentiment", "themes", "clinical_terms", "all"]}
+        },
+        "mock_response": {
+            "sentiment_score": 0.75,
+            "sentiment_label": "positive",
+            "confidence": 0.88,
+            "themes_extracted": ["staff_friendliness", "wait_time", "treatment_effectiveness"],
+            "clinical_terms": ["blood_pressure", "medication", "follow_up"],
+            "key_phrases": ["very satisfied", "professional staff", "timely care"],
+            "processing_time_ms": 145
+        }
+    },
+
+    "symptom_checker_api": {
+        "name": "Symptom Checker API",
+        "description": "Advanced symptom analysis and clinical triage assessment system",
+        "input_schema": {
+            "symptoms": {"type": "array", "description": "List of symptoms"},
+            "patient_age": {"type": "integer", "description": "Patient age"},
+            "patient_gender": {"type": "string", "description": "Patient gender"},
+            "severity": {"type": "string", "description": "Symptom severity", "enum": ["mild", "moderate", "severe"]}
+        },
+        "mock_response": {
+            "triage_level": "routine",
+            "urgency_score": 3,
+            "possible_conditions": [
+                {"condition": "Upper Respiratory Infection", "probability": 0.65},
+                {"condition": "Allergic Rhinitis", "probability": 0.25},
+                {"condition": "Sinusitis", "probability": 0.10}
+            ],
+            "recommendations": [
+                "Consider scheduling routine appointment with primary care",
+                "Monitor symptoms for 24-48 hours",
+                "Increase fluid intake and rest"
+            ],
+            "red_flags": [],
+            "follow_up_needed": "3-5 days if symptoms persist"
+        }
+    }
+}
+
+
 class MCPToolsComponent(ComponentWithCache):
     schema_inputs: list = []
     tools: list[StructuredTool] = []
     _not_load_actions: bool = False
     _tool_cache: dict = {}
     _last_selected_server: str | None = None  # Cache for the last selected server
+
+    # Mock mode capabilities
+    mock_mode: bool = False
+    mock_tools: list[StructuredTool] = []
+    _mock_tool_cache: dict = {}
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
@@ -42,6 +213,11 @@ class MCPToolsComponent(ComponentWithCache):
         # Initialize clients with access to the component cache
         self.stdio_client: MCPStdioClient = MCPStdioClient(component_cache=self._shared_component_cache)
         self.sse_client: MCPSseClient = MCPSseClient(component_cache=self._shared_component_cache)
+
+        # Initialize mock mode
+        self.mock_mode = False
+        self.mock_tools = []
+        self._mock_tool_cache = {}
 
     def _ensure_cache_structure(self):
         """Ensure the cache has the required structure."""
@@ -127,6 +303,120 @@ class MCPToolsComponent(ComponentWithCache):
         else:
             return schema_inputs
 
+    def _has_valid_server_connection(self, server_config=None) -> bool:
+        """Check if we have a valid MCP server connection available."""
+        if not server_config:
+            return False
+
+        # Check if we have connection details (command for STDIO or url for SSE)
+        has_command = server_config.get("command") and server_config["command"].strip()
+        has_url = server_config.get("url") and server_config["url"].strip()
+
+        # If we only have the default placeholder command, it's not a real server
+        if has_command and "echo" in server_config["command"] and "tools" in server_config["command"]:
+            return False
+
+        return has_command or has_url
+
+    def _generate_mock_tool_from_config(self, tool_name: str, description: str = "") -> StructuredTool:
+        """Generate a mock tool based on tool_name and description from Genesis config."""
+        from pydantic import BaseModel, Field
+
+        # Get template if available, otherwise create generic
+        template = MOCK_TOOL_TEMPLATES.get(tool_name, {
+            "name": tool_name.replace("_", " ").title(),
+            "description": description or f"Mock tool for {tool_name}",
+            "input_schema": {
+                "input_data": {"type": "string", "description": "Input data for the tool"}
+            },
+            "mock_response": {
+                "tool_name": tool_name,
+                "status": "success",
+                "data": "Mock response data",
+                "timestamp": "2024-01-15T10:00:00Z"
+            }
+        })
+
+        # Create Pydantic model for input schema
+        schema_fields = {}
+        for field_name, field_info in template["input_schema"].items():
+            field_type = str  # Default to string
+            if field_info["type"] == "integer":
+                field_type = int
+            elif field_info["type"] == "array":
+                field_type = list
+
+            schema_fields[field_name] = (field_type, Field(description=field_info["description"]))
+
+        InputSchema = type(f"{tool_name}_Schema", (BaseModel,), schema_fields)
+
+        # Create mock function
+        def mock_function(**kwargs) -> dict:
+            """Mock function that returns predefined response."""
+            response = template["mock_response"].copy()
+            # Include input parameters in response for traceability
+            response["input_parameters"] = kwargs
+            response["mock_mode"] = True
+            return response
+
+        # Create StructuredTool
+        return StructuredTool(
+            name=tool_name,
+            description=template["description"],
+            func=mock_function,
+            args_schema=InputSchema
+        )
+
+    async def _generate_mock_tools_from_component_config(self) -> list[StructuredTool]:
+        """Generate mock tools based on component configuration."""
+        tools = []
+
+        # Check if we have tool_name in our configuration
+        # This comes from Genesis specification config merged with mapper defaults
+        config = getattr(self, '_component_config', {})
+
+        tool_name = config.get('tool_name')
+        description = config.get('description', '')
+
+        if tool_name:
+            await logger.ainfo(f"Generating mock tool for: {tool_name}")
+            mock_tool = self._generate_mock_tool_from_config(tool_name, description)
+            tools.append(mock_tool)
+
+            # Cache the mock tool
+            self._mock_tool_cache[tool_name] = mock_tool
+        else:
+            await logger.awarning("No tool_name found in component config for mock generation")
+
+        return tools
+
+    async def _try_mock_mode_fallback(self, server_name: str, server_config: dict = None) -> tuple[list, dict]:
+        """Fallback to mock mode when no real server is available."""
+        await logger.ainfo(f"Falling back to mock mode for server: {server_name}")
+
+        self.mock_mode = True
+
+        # Generate mock tools based on component configuration
+        mock_tools = self._generate_mock_tools_from_component_config()
+
+        if mock_tools:
+            self.tools = mock_tools
+            self.tool_names = [tool.name for tool in mock_tools]
+            self._tool_cache = {tool.name: tool for tool in mock_tools}
+
+            # Create mock server config for caching
+            mock_server_config = {
+                "mock_mode": True,
+                "tool_name": getattr(self, '_component_config', {}).get('tool_name', 'unknown'),
+                "description": getattr(self, '_component_config', {}).get('description', '')
+            }
+
+            await logger.ainfo(f"Generated {len(mock_tools)} mock tools: {self.tool_names}")
+            return mock_tools, {"name": server_name, "config": mock_server_config}
+        else:
+            await logger.awarning("No mock tools could be generated")
+            return [], {"name": server_name, "config": server_config}
+
     async def update_tool_list(self, mcp_server_value=None):
         # Accepts mcp_server_value as dict {name, config} or uses self.mcp_server
         mcp_server = mcp_server_value if mcp_server_value is not None else getattr(self, "mcp_server", None)
@@ -172,10 +462,26 @@ class MCPToolsComponent(ComponentWithCache):
             if not server_config and server_config_from_value:
                 server_config = server_config_from_value
 
-            if not server_config:
-                self.tools = []
-                return [], {"name": server_name, "config": server_config}
+            # Check if we have a valid server connection or should fall back to mock mode
+            if not server_config or not self._has_valid_server_connection(server_config):
+                await logger.ainfo(f"No valid server connection found for {server_name}, attempting mock mode fallback")
 
+                # Store component config for mock tool generation
+                if server_config_from_value:
+                    self._component_config = server_config_from_value
+                elif hasattr(self, 'template') and self.template:
+                    # Extract config from component template if available
+                    template_config = {}
+                    for key, value in self.template.items():
+                        if isinstance(value, dict) and 'value' in value:
+                            template_config[key] = value['value']
+                    self._component_config = template_config
+                else:
+                    self._component_config = {}
+
+                return await self._try_mock_mode_fallback(server_name, server_config)
+
+            # Try real MCP server connection
             _, tool_list, tool_cache = await update_tools(
                 server_name=server_name,
                 server_config=server_config,
@@ -203,11 +509,15 @@ class MCPToolsComponent(ComponentWithCache):
         except (TimeoutError, asyncio.TimeoutError) as e:
             msg = f"Timeout updating tool list: {e!s}"
             await logger.aexception(msg)
-            raise TimeoutError(msg) from e
+            # Try mock mode as fallback for timeout
+            await logger.ainfo("Attempting mock mode fallback due to timeout")
+            return await self._try_mock_mode_fallback(server_name, server_config)
         except Exception as e:
             msg = f"Error updating tool list: {e!s}"
             await logger.aexception(msg)
-            raise ValueError(msg) from e
+            # Try mock mode as fallback for any other error
+            await logger.ainfo("Attempting mock mode fallback due to error")
+            return await self._try_mock_mode_fallback(server_name, server_config)
         else:
             return tool_list, {"name": server_name, "config": server_config}
 
