@@ -829,6 +829,1101 @@ MOCK_TOOL_TEMPLATES = {
                 }
             ]
         }
+    },
+
+    # HIGH PRIORITY: Core Healthcare Operations Tools
+    "api_component": {
+        "name": "Generic API Integration Component",
+        "description": "Flexible API integration tool for connecting with various healthcare systems and external services",
+        "input_schema": {
+            "endpoint": {"type": "string", "description": "API endpoint URL"},
+            "method": {"type": "string", "description": "HTTP method", "enum": ["GET", "POST", "PUT", "DELETE"]},
+            "payload": {"type": "object", "description": "Request payload data"},
+            "headers": {"type": "object", "description": "Custom headers for the request"}
+        },
+        "mock_response": {
+            "request_id": "API_REQ_20240115_001",
+            "status": "success",
+            "response_time_ms": 234,
+            "data": {
+                "operation": "healthcare_data_sync",
+                "records_processed": 1247,
+                "timestamp": "2024-01-15T10:30:00Z",
+                "sync_status": "completed"
+            },
+            "metadata": {
+                "api_version": "v2.1",
+                "rate_limit_remaining": 4756,
+                "next_allowed_request": "2024-01-15T10:30:01Z"
+            },
+            "validation": {
+                "schema_valid": True,
+                "data_integrity_check": "passed",
+                "security_scan": "clean"
+            }
+        }
+    },
+
+    "encoder_pro": {
+        "name": "Medical Coding and Validation Tool",
+        "description": "Advanced medical coding engine for ICD-10, CPT, and HCPCS code validation and suggestions",
+        "input_schema": {
+            "service_code": {"type": "string", "description": "Medical service or procedure code"},
+            "diagnosis_codes": {"type": "array", "description": "List of diagnosis codes"},
+            "validation_type": {"type": "string", "description": "Type of validation", "enum": ["code_validity", "medical_necessity", "coverage", "all"]},
+            "payer_type": {"type": "string", "description": "Insurance payer type", "enum": ["medicare", "medicaid", "commercial", "all"]}
+        },
+        "mock_response": {
+            "validation_id": "VAL_20240115_001",
+            "service_code": "99213",
+            "code_description": "Office/outpatient visit, established patient, low complexity",
+            "validation_status": "valid",
+            "medical_necessity": {
+                "supported": True,
+                "confidence_score": 0.92,
+                "supporting_diagnoses": ["E11.9", "I10"],
+                "evidence_level": "strong"
+            },
+            "coverage_analysis": {
+                "medicare_covered": True,
+                "medicaid_covered": True,
+                "commercial_covered": True,
+                "prior_auth_required": False
+            },
+            "coding_suggestions": [
+                {
+                    "alternative_code": "99214",
+                    "description": "Office visit, moderate complexity",
+                    "reason": "Better documentation support for complexity level",
+                    "reimbursement_impact": "+15%"
+                }
+            ],
+            "compliance_flags": [],
+            "processing_time_ms": 156
+        }
+    },
+
+    "pa_lookup": {
+        "name": "Prior Authorization Lookup Tool",
+        "description": "Comprehensive prior authorization requirements lookup and status checking system",
+        "input_schema": {
+            "service_code": {"type": "string", "description": "CPT or HCPCS service code"},
+            "diagnosis_code": {"type": "string", "description": "Primary diagnosis code"},
+            "member_id": {"type": "string", "description": "Member identifier"},
+            "payer_id": {"type": "string", "description": "Insurance payer identifier"},
+            "provider_npi": {"type": "string", "description": "Provider NPI number"}
+        },
+        "mock_response": {
+            "lookup_id": "PA_LOOKUP_20240115_001",
+            "service_code": "77058",
+            "service_description": "Mammography, bilateral",
+            "pa_requirement": {
+                "required": True,
+                "urgency_level": "routine",
+                "estimated_approval_time_days": 3,
+                "submission_method": "electronic"
+            },
+            "payer_specific_rules": {
+                "payer_name": "Blue Cross Blue Shield",
+                "plan_type": "PPO",
+                "medical_necessity_criteria": [
+                    "Age 40+ for routine screening",
+                    "Family history documentation if under 40",
+                    "Previous imaging results if follow-up"
+                ],
+                "required_documentation": [
+                    "Clinical notes supporting indication",
+                    "Previous mammography reports (if applicable)",
+                    "Family history questionnaire"
+                ]
+            },
+            "existing_authorizations": [
+                {
+                    "auth_number": "AUTH123456789",
+                    "status": "approved",
+                    "valid_from": "2024-01-01",
+                    "valid_to": "2024-12-31",
+                    "services_covered": 1,
+                    "services_used": 0
+                }
+            ],
+            "recommendation": "Prior authorization required - existing annual auth available",
+            "next_steps": ["Verify member eligibility", "Submit PA request with clinical documentation"]
+        }
+    },
+
+    "eligibility_check": {
+        "name": "Member Eligibility Validation Tool",
+        "description": "Real-time insurance eligibility verification and benefits checking system",
+        "input_schema": {
+            "member_id": {"type": "string", "description": "Member identifier"},
+            "service_date": {"type": "string", "description": "Date of service (YYYY-MM-DD)"},
+            "service_codes": {"type": "array", "description": "List of service codes to check"},
+            "provider_npi": {"type": "string", "description": "Rendering provider NPI"}
+        },
+        "mock_response": {
+            "eligibility_id": "ELIG_20240115_001",
+            "member_id": "MEM789012345",
+            "eligibility_status": "active",
+            "effective_date": "2024-01-01",
+            "termination_date": "2024-12-31",
+            "plan_details": {
+                "plan_name": "Health Plus PPO",
+                "group_number": "GRP001234",
+                "plan_type": "PPO",
+                "network_status": "in_network"
+            },
+            "benefits_summary": {
+                "deductible": {
+                    "individual_annual": 1500,
+                    "individual_remaining": 1200,
+                    "family_annual": 3000,
+                    "family_remaining": 2400
+                },
+                "out_of_pocket_max": {
+                    "individual_annual": 6000,
+                    "individual_remaining": 5100,
+                    "family_annual": 12000,
+                    "family_remaining": 10200
+                },
+                "copayments": {
+                    "primary_care": 25,
+                    "specialist": 50,
+                    "emergency_room": 200,
+                    "urgent_care": 75
+                }
+            },
+            "service_coverage": [
+                {
+                    "service_code": "99213",
+                    "covered": True,
+                    "copay": 25,
+                    "coinsurance": 0,
+                    "prior_auth_required": False
+                }
+            ],
+            "verification_source": "real_time_270_271",
+            "last_updated": "2024-01-15T10:30:00Z"
+        }
+    },
+
+    "ehr_systems_integration": {
+        "name": "Multi-EHR Systems Integration",
+        "description": "Comprehensive EHR integration platform for accessing patient data across multiple healthcare systems",
+        "input_schema": {
+            "patient_id": {"type": "string", "description": "Patient identifier"},
+            "ehr_systems": {"type": "array", "description": "List of EHR systems to query"},
+            "data_types": {"type": "array", "description": "Types of data to retrieve", "enum": ["demographics", "medications", "allergies", "lab_results", "visits", "all"]},
+            "date_range": {"type": "string", "description": "Date range for clinical data"}
+        },
+        "mock_response": {
+            "integration_id": "EHR_INT_20240115_001",
+            "patient_id": "PAT789012",
+            "systems_queried": ["Epic", "Cerner", "Allscripts"],
+            "data_consolidated": {
+                "demographics": {
+                    "name": "John Smith",
+                    "dob": "1975-08-15",
+                    "gender": "Male",
+                    "mrn_mappings": {
+                        "Epic": "EPI123456",
+                        "Cerner": "CER789012",
+                        "Allscripts": "ALL345678"
+                    }
+                },
+                "medications": [
+                    {
+                        "medication": "Lisinopril 10mg",
+                        "source_system": "Epic",
+                        "prescriber": "Dr. Johnson",
+                        "start_date": "2023-06-15",
+                        "status": "active"
+                    },
+                    {
+                        "medication": "Metformin 500mg",
+                        "source_system": "Cerner",
+                        "prescriber": "Dr. Smith",
+                        "start_date": "2023-08-01",
+                        "status": "active"
+                    }
+                ],
+                "allergies": [
+                    {
+                        "allergen": "Penicillin",
+                        "reaction": "Rash",
+                        "severity": "Moderate",
+                        "source_system": "Epic"
+                    }
+                ],
+                "recent_visits": [
+                    {
+                        "date": "2024-01-10",
+                        "provider": "Dr. Johnson",
+                        "facility": "Metro Medical Center",
+                        "diagnosis": "Hypertension follow-up",
+                        "source_system": "Epic"
+                    }
+                ]
+            },
+            "data_quality": {
+                "completeness_score": 0.89,
+                "consistency_score": 0.94,
+                "duplicate_records_found": 2,
+                "conflicts_resolved": 1
+            },
+            "integration_metadata": {
+                "systems_available": 3,
+                "systems_responded": 3,
+                "response_time_seconds": 2.8,
+                "last_sync": "2024-01-15T10:30:00Z"
+            }
+        }
+    },
+
+    "referral_management_systems": {
+        "name": "Referral Management Platform Integration",
+        "description": "Comprehensive referral coordination platform for managing specialist referrals and care transitions",
+        "input_schema": {
+            "referral_id": {"type": "string", "description": "Referral identifier (optional for new referrals)"},
+            "patient_id": {"type": "string", "description": "Patient identifier"},
+            "specialty_type": {"type": "string", "description": "Specialty type for referral"},
+            "urgency_level": {"type": "string", "description": "Referral urgency", "enum": ["routine", "urgent", "stat"]},
+            "operation": {"type": "string", "description": "Operation type", "enum": ["create", "status_check", "update", "search"]}
+        },
+        "mock_response": {
+            "referral_id": "REF_20240115_001",
+            "patient_id": "PAT789012",
+            "referral_status": "pending_appointment",
+            "specialty_requested": "Cardiology",
+            "referring_provider": {
+                "name": "Dr. Jane Smith",
+                "npi": "1234567890",
+                "facility": "Primary Care Associates"
+            },
+            "target_provider": {
+                "name": "Dr. Michael Chen",
+                "npi": "0987654321",
+                "facility": "Heart & Vascular Center",
+                "next_available": "2024-01-22T14:00:00Z"
+            },
+            "referral_details": {
+                "reason": "Abnormal EKG findings",
+                "clinical_summary": "Patient presents with irregular rhythm on routine EKG",
+                "urgency": "routine",
+                "requested_services": ["Consultation", "Echocardiogram"],
+                "insurance_verified": True
+            },
+            "workflow_status": {
+                "authorization_required": True,
+                "authorization_status": "approved",
+                "appointment_scheduled": False,
+                "patient_contacted": True,
+                "estimated_completion": "2024-01-25"
+            },
+            "communication_log": [
+                {
+                    "date": "2024-01-15T09:00:00Z",
+                    "action": "referral_submitted",
+                    "party": "referring_provider"
+                },
+                {
+                    "date": "2024-01-15T10:30:00Z",
+                    "action": "insurance_verified",
+                    "party": "referral_coordinator"
+                }
+            ]
+        }
+    },
+
+    "hie_integration": {
+        "name": "Health Information Exchange Integration",
+        "description": "Health Information Exchange connectivity for cross-provider data sharing and interoperability",
+        "input_schema": {
+            "patient_id": {"type": "string", "description": "Patient identifier"},
+            "hie_networks": {"type": "array", "description": "HIE networks to query", "enum": ["CommonWell", "Carequality", "Regional_HIE", "all"]},
+            "data_categories": {"type": "array", "description": "Categories of data to retrieve"},
+            "consent_status": {"type": "string", "description": "Patient consent status", "enum": ["active", "verify_required"]}
+        },
+        "mock_response": {
+            "hie_query_id": "HIE_20240115_001",
+            "patient_id": "PAT789012",
+            "networks_queried": ["CommonWell", "Carequality", "Metro Regional HIE"],
+            "consent_verified": True,
+            "participating_organizations": [
+                {
+                    "organization": "Metro Hospital System",
+                    "network": "CommonWell",
+                    "data_available": ["encounters", "medications", "allergies", "lab_results"],
+                    "last_activity": "2024-01-10"
+                },
+                {
+                    "organization": "Regional Medical Center",
+                    "network": "Carequality",
+                    "data_available": ["emergency_visits", "radiology", "discharge_summaries"],
+                    "last_activity": "2024-01-08"
+                },
+                {
+                    "organization": "Community Health Partners",
+                    "network": "Metro Regional HIE",
+                    "data_available": ["primary_care_visits", "preventive_care", "immunizations"],
+                    "last_activity": "2024-01-12"
+                }
+            ],
+            "consolidated_data": {
+                "encounters_summary": {
+                    "total_encounters": 15,
+                    "emergency_visits": 2,
+                    "inpatient_stays": 1,
+                    "outpatient_visits": 12,
+                    "date_range": "2023-01-01 to 2024-01-15"
+                },
+                "medications_reconciled": 8,
+                "allergies_consolidated": 3,
+                "immunizations_current": True
+            },
+            "data_quality_metrics": {
+                "completeness": 0.87,
+                "timeliness": 0.92,
+                "accuracy_score": 0.89,
+                "duplicate_entries": 4
+            },
+            "privacy_compliance": {
+                "consent_documented": True,
+                "minimum_necessary_applied": True,
+                "audit_trail_complete": True,
+                "data_retention_policy": "7 years"
+            }
+        }
+    },
+
+    "care_management_platforms": {
+        "name": "Care Management Platform Integration",
+        "description": "Comprehensive care coordination platform for care plans, team communication, and outcome tracking",
+        "input_schema": {
+            "patient_id": {"type": "string", "description": "Patient identifier"},
+            "care_plan_type": {"type": "string", "description": "Type of care plan", "enum": ["chronic_disease", "post_acute", "transitional", "wellness", "all"]},
+            "team_member_role": {"type": "string", "description": "Care team member role filter"},
+            "include_outcomes": {"type": "boolean", "description": "Include outcome measurements"}
+        },
+        "mock_response": {
+            "care_management_id": "CM_20240115_001",
+            "patient_id": "PAT789012",
+            "active_care_plans": [
+                {
+                    "plan_id": "CP_DIABETES_001",
+                    "plan_type": "chronic_disease",
+                    "condition": "Type 2 Diabetes",
+                    "start_date": "2023-06-15",
+                    "status": "active",
+                    "care_manager": "Sarah Johnson, RN",
+                    "next_review": "2024-03-15"
+                },
+                {
+                    "plan_id": "CP_HTN_001",
+                    "plan_type": "chronic_disease",
+                    "condition": "Hypertension",
+                    "start_date": "2023-08-01",
+                    "status": "active",
+                    "care_manager": "Mike Chen, PharmD",
+                    "next_review": "2024-02-01"
+                }
+            ],
+            "care_team": [
+                {
+                    "role": "Primary Care Provider",
+                    "name": "Dr. Jane Smith",
+                    "contact": "jsmith@primarycare.com",
+                    "last_contact": "2024-01-10"
+                },
+                {
+                    "role": "Care Manager",
+                    "name": "Sarah Johnson, RN",
+                    "contact": "sjohnson@caremanagement.com",
+                    "last_contact": "2024-01-12"
+                },
+                {
+                    "role": "Pharmacist",
+                    "name": "Mike Chen, PharmD",
+                    "contact": "mchen@pharmacy.com",
+                    "last_contact": "2024-01-08"
+                }
+            ],
+            "risk_stratification": {
+                "overall_risk_score": 72,
+                "risk_category": "moderate",
+                "primary_risk_factors": ["diabetes_control", "medication_adherence", "social_determinants"],
+                "intervention_priority": "medium"
+            },
+            "outcome_measures": {
+                "hba1c_trend": "improving",
+                "blood_pressure_control": "adequate",
+                "medication_adherence_score": 0.78,
+                "patient_engagement_score": 0.85,
+                "quality_measures_met": 7,
+                "quality_measures_total": 10
+            },
+            "recent_interactions": [
+                {
+                    "date": "2024-01-12",
+                    "type": "care_coordination_call",
+                    "participant": "Sarah Johnson, RN",
+                    "summary": "Reviewed medication adherence, scheduled lab work",
+                    "action_items": ["Schedule HbA1c test", "Med adherence counseling"]
+                }
+            ]
+        }
+    },
+
+    # MEDIUM PRIORITY: Claims & Analytics Tools
+    "qnext_auth_history": {
+        "name": "QNext Authorization History",
+        "description": "QNext platform authorization history and prior authorization tracking system",
+        "input_schema": {
+            "member_id": {"type": "string", "description": "Member identifier"},
+            "auth_number": {"type": "string", "description": "Specific authorization number (optional)"},
+            "date_range": {"type": "string", "description": "Date range for authorization history"},
+            "status_filter": {"type": "string", "description": "Authorization status filter", "enum": ["approved", "denied", "pending", "expired", "all"]}
+        },
+        "mock_response": {
+            "member_id": "MEM789012345",
+            "query_period": "2023-01-01 to 2024-01-15",
+            "total_authorizations": 23,
+            "authorization_summary": {
+                "approved": 18,
+                "denied": 3,
+                "pending": 1,
+                "expired": 1
+            },
+            "authorization_history": [
+                {
+                    "auth_number": "QNEXT_AUTH_001234",
+                    "service_code": "77058",
+                    "service_description": "Mammography, bilateral",
+                    "status": "approved",
+                    "approved_date": "2024-01-10",
+                    "valid_from": "2024-01-15",
+                    "valid_to": "2024-07-15",
+                    "authorized_units": 1,
+                    "units_used": 0,
+                    "provider_name": "Metro Imaging Center",
+                    "medical_necessity": "routine_screening"
+                },
+                {
+                    "auth_number": "QNEXT_AUTH_001235",
+                    "service_code": "93306",
+                    "service_description": "Echocardiography",
+                    "status": "approved",
+                    "approved_date": "2024-01-05",
+                    "valid_from": "2024-01-08",
+                    "valid_to": "2024-04-08",
+                    "authorized_units": 1,
+                    "units_used": 1,
+                    "provider_name": "Cardiology Associates",
+                    "medical_necessity": "abnormal_ekg"
+                }
+            ],
+            "utilization_metrics": {
+                "authorization_approval_rate": 0.87,
+                "average_approval_time_days": 2.5,
+                "utilization_rate": 0.78,
+                "most_common_services": ["imaging", "specialty_consultations", "procedures"]
+            },
+            "recent_trends": {
+                "monthly_authorization_volume": "stable",
+                "approval_rate_trend": "improving",
+                "denial_reasons": ["insufficient_documentation", "not_medically_necessary", "experimental"]
+            }
+        }
+    },
+
+    "claims_history": {
+        "name": "Claims History Access",
+        "description": "Comprehensive claims history database for member claims tracking and analysis",
+        "input_schema": {
+            "member_id": {"type": "string", "description": "Member identifier"},
+            "claim_type": {"type": "string", "description": "Type of claim", "enum": ["medical", "pharmacy", "dental", "vision", "all"]},
+            "date_range": {"type": "string", "description": "Date range for claims history"},
+            "status_filter": {"type": "string", "description": "Claim status filter", "enum": ["paid", "denied", "pending", "all"]}
+        },
+        "mock_response": {
+            "member_id": "MEM789012345",
+            "claims_period": "2023-01-01 to 2024-01-15",
+            "total_claims": 47,
+            "claims_summary": {
+                "medical_claims": 32,
+                "pharmacy_claims": 12,
+                "dental_claims": 2,
+                "vision_claims": 1
+            },
+            "financial_summary": {
+                "total_billed": 24567.89,
+                "total_paid": 19234.56,
+                "member_responsibility": 2890.34,
+                "savings": 2442.99
+            },
+            "recent_claims": [
+                {
+                    "claim_number": "CLM_20240110_001",
+                    "service_date": "2024-01-10",
+                    "provider": "Metro Medical Center",
+                    "service_description": "Office Visit - Level 3",
+                    "procedure_codes": ["99213"],
+                    "billed_amount": 245.00,
+                    "allowed_amount": 180.00,
+                    "paid_amount": 155.00,
+                    "member_responsibility": 25.00,
+                    "status": "paid",
+                    "payment_date": "2024-01-12"
+                },
+                {
+                    "claim_number": "CLM_20240108_001",
+                    "service_date": "2024-01-08",
+                    "provider": "Regional Pharmacy",
+                    "service_description": "Prescription - Metformin",
+                    "ndc_code": "00093-0058-01",
+                    "billed_amount": 65.00,
+                    "allowed_amount": 45.00,
+                    "paid_amount": 35.00,
+                    "member_responsibility": 10.00,
+                    "status": "paid",
+                    "payment_date": "2024-01-09"
+                }
+            ],
+            "utilization_patterns": {
+                "primary_care_visits": 8,
+                "specialist_visits": 4,
+                "emergency_visits": 1,
+                "prescriptions_filled": 24,
+                "preventive_care_compliance": 0.85
+            },
+            "cost_analysis": {
+                "average_claim_amount": 522.51,
+                "highest_cost_categories": ["imaging", "specialist_procedures", "brand_medications"],
+                "cost_trend": "stable",
+                "cost_per_member_per_month": 1269.45
+            }
+        }
+    },
+
+    "benefit_calculator": {
+        "name": "Benefits Calculation Tool",
+        "description": "Advanced benefits calculation engine for deductibles, coinsurance, and out-of-pocket maximums",
+        "input_schema": {
+            "member_id": {"type": "string", "description": "Member identifier"},
+            "service_codes": {"type": "array", "description": "List of service codes for calculation"},
+            "service_amounts": {"type": "array", "description": "Corresponding billed amounts"},
+            "calculation_type": {"type": "string", "description": "Type of calculation", "enum": ["estimate", "actual", "what_if"]}
+        },
+        "mock_response": {
+            "calculation_id": "CALC_20240115_001",
+            "member_id": "MEM789012345",
+            "plan_year": "2024",
+            "current_accumulations": {
+                "deductible_met": 1200.00,
+                "deductible_remaining": 300.00,
+                "out_of_pocket_met": 2450.00,
+                "out_of_pocket_remaining": 3550.00
+            },
+            "service_calculations": [
+                {
+                    "service_code": "99214",
+                    "service_description": "Office Visit - Level 4",
+                    "billed_amount": 350.00,
+                    "allowed_amount": 280.00,
+                    "deductible_applied": 280.00,
+                    "coinsurance_amount": 0.00,
+                    "copay_amount": 0.00,
+                    "member_responsibility": 280.00,
+                    "plan_pays": 0.00
+                },
+                {
+                    "service_code": "80053",
+                    "service_description": "Comprehensive Metabolic Panel",
+                    "billed_amount": 125.00,
+                    "allowed_amount": 95.00,
+                    "deductible_applied": 20.00,
+                    "coinsurance_amount": 15.00,
+                    "copay_amount": 0.00,
+                    "member_responsibility": 35.00,
+                    "plan_pays": 60.00
+                }
+            ],
+            "total_calculation": {
+                "total_billed": 475.00,
+                "total_allowed": 375.00,
+                "total_member_responsibility": 315.00,
+                "total_plan_pays": 60.00,
+                "savings_vs_billed": 100.00
+            },
+            "updated_accumulations": {
+                "new_deductible_met": 1500.00,
+                "new_deductible_remaining": 0.00,
+                "new_out_of_pocket_met": 2765.00,
+                "new_out_of_pocket_remaining": 3235.00,
+                "deductible_satisfied": True
+            },
+            "benefit_explanations": [
+                "Deductible will be satisfied after these services",
+                "Future services will be subject to 20% coinsurance",
+                "Out-of-pocket maximum is $6,000 for individual coverage"
+            ]
+        }
+    },
+
+    "data_transformer": {
+        "name": "Data Transformation Tool",
+        "description": "Advanced data transformation and standardization engine for healthcare data processing",
+        "input_schema": {
+            "input_data": {"type": "object", "description": "Raw input data to be transformed"},
+            "transformation_type": {"type": "string", "description": "Type of transformation", "enum": ["hl7_to_fhir", "claims_to_clinical", "standardize", "aggregate", "custom"]},
+            "output_format": {"type": "string", "description": "Desired output format", "enum": ["fhir", "hl7", "json", "xml", "csv"]},
+            "validation_rules": {"type": "array", "description": "Validation rules to apply"}
+        },
+        "mock_response": {
+            "transformation_id": "TRANS_20240115_001",
+            "input_records": 1247,
+            "output_records": 1243,
+            "transformation_summary": {
+                "records_processed": 1247,
+                "records_transformed": 1243,
+                "records_failed": 4,
+                "records_skipped": 0,
+                "processing_time_seconds": 8.7
+            },
+            "data_quality_metrics": {
+                "completeness_score": 0.94,
+                "accuracy_score": 0.97,
+                "consistency_score": 0.91,
+                "validity_score": 0.96
+            },
+            "transformation_details": {
+                "field_mappings_applied": 47,
+                "data_type_conversions": 23,
+                "value_standardizations": 156,
+                "validation_rules_passed": 12,
+                "validation_rules_failed": 2
+            },
+            "output_sample": {
+                "resource_type": "Patient",
+                "id": "patient-123456",
+                "identifier": [
+                    {
+                        "system": "http://hospital.example.org/mrn",
+                        "value": "MRN123456"
+                    }
+                ],
+                "name": [
+                    {
+                        "family": "Smith",
+                        "given": ["John", "Michael"]
+                    }
+                ],
+                "gender": "male",
+                "birthDate": "1975-08-15"
+            },
+            "validation_results": [
+                {
+                    "rule": "required_fields_present",
+                    "status": "passed",
+                    "details": "All required fields validated successfully"
+                },
+                {
+                    "rule": "date_format_validation",
+                    "status": "failed",
+                    "details": "4 records had invalid date formats",
+                    "affected_records": ["REC001", "REC045", "REC089", "REC234"]
+                }
+            ],
+            "performance_metrics": {
+                "throughput_records_per_second": 143.4,
+                "memory_usage_mb": 256.7,
+                "cpu_utilization_percent": 23.5
+            }
+        }
+    },
+
+    "ml_theme_extraction": {
+        "name": "ML Theme Extraction Engine",
+        "description": "Machine learning-powered theme extraction and categorization for patient feedback analysis",
+        "input_schema": {
+            "text_data": {"type": "array", "description": "Array of text content for analysis"},
+            "analysis_depth": {"type": "string", "description": "Depth of analysis", "enum": ["basic", "detailed", "comprehensive"]},
+            "domain_focus": {"type": "string", "description": "Healthcare domain focus", "enum": ["patient_experience", "clinical_quality", "operations", "all"]},
+            "language": {"type": "string", "description": "Primary language of text content"}
+        },
+        "mock_response": {
+            "analysis_id": "ML_THEME_20240115_001",
+            "documents_processed": 2847,
+            "processing_time_seconds": 12.4,
+            "theme_extraction_results": {
+                "primary_themes": [
+                    {
+                        "theme": "wait_times",
+                        "frequency": 0.42,
+                        "sentiment": "negative",
+                        "confidence_score": 0.89,
+                        "related_keywords": ["waiting", "delay", "appointment", "late", "schedule"],
+                        "impact_score": "high"
+                    },
+                    {
+                        "theme": "staff_communication",
+                        "frequency": 0.38,
+                        "sentiment": "positive",
+                        "confidence_score": 0.91,
+                        "related_keywords": ["friendly", "helpful", "explained", "listened", "caring"],
+                        "impact_score": "high"
+                    },
+                    {
+                        "theme": "facility_cleanliness",
+                        "frequency": 0.31,
+                        "sentiment": "positive",
+                        "confidence_score": 0.94,
+                        "related_keywords": ["clean", "sanitized", "hygienic", "maintained", "organized"],
+                        "impact_score": "medium"
+                    }
+                ],
+                "emerging_themes": [
+                    {
+                        "theme": "telehealth_experience",
+                        "frequency": 0.15,
+                        "sentiment": "mixed",
+                        "confidence_score": 0.76,
+                        "trend": "increasing"
+                    },
+                    {
+                        "theme": "parking_availability",
+                        "frequency": 0.12,
+                        "sentiment": "negative",
+                        "confidence_score": 0.82,
+                        "trend": "stable"
+                    }
+                ]
+            },
+            "sentiment_analysis": {
+                "overall_sentiment": 0.73,
+                "sentiment_distribution": {
+                    "very_positive": 0.28,
+                    "positive": 0.34,
+                    "neutral": 0.23,
+                    "negative": 0.12,
+                    "very_negative": 0.03
+                },
+                "sentiment_trends": {
+                    "improving_areas": ["provider_communication", "appointment_scheduling"],
+                    "declining_areas": ["wait_times", "insurance_processes"]
+                }
+            },
+            "actionable_insights": [
+                {
+                    "insight": "Implement real-time wait time notifications",
+                    "theme": "wait_times",
+                    "priority": "high",
+                    "estimated_impact": "25% reduction in wait time complaints"
+                },
+                {
+                    "insight": "Expand staff communication training program",
+                    "theme": "staff_communication",
+                    "priority": "medium",
+                    "estimated_impact": "15% improvement in satisfaction scores"
+                }
+            ],
+            "model_performance": {
+                "accuracy": 0.92,
+                "precision": 0.89,
+                "recall": 0.91,
+                "f1_score": 0.90,
+                "model_version": "healthcare_nlp_v2.3"
+            }
+        }
+    },
+
+    # LOWER PRIORITY: Specialized Tools
+    "healthcare_claims_database": {
+        "name": "Healthcare Claims Database",
+        "description": "Comprehensive claims database for historical claims analysis and pattern recognition",
+        "input_schema": {
+            "query_type": {"type": "string", "description": "Type of query", "enum": ["member_history", "provider_patterns", "service_utilization", "cost_analysis"]},
+            "filters": {"type": "object", "description": "Query filters (member_id, date_range, service_codes, etc.)"},
+            "aggregation_level": {"type": "string", "description": "Aggregation level", "enum": ["individual", "group", "population"]}
+        },
+        "mock_response": {
+            "query_id": "CLAIMS_DB_20240115_001",
+            "query_execution_time_ms": 847,
+            "records_found": 15647,
+            "aggregated_results": {
+                "total_claims_analyzed": 15647,
+                "total_members": 3241,
+                "date_range": "2022-01-01 to 2024-01-15",
+                "financial_summary": {
+                    "total_billed_amount": 12456789.45,
+                    "total_paid_amount": 9234567.89,
+                    "average_claim_amount": 795.43
+                }
+            },
+            "utilization_patterns": {
+                "most_common_services": [
+                    {"service": "Office Visits", "frequency": 0.34, "avg_cost": 185.50},
+                    {"service": "Laboratory Tests", "frequency": 0.28, "avg_cost": 125.30},
+                    {"service": "Pharmacy", "frequency": 0.22, "avg_cost": 89.75}
+                ],
+                "seasonal_trends": {
+                    "peak_months": ["January", "February", "March"],
+                    "lowest_months": ["July", "August"]
+                },
+                "geographic_distribution": {
+                    "urban": 0.68,
+                    "suburban": 0.24,
+                    "rural": 0.08
+                }
+            },
+            "cost_analysis": {
+                "high_cost_members": 156,
+                "high_cost_threshold": 50000,
+                "cost_drivers": ["chronic_conditions", "specialty_drugs", "emergency_visits"],
+                "cost_trend": "increasing_moderate"
+            },
+            "quality_indicators": {
+                "preventive_care_compliance": 0.76,
+                "chronic_disease_management": 0.82,
+                "emergency_department_utilization": 0.23
+            }
+        }
+    },
+
+    "insurance_plan_rules": {
+        "name": "Insurance Plan Rules Engine",
+        "description": "Comprehensive insurance plan rules and coverage determination engine",
+        "input_schema": {
+            "plan_id": {"type": "string", "description": "Insurance plan identifier"},
+            "service_codes": {"type": "array", "description": "Service codes to evaluate"},
+            "member_id": {"type": "string", "description": "Member identifier"},
+            "rule_category": {"type": "string", "description": "Rule category", "enum": ["coverage", "prior_auth", "quantity_limits", "step_therapy", "all"]}
+        },
+        "mock_response": {
+            "plan_id": "PLAN_PPO_2024",
+            "plan_name": "Health Plus PPO",
+            "effective_date": "2024-01-01",
+            "rule_evaluation_results": [
+                {
+                    "service_code": "99214",
+                    "service_description": "Office Visit - Level 4",
+                    "coverage_determination": "covered",
+                    "coverage_percentage": 80,
+                    "prior_authorization_required": False,
+                    "quantity_limits": {
+                        "limit_applies": False,
+                        "limit_description": "No limit on office visits"
+                    },
+                    "member_cost_share": {
+                        "copay": 0,
+                        "coinsurance": 20,
+                        "applies_to_deductible": True
+                    }
+                },
+                {
+                    "service_code": "J0585",
+                    "service_description": "Botulinum Toxin Injection",
+                    "coverage_determination": "covered_with_conditions",
+                    "coverage_percentage": 80,
+                    "prior_authorization_required": True,
+                    "conditions": [
+                        "Medical necessity documentation required",
+                        "Failure of conservative therapy",
+                        "Specific diagnosis codes required"
+                    ],
+                    "quantity_limits": {
+                        "limit_applies": True,
+                        "limit_description": "Maximum 4 treatments per year",
+                        "current_usage": 1,
+                        "remaining_allowance": 3
+                    }
+                }
+            ],
+            "plan_benefits_summary": {
+                "deductible": {
+                    "individual": 1500,
+                    "family": 3000
+                },
+                "out_of_pocket_maximum": {
+                    "individual": 6000,
+                    "family": 12000
+                },
+                "coinsurance": 20,
+                "network_type": "PPO"
+            },
+            "special_programs": {
+                "wellness_incentives": True,
+                "disease_management": ["diabetes", "hypertension", "asthma"],
+                "preventive_care_covered": True,
+                "telemedicine_coverage": True
+            }
+        }
+    },
+
+    "healthcare_facility_directory": {
+        "name": "Healthcare Facility Directory",
+        "description": "Comprehensive healthcare facility and provider directory with specialties and network status",
+        "input_schema": {
+            "search_criteria": {"type": "object", "description": "Search criteria (location, specialty, network, etc.)"},
+            "search_radius_miles": {"type": "integer", "description": "Search radius in miles"},
+            "include_availability": {"type": "boolean", "description": "Include real-time availability"},
+            "network_filter": {"type": "string", "description": "Network filter", "enum": ["in_network", "out_of_network", "all"]}
+        },
+        "mock_response": {
+            "search_id": "DIR_SEARCH_20240115_001",
+            "search_criteria": {
+                "specialty": "Cardiology",
+                "location": "Metro City",
+                "radius_miles": 25,
+                "network_status": "in_network"
+            },
+            "total_results": 23,
+            "facilities": [
+                {
+                    "facility_id": "FAC_001",
+                    "name": "Metro Heart & Vascular Center",
+                    "address": "123 Medical Plaza Dr, Metro City, ST 12345",
+                    "phone": "555-123-4567",
+                    "network_status": "in_network",
+                    "distance_miles": 3.2,
+                    "specialties": ["Cardiology", "Cardiac Surgery", "Interventional Cardiology"],
+                    "providers": [
+                        {
+                            "name": "Dr. Michael Chen",
+                            "npi": "1234567890",
+                            "specialty": "Interventional Cardiology",
+                            "accepting_new_patients": True,
+                            "next_available": "2024-01-22T09:00:00Z"
+                        },
+                        {
+                            "name": "Dr. Sarah Williams",
+                            "npi": "0987654321",
+                            "specialty": "Cardiology",
+                            "accepting_new_patients": True,
+                            "next_available": "2024-01-25T14:30:00Z"
+                        }
+                    ],
+                    "facility_features": {
+                        "parking_available": True,
+                        "wheelchair_accessible": True,
+                        "languages_supported": ["English", "Spanish", "Mandarin"],
+                        "imaging_services": True,
+                        "lab_services": True
+                    },
+                    "quality_ratings": {
+                        "cms_star_rating": 4.5,
+                        "patient_satisfaction": 4.3,
+                        "safety_rating": "A"
+                    }
+                }
+            ],
+            "search_suggestions": [
+                "Consider expanding search radius to 50 miles for more options",
+                "Alternative specialties: Internal Medicine with cardiology subspecialty",
+                "Telehealth options available for some consultations"
+            ],
+            "network_coverage_info": {
+                "in_network_facilities": 18,
+                "out_of_network_facilities": 5,
+                "coverage_gaps": "Limited interventional cardiology options in rural areas"
+            }
+        }
+    },
+
+    "navigation_ml_analytics": {
+        "name": "Navigation ML Analytics Platform",
+        "description": "Machine learning analytics platform for healthcare navigation patterns and optimization insights",
+        "input_schema": {
+            "analytics_type": {"type": "string", "description": "Type of analytics", "enum": ["patient_journeys", "navigation_patterns", "bottleneck_analysis", "outcome_prediction"]},
+            "time_period": {"type": "string", "description": "Analysis time period"},
+            "patient_cohort": {"type": "string", "description": "Patient cohort filter"},
+            "include_predictions": {"type": "boolean", "description": "Include predictive analytics"}
+        },
+        "mock_response": {
+            "analytics_id": "NAV_ML_20240115_001",
+            "analysis_period": "2023-07-01 to 2024-01-15",
+            "patient_journeys_analyzed": 8734,
+            "navigation_insights": {
+                "common_pathways": [
+                    {
+                        "pathway": "PCP → Specialist → Procedure → Follow-up",
+                        "frequency": 0.34,
+                        "average_time_to_completion_days": 45,
+                        "success_rate": 0.87
+                    },
+                    {
+                        "pathway": "Emergency → Admission → Discharge → PCP",
+                        "frequency": 0.18,
+                        "average_time_to_completion_days": 21,
+                        "success_rate": 0.76
+                    }
+                ],
+                "bottleneck_analysis": {
+                    "appointment_scheduling": {
+                        "average_wait_time_days": 12.5,
+                        "impact_on_outcomes": "moderate",
+                        "improvement_potential": "high"
+                    },
+                    "insurance_authorization": {
+                        "average_processing_time_days": 3.8,
+                        "impact_on_outcomes": "low",
+                        "improvement_potential": "medium"
+                    },
+                    "test_result_communication": {
+                        "average_delay_days": 2.1,
+                        "impact_on_outcomes": "high",
+                        "improvement_potential": "high"
+                    }
+                }
+            },
+            "predictive_analytics": {
+                "care_gap_predictions": [
+                    {
+                        "gap_type": "missed_preventive_care",
+                        "predicted_patients": 234,
+                        "confidence": 0.89,
+                        "intervention_window_days": 30
+                    },
+                    {
+                        "gap_type": "medication_adherence_decline",
+                        "predicted_patients": 156,
+                        "confidence": 0.82,
+                        "intervention_window_days": 14
+                    }
+                ],
+                "outcome_predictions": {
+                    "readmission_risk": {
+                        "high_risk_patients": 67,
+                        "prediction_accuracy": 0.84,
+                        "primary_risk_factors": ["multiple_comorbidities", "social_determinants", "medication_complexity"]
+                    },
+                    "navigation_success": {
+                        "completion_probability": 0.78,
+                        "key_success_factors": ["care_coordination", "patient_engagement", "provider_communication"]
+                    }
+                }
+            },
+            "optimization_recommendations": [
+                {
+                    "recommendation": "Implement proactive appointment scheduling for high-risk patients",
+                    "impact_area": "appointment_scheduling",
+                    "estimated_improvement": "25% reduction in wait times",
+                    "implementation_priority": "high"
+                },
+                {
+                    "recommendation": "Deploy automated test result notifications",
+                    "impact_area": "communication",
+                    "estimated_improvement": "60% faster result delivery",
+                    "implementation_priority": "medium"
+                }
+            ],
+            "model_performance": {
+                "prediction_accuracy": 0.86,
+                "data_quality_score": 0.91,
+                "model_confidence": 0.83,
+                "last_training_date": "2024-01-01"
+            }
+        }
     }
 }
 
