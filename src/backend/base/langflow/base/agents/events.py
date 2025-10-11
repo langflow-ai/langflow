@@ -59,7 +59,8 @@ async def handle_on_chain_start(
     send_message_method: SendMessageFunctionType,
     start_time: float,
     *,
-    had_streaming: bool = False, # noqa: ARG001
+    had_streaming: bool = False,  # noqa: ARG001
+    event_manager=None,  # noqa: ARG001
 ) -> tuple[Message, float]:
     # Create content blocks if they don't exist
     if not agent_message.content_blocks:
@@ -133,7 +134,8 @@ async def handle_on_chain_end(
     send_message_method: SendMessageFunctionType,
     start_time: float,
     *,
-    had_streaming: bool = False, # noqa: ARG001
+    had_streaming: bool = False,
+    event_manager=None,  # noqa: ARG001
 ) -> tuple[Message, float]:
     data_output = event["data"].get("output")
     if data_output and isinstance(data_output, AgentFinish) and data_output.return_values.get("output"):
