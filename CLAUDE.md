@@ -157,13 +157,35 @@ For each tool/capability needed:
    - Document component capabilities
    - Check if spec mapper exists
 
-3. External Tools via MCP:
-   - If tool is external API or connector, use genesis:mcp_tool
-   - Document what MCP tool is needed
-   - Define tool configuration
-   - Specify API requirements
+3. API Components vs MCP Tools:
 
-4. Component Mapping Gaps:
+   **Use genesis:api_request for:**
+   - Direct HTTP API calls (REST, GraphQL endpoints)
+   - Simple external service integration
+   - Standard authentication (API keys, Bearer tokens)
+   - Known endpoint URLs with predictable responses
+
+   **Use genesis:mcp_tool for:**
+   - Complex healthcare-specific integrations
+   - Multi-step workflows requiring state management
+   - Domain-specific data transformations
+   - Tools requiring specialized business logic
+   - When MCP servers provide additional capabilities
+
+   **API Request Configuration:**
+   - Supports all HTTP methods: GET, POST, PUT, PATCH, DELETE
+   - Secure header handling for API keys and auth tokens
+   - Body support for POST/PUT/PATCH operations
+   - Query parameter and timeout configuration
+   - Use environment variables for sensitive data
+
+4. MCP Tool Requirements:
+   - If using genesis:mcp_tool, MUST provide mock template
+   - Document what MCP tool is needed
+   - Define tool configuration and expected responses
+   - Specify API requirements and data structures
+
+5. Component Mapping Gaps:
    - If Langflow component exists but no spec mapper:
      - Document the component with WARNING
      - Note its location
@@ -603,6 +625,155 @@ For each requirement I provide:
 10. Update knowledge base documentation
 11. Provide comprehensive output
 12. List any follow-up tasks (mappings, custom components, validator)
+
+---
+
+CRITICAL: MCP Mock Template Requirements
+
+When using genesis:mcp_tool in specifications, you MUST ensure mock templates exist for development without MCP servers.
+
+Mock Template Creation Process:
+
+1. Check Existing Mock Templates:
+   - Location: /Users/jagveersingh/Developer/studio/ai-studio/src/backend/base/langflow/components/agents/mcp_component.py
+   - Dictionary: MOCK_TOOL_TEMPLATES
+   - Verify tool_name has corresponding mock template
+
+2. Create New Mock Templates (if missing):
+   - Add to MOCK_TOOL_TEMPLATES dictionary
+   - Include realistic healthcare data structures
+   - Use clinical terminology and medical codes
+   - Provide comprehensive input/output schemas
+   - Include KPIs, metrics, and actionable insights
+
+3. Mock Template Structure:
+```python
+"tool_name": {
+    "name": "Tool Display Name",
+    "description": "Clear description of tool functionality",
+    "input_schema": {
+        "param1": {"type": "string", "description": "Parameter description"},
+        "param2": {"type": "array", "description": "Array parameter with enum", "enum": ["opt1", "opt2"]}
+    },
+    "mock_response": {
+        "realistic_healthcare_data": "with_clinical_terminology",
+        "metrics": {"accuracy": 0.95, "processing_time_ms": 234},
+        "actionable_insights": ["recommendation1", "recommendation2"]
+    }
+}
+```
+
+4. Healthcare Mock Standards:
+   - Use FHIR-compatible data structures
+   - Include medical codes (ICD-10, CPT, HCPCS, NDC)
+   - Provide realistic patient demographics
+   - Include quality metrics and KPIs
+   - Add healthcare workflow status information
+   - Use industry-standard terminology
+
+5. Automatic Mock Fallback:
+   - MCP component automatically falls back to mock mode
+   - Timeout detection triggers mock mode
+   - Seamless server migration when available
+   - No specification changes required
+
+---
+
+MCP MARKETPLACE PREPARATION
+
+Future MCP Marketplace Integration:
+
+1. Mock Template Catalog:
+   - Complete mock coverage for all healthcare tools
+   - Standardized metadata and descriptions
+   - Tool categorization and tagging
+   - Usage examples and documentation
+
+2. Tool Discovery Standards:
+   - Consistent naming conventions (tool_name format)
+   - Comprehensive tool descriptions
+   - Input/output schema documentation
+   - Healthcare domain categorization
+
+3. Marketplace Metadata:
+   - Tool provider information
+   - Version compatibility
+   - Dependencies and requirements
+   - Performance characteristics
+   - Security and compliance information
+
+4. Integration Guidelines:
+   - Server connection protocols (STDIO, SSE)
+   - Authentication and authorization
+   - Rate limiting and timeout handling
+   - Error handling and fallback strategies
+
+5. Quality Assurance:
+   - Mock template validation
+   - Healthcare data accuracy
+   - Clinical terminology consistency
+   - Performance benchmarking
+
+---
+
+API REQUEST vs MCP TOOL DECISION FRAMEWORK
+
+Use this decision tree when selecting components:
+
+**Choose genesis:api_request when:**
+- ✅ Simple HTTP REST API call
+- ✅ Standard authentication (API key, Bearer token)
+- ✅ Direct endpoint with known response format
+- ✅ Minimal data transformation required
+- ✅ Performance-critical operations
+- ✅ Well-documented public APIs
+
+**Choose genesis:mcp_tool when:**
+- ✅ Healthcare-specific data processing
+- ✅ Complex multi-step workflows
+- ✅ Domain-specific business logic
+- ✅ State management required
+- ✅ Specialized data transformations
+- ✅ Integration with healthcare systems
+- ✅ Tools requiring mock fallback capability
+
+**API Request Configuration Examples:**
+
+```yaml
+# GET with authentication
+- id: api-get-secure
+  type: genesis:api_request
+  config:
+    method: "GET"
+    url_input: "https://api.healthcare.gov/v1/eligibility"
+    headers: [
+      {"key": "Authorization", "value": "Bearer ${HEALTHCARE_API_TOKEN}"},
+      {"key": "Content-Type", "value": "application/json"}
+    ]
+    timeout: 30
+
+# POST with JSON body
+- id: api-post-data
+  type: genesis:api_request
+  config:
+    method: "POST"
+    url_input: "https://api.example.com/submit"
+    headers: [
+      {"key": "X-API-Key", "value": "${API_KEY}"},
+      {"key": "Content-Type", "value": "application/json"}
+    ]
+    body: [
+      {"key": "patient_id", "value": "PAT123"},
+      {"key": "action", "value": "eligibility_check"}
+    ]
+```
+
+**Security Best Practices:**
+- Never hardcode API keys or tokens in specifications
+- Use environment variables: ${VARIABLE_NAME}
+- Implement proper error handling
+- Configure appropriate timeouts
+- Use HTTPS endpoints only
 
 Ready to create specifications from requirements.
 
