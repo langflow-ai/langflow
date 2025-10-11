@@ -1357,6 +1357,11 @@ class ComposioBaseComponent(Component):
                     build_config["auth_link"]["connection_id"] = connection_id
                     build_config["action_button"]["helper_text"] = ""
                     build_config["action_button"]["helper_text_metadata"] = {}
+
+                    # Clear auth fields when connected
+                    schema = self._get_toolkit_schema()
+                    self._clear_auth_fields_from_schema(build_config, schema)
+
                     logger.info(f"Using existing ACTIVE connection {connection_id} for {toolkit_slug}")
                     return self.update_input_types(build_config)
 
@@ -1619,6 +1624,12 @@ class ComposioBaseComponent(Component):
                         else:
                             build_config["auth_link"]["value"] = "validated"
                             build_config["auth_link"]["auth_tooltip"] = "Disconnect"
+                            build_config["auth_link"]["connection_id"] = connection_id
+
+                            # Clear auth fields when connected
+                            schema = self._get_toolkit_schema()
+                            self._clear_auth_fields_from_schema(build_config, schema)
+
                         return self.update_input_types(build_config)
                     except (ValueError, ConnectionError, TypeError) as e:
                         logger.error(f"Error creating connection: {e}")
@@ -1744,18 +1755,26 @@ class ComposioBaseComponent(Component):
             build_config.setdefault("auth_link", {})
             build_config["auth_link"]["show"] = False
             build_config["auth_link"]["display_name"] = ""
-            try:
+
+            # Only render auth fields if NOT already connected
+            active_connection = self._find_active_connection_for_app(self.app_name)
+            if not active_connection:
+                try:
+                    schema = self._get_toolkit_schema()
+                    mode = (build_config.get("auth_mode") or {}).get("value")
+                    managed = (schema or {}).get("composio_managed_auth_schemes") or []
+                    if (
+                        mode
+                        and not (isinstance(managed, list) and mode in managed)
+                        and not getattr(self, "_auth_dynamic_fields", set())
+                    ):
+                        self._render_custom_auth_fields(build_config, schema or {}, mode)
+                except (TypeError, ValueError, AttributeError):
+                    pass
+            else:
+                # Clear auth fields when connected in tool mode
                 schema = self._get_toolkit_schema()
-                mode = (build_config.get("auth_mode") or {}).get("value")
-                managed = (schema or {}).get("composio_managed_auth_schemes") or []
-                if (
-                    mode
-                    and not (isinstance(managed, list) and mode in managed)
-                    and not getattr(self, "_auth_dynamic_fields", set())
-                ):
-                    self._render_custom_auth_fields(build_config, schema or {}, mode)
-            except (TypeError, ValueError, AttributeError):
-                pass
+                self._clear_auth_fields_from_schema(build_config, schema)
             # Do NOT return here; allow auth flow to run in Tool Mode
 
         if field_name == "tool_mode":
