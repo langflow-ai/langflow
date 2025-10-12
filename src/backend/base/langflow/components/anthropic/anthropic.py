@@ -169,7 +169,7 @@ class AnthropicModelComponent(LCModelComponent):
             self.base_url = DEFAULT_ANTHROPIC_API_URL
         if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
             try:
-                if not self.api_key or len(self.api_key) == 0:
+                if len(self.api_key) == 0:
                     ids = ANTHROPIC_MODELS
                 else:
                     try:

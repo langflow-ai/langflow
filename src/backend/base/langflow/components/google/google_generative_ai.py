@@ -130,7 +130,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
             try:
-                if not self.api_key or len(self.api_key) == 0:
+                if len(self.api_key) == 0:
                     ids = GOOGLE_GENERATIVE_AI_MODELS
                 else:
                     try:
