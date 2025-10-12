@@ -1,7 +1,6 @@
 const Icon = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    xmlns:v="https://svgstorm.com"
     viewBox="0 0 212 212"
     width="19"
     height="19"
