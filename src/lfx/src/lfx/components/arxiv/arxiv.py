@@ -50,12 +50,7 @@ class ArXivComponent(Component):
             search_query = self.search_query  # No prefix for all fields
         else:
             # Map dropdown values to ArXiv API prefixes
-            prefix_map = {
-                "title": "ti",
-                "abstract": "abs",
-                "author": "au",
-                "cat": "cat"
-            }
+            prefix_map = {"title": "ti", "abstract": "abs", "author": "au", "cat": "cat"}
             prefix = prefix_map.get(self.search_type, "")
             search_query = f"{prefix}:{self.search_query}"
 
