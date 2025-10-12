@@ -219,7 +219,9 @@ audio = [
 
 azure = [
     "azure-storage-blob>=12.24.0",
+    "reportlab>=4.0.0",
     "pypdf>=5.1.0",
+
 ]
 
 couchbase = [
