@@ -12,6 +12,12 @@ if TYPE_CHECKING:
     from langflow.components.helpers.memory import MemoryComponent
     from langflow.components.helpers.output_parser import OutputParserComponent
     from langflow.components.helpers.store_message import MessageStoreComponent
+    from langflow.components.helpers.studio_builder import (
+        ConversationController,
+        ConversationMemoryTool,
+        SpecValidatorTool,
+        SpecificationSearchTool,
+    )
 
 _dynamic_imports = {
     "CalculatorComponent": "calculator_core",
@@ -21,6 +27,10 @@ _dynamic_imports = {
     "MemoryComponent": "memory",
     "OutputParserComponent": "output_parser",
     "MessageStoreComponent": "store_message",
+    "ConversationController": "studio_builder",
+    "ConversationMemoryTool": "studio_builder",
+    "SpecValidatorTool": "studio_builder",
+    "SpecificationSearchTool": "studio_builder",
 }
 
 __all__ = [
@@ -31,6 +41,10 @@ __all__ = [
     "MemoryComponent",
     "MessageStoreComponent",
     "OutputParserComponent",
+    "ConversationController",
+    "ConversationMemoryTool",
+    "SpecValidatorTool",
+    "SpecificationSearchTool",
 ]
 
 
