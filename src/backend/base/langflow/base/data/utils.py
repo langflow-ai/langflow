@@ -62,7 +62,13 @@ def parse_structured_text(text: str, file_path: str) -> str | dict | list:
         return orjson.dumps(loaded_json).decode("utf-8")
 
     if file_path.endswith((".yaml", ".yml")):
-        return yaml.safe_load(text)
+        try:
+            CLoader = getattr(yaml, "CLoader", None)
+            if CLoader is not None:
+                return yaml.load(text, Loader=CLoader)
+            return yaml.safe_load(text)
+        except Exception:
+            return yaml.safe_load(text)
 
     if file_path.endswith(".xml"):
         xml_element = ElementTree.fromstring(text)
