@@ -103,26 +103,26 @@ class ComponentMapper:
         self.STANDARD_MAPPINGS = {
             # Agents and Language Models
             "genesis:agent": {"component": "Agent", "config": {}},
-            "genesis:autonomize_agent": {"component": "AutonomizeAgent", "config": {}},
-            "genesis:language_model": {"component": "LanguageModelComponent", "config": {}},
+            "genesis:autonomize_agent": {"component": "Agent", "config": {}},  # Map to Agent since AutonomizeAgent may not exist
+            "genesis:language_model": {"component": "Agent", "config": {}},  # Map to Agent as it has LLM capabilities
 
             # Input/Output Components
             "genesis:chat_input": {"component": "ChatInput", "config": {}},
             "genesis:chat_output": {"component": "ChatOutput", "config": {}},
             "genesis:text_input": {"component": "TextInput", "config": {}},
             "genesis:text_output": {"component": "TextOutput", "config": {}},
-            "genesis:json_input": {"component": "JSONInput", "config": {}},
+            "genesis:json_input": {"component": "CreateData", "config": {}},  # Map to existing CreateData
             "genesis:json_output": {"component": "ParseData", "config": {}},
-            "genesis:file_input": {"component": "FileInput", "config": {}},
-            "genesis:file": {"component": "FileComponent", "config": {}},
-            "genesis:directory": {"component": "DirectoryComponent", "config": {}},
-            "genesis:url": {"component": "URLComponent", "config": {}},
+            "genesis:file_input": {"component": "File", "config": {}},  # Map to File component
+            "genesis:file": {"component": "File", "config": {}},
+            "genesis:directory": {"component": "Directory", "config": {}},
+            "genesis:url": {"component": "URL", "config": {}},
             "genesis:file_path": {"component": "FilePathComponent", "config": {}},
             "genesis:blob_storage": {"component": "BlobStorageComponent", "config": {}},
 
             # Prompts
             "genesis:prompt": {"component": "Prompt", "config": {}},
-            "genesis:prompt_template": {"component": "GenesisPromptComponent", "config": {}, "dataType": "Prompt"},
+            "genesis:prompt_template": {"component": "Prompt", "config": {}, "dataType": "Prompt"},  # Use existing Prompt component
             "genesis:genesis_prompt": {"component": "GenesisPromptComponent", "config": {}, "dataType": "Prompt"},
 
             # Memory

@@ -382,22 +382,77 @@ class FlowConverter:
                                  component: Component = None,
                                  spec: AgentSpec = None):
         """Apply component config values to the template."""
+        # Make a copy to avoid modifying original
+        config = dict(config)
+
+        # Component-specific field mappings for proper configuration
+        FIELD_MAPPINGS = {
+            "Agent": {
+                "provider": "agent_llm",  # Map provider to agent_llm dropdown
+                "azure_deployment": "azure_deployment_name",  # Azure specific
+                "azure_endpoint": "azure_api_base",
+                "api_key": "openai_api_key",
+                "llm_model": "model_name",
+                "max_tokens": "max_tokens",
+                "temperature": "temperature",
+                "streaming": "stream"
+            },
+            "AutonomizeAgent": {
+                "provider": "agent_llm",
+                "azure_deployment": "azure_deployment_name",
+                "temperature": "temperature"
+            },
+            "LanguageModelComponent": {
+                "provider": "provider",  # Direct mapping
+                "azure_deployment": "azure_deployment",  # Direct mapping
+                "azure_endpoint": "azure_endpoint",  # Direct mapping
+                "api_key": "api_key",
+                "temperature": "temperature",
+                "max_tokens": "max_tokens",
+                "stream": "stream"
+            },
+            "MCPTools": {
+                "tool_name": "tool_names",
+                "description": "tool_description"
+            },
+            "APIRequest": {
+                "method": "method",
+                "url": "url_input",
+                "headers": "headers",
+                "body": "body",
+                "timeout": "timeout"
+            }
+        }
+
+        # Get the component type from the component
+        component_type = None
+        if component:
+            mapping = self.mapper.map_component(component.type)
+            component_type = mapping.get("component", "")
+
+            # Apply field mappings based on component type
+            if component_type in FIELD_MAPPINGS:
+                mappings = FIELD_MAPPINGS[component_type]
+                for old_key, new_key in mappings.items():
+                    if old_key in config and old_key != new_key:
+                        config[new_key] = config.pop(old_key)
+                        logger.debug(f"Mapped config field {old_key} -> {new_key} for {component_type}")
+
         # Special handling for Agent components - use agentGoal as system_prompt
         if (component and "agent" in component.type.lower() and
             "system_prompt" not in config and spec and spec.agentGoal):
-            config = dict(config)
             config["system_prompt"] = spec.agentGoal
 
         # Special handling for KnowledgeHubSearch - map collections to selected_hubs
         if (component and "knowledge_hub_search" in component.type.lower() and
             "collections" in config and "selected_hubs" not in config):
-            config = dict(config)
-            collections = config.pop("collections")
-            if isinstance(collections, list):
-                config["selected_hubs"] = collections
-            elif isinstance(collections, str):
-                # Handle comma-separated string
-                config["selected_hubs"] = [c.strip() for c in collections.split(",") if c.strip()]
+            collections = config.pop("collections", None)
+            if collections:
+                if isinstance(collections, list):
+                    config["selected_hubs"] = collections
+                elif isinstance(collections, str):
+                    # Handle comma-separated string
+                    config["selected_hubs"] = [c.strip() for c in collections.split(",") if c.strip()]
 
         # Resolve variables in config
         resolved_config = self.resolver.resolve(config)
@@ -405,6 +460,10 @@ class FlowConverter:
         logger.debug(f"Applying config to template for {component.id if component else 'unknown'}")
         logger.debug(f"Config keys: {list(resolved_config.keys())}")
         logger.debug(f"Template keys: {list(template.keys()) if template else 'No template'}")
+
+        # Track which configs were successfully applied
+        applied_configs = []
+        unmapped_configs = []
 
         for key, value in resolved_config.items():
             if key in template and isinstance(template[key], dict):
@@ -414,9 +473,27 @@ class FlowConverter:
                     template[key]["value"] = value
                 else:
                     template[key]["value"] = value
-                logger.debug(f"Set template[{key}][value] = {value}")
+                applied_configs.append(key)
+                logger.debug(f"✅ Set template[{key}][value] = {value}")
             else:
-                logger.warning(f"Config key '{key}' not found in template or not a dict")
+                unmapped_configs.append(key)
+                logger.debug(f"⚠️ Config key '{key}' not found in template")
+
+        # Validate required fields for specific components
+        if component_type == "Agent" and "agent_llm" in template:
+            # Ensure Azure OpenAI settings are present when using Azure
+            if template.get("agent_llm", {}).get("value") == "Azure OpenAI":
+                required_azure_fields = ["azure_deployment_name", "azure_api_base", "openai_api_key"]
+                missing_fields = [f for f in required_azure_fields if f not in applied_configs and
+                                 not template.get(f, {}).get("value")]
+                if missing_fields:
+                    logger.warning(f"Missing required Azure OpenAI fields for {component.id}: {missing_fields}")
+
+        # Log summary of configuration application
+        if applied_configs:
+            logger.info(f"Applied {len(applied_configs)} configs to {component.id}: {applied_configs}")
+        if unmapped_configs:
+            logger.warning(f"Could not map {len(unmapped_configs)} configs for {component.id}: {unmapped_configs}")
 
     async def _build_edges(self, spec: AgentSpec,
                           nodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -1001,12 +1078,17 @@ class FlowConverter:
             return self._create_fallback_template(component_type)
 
     def _create_fallback_template(self, component_type: str) -> Dict[str, Any]:
-        """Create a fallback template for unknown components."""
-        # Component-specific fallbacks
+        """Create a fallback template for unknown components with comprehensive fields."""
+        # Component-specific fallbacks with proper fields
         if "Input" in component_type:
             return {
                 "outputs": [{"name": "message", "types": ["Message"]}],
-                "template": {},
+                "template": {
+                    "input_value": {"input_types": [], "type": "str", "display_name": "Text"},
+                    "sender": {"input_types": [], "type": "str", "display_name": "Sender"},
+                    "sender_name": {"input_types": [], "type": "str", "display_name": "Sender Name"},
+                    "should_store_message": {"input_types": [], "type": "bool", "display_name": "Store Messages"}
+                },
                 "base_classes": [component_type],
                 "description": f"Input component: {component_type}",
                 "display_name": component_type
@@ -1014,36 +1096,134 @@ class FlowConverter:
         elif "Output" in component_type:
             return {
                 "outputs": [{"name": "message", "types": ["Message"]}],
-                "template": {"input_value": {"input_types": ["Message", "Text"]}},
+                "template": {
+                    "input_value": {"input_types": ["Message", "Text"], "display_name": "Input"},
+                    "sender": {"input_types": [], "type": "str", "display_name": "Sender"},
+                    "sender_name": {"input_types": [], "type": "str", "display_name": "Sender Name"},
+                    "should_store_message": {"input_types": [], "type": "bool", "display_name": "Store Messages"}
+                },
                 "base_classes": [component_type],
                 "description": f"Output component: {component_type}",
                 "display_name": component_type
             }
-        elif "Agent" in component_type:
+        elif "Agent" in component_type or "AutonomizeAgent" in component_type:
+            # Comprehensive agent template with all LLM configuration fields
             return {
                 "outputs": [{"name": "response", "types": ["Message"]}],
                 "template": {
-                    "input_value": {"input_types": ["Message"]},
-                    "system_prompt": {"input_types": ["Message"]},
-                    "tools": {"input_types": ["Tool"]}
+                    # Core inputs
+                    "input_value": {"input_types": ["Message"], "display_name": "Input"},
+                    "system_prompt": {"input_types": ["Message"], "display_name": "System Prompt", "value": ""},
+                    "tools": {"input_types": ["Tool"], "display_name": "Tools", "list": True},
+
+                    # LLM Configuration - Model selection
+                    "agent_llm": {"type": "str", "display_name": "Model Provider", "value": "Azure OpenAI"},
+
+                    # Azure OpenAI specific fields
+                    "azure_deployment_name": {"type": "str", "display_name": "Azure Deployment", "value": ""},
+                    "azure_api_base": {"type": "str", "display_name": "Azure Endpoint", "value": ""},
+                    "azure_api_version": {"type": "str", "display_name": "API Version", "value": "2024-02-15-preview"},
+
+                    # OpenAI fields
+                    "openai_api_key": {"type": "str", "display_name": "API Key", "password": True, "value": ""},
+                    "model_name": {"type": "str", "display_name": "Model Name", "value": "gpt-4"},
+
+                    # Common LLM parameters
+                    "temperature": {"type": "float", "display_name": "Temperature", "value": 0.7},
+                    "max_tokens": {"type": "int", "display_name": "Max Tokens", "value": 2000},
+                    "top_p": {"type": "float", "display_name": "Top P", "value": 1.0},
+                    "frequency_penalty": {"type": "float", "display_name": "Frequency Penalty", "value": 0.0},
+                    "presence_penalty": {"type": "float", "display_name": "Presence Penalty", "value": 0.0},
+                    "stream": {"type": "bool", "display_name": "Stream", "value": False},
+
+                    # Memory settings
+                    "memory": {"input_types": [], "display_name": "Memory", "value": None}
                 },
                 "base_classes": [component_type],
                 "description": f"Agent component: {component_type}",
                 "display_name": component_type
             }
+        elif "Prompt" in component_type or "prompt" in component_type.lower():
+            # Prompt template with proper fields
+            return {
+                "outputs": [{"name": "prompt", "types": ["Message"]}],
+                "template": {
+                    "template": {"type": "str", "display_name": "Template", "value": ""},
+                    "input_variables": {"type": "list", "display_name": "Input Variables", "value": []},
+                    "partial_variables": {"type": "dict", "display_name": "Partial Variables", "value": {}},
+                    "validate_template": {"type": "bool", "display_name": "Validate Template", "value": True}
+                },
+                "base_classes": [component_type],
+                "description": f"Prompt component: {component_type}",
+                "display_name": component_type
+            }
         elif "Tool" in component_type or "MCP" in component_type:
+            # Comprehensive MCP/Tool template
             return {
                 "outputs": [{"name": "component_as_tool", "types": ["Tool"]}],
-                "template": {},
+                "template": {
+                    # MCP Tool specific fields
+                    "tool_names": {"type": "str", "display_name": "Tool Name", "value": ""},
+                    "tool_description": {"type": "str", "display_name": "Tool Description", "value": ""},
+
+                    # STDIO mode fields
+                    "command": {"type": "str", "display_name": "Command", "value": ""},
+                    "args": {"type": "list", "display_name": "Arguments", "value": []},
+                    "env": {"type": "dict", "display_name": "Environment", "value": {}},
+
+                    # SSE mode fields
+                    "connection_mode": {"type": "str", "display_name": "Connection Mode", "value": "stdio"},
+                    "url": {"type": "str", "display_name": "URL", "value": ""},
+                    "headers": {"type": "dict", "display_name": "Headers", "value": {}},
+                    "timeout_seconds": {"type": "int", "display_name": "Timeout", "value": 30},
+                    "sse_read_timeout_seconds": {"type": "int", "display_name": "SSE Timeout", "value": 60},
+
+                    # Mock response for development
+                    "mock_response": {"type": "dict", "display_name": "Mock Response", "value": {}}
+                },
                 "base_classes": [component_type],
                 "description": f"Tool component: {component_type}",
                 "display_name": component_type
             }
+        elif "API" in component_type or "Request" in component_type or "HTTP" in component_type:
+            # API Request template with all HTTP fields
+            return {
+                "outputs": [{"name": "response", "types": ["Data"]}],
+                "template": {
+                    "method": {"type": "str", "display_name": "Method", "value": "GET"},
+                    "url_input": {"type": "str", "display_name": "URL", "value": ""},
+                    "headers": {"type": "list", "display_name": "Headers", "value": []},
+                    "body": {"type": "dict", "display_name": "Body", "value": {}},
+                    "params": {"type": "dict", "display_name": "Query Params", "value": {}},
+                    "timeout": {"type": "int", "display_name": "Timeout", "value": 30},
+                    "follow_redirects": {"type": "bool", "display_name": "Follow Redirects", "value": True},
+                    "verify": {"type": "bool", "display_name": "Verify SSL", "value": True}
+                },
+                "base_classes": [component_type],
+                "description": f"API component: {component_type}",
+                "display_name": component_type
+            }
+        elif "File" in component_type or "Document" in component_type:
+            # File/Document component template
+            return {
+                "outputs": [{"name": "data", "types": ["Data"]}],
+                "template": {
+                    "file_path": {"type": "str", "display_name": "File Path", "value": ""},
+                    "file_type": {"type": "str", "display_name": "File Type", "value": ""},
+                    "parse_content": {"type": "bool", "display_name": "Parse Content", "value": True}
+                },
+                "base_classes": [component_type],
+                "description": f"File component: {component_type}",
+                "display_name": component_type
+            }
         else:
-            # Generic fallback
+            # Generic fallback with common fields
             return {
                 "outputs": [{"name": "output", "types": ["Any"]}],
-                "template": {"input_value": {"input_types": ["Any"]}},
+                "template": {
+                    "input_value": {"input_types": ["Any"], "display_name": "Input"},
+                    "config": {"type": "dict", "display_name": "Configuration", "value": {}}
+                },
                 "base_classes": [component_type],
                 "description": f"Generic component: {component_type}",
                 "display_name": component_type
