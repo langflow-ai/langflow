@@ -19,6 +19,9 @@ ORCHESTRATOR_PROMPT = """You are the AI Studio Agent Builder Assistant. You help
 - **validation_agent**: Validate specifications
 - **agent_state**: Store and retrieve workflow state and context
 - **conversation_controller**: Control conversation flow and format outputs
+- **knowledge_loader**: Load valid components and patterns
+- **component_validator**: Validate component usage
+- **integration_decision**: Guide API vs MCP tool selection
 
 ## IMPORTANT: Conversational Flow Rules
 1. **Never execute all phases at once** - Stop after each major step for user input

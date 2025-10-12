@@ -90,6 +90,37 @@ components:
         in: orchestrator
         description: Session state management capability
 
+  # Knowledge and Validation Tools
+  - id: knowledge-loader
+    type: genesis:knowledge_loader
+    name: Knowledge Loader
+    description: Loads valid components, patterns, and specifications
+    config:
+      query_type: all
+      reload_cache: false
+    provides:
+      - useAs: tool
+        in: orchestrator
+        description: Access to valid components and patterns
+
+  - id: component-validator
+    type: genesis:component_validator
+    name: Component Validator
+    description: Validates that specifications use only valid genesis components
+    provides:
+      - useAs: tool
+        in: orchestrator
+        description: Component validation capability
+
+  - id: integration-decision
+    type: genesis:integration_decision
+    name: Integration Decision Helper
+    description: Helps decide between API Request and MCP Tool approaches
+    provides:
+      - useAs: tool
+        in: orchestrator
+        description: Integration approach guidance
+
   # Specialized Agents (configured as tools)
   - id: requirements-analyst
     type: genesis:agent
@@ -291,6 +322,9 @@ components:
         - validation_agent
         - agent_state
         - conversation_controller
+        - knowledge_loader
+        - component_validator
+        - integration_decision
       interaction_mode: conversational
       pause_between_phases: true
       require_user_confirmation: true
