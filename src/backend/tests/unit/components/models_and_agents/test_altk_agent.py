@@ -134,7 +134,7 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
         openai_chat_model_names = ["gpt-4", "gpt-4o", "gpt-4o-mini"]
         for model_name in openai_chat_model_names:
             # Initialize the agent with mocked inputs
-            tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
+            tools = [CalculatorToolComponent().build_tool()]
             agent = ALTKAgentComponent(
                 tools=tools,
                 input_value=input_value,
