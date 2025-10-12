@@ -1119,13 +1119,13 @@ class FlowConverter:
                     # LLM Configuration - Model selection
                     "agent_llm": {"type": "str", "display_name": "Model Provider", "value": "Azure OpenAI"},
 
-                    # Azure OpenAI specific fields
-                    "azure_deployment_name": {"type": "str", "display_name": "Azure Deployment", "value": ""},
-                    "azure_api_base": {"type": "str", "display_name": "Azure Endpoint", "value": ""},
+                    # Azure OpenAI specific fields with environment variable defaults
+                    "azure_deployment_name": {"type": "str", "display_name": "Azure Deployment", "value": "${AZURE_OPENAI_DEPLOYMENT:}"},
+                    "azure_api_base": {"type": "str", "display_name": "Azure Endpoint", "value": "${AZURE_OPENAI_ENDPOINT:}"},
                     "azure_api_version": {"type": "str", "display_name": "API Version", "value": "2024-02-15-preview"},
 
-                    # OpenAI fields
-                    "openai_api_key": {"type": "str", "display_name": "API Key", "password": True, "value": ""},
+                    # OpenAI fields with environment variable defaults
+                    "openai_api_key": {"type": "str", "display_name": "API Key", "password": True, "value": "${AZURE_OPENAI_API_KEY:}"},
                     "model_name": {"type": "str", "display_name": "Model Name", "value": "gpt-4"},
 
                     # Common LLM parameters
@@ -1144,14 +1144,13 @@ class FlowConverter:
                 "display_name": component_type
             }
         elif "Prompt" in component_type or "prompt" in component_type.lower():
-            # Prompt template with proper fields
+            # Prompt template with proper fields matching PromptComponent
             return {
                 "outputs": [{"name": "prompt", "types": ["Message"]}],
                 "template": {
-                    "template": {"type": "str", "display_name": "Template", "value": ""},
-                    "input_variables": {"type": "list", "display_name": "Input Variables", "value": []},
-                    "partial_variables": {"type": "dict", "display_name": "Partial Variables", "value": {}},
-                    "validate_template": {"type": "bool", "display_name": "Validate Template", "value": True}
+                    "template": {"type": "str", "display_name": "Template", "value": "", "multiline": True},
+                    "tool_placeholder": {"input_types": ["Message"], "type": "str", "display_name": "Tool Placeholder",
+                                       "advanced": True, "tool_mode": True, "info": "A placeholder input for tool mode."}
                 },
                 "base_classes": [component_type],
                 "description": f"Prompt component: {component_type}",

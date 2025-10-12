@@ -121,9 +121,9 @@ class ComponentMapper:
             "genesis:blob_storage": {"component": "BlobStorageComponent", "config": {}},
 
             # Prompts
-            "genesis:prompt": {"component": "Prompt", "config": {}},
-            "genesis:prompt_template": {"component": "Prompt", "config": {}, "dataType": "Prompt"},  # Use existing Prompt component
-            "genesis:genesis_prompt": {"component": "GenesisPromptComponent", "config": {}, "dataType": "Prompt"},
+            "genesis:prompt": {"component": "PromptComponent", "config": {}},
+            "genesis:prompt_template": {"component": "PromptComponent", "config": {}, "dataType": "PromptComponent"},  # Use existing PromptComponent
+            "genesis:genesis_prompt": {"component": "GenesisPromptComponent", "config": {}, "dataType": "PromptComponent"},
 
             # Memory
             "genesis:memory": {"component": "Memory", "config": {}},
