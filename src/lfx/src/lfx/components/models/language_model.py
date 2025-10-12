@@ -50,6 +50,12 @@ class LanguageModelComponent(LCModelComponent):
             real_time_refresh=True,
         ),
         MessageInput(
+            name="api_base",
+            display_name="API Base URL",
+            info="Base URL for the API. Leave empty for default.",
+            advanced=True,
+        ),
+        MessageInput(
             name="input_value",
             display_name="Input",
             info="The input text to send to the model",
@@ -82,6 +88,7 @@ class LanguageModelComponent(LCModelComponent):
         model_name = self.model_name
         temperature = self.temperature
         stream = self.stream
+        api_base = self.api_base
 
         if provider == "OpenAI":
             if not self.api_key:
@@ -97,6 +104,7 @@ class LanguageModelComponent(LCModelComponent):
                 temperature=temperature,
                 streaming=stream,
                 openai_api_key=self.api_key,
+                base_url=api_base or None,
             )
         if provider == "Anthropic":
             if not self.api_key:
@@ -127,6 +135,7 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["model_name"]["options"] = OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES
                 build_config["model_name"]["value"] = OPENAI_CHAT_MODEL_NAMES[0]
                 build_config["api_key"]["display_name"] = "OpenAI API Key"
+                build_config["api_base"]["display_name"] = "OpenAI API Base URL"
             elif field_value == "Anthropic":
                 build_config["model_name"]["options"] = ANTHROPIC_MODELS
                 build_config["model_name"]["value"] = ANTHROPIC_MODELS[0]
