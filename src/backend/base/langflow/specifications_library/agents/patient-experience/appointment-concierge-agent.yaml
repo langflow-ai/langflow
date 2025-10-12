@@ -1,0 +1,661 @@
+id: urn:agent:genesis:patient_experience:appointment_concierge:1.0.0
+name: Appointment Concierge Agent
+fullyQualifiedName: genesis.autonomize.ai.appointment_concierge
+description: Automates appointment scheduling using EHR calendars, insurance eligibility, and preferred location. Sends reminders and follow-ups across SMS and email.
+domain: autonomize.ai
+subDomain: patient-experience
+version: 1.0.0
+environment: production
+agentOwner: patient-experience@autonomize.ai
+agentOwnerDisplayName: Patient Experience Team
+email: patient-experience@autonomize.ai
+status: ACTIVE
+
+variables:
+- name: llm_provider
+  type: string
+  required: false
+  default: Azure OpenAI
+  description: LLM provider for scheduling logic
+- name: model_name
+  type: string
+  required: false
+  default: gpt-4
+  description: Model for complex scheduling and optimization
+- name: temperature
+  type: float
+  required: false
+  default: 0.1
+  description: Low temperature for consistent scheduling decisions
+- name: scheduling_window_days
+  type: integer
+  required: false
+  default: 30
+  description: Default scheduling window in days
+- name: reminder_advance_hours
+  type: integer
+  required: false
+  default: 24
+  description: Hours before appointment to send reminder
+- name: enable_sms_notifications
+  type: boolean
+  required: false
+  default: true
+  description: Enable SMS notifications and reminders
+- name: enable_email_notifications
+  type: boolean
+  required: false
+  default: true
+  description: Enable email notifications and confirmations
+- name: preferred_location_radius_miles
+  type: integer
+  required: false
+  default: 15
+  description: Radius for preferred location matching
+
+tags:
+- patient-experience
+- appointment-scheduling
+- automation
+- healthcare
+- insurance-eligibility
+- multi-channel-communication
+- concierge-service
+
+kind: Single Agent
+agentGoal: Automate comprehensive appointment scheduling with insurance eligibility verification, location optimization, and multi-channel patient communication
+targetUser: external
+valueGeneration: ProcessAutomation
+interactionMode: RequestResponse
+runMode: RealTime
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+
+reusability:
+  asTools: true
+  standalone: true
+  provides:
+    toolName: AppointmentConcierge
+    toolDescription: Comprehensive appointment scheduling automation with eligibility and communication
+    inputSchema:
+      type: object
+      properties:
+        patient_id:
+          type: string
+          description: Patient identifier
+        appointment_type:
+          type: string
+          description: Type of appointment needed
+        preferred_dates:
+          type: array
+          items:
+            type: string
+          description: Patient's preferred dates (YYYY-MM-DD)
+        preferred_times:
+          type: array
+          items:
+            type: string
+          description: Patient's preferred time slots
+        preferred_locations:
+          type: array
+          items:
+            type: string
+          description: Patient's preferred facility locations
+        insurance_info:
+          type: object
+          properties:
+            plan_id:
+              type: string
+            member_id:
+              type: string
+            group_number:
+              type: string
+        contact_preferences:
+          type: object
+          properties:
+            phone:
+              type: string
+            email:
+              type: string
+            sms_enabled:
+              type: boolean
+            email_enabled:
+              type: boolean
+        urgency_level:
+          type: string
+          enum: ["routine", "urgent", "stat"]
+      required:
+      - patient_id
+      - appointment_type
+      - insurance_info
+      - contact_preferences
+    outputSchema:
+      type: object
+      properties:
+        appointment_details:
+          type: object
+          properties:
+            appointment_id:
+              type: string
+            scheduled_date:
+              type: string
+            scheduled_time:
+              type: string
+            provider_name:
+              type: string
+            facility_location:
+              type: string
+            duration_minutes:
+              type: integer
+        insurance_verification:
+          type: object
+          properties:
+            eligibility_confirmed:
+              type: boolean
+            coverage_details:
+              type: object
+            copay_amount:
+              type: number
+            authorization_required:
+              type: boolean
+        notifications_sent:
+          type: object
+          properties:
+            sms_confirmation:
+              type: boolean
+            email_confirmation:
+              type: boolean
+            reminder_scheduled:
+              type: boolean
+        next_steps:
+          type: array
+          items:
+            type: string
+
+sampleInput:
+  patient_id: "P123456789"
+  appointment_type: "annual_physical"
+  preferred_dates: ["2024-04-15", "2024-04-16", "2024-04-17"]
+  preferred_times: ["morning", "afternoon"]
+  preferred_locations: ["Downtown Clinic", "Westside Medical Center"]
+  insurance_info:
+    plan_id: "BCBS_PPO_2024"
+    member_id: "M987654321"
+    group_number: "GRP12345"
+  contact_preferences:
+    phone: "+1-555-123-4567"
+    email: "patient@email.com"
+    sms_enabled: true
+    email_enabled: true
+  urgency_level: "routine"
+
+promptConfiguration:
+  basePromptId: appointment_concierge_v1
+  customPrompt: 'You are an expert appointment concierge specializing in healthcare scheduling automation.
+
+    Your comprehensive responsibilities:
+    1. Intelligent Scheduling Coordination
+    2. Insurance Eligibility Verification
+    3. Location and Provider Optimization
+    4. Multi-Channel Patient Communication
+    5. Follow-up and Reminder Management
+
+    Scheduling optimization approach:
+
+    STEP 1: ELIGIBILITY VERIFICATION
+    - Verify patient insurance eligibility in real-time
+    - Check coverage for requested appointment type
+    - Identify any authorization requirements
+    - Calculate patient financial responsibility
+    - Flag any coverage limitations or exclusions
+
+    STEP 2: PROVIDER AND LOCATION MATCHING
+    - Find providers accepting patient''s insurance
+    - Match specialty requirements to appointment type
+    - Consider patient''s preferred locations and radius
+    - Check provider availability within scheduling window
+    - Optimize for shortest wait time and travel distance
+
+    STEP 3: APPOINTMENT SCHEDULING
+    - Cross-reference patient preferences with availability
+    - Book optimal appointment slot considering all factors
+    - Reserve appointment in EHR system
+    - Generate confirmation number and details
+    - Handle any scheduling conflicts or issues
+
+    STEP 4: PATIENT COMMUNICATION
+    - Send immediate confirmation via preferred channels
+    - Include all appointment details and preparation instructions
+    - Schedule automated reminders based on preferences
+    - Provide facility information and directions
+    - Include insurance and payment information
+
+    STEP 5: FOLLOW-UP COORDINATION
+    - Schedule pre-appointment reminders (24h, 2h options)
+    - Set up post-appointment follow-up if needed
+    - Monitor for any cancellations or changes
+    - Track no-show patterns for optimization
+
+    Communication standards:
+    - Use clear, patient-friendly language
+    - Provide complete appointment information
+    - Include specific instructions and requirements
+    - Maintain professional but warm tone
+    - Ensure HIPAA compliance in all communications
+    - Personalize messages with patient and provider names
+
+    Error handling:
+    - If insurance not verified: Provide manual verification steps
+    - If no availability: Offer waitlist and alternative options
+    - If location conflict: Suggest closest acceptable alternatives
+    - If system errors: Gracefully degrade to manual scheduling assistance
+
+    Quality standards:
+    - Confirm insurance eligibility before final booking
+    - Verify patient contact information accuracy
+    - Ensure all appointment details are complete
+    - Double-check provider specialty match
+    - Validate appointment time availability
+
+    Always prioritize patient convenience while ensuring insurance coverage and clinical appropriateness.
+    '
+
+components:
+- id: input
+  name: Appointment Request
+  kind: Data
+  type: genesis:chat_input
+  description: Patient appointment request with preferences and insurance information
+  provides:
+  - useAs: input
+    in: concierge-agent
+    description: Appointment scheduling request
+
+- id: concierge-prompt
+  name: Scheduling Optimization Guidelines
+  kind: Prompt
+  type: genesis:prompt_template
+  description: Comprehensive appointment concierge methodology and communication standards
+  config:
+    saved_prompt: appointment_concierge_prompt_v1
+    template: 'You are an expert appointment concierge specializing in healthcare scheduling automation with comprehensive patient service.
+
+      Your role encompasses five critical areas:
+
+      1. INTELLIGENT SCHEDULING COORDINATION
+      - Analyze patient preferences for dates, times, and locations
+      - Cross-reference with provider availability and specialty requirements
+      - Optimize scheduling based on multiple variables and constraints
+      - Handle complex scheduling scenarios and conflicts
+      - Coordinate multi-provider appointments if needed
+
+      2. REAL-TIME INSURANCE VERIFICATION
+      - Verify eligibility status and coverage details
+      - Check benefits for specific appointment types and procedures
+      - Identify prior authorization requirements
+      - Calculate patient financial responsibility and copays
+      - Flag potential coverage issues before scheduling
+
+      3. LOCATION AND PROVIDER OPTIMIZATION
+      - Match providers by specialty, location, and insurance acceptance
+      - Consider patient travel preferences and accessibility needs
+      - Optimize for appointment availability and wait times
+      - Factor in provider ratings and patient feedback when available
+      - Coordinate referrals and specialist appointments
+
+      4. MULTI-CHANNEL PATIENT COMMUNICATION
+      - Send confirmations via patient''s preferred communication channels
+      - Provide comprehensive appointment information and instructions
+      - Include facility details, parking, and preparation requirements
+      - Customize messaging based on appointment type and patient needs
+      - Maintain consistent, professional, and empathetic communication tone
+
+      5. PROACTIVE FOLLOW-UP MANAGEMENT
+      - Schedule automated appointment reminders at optimal intervals
+      - Monitor and manage appointment changes and cancellations
+      - Coordinate rescheduling when conflicts arise
+      - Track patient satisfaction and appointment completion rates
+      - Identify opportunities for care coordination and follow-up appointments
+
+      Tools and data integration:
+      - Use EHR calendar access for real-time provider availability
+      - Query insurance APIs for instant eligibility verification
+      - Leverage SMS and email services for multi-channel communication
+      - Integrate with analytics tools for performance monitoring and optimization
+      - Access patient preference data for personalized service
+
+      Quality assurance principles:
+      - Always verify insurance coverage before confirming appointments
+      - Ensure appointment type matches provider specialty and capabilities
+      - Confirm patient contact information and communication preferences
+      - Validate all appointment details before sending confirmations
+      - Provide clear next steps and expectations for patients
+
+      Communication excellence:
+      - Use clear, jargon-free language appropriate for patients
+      - Include all essential appointment information in confirmations
+      - Provide proactive guidance on appointment preparation
+      - Maintain HIPAA compliance in all patient communications
+      - Personalize interactions with patient and provider names
+
+      Error resilience:
+      - Gracefully handle system unavailability with clear alternatives
+      - Provide manual escalation paths when automation fails
+      - Offer multiple appointment options when preferences cannot be met
+      - Maintain service quality even with partial system functionality
+
+      Success metrics focus:
+      - Maximize appointment scheduling success rate
+      - Minimize patient wait times and travel distance
+      - Ensure high insurance eligibility confirmation rate
+      - Optimize patient satisfaction with scheduling experience
+      - Reduce appointment no-show rates through effective communication
+
+      Always maintain the highest standards of patient service while ensuring clinical appropriateness and administrative efficiency.'
+  provides:
+  - useAs: prompt
+    in: concierge-agent
+    description: Provide comprehensive concierge methodology
+
+- id: ehr-calendar-api
+  name: EHR Calendar Integration
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access provider calendars and availability in EHR system
+  asTools: true
+  config:
+    tool_name: ehr_calendar_access
+    description: |
+      Access electronic health record system for provider scheduling and availability.
+
+      Capabilities:
+      - Real-time provider calendar access
+      - Appointment slot availability checking
+      - Multi-provider scheduling coordination
+      - Appointment booking and confirmation
+      - Schedule conflict resolution
+      - Specialty and location filtering
+
+      Use for:
+      - Finding available appointment slots
+      - Checking provider specialty match
+      - Booking confirmed appointments
+      - Managing schedule changes
+      - Coordinating complex multi-provider appointments
+
+      Required parameters: provider_id, appointment_type, date_range
+      Returns: Available slots with provider details and booking confirmation
+    api_version: "v2"
+    timeout_seconds: 30
+    retry_attempts: 3
+    include_provider_details: true
+    include_facility_info: true
+  provides:
+  - useAs: tools
+    in: concierge-agent
+    description: Provide EHR calendar and scheduling access
+
+- id: insurance-eligibility-api
+  name: Insurance Eligibility Verification
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Real-time insurance eligibility and benefits verification
+  asTools: true
+  config:
+    tool_name: insurance_eligibility_check
+    description: |
+      Real-time insurance eligibility verification and benefits checking.
+
+      Verification capabilities:
+      - Current eligibility status verification
+      - Benefit coverage for specific services
+      - Prior authorization requirements identification
+      - Copay and deductible information
+      - Out-of-network penalty calculations
+      - Coverage limitation identification
+
+      Use for:
+      - Verifying patient eligibility before scheduling
+      - Checking coverage for specific appointment types
+      - Calculating patient financial responsibility
+      - Identifying authorization requirements
+      - Validating network provider status
+
+      Required: member_id, plan_id, service_code
+      Returns: Eligibility status, coverage details, financial responsibility
+    eligibility_api_version: "270"
+    real_time_verification: true
+    include_benefits_detail: true
+    include_authorization_requirements: true
+  provides:
+  - useAs: tools
+    in: concierge-agent
+    description: Provide insurance verification capabilities
+
+- id: sms-notification-service
+  name: SMS Notification Gateway
+  kind: Tool
+  type: genesis:mcp_tool
+  description: SMS messaging service for appointment notifications and reminders
+  asTools: true
+  config:
+    tool_name: sms_gateway
+    description: |
+      SMS messaging service for patient communication and notifications.
+
+      SMS capabilities:
+      - Appointment confirmations and reminders
+      - Schedule change notifications
+      - Pre-appointment instructions
+      - Post-appointment follow-up messages
+      - Emergency notifications and updates
+
+      Message types:
+      - Immediate confirmation messages
+      - 24-hour advance reminders
+      - 2-hour pre-appointment reminders
+      - Cancellation and rescheduling notifications
+      - Custom appointment instructions
+
+      Use for:
+      - Sending appointment confirmations via SMS
+      - Scheduling automated reminder messages
+      - Notifying patients of schedule changes
+      - Providing pre-appointment instructions
+      - Collecting appointment feedback
+
+      Required: phone_number, message_content, send_time
+      Returns: Message delivery status and tracking information
+    sms_provider: "twilio"
+    delivery_tracking: true
+    opt_out_handling: true
+    hipaa_compliant: true
+  provides:
+  - useAs: tools
+    in: concierge-agent
+    description: Provide SMS notification capabilities
+
+- id: email-notification-service
+  name: Email Notification Service
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Email service for detailed appointment communications and confirmations
+  asTools: true
+  config:
+    tool_name: email_service
+    description: |
+      Email service for comprehensive patient communication and appointment management.
+
+      Email capabilities:
+      - Detailed appointment confirmations with calendar attachments
+      - Pre-appointment preparation instructions
+      - Facility information and directions
+      - Insurance and payment information
+      - Follow-up appointment coordination
+
+      Email features:
+      - HTML formatted appointment confirmations
+      - Calendar event attachments (.ics files)
+      - Facility maps and parking information
+      - Insurance coverage details and copay information
+      - Personalized appointment preparation checklists
+
+      Use for:
+      - Sending comprehensive appointment confirmations
+      - Providing detailed facility and preparation information
+      - Delivering insurance and payment details
+      - Coordinating follow-up appointments
+      - Collecting patient satisfaction feedback
+
+      Required: email_address, subject, content_template
+      Returns: Email delivery confirmation and engagement tracking
+    email_provider: "sendgrid"
+    template_engine: "handlebars"
+    calendar_attachments: true
+    delivery_tracking: true
+    engagement_analytics: true
+  provides:
+  - useAs: tools
+    in: concierge-agent
+    description: Provide email notification and communication
+
+- id: analytics-tracking-tool
+  name: Appointment Analytics Tracker
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Analytics and KPI tracking for appointment scheduling performance
+  asTools: true
+  config:
+    tool_name: appointment_analytics
+    description: |
+      Analytics platform for tracking appointment scheduling performance and KPIs.
+
+      Analytics capabilities:
+      - Appointment scheduling success rates
+      - Patient satisfaction scoring
+      - No-show rate tracking and analysis
+      - Insurance eligibility confirmation rates
+      - Communication effectiveness metrics
+      - Location and provider preference analysis
+
+      Metrics tracked:
+      - Time from request to scheduled appointment
+      - Patient preference match accuracy
+      - Insurance verification success rate
+      - Multi-channel communication engagement
+      - Appointment completion and no-show rates
+
+      Use for:
+      - Tracking scheduling performance metrics
+      - Monitoring patient satisfaction levels
+      - Analyzing appointment completion rates
+      - Measuring communication effectiveness
+      - Optimizing scheduling algorithms
+
+      Data points: appointment_id, metrics_data, timestamp
+      Returns: Updated analytics dashboard and performance insights
+    analytics_platform: "custom"
+    real_time_tracking: true
+    dashboard_integration: true
+    kpi_alerting: true
+  provides:
+  - useAs: tools
+    in: concierge-agent
+    description: Provide analytics and performance tracking
+
+- id: concierge-agent
+  name: Appointment Concierge Agent
+  kind: Agent
+  type: genesis:agent
+  description: Intelligent appointment scheduling coordinator with comprehensive patient service
+  config:
+    agent_llm: Azure OpenAI
+    model_name: gpt-4
+    temperature: 0.1
+    max_tokens: 2500
+    handle_parsing_errors: true
+    max_iterations: 10
+    verbose: false
+  provides:
+  - useAs: input
+    in: scheduling-output
+    description: Provide complete appointment scheduling results
+
+- id: scheduling-output
+  name: Appointment Confirmation
+  kind: Data
+  type: genesis:chat_output
+  description: Comprehensive appointment scheduling confirmation with all details
+  config:
+    should_store_message: true
+    include_appointment_details: true
+    include_contact_confirmations: true
+
+outputs:
+- appointment_confirmation
+- insurance_verification_status
+- provider_assignment
+- facility_location
+- communication_confirmations
+- reminder_schedule
+- next_steps
+
+kpis:
+- name: Appointment Scheduling Success Rate
+  category: Quality
+  valueType: percentage
+  target: 95
+  unit: '%'
+  description: Percentage of requests successfully scheduled
+- name: Insurance Eligibility Confirmation Rate
+  category: Quality
+  valueType: percentage
+  target: 98
+  unit: '%'
+  description: Percentage of appointments with confirmed insurance eligibility
+- name: Preferred Location Match Rate
+  category: Quality
+  valueType: percentage
+  target: 85
+  unit: '%'
+  description: Percentage of appointments scheduled at preferred locations
+- name: Patient Satisfaction Score
+  category: Quality
+  valueType: numeric
+  target: 4.7
+  unit: score
+  description: Patient satisfaction with scheduling experience (1-5 scale)
+- name: Appointment No-Show Rate
+  category: Outcome
+  valueType: percentage
+  target: 8
+  unit: '%'
+  description: Percentage of scheduled appointments that result in no-shows
+- name: Average Scheduling Time
+  category: Performance
+  valueType: numeric
+  target: 120
+  unit: seconds
+  description: Average time to complete appointment scheduling process
+- name: Multi-Channel Communication Success
+  category: Performance
+  valueType: percentage
+  target: 96
+  unit: '%'
+  description: Success rate of SMS and email notifications
+- name: Insurance Authorization Accuracy
+  category: Quality
+  valueType: percentage
+  target: 99
+  unit: '%'
+  description: Accuracy of prior authorization requirement identification
+
+securityInfo:
+  visibility: Private
+  confidentiality: High
+  gdprSensitive: true
+  hipaaCompliant: true
+  patientDataAccess: true
+  insuranceDataAccess: true
+  communicationTracking: true

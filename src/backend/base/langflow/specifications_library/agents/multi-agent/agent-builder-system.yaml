@@ -1,0 +1,406 @@
+# AI Agent Builder Multi-Agent System Specification
+id: urn:agent:genesis:ai-studio:agent-builder-system:1.0.0
+name: AI Agent Builder System
+fullyQualifiedName: genesis.autonomize.ai.agent-builder
+description: Multi-agent system for building and validating agent specifications through guided conversation
+domain: autonomize.ai
+subDomain: agent-development
+version: 1.0.0
+environment: production
+agentOwner: ai-studio-team@autonomize.ai
+agentOwnerDisplayName: AI Studio Team
+email: ai-studio-team@autonomize.ai
+status: ACTIVE
+
+# Agent Characteristics
+kind: Multi Agent
+agentGoal: Guide users through creating validated agent specifications using specialized sub-agents
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: Conversational
+runMode: RealTime
+agencyLevel: GoalBasedAgent
+toolsUse: true
+learningCapability: None
+
+# Variables for prompts (can be customized)
+variables:
+  orchestrator_prompt: ${ORCHESTRATOR_PROMPT}
+  requirements_analyst_prompt: ${REQUIREMENTS_ANALYST_PROMPT}
+  intent_classifier_prompt: ${INTENT_CLASSIFIER_PROMPT}
+  research_agent_prompt: ${RESEARCH_AGENT_PROMPT}
+  pattern_matcher_prompt: ${PATTERN_MATCHER_PROMPT}
+  spec_builder_prompt: ${SPEC_BUILDER_PROMPT}
+  validation_agent_prompt: ${VALIDATION_AGENT_PROMPT}
+
+# Tags for categorization
+tags:
+  - multi-agent
+  - agent-builder
+  - specification-generator
+  - ai-studio
+  - orchestrator
+  - development-tools
+
+# Reusability configuration
+reusability:
+  asTools: false
+  standalone: true
+  description: Complete system for building agent specifications
+
+# Sample input/output
+sampleInput:
+  message: "I need to build a customer support chatbot that can handle FAQs and escalate complex issues"
+sampleOutput:
+  specification: "Complete YAML specification for customer support agent"
+  validation_status: "Valid"
+  suggestions: ["Consider adding sentiment analysis", "Include escalation workflow"]
+
+# Components definition
+components:
+  # Input Component
+  - id: user-input
+    type: genesis:chat_input
+    name: User Input
+    description: Receives user requirements for agent building
+
+  # Conversation Controller
+  - id: conversation-controller
+    type: genesis:conversation_controller
+    name: Conversation Controller
+    description: Controls conversation flow and pacing
+    asTools: true
+    config:
+      current_phase: initial
+      require_confirmation: false
+    provides:
+      - useAs: tools
+        in: orchestrator
+        description: Flow control and output formatting
+
+  # Memory Management Tool
+  - id: agent-state
+    type: genesis:agent_state_manager
+    name: Agent State Manager
+    description: Manages workflow state and context across the entire session
+    asTools: true
+    config:
+      operation: retrieve
+      data_type: json
+    provides:
+      - useAs: tools
+        in: orchestrator
+        description: Session state management capability
+
+  # Knowledge and Validation Tools
+  - id: knowledge-loader
+    type: genesis:knowledge_loader
+    name: Knowledge Loader
+    description: Loads valid components, patterns, and specifications
+    asTools: true
+    config:
+      query_type: all
+      reload_cache: false
+    provides:
+      - useAs: tools
+        in: orchestrator
+        description: Access to valid components and patterns
+
+  - id: component-validator
+    type: genesis:component_validator
+    name: Component Validator
+    description: Validates that specifications use only valid genesis components
+    asTools: true
+    provides:
+      - useAs: tools
+        in: orchestrator
+        description: Component validation capability
+
+  - id: integration-decision
+    type: genesis:integration_decision
+    name: Integration Decision Helper
+    description: Helps decide between API Request and MCP Tool approaches
+    asTools: true
+    provides:
+      - useAs: tools
+        in: orchestrator
+        description: Integration approach guidance
+
+  # Specialized Agents (configured as tools)
+  - id: requirements-analyst
+    type: genesis:agent
+    name: Requirements Analyst Agent
+    description: Extracts structured requirements from descriptions
+    asTools: true
+    config:
+      system_prompt: |
+        You are a Requirements Analyst specialized in extracting structured
+        requirements from natural language descriptions of AI agents.
+
+        Extract: goal, domain, use case type, inputs/outputs, integrations,
+        performance needs, security requirements, and user interaction mode.
+
+        Return structured JSON with requirements, confidence score,
+        missing fields, and clarifying questions.
+      provider: Azure OpenAI
+      azure_deployment: gpt-4o
+      temperature: 0.3
+      max_iterations: 10
+    provides:
+      - useAs: tools
+        in: orchestrator
+        description: Requirements extraction capability
+
+  - id: intent-classifier
+    type: genesis:agent
+    name: Intent Classifier Agent
+    description: Classifies agent type and complexity
+    asTools: true
+    config:
+      system_prompt: |
+        You are an Intent Classifier for AI agent building.
+
+        Classify: agent type (chatbot, api_processor, workflow, etc.),
+        complexity level (simple, intermediate, advanced, enterprise),
+        and suggest matching patterns.
+
+        Return structured classification with reasoning.
+      provider: Azure OpenAI
+      azure_deployment: gpt-4o
+      temperature: 0.2
+      max_iterations: 10
+    provides:
+      - useAs: tools
+        in: orchestrator
+        description: Intent classification capability
+
+  - id: research-agent
+    type: genesis:agent
+    name: Research Agent
+    description: Searches for similar agents and patterns
+    asTools: true
+    config:
+      system_prompt: |
+        You are a Research Agent specialized in finding similar agents
+        and patterns from the specification library.
+
+        Search for similar specifications, identify reusable components,
+        and extract best practices.
+
+        Use the specification_search tool to find existing agents.
+      provider: Azure OpenAI
+      azure_deployment: gpt-4o
+      temperature: 0.3
+      max_iterations: 10
+    provides:
+      - useAs: tools
+        in: orchestrator
+        description: Research and discovery capability
+
+  - id: pattern-matcher
+    type: genesis:agent
+    name: Pattern Matcher Agent
+    description: Matches requirements to specification patterns
+    asTools: true
+    config:
+      system_prompt: |
+        You are a Pattern Matching expert for agent specifications.
+
+        Match requirements to known patterns: linear, multi-tool,
+        knowledge base, conversational, or multi-agent workflows.
+
+        Return pattern match with confidence and required modifications.
+      provider: Azure OpenAI
+      azure_deployment: gpt-4o
+      temperature: 0.2
+      max_iterations: 10
+    provides:
+      - useAs: tools
+        in: orchestrator
+        description: Pattern matching capability
+
+  - id: spec-builder
+    type: genesis:agent
+    name: Specification Builder Agent
+    description: Generates complete YAML specifications
+    asTools: true
+    config:
+      system_prompt: |
+        You are a Specification Builder that generates complete YAML
+        agent specifications following the AI Studio schema.
+
+        Generate specifications with proper metadata, characteristics,
+        components, and relationships.
+
+        IMPORTANT: Always configure agents with:
+        - provider: Azure OpenAI
+        - azure_deployment: gpt-4o
+        Never ask users about model selection.
+
+        Ensure all required fields are included.
+      provider: Azure OpenAI
+      azure_deployment: gpt-4o
+      temperature: 0.3
+      max_iterations: 15
+    provides:
+      - useAs: tools
+        in: orchestrator
+        description: Specification generation capability
+
+  - id: validation-agent
+    type: genesis:agent
+    name: Validation Agent
+    description: Validates specifications and suggests fixes
+    asTools: true
+    config:
+      system_prompt: |
+        You are a Validation Agent that checks specifications.
+
+        Use the spec_validator tool to validate YAML specifications.
+        Analyze results and suggest fixes for any errors.
+
+        Return validation report with fixes if needed.
+      provider: Azure OpenAI
+      azure_deployment: gpt-4o
+      temperature: 0.1
+      max_iterations: 10
+    provides:
+      - useAs: tools
+        in: orchestrator
+        description: Validation capability
+
+  # Actual Tools (non-LLM components)
+  - id: spec-search
+    type: genesis:specification_search_tool
+    name: Specification Search
+    description: Searches existing specifications
+    config:
+      limit: 5
+      search_path: src/backend/base/langflow/specifications_library
+    provides:
+      - useAs: tool
+        in: research-agent
+        description: Specification search capability
+
+  - id: spec-validator
+    type: genesis:spec_validator_tool
+    name: Spec Validator
+    description: Validates specifications via API
+    config:
+      validation_mode: comprehensive
+    provides:
+      - useAs: tool
+        in: validation-agent
+        description: Specification validation capability
+
+  # Main Orchestrator Agent
+  - id: orchestrator
+    type: genesis:agent
+    name: AI Builder Orchestrator
+    description: Main orchestrator that coordinates all specialized agents and manages conversation state
+    config:
+      system_prompt: |
+        You are the AI Studio Agent Builder Orchestrator. Help users create agent specifications efficiently.
+
+        IMPORTANT RULES:
+        1. NEVER ask users about model selection - ALWAYS use Azure OpenAI gpt-4o
+        2. Minimize confirmations - combine phases where possible
+        3. Present a COMPLETE plan with state information for frontend
+        4. Keep conversation focused on essential questions only
+
+        YOUR WORKFLOW:
+        Phase 1 - UNDERSTAND & ANALYZE (Combined):
+        - Use Requirements Analyst to extract requirements
+        - Use Intent Classifier and Research Agent simultaneously
+        - Ask only 2-3 essential questions (MCP vs API, specific systems)
+        - Emit state: "gathering"
+
+        Phase 2 - DESIGN & PRESENT:
+        - Use Pattern Matcher to finalize design
+        - Present complete agent architecture
+        - Show components, flow, and features
+        - Emit state: "ready_to_build"
+        - Frontend will handle Build/Edit UI based on state
+
+        When frontend sends "build" action:
+        - Generate YAML specification (use Specification Builder)
+        - Validate the spec (use Validation Agent)
+        - Emit state: "complete"
+
+        DEFAULT CONFIGURATION FOR ALL AGENTS:
+        - provider: Azure OpenAI
+        - azure_deployment: gpt-4o
+        - temperature: 0.7 (adjustable based on use case)
+
+        NEVER discuss model options. Focus on essential workflow questions only.
+      provider: Azure OpenAI
+      azure_deployment: gpt-4o
+      temperature: 0.7
+      max_iterations: 20
+      tools:
+        - requirements_analyst
+        - intent_classifier
+        - research_agent
+        - pattern_matcher
+        - spec_builder
+        - validation_agent
+        - agent_state
+        - conversation_controller
+        - knowledge_loader
+        - component_validator
+        - integration_decision
+      interaction_mode: conversational
+      pause_between_phases: false
+      require_user_confirmation: false
+      output_format: markdown
+      use_emojis: true
+      single_plan_presentation: true
+    provides:
+      - useAs: processor
+        from: user-input
+        description: Main processing logic
+
+  # Output Component
+  - id: agent-output
+    type: genesis:chat_output
+    name: Agent Response
+    description: Returns the generated specification or guidance
+    provides:
+      - useAs: output
+        from: orchestrator
+        description: Final response to user
+
+# Output specifications
+outputs:
+  - name: generated_specification
+    type: text
+    description: Complete YAML specification for the requested agent
+  - name: validation_report
+    type: object
+    description: Validation results with errors, warnings, and suggestions
+  - name: process_summary
+    type: object
+    description: Summary of the agent building process and decisions made
+
+# KPIs for monitoring
+KPIs:
+  - name: specification_generation_success_rate
+    description: Percentage of successfully generated specifications
+    unit: percentage
+    target: 95
+  - name: validation_pass_rate
+    description: Percentage of specifications passing validation on first attempt
+    unit: percentage
+    target: 80
+  - name: average_conversation_length
+    description: Average number of interactions to complete specification
+    unit: count
+    target: 10
+
+# Security information
+securityInfo:
+  visibility: internal
+  confidentialityLevel: low
+  gdprSensitivity: false
+  complianceRequirements:
+    - data-residency

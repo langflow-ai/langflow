@@ -1,0 +1,75 @@
+name: Benefit Check Agent
+description: Orchestrates comprehensive healthcare authorization analysis using specialized agents
+agentGoal: Orchestrate comprehensive healthcare authorization analysis by evaluating service code eligibility, coverage benefits, and utilization limits
+version: "1.0.0"
+
+components:
+  - id: authorization-input
+    type: genesis:chat_input
+    name: Authorization Request
+    description: Input for authorization request with member and service details
+    provides:
+      - in: orchestrator-agent
+        useAs: input
+        description: Authorization request to orchestrator
+
+  - id: eoc-checker
+    type: genesis:agent
+    name: EOC Check Agent
+    description: Evidence of Coverage validation agent
+    config:
+      system_prompt: |
+        You are an Evidence of Coverage (EOC) specialist. Validate if requested services are covered under the member's plan.
+        Check coverage details, limitations, and exclusions.
+      temperature: 0.1
+    provides:
+      - in: orchestrator-agent
+        useAs: tool
+        description: EOC validation tool
+
+  - id: eligibility-checker
+    type: genesis:agent
+    name: Eligibility Check Agent
+    description: Member eligibility validation agent
+    config:
+      system_prompt: |
+        You are an eligibility specialist. Verify member eligibility status, active coverage, and benefit limits.
+      temperature: 0.1
+    provides:
+      - in: orchestrator-agent
+        useAs: tool
+        description: Eligibility validation tool
+
+  - id: orchestrator-agent
+    type: genesis:agent
+    name: Benefit Orchestrator
+    description: Main orchestrator for comprehensive benefit analysis
+    config:
+      system_prompt: |
+        You are a benefit orchestration specialist. Coordinate comprehensive healthcare authorization analysis using your available tools:
+
+        1. EOC Check Agent - Validates service coverage under member's plan
+        2. Eligibility Check Agent - Verifies member eligibility and benefit limits
+
+        For each authorization request:
+        1. First check member eligibility and active coverage
+        2. Then validate service coverage under EOC
+        3. Analyze any limitations or requirements
+        4. Provide comprehensive authorization decision
+
+        Format your response with:
+        - Authorization Decision (Approved/Denied/Prior Auth Required)
+        - Coverage Details
+        - Member Cost Responsibility
+        - Recommendations or Next Steps
+      temperature: 0.2
+      max_tokens: 2000
+    provides:
+      - in: authorization-output
+        useAs: input
+        description: Send orchestrated results to output
+
+  - id: authorization-output
+    type: genesis:chat_output
+    name: Authorization Decision
+    description: Display comprehensive authorization analysis and decision

@@ -1,0 +1,397 @@
+id: urn:agent:genesis:patient-experience:medication-adherence-coach:1.0.0
+name: Medication Adherence Coach Agent
+fullyQualifiedName: genesis.autonomize.ai.medication-adherence-coach
+description: Multi-agent system that uses pharmacy claims, care plans, and refill history to send targeted reminders and educational content for medication non-adherence
+domain: autonomize.ai
+subDomain: patient-experience
+version: 1.0.0
+environment: production
+agentOwner: patient-experience@autonomize.ai
+agentOwnerDisplayName: Patient Experience Team
+email: patient-experience@autonomize.ai
+status: ACTIVE
+
+variables:
+- name: adherence_threshold
+  type: float
+  required: false
+  default: 0.8
+  description: PDC threshold below which patients are considered non-adherent
+- name: reminder_frequency_days
+  type: integer
+  required: false
+  default: 7
+  description: Days between reminder communications
+- name: risk_assessment_window_days
+  type: integer
+  required: false
+  default: 90
+  description: Days to look back for adherence pattern analysis
+- name: communication_channels
+  type: string
+  required: false
+  default: "email,sms,portal"
+  description: Comma-separated list of communication channels to use
+
+tags:
+- patient-experience
+- medication-adherence
+- pharmacy
+- chronic-care-management
+- patient-engagement
+- healthcare
+- multi-agent
+
+reusability:
+  asTools: false
+
+sampleInput:
+  patient_id: "PAT123456"
+  chronic_conditions: ["diabetes", "hypertension", "hyperlipidemia"]
+  preferred_communication: "email"
+  pharmacy_network: "CVS"
+
+sampleOutput:
+  adherence_score: 0.65
+  risk_level: "high"
+  interventions_sent: 3
+  next_reminder_date: "2024-01-15"
+  adherence_gaps: ["metformin", "lisinopril"]
+
+kind: Multi Agent
+agentGoal: Improve medication adherence through personalized, data-driven interventions and educational outreach for patients with chronic conditions
+targetUser: external
+valueGeneration: ProcessAutomation
+interactionMode: Streaming
+runMode: Scheduled
+agencyLevel: KnowledgeDrivenWorkflow
+toolsUse: true
+learningCapability: Supervised
+
+components:
+- id: patient-input
+  name: Patient Data Input
+  kind: Input
+  type: genesis:chat_input
+  description: Receive patient identification and adherence coaching request
+  provides:
+  - useAs: input_value
+    in: data-collection-agent
+    description: Provide patient context for data collection
+
+- id: pharmacy-claims-tool
+  name: Pharmacy Claims Access
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access NCPDP pharmacy claims data for medication fill history
+  asTools: true
+  config:
+    tool_name: pharmacy_claims_ncpdp
+    description: |
+      Access pharmacy claims data to retrieve medication fill history and refill patterns.
+      Provides:
+      - Prescription fill dates and quantities
+      - Days supply information
+      - NDC codes and medication details
+      - Pharmacy and prescriber information
+      - Insurance coverage and copay data
+  provides:
+  - useAs: tools
+    in: data-collection-agent
+    description: Enable pharmacy claims data collection
+
+- id: care-plans-tool
+  name: Care Plans Access
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access EHR care plans and chronic condition management protocols
+  asTools: true
+  config:
+    tool_name: ehr_care_plans
+    description: |
+      Access electronic health record care plans and clinical protocols.
+      Provides:
+      - Active care plans and goals
+      - Chronic condition management protocols
+      - Prescribed medication regimens
+      - Clinical notes and provider recommendations
+      - Patient health status indicators
+  provides:
+  - useAs: tools
+    in: data-collection-agent
+    description: Enable care plan data access
+
+- id: member-management-tool
+  name: Member Management System
+  kind: Tool
+  type: genesis:mcp_tool
+  description: Access member demographics, preferences, and contact information
+  asTools: true
+  config:
+    tool_name: member_management_system
+    description: |
+      Access member management system for patient demographics and preferences.
+      Provides:
+      - Patient demographics and contact information
+      - Communication preferences and channels
+      - Insurance coverage and benefits
+      - Healthcare provider relationships
+      - Previous outreach history and responses
+  provides:
+  - useAs: tools
+    in: data-collection-agent
+    description: Enable member data access
+
+- id: data-collection-agent
+  name: Data Collection Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Collect and aggregate pharmacy claims, care plans, and member data
+  config:
+    role: Data Collection Specialist
+    goal: Gather comprehensive medication and patient data for adherence analysis
+    backstory: |
+      You are a healthcare data specialist focused on collecting comprehensive medication adherence data.
+      Your expertise includes pharmacy claims analysis, care plan review, and member data aggregation.
+      You ensure data quality and completeness for accurate adherence assessment.
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: agent
+    in: data-collection-task
+    description: Execute data collection task
+
+- id: risk-assessment-agent
+  name: Risk Assessment Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Analyze medication adherence patterns and identify at-risk patients
+  config:
+    role: Medication Adherence Analyst
+    goal: Identify non-adherent patients and assess risk levels using PDC calculations and pattern analysis
+    backstory: |
+      You are a clinical pharmacist and data analyst specializing in medication adherence.
+      Your expertise includes PDC calculations, adherence gap analysis, and risk stratification.
+      You identify patients most likely to benefit from adherence interventions.
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: agent
+    in: risk-assessment-task
+    description: Execute risk assessment analysis
+
+- id: communication-agent
+  name: Communication Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Generate personalized adherence reminders and educational content
+  config:
+    role: Patient Communication Specialist
+    goal: Create personalized, effective communication strategies to improve medication adherence
+    backstory: |
+      You are a patient engagement specialist with expertise in health communication and behavior change.
+      Your skills include personalized messaging, health literacy adaptation, and multi-channel outreach.
+      You create compelling content that motivates patients to improve their medication adherence.
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: agent
+    in: communication-task
+    description: Execute communication generation task
+
+- id: analytics-agent
+  name: Analytics Agent
+  kind: Agent
+  type: genesis:crewai_agent
+  description: Track adherence KPIs and generate performance reports
+  config:
+    role: Healthcare Analytics Specialist
+    goal: Monitor adherence improvement metrics and generate actionable insights for care teams
+    backstory: |
+      You are a healthcare analytics expert specializing in medication adherence outcomes.
+      Your expertise includes KPI tracking, trend analysis, and performance reporting.
+      You provide data-driven insights to optimize adherence intervention programs.
+    allow_delegation: false
+    verbose: true
+    memory: true
+  provides:
+  - useAs: agent
+    in: analytics-task
+    description: Execute analytics and reporting task
+
+- id: data-collection-task
+  name: Data Collection Task
+  kind: Task
+  type: genesis:crewai_sequential_task
+  description: Collect comprehensive medication and patient data from multiple sources
+  config:
+    description: |
+      Collect and aggregate comprehensive medication adherence data for the specified patient:
+
+      1. Retrieve pharmacy claims data including fill history, refill patterns, and medication details
+      2. Access care plans and chronic condition management protocols
+      3. Gather member demographics, preferences, and communication history
+      4. Validate data quality and completeness
+      5. Prepare consolidated dataset for adherence analysis
+
+      Ensure all data collection complies with HIPAA and patient privacy requirements.
+    expected_output: |
+      Comprehensive patient medication data package including:
+      - Pharmacy claims history with fill dates and quantities
+      - Active care plans and prescribed regimens
+      - Patient demographics and communication preferences
+      - Data quality validation report
+  provides:
+  - useAs: context
+    in: risk-assessment-task
+    description: Provide collected data for adherence analysis
+
+- id: risk-assessment-task
+  name: Risk Assessment Task
+  kind: Task
+  type: genesis:crewai_sequential_task
+  description: Analyze adherence patterns and calculate risk scores
+  config:
+    description: |
+      Perform comprehensive medication adherence risk assessment:
+
+      1. Calculate PDC (Proportion of Days Covered) for each medication
+      2. Identify adherence gaps and patterns of non-adherence
+      3. Assess risk factors including medication complexity, cost barriers, and refill patterns
+      4. Segment patients by risk level (low, medium, high)
+      5. Prioritize medications and conditions for intervention focus
+
+      Use evidence-based adherence thresholds and clinical guidelines for assessment.
+    expected_output: |
+      Adherence risk assessment report including:
+      - PDC scores for each medication
+      - Risk level classification (low/medium/high)
+      - Identified adherence gaps and patterns
+      - Prioritized intervention recommendations
+  provides:
+  - useAs: context
+    in: communication-task
+    description: Provide risk assessment for targeted communication
+
+- id: communication-task
+  name: Communication Task
+  kind: Task
+  type: genesis:crewai_sequential_task
+  description: Generate personalized adherence interventions and reminders
+  config:
+    description: |
+      Create personalized medication adherence interventions:
+
+      1. Design targeted reminders based on identified adherence gaps
+      2. Generate educational content appropriate to patient health literacy level
+      3. Customize messaging for preferred communication channels
+      4. Schedule intervention delivery timing based on refill patterns
+      5. Include motivational messaging and barrier-specific solutions
+
+      Ensure all communications are patient-friendly, actionable, and culturally appropriate.
+    expected_output: |
+      Personalized communication package including:
+      - Targeted reminder messages for each medication
+      - Educational content on adherence importance
+      - Channel-specific delivery schedules
+      - Barrier-specific intervention strategies
+  provides:
+  - useAs: context
+    in: analytics-task
+    description: Provide intervention details for outcome tracking
+
+- id: analytics-task
+  name: Analytics Task
+  kind: Task
+  type: genesis:crewai_sequential_task
+  description: Track adherence KPIs and generate performance insights
+  config:
+    description: |
+      Generate comprehensive adherence analytics and KPI tracking:
+
+      1. Calculate baseline and post-intervention adherence metrics
+      2. Track KPIs including adherence rate, refill gap closure, and engagement metrics
+      3. Analyze intervention effectiveness by communication channel and message type
+      4. Generate actionable insights for program optimization
+      5. Create reports for care teams and quality improvement initiatives
+
+      Provide both individual patient and population-level analytics.
+    expected_output: |
+      Comprehensive analytics report including:
+      - Adherence KPIs and trend analysis
+      - Intervention effectiveness metrics
+      - Patient engagement and response rates
+      - Recommendations for program optimization
+  provides:
+  - useAs: input_value
+    in: adherence-output
+    from: analytics_report
+    description: Provide final analytics and recommendations
+
+- id: medication-adherence-crew
+  name: Medication Adherence Crew
+  kind: Crew
+  type: genesis:crewai_sequential_crew
+  description: Coordinate multi-agent medication adherence coaching workflow
+  config:
+    process: sequential
+    memory: true
+    cache: true
+    max_rpm: 100
+    share_crew: false
+  provides:
+  - useAs: crew_coordination
+    in: adherence-output
+    description: Coordinate agent execution and results
+
+- id: adherence-output
+  name: Adherence Coach Output
+  kind: Output
+  type: genesis:chat_output
+  description: Present medication adherence coaching results and recommendations
+  provides: []
+
+outputs:
+- name: adherence_assessment
+  type: object
+  description: Comprehensive medication adherence analysis and risk assessment
+- name: intervention_plan
+  type: object
+  description: Personalized adherence intervention strategy and communication plan
+- name: kpi_metrics
+  type: object
+  description: Adherence KPIs and performance tracking metrics
+- name: recommendations
+  type: array
+  description: Actionable recommendations for care teams and patients
+
+kpis:
+- name: Adherence Rate (PDC)
+  description: Proportion of Days Covered for each medication
+  target: "> 0.8"
+  measurement: percentage
+- name: Refill Gap Closure Rate
+  description: Percentage of identified gaps successfully closed
+  target: "> 70%"
+  measurement: percentage
+- name: Patient Engagement Rate
+  description: Percentage of patients who respond to interventions
+  target: "> 60%"
+  measurement: percentage
+- name: Intervention Conversion Rate
+  description: Percentage of interventions leading to improved adherence
+  target: "> 40%"
+  measurement: percentage
+- name: Reduction in Hospital Readmissions
+  description: Decrease in readmissions tied to medication non-adherence
+  target: "> 15%"
+  measurement: percentage
+
+securityInfo:
+  visibility: internal
+  confidentialityLevel: high
+  gdprSensitive: true
+  complianceRequirements: ["HIPAA", "SOC2", "PCI-DSS"]

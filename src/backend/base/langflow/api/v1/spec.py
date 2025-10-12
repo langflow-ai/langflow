@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils import DbSession
 from langflow.services.spec.service import SpecService
 from langflow.logging import logger
 
@@ -69,8 +69,7 @@ class ComponentMappingResponse(BaseModel):
 
 @router.post("/convert", response_model=SpecConvertResponse)
 async def convert_spec_to_flow(
-    request: SpecConvertRequest,
-    _current_user: CurrentActiveUser
+    request: SpecConvertRequest
 ) -> SpecConvertResponse:
     """
     Convert YAML specification to Langflow JSON.
@@ -103,8 +102,7 @@ async def convert_spec_to_flow(
 
 @router.post("/validate", response_model=SpecValidationResponse)
 async def validate_spec(
-    request: SpecValidationRequest,
-    _current_user: CurrentActiveUser
+    request: SpecValidationRequest
 ) -> SpecValidationResponse:
     """
     Validate specification without converting.
@@ -128,9 +126,7 @@ async def validate_spec(
 
 
 @router.get("/components", response_model=ComponentsResponse)
-async def get_available_components(
-    _current_user: CurrentActiveUser
-) -> ComponentsResponse:
+async def get_available_components() -> ComponentsResponse:
     """
     Get list of available components with their configurations.
 
@@ -150,8 +146,7 @@ async def get_available_components(
 
 @router.post("/component-mapping", response_model=ComponentMappingResponse)
 async def get_component_mapping(
-    request: ComponentMappingRequest,
-    _current_user: CurrentActiveUser
+    request: ComponentMappingRequest
 ) -> ComponentMappingResponse:
     """
     Get information about how a specification type maps to components.
@@ -168,3 +163,114 @@ async def get_component_mapping(
     except Exception as e:
         logger.error(f"Error getting component mapping: {e}")
         raise HTTPException(status_code=500, detail="Internal server error getting mapping") from e
+
+
+class KnowledgeRequest(BaseModel):
+    """Request model for knowledge endpoint."""
+    query_type: str = Field(default="all", description="Type of knowledge: components, patterns, specifications, or all")
+    reload_cache: bool = Field(default=False, description="Force reload from disk")
+
+
+class KnowledgeResponse(BaseModel):
+    """Response model for knowledge endpoint."""
+    success: bool = Field(..., description="Success status")
+    knowledge: Dict[str, Any] = Field(..., description="Knowledge data")
+    message: str = Field(..., description="Status message")
+
+
+@router.post("/knowledge", response_model=KnowledgeResponse)
+async def get_knowledge(
+    request: KnowledgeRequest
+) -> KnowledgeResponse:
+    """
+    Get available components, patterns, and specifications.
+
+    Returns knowledge about available Genesis components, patterns that can be used,
+    and example specifications from the library.
+    """
+    try:
+        # Import the mapper directly to avoid recursion through KnowledgeLoader
+        from langflow.custom.genesis.spec.mapper import ComponentMapper
+        from pathlib import Path
+        import json
+        import yaml
+
+        knowledge = {}
+
+        # Get components from mapper
+        if request.query_type in ["components", "all"]:
+            mapper = ComponentMapper()
+            components = {}
+
+            # Get all component mappings from different categories
+            all_mappings = {}
+            all_mappings.update(mapper.AUTONOMIZE_MODELS)
+            all_mappings.update(mapper.MCP_MAPPINGS)
+            all_mappings.update(mapper.STANDARD_MAPPINGS)
+
+            # Convert to knowledge format
+            for spec_type, mapping_info in all_mappings.items():
+                components[spec_type] = {
+                    "component": mapping_info.get("component", ""),
+                    "description": f"Genesis component type {spec_type}",
+                    "config": mapping_info.get("config", {}),
+                    "is_tool": mapper.is_tool_component(spec_type)
+                }
+
+            knowledge["components"] = components
+
+        # Get patterns from disk if requested
+        if request.query_type in ["patterns", "all"]:
+            base_path = Path(__file__).parent.parent.parent / "specifications_library"
+            patterns_file = base_path / "documentation" / "patterns" / "pattern-catalog.md"
+
+            patterns = {}
+            if patterns_file.exists():
+                # Simple pattern extraction from markdown
+                content = patterns_file.read_text()
+                # Extract pattern names (basic implementation)
+                import re
+                pattern_matches = re.findall(r'## (.*?) Pattern', content)
+                for pattern_name in pattern_matches:
+                    patterns[pattern_name.lower().replace(' ', '_')] = {
+                        "name": pattern_name,
+                        "description": f"{pattern_name} pattern for agent specifications"
+                    }
+
+            knowledge["patterns"] = patterns
+
+        # Get specifications from disk if requested
+        if request.query_type in ["specifications", "all"]:
+            base_path = Path(__file__).parent.parent.parent / "specifications_library"
+            specs = {}
+
+            # Walk through all YAML files in specifications_library
+            for spec_file in base_path.rglob("*.yaml"):
+                if "documentation" not in str(spec_file):
+                    try:
+                        with open(spec_file, 'r') as f:
+                            spec_data = yaml.safe_load(f)
+                            if spec_data and "name" in spec_data:
+                                spec_key = spec_file.stem
+                                specs[spec_key] = {
+                                    "name": spec_data.get("name"),
+                                    "description": spec_data.get("description", ""),
+                                    "kind": spec_data.get("kind", ""),
+                                    "path": str(spec_file.relative_to(base_path))
+                                }
+                    except Exception as e:
+                        logger.warning(f"Could not load spec from {spec_file}: {e}")
+
+            knowledge["specifications"] = specs
+
+        return KnowledgeResponse(
+            success=True,
+            knowledge=knowledge,
+            message=f"Loaded {request.query_type} knowledge successfully"
+        )
+
+    except Exception as e:
+        logger.error(f"Error loading knowledge: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error loading knowledge") from e
+
+

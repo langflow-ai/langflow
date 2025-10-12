@@ -136,6 +136,7 @@ dependencies = [
     "autonomize-model-sdk==1.1.70",
     "pillow>=10.2.0",
     "mlflow>=3.4.0",
+    "psycopg>=3.2.10",
 ]
 
 [dependency-groups]
