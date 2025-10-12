@@ -21,7 +21,9 @@
         "--reload-include",
         "./src/backend/*",
         "--reload-include",
-        "./src/lfx/*"
+        "./src/lfx/*",
+        "--reload-exclude",
+        "*.db*"
       ],
       "jinja": true,
       "justMyCode": false,
