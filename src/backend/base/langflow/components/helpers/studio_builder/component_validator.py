@@ -18,20 +18,36 @@ class ComponentValidator(Component):
     name = "ComponentValidator"
     category = "Helpers"
 
-    # Valid components that can be deployed
-    VALID_COMPONENTS = {
-        "genesis:chat_input",
-        "genesis:chat_output",
-        "genesis:agent",
-        "genesis:prompt_template",
-        "genesis:mcp_tool",
-        "genesis:api_request",
-        "genesis:knowledge_hub_search",
-        "genesis:crewai_agent",
-        "genesis:crewai_sequential_task",
-        "genesis:crewai_sequential_crew",
-        "genesis:crewai_hierarchical_crew"
-    }
+    # Valid components loaded dynamically from mapper
+    _valid_components_cache = None
+
+    @property
+    def VALID_COMPONENTS(self):
+        """Get valid components from the mapper (single source of truth)."""
+        if self._valid_components_cache is None:
+            try:
+                from langflow.custom.genesis.spec.mapper import ComponentMapper
+                mapper = ComponentMapper()
+
+                # Get all valid component types from mapper
+                all_mappings = {
+                    **mapper.STANDARD_MAPPINGS,
+                    **mapper.MCP_MAPPINGS,
+                    **mapper.AUTONOMIZE_MODELS
+                }
+
+                self._valid_components_cache = set(all_mappings.keys())
+            except ImportError as e:
+                logger.error(f"Could not import ComponentMapper: {e}")
+                # Fallback to essential components
+                self._valid_components_cache = {
+                    "genesis:chat_input",
+                    "genesis:chat_output",
+                    "genesis:agent",
+                    "genesis:language_model"
+                }
+
+        return self._valid_components_cache
 
     # Valid connection types
     VALID_CONNECTION_TYPES = {
@@ -201,7 +217,7 @@ class ComponentValidator(Component):
 
         # Identify pattern and missing components
         if "genesis:chat_input" in component_types and "genesis:chat_output" in component_types:
-            if "genesis:agent" in component_types:
+            if "genesis:agent" in component_types or "genesis:language_model" in component_types:
                 # Basic agent pattern
                 pattern = "simple_linear"
                 missing = []
@@ -214,15 +230,15 @@ class ComponentValidator(Component):
 
                 return {"pattern": pattern, "missing": missing}
             else:
-                return {"pattern": "incomplete", "missing": ["genesis:agent"]}
+                return {"pattern": "incomplete", "missing": ["genesis:agent or genesis:language_model"]}
         else:
             missing = []
             if "genesis:chat_input" not in component_types:
                 missing.append("genesis:chat_input")
             if "genesis:chat_output" not in component_types:
                 missing.append("genesis:chat_output")
-            if "genesis:agent" not in component_types:
-                missing.append("genesis:agent")
+            if "genesis:agent" not in component_types and "genesis:language_model" not in component_types:
+                missing.append("genesis:agent or genesis:language_model")
 
             return {"pattern": "incomplete", "missing": missing}
 

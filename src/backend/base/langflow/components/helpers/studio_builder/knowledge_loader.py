@@ -77,124 +77,99 @@ class KnowledgeLoader(Component):
             })
 
     def _load_components(self) -> Dict:
-        """Load valid genesis components that can be deployed."""
+        """Load valid genesis components dynamically from the mapper."""
         if self._components_cache is not None:
             return self._components_cache
 
-        # These are the ONLY components that can be used in specifications
-        # Based on actual deployed specifications in the library
-        components = {
-            "genesis:chat_input": {
-                "name": "Chat Input",
-                "category": "Data",
-                "purpose": "Accept user input",
-                "required_config": [],
-                "connections": {
-                    "provides": ["input"]
-                }
-            },
-            "genesis:chat_output": {
-                "name": "Chat Output",
-                "category": "Data",
-                "purpose": "Display results to user",
-                "required_config": [],
-                "connections": {
-                    "receives": ["input"]
-                }
-            },
-            "genesis:agent": {
-                "name": "Agent",
-                "category": "Agent",
-                "purpose": "LLM-powered processing",
-                "required_config": ["system_prompt", "temperature", "max_tokens"],
-                "optional_config": ["tools", "model_name"],
-                "connections": {
-                    "receives": ["input", "prompt", "tools"],
-                    "provides": ["input", "output"]
-                }
-            },
-            "genesis:prompt_template": {
-                "name": "Prompt Template",
-                "category": "Prompt",
-                "purpose": "Manage complex prompts",
-                "required_config": ["template"],
-                "optional_config": ["saved_prompt"],
-                "connections": {
-                    "provides": ["prompt"]
-                }
-            },
-            "genesis:mcp_tool": {
-                "name": "MCP Tool",
-                "category": "Tool",
-                "purpose": "External tool integration via MCP",
-                "required_config": ["tool_name", "description"],
-                "optional_config": ["mock_response"],
-                "connections": {
-                    "provides": ["tools"]
-                },
-                "note": "Requires MCP server or uses mock response"
-            },
-            "genesis:api_request": {
-                "name": "API Request",
-                "category": "Tool",
-                "purpose": "Direct HTTP API calls",
-                "required_config": ["method", "url_input"],
-                "optional_config": ["headers", "body", "timeout"],
-                "connections": {
-                    "provides": ["tools", "output"]
-                }
-            },
-            "genesis:knowledge_hub_search": {
-                "name": "Knowledge Hub Search",
-                "category": "Tool",
-                "purpose": "Search internal knowledge base",
-                "required_config": ["search_query"],
-                "optional_config": ["max_results"],
-                "connections": {
-                    "provides": ["tools", "output"]
-                }
+        try:
+            # Import the mapper to get the actual valid components
+            from langflow.custom.genesis.spec.mapper import ComponentMapper
+
+            mapper = ComponentMapper()
+            components = {}
+
+            # Combine all mappings from the mapper (single source of truth)
+            all_mappings = {
+                **mapper.STANDARD_MAPPINGS,
+                **mapper.MCP_MAPPINGS,
+                **mapper.AUTONOMIZE_MODELS
             }
+
+            # Build component info from actual mappings
+            for spec_type, mapping in all_mappings.items():
+                component_name = mapping.get("component", "Unknown")
+                config = mapping.get("config", {})
+
+                components[spec_type] = {
+                    "name": component_name,
+                    "category": self._get_category(spec_type),
+                    "purpose": self._get_purpose(spec_type, component_name),
+                    "langflow_component": component_name,
+                    "config": config,
+                    "dataType": mapping.get("dataType", None)
+                }
+
+            self._components_cache = components
+            return components
+
+        except ImportError as e:
+            logger.error(f"Could not import ComponentMapper: {e}")
+            # Fallback to a minimal set if import fails
+            return {
+                "genesis:chat_input": {"name": "ChatInput", "category": "Input"},
+                "genesis:chat_output": {"name": "ChatOutput", "category": "Output"},
+                "genesis:agent": {"name": "Agent", "category": "Agent"},
+                "genesis:language_model": {"name": "LanguageModelComponent", "category": "Model"}
+            }
+
+    def _get_category(self, spec_type: str) -> str:
+        """Determine category based on component type."""
+        if "input" in spec_type:
+            return "Input"
+        elif "output" in spec_type:
+            return "Output"
+        elif "agent" in spec_type:
+            return "Agent"
+        elif "model" in spec_type or "llm" in spec_type:
+            return "Model"
+        elif "prompt" in spec_type:
+            return "Prompt"
+        elif "tool" in spec_type or "mcp" in spec_type:
+            return "Tool"
+        elif "crew" in spec_type:
+            return "Crew"
+        elif "task" in spec_type:
+            return "Task"
+        elif "memory" in spec_type:
+            return "Memory"
+        elif "api" in spec_type or "request" in spec_type:
+            return "Integration"
+        else:
+            return "Component"
+
+    def _get_purpose(self, spec_type: str, component_name: str) -> str:
+        """Generate purpose description based on component type."""
+        purposes = {
+            "genesis:chat_input": "Accept user input",
+            "genesis:chat_output": "Display results to user",
+            "genesis:agent": "LLM-powered processing with tools",
+            "genesis:language_model": "Simple LLM without tool capabilities",
+            "genesis:prompt_template": "Manage complex prompts",
+            "genesis:mcp_tool": "External tool integration via MCP",
+            "genesis:api_request": "Direct HTTP API calls",
+            "genesis:knowledge_hub_search": "Search internal knowledge base",
+            "genesis:crewai_agent": "Specialized agent for crew",
+            "genesis:crewai_sequential_task": "Task for sequential crew",
+            "genesis:crewai_sequential_crew": "Orchestrate sequential tasks",
+            "genesis:crewai_hierarchical_crew": "Manager-worker crew pattern",
+            "genesis:memory": "Maintain conversation context",
+            "genesis:autonomize_model": "Clinical AI model",
+            "genesis:rxnorm": "RxNorm medication coding",
+            "genesis:icd10": "ICD-10 diagnosis coding",
+            "genesis:cpt_code": "CPT procedure coding"
         }
 
-        # CrewAI components for multi-agent (only if multi-agent pattern is needed)
-        components.update({
-            "genesis:crewai_agent": {
-                "name": "CrewAI Agent",
-                "category": "Agent",
-                "purpose": "Specialized agent for crew",
-                "required_config": ["role", "goal", "backstory"],
-                "optional_config": ["tools", "delegation"],
-                "connections": {
-                    "receives": ["tools"],
-                    "provides": ["agent"]
-                }
-            },
-            "genesis:crewai_sequential_task": {
-                "name": "Sequential Task",
-                "category": "Task",
-                "purpose": "Task for sequential crew",
-                "required_config": ["description", "expected_output"],
-                "optional_config": ["agent"],
-                "connections": {
-                    "receives": ["agent"],
-                    "provides": ["task"]
-                }
-            },
-            "genesis:crewai_sequential_crew": {
-                "name": "Sequential Crew",
-                "category": "Crew",
-                "purpose": "Orchestrate sequential tasks",
-                "required_config": ["tasks"],
-                "optional_config": ["verbose"],
-                "connections": {
-                    "receives": ["tasks", "agents"],
-                    "provides": ["output"]
-                }
-            }
-        })
-
-        self._components_cache = components
-        return components
+        return purposes.get(spec_type, f"Process with {component_name}")
 
     def _load_patterns(self) -> Dict:
         """Load valid patterns that can be created."""

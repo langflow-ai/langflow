@@ -69,11 +69,12 @@ components:
     type: genesis:conversation_controller
     name: Conversation Controller
     description: Controls conversation flow and pacing
+    asTools: true
     config:
       current_phase: initial
       require_confirmation: true
     provides:
-      - useAs: tool
+      - useAs: tools
         in: orchestrator
         description: Flow control and output formatting
 
@@ -82,11 +83,12 @@ components:
     type: genesis:agent_state_manager
     name: Agent State Manager
     description: Manages workflow state and context across the entire session
+    asTools: true
     config:
       operation: retrieve
       data_type: json
     provides:
-      - useAs: tool
+      - useAs: tools
         in: orchestrator
         description: Session state management capability
 
@@ -95,11 +97,12 @@ components:
     type: genesis:knowledge_loader
     name: Knowledge Loader
     description: Loads valid components, patterns, and specifications
+    asTools: true
     config:
       query_type: all
       reload_cache: false
     provides:
-      - useAs: tool
+      - useAs: tools
         in: orchestrator
         description: Access to valid components and patterns
 
@@ -107,8 +110,9 @@ components:
     type: genesis:component_validator
     name: Component Validator
     description: Validates that specifications use only valid genesis components
+    asTools: true
     provides:
-      - useAs: tool
+      - useAs: tools
         in: orchestrator
         description: Component validation capability
 
@@ -116,8 +120,9 @@ components:
     type: genesis:integration_decision
     name: Integration Decision Helper
     description: Helps decide between API Request and MCP Tool approaches
+    asTools: true
     provides:
-      - useAs: tool
+      - useAs: tools
         in: orchestrator
         description: Integration approach guidance
 
