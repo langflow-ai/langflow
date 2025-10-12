@@ -57,9 +57,20 @@ For more information about using embedding model components in flows, see [Embed
 
 ## Azure Blob Upload
 
-The **Azure Blob Upload** component uploads files to Azure Blob Storage containers.
+The **Azure Blob Upload** component uploads files and data to Azure Blob Storage containers with support for multiple file formats and PDF generation.
 
-Simple component to upload one or more local files to Azure Blob Storage. Select files in the UI just like the File component.
+This component supports two upload strategies:
+- **Store Data**: Uploads parsed text content from Data objects with optional format conversion (including text-to-PDF)
+- **Store Original File**: Uploads original binary files preserving their format
+
+### Features
+
+- **PDF Generation**: Automatically converts text content into properly formatted PDF documents
+- **Format Conversion**: Convert content to `.txt`, `.csv`, or `.pdf` formats
+- **Auto-naming**: Generates filenames automatically when none is provided
+- **Flexible Input**: Works with Data objects from AI models, File components, or Directory components
+- **Batch Upload**: Upload multiple files or data items at once
+- **Path Management**: Optional blob prefix and path stripping for organized storage
 
 ### Azure Blob Upload parameters
 
@@ -68,9 +79,47 @@ Simple component to upload one or more local files to Azure Blob Storage. Select
 | Name | Type | Description |
 |------|------|-------------|
 | **Connection String** | SecretString | Input parameter. Azure Storage connection string from your Azure Portal. Required. |
-| **Container Name** | String | Input parameter. Name of the blob container where files will be uploaded. Required. |
-| **Files** | File | Input parameter. Select one or more files to upload. Required. |
-| **Blob Prefix (Optional)** | String | Input parameter. Optional prefix/folder path for uploaded blobs (e.g., 'uploads/2024/'). |
+| **Container Name** | Dropdown | Input parameter. Select a container from your Azure Storage account. Auto-populated when connection string is provided. Required. |
+| **Blob Prefix (Optional)** | String | Input parameter. Optional prefix to add to uploaded blobs (e.g., 'uploads/2024/'). Leave empty for no prefix. |
+| **File Format** | Dropdown | Input parameter. Choose the file format: `.txt`, `.csv`, `.pdf`, or `Keep Original`. Only applies to 'Store Data' strategy. PDF format converts text content into a proper PDF document. Default: `Keep Original`. |
+| **Strategy** | Dropdown | Input parameter. Choose upload strategy: `Store Data` (uploads parsed text content) or `Store Original File` (uploads original files as-is). Default: `Store Data`. |
+| **Data Inputs** | Data (List) | Input parameter. The data to upload to Azure Blob Storage. Accepts Data objects from File, Directory, or AI model components. Required. |
+| **Strip Path** | Boolean | Input parameter. Removes directory path from file path, keeping only the filename. Default: `false`. |
+
+### Usage Examples
+
+**Example 1: Convert AI Response to PDF**
+```
+OpenAI Model → Azure Blob Upload
+  Settings: Strategy = Store Data, Format = .pdf
+  Result: AI response saved as a formatted PDF document
+```
+
+**Example 2: Upload Multiple Text Files**
+```
+Directory → Azure Blob Upload
+  Settings: Strategy = Store Data, Format = .txt
+  Result: All text files uploaded with normalized encoding
+```
+
+**Example 3: Upload Original Files**
+```
+File → Azure Blob Upload
+  Settings: Strategy = Store Original File
+  Result: Binary files uploaded preserving original format
+```
+
+### PDF Generation Details
+
+When **File Format** is set to `.pdf` and **Strategy** is `Store Data`:
+- Creates properly formatted PDF documents using reportlab
+- Letter-sized pages (8.5" × 11") with 1-inch margins
+- Text content is split into paragraphs with proper spacing
+- Special characters are handled correctly
+- Generates valid, openable PDF files
+- Sets correct MIME type (`application/pdf`) in Azure
+
+If reportlab is not installed, the component falls back to plain text encoding.
 
 ## Azure Blob Retrieve
 
