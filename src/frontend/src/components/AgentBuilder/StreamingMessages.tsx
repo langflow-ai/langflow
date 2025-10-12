@@ -7,6 +7,7 @@ interface StreamingMessagesProps {
   isLoading: boolean;
   onBuildAgent?: (workflow: any) => void;
   isFlowBuilt?: boolean;
+  onTriggerBuild?: () => void;
 }
 
 export default function StreamingMessages({
@@ -14,6 +15,7 @@ export default function StreamingMessages({
   isLoading,
   onBuildAgent,
   isFlowBuilt = false,
+  onTriggerBuild,
 }: StreamingMessagesProps) {
   if (messages.length === 0 && !isLoading) {
     return null;
@@ -22,7 +24,7 @@ export default function StreamingMessages({
   return (
     <div className="space-y-4">
       {messages.map((message) => (
-        <MessageItem key={message.id} message={message} onBuildAgent={onBuildAgent} isFlowBuilt={isFlowBuilt} />
+        <MessageItem key={message.id} message={message} onBuildAgent={onBuildAgent} isFlowBuilt={isFlowBuilt} onTriggerBuild={onTriggerBuild} />
       ))}
 
       {isLoading && (
@@ -35,16 +37,18 @@ export default function StreamingMessages({
   );
 }
 
-function MessageItem({ message, onBuildAgent, isFlowBuilt }: { message: StreamMessage; onBuildAgent?: (workflow: any) => void; isFlowBuilt?: boolean }) {
+function MessageItem({ message, onBuildAgent, isFlowBuilt, onTriggerBuild }: { message: StreamMessage; onBuildAgent?: (workflow: any) => void; isFlowBuilt?: boolean; onTriggerBuild?: () => void }) {
   switch (message.type) {
     case "user":
       return <UserMessage data={message.data} />;
+    case "message":
+      return <AgentMessage data={message.data} />;
     case "thinking":
       return <ThinkingMessage data={message.data} />;
     case "agent_found":
       return <AgentFoundMessage data={message.data} />;
     case "complete":
-      return <CompleteMessage data={message.data} onBuildAgent={onBuildAgent} isFlowBuilt={isFlowBuilt} />;
+      return <CompleteMessage data={message.data} onBuildAgent={onBuildAgent} isFlowBuilt={isFlowBuilt} onTriggerBuild={onTriggerBuild} />;
     case "error":
       return <ErrorMessage data={message.data} />;
     default:
@@ -58,6 +62,25 @@ function UserMessage({ data }: { data: any }) {
       <div className="max-w-[80%]">
         <div className="rounded-lg bg-muted px-4 py-3">
           <p className="text-sm text-text-grey">{data.message}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AgentMessage({ data }: { data: any }) {
+  return (
+    <div className="flex items-start gap-3 mb-4">
+      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+        <img
+          src="/favicon-new.ico"
+          alt="AI"
+          className="h-4 w-4"
+        />
+      </div>
+      <div className="flex-1">
+        <div className="text-sm text-foreground whitespace-pre-wrap">
+          {data.message || data.chunk}
         </div>
       </div>
     </div>
@@ -124,13 +147,18 @@ function AgentFoundMessage({ data }: { data: any }) {
   );
 }
 
-function CompleteMessage({ data, onBuildAgent, isFlowBuilt }: { data: any; onBuildAgent?: (workflow: any) => void; isFlowBuilt?: boolean }) {
+function CompleteMessage({ data, onBuildAgent, isFlowBuilt, onTriggerBuild }: { data: any; onBuildAgent?: (workflow: any) => void; isFlowBuilt?: boolean; onTriggerBuild?: () => void }) {
   const workflow = data.workflow;
   const reasoning = data.reasoning;
 
   const handleBuildClick = () => {
-    if (onBuildAgent && workflow) {
+    // If workflow has yaml_config, build directly
+    if (workflow?.yaml_config && onBuildAgent) {
       onBuildAgent(workflow);
+    } 
+    // Otherwise, trigger YAML generation by sending message
+    else if (onTriggerBuild) {
+      onTriggerBuild();
     }
   };
 
@@ -159,24 +187,22 @@ function CompleteMessage({ data, onBuildAgent, isFlowBuilt }: { data: any; onBui
   return (
     <div className="mb-3">
       <div className="rounded-lg bg-muted/30 p-6">
-        <p className="text-sm text-foreground mb-3">Perfect! Updating your agent with:</p>
-
         {reasoning && (
-          <div className="mb-3">
-            <p className="text-sm text-muted-foreground">{reasoning}</p>
+          <div className="mb-4">
+            <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+              {reasoning}
+            </div>
           </div>
         )}
 
-        {workflow && (
+        {workflow && workflow.workflow_diagram && (
           <>
-            <p className="text-sm font-medium text-foreground mb-2">Your Agent Flow:</p>
-            <p className="text-sm text-muted-foreground mb-4">
-              {workflow.description || workflow.name}
-            </p>
-
-            <p className="text-sm text-foreground mb-4">
-              Would you like me to show this visually in the Agent Builder canvas?
-            </p>
+            <div className="mb-4 border-t pt-4">
+              <p className="text-sm font-medium text-foreground mb-2">Your Workflow:</p>
+              <p className="text-sm text-muted-foreground font-mono bg-muted/50 px-3 py-2 rounded">
+                {workflow.workflow_diagram}
+              </p>
+            </div>
 
             <div className="flex gap-2">
               <button
@@ -186,10 +212,10 @@ function CompleteMessage({ data, onBuildAgent, isFlowBuilt }: { data: any; onBui
                 <ForwardedIconComponent name="CheckCircle2" className="h-4 w-4" />
                 Build Agent
               </button>
-              <button className="rounded-md bg-muted px-4 py-2 text-sm font-medium hover:bg-muted/80 flex items-center gap-2">
+              {/* <button className="rounded-md bg-muted px-4 py-2 text-sm font-medium hover:bg-muted/80 flex items-center gap-2">
                 <ForwardedIconComponent name="Edit" className="h-4 w-4" />
                 Edit Plan
-              </button>
+              </button> */}
             </div>
           </>
         )}

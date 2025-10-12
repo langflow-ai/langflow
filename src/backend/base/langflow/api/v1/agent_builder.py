@@ -31,17 +31,14 @@ async def stream_agent_builder_events(request: AgentBuilderRequest) -> AsyncGene
         SSE formatted event strings
     """
     try:
-        # Step 1: Analyze request
-        yield str(StreamData(event="thinking", data={"message": "Analyzing your request..."}))
-        await asyncio.sleep(0.5)  # Simulate processing
+        # Use Multi-Agent Orchestrator with Master Planning + Builder agents
+        from langflow.custom.genesis.services.agent_builder.multi_agent_orchestrator import MultiAgentOrchestrator
 
-        # Step 2-5: Use Agent Builder Service for complete pipeline
-        from langflow.custom.genesis.services.deps import get_agent_builder_service
-
-        agent_builder_service = get_agent_builder_service()
+        # Initialize orchestrator with conversation history from request
+        orchestrator = MultiAgentOrchestrator(conversation_history=request.conversation_history)
 
         # Stream the complete agent building pipeline
-        async for event in agent_builder_service.build_streaming(request.prompt):
+        async for event in orchestrator.build_streaming(request.prompt):
             yield str(event)
 
     except Exception as e:

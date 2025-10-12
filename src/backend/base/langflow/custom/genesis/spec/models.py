@@ -196,6 +196,26 @@ class AgentSpec(BaseModel):
         kind = cls._map_type_to_kind(comp_type)
         comp_data["kind"] = kind
 
+        # Handle provides field - convert string format to object format
+        if "provides" in comp_data and comp_data["provides"]:
+            provides_list = comp_data["provides"]
+            if isinstance(provides_list, list):
+                normalized_provides = []
+                for provide_item in provides_list:
+                    if isinstance(provide_item, str):
+                        # Convert shorthand string format to object format
+                        # String format like 'text' or 'json' means output type
+                        # We'll create a minimal ComponentProvides object
+                        # The actual target component will be resolved during edge creation
+                        normalized_provides.append({
+                            "useAs": provide_item,
+                            "in": "_auto_"  # Placeholder, will be resolved by converter
+                        })
+                    elif isinstance(provide_item, dict):
+                        # Already in object format, keep as-is
+                        normalized_provides.append(provide_item)
+                comp_data["provides"] = normalized_provides
+
         return Component(**comp_data)
 
     @classmethod
@@ -267,4 +287,4 @@ class AgentSpec(BaseModel):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return self.dict(exclude_none=True, by_alias=True)
+        return self.model_dump(exclude_none=True, by_alias=True)

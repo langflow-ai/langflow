@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 
 export interface StreamMessage {
   id: string;
-  type: "user" | "thinking" | "agent_found" | "complete" | "error";
+  type: "user" | "message" | "thinking" | "agent_found" | "complete" | "error";
   data: any;
   timestamp: number;
 }
@@ -47,7 +47,13 @@ export function useAgentBuilderStream() {
         abortControllerRef.current.abort();
       }
 
-      // Add user message first
+      // Build conversation history from existing messages BEFORE adding new one
+      const conversationHistory = state.messages.map((msg) => ({
+        role: msg.type === "user" ? "user" : "agent",
+        content: msg.data.message || msg.data.chunk || JSON.stringify(msg.data),
+      }));
+
+      // Add user message after building history
       const userMessage: StreamMessage = {
         id: `${Date.now()}-user`,
         type: "user",
@@ -55,11 +61,11 @@ export function useAgentBuilderStream() {
         timestamp: Date.now(),
       };
 
-      setState({
+      setState((prev) => ({
         status: "connecting",
-        messages: [userMessage],
+        messages: [...prev.messages, userMessage],
         error: null,
-      });
+      }));
 
       try {
         // Use fetch with ReadableStream instead of EventSource for POST requests
@@ -70,7 +76,10 @@ export function useAgentBuilderStream() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ prompt }),
+          body: JSON.stringify({
+            prompt,
+            conversation_history: conversationHistory,
+          }),
           signal: abortControllerRef.current.signal,
         });
 
@@ -146,7 +155,7 @@ export function useAgentBuilderStream() {
         }
       }
     },
-    [addMessage]
+    [addMessage, state.messages]
   );
 
   const stopStream = useCallback(() => {

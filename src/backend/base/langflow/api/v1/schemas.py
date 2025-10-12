@@ -493,6 +493,10 @@ class AgentBuilderRequest(BaseModel):
 
     prompt: str = Field(..., description="User request for building an agent/workflow")
     context: dict[str, Any] | None = Field(default=None, description="Additional context for the request")
+    conversation_history: list[dict[str, str]] | None = Field(
+        default=None,
+        description="Previous conversation messages in format [{'role': 'user'|'agent', 'content': '...'}]"
+    )
 
 
 class AgentBuilderResponse(BaseModel):

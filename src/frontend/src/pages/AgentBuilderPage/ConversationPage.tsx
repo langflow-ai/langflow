@@ -12,14 +12,13 @@ import FlowPanel from "./FlowPanel";
 export default function ConversationPage() {
   const location = useLocation();
   const [promptValue, setPromptValue] = useState("");
-  const [showFlowPanel, setShowFlowPanel] = useState(false);
   const [flowData, setFlowData] = useState<any>(null);
   const [createdFlowId, setCreatedFlowId] = useState<string | null>(null);
   const [yamlSpec, setYamlSpec] = useState<string>("");
   const [leftPanelWidth, setLeftPanelWidth] = useState(50); // Percentage
   const [isDragging, setIsDragging] = useState(false);
 
-  const { messages, isLoading, startStream } = useAgentBuilderStream();
+  const { messages, isLoading, startStream, reset } = useAgentBuilderStream();
   const convertSpecMutation = useConvertSpec();
   const createFlowMutation = usePostAddFlow();
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -28,6 +27,12 @@ export default function ConversationPage() {
 
   // Get initial prompt from navigation state
   const initialPrompt = location.state?.prompt;
+
+  // Reset conversation state on page load/reload
+  useEffect(() => {
+    reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Start streaming with initial prompt on mount
   useEffect(() => {
@@ -42,6 +47,11 @@ export default function ConversationPage() {
       startStream(promptValue);
       setPromptValue("");
     }
+  };
+
+  const handleTriggerBuild = () => {
+    // Send message to trigger Builder Agent to generate YAML
+    startStream("build agent now");
   };
 
   // Handle resizable panel dragging
@@ -134,7 +144,6 @@ export default function ConversationPage() {
           // Store the created flow data and ID
           setFlowData(result.flow);
           setCreatedFlowId(createdFlow.id);
-          setShowFlowPanel(true);
         } catch (flowError: any) {
           console.error("[AgentBuilder] Flow creation error:", flowError);
           console.error("[AgentBuilder] Flow data that failed:", result.flow);
@@ -153,28 +162,29 @@ export default function ConversationPage() {
   return (
     <div className="flex h-full w-full flex-col agent-builder-conversation-page">
 
-      {/* Main Content - Split Layout when flow panel is open */}
+      {/* Main Content - Always 2-column layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Chat Panel */}
         <div
           className="flex flex-col border-r"
-          style={{ width: showFlowPanel ? `${leftPanelWidth}%` : '100%' }}
+          style={{ width: `${leftPanelWidth}%` }}
         >
           {/* Chat Messages Area */}
           <div className="flex-1 overflow-y-auto px-4 py-6">
-            <div className={showFlowPanel ? 'max-w-full' : 'mx-auto max-w-4xl'}>
+            <div className="max-w-full">
               <StreamingMessages
                 messages={messages}
                 isLoading={isLoading}
                 onBuildAgent={handleBuildAgent}
-                isFlowBuilt={showFlowPanel}
+                onTriggerBuild={handleTriggerBuild}
+                isFlowBuilt={!!createdFlowId}
               />
             </div>
           </div>
 
           {/* Input Section - Fixed at bottom */}
           <div className="border-t bg-background px-4 py-4">
-            <div className={showFlowPanel ? 'max-w-full' : 'mx-auto max-w-4xl'}>
+            <div className="max-w-full">
               <div className="relative">
                 <textarea
                   value={promptValue}
@@ -201,34 +211,30 @@ export default function ConversationPage() {
           </div>
         </div>
 
-        {/* Resizable Divider */}
-        {showFlowPanel && (
-          <div
-            className={`w-1 bg-border hover:bg-primary cursor-col-resize transition-colors ${
-              isDragging ? 'bg-primary' : ''
-            }`}
-            onMouseDown={handleDragStart}
-          />
-        )}
+        {/* Resizable Divider - Always visible */}
+        <div
+          className={`w-1 bg-border hover:bg-primary cursor-col-resize transition-colors ${
+            isDragging ? 'bg-primary' : ''
+          }`}
+          onMouseDown={handleDragStart}
+        />
 
-        {/* Flow Panel - Right Side */}
-        {showFlowPanel && createdFlowId && (
-          <div
-            className="bg-background overflow-hidden"
-            style={{
-              width: `${100 - leftPanelWidth}%`,
-              pointerEvents: isDragging ? 'none' : 'auto', // Disable pointer events during drag
-            }}
-          >
-            <FlowPanel
-              flowId={createdFlowId}
-              yamlSpec={yamlSpec}
-              flowData={flowData}
-              folderId={myCollectionId || folders?.[0]?.id || ""}
-              onClose={() => setShowFlowPanel(false)}
-            />
-          </div>
-        )}
+        {/* Flow Panel - Right Side - Always visible */}
+        <div
+          className="bg-background overflow-hidden"
+          style={{
+            width: `${100 - leftPanelWidth}%`,
+            pointerEvents: isDragging ? 'none' : 'auto', // Disable pointer events during drag
+          }}
+        >
+          <FlowPanel
+            flowId={createdFlowId}
+            yamlSpec={yamlSpec}
+            flowData={flowData}
+            folderId={myCollectionId || folders?.[0]?.id || ""}
+            onClose={() => setCreatedFlowId(null)}
+          />
+        </div>
       </div>
     </div>
   );
