@@ -1,11 +1,13 @@
 """Integration Decision Tool for AI Studio Agent Builder - Helps decide between API and MCP."""
 
+import asyncio
 from typing import Dict, List, Optional
 from langflow.custom.custom_component.component import Component
 from langflow.inputs import MessageTextInput, BoolInput
 from langflow.io import Output
 from langflow.schema.data import Data
 from langflow.logging import logger
+from langflow.components.helpers.studio_builder.api_client import SpecAPIClient
 
 
 class IntegrationDecision(Component):
@@ -55,7 +57,10 @@ class IntegrationDecision(Component):
     def decide(self) -> Data:
         """Decide on the best integration approach."""
         try:
-            decision = self._analyze_requirements()
+            # First check available components from API
+            available_components = self._get_available_components()
+
+            decision = self._analyze_requirements(available_components)
             guidance = self._generate_guidance(decision)
             examples = self._get_examples(decision)
 
@@ -64,6 +69,7 @@ class IntegrationDecision(Component):
                 "decision": decision,
                 "guidance": guidance,
                 "examples": examples,
+                "available_integration_components": self._filter_integration_components(available_components),
                 "conversation_response": self._format_response(decision, guidance, examples)
             })
 
@@ -74,7 +80,31 @@ class IntegrationDecision(Component):
                 "error": str(e)
             })
 
-    def _analyze_requirements(self) -> Dict:
+    def _get_available_components(self) -> Dict:
+        """Get available components from the API."""
+        try:
+            async def _fetch_components():
+                async with SpecAPIClient() as client:
+                    return await client.get_available_components()
+
+            return asyncio.run(_fetch_components())
+        except Exception as e:
+            logger.warning(f"Could not fetch components from API: {e}")
+            # Return minimal set of known integration components
+            return {
+                "genesis:api_request": {"name": "API Request", "category": "Integration"},
+                "genesis:mcp_tool": {"name": "MCP Tool", "category": "Tool"}
+            }
+
+    def _filter_integration_components(self, components: Dict) -> List[str]:
+        """Filter components to show only integration-related ones."""
+        integration_types = []
+        for comp_type, comp_info in components.items():
+            if any(keyword in comp_type.lower() for keyword in ["api", "mcp", "tool", "request", "webhook"]):
+                integration_types.append(comp_type)
+        return integration_types
+
+    def _analyze_requirements(self, available_components: Dict) -> Dict:
         """Analyze requirements to determine best approach."""
         description_lower = self.integration_description.lower()
 
@@ -91,19 +121,28 @@ class IntegrationDecision(Component):
                                 ["rest", "api", "endpoint", "http", "webhook"])
         }
 
-        # Decision logic
-        if factors["has_mcp"]:
+        # Decision logic - check what's actually available
+        has_api_request = "genesis:api_request" in available_components
+        has_mcp_tool = "genesis:mcp_tool" in available_components
+
+        if factors["has_mcp"] and has_mcp_tool:
             component_type = "genesis:mcp_tool"
             reason = "You have an MCP server available, which provides better integration capabilities"
-        elif factors["is_simple_api"] and factors["has_api_details"]:
+        elif factors["is_simple_api"] and factors["has_api_details"] and has_api_request:
             component_type = "genesis:api_request"
             reason = "This is a straightforward API integration with known endpoints"
-        elif factors["is_healthcare"] or factors["is_complex"] or factors["needs_state"]:
+        elif (factors["is_healthcare"] or factors["is_complex"] or factors["needs_state"]) and has_mcp_tool:
             component_type = "genesis:mcp_tool"
             reason = "This complex integration would benefit from MCP's capabilities (can use mock mode)"
-        else:
+        elif has_api_request:
             component_type = "genesis:api_request"
             reason = "This appears to be a simple integration suitable for direct API calls"
+        elif has_mcp_tool:
+            component_type = "genesis:mcp_tool"
+            reason = "Using MCP tool as the available integration option"
+        else:
+            component_type = "genesis:api_request"  # Default fallback
+            reason = "Recommending API Request as the standard integration approach"
 
         return {
             "recommended_component": component_type,

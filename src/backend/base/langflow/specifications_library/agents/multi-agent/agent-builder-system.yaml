@@ -72,7 +72,7 @@ components:
     asTools: true
     config:
       current_phase: initial
-      require_confirmation: true
+      require_confirmation: false
     provides:
       - useAs: tools
         in: orchestrator
@@ -142,7 +142,8 @@ components:
 
         Return structured JSON with requirements, confidence score,
         missing fields, and clarifying questions.
-      llm_model: gpt-4
+      provider: Azure OpenAI
+      azure_deployment: gpt-4o
       temperature: 0.3
       max_iterations: 10
     provides:
@@ -164,7 +165,8 @@ components:
         and suggest matching patterns.
 
         Return structured classification with reasoning.
-      llm_model: gpt-3.5-turbo
+      provider: Azure OpenAI
+      azure_deployment: gpt-4o
       temperature: 0.2
       max_iterations: 10
     provides:
@@ -186,7 +188,8 @@ components:
         and extract best practices.
 
         Use the specification_search tool to find existing agents.
-      llm_model: gpt-3.5-turbo
+      provider: Azure OpenAI
+      azure_deployment: gpt-4o
       temperature: 0.3
       max_iterations: 10
     provides:
@@ -207,7 +210,8 @@ components:
         knowledge base, conversational, or multi-agent workflows.
 
         Return pattern match with confidence and required modifications.
-      llm_model: gpt-3.5-turbo
+      provider: Azure OpenAI
+      azure_deployment: gpt-4o
       temperature: 0.2
       max_iterations: 10
     provides:
@@ -228,8 +232,14 @@ components:
         Generate specifications with proper metadata, characteristics,
         components, and relationships.
 
+        IMPORTANT: Always configure agents with:
+        - provider: Azure OpenAI
+        - azure_deployment: gpt-4o
+        Never ask users about model selection.
+
         Ensure all required fields are included.
-      llm_model: gpt-4
+      provider: Azure OpenAI
+      azure_deployment: gpt-4o
       temperature: 0.3
       max_iterations: 15
     provides:
@@ -250,7 +260,8 @@ components:
         Analyze results and suggest fixes for any errors.
 
         Return validation report with fixes if needed.
-      llm_model: gpt-3.5-turbo
+      provider: Azure OpenAI
+      azure_deployment: gpt-4o
       temperature: 0.1
       max_iterations: 10
     provides:
@@ -289,33 +300,41 @@ components:
     description: Main orchestrator that coordinates all specialized agents and manages conversation state
     config:
       system_prompt: |
-        You are the AI Studio Agent Builder Orchestrator. Guide users through
-        creating agent specifications using a three-phase approach:
+        You are the AI Studio Agent Builder Orchestrator. Help users create agent specifications efficiently.
 
-        PHASE 1: UNDERSTANDING & RESEARCH
+        IMPORTANT RULES:
+        1. NEVER ask users about model selection - ALWAYS use Azure OpenAI gpt-4o
+        2. Minimize confirmations - combine phases where possible
+        3. Present a COMPLETE plan with state information for frontend
+        4. Keep conversation focused on essential questions only
+
+        YOUR WORKFLOW:
+        Phase 1 - UNDERSTAND & ANALYZE (Combined):
         - Use Requirements Analyst to extract requirements
-        - Use Intent Classifier to determine agent type
-        - Use Research Agent to find similar agents
-        - Store requirements in Conversation Memory
+        - Use Intent Classifier and Research Agent simultaneously
+        - Ask only 2-3 essential questions (MCP vs API, specific systems)
+        - Emit state: "gathering"
 
-        PHASE 2: PLANNING & DESIGN
-        - Use Pattern Matcher to identify patterns
-        - Design agent architecture
-        - Plan component configuration
-        - Store design decisions in Conversation Memory
+        Phase 2 - DESIGN & PRESENT:
+        - Use Pattern Matcher to finalize design
+        - Present complete agent architecture
+        - Show components, flow, and features
+        - Emit state: "ready_to_build"
+        - Frontend will handle Build/Edit UI based on state
 
-        PHASE 3: IMPLEMENTATION
-        - Use Specification Builder to generate YAML
-        - Use Validation Agent to check the spec
-        - Provide final specification
+        When frontend sends "build" action:
+        - Generate YAML specification (use Specification Builder)
+        - Validate the spec (use Validation Agent)
+        - Emit state: "complete"
 
-        Use the Conversation Memory tool to:
-        - Store extracted requirements
-        - Track design decisions
-        - Maintain context between phases
+        DEFAULT CONFIGURATION FOR ALL AGENTS:
+        - provider: Azure OpenAI
+        - azure_deployment: gpt-4o
+        - temperature: 0.7 (adjustable based on use case)
 
-        Show reasoning transparently. Ask clarifying questions when needed.
-      llm_model: gpt-4
+        NEVER discuss model options. Focus on essential workflow questions only.
+      provider: Azure OpenAI
+      azure_deployment: gpt-4o
       temperature: 0.7
       max_iterations: 20
       tools:
@@ -331,10 +350,11 @@ components:
         - component_validator
         - integration_decision
       interaction_mode: conversational
-      pause_between_phases: true
-      require_user_confirmation: true
+      pause_between_phases: false
+      require_user_confirmation: false
       output_format: markdown
       use_emojis: true
+      single_plan_presentation: true
     provides:
       - useAs: processor
         from: user-input

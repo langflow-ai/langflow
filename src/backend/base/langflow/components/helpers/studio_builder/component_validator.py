@@ -1,5 +1,6 @@
 """Component Validator for AI Studio Agent Builder - Validates component usage."""
 
+import asyncio
 import yaml
 from typing import Dict, List, Any, Optional
 from langflow.custom.custom_component.component import Component
@@ -7,6 +8,7 @@ from langflow.inputs import MessageTextInput
 from langflow.io import Output
 from langflow.schema.data import Data
 from langflow.logging import logger
+from langflow.components.helpers.studio_builder.api_client import SpecAPIClient
 
 
 class ComponentValidator(Component):
@@ -18,36 +20,8 @@ class ComponentValidator(Component):
     name = "ComponentValidator"
     category = "Helpers"
 
-    # Valid components loaded dynamically from mapper
+    # Valid components cache
     _valid_components_cache = None
-
-    @property
-    def VALID_COMPONENTS(self):
-        """Get valid components from the mapper (single source of truth)."""
-        if self._valid_components_cache is None:
-            try:
-                from langflow.custom.genesis.spec.mapper import ComponentMapper
-                mapper = ComponentMapper()
-
-                # Get all valid component types from mapper
-                all_mappings = {
-                    **mapper.STANDARD_MAPPINGS,
-                    **mapper.MCP_MAPPINGS,
-                    **mapper.AUTONOMIZE_MODELS
-                }
-
-                self._valid_components_cache = set(all_mappings.keys())
-            except ImportError as e:
-                logger.error(f"Could not import ComponentMapper: {e}")
-                # Fallback to essential components
-                self._valid_components_cache = {
-                    "genesis:chat_input",
-                    "genesis:chat_output",
-                    "genesis:agent",
-                    "genesis:language_model"
-                }
-
-        return self._valid_components_cache
 
     # Valid connection types
     VALID_CONNECTION_TYPES = {
@@ -67,6 +41,27 @@ class ComponentValidator(Component):
     outputs = [
         Output(display_name="Validation Result", name="result", method="validate"),
     ]
+
+    def _get_valid_components(self) -> set:
+        """Get valid components from API if not cached."""
+        if self._valid_components_cache is None:
+            try:
+                async def _fetch_components():
+                    async with SpecAPIClient() as client:
+                        components = await client.get_available_components()
+                        return set(components.keys())
+
+                self._valid_components_cache = asyncio.run(_fetch_components())
+            except Exception as e:
+                logger.error(f"Failed to get components from API: {e}")
+                # Fallback to essential components
+                self._valid_components_cache = {
+                    "genesis:chat_input",
+                    "genesis:chat_output",
+                    "genesis:agent",
+                    "genesis:language_model"
+                }
+        return self._valid_components_cache
 
     def validate(self) -> Data:
         """Validate the components in a specification."""
@@ -105,7 +100,8 @@ class ComponentValidator(Component):
                     comp_name = comp_type
 
                 # Check if component type is valid
-                if comp_type not in self.VALID_COMPONENTS:
+                valid_components = self._get_valid_components()
+                if comp_type not in valid_components:
                     errors.append(f"Invalid component type '{comp_type}' for '{comp_id}'")
 
                     # Suggest corrections
@@ -183,7 +179,8 @@ class ComponentValidator(Component):
         # Check if it's missing the genesis: prefix
         if not invalid_type.startswith("genesis:"):
             potential = f"genesis:{invalid_type}"
-            if potential in self.VALID_COMPONENTS:
+            valid_components = self._get_valid_components()
+            if potential in valid_components:
                 return potential
 
         return None

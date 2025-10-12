@@ -1,5 +1,6 @@
 """Spec Validator Tool for Agent Builder."""
 
+import asyncio
 import json
 import yaml
 from typing import Dict, Any, List
@@ -9,6 +10,7 @@ from langflow.inputs import MessageTextInput
 from langflow.io import Output
 from langflow.schema.data import Data
 from langflow.logging import logger
+from langflow.components.helpers.studio_builder.api_client import SpecAPIClient
 
 
 class SpecValidatorTool(Component):
@@ -57,12 +59,13 @@ class SpecValidatorTool(Component):
                     "suggestions": ["Fix the YAML syntax errors before validation"]
                 })
 
-            # Try to use the SpecService if available
+            # Use the API client to validate
             try:
-                from langflow.services.spec.service import SpecService
+                async def _validate_via_api():
+                    async with SpecAPIClient() as client:
+                        return await client.validate_spec(self.spec_yaml)
 
-                service = SpecService()
-                validation_result = service.validate_spec(self.spec_yaml)
+                validation_result = asyncio.run(_validate_via_api())
 
                 # Add suggestions based on common issues
                 if not validation_result.get("valid"):
@@ -73,8 +76,8 @@ class SpecValidatorTool(Component):
 
                 return Data(data=validation_result)
 
-            except ImportError:
-                logger.info("SpecService not available, using built-in validation")
+            except Exception as api_error:
+                logger.warning(f"API validation failed, using built-in validation: {api_error}")
                 # Fall back to built-in validation
                 return self._builtin_validate(spec_data)
 
