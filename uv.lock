@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and sys_platform == 'darwin'",
@@ -496,9 +496,9 @@ name = "azure-core"
 version = "1.35.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "requests", marker = "python_full_version >= '3.12'" },
-    { name = "six", marker = "python_full_version >= '3.12'" },
-    { name = "typing-extensions", marker = "python_full_version >= '3.12'" },
+    { name = "requests" },
+    { name = "six" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/15/6b/2653adc0f33adba8f11b1903701e6b1c10d34ce5d8e25dfa13a422f832b0/azure_core-1.35.1.tar.gz", hash = "sha256:435d05d6df0fff2f73fb3c15493bb4721ede14203f1ff1382aa6b6b2bdd7e562", size = 345290, upload-time = "2025-09-11T22:58:04.481Z" }
 wheels = [
@@ -510,10 +510,10 @@ name = "azure-storage-blob"
 version = "12.24.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "azure-core", marker = "python_full_version >= '3.12'" },
-    { name = "cryptography", marker = "python_full_version >= '3.12'" },
-    { name = "isodate", marker = "python_full_version >= '3.12'" },
-    { name = "typing-extensions", marker = "python_full_version >= '3.12'" },
+    { name = "azure-core" },
+    { name = "cryptography" },
+    { name = "isodate" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fe/f6/5a94fa935933c8483bf27af0140e09640bd4ee5b2f346e71eee06c197482/azure_storage_blob-12.24.0.tar.gz", hash = "sha256:eaaaa1507c8c363d6e1d1342bd549938fdf1adec9b1ada8658c8f5bf3aea844e", size = 569613, upload-time = "2024-11-13T20:30:48.475Z" }
 wheels = [
@@ -5098,6 +5098,10 @@ dependencies = [
 audio = [
     { name = "webrtcvad" },
 ]
+azure = [
+    { name = "azure-storage-blob" },
+    { name = "pypdf" },
+]
 cassio = [
     { name = "cassio" },
 ]
@@ -5185,6 +5189,7 @@ requires-dist = [
     { name = "assemblyai", specifier = "==0.35.1" },
     { name = "astra-assistants", extras = ["tools"], specifier = ">=2.2.13,<3.0.0" },
     { name = "atlassian-python-api", specifier = "==3.41.16" },
+    { name = "azure-storage-blob", marker = "extra == 'azure'", specifier = ">=12.24.0" },
     { name = "beautifulsoup4", specifier = "==4.12.3" },
     { name = "boto3", specifier = ">=1.34.162,<2.0.0" },
     { name = "cassio", marker = "extra == 'cassio'", specifier = ">=0.1.7" },
@@ -5278,6 +5283,7 @@ requires-dist = [
     { name = "pydantic-ai", specifier = ">=0.0.19,<1.0.0" },
     { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
     { name = "pymongo", specifier = "==4.10.1" },
+    { name = "pypdf", marker = "extra == 'azure'", specifier = ">=5.1.0" },
     { name = "pytube", specifier = "==15.0.0" },
     { name = "pywin32", marker = "sys_platform == 'win32'", specifier = "==307" },
     { name = "qdrant-client", specifier = "==1.9.2" },
@@ -5310,7 +5316,7 @@ requires-dist = [
     { name = "youtube-transcript-api", specifier = "==0.6.3" },
     { name = "zep-python", specifier = "==2.0.2" },
 ]
-provides-extras = ["docling", "audio", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
+provides-extras = ["docling", "audio", "azure", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
 
 [package.metadata.requires-dev]
 dev = [
