@@ -1,4 +1,4 @@
-"""Conversation Memory Tool for Agent Builder."""
+"""Agent State Manager for Agent Builder workflow state management."""
 
 import json
 from typing import Dict, Any, Optional
@@ -11,13 +11,13 @@ from langflow.schema.data import Data
 from langflow.logging import logger
 
 
-class ConversationMemoryTool(Component):
-    """Tool for managing conversation state and context."""
+class AgentStateManager(Component):
+    """Tool for managing agent builder workflow state and context."""
 
-    display_name = "Conversation Memory"
-    description = "Manage conversation context and requirements gathering state"
+    display_name = "Agent State Manager"
+    description = "Manage agent builder workflow state and context"
     icon = "save"
-    name = "ConversationMemoryTool"
+    name = "AgentStateManager"
     category = "Helpers"
 
     # In-memory storage (in production, use Redis or database)

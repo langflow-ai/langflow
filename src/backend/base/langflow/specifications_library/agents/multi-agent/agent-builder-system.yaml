@@ -78,10 +78,10 @@ components:
         description: Flow control and output formatting
 
   # Memory Management Tool
-  - id: conversation-memory
-    type: genesis:conversation_memory_tool
-    name: Conversation Memory
-    description: Manages conversation state and requirements across the entire session
+  - id: agent-state
+    type: genesis:agent_state_manager
+    name: Agent State Manager
+    description: Manages workflow state and context across the entire session
     config:
       operation: retrieve
       data_type: json
@@ -289,7 +289,7 @@ components:
         - pattern_matcher
         - spec_builder
         - validation_agent
-        - conversation_memory
+        - agent_state
         - conversation_controller
       interaction_mode: conversational
       pause_between_phases: true

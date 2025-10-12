@@ -19,7 +19,7 @@ Main Orchestrator Agent
     └── Actual Tools:
         ├── SpecificationSearchTool (file search)
         ├── SpecValidatorTool (API validation)
-        └── ConversationMemoryTool (state management)
+        └── AgentStateManager (state management)
 ```
 
 ## 📦 Components
@@ -38,8 +38,8 @@ Only 3 custom tool components are needed:
    - Uses SpecService when available
    - Falls back to built-in validation
 
-3. **ConversationMemoryTool** (`conversation_memory.py`)
-   - Manages conversation state and context
+3. **AgentStateManager** (`agent_state_manager.py`)
+   - Manages workflow state and context
    - Stores requirements and decisions
    - Session-based memory management
 
@@ -63,7 +63,7 @@ All specialized agents use the standard `genesis:agent` component with custom pr
 from langflow.components.tools.agent_builder import (
     SpecificationSearchTool,
     SpecValidatorTool,
-    ConversationMemoryTool
+    AgentStateManager
 )
 ```
 
@@ -153,7 +153,7 @@ agent_builder/
 ├── __init__.py                    # Component exports
 ├── specification_search.py        # Search tool
 ├── spec_validator.py              # Validator tool
-├── conversation_memory.py         # Memory tool
+├── agent_state_manager.py         # State management tool
 ├── prompts.py                     # Agent prompts
 ├── example_usage.md              # Usage examples
 └── README.md                      # This file
@@ -188,13 +188,13 @@ validator = SpecValidatorTool()
 validator.spec_yaml = "your_spec_here"
 validation = validator.validate()
 
-# Test memory
-memory = ConversationMemoryTool()
-memory.session_id = "test-session"
-memory.operation = "store"
-memory.key = "requirements"
-memory.value = '{"goal": "test"}'
-result = memory.process()
+# Test state manager
+state_manager = AgentStateManager()
+state_manager.session_id = "test-session"
+state_manager.operation = "store"
+state_manager.key = "requirements"
+state_manager.value = '{"goal": "test"}'
+result = state_manager.process()
 ```
 
 ## 📚 Documentation

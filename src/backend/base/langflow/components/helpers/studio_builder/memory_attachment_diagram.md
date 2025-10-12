@@ -1,8 +1,8 @@
-# Conversation Memory Tool Attachment
+# Agent State Manager Tool Attachment
 
-## Where ConversationMemoryTool is Attached
+## Where AgentStateManager is Attached
 
-The `ConversationMemoryTool` is attached directly to the **Main Orchestrator Agent** as one of its tools.
+The `AgentStateManager` is attached directly to the **Main Orchestrator Agent** as one of its tools.
 
 ## Architecture Diagram
 
@@ -35,7 +35,7 @@ The `ConversationMemoryTool` is attached directly to the **Main Orchestrator Age
 ### Phase 1: Understanding & Research
 ```python
 # Orchestrator stores requirements after extraction
-orchestrator.use_tool("conversation_memory", {
+orchestrator.use_tool("agent_state", {
     "operation": "store",
     "key": "requirements",
     "value": requirements_data
@@ -45,13 +45,13 @@ orchestrator.use_tool("conversation_memory", {
 ### Phase 2: Planning & Design
 ```python
 # Retrieve requirements for planning
-requirements = orchestrator.use_tool("conversation_memory", {
+requirements = orchestrator.use_tool("agent_state", {
     "operation": "retrieve",
     "key": "requirements"
 })
 
 # Store design decisions
-orchestrator.use_tool("conversation_memory", {
+orchestrator.use_tool("agent_state", {
     "operation": "store",
     "key": "design_decisions",
     "value": design_data
@@ -61,7 +61,7 @@ orchestrator.use_tool("conversation_memory", {
 ### Phase 3: Implementation
 ```python
 # Retrieve all context for spec building
-context = orchestrator.use_tool("conversation_memory", {
+context = orchestrator.use_tool("agent_state", {
     "operation": "retrieve",
     "key": "_summary"  # Get all stored data
 })
@@ -73,8 +73,8 @@ context = orchestrator.use_tool("conversation_memory", {
 components:
   # Memory Tool Definition
   - id: conversation-memory
-    type: genesis:conversation_memory_tool
-    name: Conversation Memory
+    type: genesis:agent_state_manager
+    name: Agent State Manager
     provides:
       - useAs: tool
         in: orchestrator  # ← Attached here
@@ -92,7 +92,7 @@ components:
         - pattern_matcher
         - spec_builder
         - validation_agent
-        - conversation_memory  # ← Listed as available tool
+        - agent_state  # ← Listed as available tool
 ```
 
 ## Memory Operations

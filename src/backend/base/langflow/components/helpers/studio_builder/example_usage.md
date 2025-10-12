@@ -103,7 +103,7 @@ search our knowledge base, and escalate complex issues to human agents."
   "recommended_pattern": "conversational_with_memory_and_tools",
   "reusable_configs": {
     "memory_config": {
-      "type": "conversation_memory",
+      "type": "agent_state",
       "window_size": 10
     },
     "agent_config": {
@@ -243,7 +243,7 @@ The specification has been validated and is ready for deployment. Would you like
 1. **Import Components**: The three tool components are automatically available in Langflow
    - `SpecificationSearchTool`
    - `SpecValidatorTool`
-   - `ConversationMemoryTool`
+   - `AgentStateManager`
 
 2. **Configure Agents**: Use standard Agent components with the prompts from `prompts.py`
 
@@ -255,13 +255,13 @@ The specification has been validated and is ready for deployment. Would you like
    from langflow.components.tools.agent_builder import (
        SpecificationSearchTool,
        SpecValidatorTool,
-       ConversationMemoryTool
+       AgentStateManager
    )
 
    # Create instances
    search_tool = SpecificationSearchTool()
    validator = SpecValidatorTool()
-   memory = ConversationMemoryTool()
+   state_manager = AgentStateManager()
 
    # Use in flow
    search_tool.query = "customer support"
