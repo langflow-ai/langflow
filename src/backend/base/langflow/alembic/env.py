@@ -87,7 +87,7 @@ def _do_run_migrations(connection):
     with context.begin_transaction():
         if connection.dialect.name == "postgresql":
             # Hash the database URL to create a unique lock key per database
-            # TODO: Temporarily use a static key to test whether long startup behavior 
+            # TODO: Temporarily use a static key to test whether long startup behavior
             # during migration could be caused by the lock timeout
             db_url = str(connection.engine.url)
             _lock_key = int(hashlib.sha256(db_url.encode()).hexdigest()[:16], 16) % (2**63 - 1)
