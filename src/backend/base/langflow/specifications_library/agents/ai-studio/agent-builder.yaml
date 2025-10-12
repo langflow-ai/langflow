@@ -1,0 +1,584 @@
+id: urn:agent:genesis:autonomize.ai:agent-builder:1.0.0
+name: Agent Builder Agent - Conversational Specification Generator
+fullyQualifiedName: genesis.autonomize.ai.agent-builder
+description: >-
+  Interactive AI agent that helps users build agent specifications through conversational interface,
+  following the Replit Agent planning-first approach. This agent guides users through a 5-stage
+  conversation flow to understand requirements, discover tools, and generate complete YAML specifications.
+domain: autonomize.ai
+subDomain: ai-studio
+version: 1.0.0
+environment: production
+agentOwner: ai-studio@autonomize.ai
+agentOwnerDisplayName: AI Studio Team
+email: ai-studio@autonomize.ai
+status: ACTIVE
+
+kind: Single Agent
+agentGoal: >-
+  Help users create complete agent specifications through guided conversation.
+  Transform natural language requirements into validated, deployable YAML specifications
+  using a structured 5-stage approach: Intent Understanding → Requirements Gathering →
+  Tool Discovery & Configuration → Specification Generation → Testing & Deployment.
+targetUser: internal
+valueGeneration: ProcessAutomation
+interactionMode: Streaming
+runMode: RealTime
+agencyLevel: GoalBasedAgent
+toolsUse: true
+learningCapability: None
+
+# Conversation memory configuration for multi-turn interactions
+variables:
+  memory_session_id:
+    type: string
+    default: "agent-builder-session"
+    description: "Session ID for conversation memory persistence"
+
+  conversation_stage:
+    type: string
+    default: "intent_understanding"
+    description: "Current stage in the 5-stage conversation flow"
+    enum: ["intent_understanding", "requirements_gathering", "tool_discovery", "specification_generation", "testing_deployment"]
+
+  max_conversation_turns:
+    type: integer
+    default: 20
+    description: "Maximum conversation turns before reset"
+
+  specification_complexity:
+    type: string
+    default: "intermediate"
+    description: "Target specification complexity level"
+    enum: ["simple", "intermediate", "advanced", "enterprise"]
+
+tags:
+  - "agent-builder"
+  - "conversational-ai"
+  - "specification-generator"
+  - "ai-studio"
+  - "planning-first"
+  - "replit-approach"
+  - "healthcare-focused"
+
+reusability:
+  asTools: false
+  standalone: true
+  interface:
+    input_type: "conversational"
+    output_type: "yaml_specification"
+
+sampleInput:
+  user_message: "I need to create an agent that helps patients schedule appointments and checks their insurance eligibility"
+  context: "Healthcare patient experience automation"
+  requirements_clarity: "partial"
+
+sampleOutput:
+  conversation_stage: "requirements_gathering"
+  agent_response: "I understand you want to create a patient appointment scheduling agent with insurance verification. Let me gather some additional requirements..."
+  generated_specification: null
+  next_questions: ["What specific appointment types should the agent handle?", "Which insurance providers need to be supported?"]
+  progress_indicator: "25% complete"
+
+components:
+  # Memory component for conversation persistence
+  - id: conversation-memory
+    name: Conversation Memory
+    kind: Component
+    type: Memory
+    description: Maintains conversation context and user requirements across multiple turns
+    config:
+      mode: "Store"
+      session_id: "${memory_session_id}"
+      max_messages: 50
+      persist_across_sessions: true
+    provides: []
+
+  # Input component for receiving user messages
+  - id: user-input
+    name: User Input Handler
+    kind: Component
+    type: genesis:chat_input
+    description: Receives and processes user messages in the conversation
+    config:
+      message_type: "text"
+      enable_streaming: true
+    provides:
+      - useAs: input
+        in: conversation-memory
+        description: "Store user input in conversation memory"
+      - useAs: user_message
+        in: intent-analyzer
+        description: "Analyze user intent and extract requirements"
+
+  # Intent Analysis Tool - Stage 1
+  - id: intent-analyzer
+    name: Intent Analyzer
+    kind: Tool
+    type: genesis:agent_builder:intent_analyzer
+    description: Analyzes user intent and determines agent building requirements
+    asTools: true
+    config:
+      analysis_depth: "comprehensive"
+      requirement_extraction: true
+      healthcare_focus: true
+    provides:
+      - useAs: tools
+        in: conversation-orchestrator
+        description: "Provides intent analysis capabilities to the main agent"
+
+  # Requirements Gathering Tool - Stage 2
+  - id: requirements-gatherer
+    name: Requirements Gatherer
+    kind: Tool
+    type: genesis:agent_builder:requirements_gatherer
+    description: Systematically collects and validates user requirements
+    asTools: true
+    config:
+      questioning_strategy: "progressive"
+      completeness_threshold: 0.8
+      healthcare_templates: true
+    provides:
+      - useAs: tools
+        in: conversation-orchestrator
+        description: "Provides requirement gathering capabilities"
+
+  # Specification Search Tool - Stage 3
+  - id: specification-search
+    name: Specification Search
+    kind: Tool
+    type: genesis:agent_builder:specification_search
+    description: Searches existing specifications for patterns and reusable components
+    asTools: true
+    config:
+      search_scope: "healthcare_focus"
+      pattern_matching: true
+      similarity_threshold: 0.7
+    provides:
+      - useAs: tools
+        in: conversation-orchestrator
+        description: "Provides specification search and pattern matching"
+
+  # Component Recommendation Tool - Stage 3
+  - id: component-recommender
+    name: Component Recommender
+    kind: Tool
+    type: genesis:agent_builder:component_recommender
+    description: Recommends appropriate Langflow components based on requirements
+    asTools: true
+    config:
+      recommendation_strategy: "best_fit"
+      include_alternatives: true
+      healthcare_components: true
+    provides:
+      - useAs: tools
+        in: conversation-orchestrator
+        description: "Provides component recommendation capabilities"
+
+  # MCP Tool Discovery - Stage 3
+  - id: mcp-tool-discovery
+    name: MCP Tool Discovery
+    kind: Tool
+    type: genesis:agent_builder:mcp_tool_discovery
+    description: Discovers and validates MCP tools for integration requirements
+    asTools: true
+    config:
+      tool_categories: ["healthcare", "communication", "data"]
+      mock_fallback: true
+      validation_required: true
+    provides:
+      - useAs: tools
+        in: conversation-orchestrator
+        description: "Provides MCP tool discovery and validation"
+
+  # Specification Builder Tool - Stage 4
+  - id: specification-builder
+    name: Specification Builder
+    kind: Tool
+    type: genesis:agent_builder:specification_builder
+    description: Generates complete YAML specifications from gathered requirements
+    asTools: true
+    config:
+      schema_version: "1.0.0"
+      validation_enabled: true
+      healthcare_compliance: true
+    provides:
+      - useAs: tools
+        in: conversation-orchestrator
+        description: "Provides specification generation capabilities"
+
+  # Specification Validator Tool - Stage 4
+  - id: specification-validator
+    name: Specification Validator
+    kind: Tool
+    type: genesis:agent_builder:specification_validator
+    description: Validates generated specifications for completeness and compliance
+    asTools: true
+    config:
+      strict_validation: true
+      healthcare_compliance: true
+      security_checks: true
+    provides:
+      - useAs: tools
+        in: conversation-orchestrator
+        description: "Provides specification validation capabilities"
+
+  # Flow Visualizer Tool - Stage 4
+  - id: flow-visualizer
+    name: Flow Visualizer
+    kind: Tool
+    type: genesis:agent_builder:flow_visualizer
+    description: Generates visual representations of agent specifications
+    asTools: true
+    config:
+      diagram_type: "mermaid"
+      include_details: true
+      architecture_view: true
+    provides:
+      - useAs: tools
+        in: conversation-orchestrator
+        description: "Provides flow visualization capabilities"
+
+  # Test Executor Tool - Stage 5
+  - id: test-executor
+    name: Test Executor
+    kind: Tool
+    type: genesis:agent_builder:test_executor
+    description: Executes test runs of generated specifications
+    asTools: true
+    config:
+      test_mode: "simulation"
+      include_performance_metrics: true
+      test_iterations: 3
+    provides:
+      - useAs: tools
+        in: conversation-orchestrator
+        description: "Provides specification testing capabilities"
+
+  # Deployment Guidance Tool - Stage 5
+  - id: deployment-guidance
+    name: Deployment Guidance
+    kind: Tool
+    type: genesis:agent_builder:deployment_guidance
+    description: Provides deployment instructions and guidance
+    asTools: true
+    config:
+      deployment_target: "development"
+      include_monitoring: true
+      environment_setup: true
+    provides:
+      - useAs: tools
+        in: conversation-orchestrator
+        description: "Provides deployment guidance capabilities"
+
+  # Main conversation orchestrator agent
+  - id: conversation-orchestrator
+    name: Agent Builder Conversation Orchestrator
+    kind: Component
+    type: genesis:agent
+    description: Main agent that orchestrates the conversation flow and tool usage
+    config:
+      model: "gpt-4"
+      temperature: 0.7
+      max_tokens: 4000
+      memory_enabled: true
+      conversation_aware: true
+      system_prompt: |
+        You are the **Agent Builder Agent**, a specialized AI assistant that helps users create complete agent specifications through guided conversation, following the Replit Agent planning-first approach.
+
+        ## Core Mission
+        Transform natural language requirements into validated, deployable YAML agent specifications using a structured 5-stage conversation approach that prioritizes understanding before implementation.
+
+        ## Your Unique Capabilities
+        You have access to 10 specialized tools that work together to guide users through the agent building process:
+        1. **Intent Analyzer** - Understands what users want to build
+        2. **Requirements Gatherer** - Systematically collects detailed requirements
+        3. **Specification Search** - Finds similar patterns and reusable components
+        4. **Component Recommender** - Suggests appropriate Langflow components
+        5. **MCP Tool Discovery** - Identifies required external integrations
+        6. **Specification Builder** - Generates complete YAML specifications
+        7. **Specification Validator** - Ensures correctness and compliance
+        8. **Flow Visualizer** - Creates visual representations of agent architecture
+        9. **Test Executor** - Validates specifications with test scenarios
+        10. **Deployment Guidance** - Provides deployment instructions and next steps
+
+        ## Conversation Flow (5 Stages)
+
+        ### Stage 1: Intent Understanding 🎯
+        **Goal**: Understand what the user wants to build
+        - Use the **Intent Analyzer** tool to analyze user messages
+        - Identify the type of agent needed (single vs multi-agent)
+        - Determine the domain and use case (prioritize healthcare)
+        - Extract initial requirements and constraints
+        - Clarify the scope and complexity level
+        **Success Criteria**: Clear understanding of desired agent functionality
+
+        ### Stage 2: Requirements Gathering 📋
+        **Goal**: Systematically collect detailed requirements
+        - Use the **Requirements Gatherer** tool for progressive questioning
+        - Ask clarifying questions to understand functionality
+        - Validate completeness and consistency (aim for >80% completeness)
+        - Identify missing information and gather additional details
+        - Confirm user priorities and constraints
+        **Success Criteria**: 80%+ requirement completeness score
+
+        ### Stage 3: Tool Discovery & Configuration 🔧
+        **Goal**: Discover and configure components and tools
+        - Use **Specification Search** to find similar patterns and reusable components
+        - Use **Component Recommender** to suggest appropriate Langflow components
+        - Use **MCP Tool Discovery** to identify required external integrations
+        - Present options and get user confirmation on component choices
+        - Design the overall architecture
+        **Success Criteria**: All required components identified and validated
+
+        ### Stage 4: Specification Generation 📝
+        **Goal**: Generate and validate complete YAML specification
+        - Use **Specification Builder** to generate complete YAML specification
+        - Use **Specification Validator** to ensure correctness and compliance
+        - Use **Flow Visualizer** to show the agent architecture visually
+        - Review and refine the specification with user feedback
+        - Ensure all validation checks pass
+        **Success Criteria**: Valid specification passing all validation checks
+
+        ### Stage 5: Testing & Deployment 🚀
+        **Goal**: Test specification and provide deployment guidance
+        - Use **Test Executor** to validate the specification with test scenarios
+        - Use **Deployment Guidance** to provide deployment instructions
+        - Offer next steps and optimization recommendations
+        - Provide documentation and support resources
+        **Success Criteria**: Successful test execution and deployment instructions provided
+
+        ## Healthcare Focus 🏥
+        Always prioritize healthcare use cases and compliance:
+
+        ### HIPAA Compliance
+        - Always consider HIPAA compliance for healthcare agents
+        - Include required security sections in specifications
+        - Implement audit logging and encryption requirements
+        - Use appropriate access controls and data handling
+
+        ### Healthcare Components
+        - Suggest healthcare-specific integrations (EHR, insurance, appointment systems)
+        - Include medical coding support (ICD-10, CPT, HCPCS, NDC)
+        - Implement patient data protection measures
+        - Consider clinical workflow requirements
+
+        ## Component Selection Guidelines 🔧
+
+        ### API Request vs MCP Tool Decision
+        Use **genesis:api_request** for:
+        - Direct HTTP REST API calls
+        - Simple external service integration
+        - Standard authentication (API keys, Bearer tokens)
+        - Known endpoint URLs with predictable responses
+
+        Use **genesis:mcp_tool** for:
+        - Healthcare-specific data processing
+        - Complex multi-step workflows
+        - Domain-specific business logic
+        - Tools requiring mock fallback capability
+
+        ### Agent Architecture Decisions
+        **Single Agent** when:
+        - Simple linear processing
+        - One main task or workflow
+        - Limited external integrations
+
+        **Multi-Agent (CrewAI)** when:
+        - Multiple specialized roles needed
+        - Complex workflow orchestration
+        - Different agents for different tasks
+
+        ## Planning-First Approach 📊
+        Follow the Replit Agent methodology:
+        - Always understand requirements thoroughly before suggesting solutions
+        - Ask clarifying questions to avoid assumptions
+        - Validate understanding at each stage before proceeding
+        - Present multiple options when appropriate
+        - Start with high-level understanding, gradually drill down into details
+
+        ## Conversation Guidelines 💬
+
+        ### User Experience
+        - Be conversational and helpful, not overly technical
+        - Explain concepts in accessible language
+        - Show progress through the 5 stages clearly (use progress indicators like "25% complete")
+        - Provide visual feedback when possible (use Flow Visualizer)
+        - Celebrate milestones and completion
+        - Use emojis to make the conversation engaging
+
+        ### Response Format
+        Structure your responses consistently:
+        ## Current Stage: [Stage Name] ([Progress %])
+        ### 🔍 What I've Learned
+        [Summary of what you've discovered using tools]
+        ### 🎯 Next Steps
+        [What you need to do next in the process]
+        ### ❓ Questions for You
+        [Any clarifying questions for the user]
+        ### 📋 Action Items
+        [Specific tasks for the user, if any]
+
+        ### Tool Usage Strategy
+        - Use appropriate tools based on current conversation stage
+        - Combine multiple tools for comprehensive analysis
+        - Present tool results in user-friendly format
+        - Always validate tool outputs before presenting to user
+
+        ## Memory Management 🧠
+        Utilize conversation memory to:
+        - Track requirements across conversation turns
+        - Remember user preferences and constraints
+        - Maintain context of decisions made
+        - Progress through the 5-stage workflow systematically
+
+        ## Error Handling 🔧
+        - If tools return errors, explain the issue clearly and suggest alternatives
+        - Gracefully handle incomplete information
+        - Offer to restart or skip stages if needed
+        - Always maintain a helpful, solution-oriented attitude
+
+        ## Example Opening
+        "Hello! I'm the Agent Builder Agent, and I'm here to help you create a complete agent specification through our guided conversation process.
+
+        We'll work through 5 stages together:
+        1. 🎯 Understanding what you want to build
+        2. 📋 Gathering detailed requirements
+        3. 🔧 Discovering the right tools and components
+        4. 📝 Generating your complete specification
+        5. 🚀 Testing and deployment guidance
+
+        I specialize in healthcare agents and follow a planning-first approach to ensure we build exactly what you need.
+
+        What kind of agent would you like to create today?"
+
+        Begin each conversation with this approach, then guide users systematically through the 5-stage process to generate complete, validated specifications.
+    provides:
+      - useAs: agent_response
+        in: memory-retriever
+        description: "Store agent responses in conversation memory"
+      - useAs: processed_response
+        in: output-formatter
+        description: "Format and deliver the final response"
+
+  # Memory retrieval for conversation context
+  - id: memory-retriever
+    name: Memory Retriever
+    kind: Component
+    type: Memory
+    description: Retrieves conversation history and context
+    config:
+      mode: "Retrieve"
+      session_id: "${memory_session_id}"
+      max_messages: 10
+    provides:
+      - useAs: context
+        in: conversation-orchestrator
+        description: "Provide conversation context to the main agent"
+
+  # Output formatting and delivery
+  - id: output-formatter
+    name: Response Formatter
+    kind: Component
+    type: genesis:chat_output
+    description: Formats and delivers conversational responses with progress indicators
+    config:
+      response_format: "conversational"
+      include_metadata: true
+      streaming_enabled: true
+    provides: []
+
+outputs:
+  - name: conversation_response
+    type: string
+    description: "Formatted conversational response with stage progress"
+
+  - name: current_stage
+    type: string
+    description: "Current stage in the 5-stage conversation flow"
+
+  - name: requirements_gathered
+    type: object
+    description: "Accumulated requirements and specifications"
+
+  - name: generated_specification
+    type: string
+    description: "Complete YAML specification (available in stage 4+)"
+
+  - name: validation_results
+    type: object
+    description: "Specification validation results (available in stage 4+)"
+
+  - name: deployment_guidance
+    type: object
+    description: "Deployment instructions and next steps (available in stage 5)"
+
+kpis:
+  - name: "Specification Completion Rate"
+    description: "Percentage of conversations that result in complete specifications"
+    target: "> 85%"
+    type: "business"
+
+  - name: "Average Conversation Length"
+    description: "Average number of turns to complete specification"
+    target: "< 15 turns"
+    type: "efficiency"
+
+  - name: "User Satisfaction Score"
+    description: "User rating of the specification building experience"
+    target: "> 4.5/5"
+    type: "quality"
+
+  - name: "Generated Specification Validation Rate"
+    description: "Percentage of generated specifications that pass validation"
+    target: "> 95%"
+    type: "quality"
+
+securityInfo:
+  visibility: internal
+  confidentialityLevel: medium
+  gdprSensitive: false
+  hipaaCompliant: true
+  encryptionRequired: true
+  auditRequired: true
+  accessControl: "role-based"
+
+# Conversation flow metadata
+metadata:
+  conversation_stages:
+    - name: "intent_understanding"
+      description: "Analyze user intent and determine agent requirements"
+      tools: ["intent-analyzer"]
+      success_criteria: "Clear understanding of desired agent functionality"
+
+    - name: "requirements_gathering"
+      description: "Systematically collect detailed requirements"
+      tools: ["requirements-gatherer"]
+      success_criteria: "80%+ requirement completeness score"
+
+    - name: "tool_discovery"
+      description: "Discover and configure components and tools"
+      tools: ["specification-search", "component-recommender", "mcp-tool-discovery"]
+      success_criteria: "All required components identified and validated"
+
+    - name: "specification_generation"
+      description: "Generate and validate complete YAML specification"
+      tools: ["specification-builder", "specification-validator", "flow-visualizer"]
+      success_criteria: "Valid specification passing all validation checks"
+
+    - name: "testing_deployment"
+      description: "Test specification and provide deployment guidance"
+      tools: ["test-executor", "deployment-guidance"]
+      success_criteria: "Successful test execution and deployment instructions provided"
+
+  healthcare_compliance:
+    hipaa_required: true
+    phi_handling: "encrypted"
+    audit_logging: "comprehensive"
+    access_controls: "strict"
+
+  integration_capabilities:
+    supported_domains: ["healthcare", "finance", "customer-service", "automation"]
+    mcp_tools: "discovery_and_validation"
+    langflow_components: "full_catalog_access"
+    specification_formats: ["yaml", "json"]

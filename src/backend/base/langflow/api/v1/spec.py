@@ -9,8 +9,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils import CurrentActiveUser
-from langflow.services.deps import get_session
+from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.spec.service import SpecService
 from langflow.logging import logger
 
