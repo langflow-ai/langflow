@@ -13,11 +13,12 @@ from lfx.schema.data import Data
 
 
 class CalculatorToolComponent(LCToolComponent):
-    display_name = "Calculator [DEPRECATED]"
+    display_name = "Calculator"
     description = "Perform basic arithmetic operations on a given expression."
     icon = "calculator"
     name = "CalculatorTool"
     legacy = True
+    replacement = ["helpers.CalculatorComponent"]
 
     inputs = [
         MessageTextInput(

@@ -8,15 +8,16 @@ import anyio
 import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
+from langflow.api.v2.mcp import get_mcp_file
 from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_db_service
+from lfx.services.deps import session_scope
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from lfx.services.deps import session_scope
 from tests.conftest import _delete_transactions_and_vertex_builds
 
 
@@ -384,36 +385,39 @@ async def test_upload_files_with_different_extensions_same_name(files_client, fi
     assert file3["name"] == "document (2)"
 
 
-async def test_mcp_servers_file_replacement(files_client, files_created_api_key):
+async def test_mcp_servers_file_replacement(files_client, files_created_api_key, files_active_user):
     """Test that _mcp_servers file gets replaced instead of creating unique names."""
     headers = {"x-api-key": files_created_api_key.api_key}
+
+    mcp_file_ext = await get_mcp_file(files_active_user, extension=True)
+    mcp_file = await get_mcp_file(files_active_user)
 
     # Upload first _mcp_servers file
     response1 = await files_client.post(
         "api/v2/files",
-        files={"file": ("_mcp_servers.json", b'{"servers": ["server1"]}')},
+        files={"file": (mcp_file_ext, b'{"servers": ["server1"]}')},
         headers=headers,
     )
     assert response1.status_code == 201
     file1 = response1.json()
-    assert file1["name"] == "_mcp_servers"
+    assert file1["name"] == mcp_file
 
     # Upload second _mcp_servers file - should replace the first one
     response2 = await files_client.post(
         "api/v2/files",
-        files={"file": ("_mcp_servers.json", b'{"servers": ["server2"]}')},
+        files={"file": (mcp_file_ext, b'{"servers": ["server2"]}')},
         headers=headers,
     )
     assert response2.status_code == 201
     file2 = response2.json()
-    assert file2["name"] == "_mcp_servers"
+    assert file2["name"] == mcp_file
 
     # Note: _mcp_servers files are filtered out from the regular file list
     # This is expected behavior since they're managed separately
     response = await files_client.get("api/v2/files", headers=headers)
     assert response.status_code == 200
     files = response.json()
-    mcp_files = [f for f in files if f["name"] == "_mcp_servers"]
+    mcp_files = [f for f in files if f["name"] == mcp_file]
     assert len(mcp_files) == 0  # MCP servers files are filtered out from regular list
 
     # Verify the second file can be downloaded with the updated content

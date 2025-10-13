@@ -48,6 +48,15 @@ class TelemetryService(Service):
             os.getenv("DO_NOT_TRACK", "False").lower() == "true" or settings_service.settings.do_not_track
         )
         self.log_package_version_task: asyncio.Task | None = None
+        self.client_type = self._get_client_type()
+
+        # Initialize static telemetry fields
+        version_info = get_version_info()
+        self.common_telemetry_fields = {
+            "langflow_version": version_info["version"],
+            "platform": "desktop" if self._get_langflow_desktop() else "python_package",
+            "os": platform.system().lower(),
+        }
 
     async def telemetry_worker(self) -> None:
         while self.running:
@@ -64,12 +73,23 @@ class TelemetryService(Service):
             await logger.adebug("Telemetry tracking is disabled.")
             return
 
+        if payload.client_type is None:
+            payload.client_type = self.client_type
+
         url = f"{self.base_url}"
         if path:
             url = f"{url}/{path}"
 
         try:
             payload_dict = payload.model_dump(by_alias=True, exclude_none=True, exclude_unset=True)
+
+            # Add common fields to all payloads except VersionPayload
+            if not isinstance(payload, VersionPayload):
+                payload_dict.update(self.common_telemetry_fields)
+                # Add timestamp dynamically
+            if "timestamp" not in payload_dict:
+                payload_dict["timestamp"] = datetime.now(timezone.utc).isoformat()
+
             response = await self.client.get(url, params=payload_dict)
             if response.status_code != httpx.codes.OK:
                 await logger.aerror(f"Failed to send telemetry data: {response.status_code} {response.text}")
@@ -98,6 +118,9 @@ class TelemetryService(Service):
         # Coerce to bool, could be 1, 0, True, False, "1", "0", "True", "False"
         return str(os.getenv("LANGFLOW_DESKTOP", "False")).lower() in {"1", "true"}
 
+    def _get_client_type(self) -> str:
+        return "desktop" if self._get_langflow_desktop() else "oss"
+
     async def log_package_version(self) -> None:
         python_version = ".".join(platform.python_version().split(".")[:2])
         version_info = get_version_info()
@@ -112,7 +135,7 @@ class TelemetryService(Service):
             backend_only=self.settings_service.settings.backend_only,
             arch=self.architecture,
             auto_login=self.settings_service.auth_settings.AUTO_LOGIN,
-            desktop=self._get_langflow_desktop(),
+            client_type=self.client_type,
         )
         await self._queue_event((self.send_telemetry_data, payload, None))
 

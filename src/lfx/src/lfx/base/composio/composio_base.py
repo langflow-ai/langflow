@@ -1,6 +1,7 @@
 import copy
 import json
 import re
+from contextlib import suppress
 from typing import Any
 
 from composio import Composio
@@ -381,9 +382,9 @@ class ComposioBaseComponent(Component):
                             if clean_field == "user_id":
                                 clean_field = f"{self.app_name}_user_id"
 
-                            # Handle reserved attribute name conflicts (e.g., 'status') by prefixing with app name
-                            # This prevents clashes with component attributes like self.status
-                            if clean_field in {"status"}:
+                            # Handle reserved attribute name conflicts (e.g., 'status', 'name')
+                            # Prefix with app name to prevent clashes with component attributes
+                            if clean_field in {"status", "name"}:
                                 clean_field = f"{self.app_name}_{clean_field}"
 
                             action_fields.append(clean_field)
@@ -549,6 +550,13 @@ class ComposioBaseComponent(Component):
                     field_schema_copy["description"] = f"Status for {self.app_name.title()}: " + field_schema.get(
                         "description", ""
                     )
+                elif clean_field_name == "name":
+                    clean_field_name = f"{self.app_name}_name"
+                    # Update the field schema description to reflect the name change
+                    field_schema_copy = field_schema.copy()
+                    field_schema_copy["description"] = f"Name for {self.app_name.title()}: " + field_schema.get(
+                        "description", ""
+                    )
                 else:
                     # Use the original field schema for all other fields
                     field_schema_copy = field_schema
@@ -571,7 +579,17 @@ class ComposioBaseComponent(Component):
 
             # Also update required fields to match cleaned names
             if flat_schema.get("required"):
-                cleaned_required = [field.replace("[0]", "") for field in flat_schema["required"]]
+                cleaned_required = []
+                for field in flat_schema["required"]:
+                    base = field.replace("[0]", "")
+                    if base == "user_id":
+                        cleaned_required.append(f"{self.app_name}_user_id")
+                    elif base == "status":
+                        cleaned_required.append(f"{self.app_name}_status")
+                    elif base == "name":
+                        cleaned_required.append(f"{self.app_name}_name")
+                    else:
+                        cleaned_required.append(base)
                 flat_schema["required"] = cleaned_required
 
             input_schema = create_input_schema_from_json_schema(flat_schema)
@@ -755,6 +773,9 @@ class ComposioBaseComponent(Component):
 
         # Ensure _all_fields includes new ones
         self._all_fields.update({i.name for i in lf_inputs if i.name is not None})
+
+        # Normalize input_types to prevent None values
+        self.update_input_types(build_config)
 
     def _is_tool_mode_enabled(self) -> bool:
         """Check if tool_mode is currently enabled."""
@@ -1094,6 +1115,20 @@ class ComposioBaseComponent(Component):
         # Also clear any tracked dynamic fields
         self._clear_auth_dynamic_fields(build_config)
 
+    def update_input_types(self, build_config: dict) -> dict:
+        """Normalize input_types to [] wherever None appears in the build_config template."""
+        try:
+            for key, value in list(build_config.items()):
+                if isinstance(value, dict):
+                    if value.get("input_types") is None:
+                        build_config[key]["input_types"] = []
+                elif hasattr(value, "input_types") and value.input_types is None:
+                    with suppress(AttributeError, TypeError):
+                        value.input_types = []
+        except (RuntimeError, KeyError):
+            pass
+        return build_config
+
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         """Update build config for auth and action selection."""
         # Avoid normalizing legacy input_types here; rely on upstream fixes
@@ -1233,7 +1268,7 @@ class ComposioBaseComponent(Component):
             build_config["auth_link"].pop("connection_id", None)
             build_config["action_button"]["helper_text"] = "Please connect before selecting actions."
             build_config["action_button"]["helper_text_metadata"] = {"variant": "destructive"}
-            return build_config
+            return self.update_input_types(build_config)
 
         # Handle auth mode change -> render appropriate fields based on schema
         if field_name == "auth_mode":
@@ -1262,7 +1297,7 @@ class ComposioBaseComponent(Component):
                 build_config["auth_link"]["auth_tooltip"] = "Disconnect"
                 build_config["auth_link"]["connection_id"] = connection_id
                 # Reflect the connected auth scheme in the UI
-                scheme, is_managed = self._get_connection_auth_info(connection_id)
+                scheme, _ = self._get_connection_auth_info(connection_id)
                 if scheme:
                     build_config.setdefault("auth_link", {})
                     build_config["auth_link"]["auth_scheme"] = scheme
@@ -1290,7 +1325,7 @@ class ComposioBaseComponent(Component):
                         }
                     build_config["action_button"]["helper_text"] = ""
                     build_config["action_button"]["helper_text_metadata"] = {}
-                    return build_config
+                    return self.update_input_types(build_config)
             if mode:
                 managed = schema.get("composio_managed_auth_schemes") or []
                 # Always hide the Create Auth Config control (used internally only)
@@ -1306,7 +1341,7 @@ class ComposioBaseComponent(Component):
                 else:
                     # Custom → render only required fields based on the toolkit schema
                     self._render_custom_auth_fields(build_config, schema, mode)
-                return build_config
+                return self.update_input_types(build_config)
 
         # Handle connection initiation when tool mode is enabled
         if field_name == "auth_link" and isinstance(field_value, dict):
@@ -1323,7 +1358,7 @@ class ComposioBaseComponent(Component):
                     build_config["action_button"]["helper_text"] = ""
                     build_config["action_button"]["helper_text_metadata"] = {}
                     logger.info(f"Using existing ACTIVE connection {connection_id} for {toolkit_slug}")
-                    return build_config
+                    return self.update_input_types(build_config)
 
                 # Only reuse ACTIVE connections; otherwise create a new connection
                 stored_connection_id = None
@@ -1342,11 +1377,11 @@ class ComposioBaseComponent(Component):
                             redirect_url, connection_id = self._initiate_connection(toolkit_slug)
                             build_config["auth_link"]["value"] = redirect_url
                             logger.info(f"New OAuth URL created for {toolkit_slug}: {redirect_url}")
-                            return build_config
+                            return self.update_input_types(build_config)
                         if not mode:
                             build_config["auth_link"]["value"] = "connect"
                             build_config["auth_link"]["auth_tooltip"] = "Select Auth Mode"
-                            return build_config
+                            return self.update_input_types(build_config)
                         # Custom modes: create auth config and/or initiate with config
                         # Validate required fields before creating any auth config
                         required_missing = []
@@ -1403,7 +1438,7 @@ class ComposioBaseComponent(Component):
                             build_config["auth_mode"]["helper_text_metadata"] = {"variant": "destructive"}
                             build_config["auth_link"]["value"] = "connect"
                             build_config["auth_link"]["auth_tooltip"] = f"Missing: {missing_joined}"
-                            return build_config
+                            return self.update_input_types(build_config)
                         composio = self._build_wrapper()
                         if mode == "OAUTH2":
                             # If an auth_config was already created via the button, use it and include initiation fields
@@ -1437,7 +1472,7 @@ class ComposioBaseComponent(Component):
                                 # Clear action blocker text on successful initiation
                                 build_config["action_button"]["helper_text"] = ""
                                 build_config["action_button"]["helper_text_metadata"] = {}
-                                return build_config
+                                return self.update_input_types(build_config)
                             # Otherwise, create custom OAuth2 auth config using schema-declared required fields
                             credentials = {}
                             missing = []
@@ -1487,7 +1522,7 @@ class ComposioBaseComponent(Component):
                                 build_config["auth_link"]["auth_config_id"] = auth_config_id
                                 build_config["auth_link"]["value"] = "connect"
                                 build_config["auth_link"]["auth_tooltip"] = "Connect"
-                                return build_config
+                                return self.update_input_types(build_config)
                             # Otherwise initiate immediately
                             redirect = composio.connected_accounts.initiate(
                                 user_id=self.entity_id,
@@ -1504,7 +1539,7 @@ class ComposioBaseComponent(Component):
                             self._clear_auth_fields_from_schema(build_config, schema)
                             build_config["action_button"]["helper_text"] = ""
                             build_config["action_button"]["helper_text_metadata"] = {}
-                            return build_config
+                            return self.update_input_types(build_config)
                         if mode == "API_KEY":
                             ac = composio.auth_configs.create(
                                 toolkit=toolkit_slug,
@@ -1550,7 +1585,7 @@ class ComposioBaseComponent(Component):
                             self._clear_auth_fields_from_schema(build_config, schema)
                             build_config["action_button"]["helper_text"] = ""
                             build_config["action_button"]["helper_text_metadata"] = {}
-                            return build_config
+                            return self.update_input_types(build_config)
                         # Generic custom auth flow for any other mode (treat like API_KEY)
                         ac = composio.auth_configs.create(
                             toolkit=toolkit_slug,
@@ -1584,13 +1619,13 @@ class ComposioBaseComponent(Component):
                         else:
                             build_config["auth_link"]["value"] = "validated"
                             build_config["auth_link"]["auth_tooltip"] = "Disconnect"
-                        return build_config
+                        return self.update_input_types(build_config)
                     except (ValueError, ConnectionError, TypeError) as e:
                         logger.error(f"Error creating connection: {e}")
                         build_config["auth_link"]["value"] = "connect"
                         build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
                     else:
-                        return build_config
+                        return self.update_input_types(build_config)
                 else:
                     # We already have a usable connection; no new OAuth request
                     build_config["auth_link"]["auth_tooltip"] = "Disconnect"
@@ -1630,7 +1665,7 @@ class ComposioBaseComponent(Component):
                 build_config["auth_link"]["auth_tooltip"] = "Disconnect"
                 build_config["auth_link"]["show"] = False
                 # Update auth mode UI to reflect connected scheme
-                scheme, is_managed = self._get_connection_auth_info(active_connection_id)
+                scheme, _ = self._get_connection_auth_info(active_connection_id)
                 if scheme:
                     build_config.setdefault("auth_link", {})
                     build_config["auth_link"]["auth_scheme"] = scheme
@@ -1732,7 +1767,7 @@ class ComposioBaseComponent(Component):
                 build_config["action_button"]["show"] = True  # Show action field when tool mode is disabled
                 for field in self._all_fields:
                     build_config[field]["show"] = True  # Update show status for all fields based on tool mode
-            return build_config
+            return self.update_input_types(build_config)
 
         if field_name == "action_button":
             # If selection is cancelled/cleared, remove generated fields
@@ -1748,12 +1783,12 @@ class ComposioBaseComponent(Component):
 
             if _is_cleared(field_value):
                 self._hide_all_action_fields(build_config)
-                return build_config
+                return self.update_input_types(build_config)
 
             self._update_action_config(build_config, field_value)
             # Keep the existing show/hide behaviour
             self.show_hide_fields(build_config, field_value)
-            return build_config
+            return self.update_input_types(build_config)
 
         # Handle auth config button click
         if field_name == "create_auth_config" and field_value == "create":
@@ -1798,7 +1833,7 @@ class ComposioBaseComponent(Component):
                         build_config["auth_link"]["auth_config_id"] = auth_config_id
                         build_config["auth_link"]["value"] = "connect"
                         build_config["auth_link"]["auth_tooltip"] = "Connect"
-                        return build_config
+                        return self.update_input_types(build_config)
                     # If no initiation fields required, initiate immediately
                     connection_request = composio.connected_accounts.initiate(
                         user_id=self.entity_id, auth_config_id=auth_config_id
@@ -1824,7 +1859,7 @@ class ComposioBaseComponent(Component):
                 logger.error(f"Error creating new auth config: {e}")
                 build_config["auth_link"]["value"] = "error"
                 build_config["auth_link"]["auth_tooltip"] = f"Error: {e!s}"
-            return build_config
+            return self.update_input_types(build_config)
 
         # Handle API key removal
         if field_name == "api_key" and len(field_value) == 0:
@@ -1861,16 +1896,16 @@ class ComposioBaseComponent(Component):
                 self._hide_all_action_fields(build_config)
             except (TypeError, ValueError, AttributeError):
                 pass
-            return build_config
+            return self.update_input_types(build_config)
 
         # Only proceed with connection logic if we have an API key
         if not hasattr(self, "api_key") or not self.api_key:
-            return build_config
+            return self.update_input_types(build_config)
 
         # CRITICAL: If tool_mode is enabled (check both instance and build_config), skip all connection logic
         if current_tool_mode:
             build_config["action_button"]["show"] = False
-            return build_config
+            return self.update_input_types(build_config)
 
         # Update action options only if tool_mode is disabled
         self._build_action_maps()
@@ -1931,7 +1966,7 @@ class ComposioBaseComponent(Component):
         if self._is_tool_mode_enabled():
             build_config["action_button"]["show"] = False
 
-        return build_config
+        return self.update_input_types(build_config)
 
     def configure_tools(self, composio: Composio, limit: int | None = None) -> list[Tool]:
         if limit is None:
@@ -2039,6 +2074,10 @@ class ComposioBaseComponent(Component):
                 final_field_name = field
                 if field.endswith("_user_id") and field.startswith(self.app_name):
                     final_field_name = "user_id"
+                elif field == f"{self.app_name}_status":
+                    final_field_name = "status"
+                elif field == f"{self.app_name}_name":
+                    final_field_name = "name"
 
                 arguments[final_field_name] = value
 
