@@ -118,6 +118,25 @@ The backend service runs as a FastAPI service on Python, and is responsible for 
 make backend
 ```
 
+> [!TIP]
+> **Component Development Mode**: By default, Langflow uses a prebuilt component index for fast startup (~10ms). If you're actively developing or modifying components, enable dynamic component loading with `LFX_DEV`:
+>
+> ```bash
+> # Load all components dynamically
+> LFX_DEV=1 make backend
+>
+> # Load only specific component modules (faster dev workflow)
+> LFX_DEV=mistral,openai,anthropic make backend
+> ```
+>
+> The list mode is particularly useful when working on specific integrations, as it significantly speeds up startup time by only loading the components you need.
+>
+> Without `LFX_DEV`, component changes require rebuilding the index:
+>
+> ```bash
+> uv run python scripts/build_component_index.py
+> ```
+
 You will get output similar to:
 
 ```
@@ -181,9 +200,18 @@ Navigate to http://localhost:3001/ in a browser and view the documentation. Docu
 
 Components reside in folders under `src/backend/base/langflow`, and their unit tests under `src/backend/base/tests/unit/components`.
 
+> [!IMPORTANT]
+> **Component Development Mode**: When actively developing components, make sure to run the backend with `LFX_DEV=1` to enable live reloading:
+>
+> ```bash
+> LFX_DEV=1 make backend
+> ```
+>
+> This ensures your component changes are immediately reflected without needing to rebuild the component index.
+
 ### Adding a Component
 
-Add the component to the appropriate subdirectory, and add the component to the `__init__.py` file (alphabetical ordering on the `import` and the `__all__` list). Assuming the backend and frontend services are running, the backend service will restart as these files are changed. The new component will be visible after the backend is restarted, _*and*_ after you hit "refresh" in the browser.
+Add the component to the appropriate subdirectory, and add the component to the `__init__.py` file (alphabetical ordering on the `import` and the `__all__` list). Assuming the backend and frontend services are running **with `LFX_DEV=1`**, the backend service will restart as these files are changed. The new component will be visible after the backend is restarted, _*and*_ after you hit "refresh" in the browser.
 
 > [!TIP]
 > It is faster to copy-paste the component code from your editor into the UI _without_ saving in the source code in the editor, and once you are satisfied it is working you can save (restarting the backend) and refresh the browser to confirm it is present.
@@ -196,6 +224,16 @@ Modifying a component is much the same as adding a component: it is generally ea
 
 > [!NOTE]
 > If you have an old version of the component on the canvas when changes are saved and the backend service restarts, that component should show "Updates Available" when the canvas is reloaded (i.e. a browser refresh). [Issue 5179](https://github.com/langflow-ai/langflow/issues/5179) indicates this behavior is not consistent, at least in a development setting.
+
+### Component Index
+
+When you're done modifying components and ready to commit, the component index will be automatically updated by CI when you create a pull request. The GitHub Actions workflow will detect changes to components and rebuild the index, committing it to your PR branch if needed.
+
+If you want to manually rebuild the index locally for testing:
+
+```bash
+uv run python scripts/build_component_index.py
+```
 
 ## Building and Testing Changes
 

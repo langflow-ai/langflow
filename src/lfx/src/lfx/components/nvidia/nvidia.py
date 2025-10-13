@@ -42,7 +42,7 @@ class NVIDIAModelComponent(LCModelComponent):
             info="The name of the NVIDIA model to use.",
             advanced=False,
             value=None,
-            options=[model.id for model in all_models],
+            options=sorted(model.id for model in all_models),
             combobox=True,
             refresh_button=True,
         ),
@@ -102,8 +102,8 @@ class NVIDIAModelComponent(LCModelComponent):
         model = ChatNVIDIA(base_url=self.base_url, api_key=self.api_key)
         if tool_model_enabled:
             tool_models = [m for m in model.get_available_models() if m.supports_tools]
-            return [m.id for m in tool_models]
-        return [m.id for m in model.available_models]
+            return sorted(m.id for m in tool_models)
+        return sorted(m.id for m in model.available_models)
 
     def update_build_config(self, build_config: dotdict, _field_value: Any, field_name: str | None = None):
         if field_name in {"model_name", "tool_model_enabled", "base_url", "api_key"}:

@@ -190,7 +190,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Caching types")
-            all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
+            all_types_dict = await get_and_cache_all_types_dict(get_settings_service(), telemetry_service)
             await logger.adebug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             # Use file-based lock to prevent multiple workers from creating duplicate starter projects concurrently.
@@ -247,19 +247,19 @@ def get_lifespan(*, fix_migration=False, version=None):
             async def delayed_init_mcp_servers():
                 await asyncio.sleep(10.0)  # Increased delay to allow starter projects to be created
                 current_time = asyncio.get_event_loop().time()
-                await logger.adebug("Loading mcp servers for projects")
+                await logger.adebug("Loading MCP servers for projects")
                 try:
                     await init_mcp_servers()
-                    await logger.adebug(f"mcp servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+                    await logger.adebug(f"MCP servers loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
                 except Exception as e:  # noqa: BLE001
                     await logger.awarning(f"First MCP server initialization attempt failed: {e}")
                     await asyncio.sleep(5.0)  # Increased retry delay
                     current_time = asyncio.get_event_loop().time()
-                    await logger.adebug("Retrying mcp servers initialization")
+                    await logger.adebug("Retrying MCP servers initialization")
                     try:
                         await init_mcp_servers()
                         await logger.adebug(
-                            f"mcp servers loaded on retry in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                            f"MCP servers loaded on retry in {asyncio.get_event_loop().time() - current_time:.2f}s"
                         )
                     except Exception as e2:  # noqa: BLE001
                         await logger.aexception(f"Failed to initialize MCP servers after retry: {e2}")
