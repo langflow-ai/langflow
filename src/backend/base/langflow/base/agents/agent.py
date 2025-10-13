@@ -180,10 +180,11 @@ class LCAgentComponent(Component):
 
             # Extract text strings from text content items
             text_strings = [
-                item.get("text", "") for item in text_content 
+                item.get("text", "")
+                for item in text_content
                 if item.get("type") == "text" and item.get("text", "").strip()
             ]
-            
+
             # Set input to concatenated text or empty string
             input_dict["input"] = " ".join(text_strings) if text_strings else ""
 
