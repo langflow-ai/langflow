@@ -269,7 +269,7 @@ jobs:
           }' ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
 
       - name: Send success notification to Slack
-        if: ${{ needs.release-nightly-build.result == 'success' && (needs.frontend-tests.result == 'success' || needs.frontend-tests.result == 'skipped') && (needs.backend-unit-tests.result == 'success' || needs.backend-unit-tests.result == 'skipped') }}
+        if: ${{ needs.release-nightly-build.result == 'success' }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{
