@@ -5,6 +5,7 @@ import inspect
 import json
 import os
 import pkgutil
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -209,7 +210,55 @@ def _save_generated_index(modules_dict: dict) -> None:
         logger.debug(f"Failed to save generated index to cache: {e}")
 
 
-async def import_langflow_components(settings_service: Optional["SettingsService"] = None):
+async def _send_telemetry(
+    telemetry_service: Any,
+    index_source: str,
+    modules_dict: dict,
+    dev_mode: bool,  # noqa: FBT001
+    target_modules: list[str] | None,
+    start_time_ms: int,
+) -> None:
+    """Send telemetry about component index loading.
+
+    Args:
+        telemetry_service: Telemetry service instance (optional)
+        index_source: Source of the index ("builtin", "cache", or "dynamic")
+        modules_dict: Dictionary of loaded components
+        dev_mode: Whether dev mode is enabled
+        target_modules: List of filtered modules if any
+        start_time_ms: Start time in milliseconds
+    """
+    if not telemetry_service:
+        return
+
+    try:
+        # Calculate metrics
+        num_modules = len(modules_dict)
+        num_components = sum(len(components) for components in modules_dict.values())
+        load_time_ms = int(time.time() * 1000) - start_time_ms
+        filtered_modules = ",".join(target_modules) if target_modules else None
+
+        # Import the payload class dynamically to avoid circular imports
+        from langflow.services.telemetry.schema import ComponentIndexPayload
+
+        payload = ComponentIndexPayload(
+            index_source=index_source,
+            num_modules=num_modules,
+            num_components=num_components,
+            dev_mode=dev_mode,
+            filtered_modules=filtered_modules,
+            load_time_ms=load_time_ms,
+        )
+
+        await telemetry_service.log_component_index(payload)
+    except Exception as e:  # noqa: BLE001
+        # Don't fail component loading if telemetry fails
+        await logger.adebug(f"Failed to send component index telemetry: {e}")
+
+
+async def import_langflow_components(
+    settings_service: Optional["SettingsService"] = None, telemetry_service: Any | None = None
+):
     """Asynchronously discovers and loads all built-in Langflow components with module-level parallelization.
 
     In production mode (non-dev), attempts to load components from a prebuilt static index for instant startup.
@@ -222,10 +271,15 @@ async def import_langflow_components(settings_service: Optional["SettingsService
 
     Args:
         settings_service: Optional settings service to get custom index path
+        telemetry_service: Optional telemetry service to log component loading metrics
 
     Returns:
         A dictionary with a "components" key mapping top-level package names to their component templates.
     """
+    # Start timer for telemetry
+    start_time_ms = int(time.time() * 1000)
+    index_source = None
+
     # Track if we need to save the index after building
     should_save_index = False
 
@@ -242,6 +296,7 @@ async def import_langflow_components(settings_service: Optional["SettingsService
         if index and "entries" in index:
             source = custom_index_path or "built-in index"
             await logger.adebug(f"Loading components from {source}")
+            index_source = "builtin"
             # Reconstruct modules_dict from index entries
             modules_dict = {}
             for top_level, components in index["entries"]:
@@ -249,6 +304,9 @@ async def import_langflow_components(settings_service: Optional["SettingsService
                     modules_dict[top_level] = {}
                 modules_dict[top_level].update(components)
             await logger.adebug(f"Loaded {len(modules_dict)} component categories from index")
+            await _send_telemetry(
+                telemetry_service, index_source, modules_dict, dev_mode_enabled, target_modules, start_time_ms
+            )
             return {"components": modules_dict}
 
         # Index failed to load in production - try cache before building
@@ -260,12 +318,16 @@ async def import_langflow_components(settings_service: Optional["SettingsService
                 index = _read_component_index(str(cache_path))
                 if index and "entries" in index:
                     await logger.adebug("Loading components from cached index")
+                    index_source = "cache"
                     modules_dict = {}
                     for top_level, components in index["entries"]:
                         if top_level not in modules_dict:
                             modules_dict[top_level] = {}
                         modules_dict[top_level].update(components)
                     await logger.adebug(f"Loaded {len(modules_dict)} component categories from cache")
+                    await _send_telemetry(
+                        telemetry_service, index_source, modules_dict, dev_mode_enabled, target_modules, start_time_ms
+                    )
                     return {"components": modules_dict}
         except Exception as e:  # noqa: BLE001
             await logger.adebug(f"Cache load failed: {e}")
@@ -332,6 +394,12 @@ async def import_langflow_components(settings_service: Optional["SettingsService
     if should_save_index and modules_dict:
         await logger.adebug("Saving generated component index to cache")
         _save_generated_index(modules_dict)
+
+    # Send telemetry for dynamic loading
+    index_source = "dynamic"
+    await _send_telemetry(
+        telemetry_service, index_source, modules_dict, dev_mode_enabled, target_modules, start_time_ms
+    )
 
     return {"components": modules_dict}
 
@@ -436,6 +504,7 @@ async def _determine_loading_strategy(settings_service: "SettingsService") -> di
 
 async def get_and_cache_all_types_dict(
     settings_service: "SettingsService",
+    telemetry_service: Any | None = None,
 ):
     """Retrieves and caches the complete dictionary of component types and templates.
 
@@ -443,11 +512,15 @@ async def get_and_cache_all_types_dict(
     components and either fully loads all components or loads only their metadata, depending on the
     lazy loading setting. Merges built-in and custom components into the cache and returns the
     resulting dictionary.
+
+    Args:
+        settings_service: Settings service instance
+        telemetry_service: Optional telemetry service for tracking component loading metrics
     """
     if component_cache.all_types_dict is None:
         await logger.adebug("Building components cache")
 
-        langflow_components = await import_langflow_components(settings_service)
+        langflow_components = await import_langflow_components(settings_service, telemetry_service)
         custom_components_dict = await _determine_loading_strategy(settings_service)
 
         # Flatten custom dict if it has a "components" wrapper

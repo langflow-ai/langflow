@@ -190,7 +190,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Caching types")
-            all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
+            all_types_dict = await get_and_cache_all_types_dict(get_settings_service(), telemetry_service)
             await logger.adebug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             # Use file-based lock to prevent multiple workers from creating duplicate starter projects concurrently.
