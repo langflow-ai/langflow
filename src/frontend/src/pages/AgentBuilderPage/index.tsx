@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -193,6 +194,8 @@ export default function AgentBuilderPage() {
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const [showAllAgents, setShowAllAgents] = useState(false);
   const [view, setView] = useState<"list" | "grid">("grid");
+  const [sortOpen, setSortOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<"most_recent" | "recently_created">("most_recent");
 
   // Fetch folders and agents (same logic as StudioHomePage)
   const myCollectionId = useFolderStore((s) => s.myCollectionId);
@@ -218,10 +221,24 @@ export default function AgentBuilderPage() {
     deleteMutation.mutate({ flow_ids: [flowId] });
   };
 
-  // Get agents to display (4 for home view, all for expanded view)
-  const agentsToShow = showAllAgents 
-    ? (folderData?.flows?.items ?? [])
-    : (folderData?.flows?.items ?? []).slice(0, 9);
+  // Sort agents based on selected option
+  const allAgents = (folderData?.flows?.items ?? []).slice();
+  const sortedAgents = allAgents.sort((a: any, b: any) => {
+    const aDate = sortBy === "most_recent" ? a?.updated_at : a?.date_created;
+    const bDate = sortBy === "most_recent" ? b?.updated_at : b?.date_created;
+    if (aDate && bDate) {
+      return new Date(bDate).getTime() - new Date(aDate).getTime();
+    } else if (aDate) {
+      return 1;
+    } else if (bDate) {
+      return -1;
+    } else {
+      return 0;
+    }
+  });
+
+  // Get agents to display (top 9 or all) after sorting
+  const agentsToShow = showAllAgents ? sortedAgents : sortedAgents.slice(0, 9);
 
   console.log(folderData);
 
@@ -297,7 +314,56 @@ export default function AgentBuilderPage() {
               Top {folderData?.flows?.items.length || 0} Agents
             </div>
             <div className="flex items-center gap-2">
-                            <div className="relative flex h-fit rounded-lg border border-muted bg-muted">
+              {/* Sort By Dropdown */}
+              <DropdownMenu open={sortOpen} onOpenChange={setSortOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "h-8 px-2 text-sm gap-1 border border-solid border-[#efefef] rounded-lg",
+                      sortOpen && "bg-muted text-foreground",
+                    )}
+                    aria-haspopup="menu"
+                    aria-expanded={sortOpen}
+                  >
+                    <ForwardedIconComponent name="ArrowUpDown" className="h-4 w-4" />
+                    <span>Sort By</span>
+                    <ForwardedIconComponent name="ChevronDown" className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="p-1">
+                  <DropdownMenuItem
+                    className={cn(
+                      "flex items-center justify-between gap-4 text-sm",
+                      sortBy === "most_recent" && "bg-accent",
+                    )}
+                    onClick={() => setSortBy("most_recent")}
+                    aria-selected={sortBy === "most_recent"}
+                  >
+                    <span>Most Recent</span>
+                    <div className="flex items-center gap-1">
+                      <ForwardedIconComponent name="ArrowUp" className="h-3 w-3" />
+                      <ForwardedIconComponent name="ArrowDown" className="h-3 w-3" />
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className={cn(
+                      "flex items-center justify-between gap-4 text-sm",
+                      sortBy === "recently_created" && "bg-accent",
+                    )}
+                    onClick={() => setSortBy("recently_created")}
+                    aria-selected={sortBy === "recently_created"}
+                  >
+                    <span>Recently Created</span>
+                    <div className="flex items-center gap-1">
+                      <ForwardedIconComponent name="ArrowUp" className="h-3 w-3" />
+                      <ForwardedIconComponent name="ArrowDown" className="h-3 w-3" />
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <div className="relative flex h-fit rounded-lg border border-muted bg-muted">
                 <div
                   className={`absolute top-[2px] h-[32px] w-8 transform rounded-md bg-background shadow-md transition-transform duration-300 ${
                     view === "list"
