@@ -1,4 +1,4 @@
-import { Outlet, type To } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import SideBarButtonsComponent from "@/components/core/sidebarComponent";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { CustomStoreSidebar } from "@/customization/components/custom-store-sidebar";
