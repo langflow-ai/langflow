@@ -61,11 +61,15 @@ install_backend: ## install the backend dependencies
 
 
 
-init: check_tools ## initialize the project
+init: check_tools setup_database ## initialize the project
 	@make install_backend
 	@make install_frontend
 	@uvx pre-commit install
 	@echo "$(GREEN)All requirements are installed.$(NC)"
+
+setup_database: ## set up PostgreSQL database for local development
+	@echo "Setting up PostgreSQL database..."
+	@bash scripts/setup/setup_database.sh
 
 ######################
 # CLEAN PROJECT
