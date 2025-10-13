@@ -7,6 +7,7 @@ import useUpdateAllNodes, {
 } from "@/CustomNodes/hooks/use-update-all-nodes";
 import { Button } from "@/components/ui/button";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import UpdateComponentModal from "@/modals/updateComponentModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -196,6 +197,8 @@ export default function UpdateAllComponents() {
   };
 
   if (componentsToUpdateFiltered.length === 0) return null;
+
+  if (LANGFLOW_ONLY_CANVAS) return <></>;
 
   return (
     <AnimatePresence mode="wait">

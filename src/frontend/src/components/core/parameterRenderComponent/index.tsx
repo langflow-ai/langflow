@@ -7,6 +7,7 @@ import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import CustomConnectionComponent from "@/customization/components/custom-connectionComponent";
 import CustomInputFileComponent from "@/customization/components/custom-input-file";
 import CustomLinkComponent from "@/customization/components/custom-linkComponent";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import type { APIClassType, InputFieldType } from "@/types/api";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
@@ -71,7 +72,7 @@ export function ParameterRenderComponent({
       handleNodeClass,
       nodeId,
       helperText: templateData?.helper_text,
-      readonly: templateData.readonly,
+      readonly: templateData.readonly || LANGFLOW_ONLY_CANVAS,
       placeholder,
       isToolMode,
       nodeInformationMetadata,

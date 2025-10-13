@@ -7,6 +7,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { CustomNodeStatus } from "@/customization/components/custom-NodeStatus";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import UpdateComponentModal from "@/modals/updateComponentModal";
 import { useAlternate } from "@/shared/hooks/use-alternate";
 import type { FlowStoreType } from "@/types/zustand/flow";
@@ -405,41 +406,43 @@ function GenericNode({
             hasBreakingChange={hasBreakingChange}
           />
         </div>
-        <div className="-z-10">
-          <Button
-            unstyled
-            onClick={() => {
-              toggleEditNameDescription();
-              setHasChangedNodeDescription(false);
-            }}
-            className={cn(
-              "nodrag absolute left-1/2 z-50 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md",
-              "transform transition-all duration-300 ease-out",
-              showNode
-                ? "top-2 translate-x-[10.4rem]"
-                : "top-0 translate-x-[6.4rem]",
-              editedNameDescription
-                ? "bg-accent-emerald"
-                : "bg-zinc-foreground",
-            )}
-            data-testid={
-              editedNameDescription
-                ? "save-name-description-button"
-                : "edit-name-description-button"
-            }
-          >
-            <ForwardedIconComponent
-              name={editedNameDescription ? "Check" : "PencilLine"}
-              strokeWidth={ICON_STROKE_WIDTH}
+        {!LANGFLOW_ONLY_CANVAS && (
+          <div className="-z-10">
+            <Button
+              unstyled
+              onClick={() => {
+                toggleEditNameDescription();
+                setHasChangedNodeDescription(false);
+              }}
               className={cn(
+                "nodrag absolute left-1/2 z-50 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md",
+                "transform transition-all duration-300 ease-out",
+                showNode
+                  ? "top-2 translate-x-[10.4rem]"
+                  : "top-0 translate-x-[6.4rem]",
                 editedNameDescription
-                  ? "text-accent-emerald-foreground"
-                  : "text-muted-foreground",
-                "icon-size",
+                  ? "bg-accent-emerald"
+                  : "bg-zinc-foreground",
               )}
-            />
-          </Button>
-        </div>
+              data-testid={
+                editedNameDescription
+                  ? "save-name-description-button"
+                  : "edit-name-description-button"
+              }
+            >
+              <ForwardedIconComponent
+                name={editedNameDescription ? "Check" : "PencilLine"}
+                strokeWidth={ICON_STROKE_WIDTH}
+                className={cn(
+                  editedNameDescription
+                    ? "text-accent-emerald-foreground"
+                    : "text-muted-foreground",
+                  "icon-size",
+                )}
+              />
+            </Button>
+          </div>
+        )}
       </>
     ) : (
       <></>

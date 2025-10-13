@@ -2,6 +2,7 @@ import { Panel, useStoreApi } from "@xyflow/react";
 import { type ReactNode, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Separator } from "@/components/ui/separator";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
 import CanvasControlsDropdown from "./CanvasControlsDropdown";
 import HelpDropdown from "./HelpDropdown";
@@ -26,7 +27,8 @@ const CanvasControls = ({ children }: { children?: ReactNode }) => {
       className="react-flow__controls !left-auto !m-2 flex !flex-row rounded-md border border-border bg-background fill-foreground stroke-foreground text-primary [&>button]:border-0"
       position="bottom-right"
     >
-      {children}
+      {!LANGFLOW_ONLY_CANVAS && children}
+
       {children && (
         <span>
           <Separator orientation="vertical" />
@@ -36,7 +38,8 @@ const CanvasControls = ({ children }: { children?: ReactNode }) => {
       <span>
         <Separator orientation="vertical" />
       </span>
-      <HelpDropdown />
+
+      {!LANGFLOW_ONLY_CANVAS && <HelpDropdown />}
     </Panel>
   );
 };

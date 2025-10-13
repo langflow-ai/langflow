@@ -1,6 +1,7 @@
 import { Panel } from "@xyflow/react";
 import { memo, useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import ExportModal from "@/modals/exportModal";
 import useFlowStore from "../../../stores/flowStore";
@@ -34,15 +35,26 @@ const FlowToolbar = memo(function FlowToolbar(): JSX.Element {
   const api = useShortcutsStore((state) => state.api);
   const flow = useShortcutsStore((state) => state.flow);
 
-  useHotkeys(openPlayground, handleChatWShortcut, { preventDefault });
-  useHotkeys(api, handleAPIWShortcut, { preventDefault });
-  useHotkeys(flow, handleShareWShortcut, { preventDefault });
+  useHotkeys(openPlayground, handleChatWShortcut, {
+    preventDefault,
+    enabled: !LANGFLOW_ONLY_CANVAS,
+  });
+  useHotkeys(api, handleAPIWShortcut, {
+    preventDefault,
+    enabled: !LANGFLOW_ONLY_CANVAS,
+  });
+  useHotkeys(flow, handleShareWShortcut, {
+    preventDefault,
+    enabled: !LANGFLOW_ONLY_CANVAS,
+  });
 
   useEffect(() => {
     if (open) {
       track("Playground Button Clicked");
     }
   }, [open]);
+
+  if (LANGFLOW_ONLY_CANVAS) return <></>;
 
   return (
     <>

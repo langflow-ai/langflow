@@ -2,6 +2,7 @@ import emojiRegex from "emoji-regex";
 import { useEffect, useState } from "react";
 import { checkLucideIcons } from "@/CustomNodes/helpers/check-lucide-icons";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import { useTypesStore } from "@/stores/typesStore";
 import { iconExists } from "@/utils/styleUtils";
 import IconComponent from "../../../../components/common/genericIconComponent";

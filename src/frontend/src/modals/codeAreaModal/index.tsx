@@ -10,6 +10,7 @@ import "ace-builds/src-noconflict/theme-twilight";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
 import type ReactAce from "react-ace/lib/ace";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -249,18 +250,20 @@ export default function CodeAreaModal({
               </div>
             </div>
           </div>
-          <div className="flex h-fit w-full justify-end">
-            <Button
-              className="mt-3"
-              onClick={processCode}
-              type="submit"
-              id="checkAndSaveBtn"
-              disabled={readonly}
-              data-testid="checkAndSaveBtn"
-            >
-              Check & Save
-            </Button>
-          </div>
+          {!LANGFLOW_ONLY_CANVAS && (
+            <div className="flex h-fit w-full justify-end">
+              <Button
+                className="mt-3"
+                onClick={processCode}
+                type="submit"
+                id="checkAndSaveBtn"
+                disabled={readonly}
+                data-testid="checkAndSaveBtn"
+              >
+                Check & Save
+              </Button>
+            </div>
+          )}
         </div>
         <ConfirmationModal
           onClose={() => {

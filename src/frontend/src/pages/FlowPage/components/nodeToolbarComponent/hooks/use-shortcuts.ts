@@ -1,4 +1,5 @@
 import { useHotkeys } from "react-hotkeys-hook";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import isWrappedWithClass from "../../PageComponent/utils/is-wrapped-with-class";
 
@@ -117,18 +118,41 @@ export default function useShortcuts({
     activateToolMode();
   }
 
-  useHotkeys(minimize, handleMinimizeWShortcut, { preventDefault: true });
-  useHotkeys(group, handleGroupWShortcut, { preventDefault: true });
-  useHotkeys(componentShare, handleShareWShortcut, { preventDefault: true });
-  useHotkeys(code, handleCodeWShortcut, { preventDefault: true });
+  useHotkeys(minimize, handleMinimizeWShortcut, {
+    preventDefault: true,
+    enabled: !LANGFLOW_ONLY_CANVAS,
+  });
+  useHotkeys(group, handleGroupWShortcut, {
+    preventDefault: true,
+    enabled: !LANGFLOW_ONLY_CANVAS,
+  });
+  useHotkeys(componentShare, handleShareWShortcut, {
+    preventDefault: true,
+    enabled: !LANGFLOW_ONLY_CANVAS,
+  });
+  useHotkeys(code, handleCodeWShortcut, {
+    preventDefault: true,
+    enabled: !LANGFLOW_ONLY_CANVAS,
+  });
   useHotkeys(advancedSettings, handleAdvancedWShortcut, {
     preventDefault: true,
+    enabled: !LANGFLOW_ONLY_CANVAS,
   });
-  useHotkeys(save, handleSaveWShortcut, { preventDefault: true });
-  useHotkeys(docs, handleDocsWShortcut, { preventDefault: true });
-  useHotkeys(download, handleDownloadWShortcut, { preventDefault: true });
-  useHotkeys(freezeAll, handleFreezeAll);
+  useHotkeys(save, handleSaveWShortcut, {
+    preventDefault: true,
+    enabled: !LANGFLOW_ONLY_CANVAS,
+  });
+  useHotkeys(docs, handleDocsWShortcut, {
+    preventDefault: true,
+    enabled: !LANGFLOW_ONLY_CANVAS,
+  });
+  useHotkeys(download, handleDownloadWShortcut, {
+    preventDefault: true,
+    enabled: !LANGFLOW_ONLY_CANVAS,
+  });
+  useHotkeys(freezeAll, handleFreezeAll, { enabled: !LANGFLOW_ONLY_CANVAS });
   useHotkeys(toolMode, (e) => handleToolModeWShortcut(e, hasToolMode), {
     preventDefault: true,
+    enabled: !LANGFLOW_ONLY_CANVAS,
   });
 }

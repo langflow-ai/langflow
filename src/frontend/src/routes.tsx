@@ -17,6 +17,7 @@ import {
   ENABLE_CUSTOM_PARAM,
   ENABLE_FILE_MANAGEMENT,
   ENABLE_KNOWLEDGE_BASES,
+  LANGFLOW_ONLY_CANVAS,
 } from "./customization/feature-flags";
 import { CustomRoutesStore } from "./customization/utils/custom-routes-store";
 import { CustomRoutesStorePages } from "./customization/utils/custom-routes-store-pages";
@@ -81,7 +82,12 @@ const router = createBrowserRouter(
                 <Route path="" element={<CollectionPage />}>
                   <Route
                     index
-                    element={<CustomNavigate replace to={"flows"} />}
+                    element={
+                      <CustomNavigate
+                        replace
+                        to={LANGFLOW_ONLY_CANVAS ? "flow" : "flows"}
+                      />
+                    }
                   />
                   {ENABLE_FILE_MANAGEMENT && (
                     <Route path="assets">
@@ -173,6 +179,13 @@ const router = createBrowserRouter(
                 </Route>
                 <Route path="view" element={<ViewPage />} />
               </Route>
+              {LANGFLOW_ONLY_CANVAS && (
+                <Route path="flow">
+                  <Route path="" element={<CustomDashboardWrapperPage />}>
+                    <Route path="" element={<FlowPage />} />
+                  </Route>
+                </Route>
+              )}
             </Route>
           </Route>
           <Route

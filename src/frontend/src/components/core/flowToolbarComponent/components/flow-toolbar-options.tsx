@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import useFlowStore from "@/stores/flowStore";
 import PublishDropdown from "./deploy-dropdown";
 import PlaygroundButton from "./playground-button";

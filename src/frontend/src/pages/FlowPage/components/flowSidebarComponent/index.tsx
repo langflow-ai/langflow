@@ -22,7 +22,10 @@ import {
 } from "@/components/ui/sidebar";
 import SkeletonGroup from "@/components/ui/skeletonGroup";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
-import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
+import {
+  ENABLE_NEW_SIDEBAR,
+  LANGFLOW_ONLY_CANVAS,
+} from "@/customization/feature-flags";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { setLocalStorage } from "@/utils/local-storage-util";
@@ -467,6 +470,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     },
     {
       preventDefault: true,
+      enabled: !LANGFLOW_ONLY_CANVAS,
     },
   );
 
@@ -478,7 +482,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     },
     {
       enableOnFormTags: true,
-      enabled: isSearchFocused,
+      enabled: isSearchFocused && !LANGFLOW_ONLY_CANVAS,
     },
   );
 
@@ -562,6 +566,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     setFilterComponent("");
     setFilterData(baseData);
   }, [setFilterEdge, setFilterComponent, setFilterData, baseData]);
+
+  if (LANGFLOW_ONLY_CANVAS) return <></>;
 
   return (
     <Sidebar

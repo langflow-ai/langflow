@@ -1,9 +1,12 @@
 import { Panel } from "@xyflow/react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import FlowLogsModal from "@/modals/flowLogsModal";
 
 const LogCanvasControls = () => {
+  if (LANGFLOW_ONLY_CANVAS) return <></>;
+
   return (
     <Panel
       data-testid="canvas_controls"

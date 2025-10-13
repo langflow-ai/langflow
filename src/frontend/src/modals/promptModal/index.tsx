@@ -1,6 +1,7 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import IconComponent from "../../components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "../../components/common/sanitizedHTMLWrapper";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
@@ -325,17 +326,19 @@ export default function PromptModal({
               </span>
             </div>
           </div>
-          <Button
-            data-testid="genericModalBtnSave"
-            id="genericModalBtnSave"
-            disabled={readonly}
-            onClick={() => {
-              validatePrompt(false);
-            }}
-            type="submit"
-          >
-            Check & Save
-          </Button>
+          {!LANGFLOW_ONLY_CANVAS && (
+            <Button
+              data-testid="genericModalBtnSave"
+              id="genericModalBtnSave"
+              disabled={readonly}
+              onClick={() => {
+                validatePrompt(false);
+              }}
+              type="submit"
+            >
+              Check & Save
+            </Button>
+          )}
         </div>
       </BaseModal.Footer>
     </BaseModal>

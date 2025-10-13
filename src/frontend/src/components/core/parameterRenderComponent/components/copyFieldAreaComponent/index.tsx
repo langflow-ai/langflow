@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { GRADIENT_CLASS_DISABLED } from "@/constants/constants";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -101,44 +102,48 @@ export default function CopyFieldAreaComponent({
     event?.stopPropagation();
   };
 
-  const renderIcon = () => (
-    <>
-      {!isFocused && (
-        <div
-          className={cn(
-            externalLinkIconClasses.gradient({
-              editNode,
-              disabled: false,
-            }),
-            editNode
-              ? externalLinkIconClasses.editNodeTop
-              : externalLinkIconClasses.normalTop,
-          )}
-          style={{
-            pointerEvents: "none",
-            background: isFocused ? undefined : GRADIENT_CLASS_DISABLED,
-          }}
-          aria-hidden="true"
-        />
-      )}
-      <div onClick={handleCopy}>
-        <IconComponent
-          dataTestId={`btn_copy_${id?.toLowerCase()}${
-            editNode ? "_advanced" : ""
-          }`}
-          name={isCopied ? "Check" : "Copy"}
-          className={cn(
-            "cursor-pointer bg-muted",
-            externalLinkIconClasses.icon,
-            editNode
-              ? externalLinkIconClasses.editNodeTop
-              : externalLinkIconClasses.iconTop,
-            "bg-muted text-foreground",
-          )}
-        />
-      </div>
-    </>
-  );
+  const renderIcon = () => {
+    if (LANGFLOW_ONLY_CANVAS) return <></>;
+
+    return (
+      <>
+        {!isFocused && (
+          <div
+            className={cn(
+              externalLinkIconClasses.gradient({
+                editNode,
+                disabled: false,
+              }),
+              editNode
+                ? externalLinkIconClasses.editNodeTop
+                : externalLinkIconClasses.normalTop,
+            )}
+            style={{
+              pointerEvents: "none",
+              background: isFocused ? undefined : GRADIENT_CLASS_DISABLED,
+            }}
+            aria-hidden="true"
+          />
+        )}
+        <div onClick={handleCopy}>
+          <IconComponent
+            dataTestId={`btn_copy_${id?.toLowerCase()}${
+              editNode ? "_advanced" : ""
+            }`}
+            name={isCopied ? "Check" : "Copy"}
+            className={cn(
+              "cursor-pointer bg-muted",
+              externalLinkIconClasses.icon,
+              editNode
+                ? externalLinkIconClasses.editNodeTop
+                : externalLinkIconClasses.iconTop,
+              "bg-muted text-foreground",
+            )}
+          />
+        </div>
+      </>
+    );
+  };
 
   return (
     <div className={cn("w-full")}>

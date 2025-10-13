@@ -10,7 +10,10 @@ import CustomAccountMenu from "@/customization/components/custom-AccountMenu";
 import CustomLangflowCounts from "@/customization/components/custom-langflow-counts";
 import { CustomOrgSelector } from "@/customization/components/custom-org-selector";
 import { CustomProductSelector } from "@/customization/components/custom-product-selector";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import {
+  ENABLE_DATASTAX_LANGFLOW,
+  LANGFLOW_ONLY_CANVAS,
+} from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import useAlertStore from "@/stores/alertStore";
@@ -48,6 +51,8 @@ export default function AppHeader(): JSX.Element {
       ? `${baseClasses} right-[0.3rem] top-[5px]`
       : "hidden";
   };
+
+  if (LANGFLOW_ONLY_CANVAS) return <></>;
 
   return (
     <div

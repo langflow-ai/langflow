@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
@@ -94,20 +95,22 @@ export default function ComponentTextModal({
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>
-        <div className="flex w-full shrink-0 items-end justify-end">
-          <Button
-            data-testid="genericModalBtnSave"
-            id="genericModalBtnSave"
-            disabled={readonly}
-            onClick={() => {
-              setValue(inputValue);
-              setModalOpen(false);
-            }}
-            type="submit"
-          >
-            Finish Editing
-          </Button>
-        </div>
+        {!LANGFLOW_ONLY_CANVAS && (
+          <div className="flex w-full shrink-0 items-end justify-end">
+            <Button
+              data-testid="genericModalBtnSave"
+              id="genericModalBtnSave"
+              disabled={readonly}
+              onClick={() => {
+                setValue(inputValue);
+                setModalOpen(false);
+              }}
+              type="submit"
+            >
+              Finish Editing
+            </Button>
+          </div>
+        )}
       </BaseModal.Footer>
     </BaseModal>
   );

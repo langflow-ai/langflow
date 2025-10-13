@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { Select, SelectTrigger } from "@/components/ui/select-custom";
 import { COLOR_OPTIONS } from "@/constants/constants";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -114,7 +115,10 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
               <div>
                 <div
                   data-testid="color_picker"
-                  className="relative inline-flex items-center rounded-l-md bg-background px-2 py-2 text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                  className={cn(
+                    "relative inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+                    LANGFLOW_ONLY_CANVAS ? "rounded-md" : "rounded-l-md",
+                  )}
                 >
                   <div
                     style={colorPickerStyle}
@@ -136,26 +140,28 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
           </PopoverContent>
         </Popover>
 
-        <Select onValueChange={handleSelectChange} value="">
-          <SelectTrigger>
-            <ShadTooltip content="Show More" side="top">
-              <div>
-                <div
-                  data-testid="more-options-modal"
-                  className={classNames(
-                    "relative -ml-px inline-flex h-8 w-[2rem] items-center rounded-r-md bg-background text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
-                  )}
-                >
-                  <IconComponent
-                    name="MoreHorizontal"
-                    className="relative left-2 h-4 w-4"
-                  />
+        {!LANGFLOW_ONLY_CANVAS && (
+          <Select onValueChange={handleSelectChange} value="">
+            <SelectTrigger>
+              <ShadTooltip content="Show More" side="top">
+                <div>
+                  <div
+                    data-testid="more-options-modal"
+                    className={classNames(
+                      "relative -ml-px inline-flex h-8 w-[2rem] items-center rounded-r-md bg-background text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+                    )}
+                  >
+                    <IconComponent
+                      name="MoreHorizontal"
+                      className="relative left-2 h-4 w-4"
+                    />
+                  </div>
                 </div>
-              </div>
-            </ShadTooltip>
-          </SelectTrigger>
-          <SelectItems shortcuts={shortcuts} data={data} />
-        </Select>
+              </ShadTooltip>
+            </SelectTrigger>
+            <SelectItems shortcuts={shortcuts} data={data} />
+          </Select>
+        )}
       </span>
     </div>
   );

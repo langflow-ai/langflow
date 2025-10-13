@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import { cn } from "@/utils/utils";
 
 export default function NodeUpdateComponent({
@@ -14,6 +15,7 @@ export default function NodeUpdateComponent({
   loadingUpdate: boolean;
   setDismissAll: (value: boolean) => void;
 }) {
+  if (LANGFLOW_ONLY_CANVAS) return <></>;
   return (
     <div
       className={cn(

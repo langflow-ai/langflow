@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GRADIENT_CLASS } from "@/constants/constants";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { getCurlWebhookCode } from "@/modals/apiModal/utils/get-curl-code";
 import ComponentTextModal from "@/modals/textAreaModal";
@@ -142,49 +143,54 @@ export default function TextAreaComponent({
       handleOnNewValue({ value: curlWebhookCode });
     }
   };
+  const renderIcon = () => {
+    if (LANGFLOW_ONLY_CANVAS) return <></>;
 
-  const renderIcon = () => (
-    <div>
-      {!disabled && !isFocused && (
-        <div
+    return (
+      <div>
+        {!disabled && !isFocused && (
+          <div
+            className={cn(
+              externalLinkIconClasses.gradient({
+                disabled,
+                editNode,
+                password: password!,
+              }),
+              editNode
+                ? externalLinkIconClasses.editNodeTop
+                : externalLinkIconClasses.normalTop,
+            )}
+            style={{
+              pointerEvents: "none",
+              background: isFocused
+                ? undefined
+                : disabled
+                  ? "bg-background"
+                  : GRADIENT_CLASS,
+            }}
+            aria-hidden="true"
+          />
+        )}
+
+        <IconComponent
+          dataTestId={`button_open_text_area_modal_${id}${
+            editNode ? "_advanced" : ""
+          }`}
+          name={getIconName(disabled, "", "", false, isToolMode) || "Scan"}
           className={cn(
-            externalLinkIconClasses.gradient({
-              disabled,
-              editNode,
-              password: password!,
-            }),
+            "cursor-pointer bg-background",
+            externalLinkIconClasses.icon,
             editNode
               ? externalLinkIconClasses.editNodeTop
-              : externalLinkIconClasses.normalTop,
+              : externalLinkIconClasses.iconTop,
+            disabled
+              ? "bg-muted text-placeholder-foreground"
+              : "bg-background text-foreground",
           )}
-          style={{
-            pointerEvents: "none",
-            background: isFocused
-              ? undefined
-              : disabled
-                ? "bg-background"
-                : GRADIENT_CLASS,
-          }}
-          aria-hidden="true"
         />
-      )}
-
-      <IconComponent
-        dataTestId={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
-        name={getIconName(disabled, "", "", false, isToolMode) || "Scan"}
-        className={cn(
-          "cursor-pointer bg-background",
-          externalLinkIconClasses.icon,
-          editNode
-            ? externalLinkIconClasses.editNodeTop
-            : externalLinkIconClasses.iconTop,
-          disabled
-            ? "bg-muted text-placeholder-foreground"
-            : "bg-background text-foreground",
-        )}
-      />
-    </div>
-  );
+      </div>
+    );
+  };
 
   return (
     <div className={cn("w-full", disabled && "pointer-events-none")}>

@@ -6,6 +6,7 @@ import { PanelLeft } from "lucide-react";
 import * as React from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { LANGFLOW_ONLY_CANVAS } from "../../customization/feature-flags";
 import isWrappedWithClass from "../../pages/FlowPage/components/PageComponent/utils/is-wrapped-with-class";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { cn } from "../../utils/utils";
@@ -206,6 +207,7 @@ const SidebarProvider = React.forwardRef<
       },
       {
         preventDefault: true,
+        enabled: !LANGFLOW_ONLY_CANVAS,
       },
     );
 

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { BuildStatus } from "@/constants/enums";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
@@ -223,6 +224,9 @@ export default function NodeStatus({
       selected && !isBuilding
         ? " border ring-[0.75px] ring-muted-foreground border-muted-foreground hover:shadow-node"
         : "border ring-[0.5px] hover:shadow-node ring-border";
+
+    if (LANGFLOW_ONLY_CANVAS) return className;
+
     const frozenClass = selected ? "border-ring-frozen" : "border-frozen";
     const updateClass =
       isOutdated && !isUserEdited && !dismissAll && isBreakingChange
@@ -487,7 +491,7 @@ export default function NodeStatus({
           )}
         </div>
       )}
-      {showNode && (
+      {showNode && !LANGFLOW_ONLY_CANVAS && (
         <ShadTooltip content={getTooltipContent()}>
           <div
             onMouseEnter={() => setIsHovered(true)}

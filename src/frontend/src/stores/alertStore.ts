@@ -1,5 +1,6 @@
 import { uniqueId } from "lodash";
 import { create } from "zustand";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import type { AlertItemType } from "../types/alerts";
 import type { AlertStoreType } from "../types/zustand/alert";
 import { customStringify } from "../utils/reactflowUtils";
@@ -45,6 +46,7 @@ const useAlertStore = create<AlertStoreType>((set, get) => ({
     }
   },
   setErrorData: (newState: { title: string; list?: Array<string> }) => {
+    if (LANGFLOW_ONLY_CANVAS) return;
     if (newState.title && newState.title !== "") {
       set({ errorData: newState });
       const notification: Omit<AlertItemType, "id"> = {
@@ -57,6 +59,7 @@ const useAlertStore = create<AlertStoreType>((set, get) => ({
     }
   },
   setNoticeData: (newState: { title: string; link?: string }) => {
+    if (LANGFLOW_ONLY_CANVAS) return;
     if (newState.title && newState.title !== "") {
       set({ noticeData: newState });
       const notification: Omit<AlertItemType, "id"> = {
@@ -69,6 +72,7 @@ const useAlertStore = create<AlertStoreType>((set, get) => ({
     }
   },
   setSuccessData: (newState: { title: string }) => {
+    if (LANGFLOW_ONLY_CANVAS) return;
     if (newState.title && newState.title !== "") {
       set({ successData: newState });
       const notification: Omit<AlertItemType, "id"> = {

@@ -10,6 +10,7 @@ import ToggleShadComponent from "@/components/core/parameterRenderComponent/comp
 import { Button } from "@/components/ui/button";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import type { APIClassType } from "@/types/api";
@@ -458,7 +459,7 @@ const NodeToolbarComponent = memo(
               dataTestId="edit-button-modal"
             />
           )}
-          {!hasToolMode && (
+          {!LANGFLOW_ONLY_CANVAS && !hasToolMode && (
             <ToolbarButton
               icon="FreezeAll"
               label="Freeze"
@@ -476,7 +477,7 @@ const NodeToolbarComponent = memo(
               className={cn("node-toolbar-buttons", frozen && "text-blue-500")}
             />
           )}
-          {hasToolMode && (
+          {!LANGFLOW_ONLY_CANVAS && hasToolMode && (
             <ShadTooltip
               content={
                 <ShortcutDisplay
@@ -546,187 +547,196 @@ const NodeToolbarComponent = memo(
         <div className="noflow nopan nodelete nodrag">
           <div className="toolbar-wrapper">
             {renderToolbarButtons}
-            <Select
-              onValueChange={handleSelectChange}
-              value={selectedValue!}
-              onOpenChange={handleOpenChange}
-            >
-              <SelectTrigger className="w-62">
-                <ShadTooltip content="Show More" side="top">
-                  <div data-testid="more-options-modal">
-                    <Button
-                      className="node-toolbar-buttons h-[2rem] w-[2rem]"
-                      variant="ghost"
-                      onClick={handleButtonClick}
-                      size="node-toolbar"
-                      asChild
-                    >
-                      <IconComponent
-                        name="MoreHorizontal"
-                        className="h-4 w-4"
-                      />
-                    </Button>
-                  </div>
-                </ShadTooltip>
-              </SelectTrigger>
-              <SelectContentWithoutPortal
-                className={"relative top-1 w-56 bg-background"}
+            {!LANGFLOW_ONLY_CANVAS && (
+              <Select
+                onValueChange={handleSelectChange}
+                value={selectedValue!}
+                onOpenChange={handleOpenChange}
               >
-                <SelectItem value={"save"}>
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Save Component")
-                        ?.shortcut!
-                    }
-                    value={"Save"}
-                    icon={"SaveAll"}
-                    dataTestId="save-button-modal"
-                  />
-                </SelectItem>
-                <SelectItem value={"duplicate"}>
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Duplicate")
-                        ?.shortcut!
-                    }
-                    value={"Duplicate"}
-                    icon={"Copy"}
-                    dataTestId="copy-button-modal"
-                  />
-                </SelectItem>
-                <SelectItem value={"copy"}>
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Copy")?.shortcut!
-                    }
-                    value={"Copy"}
-                    icon={"Clipboard"}
-                    dataTestId="copy-button-modal"
-                  />
-                </SelectItem>
-                {isOutdated && (
-                  <SelectItem value={"update"}>
-                    <ToolbarSelectItem
-                      shortcut={
-                        shortcuts.find((obj) => obj.name === "Update")
-                          ?.shortcut!
-                      }
-                      style={
-                        hasBreakingChange ? "text-accent-amber-foreground" : ""
-                      }
-                      value={isUserEdited ? "Restore" : "Update"}
-                      icon={isUserEdited ? "RefreshCcwDot" : "CircleArrowUp"}
-                      dataTestId="update-button-modal"
-                    />
-                  </SelectItem>
-                )}
-                {hasStore && (
-                  <SelectItem
-                    value={"Share"}
-                    disabled={!hasApiKey || !validApiKey}
-                  >
-                    <ToolbarSelectItem
-                      shortcut={
-                        shortcuts.find((obj) => obj.name === "Component Share")
-                          ?.shortcut!
-                      }
-                      value={"Share"}
-                      icon={"Share3"}
-                      dataTestId="share-button-modal"
-                    />
-                  </SelectItem>
-                )}
-
-                <SelectItem
-                  value={"documentation"}
-                  disabled={data.node?.documentation === ""}
+                <SelectTrigger className="w-62">
+                  <ShadTooltip content="Show More" side="top">
+                    <div data-testid="more-options-modal">
+                      <Button
+                        className="node-toolbar-buttons h-[2rem] w-[2rem]"
+                        variant="ghost"
+                        onClick={handleButtonClick}
+                        size="node-toolbar"
+                        asChild
+                      >
+                        <IconComponent
+                          name="MoreHorizontal"
+                          className="h-4 w-4"
+                        />
+                      </Button>
+                    </div>
+                  </ShadTooltip>
+                </SelectTrigger>
+                <SelectContentWithoutPortal
+                  className={"relative top-1 w-56 bg-background"}
                 >
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Docs")?.shortcut!
-                    }
-                    value={"Docs"}
-                    icon={"FileText"}
-                    dataTestId="docs-button-modal"
-                  />
-                </SelectItem>
-                {(isMinimal || !showNode) && (
-                  <SelectItem
-                    value={"show"}
-                    data-testid={`${
-                      showNode ? "minimize" : "expand"
-                    }-button-modal`}
-                  >
+                  <SelectItem value={"save"}>
                     <ToolbarSelectItem
                       shortcut={
-                        shortcuts.find((obj) => obj.name === "Minimize")
+                        shortcuts.find((obj) => obj.name === "Save Component")
                           ?.shortcut!
                       }
-                      value={showNode ? "Minimize" : "Expand"}
-                      icon={showNode ? "Minimize2" : "Maximize2"}
+                      value={"Save"}
+                      icon={"SaveAll"}
+                      dataTestId="save-button-modal"
                     />
                   </SelectItem>
-                )}
-                {isGroup && (
-                  <SelectItem value="ungroup">
+                  <SelectItem value={"duplicate"}>
                     <ToolbarSelectItem
                       shortcut={
-                        shortcuts.find((obj) => obj.name === "Group")?.shortcut!
+                        shortcuts.find((obj) => obj.name === "Duplicate")
+                          ?.shortcut!
                       }
-                      value={"Ungroup"}
-                      icon={"Ungroup"}
-                      dataTestId="group-button-modal"
+                      value={"Duplicate"}
+                      icon={"Copy"}
+                      dataTestId="copy-button-modal"
                     />
                   </SelectItem>
-                )}
-                {hasToolMode && (
+                  <SelectItem value={"copy"}>
+                    <ToolbarSelectItem
+                      shortcut={
+                        shortcuts.find((obj) => obj.name === "Copy")?.shortcut!
+                      }
+                      value={"Copy"}
+                      icon={"Clipboard"}
+                      dataTestId="copy-button-modal"
+                    />
+                  </SelectItem>
+                  {isOutdated && (
+                    <SelectItem value={"update"}>
+                      <ToolbarSelectItem
+                        shortcut={
+                          shortcuts.find((obj) => obj.name === "Update")
+                            ?.shortcut!
+                        }
+                        style={
+                          hasBreakingChange
+                            ? "text-accent-amber-foreground"
+                            : ""
+                        }
+                        value={isUserEdited ? "Restore" : "Update"}
+                        icon={isUserEdited ? "RefreshCcwDot" : "CircleArrowUp"}
+                        dataTestId="update-button-modal"
+                      />
+                    </SelectItem>
+                  )}
+                  {hasStore && (
+                    <SelectItem
+                      value={"Share"}
+                      disabled={!hasApiKey || !validApiKey}
+                    >
+                      <ToolbarSelectItem
+                        shortcut={
+                          shortcuts.find(
+                            (obj) => obj.name === "Component Share",
+                          )?.shortcut!
+                        }
+                        value={"Share"}
+                        icon={"Share3"}
+                        dataTestId="share-button-modal"
+                      />
+                    </SelectItem>
+                  )}
+
                   <SelectItem
-                    value="freezeAll"
-                    data-testid="freeze-all-button-modal"
+                    value={"documentation"}
+                    disabled={data.node?.documentation === ""}
                   >
                     <ToolbarSelectItem
                       shortcut={
-                        shortcuts.find((obj) =>
-                          obj.name.toLowerCase().startsWith("freeze"),
-                        )?.shortcut!
+                        shortcuts.find((obj) => obj.name === "Docs")?.shortcut!
                       }
-                      value={"Freeze"}
-                      icon={"FreezeAll"}
-                      dataTestId="freeze-path-button"
-                      style={`${frozen ? " text-ice" : ""} transition-all`}
+                      value={"Docs"}
+                      icon={"FileText"}
+                      dataTestId="docs-button-modal"
                     />
                   </SelectItem>
-                )}
-                <SelectItem value="Download">
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Download")
-                        ?.shortcut!
-                    }
-                    value={"Download"}
-                    icon={"Download"}
-                    dataTestId="download-button-modal"
-                  />
-                </SelectItem>
-                <SelectItem value={"delete"} className="focus:bg-red-400/[.20]">
-                  <div className="font-red flex text-status-red">
-                    <IconComponent
-                      name="Trash2"
-                      className="relative top-0.5 mr-2 h-4 w-4"
-                    />{" "}
-                    <span className="">Delete</span>{" "}
-                    <span
-                      className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2]`}
+                  {(isMinimal || !showNode) && (
+                    <SelectItem
+                      value={"show"}
+                      data-testid={`${
+                        showNode ? "minimize" : "expand"
+                      }-button-modal`}
                     >
+                      <ToolbarSelectItem
+                        shortcut={
+                          shortcuts.find((obj) => obj.name === "Minimize")
+                            ?.shortcut!
+                        }
+                        value={showNode ? "Minimize" : "Expand"}
+                        icon={showNode ? "Minimize2" : "Maximize2"}
+                      />
+                    </SelectItem>
+                  )}
+                  {isGroup && (
+                    <SelectItem value="ungroup">
+                      <ToolbarSelectItem
+                        shortcut={
+                          shortcuts.find((obj) => obj.name === "Group")
+                            ?.shortcut!
+                        }
+                        value={"Ungroup"}
+                        icon={"Ungroup"}
+                        dataTestId="group-button-modal"
+                      />
+                    </SelectItem>
+                  )}
+                  {hasToolMode && (
+                    <SelectItem
+                      value="freezeAll"
+                      data-testid="freeze-all-button-modal"
+                    >
+                      <ToolbarSelectItem
+                        shortcut={
+                          shortcuts.find((obj) =>
+                            obj.name.toLowerCase().startsWith("freeze"),
+                          )?.shortcut!
+                        }
+                        value={"Freeze"}
+                        icon={"FreezeAll"}
+                        dataTestId="freeze-path-button"
+                        style={`${frozen ? " text-ice" : ""} transition-all`}
+                      />
+                    </SelectItem>
+                  )}
+                  <SelectItem value="Download">
+                    <ToolbarSelectItem
+                      shortcut={
+                        shortcuts.find((obj) => obj.name === "Download")
+                          ?.shortcut!
+                      }
+                      value={"Download"}
+                      icon={"Download"}
+                      dataTestId="download-button-modal"
+                    />
+                  </SelectItem>
+                  <SelectItem
+                    value={"delete"}
+                    className="focus:bg-red-400/[.20]"
+                  >
+                    <div className="font-red flex text-status-red">
                       <IconComponent
-                        name="Delete"
-                        className="h-4 w-4 stroke-2 text-red-400"
-                      ></IconComponent>
-                    </span>
-                  </div>
-                </SelectItem>
-              </SelectContentWithoutPortal>
-            </Select>
+                        name="Trash2"
+                        className="relative top-0.5 mr-2 h-4 w-4"
+                      />{" "}
+                      <span className="">Delete</span>{" "}
+                      <span
+                        className={`absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2]`}
+                      >
+                        <IconComponent
+                          name="Delete"
+                          className="h-4 w-4 stroke-2 text-red-400"
+                        ></IconComponent>
+                      </span>
+                    </div>
+                  </SelectItem>
+                </SelectContentWithoutPortal>
+              </Select>
+            )}
           </div>
 
           <ToolbarModals

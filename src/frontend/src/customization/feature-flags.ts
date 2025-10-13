@@ -20,3 +20,5 @@ export const ENABLE_KNOWLEDGE_BASES = false;
 export const ENABLE_MCP_COMPOSER =
   process.env.LANGFLOW_MCP_COMPOSER_ENABLED === "true";
 export const ENABLE_NEW_SIDEBAR = true;
+
+export const LANGFLOW_ONLY_CANVAS = process.env.LANGFLOW_ONLY_CANVAS === "true";

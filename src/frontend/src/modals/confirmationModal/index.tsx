@@ -1,6 +1,7 @@
 import { DialogClose } from "@radix-ui/react-dialog";
 import React, { useEffect, useState } from "react";
 import GenericIconComponent from "@/components/common/genericIconComponent";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import type {
@@ -113,6 +114,7 @@ function ConfirmationModal({
               }}
               loading={loading}
               data-testid="replace-button"
+              disabled={LANGFLOW_ONLY_CANVAS}
             >
               {confirmationText}
             </Button>

@@ -3,7 +3,10 @@ import { useBlocker, useParams } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
-import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
+import {
+  ENABLE_NEW_SIDEBAR,
+  LANGFLOW_ONLY_CANVAS,
+} from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -108,6 +111,17 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         const isAnExistingFlow = flows.find((flow) => flow.id === id);
 
         if (!isAnExistingFlow) {
+          if (LANGFLOW_ONLY_CANVAS) {
+            // Create empty flow for canvas-only mode
+            const emptyFlow = {
+              id: id || "new",
+              name: "New Flow",
+              data: { nodes: [], edges: [] },
+              description: "",
+            };
+            setCurrentFlow(emptyFlow as any);
+            return;
+          }
           navigate("/all");
           return;
         }

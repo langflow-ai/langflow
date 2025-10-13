@@ -29,6 +29,7 @@ import {
 } from "@/constants/constants";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import CustomLoader from "@/customization/components/custom-loader";
+import { LANGFLOW_ONLY_CANVAS } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
@@ -348,27 +349,29 @@ export default function Page({
   const pasteAction = useShortcutsStore((state) => state.paste);
   const downloadAction = useShortcutsStore((state) => state.download);
   //@ts-ignore
-  useHotkeys(undoAction, handleUndo);
+  useHotkeys(undoAction, handleUndo, { enabled: !LANGFLOW_ONLY_CANVAS });
   //@ts-ignore
-  useHotkeys(redoAction, handleRedo);
+  useHotkeys(redoAction, handleRedo, { enabled: !LANGFLOW_ONLY_CANVAS });
   //@ts-ignore
-  useHotkeys(redoAltAction, handleRedo);
+  useHotkeys(redoAltAction, handleRedo, { enabled: !LANGFLOW_ONLY_CANVAS });
   //@ts-ignore
-  useHotkeys(groupAction, handleGroup);
+  useHotkeys(groupAction, handleGroup, { enabled: !LANGFLOW_ONLY_CANVAS });
   //@ts-ignore
-  useHotkeys(duplicate, handleDuplicate);
+  useHotkeys(duplicate, handleDuplicate, { enabled: !LANGFLOW_ONLY_CANVAS });
   //@ts-ignore
-  useHotkeys(copyAction, handleCopy);
+  useHotkeys(copyAction, handleCopy, { enabled: !LANGFLOW_ONLY_CANVAS });
   //@ts-ignore
-  useHotkeys(cutAction, handleCut);
+  useHotkeys(cutAction, handleCut, { enabled: !LANGFLOW_ONLY_CANVAS });
   //@ts-ignore
-  useHotkeys(pasteAction, handlePaste);
+  useHotkeys(pasteAction, handlePaste, { enabled: !LANGFLOW_ONLY_CANVAS });
   //@ts-ignore
-  useHotkeys(deleteAction, handleDelete);
+  useHotkeys(deleteAction, handleDelete, { enabled: !LANGFLOW_ONLY_CANVAS });
   //@ts-ignore
-  useHotkeys(downloadAction, handleDownload);
+  useHotkeys(downloadAction, handleDownload, {
+    enabled: !LANGFLOW_ONLY_CANVAS,
+  });
   //@ts-ignore
-  useHotkeys("delete", handleDelete);
+  useHotkeys("delete", handleDelete, { enabled: !LANGFLOW_ONLY_CANVAS });
 
   const onConnectMod = useCallback(
     (params: Connection) => {
