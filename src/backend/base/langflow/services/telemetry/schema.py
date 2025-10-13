@@ -53,6 +53,8 @@ class ComponentInputsPayload(BasePayload):
     component_id: str = Field(serialization_alias="componentId")
     component_name: str = Field(serialization_alias="componentName")
     component_inputs: str = Field(serialization_alias="componentInputs")
+    chunk_index: int | None = Field(None, serialization_alias="chunkIndex")
+    total_chunks: int | None = Field(None, serialization_alias="totalChunks")
 
 
 class ExceptionPayload(BasePayload):
