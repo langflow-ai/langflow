@@ -323,8 +323,8 @@ class ChainEventHandler(Protocol):
         event: dict[str, Any],
         agent_message: Message,
         send_message_callback: SendMessageFunctionType,
-        send_token_callback: OnTokenFunctionType | None = None,
-        start_time: float = ...,
+        send_token_callback: OnTokenFunctionType | None,
+        start_time: float,
         *,
         had_streaming: bool = False,
     ) -> tuple[Message, float]: ...
