@@ -18,7 +18,7 @@ import {
   FLEX_VIEW_TYPES,
   ICON_STROKE_WIDTH,
   IS_AUTO_LOGIN,
-  LANGFLOW_SUPPORTED_TYPES,
+  AI_STUDIO_SUPPORTED_TYPES,
 } from "../../../../constants/constants";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
@@ -101,7 +101,7 @@ export default function NodeInputField({
   }, [optionalHandle]);
 
   const displayHandle =
-    (!LANGFLOW_SUPPORTED_TYPES.has(type ?? "") ||
+    (!AI_STUDIO_SUPPORTED_TYPES.has(type ?? "") ||
       (optionalHandle && optionalHandle.length > 0)) &&
     !isToolMode &&
     !hasRefreshButton;

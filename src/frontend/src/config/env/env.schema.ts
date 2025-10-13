@@ -43,6 +43,12 @@ export const envSchema = z.object({
   VITE_WEBSOCKET_URL: validator.optionalUrl(),
   VITE_MAX_FILE_SIZE: validator.optionalString(),
   VITE_TIMEOUT: validator.optionalString(),
+
+  // Keycloak Authentication Configuration
+  VITE_KEYCLOAK_URL: validator.optionalUrl(),
+  VITE_KEYCLOAK_REALM: validator.optionalString(),
+  VITE_KEYCLOAK_CLIENT_ID: validator.optionalString(),
+  VITE_KEYCLOAK_ENABLED: validator.boolean().default(false),
 });
 
 /**
@@ -80,4 +86,10 @@ export interface EnvConfig {
   websocketUrl?: string;
   maxFileSize?: string;
   timeout?: string;
+
+  // Keycloak Authentication Configuration
+  keycloakUrl?: string;
+  keycloakRealm?: string;
+  keycloakClientId?: string;
+  keycloakEnabled: boolean;
 }

@@ -1,7 +1,7 @@
 import { Cookies } from "react-cookie";
 import {
   IS_AUTO_LOGIN,
-  LANGFLOW_AUTO_LOGIN_OPTION,
+  AI_STUDIO_AUTO_LOGIN_OPTION,
 } from "@/constants/constants";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
@@ -24,7 +24,7 @@ export const useLogout: useMutationFunctionType<undefined, void> = (
   async function logoutUser(): Promise<any> {
     const autoLogin =
       useAuthStore.getState().autoLogin ||
-      getAuthCookie(cookies, LANGFLOW_AUTO_LOGIN_OPTION) === "auto" ||
+      getAuthCookie(cookies, AI_STUDIO_AUTO_LOGIN_OPTION) === "auto" ||
       isAutoLoginEnv;
 
     if (autoLogin) {

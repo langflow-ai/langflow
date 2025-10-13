@@ -33,7 +33,7 @@ import getFieldTitle from "../CustomNodes/utils/get-field-title";
 import {
   INPUT_TYPES,
   IS_MAC,
-  LANGFLOW_SUPPORTED_TYPES,
+  AI_STUDIO_SUPPORTED_TYPES,
   OUTPUT_TYPES,
   SUCCESS_BUILD,
   specialCharsRegex,
@@ -1346,7 +1346,7 @@ function updateGroupNodeTemplate(template: APITemplateType) {
     const type = template[key].type;
     const input_types = template[key].input_types;
     if (
-      LANGFLOW_SUPPORTED_TYPES.has(type) &&
+      AI_STUDIO_SUPPORTED_TYPES.has(type) &&
       !template[key].required &&
       !input_types
     ) {
