@@ -114,38 +114,16 @@ class ComponentInputsPayload(BasePayload):
         """
         truncation_suffix = "...[truncated]"
 
-        # For string values, use binary search to find optimal truncation point
-        if isinstance(value, str):
-            max_len = len(value)
-            min_len = 0
-            truncated_value = value
+        # Convert to string if needed (handles both string and non-string values)
+        # For string values: truncate directly
+        # For non-string values: convert to string representation, then truncate
+        str_value = value if isinstance(value, str) else str(value)
 
-            while min_len < max_len:
-                mid_len = (min_len + max_len + 1) // 2
-                test_val = value[:mid_len] + truncation_suffix
-                test_inputs = {key: test_val}
-                test_payload = ComponentInputsPayload(
-                    component_run_id=self.component_run_id,
-                    component_id=self.component_id,
-                    component_name=self.component_name,
-                    component_inputs=test_inputs,
-                    chunk_index=0,
-                    total_chunks=1,
-                )
-
-                if test_payload._calculate_url_size() <= max_url_size:
-                    truncated_value = test_val
-                    min_len = mid_len
-                else:
-                    max_len = mid_len - 1
-
-            return truncated_value
-        # Non-string value too large, convert to string and truncate
-        str_value = str(value)
-        # Use binary search for non-string values too
+        # Use binary search to find optimal truncation point
+        # This finds the maximum prefix length that keeps the URL under max_url_size
         max_len = len(str_value)
         min_len = 0
-        truncated_value = str_value[:100] + truncation_suffix
+        truncated_value = str_value[:100] + truncation_suffix  # Initial guess
 
         while min_len < max_len:
             mid_len = (min_len + max_len + 1) // 2
