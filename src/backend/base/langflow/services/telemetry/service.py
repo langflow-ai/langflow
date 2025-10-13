@@ -147,7 +147,17 @@ class TelemetryService(Service):
         await self._queue_event((self.send_telemetry_data, payload, "component"))
 
     async def log_package_component_inputs(self, payload: ComponentInputsPayload) -> None:
-        await self._queue_event((self.send_telemetry_data, payload, "component_inputs"))
+        """Log component input values, splitting into multiple requests if needed.
+
+        Args:
+            payload: Component inputs payload to log
+        """
+        # Split payload if it exceeds URL size limit
+        chunks = payload.split_if_needed(max_url_size=2000)
+
+        # Queue each chunk separately
+        for chunk in chunks:
+            await self._queue_event((self.send_telemetry_data, chunk, "component_inputs"))
 
     async def log_exception(self, exc: Exception, context: str) -> None:
         """Log unhandled exceptions to telemetry.
