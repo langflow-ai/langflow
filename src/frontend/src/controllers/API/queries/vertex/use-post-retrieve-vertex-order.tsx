@@ -42,17 +42,17 @@ export const usePostRetrieveVertexOrder: useMutationFunctionType<
         start_component_id: decodeURIComponent(startNodeId),
       };
     }
-    const data = {
-      data: {},
-    };
+    let requestBody: { nodes: any[]; edges: any[] } | null = null;
     if (flow && flow.nodes && flow.edges) {
       const { nodes, edges } = flow;
-      data["data"]["nodes"] = nodes;
-      data["data"]["edges"] = edges;
+      requestBody = {
+        nodes,
+        edges,
+      };
     }
     const response = await api.post(
       `${getURL("BUILD")}/${flowId}/vertices`,
-      data,
+      requestBody,
       config,
     );
 
