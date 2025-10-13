@@ -15,6 +15,8 @@ export default function SettingsPage(): JSX.Element {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const hasStore = useStoreStore((state) => state.hasStore);
 
+  const flowsUrl = `${window.location.origin}/flows`;
+
   // Hides the General settings if there is nothing to show
   const showGeneralSettings = ENABLE_PROFILE_ICONS || hasStore || !autoLogin;
 
@@ -89,7 +91,7 @@ export default function SettingsPage(): JSX.Element {
 
   return (
     <PageLayout
-      backTo={-1 as To}
+      backTo={flowsUrl}
       title="Settings"
       description="Manage the general settings for Langflow."
     >
