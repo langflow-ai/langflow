@@ -183,7 +183,7 @@ class TypeConverterComponent(Component):
         super().__init__(**data)
 
         # Get the current output_type value (from template or default)
-        output_type = getattr(self, 'output_type', 'Message')
+        output_type = getattr(self, "output_type", "Message")
 
         # Set the correct output based on output_type
         if output_type in ("Data", "JSON"):
@@ -278,4 +278,3 @@ class TypeConverterComponent(Component):
         result = convert_to_dataframe(input_value, auto_parse=self.auto_parse)
         self.status = result
         return result
-

@@ -43,6 +43,7 @@ def custom_serializer(obj):
 def serialize_data(data):
     return json.dumps(data, indent=4, default=custom_serializer)
 
+
 class JSON(CrossModuleModel):
     """Represents a record with text and optional data.
 

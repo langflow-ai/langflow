@@ -87,10 +87,10 @@ class Edge:
 
         # Type migration mappings (bidirectional)
         migrations = {
-            'Data': 'JSON',
-            'JSON': 'Data',
-            'DataFrame': 'Table',
-            'Table': 'DataFrame',
+            "Data": "JSON",
+            "JSON": "Data",
+            "DataFrame": "Table",
+            "Table": "DataFrame",
         }
 
         return migrations.get(source_type) == target_type
@@ -118,16 +118,13 @@ class Edge:
             )
 
         elif self.source_handle.output_types is not None:
-            self.valid_handles = (
-                any(
-                    self._types_are_compatible(output_type, input_type)
-                    for output_type in self.source_handle.output_types
-                    for input_type in self.target_handle.input_types
-                )
-                or any(
-                    self._types_are_compatible(output_type, self.target_handle.type)
-                    for output_type in self.source_handle.output_types
-                )
+            self.valid_handles = any(
+                self._types_are_compatible(output_type, input_type)
+                for output_type in self.source_handle.output_types
+                for input_type in self.target_handle.input_types
+            ) or any(
+                self._types_are_compatible(output_type, self.target_handle.type)
+                for output_type in self.source_handle.output_types
             )
 
         if not self.valid_handles:
