@@ -1,4 +1,5 @@
 import * as Form from "@radix-ui/react-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { useContext, useState } from "react";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { useLoginUser } from "@/controllers/API/queries/auth";
@@ -35,6 +36,7 @@ export default function LoginPage(): JSX.Element {
   }
 
   const { mutate } = useLoginUser();
+  const queryClient = useQueryClient();
 
   function signIn() {
     const user: LoginType = {
@@ -45,6 +47,7 @@ export default function LoginPage(): JSX.Element {
     mutate(user, {
       onSuccess: (data) => {
         login(data.access_token, "login", data.refresh_token);
+        queryClient.clear();
       },
       onError: (error) => {
         setErrorData({

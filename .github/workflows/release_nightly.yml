@@ -49,7 +49,7 @@ env:
 jobs:
   build-nightly-lfx:
     name: Build LFX Nightly
-    if: inputs.build_lfx
+    if: ${{ inputs.build_lfx }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.verify.outputs.version }}
@@ -114,7 +114,7 @@ jobs:
   build-nightly-base:
     name: Build Langflow Nightly Base
     needs: [build-nightly-lfx]
-    if: always() && (needs.build-nightly-lfx.result == 'success' || inputs.build_lfx == false)
+    if: ${{ always() && (needs.build-nightly-lfx.result == 'success' || inputs.build_lfx == false) }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -279,7 +279,7 @@ jobs:
   publish-nightly-lfx:
     name: Publish LFX Nightly to PyPI
     needs: [build-nightly-lfx, test-cross-platform]
-    if: inputs.build_lfx
+    if: ${{ inputs.build_lfx }}
     runs-on: ubuntu-latest
     steps:
       - name: Check out the code
@@ -288,7 +288,7 @@ jobs:
           ref: ${{ inputs.nightly_tag_main }}
           persist-credentials: true
       - name: Download LFX artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: dist-nightly-lfx
           path: src/lfx/dist
@@ -307,7 +307,7 @@ jobs:
   publish-nightly-base:
     name: Publish Langflow Base Nightly to PyPI
     needs: [build-nightly-base, test-cross-platform, publish-nightly-lfx]
-    if: always() && needs.build-nightly-base.result == 'success' && needs.test-cross-platform.result == 'success' && (needs.publish-nightly-lfx.result == 'success' || inputs.build_lfx == false)
+    if: ${{ always() && needs.build-nightly-base.result == 'success' && needs.test-cross-platform.result == 'success' && (needs.publish-nightly-lfx.result == 'success' || inputs.build_lfx == false) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -316,7 +316,7 @@ jobs:
           ref: ${{ inputs.nightly_tag_main }}
           persist-credentials: true
       - name: Download base artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: dist-nightly-base
           path: src/backend/base/dist
@@ -344,7 +344,7 @@ jobs:
           ref: ${{ inputs.nightly_tag_main }}
           persist-credentials: true
       - name: Download main artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: dist-nightly-main
           path: dist
@@ -362,7 +362,7 @@ jobs:
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
-    if: always() && inputs.build_docker_base
+    if: ${{ always() && inputs.build_docker_base }}
     needs: [build-nightly-base, build-nightly-main]
     uses: ./.github/workflows/docker-nightly-build.yml
     with:
@@ -373,7 +373,7 @@ jobs:
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    if: always() && inputs.build_docker_main
+    if: ${{ always() && inputs.build_docker_main }}
     needs: [build-nightly-main, call_docker_build_base]
     uses: ./.github/workflows/docker-nightly-build.yml
     with:
@@ -396,7 +396,7 @@ jobs:
 
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
-    if: always() && inputs.build_docker_ep
+    if: ${{ always() && inputs.build_docker_ep }}
     needs: [build-nightly-main, call_docker_build_main]
     uses: ./.github/workflows/docker-build-v2.yml
     with:
