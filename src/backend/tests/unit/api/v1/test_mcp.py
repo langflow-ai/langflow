@@ -134,8 +134,7 @@ async def test_mcp_sse_with_middleware_no_conflict(client: AsyncClient, logged_i
 
     # Verify the middleware has the bypass logic for MCP routes
     assert 'if request.url.path.startswith("/api/v1/mcp/")' in dispatch_source, (
-        "Middleware bypass for MCP routes not found! "
-        "The fix for GitHub issue #883 may have been removed."
+        "Middleware bypass for MCP routes not found! The fix for GitHub issue #883 may have been removed."
     )
 
     # Verify it returns early (bypasses middleware processing)
