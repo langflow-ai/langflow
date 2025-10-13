@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -9,6 +10,7 @@ import TemplatesModal from "@/modals/templatesModal";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
+import { usePostFolders } from "@/controllers/API/queries/folders/use-post-folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
@@ -200,6 +202,7 @@ export default function AgentBuilderPage() {
   // Fetch folders and agents (same logic as StudioHomePage)
   const myCollectionId = useFolderStore((s) => s.myCollectionId);
   const folders = useFolderStore((s) => s.folders);
+  const setMyCollectionId = useFolderStore((s) => s.setMyCollectionId);
   const folderId = myCollectionId || folders?.[0]?.id || "";
 
   const [pageIndex, setPageIndex] = useState(1);
@@ -216,6 +219,7 @@ export default function AgentBuilderPage() {
 
   // Delete mutation
   const deleteMutation = useDeleteDeleteFlows();
+  const { mutate: mutateAddFolder, isPending: isCreatingFolder } = usePostFolders();
 
   const handleDeleteAgent = (flowId: string) => {
     deleteMutation.mutate({ flow_ids: [flowId] });
@@ -251,14 +255,67 @@ export default function AgentBuilderPage() {
     }
   };
 
+  const currentFolderName =
+    folders.find((f) => f.id === folderId)?.name ?? folders[0]?.name ?? "";
+
+  const handleSelectProject = (value: string) => {
+    setMyCollectionId(value);
+    setPageIndex(1);
+  };
+
+  const handleCreateProject = () => {
+    mutateAddFolder(
+      {
+        data: {
+          name: "New Project",
+          parent_id: null,
+          description: "",
+        },
+      },
+      {
+        onSuccess: (folder: any) => {
+          setMyCollectionId(folder.id);
+        },
+      },
+    );
+  };
+
   return (
     <div className="flex h-full w-full overflow-y-auto">
       <div className="mx-auto w-full max-w-7xl p-4">
         {/* AI Agent Builder Title */}
-        <div className="mb-8">
-          <h1 className="text-xl font-medium" style={{ color: '#350E84' }}>
-            AI Agent Builder
-          </h1>
+        <div className="mb-6">
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="text-xl font-medium" style={{ color: '#350E84' }}>
+              AI Agent Builder
+            </h1>
+            {/* Project Selector */}
+            <div className="flex items-center gap-2">
+              <div className="text-sm text-muted-foreground">Project</div>
+              <Select onValueChange={handleSelectProject} value={folderId}>
+                <SelectTrigger className="w-[220px] h-9">
+                  <SelectValue placeholder="Select project" />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  {folders.map((f) => (
+                    <SelectItem key={f.id} value={f.id!} className="text-sm">
+                      {f.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9"
+                onClick={handleCreateProject}
+                disabled={isCreatingFolder}
+              >
+                <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
+                New Project
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Hero Section */}
