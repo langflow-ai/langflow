@@ -2,7 +2,7 @@
 
 These instructions will walk you through the process of running a Langflow demo via GitHub Codespaces.
 
-If you want a faster and easier demo experience with Langflow, download and install [Langflow Desktop](#install-and-run-langflow-desktop) for the least complicated setup experience.
+If you want a faster and easier demo experience with Langflow, download and install [Langflow Desktop](https://docs.langflow.org/get-started-installation#install-and-run-langflow-desktop) for the least complicated setup experience.
 
 ## Create a Codespace in GitHub
 
