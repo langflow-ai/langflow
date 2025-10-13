@@ -185,7 +185,7 @@ class LCAgentComponent(Component):
             # Set input to text content or empty string
             if text_content and has_non_empty_text:
                 lc_message.content = text_content
-                input_dict["input"] = lc_message
+                input_dict["input"] = lc_message.content
             else:
                 input_dict["input"] = ""
 
