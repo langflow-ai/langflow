@@ -47,19 +47,31 @@ class PolarisAIDataInsightComponent(Component):
 
     def extract_document(self) -> Data:
         if not self.file_path:
-            logger.error("File path is required.")
-            self.status = "File path is required."
+            error_msg = "File path is required."
+            logger.error(error_msg)
+            self.status = error_msg
+            raise ValueError(error_msg)
         if not self.api_key:
-            logger.error("API key is required.")
-            self.status = "API key is required."
+            error_msg = "API key is required."
+            logger.error(error_msg)
+            self.status = error_msg
+            raise ValueError(error_msg)
         if not self.resources_dir:
-            logger.error("Resources directory is required.")
-            self.status = "Resources directory is required."
+            error_msg = "Resources directory is required."
+            logger.error(error_msg)
+            self.status = error_msg
+            raise ValueError(error_msg)
 
         loader = PolarisAIDataInsightLoader(
             file_path=self.file_path, api_key=self.api_key, resources_dir=self.resources_dir, mode="single"
         )
-        doc = loader.load()[0]
+
+        docs = loader.load()
+        if not docs:
+            logger.error("No documents were loaded from the file.")
+            self.status = "No documents were loaded from the file."
+            return Data(data={})
+        doc = docs[0]
 
         self.status = doc
         return Data.from_document(doc)

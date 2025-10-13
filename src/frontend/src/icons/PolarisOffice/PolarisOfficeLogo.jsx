@@ -1,4 +1,4 @@
-const SVGPolarisOfficeLogo = (props) => (
+const SVGPolarisOfficeLogo = ({ isDark, ...props }) => (
   <svg
     width="1.4em"
     height="1.4em"
@@ -9,6 +9,7 @@ const SVGPolarisOfficeLogo = (props) => (
       maxWidth: "100%",
       height: "100%",
     }}
+    {...props}
   >
     <path
       d="M70.1772 139.755L3.81078 121.336C0.554964 120.43 -0.896425 122.127 0.574577 125.194L108.997 345.443C110.79 348.631 114.125 350.686 117.823 350.883C114.248 350.799 111.183 348.347 110.37 344.922L70.1772 139.755Z"

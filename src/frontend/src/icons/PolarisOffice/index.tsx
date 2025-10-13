@@ -3,7 +3,9 @@ import SvgPolarisOfficeLogo from "./PolarisOfficeLogo";
 
 export const PolarisOfficeIcon = forwardRef<
   SVGSVGElement,
-  React.PropsWithChildren<{}>
+  React.PropsWithChildren<{ isDark?: boolean }>
 >((props, ref) => {
-  return <SvgPolarisOfficeLogo ref={ref} {...props} />;
+  return (
+    <SvgPolarisOfficeLogo ref={ref} isDark={props.isDark ?? false} {...props} />
+  );
 });
