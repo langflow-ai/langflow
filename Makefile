@@ -437,6 +437,10 @@ publish_testpypi: ## build the frontend static files and package the project and
 # LFX PACKAGE
 ######################
 
+build_component_index: ## build the component index with dynamic loading
+	@echo 'Building component index'
+	LFX_DEV=1 uv run python scripts/build_component_index.py
+
 lfx_build: ## build the LFX package
 	@echo 'Building LFX package'
 	@cd src/lfx && make build
