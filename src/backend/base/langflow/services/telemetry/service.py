@@ -15,6 +15,7 @@ from langflow.services.base import Service
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
 from langflow.services.telemetry.schema import (
     MAX_TELEMETRY_URL_SIZE,
+    ComponentIndexPayload,
     ComponentInputsPayload,
     ComponentPayload,
     ExceptionPayload,
@@ -159,6 +160,9 @@ class TelemetryService(Service):
         # Queue each chunk separately
         for chunk in chunks:
             await self._queue_event((self.send_telemetry_data, chunk, "component_inputs"))
+
+    async def log_component_index(self, payload: ComponentIndexPayload) -> None:
+        await self._queue_event((self.send_telemetry_data, payload, "component_index"))
 
     async def log_exception(self, exc: Exception, context: str) -> None:
         """Log unhandled exceptions to telemetry.

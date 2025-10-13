@@ -248,3 +248,12 @@ class ExceptionPayload(BasePayload):
     exception_message: str = Field(serialization_alias="exceptionMessage")
     exception_context: str = Field(serialization_alias="exceptionContext")  # "lifespan" or "handler"
     stack_trace_hash: str | None = Field(None, serialization_alias="stackTraceHash")  # Hash for grouping
+
+
+class ComponentIndexPayload(BasePayload):
+    index_source: str = Field(serialization_alias="indexSource")  # "builtin", "cache", or "dynamic"
+    num_modules: int = Field(serialization_alias="numModules")
+    num_components: int = Field(serialization_alias="numComponents")
+    dev_mode: bool = Field(serialization_alias="devMode")
+    filtered_modules: str | None = Field(None, serialization_alias="filteredModules")  # CSV if filtering
+    load_time_ms: int = Field(serialization_alias="loadTimeMs")
