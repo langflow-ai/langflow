@@ -290,7 +290,8 @@ async def handle_on_chain_stream(
         output_text = _extract_output_text(data_chunk.content)
 
         if not send_token_callback:
-            raise ValueError("send_token_callback is required for on_chain_stream events")
+            msg = "send_token_callback is required for on_chain_stream events"
+            raise ValueError(msg)
 
         if output_text and output_text.strip():
             await asyncio.to_thread(
