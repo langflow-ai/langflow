@@ -1079,7 +1079,7 @@
                 "group_outputs": false,
                 "method": "build_structured_output",
                 "name": "structured_output",
-                "selected": null,
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
                   "JSON"

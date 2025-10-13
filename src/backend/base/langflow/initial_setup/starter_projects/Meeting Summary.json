@@ -9,17 +9,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-y1N5A",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input",
             "id": "Prompt-36nA8",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
+            "inputTypes": ["Message", "Text"],
             "type": "str"
           }
         },
@@ -38,17 +33,12 @@
             "dataType": "AssemblyAITranscriptionJobCreator",
             "id": "AssemblyAITranscriptionJobCreator-Nu1dV",
             "name": "transcript_id",
-            "output_types": [
-              "JSON"
-            ]
+            "output_types": ["JSON"]
           },
           "targetHandle": {
             "fieldName": "transcript_id",
             "id": "AssemblyAITranscriptionJobPoller-sCJsy",
-            "inputTypes": [
-              "Data",
-              "JSON"
-            ],
+            "inputTypes": ["Data", "JSON"],
             "type": "other"
           }
         },
@@ -67,17 +57,12 @@
             "dataType": "AssemblyAITranscriptionJobPoller",
             "id": "AssemblyAITranscriptionJobPoller-sCJsy",
             "name": "transcription_result",
-            "output_types": [
-              "JSON"
-            ]
+            "output_types": ["JSON"]
           },
           "targetHandle": {
             "fieldName": "input_data",
             "id": "parser-6bJ9b",
-            "inputTypes": [
-              "DataFrame",
-              "Data"
-            ],
+            "inputTypes": ["DataFrame", "Data"],
             "type": "other"
           }
         },
@@ -96,17 +81,12 @@
             "dataType": "parser",
             "id": "parser-6bJ9b",
             "name": "parsed_text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "transcript",
             "id": "Prompt-AMW8y",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
+            "inputTypes": ["Message", "Text"],
             "type": "str"
           }
         },
@@ -125,20 +105,12 @@
             "dataType": "parser",
             "id": "parser-6bJ9b",
             "name": "parsed_text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-iChI5",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
             "type": "str"
           }
         },
@@ -157,16 +129,12 @@
             "dataType": "Prompt",
             "id": "Prompt-AMW8y",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "LanguageModelComponent-cPCaH",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -185,20 +153,12 @@
             "dataType": "LanguageModelComponent",
             "id": "LanguageModelComponent-cPCaH",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-9KeOi",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
             "type": "str"
           }
         },
@@ -217,16 +177,12 @@
             "dataType": "Prompt",
             "id": "Prompt-36nA8",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "LanguageModelComponent-mMKmF",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -245,20 +201,12 @@
             "dataType": "LanguageModelComponent",
             "id": "LanguageModelComponent-mMKmF",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-R039P",
-            "inputTypes": [
-              "Data",
-              "JSON",
-              "DataFrame",
-              "Table",
-              "Message"
-            ],
+            "inputTypes": ["Data", "JSON", "DataFrame", "Table", "Message"],
             "type": "str"
           }
         },
@@ -275,17 +223,12 @@
             "dataType": "Memory",
             "id": "Memory-dFlpS",
             "name": "messages_text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "history",
             "id": "Prompt-36nA8",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
+            "inputTypes": ["Message", "Text"],
             "type": "str"
           }
         },
@@ -301,9 +244,7 @@
         "data": {
           "id": "AssemblyAITranscriptionJobPoller-sCJsy",
           "node": {
-            "base_classes": [
-              "Data"
-            ],
+            "base_classes": ["Data"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -311,11 +252,7 @@
             "display_name": "AssemblyAI Poll Transcript",
             "documentation": "https://www.assemblyai.com/docs",
             "edited": false,
-            "field_order": [
-              "api_key",
-              "transcript_id",
-              "polling_interval"
-            ],
+            "field_order": ["api_key", "transcript_id", "polling_interval"],
             "frozen": false,
             "icon": "AssemblyAI",
             "legacy": false,
@@ -349,9 +286,7 @@
                 "name": "transcription_result",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": [
-                  "JSON"
-                ],
+                "types": ["JSON"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -423,10 +358,7 @@
                 "display_name": "Transcript ID",
                 "dynamic": false,
                 "info": "The ID of the transcription job to poll",
-                "input_types": [
-                  "Data",
-                  "JSON"
-                ],
+                "input_types": ["Data", "JSON"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "transcript_id",
@@ -463,25 +395,18 @@
         "data": {
           "id": "Prompt-AMW8y",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": [
-                "transcript"
-              ]
+              "template": ["transcript"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
             "error": null,
-            "field_order": [
-              "template",
-              "tool_placeholder"
-            ],
+            "field_order": ["template", "tool_placeholder"],
             "frozen": false,
             "full_path": null,
             "icon": "braces",
@@ -507,9 +432,7 @@
                 "name": "prompt",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -557,9 +480,7 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "tool_placeholder",
@@ -581,10 +502,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -619,9 +537,7 @@
         "data": {
           "id": "ChatOutput-9KeOi",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "outputs",
             "conditional_paths": [],
@@ -679,9 +595,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -731,9 +645,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -781,10 +693,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -800,9 +709,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -822,9 +729,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -877,9 +782,7 @@
         "data": {
           "id": "ChatOutput-iChI5",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "outputs",
             "conditional_paths": [],
@@ -937,9 +840,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -989,9 +890,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -1039,10 +938,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1058,9 +954,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -1080,9 +974,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -1135,9 +1027,7 @@
         "data": {
           "id": "ChatOutput-R039P",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "outputs",
             "conditional_paths": [],
@@ -1195,9 +1085,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1247,9 +1135,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -1297,10 +1183,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1316,9 +1199,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -1338,9 +1219,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -1393,26 +1272,18 @@
         "data": {
           "id": "Prompt-36nA8",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": [
-                "history",
-                "input"
-              ]
+              "template": ["history", "input"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
             "error": null,
-            "field_order": [
-              "template",
-              "tool_placeholder"
-            ],
+            "field_order": ["template", "tool_placeholder"],
             "frozen": false,
             "full_path": null,
             "icon": "braces",
@@ -1438,9 +1309,7 @@
                 "name": "prompt",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1473,10 +1342,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1496,10 +1362,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1534,9 +1397,7 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "tool_placeholder",
@@ -1573,10 +1434,7 @@
         "data": {
           "id": "Memory-dFlpS",
           "node": {
-            "base_classes": [
-              "Data",
-              "Message"
-            ],
+            "base_classes": ["Data", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1622,23 +1480,19 @@
                 "name": "messages_text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Dataframe",
+                "display_name": "Table",
                 "group_outputs": false,
                 "method": "retrieve_messages_dataframe",
                 "name": "dataframe",
-                "selected": null,
+                "selected": "Table",
                 "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
+                "types": ["Table"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1669,9 +1523,7 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": [
-                  "Memory"
-                ],
+                "input_types": ["Memory"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "memory",
@@ -1689,9 +1541,7 @@
                 "display_name": "Message",
                 "dynamic": true,
                 "info": "The chat message to be stored.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1713,10 +1563,7 @@
                 "dynamic": false,
                 "info": "Operation mode: Store messages or Retrieve messages.",
                 "name": "mode",
-                "options": [
-                  "Retrieve",
-                  "Store"
-                ],
+                "options": ["Retrieve", "Store"],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -1754,10 +1601,7 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": [
-                  "Ascending",
-                  "Descending"
-                ],
+                "options": ["Ascending", "Descending"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": true,
@@ -1777,11 +1621,7 @@
                 "dynamic": false,
                 "info": "The sender of the message. Might be Machine or User. If empty, the current sender parameter will be used.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User",
-                  "Machine and User"
-                ],
+                "options": ["Machine", "User", "Machine and User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1798,9 +1638,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1824,11 +1662,7 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender_type",
-                "options": [
-                  "Machine",
-                  "User",
-                  "Machine and User"
-                ],
+                "options": ["Machine", "User", "Machine and User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1846,9 +1680,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1869,9 +1701,7 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1911,9 +1741,7 @@
         "data": {
           "id": "ChatInput-y1N5A",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1961,9 +1789,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2060,10 +1886,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -2079,9 +1902,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -2101,9 +1922,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -2270,9 +2089,7 @@
         "data": {
           "id": "AssemblyAITranscriptionJobCreator-Nu1dV",
           "node": {
-            "base_classes": [
-              "Data"
-            ],
+            "base_classes": ["Data"],
             "beta": false,
             "category": "assemblyai",
             "conditional_paths": [],
@@ -2326,14 +2143,12 @@
                 "name": "transcript_id",
                 "selected": "JSON",
                 "tool_mode": true,
-                "types": [
-                  "JSON"
-                ],
+                "types": ["JSON"],
                 "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
-            "score": 1.8578044550916993e-05,
+            "score": 0.000018578044550916993,
             "template": {
               "_type": "Component",
               "api_key": {
@@ -2418,9 +2233,7 @@
                 "display_name": "Audio File URL",
                 "dynamic": false,
                 "info": "The URL of the audio file to transcribe (Can be used instead of a File)",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2477,9 +2290,7 @@
                 "display_name": "Language",
                 "dynamic": false,
                 "info": "\n            The language of the audio file. Can be set manually if automatic language detection is disabled.\n            See https://www.assemblyai.com/docs/getting-started/supported-languages for a list of supported language codes.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2554,9 +2365,7 @@
                 "display_name": "Expected Number of Speakers",
                 "dynamic": false,
                 "info": "Set the expected number of speakers (optional, enter a number)",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2580,10 +2389,7 @@
                 "dynamic": false,
                 "info": "The speech model to use for the transcription",
                 "name": "speech_model",
-                "options": [
-                  "best",
-                  "nano"
-                ],
+                "options": ["best", "nano"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -2645,9 +2451,7 @@
         "data": {
           "id": "parser-6bJ9b",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "processing",
             "conditional_paths": [],
@@ -2656,12 +2460,7 @@
             "display_name": "Parser",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "mode",
-              "pattern",
-              "input_data",
-              "sep"
-            ],
+            "field_order": ["mode", "pattern", "input_data", "sep"],
             "frozen": false,
             "icon": "braces",
             "key": "parser",
@@ -2681,9 +2480,7 @@
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2733,10 +2530,7 @@
                 "display_name": "Data or DataFrame",
                 "dynamic": false,
                 "info": "Accepts either a DataFrame or a Data object.",
-                "input_types": [
-                  "DataFrame",
-                  "Data"
-                ],
+                "input_types": ["DataFrame", "Data"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "input_data",
@@ -2755,10 +2549,7 @@
                 "dynamic": false,
                 "info": "Convert into raw string instead of using a template.",
                 "name": "mode",
-                "options": [
-                  "Parser",
-                  "Stringify"
-                ],
+                "options": ["Parser", "Stringify"],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -2776,9 +2567,7 @@
                 "display_name": "Template",
                 "dynamic": true,
                 "info": "Use variables within curly brackets to extract column values for DataFrames or key values for Data.For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2800,9 +2589,7 @@
                 "display_name": "Separator",
                 "dynamic": false,
                 "info": "String used to separate rows/items.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2841,10 +2628,7 @@
         "data": {
           "id": "LanguageModelComponent-cPCaH",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -2911,9 +2695,7 @@
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -2927,9 +2709,7 @@
                 "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2980,9 +2760,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input text to send to the model",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3047,11 +2825,7 @@
                 "dynamic": false,
                 "info": "Select the model provider",
                 "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
-                ],
+                "options": ["OpenAI", "Anthropic", "Google"],
                 "options_metadata": [
                   {
                     "icon": "OpenAI"
@@ -3099,9 +2873,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3168,10 +2940,7 @@
         "data": {
           "id": "LanguageModelComponent-mMKmF",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -3238,9 +3007,7 @@
                 "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -3254,9 +3021,7 @@
                 "required_inputs": null,
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -3307,9 +3072,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input text to send to the model",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3374,11 +3137,7 @@
                 "dynamic": false,
                 "info": "Select the model provider",
                 "name": "provider",
-                "options": [
-                  "OpenAI",
-                  "Anthropic",
-                  "Google"
-                ],
+                "options": ["OpenAI", "Anthropic", "Google"],
                 "options_metadata": [
                   {
                     "icon": "OpenAI"
@@ -3426,9 +3185,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "A system message that helps set the behavior of the assistant",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -3504,8 +3261,5 @@
   "is_component": false,
   "last_tested_version": "1.4.3",
   "name": "Meeting Summary",
-  "tags": [
-    "chatbots",
-    "content-generation"
-  ]
+  "tags": ["chatbots", "content-generation"]
 }

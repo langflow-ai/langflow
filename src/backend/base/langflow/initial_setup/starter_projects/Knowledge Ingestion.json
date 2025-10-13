@@ -407,7 +407,7 @@
                 "group_outputs": false,
                 "method": "fetch_content_as_message",
                 "name": "raw_results",
-                "selected": null,
+                "selected": "Message",
                 "tool_mode": false,
                 "types": [
                   "Message"

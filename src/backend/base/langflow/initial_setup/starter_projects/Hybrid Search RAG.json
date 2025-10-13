@@ -1888,7 +1888,7 @@
                 "group_outputs": false,
                 "method": "search_documents",
                 "name": "search_results",
-                "selected": null,
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
                   "JSON"
@@ -1917,7 +1917,7 @@
                 "hidden": false,
                 "method": "as_vector_store",
                 "name": "vectorstoreconnection",
-                "selected": null,
+                "selected": "VectorStore",
                 "tool_mode": true,
                 "types": [
                   "VectorStore"
@@ -2692,7 +2692,7 @@
                 "group_outputs": false,
                 "method": "build_structured_output",
                 "name": "structured_output",
-                "selected": null,
+                "selected": "JSON",
                 "tool_mode": true,
                 "types": [
                   "JSON"
