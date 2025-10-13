@@ -42,6 +42,28 @@ Langflow can more efficiently handle multiple users and larger workloads by usin
     LANGFLOW_DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
     ```
 
+    To force the connection to use SSL, add the `sslmode=require` parameter to the connection string:
+
+    ```text
+    LANGFLOW_DATABASE_URL="postgresql://user:password@localhost:5432/dbname?sslmode=require"
+    ```
+
+    If your PostgreSQL server requires client certificates, add the certificate paths to your connection string:
+
+    ```text
+    LANGFLOW_DATABASE_URL="postgresql://user@localhost:5432/dbname?sslmode=verify-ca&sslcert=/path/to/client.crt&sslkey=/path/to/client.key&sslrootcert=/path/to/ca.crt"
+    ```
+
+    Langflow uses [SQLAlchemy](https://www.sqlalchemy.org/) with the [psycopg](https://www.psycopg.org/) driver to pass SSL parameters directly to the PostgreSQL connection. The following SSL modes are supported:
+
+    - **`sslmode=require`**: Requires SSL connection but doesn't verify server certificate. This option is the least secure, but acceptable for most use cases.
+    - **`sslmode=verify-ca`**: Requires SSL and verifies the server certificate against the Certificate Authority (CA).
+    - **`sslmode=verify-full`**: Requires SSL, verifies the server certificate, and checks the request hostname against the certificate hostname. This option is the most secure.
+
+    Do not use the Langflow environment variables [`LANGFLOW_SSL_CERT_FILE`](/environment-variables#server) and [`LANGFLOW_SSL_KEY_FILE`](/environment-variables#server) for your PostgreSQL certificates: these variables are for enabling HTTPS on the Langflow server, not for PostgreSQL database connections.
+
+    For more on managing SSL certificates in PostgreSQL, see the [PostgreSQL documentation](https://www.postgresql.org/docs/9.1/ssl-tcp.html).
+
 5. Save your changes, and then start Langflow with your `.env` file:
 
     ```bash
