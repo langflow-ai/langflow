@@ -226,12 +226,12 @@ jobs:
 
   slack-notification:
     name: Send Slack Notification
-    needs: release-nightly-build
+    needs: [frontend-tests, backend-unit-tests, release-nightly-build]
     if: ${{ github.repository == 'langflow-ai/langflow' && always() }}
     runs-on: ubuntu-latest
     steps:
       - name: Send failure notification to Slack
-        if: ${{ needs.release-nightly-build.result == 'failure' }}
+        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests.result == 'failure' || needs.backend-unit-tests.result == 'failure' }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{
@@ -269,7 +269,7 @@ jobs:
           }' ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
 
       - name: Send success notification to Slack
-        if: ${{ needs.release-nightly-build.result == 'success' }}
+        if: ${{ needs.release-nightly-build.result == 'success' && (needs.frontend-tests.result == 'success' || needs.frontend-tests.result == 'skipped') && (needs.backend-unit-tests.result == 'success' || needs.backend-unit-tests.result == 'skipped') }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{
