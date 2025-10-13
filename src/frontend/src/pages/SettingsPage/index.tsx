@@ -15,7 +15,7 @@ export default function SettingsPage(): JSX.Element {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const hasStore = useStoreStore((state) => state.hasStore);
 
-  const flowsUrl = `${window.location.origin}/flows`;
+  const flowsUrl = `${globalThis.location.origin}/flows`;
 
   // Hides the General settings if there is nothing to show
   const showGeneralSettings = ENABLE_PROFILE_ICONS || hasStore || !autoLogin;
