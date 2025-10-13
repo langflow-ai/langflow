@@ -24,7 +24,6 @@ class DynamicCreateDataComponent(Component):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._dynamic_inputs = {}
 
     inputs = [
         TableInput(
