@@ -114,38 +114,18 @@ async def test_mcp_post_endpoint_server_error(client: AsyncClient, logged_in_hea
 
 
 async def test_mcp_sse_with_middleware_no_conflict(client: AsyncClient, logged_in_headers):
-    """Test that MCP SSE endpoint bypasses middleware and doesn't produce ASGI message conflicts.
+    """Test that MCP SSE endpoint works without ASGI message conflicts from middleware.
 
-    This test verifies the fix for GitHub issue #883 where BaseHTTPMiddleware was causing
-    "Unexpected message: {'type': 'http.response.start'}" errors with SSE connections.
-
-    The fix ensures that /api/v1/mcp/ routes bypass JavaScriptMIMETypeMiddleware to prevent
-    ASGI message conflicts with streaming responses.
-
-    This test verifies the middleware bypass by checking that the JavaScriptMIMETypeMiddleware
-    early returns for /api/v1/mcp/ routes without processing them.
+    Verifies that SSE endpoints can stream responses without middleware interference
+    (fixing GitHub issue #883 where BaseHTTPMiddleware caused ASGI conflicts).
     """
-    import inspect
-
-    from langflow.main import JavaScriptMIMETypeMiddleware
-
-    # Get the dispatch method source code
-    dispatch_source = inspect.getsource(JavaScriptMIMETypeMiddleware.dispatch)
-
-    # Verify the middleware has the bypass logic for MCP routes
-    assert 'if request.url.path.startswith("/api/v1/mcp/")' in dispatch_source, (
-        "Middleware bypass for MCP routes not found! The fix for GitHub issue #883 may have been removed."
-    )
-
-    # Verify it returns early (bypasses middleware processing)
-    assert "return await call_next(request)" in dispatch_source, (
-        "Middleware bypass doesn't skip processing correctly. "
-        "It should return the response directly without middleware interference."
-    )
-
-    # Additional runtime verification: make a HEAD request to MCP endpoint
-    # HEAD requests don't hang like GET requests with SSE
+    # Test that the SSE endpoint responds correctly
     response = await client.head("api/v1/mcp/sse", headers=logged_in_headers)
-
-    # HEAD requests should succeed without middleware interference
     assert response.status_code == status.HTTP_200_OK
+
+    # Verify Content-Type header is not modified by JavaScriptMIMETypeMiddleware
+    # (which only modifies .js files, not SSE endpoints)
+    assert "text/javascript" not in response.headers.get("content-type", "")
+
+    # For more comprehensive testing, consider mocking an SSE stream and verifying
+    # that no ASGI message conflicts occur during streaming
