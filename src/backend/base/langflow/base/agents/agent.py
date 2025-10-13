@@ -24,7 +24,7 @@ from langflow.utils.constants import MESSAGE_SENDER_AI
 if TYPE_CHECKING:
     from langchain_core.messages import BaseMessage
 
-    from langflow.schema.log import SendMessageFunctionType
+    from langflow.schema.log import SendMessageFunctionType, OnTokenFunctionType
 
 
 DEFAULT_TOOLS_DESCRIPTION = "A helpful assistant with access to the following tools:"
@@ -192,11 +192,16 @@ class LCAgentComponent(Component):
             lc_message.content = [item for item in lc_message.content if item.get("type") != "image"]
             text_content = [item for item in input_dict["input"].content if item.get("type") != "image"]
 
-            # Ensure we don't create an empty content list
-            if text_content:
+            # Check if text_content has any non-empty text
+            has_non_empty_text = any(
+                item.get("type") == "text" and item.get("text", "").strip() for item in text_content
+            )
+
+            # Ensure we don't create an empty content list or content with only empty text
+            if text_content and has_non_empty_text:
                 input_dict["input"].content = text_content
             else:
-                # If no text content, convert to empty string to avoid empty message
+                # If no text content or only empty text, convert to empty string to avoid validation errors
                 input_dict["input"] = ""
 
             if "chat_history" not in input_dict:
@@ -220,6 +225,13 @@ class LCAgentComponent(Component):
             content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
             session_id=session_id,
         )
+
+        # Create token callback if event_manager is available
+        # This wraps the event_manager's on_token method to match OnTokenFunctionType Protocol
+        on_token_callback: OnTokenFunctionType | None = None
+        if self._event_manager:
+            on_token_callback = cast("OnTokenFunctionType", self._event_manager.on_token)
+
         try:
             result = await process_agent_events(
                 runnable.astream_events(
@@ -229,7 +241,7 @@ class LCAgentComponent(Component):
                 ),
                 agent_message,
                 cast("SendMessageFunctionType", self.send_message),
-                self._event_manager,
+                on_token_callback,
             )
         except ExceptionWithMessageError as e:
             if hasattr(e, "agent_message") and hasattr(e.agent_message, "id"):

@@ -10,7 +10,7 @@ from typing_extensions import TypedDict
 
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import TextContent, ToolContent
-from langflow.schema.log import SendMessageFunctionType
+from langflow.schema.log import OnTokenFunctionType, SendMessageFunctionType
 from langflow.schema.message import Message
 
 
@@ -56,11 +56,11 @@ def _calculate_duration(start_time: float) -> int:
 async def handle_on_chain_start(
     event: dict[str, Any],
     agent_message: Message,
-    send_message_method: SendMessageFunctionType,
+    send_message_callback: SendMessageFunctionType,
+    send_token_callback: OnTokenFunctionType | None,  # noqa: ARG001
     start_time: float,
     *,
     had_streaming: bool = False,  # noqa: ARG001
-    event_manager=None,  # noqa: ARG001
 ) -> tuple[Message, float]:
     # Create content blocks if they don't exist
     if not agent_message.content_blocks:
@@ -87,7 +87,7 @@ async def handle_on_chain_start(
                 header={"title": "Input", "icon": "MessageSquare"},
             )
             agent_message.content_blocks[0].contents.append(text_content)
-            agent_message = await send_message_method(message=agent_message)
+            agent_message = await send_message_callback(message=agent_message)
             start_time = perf_counter()
     return agent_message, start_time
 
@@ -131,11 +131,11 @@ def _extract_output_text(output: str | list) -> str:
 async def handle_on_chain_end(
     event: dict[str, Any],
     agent_message: Message,
-    send_message_method: SendMessageFunctionType,
+    send_message_callback: SendMessageFunctionType,
+    send_token_callback: OnTokenFunctionType | None,  # noqa: ARG001
     start_time: float,
     *,
     had_streaming: bool = False,
-    event_manager=None,  # noqa: ARG001
 ) -> tuple[Message, float]:
     data_output = event["data"].get("output")
     if data_output and isinstance(data_output, AgentFinish) and data_output.return_values.get("output"):
@@ -157,7 +157,7 @@ async def handle_on_chain_end(
         # Only send final message if we didn't have streaming chunks
         # If we had streaming, frontend already accumulated the chunks
         if not had_streaming:
-            agent_message = await send_message_method(message=agent_message)
+            agent_message = await send_message_callback(message=agent_message)
         start_time = perf_counter()
     return agent_message, start_time
 
@@ -166,7 +166,7 @@ async def handle_on_tool_start(
     event: dict[str, Any],
     agent_message: Message,
     tool_blocks_map: dict[str, ToolContent],
-    send_message_method: SendMessageFunctionType,
+    send_message_callback: SendMessageFunctionType,
     start_time: float,
 ) -> tuple[Message, float]:
     tool_name = event["name"]
@@ -196,7 +196,7 @@ async def handle_on_tool_start(
     tool_blocks_map[tool_key] = tool_content
     agent_message.content_blocks[0].contents.append(tool_content)
 
-    agent_message = await send_message_method(message=agent_message)
+    agent_message = await send_message_callback(message=agent_message)
     if agent_message.content_blocks and agent_message.content_blocks[0].contents:
         tool_blocks_map[tool_key] = agent_message.content_blocks[0].contents[-1]
     return agent_message, new_start_time
@@ -206,7 +206,7 @@ async def handle_on_tool_end(
     event: dict[str, Any],
     agent_message: Message,
     tool_blocks_map: dict[str, ToolContent],
-    send_message_method: SendMessageFunctionType,
+    send_message_callback: SendMessageFunctionType,
     start_time: float,
 ) -> tuple[Message, float]:
     run_id = event.get("run_id", "")
@@ -216,7 +216,7 @@ async def handle_on_tool_end(
 
     if tool_content and isinstance(tool_content, ToolContent):
         # Call send_message_method first to get the updated message structure
-        agent_message = await send_message_method(message=agent_message)
+        agent_message = await send_message_callback(message=agent_message)
         new_start_time = perf_counter()
 
         # Now find and update the tool content in the current message
@@ -252,7 +252,7 @@ async def handle_on_tool_error(
     event: dict[str, Any],
     agent_message: Message,
     tool_blocks_map: dict[str, ToolContent],
-    send_message_method: SendMessageFunctionType,
+    send_message_callback: SendMessageFunctionType,
     start_time: float,
 ) -> tuple[Message, float]:
     run_id = event.get("run_id", "")
@@ -264,7 +264,7 @@ async def handle_on_tool_error(
         tool_content.error = event["data"].get("error", "Unknown error")
         tool_content.duration = _calculate_duration(start_time)
         tool_content.header = {"title": f"Error using **{tool_content.name}**", "icon": "Hammer"}
-        agent_message = await send_message_method(message=agent_message)
+        agent_message = await send_message_callback(message=agent_message)
         start_time = perf_counter()
     return agent_message, start_time
 
@@ -272,11 +272,11 @@ async def handle_on_tool_error(
 async def handle_on_chain_stream(
     event: dict[str, Any],
     agent_message: Message,
-    send_message_method: SendMessageFunctionType,
+    send_message_callback: SendMessageFunctionType,
+    send_token_callback: OnTokenFunctionType | None,
     start_time: float,
     *,
     had_streaming: bool = False,  # noqa: ARG001
-    event_manager=None,
 ) -> tuple[Message, float]:
     data_chunk = event["data"].get("chunk", {})
     if isinstance(data_chunk, dict) and data_chunk.get("output"):
@@ -284,14 +284,17 @@ async def handle_on_chain_stream(
         if output and isinstance(output, str | list):
             agent_message.text = _extract_output_text(output)
         agent_message.properties.state = "complete"
-        agent_message = await send_message_method(message=agent_message)
+        agent_message = await send_message_callback(message=agent_message)
         start_time = perf_counter()
     elif isinstance(data_chunk, AIMessageChunk):
         output_text = _extract_output_text(data_chunk.content)
-        # For streaming, send token event instead of add_message
-        if output_text and output_text.strip() and event_manager:
+
+        if not send_token_callback:
+            raise ValueError("send_token_callback is required for on_chain_stream events")
+
+        if output_text and output_text.strip():
             await asyncio.to_thread(
-                event_manager.on_token,
+                send_token_callback,
                 data={
                     "chunk": output_text,
                     "id": str(agent_message.id),
@@ -309,7 +312,7 @@ class ToolEventHandler(Protocol):
         event: dict[str, Any],
         agent_message: Message,
         tool_blocks_map: dict[str, ContentBlock],
-        send_message_method: SendMessageFunctionType,
+        send_message_callback: SendMessageFunctionType,
         start_time: float,
     ) -> tuple[Message, float]: ...
 
@@ -319,11 +322,11 @@ class ChainEventHandler(Protocol):
         self,
         event: dict[str, Any],
         agent_message: Message,
-        send_message_method: SendMessageFunctionType,
-        start_time: float,
+        send_message_callback: SendMessageFunctionType,
+        send_token_callback: OnTokenFunctionType | None = None,
+        start_time: float = ...,
         *,
         had_streaming: bool = False,
-        event_manager: Any = None,
     ) -> tuple[Message, float]: ...
 
 
@@ -347,8 +350,8 @@ TOOL_EVENT_HANDLERS: dict[str, ToolEventHandler] = {
 async def process_agent_events(
     agent_executor: AsyncIterator[dict[str, Any]],
     agent_message: Message,
-    send_message_method: SendMessageFunctionType,
-    event_manager=None,
+    send_message_callback: SendMessageFunctionType,
+    send_token_callback: OnTokenFunctionType | None = None,
 ) -> Message:
     """Process agent events and return the final output."""
     if isinstance(agent_message.properties, dict):
@@ -357,7 +360,7 @@ async def process_agent_events(
         agent_message.properties.icon = "Bot"
         agent_message.properties.state = "partial"
     # Store the initial message
-    agent_message = await send_message_method(message=agent_message)
+    agent_message = await send_message_callback(message=agent_message)
     try:
         # Create a mapping of run_ids to tool contents
         tool_blocks_map: dict[str, ToolContent] = {}
@@ -368,30 +371,28 @@ async def process_agent_events(
             if event["event"] in TOOL_EVENT_HANDLERS:
                 tool_handler = TOOL_EVENT_HANDLERS[event["event"]]
                 agent_message, start_time = await tool_handler(
-                    event, agent_message, tool_blocks_map, send_message_method, start_time
+                    event, agent_message, tool_blocks_map, send_message_callback, start_time
                 )
             elif event["event"] in CHAIN_EVENT_HANDLERS:
                 chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
                 # Check if this is a streaming event
                 if event["event"] in ("on_chain_stream", "on_chat_model_stream"):
                     had_streaming = True
-                    # For streaming events, pass event_manager
                     agent_message, start_time = await chain_handler(
                         event,
                         agent_message,
-                        send_message_method,
+                        send_message_callback,
+                        send_token_callback,
                         start_time,
                         had_streaming=had_streaming,
-                        event_manager=event_manager,
                     )
                 elif event["event"] == "on_chain_end":
-                    # Pass had_streaming parameter for chain_end events
                     agent_message, start_time = await chain_handler(
-                        event, agent_message, send_message_method, start_time, had_streaming=had_streaming
+                        event, agent_message, send_message_callback, None, start_time, had_streaming=had_streaming
                     )
                 else:
                     agent_message, start_time = await chain_handler(
-                        event, agent_message, send_message_method, start_time
+                        event, agent_message, send_message_callback, None, start_time, had_streaming=had_streaming
                     )
         agent_message.properties.state = "complete"
     except Exception as e:
