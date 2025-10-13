@@ -20,7 +20,7 @@ class MultiAgentOrchestrator:
         self.logger = logging.getLogger(__name__)
 
         # Single unified multi-orchestrator flow ID
-        self.flow_id = "ec8e9d4e-1ca4-421f-b4f9-a26a7a048120"
+        self.flow_id = "f08ea9f1-b1d7-4eca-b100-78f22b572b39"
 
         # Langflow API base URL (assuming running on same host)
         self.base_url = "http://localhost:7860"

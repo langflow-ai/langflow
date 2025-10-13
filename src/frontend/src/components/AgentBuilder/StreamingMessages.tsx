@@ -178,11 +178,15 @@ function CompleteMessage({ data, onBuildAgent, isFlowBuilt, onTriggerBuild }: { 
   const workflow = data.workflow;
   const reasoning = data.reasoning || messageText;
 
+  // Extract YAML from message text if not provided in workflow
+  const extractedYaml = workflow?.yaml_config ? null : extractYAMLFromMessage(messageText);
+  const yamlContent = workflow?.yaml_config || extractedYaml;
+
   const handleBuildClick = () => {
-    // If workflow has yaml_config, build directly
-    if (workflow?.yaml_config && onBuildAgent) {
-      onBuildAgent(workflow);
-    } 
+    // If we have YAML (from workflow or extracted from message), build directly
+    if (yamlContent && onBuildAgent) {
+      onBuildAgent({ yaml_config: yamlContent });
+    }
     // Otherwise, trigger YAML generation by sending message
     else if (onTriggerBuild) {
       onTriggerBuild();
@@ -222,29 +226,31 @@ function CompleteMessage({ data, onBuildAgent, isFlowBuilt, onTriggerBuild }: { 
           </div>
         )}
 
+        {/* Show workflow diagram if available */}
         {workflow && workflow.workflow_diagram && (
-          <>
-            <div className="mb-4 border-t pt-4">
-              <p className="text-sm font-medium text-foreground mb-2">Your Workflow:</p>
-              <p className="text-sm text-muted-foreground font-mono bg-muted/50 px-3 py-2 rounded">
-                {workflow.workflow_diagram}
-              </p>
-            </div>
+          <div className="mb-4 border-t pt-4">
+            <p className="text-sm font-medium text-foreground mb-2">Your Workflow:</p>
+            <p className="text-sm text-muted-foreground font-mono bg-muted/50 px-3 py-2 rounded">
+              {workflow.workflow_diagram}
+            </p>
+          </div>
+        )}
 
-            <div className="flex gap-2">
-              <button
-                onClick={handleBuildClick}
-                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 flex items-center gap-2"
-              >
-                <ForwardedIconComponent name="CheckCircle2" className="h-4 w-4" />
-                Build Agent
-              </button>
-              {/* <button className="rounded-md bg-muted px-4 py-2 text-sm font-medium hover:bg-muted/80 flex items-center gap-2">
-                <ForwardedIconComponent name="Edit" className="h-4 w-4" />
-                Edit Plan
-              </button> */}
-            </div>
-          </>
+        {/* Show Build Agent button if YAML is available (from workflow or extracted) */}
+        {yamlContent && onBuildAgent && (
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={handleBuildClick}
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 flex items-center gap-2"
+            >
+              <ForwardedIconComponent name="CheckCircle2" className="h-4 w-4" />
+              Build Agent
+            </button>
+            {/* <button className="rounded-md bg-muted px-4 py-2 text-sm font-medium hover:bg-muted/80 flex items-center gap-2">
+              <ForwardedIconComponent name="Edit" className="h-4 w-4" />
+              Edit Plan
+            </button> */}
+          </div>
         )}
       </div>
     </div>
