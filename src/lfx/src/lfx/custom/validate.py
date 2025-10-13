@@ -348,9 +348,12 @@ def prepare_global_scope(module):
     for node in imports:
         for alias in node.names:
             module_name = alias.name
-            variable_name = alias.asname or alias.name
+            # For dotted imports like "urllib.request", the variable created is "urllib" (top-level package)
+            # unless there's an alias like "import urllib.request as req"
+            variable_name = alias.asname or module_name.split(".")[0]
+
             # Let importlib.import_module raise its own ModuleNotFoundError with the actual missing module
-            exec_globals[variable_name] = importlib.import_module(module_name)
+            exec_globals[variable_name] = importlib.import_module(variable_name)
 
     for node in import_froms:
         module_names_to_try = [node.module]
