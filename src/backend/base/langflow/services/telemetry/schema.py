@@ -88,15 +88,18 @@ class ComponentInputsPayload(BasePayload):
         Returns:
             Total character length of the encoded URL including all query parameters
         """
+        from urllib.parse import urlencode
+
         import orjson
-        from httpx import Request
 
         payload_dict = self.model_dump(by_alias=True, exclude_none=True, exclude_unset=True)
         # Serialize component_inputs dict to JSON string for URL parameter
         if "componentInputs" in payload_dict:
             payload_dict["componentInputs"] = orjson.dumps(payload_dict["componentInputs"]).decode("utf-8")
-        req = Request("GET", base_url, params=payload_dict)
-        return len(str(req.url))
+        # Construct the URL in-memory instead of creating a full HTTPX Request for speed
+        query_string = urlencode(payload_dict)
+        url = f"{base_url}?{query_string}" if query_string else base_url
+        return len(url)
 
     def _truncate_value_to_fit(self, key: str, value: Any, max_url_size: int) -> Any:
         """Truncate a value using binary search to find max length that fits within max_url_size.
