@@ -5,9 +5,11 @@ Simplified Agent Builder Orchestrator - Calls unified flow via HTTP API
 import json
 import logging
 import uuid
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import httpx
+
+from langflow.custom.genesis.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +27,11 @@ class MultiAgentOrchestrator:
         self.logger = logging.getLogger(__name__)
 
         # Single unified multi-orchestrator flow ID
-        self.flow_id = "01752477-a7b3-4622-8420-36d4a6b81476"
+        self.flow_id = settings.BUILDER_AGENT_FLOW_ID
         #"f08ea9f1-b1d7-4eca-b100-78f22b572b39"
 
         # Langflow API base URL (assuming running on same host)
-        self.base_url = "http://localhost:7860"
+        self.base_url = settings.LANGFLOW_API_URL
 
         # Use provided session ID or generate new one for conversation continuity
         self.session_id = session_id or str(uuid.uuid4())
