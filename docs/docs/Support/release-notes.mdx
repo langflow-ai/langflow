@@ -56,20 +56,28 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 - Webhook authentication
 
-    Added the `LANGFLOW_WEBHOOK_AUTH_ENABLE` environment variable for authenticating requests to the [/webhook endpoint](/api-flows-run#webhook-run-flow). When `LANGFLOW_WEBHOOK_AUTH_ENABLE=TRUE`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `FALSE`, no Langflow API key is required.
+    Added the `LANGFLOW_WEBHOOK_AUTH_ENABLE` environment variable for authenticating requests to the [`/webhook` endpoint](/api-flows-run#webhook-run-flow). When `LANGFLOW_WEBHOOK_AUTH_ENABLE=TRUE`, webhook endpoints require API key authentication and validate that the authenticated user owns the flow being executed. When `FALSE`, no Langflow API key is required and all requests to the webhook endpoint are treated as being sent by the flow owner.
 
-- DataFrame Operations component enhancements
+- Changes to read/write file components
+
+    The **Save File** component was renamed to **Write File**, and it can now save to S3 and Google Drive.
+    The **Read File** component was renamed to **Read File**.
+    Both components support **Tool Mode**.
+
+- New integrations, bundles, and components:
+
+  New filter operator for **DataFrame Operations** component
 
     The [**DataFrame Operations** component](components-processing#dataframe-operations) now includes a `not contains` filter operator.
-    Use it to clean data by keeping only records that don't contain specific values, such as filtering out invalid email addresses that don't contain `@`.
+    Use it to clean data by extracting only records that _don't_ contain specific values.
+    For example, you can filter out invalid email addresses that don't contain `@`.
 
-- Data Operations component enhancements
+  New JSON operations for **Data Operations** component
 
-    The [**Data Operations** component](components-processing#data-operations) now includes two new operations for advanced JSON data manipulation.
-    The Path Selection operations extracts values from nested JSON structures, and the JQ Expression operation uses the [jq](https://jqlang.org/) query language to perform advanced JSON filtering, projections, and transformations.
+    The [**Data Operations** component](components-processing#data-operations) now includes two operations for advanced JSON data manipulation.
+    The **Path Selection** operation extracts values from nested JSON structures, and the **JQ Expression** operation uses the [`jq`](https://jqlang.org/) query language to perform advanced JSON filtering, projections, and transformations.
 
-
-- New integrations and bundles:
+  Added the [**Smart Router** component](/components-logic#smart-router)
 
 ### Deprecations
 
@@ -78,6 +86,19 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 Highlights of this release include the following changes.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+### Known issue, potential security vulnerability: .env file not loaded in versions 1.6.0 through 1.6.3 {#env-file-bug}
+
+Langflow versions 1.6.0 through 1.6.3 have a critical bug where environment variables from `.env` files aren't read.
+This affects all deployments using environment variables for configuration, including security settings.
+
+:::warning Potential security vulnerability
+If your `.env` file includes `AUTO_LOGIN=false`, upgrading to the impacted versions causes Langflow to fall back to default settings, potentially giving all users superuser access immediately upon upgrade.
+Additionally, database credentials, API keys, and other sensitive configurations can't be loaded from `.env` files.
+
+_Don't_ upgrade to any Langflow version from 1.6.0 through 1.6.3 if you use `.env` files for configuration.
+Instead, upgrade to 1.6.4, which includes a fix for this bug.
+:::
 
 ### Known issue: Don't auto-upgrade Windows Desktop {#windows-desktop-update-issue}
 
@@ -141,9 +162,9 @@ This is expected behavior.
 
 - Advanced document parsing with built-in Docling support
 
-  The **File** component supports advanced parsing with the Docling library.
+  The **Read File** component supports advanced parsing with the Docling library.
 
-  To make it easier to use the [**Docling** components](/bundles-docling) and the **File** component's new advanced parsing feature, the Docling dependency is now included with Langflow for all operating systems except macOS Intel (x86_64).
+  To make it easier to use the [**Docling** components](/bundles-docling) and the **Read File** component's new advanced parsing feature, the Docling dependency is now included with Langflow for all operating systems except macOS Intel (x86_64).
 
   For more information, see [Advanced parsing](/components-data#advanced-parsing).
 
