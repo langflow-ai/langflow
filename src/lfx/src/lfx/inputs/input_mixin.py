@@ -106,10 +106,11 @@ class BaseInputMixin(CrossModuleModel, validate_assignment=True):  # type: ignor
     title_case: bool = False
     """Specifies if the field should be displayed in title case. Defaults to True."""
 
-    track_in_telemetry: CoalesceBool = True
+    track_in_telemetry: CoalesceBool = False
     """Specifies if the field value should be tracked in telemetry.
 
-    Defaults to True. Automatically disabled for sensitive field types.
+    Defaults to False (opt-in). Automatically disabled for sensitive field types.
+    Individual input types can explicitly enable tracking for safe, useful data.
     """
 
     def to_dict(self):
