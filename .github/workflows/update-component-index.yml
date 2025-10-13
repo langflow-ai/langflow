@@ -19,7 +19,8 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout repository (workflow_dispatch)
@@ -34,14 +35,34 @@ jobs:
           version: "latest"
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --dev --project .
+
+      - name: Check if script exists
+        id: check_script
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Checking for script at: scripts/build_component_index.py"
+          ls -la scripts/ || echo "scripts/ directory not found"
+          if [ ! -f scripts/build_component_index.py ]; then
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Script not found - PR needs to be rebased with main"
+            echo "Repository contents:"
+            ls -la
+            echo "Checking git history for the script:"
+            git log --oneline --all -- scripts/build_component_index.py | head -5 || echo "No history found"
+          else
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Script found"
+          fi
 
       - name: Build component index
+        if: steps.check_script.outputs.exists == 'true'
         env:
           LFX_DEV: "1"
-        run: uv run python scripts/build_component_index.py
+        run: make build_component_index
 
       - name: Check if index changed
+        if: steps.check_script.outputs.exists == 'true'
         id: check_changes
         run: |
           INDEX_FILE="src/lfx/src/lfx/_assets/component_index.json"
@@ -110,7 +131,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '⚠️ Component index needs to be updated. Please run `uv run python scripts/build_component_index.py` locally and commit the changes.'
+              body: '⚠️ **Component index needs to be updated**\n\nPlease run the following command locally and commit the changes:\n\n```bash\nmake build_component_index\n```\n\nOr alternatively:\n\n```bash\nLFX_DEV=1 uv run python scripts/build_component_index.py\n```\n\nThen commit and push the updated `src/lfx/src/lfx/_assets/component_index.json` file.'
             })
 
       - name: Comment on PR (same repo - auto-updated)
