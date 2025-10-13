@@ -55,7 +55,38 @@ class ComponentMapper:
         self.MCP_MAPPINGS = {
             "genesis:mcp_tool": {
                 "component": "MCPTools",
-                "config": {},
+                "config": {
+                    # For backward compatibility with existing tool_name-only configurations
+                    # Provide a default command that enables STDIO mode detection
+                    "command": "echo '{\"tools\": [], \"capabilities\": {}}'",  # Default JSON response for compatibility
+                    "args": [],
+                    "env": {},
+                    "url": "",
+                    "headers": {},
+                    "timeout_seconds": 30,
+                    "sse_read_timeout_seconds": 30
+                },
+                "dataType": "MCPTools"
+            },
+            "genesis:mcp_sse_tool": {
+                "component": "MCPTools",
+                "config": {
+                    "connection_mode": "SSE",
+                    "url": "",
+                    "headers": {},
+                    "timeout_seconds": 30,
+                    "sse_read_timeout_seconds": 30
+                },
+                "dataType": "MCPTools"
+            },
+            "genesis:mcp_stdio_tool": {
+                "component": "MCPTools",
+                "config": {
+                    "connection_mode": "Stdio",
+                    "command": "",
+                    "args": [],
+                    "env": {}
+                },
                 "dataType": "MCPTools"
             },
             "genesis:mcp_client": {
@@ -70,21 +101,29 @@ class ComponentMapper:
 
         # Standard component mappings
         self.STANDARD_MAPPINGS = {
-            # Agents
+            # Agents and Language Models
             "genesis:agent": {"component": "Agent", "config": {}},
-            "genesis:autonomize_agent": {"component": "AutonomizeAgent", "config": {}},
+            "genesis:autonomize_agent": {"component": "Agent", "config": {}},  # Map to Agent since AutonomizeAgent may not exist
+            "genesis:language_model": {"component": "Agent", "config": {}},  # Map to Agent as it has LLM capabilities
 
-            # Input/Output
+            # Input/Output Components
             "genesis:chat_input": {"component": "ChatInput", "config": {}},
             "genesis:chat_output": {"component": "ChatOutput", "config": {}},
-            "genesis:json_input": {"component": "JSONInput", "config": {}},
+            "genesis:text_input": {"component": "TextInput", "config": {}},
+            "genesis:text_output": {"component": "TextOutput", "config": {}},
+            "genesis:json_input": {"component": "CreateData", "config": {}},  # Map to existing CreateData
             "genesis:json_output": {"component": "ParseData", "config": {}},
-            "genesis:file_input": {"component": "FileInput", "config": {}},
+            "genesis:file_input": {"component": "File", "config": {}},  # Map to File component
+            "genesis:file": {"component": "File", "config": {}},
+            "genesis:directory": {"component": "Directory", "config": {}},
+            "genesis:url": {"component": "URL", "config": {}},
+            "genesis:file_path": {"component": "FilePathComponent", "config": {}},
+            "genesis:blob_storage": {"component": "BlobStorageComponent", "config": {}},
 
             # Prompts
-            "genesis:prompt": {"component": "Prompt", "config": {}},
-            "genesis:prompt_template": {"component": "GenesisPromptComponent", "config": {}, "dataType": "Prompt"},
-            "genesis:genesis_prompt": {"component": "GenesisPromptComponent", "config": {}, "dataType": "Prompt"},
+            "genesis:prompt": {"component": "PromptComponent", "config": {}},
+            "genesis:prompt_template": {"component": "PromptComponent", "config": {}, "dataType": "PromptComponent"},  # Use existing PromptComponent
+            "genesis:genesis_prompt": {"component": "GenesisPromptComponent", "config": {}, "dataType": "PromptComponent"},
 
             # Memory
             "genesis:memory": {"component": "Memory", "config": {}},
@@ -95,23 +134,66 @@ class ComponentMapper:
             "genesis:knowledge_hub_search": {"component": "KnowledgeHubSearch", "config": {}, "dataType": "KnowledgeHubSearch"},
             "genesis:calculator": {"component": "Calculator", "config": {}},
 
+            # API Components - Native HTTP request support with secure header handling
+            # Note: Headers support sensitive data like API keys, auth tokens, etc.
+            # Use environment variables or secure configuration for sensitive headers
+            "genesis:api_request": {
+                "component": "APIRequest",
+                "config": {
+                    "timeout": 30,
+                    "follow_redirects": True,
+                    "headers": [{"key": "Content-Type", "value": "application/json"}]
+                },
+                "dataType": "Data"
+            },
+            "genesis:http_request": {
+                "component": "APIRequest",
+                "config": {
+                    "timeout": 30,
+                    "follow_redirects": True,
+                    "headers": [{"key": "Content-Type", "value": "application/json"}]
+                },
+                "dataType": "Data"
+            },
+
             # Domain-specific tools -> MCP Tools Component (simplified approach)
             "genesis:encoder_pro": {"component": "MCPTools", "config": {"tool_name": "encoder_pro", "description": "Medical coding and validation tool"}, "dataType": "MCPTools"},
             "genesis:pa_lookup": {"component": "MCPTools", "config": {"tool_name": "pa_lookup", "description": "Prior authorization lookup tool"}, "dataType": "MCPTools"},
             "genesis:eligibility_component": {"component": "MCPTools", "config": {"tool_name": "eligibility_check", "description": "Member eligibility validation tool"}, "dataType": "MCPTools"},
             "genesis:qnext_auth_history": {"component": "MCPTools", "config": {"tool_name": "qnext_auth_history", "description": "QNext authorization history tool"}, "dataType": "MCPTools"},
             "genesis:api_component": {"component": "MCPTools", "config": {"tool_name": "api_component", "description": "Generic API integration tool"}, "dataType": "MCPTools"},
-            # Azure Document Intelligence (Form Recognizer) component
+            # Document Processing Components
             "genesis:form_recognizer": {"component": "AzureDocumentIntelligenceComponent", "config": {}, "dataType": "AzureDocumentIntelligenceComponent"},
             "genesis:document_intelligence": {"component": "AzureDocumentIntelligenceComponent", "config": {}, "dataType": "AzureDocumentIntelligenceComponent"},
+            "genesis:docling_inline": {"component": "DoclingInlineComponent", "config": {}},
+            "genesis:docling_remote": {"component": "DoclingRemoteComponent", "config": {}},
+            "genesis:chunk_docling": {"component": "ChunkDoclingDocumentComponent", "config": {}},
+            "genesis:export_docling": {"component": "ExportDoclingDocumentComponent", "config": {}},
 
-            # Data processing tools
+            # Data Processing Components
             "genesis:data_transformer": {"component": "MCPTools", "config": {"tool_name": "data_transformer", "description": "Data transformation and standardization tool"}, "dataType": "MCPTools"},
+            "genesis:csv_to_data": {"component": "CSVToDataComponent", "config": {}},
+            "genesis:json_to_data": {"component": "JSONToDataComponent", "config": {}},
+            "genesis:parse_data": {"component": "ParseData", "config": {}},
+            "genesis:filter_data": {"component": "FilterData", "config": {}},
+            "genesis:merge_data": {"component": "MergeData", "config": {}},
+            "genesis:create_data": {"component": "CreateData", "config": {}},
+            "genesis:update_data": {"component": "UpdateData", "config": {}},
+            "genesis:select_data": {"component": "SelectData", "config": {}},
 
-            # Vector stores
+            # Text Processing Components
+            "genesis:split_text": {"component": "SplitText", "config": {}},
+            "genesis:combine_text": {"component": "CombineText", "config": {}},
+            "genesis:regex": {"component": "RegexComponent", "config": {}},
+            "genesis:text_embedder": {"component": "TextEmbedder", "config": {}},
+
+            # Vector stores and Databases
             "genesis:vector_store": {"component": "QdrantVectorStore", "config": {}},
             "genesis:qdrant": {"component": "QdrantVectorStore", "config": {}},
             "genesis:faiss": {"component": "FAISS", "config": {}},
+            "genesis:chroma": {"component": "Chroma", "config": {}},
+            "genesis:cassandra": {"component": "Cassandra", "config": {}},
+            "genesis:couchbase": {"component": "Couchbase", "config": {}},
 
             # LLMs
             "genesis:openai": {"component": "OpenAIModel", "config": {}},
@@ -119,8 +201,39 @@ class ComponentMapper:
             "genesis:anthropic": {"component": "AnthropicModel", "config": {}},
 
             # CrewAI
-            "genesis:sequential_crew": {"component": "CrewAIAgent", "config": {}},
-            "genesis:hierarchical_crew": {"component": "HierarchicalCrew", "config": {}}
+            "genesis:crewai_agent": {"component": "CrewAIAgentComponent", "config": {}},
+            "genesis:crewai_sequential_task": {"component": "CrewAIAgentComponent", "config": {"task_type": "sequential"}},
+            "genesis:crewai_sequential_crew": {"component": "CrewAIAgentComponent", "config": {"crew_type": "sequential"}},
+            "genesis:crewai_hierarchical_crew": {"component": "CrewAIAgentComponent", "config": {"crew_type": "hierarchical"}},
+
+            # Web Search and External Data
+            "genesis:web_search": {"component": "WebSearchComponent", "config": {}},
+            "genesis:news_search": {"component": "NewsSearchComponent", "config": {}},
+            "genesis:wikipedia": {"component": "WikipediaComponent", "config": {}},
+            "genesis:arxiv": {"component": "ArxivComponent", "config": {}},
+            "genesis:bing_search": {"component": "BingSearchComponent", "config": {}},
+            "genesis:rss": {"component": "RSSComponent", "config": {}},
+            "genesis:webhook": {"component": "WebhookComponent", "config": {}},
+
+            # SQL and Databases
+            "genesis:sql_executor": {"component": "SQLExecutor", "config": {}},
+
+            # Helper Components
+            "genesis:id_generator": {"component": "IDGenerator", "config": {}},
+            "genesis:current_date": {"component": "CurrentDate", "config": {}},
+            "genesis:create_list": {"component": "CreateList", "config": {}},
+            "genesis:store_message": {"component": "StoreMessage", "config": {}},
+
+            # Embedding Components
+            "genesis:openai_embeddings": {"component": "OpenAIEmbeddings", "config": {}},
+            "genesis:azure_openai_embeddings": {"component": "AzureOpenAIEmbeddings", "config": {}},
+            "genesis:cohere_embeddings": {"component": "CohereEmbeddings", "config": {}},
+
+            # Integration Services
+            "genesis:notion": {"component": "NotionComponent", "config": {}},
+            "genesis:confluence": {"component": "ConfluenceComponent", "config": {}},
+            "genesis:google_drive": {"component": "GoogleDriveComponent", "config": {}},
+            "genesis:composio": {"component": "ComposioComponent", "config": {}}
         }
 
     def map_component(self, spec_type: str) -> Dict[str, Any]:
@@ -227,6 +340,11 @@ class ComponentMapper:
                 "output_field": "response",
                 "output_types": ["Message"]
             },
+            "LanguageModelComponent": {
+                "input_field": "input_message",
+                "output_field": "message",
+                "output_types": ["Message"]
+            },
             "Prompt": {
                 "input_field": "template",
                 "output_field": "prompt",
@@ -241,6 +359,11 @@ class ComponentMapper:
                 "input_field": None,
                 "output_field": "response",
                 "output_types": ["DataFrame"]
+            },
+            "APIRequest": {
+                "input_field": "url_input",
+                "output_field": "data",
+                "output_types": ["Data"]
             },
             "CustomComponent": {
                 "input_field": "input_value",
@@ -276,6 +399,41 @@ class ComponentMapper:
                 "input_field": "template",
                 "output_field": "prompt",
                 "output_types": ["Message"]
+            },
+            "FileComponent": {
+                "input_field": "file_path",
+                "output_field": "data",
+                "output_types": ["Data"]
+            },
+            "URLComponent": {
+                "input_field": "url",
+                "output_field": "data",
+                "output_types": ["Data"]
+            },
+            "CSVToDataComponent": {
+                "input_field": "csv_file",
+                "output_field": "data",
+                "output_types": ["Data"]
+            },
+            "JSONToDataComponent": {
+                "input_field": "json_string",
+                "output_field": "data",
+                "output_types": ["Data"]
+            },
+            "DoclingInlineComponent": {
+                "input_field": "file_path",
+                "output_field": "document",
+                "output_types": ["Document"]
+            },
+            "WebSearchComponent": {
+                "input_field": "query",
+                "output_field": "results",
+                "output_types": ["Data"]
+            },
+            "SQLExecutor": {
+                "input_field": "query",
+                "output_field": "results",
+                "output_types": ["Data"]
             }
         }
 
@@ -293,12 +451,39 @@ class ComponentMapper:
 
         # Check if it's a known tool type
         tool_types = [
+            # Core tools
             "genesis:knowledge_hub_search",
             "genesis:pa_lookup",
             "genesis:eligibility_component",
             "genesis:encoder_pro",
             "genesis:calculator",
-            "genesis:api_component"
+            "genesis:api_component",
+            "genesis:mcp_tool",
+            "genesis:mcp_sse_tool",
+            "genesis:mcp_stdio_tool",
+
+            # Web and search tools
+            "genesis:web_search",
+            "genesis:news_search",
+            "genesis:wikipedia",
+            "genesis:arxiv",
+            "genesis:bing_search",
+
+            # API and integration tools
+            "genesis:api_request",
+            "genesis:http_request",
+            "genesis:webhook",
+
+            # Document processing tools
+            "genesis:form_recognizer",
+            "genesis:document_intelligence",
+            "genesis:docling_inline",
+            "genesis:docling_remote",
+
+            # Data tools
+            "genesis:sql_executor",
+            "genesis:csv_to_data",
+            "genesis:json_to_data"
         ]
 
         return spec_type in tool_types

@@ -1,1 +1,0 @@
-"""Genesis Studio Core Configuration."""
