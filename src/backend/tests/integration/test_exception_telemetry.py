@@ -215,21 +215,23 @@ class TestTelemetryPayloadValidation:
             component_run_id="run-abc-123",
             component_id="OpenAIModel-xyz789",
             component_name="OpenAIModel",
-            component_inputs='{"temperature":0.7,"model":"gpt-4"}',
+            component_inputs={"temperature": 0.7, "model": "gpt-4"},
         )
 
         assert payload.component_run_id == "run-abc-123"
         assert payload.component_id == "OpenAIModel-xyz789"
         assert payload.component_name == "OpenAIModel"
-        assert payload.component_inputs == '{"temperature":0.7,"model":"gpt-4"}'
+        assert payload.component_inputs == {"temperature": 0.7, "model": "gpt-4"}
 
         serialized = payload.model_dump(by_alias=True)
         expected = {
             "componentRunId": "run-abc-123",
             "componentId": "OpenAIModel-xyz789",
             "componentName": "OpenAIModel",
-            "componentInputs": '{"temperature":0.7,"model":"gpt-4"}',
+            "componentInputs": {"temperature": 0.7, "model": "gpt-4"},
             "clientType": None,
+            "chunkIndex": None,
+            "totalChunks": None,
         }
         assert serialized == expected
 
@@ -579,7 +581,7 @@ class TestComponentInputTelemetry:
             component_run_id=run_id,
             component_id="Component1-abc",
             component_name="Component1",
-            component_inputs='{"input1":"value1"}',
+            component_inputs={"input1": "value1"},
         )
 
         # Second component with same run_id
@@ -587,7 +589,7 @@ class TestComponentInputTelemetry:
             component_run_id=run_id,
             component_id="Component2-def",
             component_name="Component2",
-            component_inputs='{"input2":"value2"}',
+            component_inputs={"input2": "value2"},
         )
 
         # Both should have same run_id but different component_id
@@ -616,7 +618,7 @@ class TestComponentInputTelemetry:
             component_run_id=run_id,
             component_id=component_id,
             component_name=component_name,
-            component_inputs='{"param":"value"}',
+            component_inputs={"param": "value"},
         )
 
         # Verify they can be joined via run_id
