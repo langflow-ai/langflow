@@ -29,9 +29,15 @@ When you create a [Langflow project](/concepts-flows#projects), Langflow automat
 
 If your Langflow server has authentication enabled (`AUTO_LOGIN=false`), the project's MCP server is automatically configured with API key authentication, and a new API key is generated specifically for accessing the new project's flows. See [MCP server authentication](#authentication).
 
-To disable automatic MCP server configuration for new projects, set the `LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS` environment variable to `false`. See [MCP server environment variables](#mcp-server-environment-variables).
 
-Even with automatic configuration enabled, you can still manually select which projects are exposed as MCP tools:
+### Prevent automatic MCP server configuration for Langflow projects
+
+To disable automatic MCP server configuration for new projects, set the `LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS` environment variable to `false`.
+For more information, see [MCP server environment variables](#mcp-server-environment-variables).
+
+### Selectively enable and disable MCP servers for Langflow projects
+
+With or without automatic MCP server configuration enabled, you can selectively enable and disable the projects that are exposed as MCP tools:
 
 1. Click the **MCP Server** tab on the [**Projects** page](/concepts-flows#projects), or, when editing a flow, click **Share**, and then select **MCP Server**.
 
