@@ -69,17 +69,17 @@ class ToolRouterComponent(Component):
 
     def _setup_dynamic_outputs(self):
         """Set up dynamic outputs based on connected tools."""
-        print("DEBUG: _setup_dynamic_outputs called")
+        self.log("DEBUG: _setup_dynamic_outputs called")
         tools = getattr(self, "tools", [])
         if tools:
-            print(f"DEBUG: Found {len(tools)} tools in _setup_dynamic_outputs")
+            self.log(f"DEBUG: Found {len(tools)} tools in _setup_dynamic_outputs")
             # Clear existing outputs
             self.outputs = []
 
             # Add outputs for each tool
             for i, tool in enumerate(tools):
                 tool_name = getattr(tool, "name", f"Tool {i + 1}")
-                print(f"DEBUG: Adding output for tool: {tool_name}")
+                self.log(f"DEBUG: Adding output for tool: {tool_name}")
                 self.outputs.append(
                     Output(
                         display_name=tool_name,
@@ -92,30 +92,30 @@ class ToolRouterComponent(Component):
             # Add else output if enabled
             enable_else = getattr(self, "enable_else_output", False)
             if enable_else:
-                print("DEBUG: Adding Else output in _setup_dynamic_outputs")
+                self.log("DEBUG: Adding Else output in _setup_dynamic_outputs")
                 self.outputs.append(
                     Output(display_name="Else", name="default_result", method="default_response", group_outputs=True)
                 )
         else:
-            print("DEBUG: No tools found in _setup_dynamic_outputs")
+            self.log("DEBUG: No tools found in _setup_dynamic_outputs")
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Create a dynamic output for each connected tool."""
         # Debug logging
-        print(f"DEBUG: update_outputs called with field_name='{field_name}', field_value type: {type(field_value)}")
+        self.log(f"DEBUG: update_outputs called with field_name='{field_name}', field_value type: {type(field_value)}")
 
         if field_name in {"tools", "enable_else_output"}:
             frontend_node["outputs"] = []
 
             # Get the tools data - either from field_value (if tools field) or from component state
             tools_data = field_value if field_name == "tools" else getattr(self, "tools", [])
-            print(f"DEBUG: tools_data type: {type(tools_data)}, length: {len(tools_data) if tools_data else 0}")
+            self.log(f"DEBUG: tools_data type: {type(tools_data)}, length: {len(tools_data) if tools_data else 0}")
 
             # Add a dynamic output for each tool
             if tools_data:
                 for i, tool in enumerate(tools_data):
                     tool_name = getattr(tool, "name", f"Tool {i + 1}")
-                    print(f"DEBUG: Creating output for tool {i}: {tool_name}")
+                    self.log(f"DEBUG: Creating output for tool {i}: {tool_name}")
                     frontend_node["outputs"].append(
                         Output(
                             display_name=tool_name,
@@ -132,7 +132,7 @@ class ToolRouterComponent(Component):
                 enable_else = getattr(self, "enable_else_output", False)
 
             if enable_else:
-                print("DEBUG: Adding Else output")
+                self.log("DEBUG: Adding Else output")
                 frontend_node["outputs"].append(
                     Output(
                         display_name="Else", name="default_result", method="default_response", group_outputs=True
@@ -281,7 +281,7 @@ class ToolRouterComponent(Component):
                     result = str(result)
 
                 return Message(text=result)
-            except Exception as e:
+            except (ValueError, TypeError, AttributeError, RuntimeError, KeyError) as e:
                 error_msg = f"Error executing tool {tool_name}: {e!s}"
                 self.status = error_msg
                 return Message(text=error_msg)
@@ -312,7 +312,6 @@ class ToolRouterComponent(Component):
         if not hasattr(self, "_matched_tool"):
             self._matched_tool = None
 
-        tools = getattr(self, "tools", [])
         input_text = getattr(self, "input_text", "")
 
         # Check if a match was already found in process_tool
