@@ -172,22 +172,20 @@ class LCAgentComponent(Component):
                 input_dict["chat_history"] = self._data_to_messages_skip_empty([m.to_data() for m in self.chat_history])
 
         # Handle multimodal input (images + text)
+        # Note: Agent input must be a string, so we extract text and move images to chat_history
         if lc_message and hasattr(lc_message, "content") and isinstance(lc_message.content, list):
             # Extract images and text content
             image_dicts = [item for item in lc_message.content if item.get("type") == "image"]
             text_content = [item for item in lc_message.content if item.get("type") != "image"]
 
-            # Check if text_content has any non-empty text
-            has_non_empty_text = any(
-                item.get("type") == "text" and item.get("text", "").strip() for item in text_content
-            )
-
-            # Set input to text content or empty string
-            if text_content and has_non_empty_text:
-                lc_message.content = text_content
-                input_dict["input"] = lc_message.content
-            else:
-                input_dict["input"] = ""
+            # Extract text strings from text content items
+            text_strings = [
+                item.get("text", "") for item in text_content 
+                if item.get("type") == "text" and item.get("text", "").strip()
+            ]
+            
+            # Set input to concatenated text or empty string
+            input_dict["input"] = " ".join(text_strings) if text_strings else ""
 
             # Add images to chat_history
             if image_dicts:
