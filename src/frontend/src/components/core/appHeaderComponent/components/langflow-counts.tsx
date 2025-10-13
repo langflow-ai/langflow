@@ -1,4 +1,5 @@
 import { FaDiscord, FaGithub } from "react-icons/fa";
+import { LuBotMessageSquare } from "react-icons/lu";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { DISCORD_URL, GITHUB_URL } from "@/constants/constants";
 import { useDarkStore } from "@/stores/darkStore";
@@ -10,6 +11,23 @@ export const LangflowCounts = () => {
 
   return (
     <div className="flex items-center gap-3">
+      
+      <ShadTooltip
+        content="Use GraceAI to Guide Your Project"
+        side="bottom"
+        styleClasses="z-10"
+      >
+        <div
+          onClick={() => window.open(DISCORD_URL, "_blank")}
+          className="hit-area-hover flex items-center gap-2 rounded-md p-1 text-muted-foreground"
+        >
+          <LuBotMessageSquare className="h-4 w-4" />
+          <span className="text-xs font-semibold">
+            {"Use AI to Build AI"}
+          </span>
+        </div>
+      </ShadTooltip>
+
       <ShadTooltip
         content="Go to GitHub repo"
         side="bottom"
