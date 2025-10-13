@@ -51,6 +51,14 @@ class TelemetryService(Service):
         self.log_package_version_task: asyncio.Task | None = None
         self.client_type = self._get_client_type()
 
+        # Initialize static telemetry fields
+        version_info = get_version_info()
+        self.common_telemetry_fields = {
+            "langflow_version": version_info["version"],
+            "platform": "desktop" if self._get_langflow_desktop() else "python_package",
+            "os": platform.system().lower(),
+        }
+
     async def telemetry_worker(self) -> None:
         while self.running:
             func, payload, path = await self.telemetry_queue.get()
@@ -75,6 +83,14 @@ class TelemetryService(Service):
 
         try:
             payload_dict = payload.model_dump(by_alias=True, exclude_none=True, exclude_unset=True)
+
+            # Add common fields to all payloads except VersionPayload
+            if not isinstance(payload, VersionPayload):
+                payload_dict.update(self.common_telemetry_fields)
+                # Add timestamp dynamically
+            if "timestamp" not in payload_dict:
+                payload_dict["timestamp"] = datetime.now(timezone.utc).isoformat()
+
             response = await self.client.get(url, params=payload_dict)
             if response.status_code != httpx.codes.OK:
                 await logger.aerror(f"Failed to send telemetry data: {response.status_code} {response.text}")
