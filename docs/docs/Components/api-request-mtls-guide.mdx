@@ -1,0 +1,310 @@
+# API Request mTLS Configuration Guide
+
+This guide explains how to configure mutual TLS (mTLS) authentication for the API Request component in Langflow.
+
+## What is mTLS?
+
+Mutual TLS (mTLS) is a security protocol that provides two-way authentication between client and server. Unlike standard TLS where only the server proves its identity, mTLS requires both parties to authenticate using digital certificates.
+
+## When to Use mTLS
+
+Use mTLS when:
+- Connecting to internal APIs that require client certificate authentication
+- Implementing zero-trust security architectures
+- Accessing enterprise services with strict security requirements
+- Working with financial, healthcare, or government APIs
+
+## Configuration Options
+
+The API Request component supports mTLS with the following configuration options:
+
+### Basic Setup
+
+1. **Enable mTLS**: Toggle the "Enable mTLS" option in advanced settings
+2. **Certificate Source**: Choose where to load certificates from:
+   - **File Path**: Load certificates from local filesystem
+   - **Environment Variable**: Read certificate paths from environment variables
+   - **Secrets Manager**: (Reserved for future implementation)
+
+### Certificate Configuration
+
+#### Option 1: Local Certificate Files
+
+Use this method for development or when certificates are stored on the filesystem.
+
+**Combined Certificate and Key (Single File)**
+```yaml
+Enable mTLS: true
+Certificate Source: File Path
+Client Certificate File: /path/to/client.pem
+Client Key File: (leave empty)
+```
+
+**Separate Certificate and Key Files**
+```yaml
+Enable mTLS: true
+Certificate Source: File Path
+Client Certificate File: /path/to/client.crt
+Client Key File: /path/to/client.key
+```
+
+#### Option 2: Environment Variables (Recommended for Production)
+
+Use this method for Docker, Kubernetes, or cloud deployments where certificates are managed externally.
+
+1. Set environment variables with certificate paths:
+```bash
+export CLIENT_CERT_PATH=/secrets/client.pem
+export CLIENT_KEY_PATH=/secrets/client.key
+```
+
+2. Configure component:
+```yaml
+Enable mTLS: true
+Certificate Source: Environment Variable
+Certificate Env Var: CLIENT_CERT_PATH
+Key Env Var: CLIENT_KEY_PATH
+```
+
+### Advanced Configuration
+
+#### Encrypted Private Keys
+
+If your private key is password-protected:
+
+```yaml
+Enable mTLS: true
+Certificate Source: File Path
+Client Certificate File: /path/to/client.crt
+Client Key File: /path/to/encrypted-client.key
+Key Password: your-secure-password
+```
+
+⚠️ **Security Note**: Store passwords in Langflow's secrets management, not in plain text.
+
+#### Custom CA Bundle
+
+For internal CAs or self-signed certificates:
+
+```yaml
+Enable mTLS: true
+Certificate Source: File Path
+Client Certificate File: /path/to/client.pem
+CA Bundle File: /path/to/ca-bundle.pem
+Verify Server Certificate: true
+```
+
+#### Disable Server Verification (Not Recommended)
+
+⚠️ **Warning**: Only use this for development/testing environments.
+
+```yaml
+Enable mTLS: true
+Certificate Source: File Path
+Client Certificate File: /path/to/client.pem
+Verify Server Certificate: false
+```
+
+## Example Configurations
+
+### Example 1: Docker Deployment
+
+**docker-compose.yml**
+```yaml
+version: '3.8'
+services:
+  langflow:
+    image: langflow:latest
+    environment:
+      - CLIENT_CERT_PATH=/run/secrets/client_cert
+      - CLIENT_KEY_PATH=/run/secrets/client_key
+    secrets:
+      - client_cert
+      - client_key
+    volumes:
+      - ./flows:/app/flows
+
+secrets:
+  client_cert:
+    file: ./certs/client.pem
+  client_key:
+    file: ./certs/client.key
+```
+
+**Langflow Configuration**
+```yaml
+Enable mTLS: true
+Certificate Source: Environment Variable
+Certificate Env Var: CLIENT_CERT_PATH
+Key Env Var: CLIENT_KEY_PATH
+```
+
+### Example 2: Kubernetes Deployment
+
+**Create Secret**
+```bash
+kubectl create secret generic mtls-certs \
+  --from-file=client.pem=./client.pem \
+  --from-file=client.key=./client.key
+```
+
+**Mount Secret in Pod**
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: langflow
+spec:
+  containers:
+  - name: langflow
+    image: langflow:latest
+    env:
+    - name: CLIENT_CERT_PATH
+      value: /etc/mtls-certs/client.pem
+    - name: CLIENT_KEY_PATH
+      value: /etc/mtls-certs/client.key
+    volumeMounts:
+    - name: mtls-certs
+      mountPath: /etc/mtls-certs
+      readOnly: true
+  volumes:
+  - name: mtls-certs
+    secret:
+      secretName: mtls-certs
+```
+
+**Langflow Configuration**
+```yaml
+Enable mTLS: true
+Certificate Source: Environment Variable
+Certificate Env Var: CLIENT_CERT_PATH
+Key Env Var: CLIENT_KEY_PATH
+```
+
+### Example 3: Development with Local Certificates
+
+```yaml
+# Local development setup
+Enable mTLS: true
+Certificate Source: File Path
+Client Certificate File: /Users/dev/certs/dev-client.pem
+Verify Server Certificate: false  # OK for local testing only
+```
+
+## Certificate File Formats
+
+### Supported Formats
+
+The API Request component accepts certificates in the following formats:
+
+- **.pem**: PEM-encoded certificates (most common)
+- **.crt**: Certificate files
+- **.cert**: Certificate files
+- **.key**: Private key files
+
+### Combined vs. Separate Files
+
+**Combined File (cert + key in one file)**
+```pem
+-----BEGIN CERTIFICATE-----
+MIIDXTCCAkWgAwIBAgIJAKL... (certificate data)
+-----END CERTIFICATE-----
+-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0... (private key data)
+-----END PRIVATE KEY-----
+```
+
+**Separate Files**
+
+client.crt:
+```pem
+-----BEGIN CERTIFICATE-----
+MIIDXTCCAkWgAwIBAgIJAKL... (certificate data)
+-----END CERTIFICATE-----
+```
+
+client.key:
+```pem
+-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0... (private key data)
+-----END PRIVATE KEY-----
+```
+
+## Troubleshooting
+
+### Common Issues
+
+#### "Certificate file not found"
+- Verify the file path is absolute, not relative
+- Check file permissions (must be readable by Langflow process)
+- Ensure the file exists at the specified location
+
+#### "SSL error while configuring mTLS"
+- Verify certificate format is correct (PEM-encoded)
+- Check if certificate and key match
+- Ensure certificate is not expired
+- Verify password for encrypted keys
+
+#### "Environment variable not found or empty"
+- Verify environment variable is set: `echo $CLIENT_CERT_PATH`
+- Ensure Langflow process can access the environment variable
+- Check spelling and case sensitivity
+
+### Debugging Tips
+
+1. **Enable Logging**: Check Langflow logs for detailed error messages
+2. **Test Certificate**: Verify certificate works with `openssl`:
+   ```bash
+   openssl s_client -connect api.example.com:443 \
+     -cert client.pem -key client.key
+   ```
+3. **Verify Certificate Details**:
+   ```bash
+   openssl x509 -in client.pem -text -noout
+   ```
+4. **Check Key Match**:
+   ```bash
+   # Certificate modulus
+   openssl x509 -noout -modulus -in client.pem | openssl md5
+   # Key modulus (should match)
+   openssl rsa -noout -modulus -in client.key | openssl md5
+   ```
+
+## Security Best Practices
+
+1. **Never commit certificates to version control**: Use `.gitignore` to exclude certificate files
+2. **Use secrets management**: Store certificates in proper secrets management systems
+3. **Rotate certificates regularly**: Follow your organization's certificate rotation policy
+4. **Restrict file permissions**: Set certificates to read-only for the Langflow user:
+   ```bash
+   chmod 400 client.pem client.key
+   chown langflow:langflow client.pem client.key
+   ```
+5. **Use environment variables in production**: Avoid hardcoding certificate paths
+6. **Enable server verification**: Only disable `verify_server_cert` for testing
+7. **Protect private key passwords**: Never log or expose key passwords
+8. **Monitor certificate expiration**: Set up alerts for expiring certificates
+
+## FAQ
+
+**Q: Can I use mTLS with self-signed certificates?**
+A: Yes, provide your CA certificate via the "CA Bundle File" option.
+
+**Q: Does mTLS work with API keys?**
+A: Yes, mTLS and API keys can be used together. Configure mTLS for transport security and include API keys in headers as usual.
+
+**Q: Can I use different certificates for different API endpoints?**
+A: Yes, create separate API Request components with different mTLS configurations for each endpoint.
+
+**Q: What happens if my certificate expires?**
+A: Requests will fail with an SSL error. Monitor certificate expiration and rotate before expiry.
+
+**Q: Is mTLS supported for all API Request methods (GET, POST, etc.)?**
+A: Yes, mTLS works with all HTTP methods supported by the API Request component.
+
+## Additional Resources
+
+- [OpenSSL Certificate Management](https://www.openssl.org/docs/)
+- [mTLS Best Practices](https://www.cloudflare.com/learning/access-management/what-is-mutual-tls/)
+- [Kubernetes Secrets Management](https://kubernetes.io/docs/concepts/configuration/secret/)
+- [Docker Secrets](https://docs.docker.com/engine/swarm/secrets/)

@@ -303,7 +303,25 @@ class APIRequestComponent(Component):
         return isinstance(item, dict) and "key" in item and "value" in item
 
     def validate_mtls_config(self) -> None:
-        """Validate mTLS configuration before building SSL context."""
+        """Validate mTLS configuration before building SSL context.
+
+        Ensures that all required mTLS parameters are properly configured based on the
+        selected certificate source (file path, environment variable, or secrets manager).
+
+        Raises:
+            ValueError: If mTLS is enabled but required configuration is missing:
+                - When cert_source is "File Path" but no client_cert_file is provided
+                - When cert_source is "Environment Variable" but no cert_env_var is provided
+
+        Warnings:
+            Logs a warning when verify_server_cert is disabled, as this creates an insecure connection.
+
+        Example:
+            >>> component.use_mtls = True
+            >>> component.cert_source = "File Path"
+            >>> component.client_cert_file = "/path/to/cert.pem"
+            >>> component.validate_mtls_config()  # Passes validation
+        """
         if not self.use_mtls:
             return
 
@@ -322,8 +340,45 @@ class APIRequestComponent(Component):
     def build_ssl_context(self) -> ssl.SSLContext | None:
         """Build SSL context for mTLS authentication.
 
+        Constructs an SSL context configured with client certificates for mutual TLS authentication.
+        Supports multiple certificate sources (local files, environment variables) and custom CA bundles.
+
+        Certificate Loading:
+            - File Path: Loads certificates from local filesystem paths
+            - Environment Variable: Reads paths from environment variables
+            - Secrets Manager: Reserved for future implementation
+
         Returns:
-            ssl.SSLContext configured for mTLS, or None if mTLS is disabled
+            ssl.SSLContext: Configured SSL context with client certificates loaded, or
+            None: If mTLS is disabled (use_mtls=False)
+
+        Raises:
+            ValueError: If mTLS configuration is invalid:
+                - Certificate environment variable not found or empty
+                - SSL error while loading certificates (wrapped SSLError)
+                - General configuration errors
+            FileNotFoundError: If certificate or key files don't exist at specified paths
+
+        Example:
+            >>> # Using local certificate files
+            >>> component.use_mtls = True
+            >>> component.cert_source = "File Path"
+            >>> component.client_cert_file = "/path/to/client.pem"
+            >>> component.client_key_file = "/path/to/client.key"  # Optional if combined
+            >>> ssl_ctx = component.build_ssl_context()
+
+            >>> # Using environment variables (e.g., in Docker/K8s)
+            >>> import os
+            >>> os.environ['CLIENT_CERT_PATH'] = '/path/to/cert.pem'
+            >>> component.use_mtls = True
+            >>> component.cert_source = "Environment Variable"
+            >>> component.cert_env_var = "CLIENT_CERT_PATH"
+            >>> ssl_ctx = component.build_ssl_context()
+
+        Note:
+            - Passwords for encrypted keys should be provided via key_password attribute
+            - Custom CA bundles can be specified via ca_bundle_file for internal CAs
+            - Server certificate verification can be disabled via verify_server_cert (not recommended)
         """
         if not self.use_mtls:
             return None
