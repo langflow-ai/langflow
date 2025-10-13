@@ -289,11 +289,10 @@ async def handle_on_chain_stream(
     elif isinstance(data_chunk, AIMessageChunk):
         output_text = _extract_output_text(data_chunk.content)
 
-        if not send_token_callback:
-            msg = "send_token_callback is required for on_chain_stream events"
-            raise ValueError(msg)
-
-        if output_text and output_text.strip():
+        # For streaming, send token event if callback is available
+        # Note: we should expect the callback, but we keep it optional for backwards compatibility
+        # as of v1.6.5
+        if output_text and output_text.strip() and send_token_callback:
             await asyncio.to_thread(
                 send_token_callback,
                 data={

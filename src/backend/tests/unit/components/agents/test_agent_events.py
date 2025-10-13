@@ -555,13 +555,12 @@ async def test_agent_streaming_no_text_accumulation():
         )
         return message
 
-    # Mock event manager to capture token events
-    class MockEventManager:
-        def on_token(self, data):
-            # Capture token events
-            token_events.append(data)
+    # Mock token callback to capture token events
+    def mock_token_callback(data):
+        # Capture token events
+        token_events.append(data)
 
-    event_manager = MockEventManager()
+    event_manager = mock_token_callback
 
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
@@ -669,11 +668,10 @@ async def test_agent_streaming_skips_empty_chunks():
     async def mock_send_message(message):
         return message
 
-    class MockEventManager:
-        def on_token(self, data):
-            token_events.append(data)
+    def mock_token_callback(data):
+        token_events.append(data)
 
-    event_manager = MockEventManager()
+    event_manager = mock_token_callback
 
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
