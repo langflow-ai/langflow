@@ -6,7 +6,7 @@ from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.base.tools.flow_tool import FlowTool
 from lfx.field_typing import Tool
 from lfx.graph.graph.base import Graph
-from lfx.helpers.flow import get_flow_inputs
+from lfx.helpers import get_flow_inputs
 from lfx.io import BoolInput, DropdownInput, Output, StrInput
 from lfx.log.logger import logger
 from lfx.schema.data import JSON

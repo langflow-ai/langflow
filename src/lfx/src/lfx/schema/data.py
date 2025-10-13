@@ -14,6 +14,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
 
 from lfx.log.logger import logger
+from lfx.schema.cross_module import CrossModuleModel
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
 
@@ -42,8 +43,7 @@ def custom_serializer(obj):
 def serialize_data(data):
     return json.dumps(data, indent=4, default=custom_serializer)
 
-
-class JSON(BaseModel):
+class JSON(CrossModuleModel):
     """Represents a record with text and optional data.
 
     This is the new base type for Langflow data structures, replacing Data.
