@@ -1,4 +1,4 @@
-import type { ReactFlowJsonObject } from "@xyflow/react";
+import type { Node, Edge, ReactFlowJsonObject } from "@xyflow/react";
 import type { AxiosRequestConfig } from "axios";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
@@ -42,7 +42,7 @@ export const usePostRetrieveVertexOrder: useMutationFunctionType<
         start_component_id: decodeURIComponent(startNodeId),
       };
     }
-    let requestBody: { nodes: any[]; edges: any[] } | null = null;
+    let requestBody: { nodes: Node[]; edges: Edge[] } | null = null;
     if (flow && flow.nodes && flow.edges) {
       const { nodes, edges } = flow;
       requestBody = {
