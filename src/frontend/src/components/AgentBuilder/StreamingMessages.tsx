@@ -41,13 +41,14 @@ function MessageItem({ message, onBuildAgent, isFlowBuilt, onTriggerBuild }: { m
   switch (message.type) {
     case "user":
       return <UserMessage data={message.data} />;
-    case "message":
-      return <AgentMessage data={message.data} />;
-    case "thinking":
-      return <ThinkingMessage data={message.data} />;
-    case "agent_found":
-      return <AgentFoundMessage data={message.data} />;
-    case "complete":
+    case "add_message":
+      // Langflow's add_message event - display the message text
+      return <AgentMessage data={message.data} onBuildAgent={onBuildAgent} isFlowBuilt={isFlowBuilt} />;
+    case "token":
+      // Langflow's token event - can be used for streaming tokens
+      return null; // Skip individual tokens for now
+    case "end":
+      // Langflow's end event - marks completion
       return <CompleteMessage data={message.data} onBuildAgent={onBuildAgent} isFlowBuilt={isFlowBuilt} onTriggerBuild={onTriggerBuild} />;
     case "error":
       return <ErrorMessage data={message.data} />;
@@ -68,7 +69,61 @@ function UserMessage({ data }: { data: any }) {
   );
 }
 
-function AgentMessage({ data }: { data: any }) {
+// Helper function to extract YAML from message text
+function extractYAMLFromMessage(text: string): string | null {
+  // Look for YAML code blocks: ```yaml ... ```
+  const yamlBlockRegex = /```yaml\s*([\s\S]*?)```/i;
+  const match = text.match(yamlBlockRegex);
+
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+
+  return null;
+}
+
+function AgentMessage({ data, onBuildAgent, isFlowBuilt }: { data: any; onBuildAgent?: (workflow: any) => void; isFlowBuilt?: boolean }) {
+  // Extract text from Langflow's content_blocks structure
+  let messageText = data.text || "";
+  let hasOnlyInput = false;
+
+  // If text field is empty, extract from content_blocks
+  if (!messageText && data.content_blocks && data.content_blocks.length > 0) {
+    const allTexts: string[] = [];
+    let inputOnlyCount = 0;
+    let totalCount = 0;
+
+    data.content_blocks.forEach((block: any) => {
+      if (block.contents && block.contents.length > 0) {
+        block.contents.forEach((content: any) => {
+          if (content.text) {
+            totalCount++;
+            // Check if this is just echoing the input
+            if (content.header && content.header.title === "Input") {
+              inputOnlyCount++;
+              // Don't include "Input: xxx" in display
+              return;
+            } else {
+              allTexts.push(content.text);
+            }
+          }
+        });
+      }
+    });
+
+    // If we only have input echoes and no actual content, don't render
+    hasOnlyInput = totalCount > 0 && inputOnlyCount === totalCount;
+    messageText = allTexts.join("\n\n");
+  }
+
+  // If still empty or only has input echo, don't render anything
+  if (!messageText.trim() || hasOnlyInput) {
+    return null;
+  }
+
+  // Check if message contains YAML
+  const yamlContent = extractYAMLFromMessage(messageText);
+
   return (
     <div className="flex items-start gap-3 mb-4">
       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
@@ -80,76 +135,48 @@ function AgentMessage({ data }: { data: any }) {
       </div>
       <div className="flex-1">
         <div className="text-sm text-foreground whitespace-pre-wrap">
-          {data.message || data.chunk}
+          {messageText}
         </div>
-      </div>
-    </div>
-  );
-}
 
-function ThinkingMessage({ data }: { data: any }) {
-  return (
-    <div className="flex items-start gap-3 mb-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-        <img
-          src="/favicon-new.ico"
-          alt="AI"
-          className="h-4 w-4"
-        />
-      </div>
-      <div className="flex-1">
-        <div className="text-sm text-muted-foreground">
-          {data.message || data.chunk}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AgentFoundMessage({ data }: { data: any }) {
-  const agent = data.agent;
-
-  return (
-    <div className="mb-3">
-      <Card className="border-l-4 border-l-primary">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <ForwardedIconComponent name="Bot" className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium">{agent.name}</h4>
-                <span className="text-xs text-muted-foreground">
-                  {data.index}/{data.total}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {agent.description}
-              </p>
-              {agent.tags && agent.tags.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {agent.tags.slice(0, 5).map((tag: string, idx: number) => (
-                    <span
-                      key={idx}
-                      className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+        {/* Show Build Agent button if YAML detected */}
+        {yamlContent && onBuildAgent && !isFlowBuilt && (
+          <div className="mt-4">
+            <button
+              onClick={() => onBuildAgent({ yaml_config: yamlContent })}
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 flex items-center gap-2"
+            >
+              <ForwardedIconComponent name="CheckCircle2" className="h-4 w-4" />
+              Build Agent
+            </button>
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
     </div>
   );
 }
 
 function CompleteMessage({ data, onBuildAgent, isFlowBuilt, onTriggerBuild }: { data: any; onBuildAgent?: (workflow: any) => void; isFlowBuilt?: boolean; onTriggerBuild?: () => void }) {
+  // Extract text from Langflow's end event (same structure as add_message)
+  let messageText = data.text || "";
+
+  if (!messageText && data.content_blocks && data.content_blocks.length > 0) {
+    const allTexts: string[] = [];
+
+    data.content_blocks.forEach((block: any) => {
+      if (block.contents && block.contents.length > 0) {
+        block.contents.forEach((content: any) => {
+          if (content.text) {
+            allTexts.push(content.text);
+          }
+        });
+      }
+    });
+
+    messageText = allTexts.join("\n\n");
+  }
+
   const workflow = data.workflow;
-  const reasoning = data.reasoning;
+  const reasoning = data.reasoning || messageText;
 
   const handleBuildClick = () => {
     // If workflow has yaml_config, build directly
@@ -244,14 +271,4 @@ function ErrorMessage({ data }: { data: any }) {
       </Card>
     </div>
   );
-}
-
-function getComponentIcon(type: string): string {
-  const iconMap: Record<string, string> = {
-    ChatInput: "MessageSquare",
-    ChatOutput: "Send",
-    Agent: "Bot",
-    default: "Box",
-  };
-  return iconMap[type] || iconMap.default;
 }

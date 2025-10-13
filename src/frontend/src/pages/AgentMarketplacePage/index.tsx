@@ -1,20 +1,39 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { debounce } from "lodash";
 import { Search, Grid3x3, List, Filter, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { useFolderStore } from "@/stores/foldersStore";
-import PaginatorComponent from "@/components/common/paginatorComponent";
 import AgentCard from "./components/AgentCard";
+import AgentPagination from "./components/AgentPagination";
 import ListSkeleton from "../MainPage/components/listSkeleton";
 
 export default function AgentMarketplacePage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(12);
 
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
+
+  // Debounce the search query
+  const debouncedSetSearchQuery = useCallback(
+    debounce((value: string) => {
+      setSearchQuery(value);
+      setPageIndex(1); // Reset to first page when searching
+    }, 1000),
+    [],
+  );
+
+  useEffect(() => {
+    debouncedSetSearchQuery(debouncedSearch);
+
+    return () => {
+      debouncedSetSearchQuery.cancel(); // Cleanup on unmount
+    };
+  }, [debouncedSearch, debouncedSetSearchQuery]);
 
   const { data: folderData, isLoading } = useGetFolderQuery({
     id: myCollectionId!,
@@ -35,9 +54,13 @@ export default function AgentMarketplacePage() {
     pages: folderData?.flows?.pages ?? 0,
   };
 
-  const handlePageChange = useCallback((newPageIndex: number, newPageSize: number) => {
+  const handlePageChange = useCallback((newPageIndex: number) => {
     setPageIndex(newPageIndex);
+  }, []);
+
+  const handlePageSizeChange = useCallback((newPageSize: number) => {
     setPageSize(newPageSize);
+    setPageIndex(1); // Reset to first page when changing page size
   }, []);
 
   return (
@@ -58,8 +81,8 @@ export default function AgentMarketplacePage() {
                 <Input
                   type="text"
                   placeholder="Search agent..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={debouncedSearch}
+                  onChange={(e) => setDebouncedSearch(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -138,14 +161,12 @@ export default function AgentMarketplacePage() {
           {/* Pagination */}
           {!isLoading && paginationData.total > 0 && (
             <div className="mt-6 flex justify-end border-t pt-4">
-              <PaginatorComponent
-                pageIndex={paginationData.page}
+              <AgentPagination
+                currentPage={paginationData.page}
                 pageSize={paginationData.size}
-                rowsCount={[12, 24, 48, 96]}
-                totalRowsCount={paginationData.total}
-                paginate={handlePageChange}
-                pages={paginationData.pages}
-                isComponent={false}
+                totalPages={paginationData.pages}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
               />
             </div>
           )}
