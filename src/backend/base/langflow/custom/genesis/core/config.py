@@ -33,6 +33,10 @@ class GenesisSettings(BaseSettings):
     # Experiment/project name
     AUTONOMIZE_EXPERIMENT_NAME: str = Field(default="GenesisStudio", env="AUTONOMIZE_EXPERIMENT_NAME")
 
+    # Agent Builder settings
+    # Flow ID is read directly from BuilderAgent.json (single source of truth)
+    LANGFLOW_API_URL: str = Field(env="LANGFLOW_API_URL")
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=False,

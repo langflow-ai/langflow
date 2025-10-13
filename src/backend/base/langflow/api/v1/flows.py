@@ -16,7 +16,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
-from sqlmodel import and_, col, select
+from sqlmodel import and_, col, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, cascade_delete_flow, remove_api_keys, validate_is_component, DbSession
@@ -375,8 +375,11 @@ async def _read_flow(
     flow_id: UUID,
     user_id: UUID,
 ):
-    """Read a flow."""
-    stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == user_id)
+    """Read a flow. Includes both user-owned flows and system flows (user_id=None)."""
+    # TODO: Add role-based access control for system flows
+    stmt = select(Flow).where(Flow.id == flow_id).where(
+        or_(Flow.user_id == user_id, Flow.user_id == None)  # noqa: E711
+    )
 
     return (await session.exec(stmt)).first()
 
