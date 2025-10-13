@@ -13,7 +13,7 @@ export interface StreamState {
   error: string | null;
 }
 
-export function useAgentBuilderStream() {
+export function useAgentBuilderStream(sessionId?: string) {
   const [state, setState] = useState<StreamState>({
     status: "idle",
     messages: [],
@@ -94,6 +94,7 @@ export function useAgentBuilderStream() {
           },
           body: JSON.stringify({
             prompt,
+            session_id: sessionId,
           }),
           signal: abortControllerRef.current.signal,
         });
@@ -170,7 +171,7 @@ export function useAgentBuilderStream() {
         }
       }
     },
-    [addMessage, state.messages]
+    [addMessage, state.messages, sessionId]
   );
 
   const stopStream = useCallback(() => {

@@ -166,7 +166,7 @@ const router = createBrowserRouter(
                 </Route>
                 {CustomRoutesStorePages()}
                 <Route path="agent-builder" element={<AgentBuilderPage />} />
-                <Route path="agent-builder/conversation" element={<ConversationPage />} />
+                <Route path="agent-builder/conversation/:sessionId" element={<ConversationPage />} />
                 <Route path="account">
                   <Route path="delete" element={<DeleteAccountPage />}></Route>
                 </Route>

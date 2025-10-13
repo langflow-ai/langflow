@@ -135,8 +135,10 @@ export default function AgentBuilderPage() {
 
   const handlePromptSubmit = () => {
     if (promptValue.trim()) {
-      // Navigate to conversation page with prompt
-      navigate("/agent-builder/conversation", { state: { prompt: promptValue } });
+      // Generate new session ID
+      const sessionId = crypto.randomUUID();
+      // Navigate to conversation page with session ID and prompt
+      navigate(`/agent-builder/conversation/${sessionId}`, { state: { prompt: promptValue } });
     }
   };
 

@@ -183,6 +183,27 @@ class AgentSpec(BaseModel):
         if "reusability" in data and isinstance(data["reusability"], dict):
             data["reusability"] = ReusabilityInfo(**data["reusability"])
 
+        # Helper function to parse JSON strings
+        import json
+        import logging
+        logger = logging.getLogger(__name__)
+
+        def parse_json_field(field_name: str) -> None:
+            """Parse a field that might be a JSON string into a dict."""
+            if field_name in data and data[field_name]:
+                field_value = data[field_name]
+                if isinstance(field_value, str):
+                    try:
+                        data[field_name] = json.loads(field_value)
+                        logger.debug(f"Parsed {field_name} from JSON string to dict")
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Failed to parse {field_name} JSON string: {e}")
+                        data[field_name] = None
+
+        # Parse JSON string fields that expect dicts
+        parse_json_field("sampleInput")
+        parse_json_field("promptConfiguration")
+
         return cls(**data)
 
     @classmethod

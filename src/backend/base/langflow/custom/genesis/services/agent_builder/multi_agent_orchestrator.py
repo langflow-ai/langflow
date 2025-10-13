@@ -15,18 +15,24 @@ logger = logging.getLogger(__name__)
 class MultiAgentOrchestrator:
     """Simplified orchestrator that calls a single unified agent builder flow via HTTP"""
 
-    def __init__(self, **kwargs):
-        """Initialize orchestrator with unified flow ID"""
+    def __init__(self, session_id: str | None = None, **kwargs):
+        """Initialize orchestrator with unified flow ID and optional session ID
+
+        Args:
+            session_id: Optional session ID for conversation continuity.
+                       If not provided, a new UUID will be generated.
+        """
         self.logger = logging.getLogger(__name__)
 
         # Single unified multi-orchestrator flow ID
-        self.flow_id = "f08ea9f1-b1d7-4eca-b100-78f22b572b39"
+        self.flow_id = "01752477-a7b3-4622-8420-36d4a6b81476"
+        #"f08ea9f1-b1d7-4eca-b100-78f22b572b39"
 
         # Langflow API base URL (assuming running on same host)
         self.base_url = "http://localhost:7860"
 
-        # Maintain session ID for conversation continuity
-        self.session_id = str(uuid.uuid4())
+        # Use provided session ID or generate new one for conversation continuity
+        self.session_id = session_id or str(uuid.uuid4())
 
     async def build_streaming(self, user_input: str) -> AsyncGenerator[str, None]:
         """

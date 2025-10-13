@@ -1,6 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import type { StreamMessage } from "@/hooks/useAgentBuilderStream";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import CodeTabsComponent from "@/components/core/codeTabsComponent";
 
 interface StreamingMessagesProps {
   messages: StreamMessage[];
@@ -134,8 +137,40 @@ function AgentMessage({ data, onBuildAgent, isFlowBuilt }: { data: any; onBuildA
         />
       </div>
       <div className="flex-1">
-        <div className="text-sm text-foreground whitespace-pre-wrap">
-          {messageText}
+        <div className="text-sm text-foreground prose prose-sm dark:prose-invert max-w-none">
+          <Markdown
+            linkTarget="_blank"
+            remarkPlugins={[remarkGfm]}
+            components={{
+              // Custom link styling
+              a: ({ node, ...props }) => (
+                <a
+                  href={props.href}
+                  target="_blank"
+                  className="text-primary underline"
+                  rel="noopener noreferrer"
+                >
+                  {props.children}
+                </a>
+              ),
+              // Custom code block rendering
+              code: ({ node, inline, className, children, ...props }) => {
+                const match = /language-(\w+)/.exec(className || "");
+                return !inline && match ? (
+                  <CodeTabsComponent
+                    language={match[1]}
+                    code={String(children).replace(/\n$/, "")}
+                  />
+                ) : (
+                  <code className={className} {...props}>
+                    {children}
+                  </code>
+                );
+              },
+            }}
+          >
+            {messageText}
+          </Markdown>
         </div>
 
         {/* Show Build Agent button if YAML detected */}
@@ -220,8 +255,40 @@ function CompleteMessage({ data, onBuildAgent, isFlowBuilt, onTriggerBuild }: { 
       <div className="rounded-lg bg-muted/30 p-6">
         {reasoning && (
           <div className="mb-4">
-            <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {reasoning}
+            <div className="text-sm text-muted-foreground prose prose-sm dark:prose-invert max-w-none">
+              <Markdown
+                linkTarget="_blank"
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  // Custom link styling
+                  a: ({ node, ...props }) => (
+                    <a
+                      href={props.href}
+                      target="_blank"
+                      className="text-primary underline"
+                      rel="noopener noreferrer"
+                    >
+                      {props.children}
+                    </a>
+                  ),
+                  // Custom code block rendering
+                  code: ({ node, inline, className, children, ...props }) => {
+                    const match = /language-(\w+)/.exec(className || "");
+                    return !inline && match ? (
+                      <CodeTabsComponent
+                        language={match[1]}
+                        code={String(children).replace(/\n$/, "")}
+                      />
+                    ) : (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    );
+                  },
+                }}
+              >
+                {reasoning}
+              </Markdown>
             </div>
           </div>
         )}

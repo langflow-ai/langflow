@@ -492,6 +492,7 @@ class AgentBuilderRequest(BaseModel):
     """Request model for agent builder stream."""
 
     prompt: str = Field(..., description="User request for building an agent/workflow")
+    session_id: str | None = Field(default=None, description="Session ID for maintaining conversation context")
 
 
 class AgentBuilderResponse(BaseModel):

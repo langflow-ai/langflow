@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useAgentBuilderStream } from "@/hooks/useAgentBuilderStream";
 import StreamingMessages from "@/components/AgentBuilder/StreamingMessages";
@@ -11,6 +11,7 @@ import FlowPanel from "./FlowPanel";
 
 export default function ConversationPage() {
   const location = useLocation();
+  const { sessionId } = useParams<{ sessionId: string }>();
   const [promptValue, setPromptValue] = useState("");
   const [flowData, setFlowData] = useState<any>(null);
   const [createdFlowId, setCreatedFlowId] = useState<string | null>(null);
@@ -18,7 +19,7 @@ export default function ConversationPage() {
   const [leftPanelWidth, setLeftPanelWidth] = useState(50); // Percentage
   const [isDragging, setIsDragging] = useState(false);
 
-  const { messages, isLoading, startStream, reset } = useAgentBuilderStream();
+  const { messages, isLoading, startStream, reset } = useAgentBuilderStream(sessionId);
   const convertSpecMutation = useConvertSpec();
   const createFlowMutation = usePostAddFlow();
   const setErrorData = useAlertStore((state) => state.setErrorData);

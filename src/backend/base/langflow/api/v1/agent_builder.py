@@ -19,7 +19,7 @@ async def stream_agent_builder_events(request: AgentBuilderRequest) -> AsyncGene
     """Stream agent builder events using Server-Sent Events format.
 
     Args:
-        request: Agent builder request with user prompt
+        request: Agent builder request with user prompt and optional session_id
 
     Yields:
         SSE formatted event strings
@@ -28,8 +28,8 @@ async def stream_agent_builder_events(request: AgentBuilderRequest) -> AsyncGene
         # Use the unified multi-orchestrator flow
         from langflow.custom.genesis.services.agent_builder.multi_agent_orchestrator import MultiAgentOrchestrator
 
-        # Initialize orchestrator
-        orchestrator = MultiAgentOrchestrator()
+        # Initialize orchestrator with session_id from request
+        orchestrator = MultiAgentOrchestrator(session_id=request.session_id)
 
         # Stream the complete agent building pipeline
         async for event in orchestrator.build_streaming(request.prompt):
@@ -51,7 +51,7 @@ async def build_agent_stream(request: AgentBuilderRequest) -> StreamingResponse:
     - YAML generation
 
     Args:
-        request: Agent builder request with user prompt
+        request: Agent builder request with user prompt and optional session_id
 
     Returns:
         StreamingResponse with Server-Sent Events
