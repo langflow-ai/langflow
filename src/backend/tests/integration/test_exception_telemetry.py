@@ -512,70 +512,27 @@ class TestComponentInputTelemetry:
         # Should return "[Unserializable Object]" string
         assert result == "[Unserializable Object]"
 
-    def test_component_inputs_payload_with_json_string(self):
-        """Test ComponentInputsPayload with actual JSON string."""
-        from langflow.services.telemetry.schema import ComponentInputsPayload, serialize_input_values
+    def test_component_inputs_payload_with_dict(self):
+        """Test ComponentInputsPayload with dict."""
+        from langflow.services.telemetry.schema import ComponentInputsPayload
 
         inputs_dict = {
             "temperature": 0.7,
             "model": "gpt-4",
             "max_tokens": 1000,
         }
-        inputs_json = serialize_input_values(inputs_dict)
-
-        assert inputs_json is not None
-        assert isinstance(inputs_json, str)
 
         payload = ComponentInputsPayload(
             component_run_id="run-123",
             component_id="OpenAI-abc",
             component_name="OpenAI",
-            component_inputs=inputs_json,
+            component_inputs=inputs_dict,
         )
 
         serialized = payload.model_dump(by_alias=True, exclude_none=True)
         assert "componentInputs" in serialized
-        assert '"temperature":0.7' in serialized["componentInputs"]
-
-    def test_serialize_input_values_truncation(self):
-        """Test that large input dicts are truncated."""
-        from langflow.services.telemetry.schema import MAX_INPUTS_JSON_LENGTH, serialize_input_values
-
-        # Create a large dict that exceeds the limit
-        large_dict = {f"key_{i}": f"value_{i}" for i in range(1000)}
-        result = serialize_input_values(large_dict)
-
-        # Should return None when too large
-        assert result is None
-
-        # Small dict should work
-        small_dict = {"key": "value"}
-        result = serialize_input_values(small_dict)
-        assert result is not None
-        assert len(result) <= MAX_INPUTS_JSON_LENGTH
-
-    def test_serialize_input_values_with_unserializable(self):
-        """Test that dicts with unserializable values return None."""
-        from langflow.services.telemetry.schema import serialize_input_values
-
-        # Dict with circular reference
-        circular_dict = {}
-        circular_dict["self"] = circular_dict
-
-        # Should handle gracefully and return None
-        result = serialize_input_values(circular_dict)
-        assert result is None
-
-    def test_component_inputs_payload_empty_inputs(self):
-        """Test ComponentInputsPayload behavior with empty inputs."""
-        from langflow.services.telemetry.schema import serialize_input_values
-
-        # None inputs
-        assert serialize_input_values(None) is None
-
-        # Empty dict also returns None (no telemetry needed for empty inputs)
-        result = serialize_input_values({})
-        assert result is None
+        assert serialized["componentInputs"]["temperature"] == 0.7
+        assert serialized["componentInputs"]["model"] == "gpt-4"
 
     def test_sensitive_field_types_constant(self):
         """Test that SENSITIVE_FIELD_TYPES contains expected types."""
