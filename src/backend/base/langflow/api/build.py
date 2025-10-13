@@ -38,6 +38,28 @@ from langflow.services.telemetry.schema import (
 )
 
 
+def _log_component_input_telemetry(
+    vertex,
+    vertex_id: str,
+    component_run_id: str,
+    background_tasks: BackgroundTasks,
+    telemetry_service,
+) -> None:
+    """Log component input telemetry if available."""
+    if hasattr(vertex, "custom_component") and vertex.custom_component:
+        inputs_dict = vertex.custom_component.get_telemetry_input_values()
+        if inputs_dict:
+            background_tasks.add_task(
+                telemetry_service.log_package_component_inputs,
+                ComponentInputsPayload(
+                    component_run_id=component_run_id,
+                    component_id=vertex_id,
+                    component_name=vertex_id.split("-")[0],
+                    component_inputs=inputs_dict,
+                ),
+            )
+
+
 async def start_flow_build(
     *,
     flow_id: uuid.UUID,
@@ -290,6 +312,7 @@ async def generate_flow_events(
         top_level_vertices = []
         start_time = time.perf_counter()
         error_message = None
+
         try:
             vertex = graph.get_vertex(vertex_id)
             try:
@@ -381,19 +404,7 @@ async def generate_flow_events(
             component_run_id = str(uuid.uuid4())
 
             # Extract and send component input telemetry (separate payload)
-            if hasattr(vertex, "custom_component") and vertex.custom_component:
-                inputs_dict = vertex.custom_component.get_telemetry_input_values()
-
-                if inputs_dict:
-                    background_tasks.add_task(
-                        telemetry_service.log_package_component_inputs,
-                        ComponentInputsPayload(
-                            component_run_id=component_run_id,
-                            component_id=vertex_id,
-                            component_name=vertex_id.split("-")[0],
-                            component_inputs=inputs_dict,
-                        ),
-                    )
+            _log_component_input_telemetry(vertex, vertex_id, component_run_id, background_tasks, telemetry_service)
 
             # Send component execution telemetry
             background_tasks.add_task(
@@ -412,19 +423,7 @@ async def generate_flow_events(
             component_run_id = str(uuid.uuid4())
 
             # Extract and send component input telemetry even on error (separate payload)
-            if hasattr(vertex, "custom_component") and vertex.custom_component:
-                inputs_dict = vertex.custom_component.get_telemetry_input_values()
-
-                if inputs_dict:
-                    background_tasks.add_task(
-                        telemetry_service.log_package_component_inputs,
-                        ComponentInputsPayload(
-                            component_run_id=component_run_id,
-                            component_id=vertex_id,
-                            component_name=vertex_id.split("-")[0],
-                            component_inputs=inputs_dict,
-                        ),
-                    )
+            _log_component_input_telemetry(vertex, vertex_id, component_run_id, background_tasks, telemetry_service)
 
             # Send component execution telemetry (error case)
             background_tasks.add_task(
