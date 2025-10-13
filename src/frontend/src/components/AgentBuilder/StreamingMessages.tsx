@@ -4,6 +4,7 @@ import type { StreamMessage } from "@/hooks/useAgentBuilderStream";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import CodeTabsComponent from "@/components/core/codeTabsComponent";
+import { TextShimmer } from "@/components/ui/TextShimmer";
 
 interface StreamingMessagesProps {
   messages: StreamMessage[];
@@ -31,9 +32,19 @@ export default function StreamingMessages({
       ))}
 
       {isLoading && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-          <ForwardedIconComponent name="Loader2" className="h-4 w-4 animate-spin" />
-          <span>Processing...</span>
+        <div className="flex items-start gap-3 mb-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+            <img
+              src="/favicon-new.ico"
+              alt="AI"
+              className="h-4 w-4"
+            />
+          </div>
+          <div className="flex items-center">
+            <TextShimmer className="text-sm" duration={1}>
+              Working...
+            </TextShimmer>
+          </div>
         </div>
       )}
     </div>
