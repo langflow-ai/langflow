@@ -551,8 +551,8 @@ class Component(CustomComponent):
         """Check if input should be tracked in telemetry."""
         from lfx.inputs.input_mixin import SENSITIVE_FIELD_TYPES
 
-        # Respect opt-out flag
-        if not getattr(input_obj, "track_in_telemetry", True):
+        # Respect opt-in flag (default: False for privacy)
+        if not getattr(input_obj, "track_in_telemetry", False):
             return False
         # Auto-exclude sensitive field types
         return not (hasattr(input_obj, "field_type") and input_obj.field_type in SENSITIVE_FIELD_TYPES)
