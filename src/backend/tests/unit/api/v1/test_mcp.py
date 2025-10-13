@@ -117,7 +117,6 @@ async def test_mcp_sse_with_middleware_no_conflict(client: AsyncClient, logged_i
     """Test that MCP SSE endpoint works without ASGI message conflicts from middleware.
 
     Verifies that SSE endpoints can stream responses without middleware interference
-    (fixing GitHub issue #883 where BaseHTTPMiddleware caused ASGI conflicts).
     """
     # Test that the SSE endpoint responds correctly
     response = await client.head("api/v1/mcp/sse", headers=logged_in_headers)
