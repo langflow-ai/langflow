@@ -107,12 +107,12 @@ async def validate_spec(
     """
     Validate specification without converting.
 
-    Performs validation on the YAML specification to check for structure,
-    component types, and other potential issues without full conversion.
+    Performs enhanced validation on the YAML specification to check for structure,
+    component existence, connections, and healthcare-specific compliance.
     """
     try:
         service = SpecService()
-        result = service.validate_spec(request.spec_yaml)
+        result = await service.validate_spec(request.spec_yaml)
 
         return SpecValidationResponse(
             valid=result["valid"],
