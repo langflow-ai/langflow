@@ -1,0 +1,59 @@
+name: Classification Agent
+description: Classify incoming prior authorization faxes into specific categories to route them correctly
+agentGoal: Classify incoming prior authorization faxes into specific categories such as Radiology, DME, Pharmacy, or MSK to route them into the correct processing pipeline
+version: "1.0.0"
+
+components:
+  - id: document-input
+    type: genesis:chat_input
+    name: Document Input
+    description: OCR text from fax document for classification
+    provides:
+      - in: classification-agent
+        useAs: input
+        description: Document text to classify
+
+  - id: classification-agent
+    type: genesis:agent
+    name: Document Classification Agent
+    description: Classifies PA requests by type and domain
+    config:
+      system_prompt: |
+        You are a document classification specialist for prior authorization requests. Analyze the provided OCR text and classify it accurately.
+
+        PRIMARY CLASSIFICATION - PA Type (select one):
+        - Radiology (MRI, CT, PET scans, X-rays, ultrasounds)
+        - DME (Durable Medical Equipment: wheelchairs, CPAP, oxygen, hospital beds)
+        - Pharmacy (medications, prescriptions, drug requests)
+        - MSK (Musculoskeletal: PT, OT, chiropractic, joint surgeries)
+        - Cardiology (cardiac procedures, stress tests, pacemakers)
+
+        SECONDARY CLASSIFICATIONS:
+        1. Line of Business: Medicare, Medicaid, Commercial
+        2. Request Type: Initial, Renewal, Replacement, Concurrent
+        3. Service Setting: Inpatient, Outpatient, Ambulatory, Home
+        4. Urgency Level: STAT/Urgent, Routine, Scheduled
+        5. Special Flags: High-cost procedure, Controlled substance, Manual review required
+
+        Output format:
+        {
+          "pa_type": "primary classification",
+          "line_of_business": "LOB",
+          "request_type": "type",
+          "service_setting": "setting",
+          "urgency": "level",
+          "special_flags": ["flag1", "flag2"],
+          "confidence": 0.95,
+          "routing_recommendation": "suggested pipeline"
+        }
+      temperature: 0.1
+      max_tokens: 1000
+    provides:
+      - in: classification-output
+        useAs: input
+        description: Classification results
+
+  - id: classification-output
+    type: genesis:chat_output
+    name: Classification Results
+    description: Display classification results and routing

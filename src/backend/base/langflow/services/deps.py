@@ -152,6 +152,8 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
+
+
 @asynccontextmanager
 async def session_scope() -> AsyncGenerator[AsyncSession, None]:
     """Context manager for managing an async session scope.

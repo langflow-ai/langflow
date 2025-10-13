@@ -99,8 +99,8 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up backend
 # Run tests
 docker-compose exec backend python -m pytest src/backend/tests/
 
-# Run Genesis tests
-docker-compose exec backend python test_genesis_direct.py
+# Run Genesis tests specifically
+docker-compose exec backend python -m pytest src/backend/tests/unit/custom/genesis/ -v
 
 # Access backend shell
 docker-compose exec backend bash
@@ -157,9 +157,6 @@ docker-compose exec backend python -m pytest src/backend/tests/ -v
 
 # Run specific test module
 docker-compose exec backend python -m pytest src/backend/tests/unit/custom/genesis/ -v
-
-# Run Genesis direct tests
-docker-compose exec backend python test_genesis_direct.py
 
 # Run with coverage
 docker-compose exec backend python -m pytest --cov=src/backend --cov-report=html

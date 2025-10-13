@@ -50,23 +50,22 @@ The test data includes multiple complexity levels:
 
 ## Running Tests
 
-### Method 1: Direct Test Runner (Recommended)
+### Using pytest (Recommended)
 
-The direct test runner bypasses conftest dependencies and runs core Genesis functionality:
+All Genesis tests are now integrated into the main pytest suite:
 
 ```bash
 cd src/backend
-python test_genesis_direct.py
+uv run pytest tests/unit/custom/genesis/ -v
 ```
 
-This runs 5 core test suites:
+This runs all test suites including:
 1. **Import Tests** - Verify all Genesis modules can be imported
 2. **AgentSpec Model** - Test Pydantic model validation
 3. **ComponentMapper** - Test Genesis → Langflow component mapping
 4. **VariableResolver** - Test template variable substitution
-5. **KnowledgeHubSearch Component** - Test component initialization and I/O
-
-### Method 2: pytest (If Environment Configured)
+5. **FlowConverter** - Test specification to flow conversion
+6. **Fallback Templates** - Test enhanced fallback template functionality
 
 If all dependencies are installed and conftest issues resolved:
 
@@ -237,8 +236,8 @@ Use the provided debug scripts for investigation:
 # Check component mappings and variable resolution
 python debug_mappings.py
 
-# Run individual test components
-python test_genesis_direct.py
+# Run all genesis tests
+uv run pytest tests/unit/custom/genesis/ -v
 ```
 
 ### Test Data Validation

@@ -16,7 +16,7 @@ from sqlalchemy import or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params, remove_api_keys
+from langflow.api.utils import CurrentActiveUser, cascade_delete_flow, custom_params, remove_api_keys, DbSession
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.mcp_projects import register_project_with_composer
@@ -184,7 +184,13 @@ async def read_project(
             if is_flow:
                 stmt = stmt.where(Flow.is_component == False)  # noqa: E712
             if search:
-                stmt = stmt.where(Flow.name.like(f"%{search}%"))  # type: ignore[attr-defined]
+                # Search across name, description, and tags (as JSON string)
+                stmt = stmt.where(
+                    or_(
+                        Flow.name.like(f"%{search}%"),  # type: ignore[attr-defined]
+                        Flow.description.like(f"%{search}%")  # type: ignore[attr-defined]
+                    )
+                )
 
             import warnings
 

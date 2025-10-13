@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 
 export interface StreamMessage {
   id: string;
-  type: "user" | "thinking" | "agent_found" | "complete" | "error";
+  type: "user" | "add_message" | "token" | "end" | "error";
   data: any;
   timestamp: number;
 }
@@ -13,7 +13,7 @@ export interface StreamState {
   error: string | null;
 }
 
-export function useAgentBuilderStream() {
+export function useAgentBuilderStream(sessionId?: string) {
   const [state, setState] = useState<StreamState>({
     status: "idle",
     messages: [],
@@ -24,17 +24,39 @@ export function useAgentBuilderStream() {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const addMessage = useCallback((type: StreamMessage["type"], data: any) => {
-    const message: StreamMessage = {
-      id: `${Date.now()}-${Math.random()}`,
-      type,
-      data,
-      timestamp: Date.now(),
-    };
+    setState((prev) => {
+      // Check if this message ID already exists (Langflow sends updates with same ID)
+      const existingIndex = prev.messages.findIndex(
+        (msg) => msg.data.id === data.id && data.id
+      );
 
-    setState((prev) => ({
-      ...prev,
-      messages: [...prev.messages, message],
-    }));
+      if (existingIndex !== -1) {
+        // Update existing message with new data
+        const updatedMessages = [...prev.messages];
+        updatedMessages[existingIndex] = {
+          ...updatedMessages[existingIndex],
+          data,
+          timestamp: Date.now(),
+        };
+        return {
+          ...prev,
+          messages: updatedMessages,
+        };
+      }
+
+      // Add new message
+      const message: StreamMessage = {
+        id: `${Date.now()}-${Math.random()}`,
+        type,
+        data,
+        timestamp: Date.now(),
+      };
+
+      return {
+        ...prev,
+        messages: [...prev.messages, message],
+      };
+    });
   }, []);
 
   const startStream = useCallback(
@@ -47,7 +69,7 @@ export function useAgentBuilderStream() {
         abortControllerRef.current.abort();
       }
 
-      // Add user message first
+      // Add user message
       const userMessage: StreamMessage = {
         id: `${Date.now()}-user`,
         type: "user",
@@ -55,14 +77,14 @@ export function useAgentBuilderStream() {
         timestamp: Date.now(),
       };
 
-      setState({
+      setState((prev) => ({
         status: "connecting",
-        messages: [userMessage],
+        messages: [...prev.messages, userMessage],
         error: null,
-      });
+      }));
 
       try {
-        // Use fetch with ReadableStream instead of EventSource for POST requests
+        // Use agent-builder endpoint which properly proxies to Langflow
         abortControllerRef.current = new AbortController();
 
         const response = await fetch("/api/v1/agent-builder/stream", {
@@ -70,7 +92,10 @@ export function useAgentBuilderStream() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ prompt }),
+          body: JSON.stringify({
+            prompt,
+            session_id: sessionId,
+          }),
           signal: abortControllerRef.current.signal,
         });
 
@@ -118,8 +143,8 @@ export function useAgentBuilderStream() {
 
                 addMessage(eventType, eventData);
 
-                // If complete or error, we're done
-                if (eventType === "complete") {
+                // If end or error, we're done
+                if (eventType === "end") {
                   setState((prev) => ({ ...prev, status: "complete" }));
                 } else if (eventType === "error") {
                   setState((prev) => ({
@@ -146,7 +171,7 @@ export function useAgentBuilderStream() {
         }
       }
     },
-    [addMessage]
+    [addMessage, state.messages, sessionId]
   );
 
   const stopStream = useCallback(() => {

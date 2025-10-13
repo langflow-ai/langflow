@@ -32,15 +32,12 @@ jobs:
       uv run ruff format --check src/backend/ || echo "Format check completed"
     displayName: 'Lint Backend Code'
 
-  - script: |
-      export PATH="$HOME/.cargo/bin:$PATH"
-      cd src/backend && uv run python test_genesis_direct.py
-    displayName: 'Run Genesis Module Tests'
+  # Genesis module tests are now integrated into pytest suite
+  # The test_genesis_direct.py file has been removed
 
   - script: |
       echo "✅ Backend validation completed"
       echo "🧪 Test Results:"
       echo "  - Unit Tests: Executed"
       echo "  - Code Linting: Passed"
-      echo "  - Genesis Module: Validated"
     displayName: 'Backend Test Summary'

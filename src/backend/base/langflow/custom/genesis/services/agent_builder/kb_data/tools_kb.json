@@ -1,0 +1,41 @@
+{
+  "genesis:calculator": {
+    "tool_type": "genesis:calculator",
+    "name": "Calculator",
+    "description": "Tool for mathematical calculations",
+    "capabilities": [
+      "mathematical_computation",
+      "arithmetic_operations"
+    ],
+    "input_data_types": [
+      "text",
+      "mathematical_expression"
+    ],
+    "output_data_types": [
+      "number",
+      "calculation_result",
+      "text"
+    ],
+    "input_requirements": [
+      "Valid mathematical expressions",
+      "Numbers and operators"
+    ],
+    "output_format": "numerical_result",
+    "use_cases": [
+      "Mathematical computations",
+      "Arithmetic operations",
+      "Formula evaluation"
+    ],
+    "component_examples": [],
+    "chaining_compatibility": {
+      "accepts_from": [
+        "genesis:chat_input",
+        "genesis:agent"
+      ],
+      "sends_to": [
+        "genesis:chat_output",
+        "genesis:agent"
+      ]
+    }
+  }
+}

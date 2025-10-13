@@ -32,7 +32,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           type={type}
           placeholder={placeholder}
           className={cn(
-            "nopan nodelete nodrag noflow primary-input !placeholder-transparent",
+            "nopan nodelete nodrag noflow primary-input !placeholder-transparent focus:outline-none hover:outline-none hover:border-[#e4e4e7]",
             icon && "pl-9",
             icon ? inputClassName : className,
           )}

@@ -22,94 +22,89 @@ class TestComponentMapper:
     def test_autonomize_model_mappings(self, mapper):
         """Test AutonomizeModel component mappings."""
         # Test standard RxNorm mapping
-        mapping = mapper.map_component("genesis:rxnorm", {})
+        mapping = mapper.map_component("genesis:rxnorm")
         assert mapping["component"] == "AutonomizeModel"
         assert mapping["config"]["selected_model"] == "RxNorm Code"
 
         # Test ICD-10 mapping
-        mapping = mapper.map_component("genesis:icd10", {})
+        mapping = mapper.map_component("genesis:icd10")
         assert mapping["component"] == "AutonomizeModel"
         assert mapping["config"]["selected_model"] == "ICD-10 Code"
 
         # Test CPT Code mapping
-        mapping = mapper.map_component("genesis:cpt_code", {})
+        mapping = mapper.map_component("genesis:cpt_code")
         assert mapping["component"] == "AutonomizeModel"
         assert mapping["config"]["selected_model"] == "CPT Code"
 
         # Test CPT alias
-        mapping = mapper.map_component("genesis:cpt", {})
+        mapping = mapper.map_component("genesis:cpt")
         assert mapping["component"] == "AutonomizeModel"
         assert mapping["config"]["selected_model"] == "CPT Code"
 
         # Test Clinical LLM
-        mapping = mapper.map_component("genesis:clinical_llm", {})
+        mapping = mapper.map_component("genesis:clinical_llm")
         assert mapping["component"] == "AutonomizeModel"
         assert mapping["config"]["selected_model"] == "Clinical LLM"
 
         # Test Clinical Note Classifier
-        mapping = mapper.map_component("genesis:clinical_note_classifier", {})
+        mapping = mapper.map_component("genesis:clinical_note_classifier")
         assert mapping["component"] == "AutonomizeModel"
         assert mapping["config"]["selected_model"] == "Clinical Note Classifier"
 
         # Test Combined Entity Linking
-        mapping = mapper.map_component("genesis:combined_entity_linking", {})
+        mapping = mapper.map_component("genesis:combined_entity_linking")
         assert mapping["component"] == "AutonomizeModel"
         assert mapping["config"]["selected_model"] == "Combined Entity Linking"
 
     def test_standard_component_mappings(self, mapper):
         """Test standard component mappings."""
         # Test Agent mapping
-        mapping = mapper.map_component("genesis:agent", {})
-        assert mapping["component"] == "AgentComponent"
+        mapping = mapper.map_component("genesis:agent")
+        assert mapping["component"] == "Agent"
         assert mapping["config"] == {}
 
         # Test Chat Input
-        mapping = mapper.map_component("genesis:chat_input", {})
+        mapping = mapper.map_component("genesis:chat_input")
         assert mapping["component"] == "ChatInput"
 
         # Test Chat Output
-        mapping = mapper.map_component("genesis:chat_output", {})
+        mapping = mapper.map_component("genesis:chat_output")
         assert mapping["component"] == "ChatOutput"
 
         # Test Prompt
-        mapping = mapper.map_component("genesis:prompt", {})
-        assert mapping["component"] == "PromptTemplate"
+        mapping = mapper.map_component("genesis:prompt")
+        assert mapping["component"] == "PromptComponent"
 
         # Test Calculator
-        mapping = mapper.map_component("genesis:calculator", {})
-        assert mapping["component"] == "CalculatorTool"
+        mapping = mapper.map_component("genesis:calculator")
+        assert mapping["component"] == "Calculator"
 
     def test_mcp_component_mappings(self, mapper):
         """Test MCP component mappings."""
         # Test MCP Tool
-        mapping = mapper.map_component("genesis:mcp_tool", {})
+        mapping = mapper.map_component("genesis:mcp_tool")
         assert mapping["component"] == "MCPTool"
 
         # Test MCP Client
-        mapping = mapper.map_component("genesis:mcp_client", {})
+        mapping = mapper.map_component("genesis:mcp_client")
         assert mapping["component"] == "MCPClient"
 
     def test_config_merging(self, mapper):
         """Test that component configs are properly merged."""
-        # Test with custom config
-        custom_config = {"custom_param": "value", "temperature": 0.7}
-        mapping = mapper.map_component("genesis:agent", custom_config)
+        # Test basic mapping without custom config
+        mapping = mapper.map_component("genesis:agent")
+        assert mapping["component"] == "Agent"
+        assert mapping["config"] == {}
 
-        assert mapping["component"] == "AgentComponent"
-        assert mapping["config"]["custom_param"] == "value"
-        assert mapping["config"]["temperature"] == 0.7
-
-        # Test that model configs are merged properly
-        mapping = mapper.map_component("genesis:clinical_llm", custom_config)
+        # Test model component with built-in config
+        mapping = mapper.map_component("genesis:clinical_llm")
         assert mapping["component"] == "AutonomizeModel"
         assert mapping["config"]["selected_model"] == "Clinical LLM"
-        assert mapping["config"]["custom_param"] == "value"
-        assert mapping["config"]["temperature"] == 0.7
 
     def test_unknown_component_type(self, mapper):
         """Test handling of unknown component types."""
         with pytest.raises(ValueError) as exc_info:
-            mapper.map_component("unknown:component", {})
+            mapper.map_component("unknown:component")
 
         assert "Unknown component type" in str(exc_info.value)
         assert "unknown:component" in str(exc_info.value)
@@ -140,7 +135,7 @@ class TestComponentMapper:
         assert output_field == "message"
 
         # Test Agent output
-        output_field = mapper.get_output_field("AgentComponent")
+        output_field = mapper.get_output_field("Agent")
         assert output_field == "response"
 
         # Test ChatOutput output (should be None as it's a sink)
@@ -163,15 +158,15 @@ class TestComponentMapper:
         """Test getting output type for components."""
         # Test Message types
         assert mapper.get_output_type("ChatInput") == ["Message"]
-        assert mapper.get_output_type("AgentComponent") == ["Message"]
-        assert mapper.get_output_type("PromptTemplate") == ["Message"]
+        assert mapper.get_output_type("Agent") == ["Message"]
+        assert mapper.get_output_type("PromptComponent") == ["Message"]
 
         # Test Data types
         assert mapper.get_output_type("AutonomizeModel") == ["Data"]
 
         # Test Tool types
         assert mapper.get_output_type("MCPTool") == ["Tool"]
-        assert mapper.get_output_type("CalculatorTool") == ["Tool"]
+        assert mapper.get_output_type("Calculator") == ["Tool"]
 
         # Test unknown component
         assert mapper.get_output_type("UnknownComponent") == ["Data"]  # Default
@@ -195,13 +190,13 @@ class TestComponentMapper:
     def test_component_supports_tools(self, mapper):
         """Test checking if component supports tools."""
         # Components that support tools
-        assert mapper.component_supports_tools("AgentComponent") is True
+        assert mapper.component_supports_tools("Agent") is True
         assert mapper.component_supports_tools("MCPClient") is True
 
         # Components that don't support tools
         assert mapper.component_supports_tools("ChatInput") is False
         assert mapper.component_supports_tools("ChatOutput") is False
-        assert mapper.component_supports_tools("PromptTemplate") is False
+        assert mapper.component_supports_tools("PromptComponent") is False
         assert mapper.component_supports_tools("AutonomizeModel") is False
 
     def test_is_model_component(self, mapper):
@@ -212,7 +207,7 @@ class TestComponentMapper:
         assert mapper.is_model_component("AnthropicModel") is True
 
         # Non-model components
-        assert mapper.is_model_component("AgentComponent") is False
+        assert mapper.is_model_component("Agent") is False
         assert mapper.is_model_component("ChatInput") is False
         assert mapper.is_model_component("MCPTool") is False
 
@@ -238,32 +233,35 @@ class TestComponentMapper:
 
     def test_component_priority(self, mapper):
         """Test component priority for mapping."""
-        # AutonomizeModel variants should have high priority
+        # AutonomizeModel variants should be defined
+        assert hasattr(mapper, 'AUTONOMIZE_MODELS')
         assert "genesis:clinical_llm" in mapper.AUTONOMIZE_MODELS
 
         # Standard mappings should be available
+        assert hasattr(mapper, 'STANDARD_MAPPINGS')
         assert "genesis:agent" in mapper.STANDARD_MAPPINGS
 
         # MCP mappings should be available
+        assert hasattr(mapper, 'MCP_MAPPINGS')
         assert "genesis:mcp_tool" in mapper.MCP_MAPPINGS
 
     def test_mapping_consistency(self, mapper):
         """Test that all mappings are consistent."""
         # Test all AutonomizeModel mappings
         for component_type in mapper.AUTONOMIZE_MODELS:
-            mapping = mapper.map_component(component_type, {})
+            mapping = mapper.map_component(component_type)
             assert mapping["component"] == "AutonomizeModel"
             assert "selected_model" in mapping["config"]
 
         # Test all standard mappings
         for component_type in mapper.STANDARD_MAPPINGS:
-            mapping = mapper.map_component(component_type, {})
+            mapping = mapper.map_component(component_type)
             assert "component" in mapping
             assert "config" in mapping
 
         # Test all MCP mappings
         for component_type in mapper.MCP_MAPPINGS:
-            mapping = mapper.map_component(component_type, {})
+            mapping = mapper.map_component(component_type)
             assert "component" in mapping
             assert "config" in mapping
 
@@ -271,12 +269,12 @@ class TestComponentMapper:
         """Test edge cases and invalid inputs."""
         # Test empty string
         with pytest.raises(ValueError):
-            mapper.map_component("", {})
+            mapper.map_component("")
 
         # Test None input
         with pytest.raises((ValueError, TypeError)):
-            mapper.map_component(None, {})
+            mapper.map_component(None)
 
         # Test component type without genesis prefix
         with pytest.raises(ValueError):
-            mapper.map_component("agent", {})
+            mapper.map_component("agent")

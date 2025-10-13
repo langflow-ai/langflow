@@ -2,7 +2,7 @@ from typing import Any
 
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, AzureChatOpenAI
 
 from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
 from langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
@@ -10,7 +10,7 @@ from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs.inputs import BoolInput
+from langflow.inputs.inputs import BoolInput, MessageTextInput
 from langflow.io import DropdownInput, MessageInput, MultilineInput, SecretStrInput, SliderInput
 from langflow.schema.dotdict import dotdict
 
@@ -27,11 +27,11 @@ class LanguageModelComponent(LCModelComponent):
         DropdownInput(
             name="provider",
             display_name="Model Provider",
-            options=["OpenAI", "Anthropic", "Google"],
+            options=["OpenAI", "Azure OpenAI", "Anthropic", "Google"],
             value="OpenAI",
             info="Select the model provider",
             real_time_refresh=True,
-            options_metadata=[{"icon": "OpenAI"}, {"icon": "Anthropic"}, {"icon": "GoogleGenerativeAI"}],
+            options_metadata=[{"icon": "OpenAI"}, {"icon": "Azure"}, {"icon": "Anthropic"}, {"icon": "GoogleGenerativeAI"}],
         ),
         DropdownInput(
             name="model_name",
@@ -47,6 +47,28 @@ class LanguageModelComponent(LCModelComponent):
             info="Model Provider API key",
             required=False,
             show=True,
+            real_time_refresh=True,
+        ),
+        MessageTextInput(
+            name="azure_endpoint",
+            display_name="Azure Endpoint",
+            info="Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`",
+            show=False,
+            real_time_refresh=True,
+        ),
+        MessageTextInput(
+            name="azure_deployment",
+            display_name="Deployment Name",
+            info="The name of your Azure OpenAI deployment",
+            show=False,
+            real_time_refresh=True,
+        ),
+        DropdownInput(
+            name="api_version",
+            display_name="API Version",
+            options=["2024-06-01", "2024-07-01-preview", "2024-08-01-preview", "2024-09-01-preview"],
+            value="2024-06-01",
+            show=False,
             real_time_refresh=True,
         ),
         MessageInput(
@@ -98,6 +120,25 @@ class LanguageModelComponent(LCModelComponent):
                 streaming=stream,
                 openai_api_key=self.api_key,
             )
+        if provider == "Azure OpenAI":
+            if not self.api_key:
+                msg = "Azure OpenAI API key is required when using Azure OpenAI provider"
+                raise ValueError(msg)
+            if not self.azure_endpoint:
+                msg = "Azure endpoint is required when using Azure OpenAI provider"
+                raise ValueError(msg)
+            if not self.azure_deployment:
+                msg = "Azure deployment name is required when using Azure OpenAI provider"
+                raise ValueError(msg)
+
+            return AzureChatOpenAI(
+                azure_endpoint=self.azure_endpoint,
+                azure_deployment=self.azure_deployment,
+                api_version=self.api_version,
+                api_key=self.api_key,
+                temperature=temperature,
+                streaming=stream,
+            )
         if provider == "Anthropic":
             if not self.api_key:
                 msg = "Anthropic API key is required when using Anthropic provider"
@@ -123,10 +164,23 @@ class LanguageModelComponent(LCModelComponent):
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         if field_name == "provider":
+            # Hide Azure-specific fields for all providers first
+            build_config["azure_endpoint"]["show"] = False
+            build_config["azure_deployment"]["show"] = False
+            build_config["api_version"]["show"] = False
+            build_config["model_name"]["show"] = True
+
             if field_value == "OpenAI":
                 build_config["model_name"]["options"] = OPENAI_CHAT_MODEL_NAMES + OPENAI_REASONING_MODEL_NAMES
                 build_config["model_name"]["value"] = OPENAI_CHAT_MODEL_NAMES[0]
                 build_config["api_key"]["display_name"] = "OpenAI API Key"
+            elif field_value == "Azure OpenAI":
+                # Show Azure-specific fields
+                build_config["azure_endpoint"]["show"] = True
+                build_config["azure_deployment"]["show"] = True
+                build_config["api_version"]["show"] = True
+                build_config["model_name"]["show"] = False  # Azure uses deployment name instead
+                build_config["api_key"]["display_name"] = "Azure OpenAI API Key"
             elif field_value == "Anthropic":
                 build_config["model_name"]["options"] = ANTHROPIC_MODELS
                 build_config["model_name"]["value"] = ANTHROPIC_MODELS[0]

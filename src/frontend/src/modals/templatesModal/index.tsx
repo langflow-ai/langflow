@@ -34,25 +34,19 @@ export default function TemplatesModal({
     {
       title: "Use Cases",
       items: [
-        { title: "Assistants", icon: "BotMessageSquare", id: "assistants" },
-        { title: "Classification", icon: "Tags", id: "classification" },
-        { title: "Coding", icon: "TerminalIcon", id: "coding" },
         {
-          title: "Content Generation",
-          icon: "Newspaper",
-          id: "content-generation",
+          title: "Prior Authorization",
+          icon: "BotMessageSquare",
+          id: "prior-auth",
         },
-        { title: "Q&A", icon: "Database", id: "q-a" },
-        // { title: "Summarization", icon: "Bot", id: "summarization" },
-        // { title: "Web Scraping", icon: "CodeXml", id: "web-scraping" },
-      ],
-    },
-    {
-      title: "Methodology",
-      items: [
-        { title: "Prompting", icon: "MessagesSquare", id: "chatbots" },
-        { title: "RAG", icon: "Database", id: "rag" },
-        { title: "Agents", icon: "Bot", id: "agents" },
+        { title: "Care Management", icon: "Tags", id: "classification" },
+        {
+          title: "Medical Record Review",
+          icon: "ChartBar",
+          id: "chart-review",
+        },
+        { title: "Document Analysis", icon: "FileText", id: "document-qa" },
+        { title: "Claims Operations", icon: "CreditCard", id: "claims" },
       ],
     },
   ];
@@ -79,7 +73,7 @@ export default function TemplatesModal({
               <BaseModal.Footer>
                 <div className="flex w-full flex-col justify-between gap-4 pb-4 sm:flex-row sm:items-center">
                   <div className="flex flex-col items-start justify-center">
-                    <div className="font-semibold">Start from scratch</div>
+                    <div className="font-semibold text-title">Start from scratch</div>
                     <div className="text-sm text-muted-foreground">
                       Begin with a fresh flow to build from scratch.
                     </div>
@@ -88,7 +82,7 @@ export default function TemplatesModal({
                     onClick={() => {
                       addFlow().then((id) => {
                         navigate(
-                          `/flow/${id}${folderId ? `/folder/${folderId}` : ""}`,
+                          `/flow/${id}${folderId ? `/folder/${folderId}` : ""}`
                         );
                       });
                       track("New Flow Created", { template: "Blank Flow" });

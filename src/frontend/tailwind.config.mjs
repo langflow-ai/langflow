@@ -109,6 +109,14 @@ const config = {
         "border-beam": "border-beam calc(var(--duration)*1s) infinite linear",
       },
       colors: {
+        "primary-blue":"#350E84",
+        "secondary-blue":"#8453FF",
+        "secondary-bg":"#EBE8FF",
+        "success-bg":"#EBF7E980",
+        "main-bg":"#fbfaff",
+        "title":"#444",
+        "text-grey":"#6f6f6f",
+        "success-text":"#3FA33C",
         "frozen-blue": "rgba(128, 190, 219, 0.86)", // Custom blue color for the frozen effect
         "frosted-glass": "rgba(255, 255, 255, 0.8)", // Custom frosted glass effect
         "component-icon": "var(--component-icon)",
@@ -202,7 +210,7 @@ const config = {
         selected: "var(--selected)",
         hover: "var(--hover)",
         border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
+        input: "#EBE8FF",
         ring: "hsl(var(--ring))",
         "error-red": "hsl(var(--error-red))",
         "error-red-border": "hsl(var(--error-red-border))",
@@ -216,9 +224,9 @@ const config = {
         "smooth-red": "hsl(var(--smooth-red))",
         "placeholder-foreground": "hsl(var(--placeholder-foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
+          DEFAULT: "#350E84",
           foreground: "hsl(var(--primary-foreground))",
-          hover: "hsl(var(--primary-hover))",
+          hover: "#350E84",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -231,7 +239,7 @@ const config = {
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          foreground: "#6f6f6f",
         },
         accent: {
           DEFAULT: "hsl(var(--accent))",

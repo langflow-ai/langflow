@@ -9,7 +9,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from langflow.custom.genesis.services.agent_builder.service import AgentBuilderService
     from langflow.custom.genesis.services.ai_gateway.service import AIGatewayService
+    from langflow.custom.genesis.services.azure_search.service import AzureSearchService
     from langflow.custom.genesis.services.claim_auth_history.service import ClaimAuthHistoryService
     from langflow.custom.genesis.services.encoder_pro.service import EncoderProService
     from langflow.custom.genesis.services.external_integration.service import (
@@ -193,6 +195,20 @@ def get_ai_gateway_service() -> AIGatewayService:
     from .ai_gateway.factory import AIGatewayServiceFactory
 
     return get_service("ai_gateway_service", AIGatewayServiceFactory())
+
+
+def get_azure_search_service() -> AzureSearchService:
+    """Retrieves the AzureSearchService instance from the service manager."""
+    from .azure_search.factory import AzureSearchServiceFactory
+
+    return get_service("azure_search_service", AzureSearchServiceFactory())
+
+
+def get_agent_builder_service() -> AgentBuilderService:
+    """Retrieves the AgentBuilderService instance from the service manager."""
+    from .agent_builder.factory import AgentBuilderServiceFactory
+
+    return get_service("agent_builder_service", AgentBuilderServiceFactory())
 
 
 # Convenience function for common service combinations

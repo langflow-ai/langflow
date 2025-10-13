@@ -19,7 +19,13 @@ import {
 } from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
 
-export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
+interface FlowPageProps {
+  view?: boolean;
+  flowId?: string;
+  folderId?: string;
+}
+
+export default function FlowPage({ view, flowId: propFlowId, folderId: propFolderId }: FlowPageProps): JSX.Element {
   const types = useTypesStore((state) => state.types);
 
   useGetTypes({
@@ -40,8 +46,11 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const blocker = useBlocker(changesNotSaved || isBuilding);
 
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
-  const { id } = useParams();
+  const { id: paramId } = useParams();
   const navigate = useCustomNavigate();
+  
+  // Use flowId from props if provided, otherwise use URL param
+  const id = propFlowId || paramId;
   const saveFlow = useSaveFlow();
 
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -65,15 +74,26 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         });
       }
     }, 1200);
-    saveFlow().then(() => {
-      if (!autoSaving || saving === false) {
+    saveFlow()
+      .then(() => {
+        if (!autoSaving || saving === false) {
+          blocker.proceed && blocker.proceed();
+          setSuccessData({
+            title: "Flow saved successfully!",
+          });
+        }
+        proceed = true;
+      })
+      .catch((error) => {
+        console.error("Failed to save flow:", error);
+        // Even if save fails, we should still proceed with navigation
         blocker.proceed && blocker.proceed();
+        proceed = true;
+        // Optionally show an error message
         setSuccessData({
-          title: "Flow saved successfully!",
+          title: "Failed to save flow, but navigation will continue",
         });
-      }
-      proceed = true;
-    });
+      });
   };
 
   const handleExit = () => {
@@ -82,7 +102,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
     } else if (changesNotSaved) {
       if (blocker.proceed) blocker.proceed();
     } else {
-      navigate("/all");
+      // Only navigate to /all if we're not using props (i.e., we're in a normal route context)
+      if (!propFlowId) {
+        navigate("/all");
+      }
     }
   };
 
@@ -108,7 +131,15 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         const isAnExistingFlow = flows.find((flow) => flow.id === id);
 
         if (!isAnExistingFlow) {
-          navigate("/all");
+          // Only navigate to /all if we're not using props (i.e., we're in a normal route context)
+          if (!propFlowId) {
+            navigate("/all");
+            return;
+          }
+          // If using props, try to load the flow directly
+          if (id) {
+            await getFlowToAddToCanvas(id);
+          }
           return;
         }
 
@@ -118,7 +149,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       }
     };
     awaitgetTypes();
-  }, [id, flows, currentFlowId, types]);
+  }, [id, flows, currentFlowId, types, propFlowId]);
 
   useEffect(() => {
     setOnFlowPage(true);

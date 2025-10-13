@@ -195,10 +195,10 @@ ai-studio-service/
 ```bash
 # Run comprehensive test suite
 cd src/backend
-python test_genesis_direct.py
+uv run pytest tests/ -v
 
 # Run specific test modules
-python -m pytest tests/unit/custom/genesis/ -v
+uv run pytest tests/unit/custom/genesis/ -v
 ```
 
 ## 📚 Documentation

@@ -14,6 +14,15 @@
       "calt" 1;
     font-family: Inter, system-ui, sans-serif;
   }
+  h3{
+    color: #444;
+  }
+  .text-base{
+    color: #444;
+  }
+  .bg-theme-gredient{
+    background: linear-gradient(180deg, #EFA1F0 1.44%, #7421E3 100%);
+  }
 }
 
 @keyframes slideDown {

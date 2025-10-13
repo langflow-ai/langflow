@@ -188,6 +188,38 @@ class ComponentTemplateService:
                 "description": "Calculator tool for mathematical operations.",
                 "display_name": "Calculator"
             },
+            "PromptComponent": {
+                "template": {
+                    "template": {
+                        "input_types": [],
+                        "type": "str",
+                        "display_name": "Template",
+                        "info": "The prompt template with variables in {brackets}",
+                        "multiline": True,
+                        "value": ""
+                    },
+                    "tool_placeholder": {
+                        "input_types": ["Message"],
+                        "type": "str",
+                        "display_name": "Tool Placeholder",
+                        "advanced": True,
+                        "tool_mode": True,
+                        "info": "A placeholder input for tool mode."
+                    }
+                },
+                "outputs": [
+                    {
+                        "types": ["Message"],
+                        "selected": "Message",
+                        "name": "prompt",
+                        "display_name": "Prompt",
+                        "method": "build_prompt"
+                    }
+                ],
+                "base_classes": ["PromptComponent"],
+                "description": "Create a prompt template with dynamic variables.",
+                "display_name": "Prompt Template"
+            },
             "MCPToolsComponent": {
                 "template": {
                     "mcp_server": {
