@@ -73,6 +73,10 @@ def build_component_index():
     # Build the index structure
     index = {
         "version": _get_langflow_version(),
+        "metadata": {
+            "num_modules": len(modules_dict),
+            "num_components": components_count,
+        },
         "entries": entries,
     }
 
@@ -113,7 +117,8 @@ def main():
 
     print("\nIndex successfully written!")
     print(f"  Version: {index['version']}")
-    print(f"  Modules: {len(index['entries'])}")
+    print(f"  Modules: {index['metadata']['num_modules']}")
+    print(f"  Components: {index['metadata']['num_components']}")
     print(f"  SHA256: {index['sha256']}")
 
 

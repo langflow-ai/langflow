@@ -177,6 +177,10 @@ def _save_generated_index(modules_dict: dict) -> None:
         # Convert modules_dict to entries format
         entries = [[top_level, components] for top_level, components in modules_dict.items()]
 
+        # Calculate metadata
+        num_modules = len(modules_dict)
+        num_components = sum(len(components) for components in modules_dict.values())
+
         # Get version
         from importlib.metadata import version
 
@@ -185,6 +189,10 @@ def _save_generated_index(modules_dict: dict) -> None:
         # Build index structure
         index = {
             "version": langflow_version,
+            "metadata": {
+                "num_modules": num_modules,
+                "num_components": num_components,
+            },
             "entries": entries,
         }
 
