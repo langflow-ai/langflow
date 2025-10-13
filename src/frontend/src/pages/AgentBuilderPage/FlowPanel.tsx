@@ -17,23 +17,9 @@ export default function FlowPanel({ flowId, yamlSpec, flowData, folderId, onClos
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Header */}
-      <div className="border-b px-4 py-3 flex items-center justify-between">
-        <h3 className="font-semibold">Agent Flow</h3>
-        {!isDisabled && (
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground"
-            aria-label="Close panel"
-          >
-            <ForwardedIconComponent name="X" className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-
-      {/* Tabs */}
-      <div className="border-b">
-        <div className="flex px-4">
+      {/* Tabs - Left aligned */}
+      <div className="border-b px-4 pt-4">
+        <div className="flex gap-2">
           <button
             onClick={() => !isDisabled && setActiveTab("visualization")}
             disabled={isDisabled}

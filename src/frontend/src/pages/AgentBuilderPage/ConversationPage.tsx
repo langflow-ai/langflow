@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
+import { StickToBottom } from "use-stick-to-bottom";
+import { Badge } from "@/components/ui/badge";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useAgentBuilderStream } from "@/hooks/useAgentBuilderStream";
 import StreamingMessages from "@/components/AgentBuilder/StreamingMessages";
@@ -7,17 +9,20 @@ import { useConvertSpec } from "@/controllers/API/queries/spec/use-convert-spec"
 import { usePostAddFlow } from "@/controllers/API/queries/flows/use-post-add-flow";
 import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import FlowPanel from "./FlowPanel";
 
 export default function ConversationPage() {
   const location = useLocation();
   const { sessionId } = useParams<{ sessionId: string }>();
+  const navigate = useCustomNavigate();
   const [promptValue, setPromptValue] = useState("");
   const [flowData, setFlowData] = useState<any>(null);
   const [createdFlowId, setCreatedFlowId] = useState<string | null>(null);
   const [yamlSpec, setYamlSpec] = useState<string>("");
   const [leftPanelWidth, setLeftPanelWidth] = useState(50); // Percentage
   const [isDragging, setIsDragging] = useState(false);
+  const [agentName, setAgentName] = useState<string>("New Agent");
 
   const { messages, isLoading, startStream, reset } = useAgentBuilderStream(sessionId);
   const convertSpecMutation = useConvertSpec();
@@ -53,6 +58,17 @@ export default function ConversationPage() {
   const handleTriggerBuild = () => {
     // Send message to trigger Builder Agent to generate YAML
     startStream("build agent now");
+  };
+
+  const handleNewChat = () => {
+    // Generate new session ID and navigate to new conversation
+    const newSessionId = crypto.randomUUID();
+    navigate(`/agent-builder/conversation/${newSessionId}`);
+    reset();
+  };
+
+  const handleBack = () => {
+    navigate("/agent-builder");
   };
 
   // Handle resizable panel dragging
@@ -145,6 +161,11 @@ export default function ConversationPage() {
           // Store the created flow data and ID
           setFlowData(result.flow);
           setCreatedFlowId(createdFlow.id);
+
+          // Update agent name from created flow
+          if (createdFlow.name) {
+            setAgentName(createdFlow.name);
+          }
         } catch (flowError: any) {
           console.error("[AgentBuilder] Flow creation error:", flowError);
           console.error("[AgentBuilder] Flow data that failed:", result.flow);
@@ -162,6 +183,47 @@ export default function ConversationPage() {
 
   return (
     <div className="flex h-full w-full flex-col agent-builder-conversation-page">
+      {/* Header Section */}
+      <div className="border-b bg-background px-6 py-4">
+        {/* AI Studio Title */}
+        <div className="mb-4">
+          <h1 className="text-xl font-medium" style={{ color: '#350E84' }}>
+            AI Studio
+          </h1>
+        </div>
+
+        {/* Agent Name and Navigation */}
+        <div className="flex items-center justify-between">
+          {/* Left: Back, Agent Name, Draft Badge */}
+          <div className="flex items-center gap-3">
+            {/* Back Button */}
+            <button
+              onClick={handleBack}
+              className="p-2 hover:bg-muted rounded-md transition-colors"
+              aria-label="Back to Agent Builder"
+            >
+              <ForwardedIconComponent name="RotateCcw" className="h-5 w-5 text-muted-foreground" />
+            </button>
+
+            {/* Agent Name and Status */}
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-medium">{agentName}</h2>
+              <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100">
+                Draft
+              </Badge>
+            </div>
+          </div>
+
+          {/* Right: New Chat Button */}
+          <button
+            onClick={handleNewChat}
+            className="p-2 hover:bg-muted rounded-md transition-colors"
+            aria-label="Start new chat"
+          >
+            <ForwardedIconComponent name="RotateCw" className="h-5 w-5 text-muted-foreground" />
+          </button>
+        </div>
+      </div>
 
       {/* Main Content - Always 2-column layout */}
       <div className="flex flex-1 overflow-hidden">
@@ -171,17 +233,23 @@ export default function ConversationPage() {
           style={{ width: `${leftPanelWidth}%` }}
         >
           {/* Chat Messages Area */}
-          <div className="flex-1 overflow-y-auto px-4 py-6">
-            <div className="max-w-full">
-              <StreamingMessages
-                messages={messages}
-                isLoading={isLoading}
-                onBuildAgent={handleBuildAgent}
-                onTriggerBuild={handleTriggerBuild}
-                isFlowBuilt={!!createdFlowId}
-              />
-            </div>
-          </div>
+          <StickToBottom
+            className="flex-1 overflow-y-auto px-4 py-6"
+            resize="smooth"
+            initial="instant"
+          >
+            <StickToBottom.Content className="flex flex-col min-h-full">
+              <div className="max-w-full">
+                <StreamingMessages
+                  messages={messages}
+                  isLoading={isLoading}
+                  onBuildAgent={handleBuildAgent}
+                  onTriggerBuild={handleTriggerBuild}
+                  isFlowBuilt={!!createdFlowId}
+                />
+              </div>
+            </StickToBottom.Content>
+          </StickToBottom>
 
           {/* Input Section - Fixed at bottom */}
           <div className="border-t bg-background px-4 py-4">
