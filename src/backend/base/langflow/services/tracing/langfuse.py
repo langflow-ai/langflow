@@ -153,12 +153,45 @@ class LangFuseTracer(BaseTracer):
         self.trace.update(**serialize(content_update))
 
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
+        """Get langchain callback for tracing.
+        
+        Note: Langfuse callbacks have an architectural issue with agent tool execution.
+        The callback's internal run tracking doesn't properly handle agent tool calls
+        because the agent's run_id is cleaned up before tools execute. We wrap the
+        callback to auto-create missing parent spans on-demand.
+        """
         if not self._ready:
             return None
 
-        # get callback from parent span
-        stateful_client = self.spans[next(reversed(self.spans))] if len(self.spans) > 0 else self.trace
-        return stateful_client.get_langchain_handler()
+        # Get the base callback
+        if len(self.spans) > 0:
+            current_span = self.spans[next(reversed(self.spans))]
+            base_callback = current_span.get_langchain_handler()
+        else:
+            base_callback = self.trace.get_langchain_handler()
+        
+        # Minimal wrapper - only fix the tool start issue
+        class DummyParent(type(base_callback)):
+            """Ensures parent runs exist when tools start to prevent parent-not-found errors."""
+            
+            def on_tool_start(self, serialized, input_str, *, run_id, parent_run_id=None, **kwargs):
+                # If parent is missing, create it
+                if parent_run_id and parent_run_id not in self.runs:
+                    logger.debug(f"Langfuse: Auto-creating missing parent span for tool execution")
+                    self.runs[parent_run_id] = self.trace.span(
+                        name="Agent Execution",
+                        metadata={"auto_created": True, "reason": "parent_missing_on_tool_start"}
+                    )
+                
+                # Call original
+                return super().on_tool_start(serialized, input_str, run_id=run_id, 
+                                            parent_run_id=parent_run_id, **kwargs)
+        
+        # Copy callback state
+        wrapped = DummyParent.__new__(DummyParent)
+        wrapped.__dict__.update(base_callback.__dict__)
+        
+        return wrapped
 
     @staticmethod
     def _get_config() -> dict:
