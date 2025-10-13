@@ -47,7 +47,7 @@ on:
         default: ubuntu-latest
 env:
   POETRY_VERSION: "1.8.2"
-  NODE_VERSION: "21"
+  NODE_VERSION: "22"
   PYTEST_RUN_PATH: "src/backend/tests"
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -144,6 +144,7 @@ jobs:
         env:
           PYLEAK_LOG_LEVEL: debug # enable pyleak logging
           DO_NOT_TRACK: true # disable telemetry reporting
+
 
   lfx-tests:
     name: LFX Tests - Python ${{ matrix.python-version }}
