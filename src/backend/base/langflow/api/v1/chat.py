@@ -60,7 +60,7 @@ async def retrieve_vertices_order(
     *,
     flow_id: uuid.UUID,
     background_tasks: BackgroundTasks,
-    data: Annotated[FlowDataRequest | None, Body(embed=True)] | None = None,
+    data: FlowDataRequest | None = None,
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
     session: DbSession,
