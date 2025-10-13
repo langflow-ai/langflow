@@ -88,6 +88,11 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        # Skip middleware for MCP SSE routes to avoid ASGI message conflicts
+        # MCP SSE uses streaming responses that conflict with BaseHTTPMiddleware
+        if request.url.path.startswith("/api/v1/mcp/"):
+            return await call_next(request)
+
         try:
             response = await call_next(request)
         except Exception as exc:
