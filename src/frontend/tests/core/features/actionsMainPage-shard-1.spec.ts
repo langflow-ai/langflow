@@ -1,4 +1,4 @@
-import { test } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -8,6 +8,8 @@ test(
   "select and delete a flow",
   { tag: ["@release", "@mainpage"] },
   async ({ page }) => {
+    expect(true).toBe(false);
+
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
