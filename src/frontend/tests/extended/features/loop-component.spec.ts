@@ -142,7 +142,7 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-parsercomponent-shownode-data or dataframe-left")
+      .getByTestId("handle-parsercomponent-shownode-json or table-left")
       .first()
       .click();
 
