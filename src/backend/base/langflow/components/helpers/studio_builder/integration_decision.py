@@ -105,7 +105,7 @@ class IntegrationDecision(Component):
         return integration_types
 
     def _analyze_requirements(self, available_components: Dict) -> Dict:
-        """Analyze requirements to determine best approach."""
+        """Analyze requirements and provide guidance for both API and MCP approaches."""
         description_lower = self.integration_description.lower()
 
         # Decision factors
@@ -121,38 +121,161 @@ class IntegrationDecision(Component):
                                 ["rest", "api", "endpoint", "http", "webhook"])
         }
 
-        # Decision logic - check what's actually available
+        # Check what's actually available
         has_api_request = "genesis:api_request" in available_components
         has_mcp_tool = "genesis:mcp_tool" in available_components
 
-        if factors["has_mcp"] and has_mcp_tool:
-            component_type = "genesis:mcp_tool"
-            reason = "You have an MCP server available, which provides better integration capabilities"
-        elif factors["is_simple_api"] and factors["has_api_details"] and has_api_request:
-            component_type = "genesis:api_request"
-            reason = "This is a straightforward API integration with known endpoints"
-        elif (factors["is_healthcare"] or factors["is_complex"] or factors["needs_state"]) and has_mcp_tool:
-            component_type = "genesis:mcp_tool"
-            reason = "This complex integration would benefit from MCP's capabilities (can use mock mode)"
-        elif has_api_request:
-            component_type = "genesis:api_request"
-            reason = "This appears to be a simple integration suitable for direct API calls"
-        elif has_mcp_tool:
-            component_type = "genesis:mcp_tool"
-            reason = "Using MCP tool as the available integration option"
+        # PRIMARY RECOMMENDATION: Always provide both options with clear guidance
+        api_score = 0
+        mcp_score = 0
+
+        # Scoring for API Request
+        if factors["is_simple_api"]:
+            api_score += 3
+        if factors["has_api_details"]:
+            api_score += 2
+        if not factors["is_complex"]:
+            api_score += 1
+        if not factors["needs_state"]:
+            api_score += 1
+
+        # Scoring for MCP Tool
+        if factors["is_healthcare"]:
+            mcp_score += 3
+        if factors["is_complex"]:
+            mcp_score += 2
+        if factors["needs_state"]:
+            mcp_score += 2
+        if factors["has_mcp"]:
+            mcp_score += 1
+
+        # Determine primary recommendation
+        if mcp_score > api_score:
+            primary_recommendation = "genesis:mcp_tool"
+            primary_reason = "Healthcare complexity and state management favor MCP approach"
+        elif api_score > mcp_score:
+            primary_recommendation = "genesis:api_request"
+            primary_reason = "Simple API integration with known endpoints is most efficient"
         else:
-            component_type = "genesis:api_request"  # Default fallback
-            reason = "Recommending API Request as the standard integration approach"
+            # Tie - default to MCP for healthcare, API for others
+            if factors["is_healthcare"]:
+                primary_recommendation = "genesis:mcp_tool"
+                primary_reason = "Healthcare integrations benefit from MCP's specialized capabilities"
+            else:
+                primary_recommendation = "genesis:api_request"
+                primary_reason = "API Request provides straightforward integration"
 
         return {
-            "recommended_component": component_type,
-            "reason": reason,
-            "factors": factors
+            "primary_recommendation": primary_recommendation,
+            "primary_reason": primary_reason,
+            "api_score": api_score,
+            "mcp_score": mcp_score,
+            "factors": factors,
+            "both_available": has_api_request and has_mcp_tool,
+            "comparison": {
+                "api_pros": [
+                    "Direct HTTP integration",
+                    "Simple configuration",
+                    "Fast performance",
+                    "Standard authentication"
+                ],
+                "api_cons": [
+                    "Limited business logic",
+                    "Manual error handling",
+                    "No state management",
+                    "Harder to extend"
+                ],
+                "mcp_pros": [
+                    "Healthcare-specific logic",
+                    "Mock templates for development",
+                    "State management capabilities",
+                    "Extensible architecture"
+                ],
+                "mcp_cons": [
+                    "More complex setup",
+                    "Requires MCP server (or mock mode)",
+                    "Additional abstraction layer",
+                    "Development overhead"
+                ]
+            }
         }
 
     def _generate_guidance(self, decision: Dict) -> Dict:
-        """Generate specific guidance for the chosen approach."""
-        component_type = decision["recommended_component"]
+        """Generate specific guidance for both API and MCP approaches."""
+        primary_component = decision["primary_recommendation"]
+        comparison = decision["comparison"]
+
+        # Provide guidance for both approaches
+        guidance = {
+            "primary_recommendation": {
+                "component": "API Request" if primary_component == "genesis:api_request" else "MCP Tool",
+                "reason": decision["primary_reason"],
+                "score": decision["api_score"] if primary_component == "genesis:api_request" else decision["mcp_score"]
+            },
+            "api_request_guidance": {
+                "component": "API Request",
+                "when_to_use": "Simple HTTP API integrations with known endpoints",
+                "pros": comparison["api_pros"],
+                "cons": comparison["api_cons"],
+                "setup_steps": [
+                    "Define the HTTP method (GET, POST, etc.)",
+                    "Specify the endpoint URL",
+                    "Configure headers (including authentication)",
+                    "Set up request body if needed",
+                    "Configure timeout settings"
+                ],
+                "configuration_template": {
+                    "type": "genesis:api_request",
+                    "config": {
+                        "method": "POST",
+                        "url_input": "https://api.healthcare.gov/v1/endpoint",
+                        "headers": [
+                            {"key": "Authorization", "value": "${API_KEY}"},
+                            {"key": "Content-Type", "value": "application/json"}
+                        ],
+                        "body": [
+                            {"key": "patient_id", "value": "${PATIENT_ID}"}
+                        ],
+                        "timeout": 30
+                    }
+                }
+            },
+            "mcp_tool_guidance": {
+                "component": "MCP Tool",
+                "when_to_use": "Complex healthcare integrations requiring business logic",
+                "pros": comparison["mcp_pros"],
+                "cons": comparison["mcp_cons"],
+                "setup_steps": [
+                    "Define the tool name identifier",
+                    "Provide tool description for the agent",
+                    "Configure MCP server connection (if available)",
+                    "Set up mock response for development",
+                    "Define expected input/output schemas"
+                ],
+                "configuration_template": {
+                    "type": "genesis:mcp_tool",
+                    "config": {
+                        "tool_name": "healthcare_integration_tool",
+                        "description": "Healthcare-specific integration tool with FHIR/HL7 support",
+                        "mock_response": {
+                            "status": "success",
+                            "data": {
+                                "patient_id": "PAT123",
+                                "fhir_compliant": True,
+                                "hipaa_status": "compliant"
+                            }
+                        }
+                    }
+                },
+                "development_mode": "Use mock templates for development without actual MCP servers"
+            }
+        }
+
+        return guidance
+
+    def _generate_guidance_old(self, decision: Dict) -> Dict:
+        """OLD VERSION - Generate specific guidance for the chosen approach."""
+        component_type = decision.get("recommended_component", "genesis:api_request")
 
         if component_type == "genesis:api_request":
             return {
@@ -260,34 +383,62 @@ class IntegrationDecision(Component):
             ]
 
     def _format_response(self, decision: Dict, guidance: Dict, examples: List[Dict]) -> str:
-        """Format a conversational response for the user."""
-        component_type = decision["recommended_component"]
-        component_name = "API Request" if component_type == "genesis:api_request" else "MCP Tool"
+        """Format a comprehensive conversational response for the user."""
+        primary = guidance["primary_recommendation"]
+        api_guidance = guidance["api_request_guidance"]
+        mcp_guidance = guidance["mcp_tool_guidance"]
 
-        response = f"""Based on your integration needs, I recommend using **{component_name}**.
+        response = f"""🔧 **Integration Decision Analysis**
 
-**Why this choice:**
-{decision['reason']}
+**Primary Recommendation: {primary['component']}** (Score: {primary['score']})
+**Reason:** {primary['reason']}
 
-**How to configure it:**
+## 🌐 API Request Approach
+**When to use:** {api_guidance['when_to_use']}
+
+**Pros:**
 """
-
-        for step in guidance["setup_steps"]:
-            response += f"• {step}\n"
+        for pro in api_guidance['pros']:
+            response += f"✅ {pro}\n"
 
         response += f"""
-**This approach is best for:**
+**Cons:**
 """
-        for use_case in guidance["best_for"]:
-            response += f"• {use_case}\n"
+        for con in api_guidance['cons']:
+            response += f"❌ {con}\n"
 
         response += f"""
-**Example configuration:**
+**Configuration:**
 ```yaml
-{self._dict_to_yaml(guidance['configuration_template'])}
+{self._dict_to_yaml(api_guidance['configuration_template'])}
 ```
 
-Would you like to proceed with this integration approach?"""
+## 🔌 MCP Tool Approach
+**When to use:** {mcp_guidance['when_to_use']}
+
+**Pros:**
+"""
+        for pro in mcp_guidance['pros']:
+            response += f"✅ {pro}\n"
+
+        response += f"""
+**Cons:**
+"""
+        for con in mcp_guidance['cons']:
+            response += f"❌ {con}\n"
+
+        response += f"""
+**Configuration:**
+```yaml
+{self._dict_to_yaml(mcp_guidance['configuration_template'])}
+```
+
+**💡 Development Note:** {mcp_guidance['development_mode']}
+
+## 🎯 Recommendation Summary
+For your **{self.integration_description}** integration, I recommend **{primary['component']}** because {primary['reason'].lower()}.
+
+Both approaches are available - would you like to proceed with **{primary['component']}** or explore the alternative?"""
 
         return response
 

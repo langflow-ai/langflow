@@ -101,7 +101,7 @@ class SpecService:
 
         return flow_id
 
-    def validate_spec(self, spec_yaml: str) -> Dict[str, Any]:
+    async def validate_spec(self, spec_yaml: str) -> Dict[str, Any]:
         """
         Validate specification without converting.
 
@@ -124,9 +124,21 @@ class SpecService:
             # Validate structure
             validation = self._validate_spec_structure(spec_dict)
 
-            # Validate components
-            component_validation = self._validate_components(spec_dict.get("components", []))
+            # Get available components for validation
+            available_components = await self.get_all_available_components()
+
+            # Validate components with enhanced logic
+            component_validation = await self._validate_components_enhanced(
+                spec_dict.get("components", []),
+                available_components
+            )
+
+            # Merge validation results
+            validation["errors"].extend(component_validation["errors"])
             validation["warnings"].extend(component_validation["warnings"])
+
+            # Update valid status
+            validation["valid"] = len(validation["errors"]) == 0
 
             return validation
 
@@ -137,6 +149,7 @@ class SpecService:
                 "warnings": []
             }
         except Exception as e:
+            logger.error(f"Error in validate_spec: {e}")
             return {
                 "valid": False,
                 "errors": [f"Validation error: {e}"],
@@ -279,6 +292,87 @@ class SpecService:
 
         return {"warnings": warnings}
 
+    async def _validate_components_enhanced(self, components, available_components: Dict[str, Any]) -> Dict[str, Any]:
+        """Enhanced component validation with existence checking and connection validation."""
+        errors = []
+        warnings = []
+
+        # Get the genesis mapped components
+        genesis_mapped = available_components.get("genesis_mapped", {})
+
+        # Handle both dict and list formats
+        component_items = []
+        if isinstance(components, dict):
+            component_items = [(comp_id, comp) for comp_id, comp in components.items()]
+        elif isinstance(components, list):
+            component_items = [(comp.get('id', f'component_{i}'), comp) for i, comp in enumerate(components)]
+
+        component_ids = [comp_id for comp_id, _ in component_items]
+
+        for comp_id, comp in component_items:
+            comp_type = comp.get("type", "")
+
+            # 1. Component Existence Validation (CRITICAL FIX)
+            if comp_type.startswith("genesis:"):
+                if comp_type not in genesis_mapped:
+                    errors.append(f"Component type '{comp_type}' does not exist. Available genesis components: {list(genesis_mapped.keys())[:10]}...")
+                    continue
+            else:
+                # Non-genesis components should also be validated
+                warnings.append(f"Component type '{comp_type}' is not a genesis component - ensure it exists in Langflow")
+
+            # 2. Component Connection Validation
+            has_connections = "provides" in comp and comp["provides"]
+            if not has_connections and comp_type not in ["genesis:chat_input", "genesis:chat_output"]:
+                warnings.append(f"Component '{comp_id}' has no connections defined - may be isolated in the flow")
+
+            # 3. Validate provides connections
+            if "provides" in comp:
+                for provide in comp["provides"]:
+                    if not isinstance(provide, dict):
+                        errors.append(f"Invalid provides declaration in component '{comp_id}' - must be an object")
+                        continue
+
+                    if "useAs" not in provide or "in" not in provide:
+                        errors.append(f"Provides declaration in component '{comp_id}' missing required 'useAs' or 'in' field")
+                        continue
+
+                    # Check if target component exists
+                    target_component = provide.get("in")
+                    if target_component and target_component not in component_ids:
+                        errors.append(f"Component '{comp_id}' references non-existent target component '{target_component}'")
+
+            # 4. Healthcare-specific validation
+            if comp_type in ["genesis:api_request"] and "config" in comp:
+                config = comp["config"]
+                if "url_input" in config and "example.com" in config["url_input"]:
+                    warnings.append(f"Component '{comp_id}' uses example URL - replace with actual healthcare API endpoint")
+
+        # 5. Overall flow validation
+        input_components = [comp_id for comp_id, comp in component_items if comp.get("type") == "genesis:chat_input"]
+        output_components = [comp_id for comp_id, comp in component_items if comp.get("type") == "genesis:chat_output"]
+
+        if not input_components:
+            errors.append("Specification must include at least one 'genesis:chat_input' component")
+        if not output_components:
+            errors.append("Specification must include at least one 'genesis:chat_output' component")
+
+        # 6. Check for disconnected components (no flow)
+        if len(component_items) > 2:  # More than just input/output
+            connected_components = set()
+            for comp_id, comp in component_items:
+                if "provides" in comp:
+                    connected_components.add(comp_id)
+                    for provide in comp.get("provides", []):
+                        if isinstance(provide, dict) and "in" in provide:
+                            connected_components.add(provide["in"])
+
+            disconnected = [comp_id for comp_id, _ in component_items if comp_id not in connected_components]
+            if disconnected:
+                warnings.append(f"Components may be disconnected from main flow: {disconnected}")
+
+        return {"errors": errors, "warnings": warnings}
+
     async def _save_flow_to_database(self, flow_data: Dict[str, Any], name: str,
                                     session: AsyncSession, user_id: UUID,
                                     folder_id: Optional[str] = None) -> str:
@@ -357,3 +451,68 @@ class SpecService:
             "output_types": io_info.get("output_types", []),
             "is_tool": self.mapper.is_tool_component(spec_type)
         }
+
+    async def get_all_available_components(self) -> Dict[str, Any]:
+        """
+        Get ALL components - both Langflow native and genesis mapped.
+        This method is for internal use by components, no auth required.
+
+        Returns:
+            Dictionary containing:
+            - langflow_components: All Langflow components
+            - genesis_mapped: Genesis-mapped components
+            - unmapped: Components without genesis mappings
+        """
+        try:
+            from langflow.interface.components import get_and_cache_all_types_dict
+            from langflow.services.settings.service import get_settings_service
+
+            # Get ALL Langflow components
+            all_langflow = await get_and_cache_all_types_dict(get_settings_service())
+
+            # Get genesis mappings
+            genesis_mapped = {}
+            genesis_mapped.update(self.mapper.AUTONOMIZE_MODELS)
+            genesis_mapped.update(self.mapper.MCP_MAPPINGS)
+            genesis_mapped.update(self.mapper.STANDARD_MAPPINGS)
+
+            # Find unmapped components
+            unmapped = []
+            if all_langflow and "components" in all_langflow:
+                for category, components in all_langflow["components"].items():
+                    for comp_name in components.keys():
+                        # Check if this component has a genesis mapping
+                        has_mapping = False
+                        for genesis_type, mapping in genesis_mapped.items():
+                            if mapping.get("component") == comp_name:
+                                has_mapping = True
+                                break
+
+                        if not has_mapping:
+                            unmapped.append({
+                                "name": comp_name,
+                                "category": category,
+                                "suggestion": f"genesis:{comp_name.lower().replace(' ', '_')}"
+                            })
+
+            return {
+                "langflow_components": all_langflow,
+                "genesis_mapped": genesis_mapped,
+                "unmapped": unmapped,
+                "success": True
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting all available components: {e}")
+            # Return basic fallback with genesis mappings at least
+            return {
+                "langflow_components": {},
+                "genesis_mapped": {
+                    **self.mapper.AUTONOMIZE_MODELS,
+                    **self.mapper.MCP_MAPPINGS,
+                    **self.mapper.STANDARD_MAPPINGS
+                },
+                "unmapped": [],
+                "success": False,
+                "error": str(e)
+            }

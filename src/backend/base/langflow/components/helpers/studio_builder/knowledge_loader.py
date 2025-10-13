@@ -41,27 +41,66 @@ class KnowledgeLoader(Component):
     ]
 
     def load_knowledge(self) -> Data:
-        """Load requested knowledge from the library via API."""
+        """Load ALL components directly from internal service - no HTTP, no auth needed!"""
         try:
-            # Use asyncio to run the async API call
-            async def _fetch_knowledge():
-                async with SpecAPIClient() as client:
-                    return await client.get_knowledge(
-                        query_type=self.query_type,
-                        reload_cache=self.reload_cache
-                    )
+            from langflow.services.spec.service import SpecService
+            import concurrent.futures
 
-            # Run the async function - handle existing event loop
+            # Create service instance
+            service = SpecService()
+
+            # Use the internal service method directly - no HTTP call needed!
+            async def _get_all_components():
+                return await service.get_all_available_components()
+
+            # Handle async execution properly
             try:
                 # Try to get the current event loop
                 loop = asyncio.get_running_loop()
-                # If we're in an existing loop, create a task
-                import concurrent.futures
+                # If we're in an existing loop, run in thread pool
                 with concurrent.futures.ThreadPoolExecutor() as pool:
-                    knowledge = pool.submit(asyncio.run, _fetch_knowledge()).result()
+                    components_data = pool.submit(asyncio.run, _get_all_components()).result()
             except RuntimeError:
                 # No running loop, we can use asyncio.run directly
-                knowledge = asyncio.run(_fetch_knowledge())
+                components_data = asyncio.run(_get_all_components())
+
+            # Process the knowledge based on query_type
+            if self.query_type == "components" or self.query_type == "all":
+                # Return comprehensive component information
+                knowledge = {
+                    "all_components": components_data.get("langflow_components", {}),
+                    "genesis_mapped": components_data.get("genesis_mapped", {}),
+                    "unmapped": components_data.get("unmapped", []),
+                    "valid_genesis_types": list(components_data.get("genesis_mapped", {}).keys())
+                }
+
+                # Add a helpful summary
+                if components_data.get("langflow_components"):
+                    total_components = sum(
+                        len(comps)
+                        for category in components_data["langflow_components"].get("components", {}).values()
+                        for comps in [category] if isinstance(category, dict)
+                    )
+                    knowledge["summary"] = {
+                        "total_langflow_components": total_components,
+                        "genesis_mapped_count": len(components_data.get("genesis_mapped", {})),
+                        "unmapped_count": len(components_data.get("unmapped", []))
+                    }
+            else:
+                # For backward compatibility, still support API calls for other query types
+                async def _fetch_knowledge():
+                    async with SpecAPIClient() as client:
+                        return await client.get_knowledge(
+                            query_type=self.query_type,
+                            reload_cache=self.reload_cache
+                        )
+
+                try:
+                    loop = asyncio.get_running_loop()
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        knowledge = pool.submit(asyncio.run, _fetch_knowledge()).result()
+                except RuntimeError:
+                    knowledge = asyncio.run(_fetch_knowledge())
 
             return Data(data={
                 "success": True,
@@ -70,7 +109,7 @@ class KnowledgeLoader(Component):
             })
 
         except Exception as e:
-            logger.error(f"Error loading knowledge from API: {e}")
+            logger.error(f"Error loading knowledge: {e}")
             return Data(data={
                 "success": False,
                 "error": str(e),
