@@ -354,6 +354,7 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
     """
 
     field_type: SerializableFieldTypes = FieldTypes.INTEGER
+    track_in_telemetry: CoalesceBool = True  # Safe numeric parameter
 
     @field_validator("value")
     @classmethod
@@ -389,6 +390,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
     """
 
     field_type: SerializableFieldTypes = FieldTypes.FLOAT
+    track_in_telemetry: CoalesceBool = True  # Safe numeric parameter
 
     @field_validator("value")
     @classmethod
@@ -426,6 +428,7 @@ class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolMode
 
     field_type: SerializableFieldTypes = FieldTypes.BOOLEAN
     value: CoalesceBool = False
+    track_in_telemetry: CoalesceBool = True  # Safe boolean flag
 
 
 class NestedDictInput(
@@ -490,6 +493,7 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     toggle: bool = False
     toggle_disable: bool | None = None
     toggle_value: bool | None = None
+    track_in_telemetry: CoalesceBool = True  # Safe predefined choices
 
 
 class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolModeMixin):
@@ -562,6 +566,7 @@ class TabInput(BaseInputMixin, TabMixin, MetadataTraceMixin, ToolModeMixin):
 
     field_type: SerializableFieldTypes = FieldTypes.TAB
     options: list[str] = Field(default_factory=list)
+    track_in_telemetry: CoalesceBool = True  # Safe UI tab selection
 
     @model_validator(mode="after")
     @classmethod
