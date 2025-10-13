@@ -164,10 +164,9 @@ class LCAgentComponent(Component):
 
         # Handle chat_history conversion
         if hasattr(self, "chat_history") and self.chat_history:
-            if isinstance(self.chat_history, Data):
-                input_dict["chat_history"] = self._data_to_messages_skip_empty(self.chat_history)
-            # Handle both lfx.schema.message.Message and langflow.schema.message.Message types
-            elif all(hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data for m in self.chat_history):
+            if isinstance(self.chat_history, Data) or all(
+                hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data for m in self.chat_history
+            ):
                 input_dict["chat_history"] = self._data_to_messages_skip_empty(self.chat_history)
             elif all(isinstance(m, Message) for m in self.chat_history):
                 input_dict["chat_history"] = self._data_to_messages_skip_empty([m.to_data() for m in self.chat_history])
