@@ -183,6 +183,27 @@ class AgentSpec(BaseModel):
         if "reusability" in data and isinstance(data["reusability"], dict):
             data["reusability"] = ReusabilityInfo(**data["reusability"])
 
+        # Helper function to parse JSON strings
+        import json
+        import logging
+        logger = logging.getLogger(__name__)
+
+        def parse_json_field(field_name: str) -> None:
+            """Parse a field that might be a JSON string into a dict."""
+            if field_name in data and data[field_name]:
+                field_value = data[field_name]
+                if isinstance(field_value, str):
+                    try:
+                        data[field_name] = json.loads(field_value)
+                        logger.debug(f"Parsed {field_name} from JSON string to dict")
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Failed to parse {field_name} JSON string: {e}")
+                        data[field_name] = None
+
+        # Parse JSON string fields that expect dicts
+        parse_json_field("sampleInput")
+        parse_json_field("promptConfiguration")
+
         return cls(**data)
 
     @classmethod
@@ -195,6 +216,26 @@ class AgentSpec(BaseModel):
         comp_type = comp_data.get("type", "")
         kind = cls._map_type_to_kind(comp_type)
         comp_data["kind"] = kind
+
+        # Handle provides field - convert string format to object format
+        if "provides" in comp_data and comp_data["provides"]:
+            provides_list = comp_data["provides"]
+            if isinstance(provides_list, list):
+                normalized_provides = []
+                for provide_item in provides_list:
+                    if isinstance(provide_item, str):
+                        # Convert shorthand string format to object format
+                        # String format like 'text' or 'json' means output type
+                        # We'll create a minimal ComponentProvides object
+                        # The actual target component will be resolved during edge creation
+                        normalized_provides.append({
+                            "useAs": provide_item,
+                            "in": "_auto_"  # Placeholder, will be resolved by converter
+                        })
+                    elif isinstance(provide_item, dict):
+                        # Already in object format, keep as-is
+                        normalized_provides.append(provide_item)
+                comp_data["provides"] = normalized_provides
 
         return Component(**comp_data)
 
@@ -267,4 +308,4 @@ class AgentSpec(BaseModel):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return self.dict(exclude_none=True, by_alias=True)
+        return self.model_dump(exclude_none=True, by_alias=True)

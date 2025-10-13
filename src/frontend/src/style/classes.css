@@ -432,3 +432,14 @@ input[type="search"]::-webkit-search-cancel-button {
 .jse-button.jse-search:active {
   background-color: hsl(var(--border)) !important;
 }
+
+/* Hide FlowMenu header in Agent Builder flow view */
+.agent-builder-flow-view [data-testid="menu_bar_wrapper"] {
+  display: none !important;
+}
+
+/* Hide FlowMenu header on Agent Builder pages (when URL contains /agent-builder) */
+body:has([data-route*="agent-builder"]) [data-testid="menu_bar_wrapper"],
+body:has([class*="agent-builder"]) [data-testid="menu_bar_wrapper"] {
+  display: none !important;
+}

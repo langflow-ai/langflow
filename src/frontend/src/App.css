@@ -229,3 +229,13 @@ code {
   max-width: calc(var(--sidebar-width) - (var(--sidebar-width-icon) + 0.1rem));
   width: var(--sidebar-width);
 }
+
+
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}

@@ -31,6 +31,7 @@ import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
 import CollectionPage from "./pages/MainPage/pages/main-page";
 import SettingsPage from "./pages/SettingsPage";
 import AgentBuilderPage from "./pages/AgentBuilderPage";
+import AgentMarketplacePage from "./pages/AgentMarketplacePage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
@@ -105,6 +106,10 @@ const router = createBrowserRouter(
                     element={<AgentBuilderPage key="agent-builder"/>}
                   />
                   <Route
+                    path="agent-marketplace/"
+                    element={<AgentMarketplacePage />}
+                  />
+                  <Route
                     path="flows/"
                     element={<HomePage key="flows" type="flows" />}
                   />
@@ -161,7 +166,7 @@ const router = createBrowserRouter(
                 </Route>
                 {CustomRoutesStorePages()}
                 <Route path="agent-builder" element={<AgentBuilderPage />} />
-                <Route path="agent-builder/conversation" element={<ConversationPage />} />
+                <Route path="agent-builder/conversation/:sessionId" element={<ConversationPage />} />
                 <Route path="account">
                   <Route path="delete" element={<DeleteAccountPage />}></Route>
                 </Route>

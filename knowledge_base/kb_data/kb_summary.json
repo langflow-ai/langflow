@@ -1,0 +1,30 @@
+{
+  "total_agents": 22,
+  "total_components": 15,
+  "total_tools": 1,
+  "total_models": 1,
+  "domains": [
+    "general",
+    "healthcare",
+    "mathematics",
+    "integration"
+  ],
+  "component_types": [
+    "genesis:agent",
+    "$ref:medication_extractor",
+    "$ref:eligibility_checker",
+    "genesis:chat_input",
+    "$ref:document_processor",
+    "$ref:clinical_validator",
+    "genesis:calculator",
+    "genesis:knowledge_hub_search",
+    "genesis:mcp_tool",
+    "genesis:chat_output",
+    "genesis:autonomize_model",
+    "genesis:conversation_chain",
+    "genesis:file_reader",
+    "genesis:form_recognizer",
+    "genesis:prompt_template"
+  ],
+  "extraction_timestamp": "2025-10-08T15:25:50.524074"
+}

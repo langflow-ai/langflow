@@ -184,7 +184,13 @@ async def read_project(
             if is_flow:
                 stmt = stmt.where(Flow.is_component == False)  # noqa: E712
             if search:
-                stmt = stmt.where(Flow.name.like(f"%{search}%"))  # type: ignore[attr-defined]
+                # Search across name, description, and tags (as JSON string)
+                stmt = stmt.where(
+                    or_(
+                        Flow.name.like(f"%{search}%"),  # type: ignore[attr-defined]
+                        Flow.description.like(f"%{search}%")  # type: ignore[attr-defined]
+                    )
+                )
 
             import warnings
 
