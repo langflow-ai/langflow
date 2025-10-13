@@ -18,6 +18,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 from langflow.base.data.base_file import BaseFileComponent
+from langflow.base.data.storage_utils import parse_storage_path
 from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from langflow.io import (
     BoolInput,
@@ -30,6 +31,7 @@ from langflow.io import (
 )
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.services.deps import get_storage_service
 
 if TYPE_CHECKING:
     from langflow.schema import DataFrame
@@ -44,9 +46,11 @@ class FileComponent(BaseFileComponent):
     icon = "file-text"
     name = "File"
 
-    # Docling-supported/compatible extensions; TEXT_FILE_TYPES are supported by the base loader.
-    VALID_EXTENSIONS = [
-        *TEXT_FILE_TYPES,
+    # Extensions that can be processed without Docling (using standard text parsing)
+    TEXT_EXTENSIONS = TEXT_FILE_TYPES
+
+    # Extensions that require Docling for processing (images, advanced office formats, etc.)
+    DOCLING_ONLY_EXTENSIONS = [
         "adoc",
         "asciidoc",
         "asc",
@@ -67,6 +71,12 @@ class FileComponent(BaseFileComponent):
         "xlsx",
         "xhtml",
         "webp",
+    ]
+
+    # Docling-supported/compatible extensions; TEXT_FILE_TYPES are supported by the base loader.
+    VALID_EXTENSIONS = [
+        *TEXT_EXTENSIONS,
+        *DOCLING_ONLY_EXTENSIONS,
     ]
 
     # Fixed export settings used when markdown export is requested.
@@ -290,17 +300,94 @@ class FileComponent(BaseFileComponent):
         )
         return file_path.lower().endswith(docling_exts)
 
+    async def _get_local_file_for_docling(self, file_path: str) -> tuple[str, bool]:
+        """Get a local file path for Docling processing, downloading from S3 if needed.
+
+        Args:
+            file_path: Either a local path or S3 key (format "flow_id/filename")
+
+        Returns:
+            tuple[str, bool]: (local_path, should_delete) where should_delete indicates
+                              if this is a temporary file that should be cleaned up
+        """
+        from langflow.services.deps import get_settings_service
+
+        settings = get_settings_service().settings
+
+        if settings.storage_type == "local":
+            # Already a local path
+            return file_path, False
+
+        # S3 storage - download to temp file
+        parsed = parse_storage_path(file_path)
+        if not parsed:
+            msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
+            raise ValueError(msg)
+
+        storage_service = get_storage_service()
+        flow_id, filename = parsed
+
+        # Get file content from S3
+        content = await storage_service.get_file(flow_id, filename)
+
+        # Create temp file with same extension
+        from pathlib import Path
+        from tempfile import NamedTemporaryFile
+
+        suffix = Path(filename).suffix
+        with NamedTemporaryFile(mode="wb", suffix=suffix, delete=False) as tmp_file:
+            tmp_file.write(content)
+            temp_path = tmp_file.name
+
+        return temp_path, True
+
     def _process_docling_in_subprocess(self, file_path: str) -> Data | None:
         """Run Docling in a separate OS process and map the result to a Data object.
 
         We avoid multiprocessing pickling by launching `python -c "<script>"` and
         passing JSON config via stdin. The child prints a JSON result to stdout.
+
+        For S3 storage, the file is downloaded to a temp file first.
         """
         if not file_path:
             return None
 
+        # Handle S3 storage paths
+        import asyncio
+        from pathlib import Path
+
+        from langflow.services.deps import get_settings_service
+
+        settings = get_settings_service().settings
+
+        if settings.storage_type == "s3":
+            local_path, should_delete = asyncio.run(self._get_local_file_for_docling(file_path))
+        else:
+            local_path = file_path
+            should_delete = False
+
+        try:
+            return self._process_docling_subprocess_impl(local_path, file_path)
+        finally:
+            # Clean up temp file if we created one
+            if should_delete:
+                try:
+                    Path(local_path).unlink()
+                except Exception:  # noqa: S110
+                    pass  # Ignore cleanup errors
+
+    def _process_docling_subprocess_impl(self, local_file_path: str, original_file_path: str) -> Data | None:
+        """Implementation of Docling subprocess processing.
+
+        Args:
+            local_file_path: Path to local file to process
+            original_file_path: Original file path to include in metadata
+
+        Returns:
+            Data object with processed content
+        """
         args: dict[str, Any] = {
-            "file_path": file_path,
+            "file_path": local_file_path,
             "markdown": bool(self.markdown),
             "image_mode": str(self.IMAGE_MODE),
             "md_image_placeholder": str(self.md_image_placeholder),
@@ -311,7 +398,7 @@ class FileComponent(BaseFileComponent):
             ),
         }
 
-        self.log(f"Starting Docling subprocess for file: {file_path}")
+        self.log(f"Starting Docling subprocess for file: {original_file_path}")
         self.log(args)
 
         # Child script for isolating the docling processing
@@ -519,14 +606,17 @@ class FileComponent(BaseFileComponent):
 
         if not proc.stdout:
             err_msg = proc.stderr.decode("utf-8", errors="replace") or "no output from child process"
-            return Data(data={"error": f"Docling subprocess error: {err_msg}", "file_path": file_path})
+            return Data(data={"error": f"Docling subprocess error: {err_msg}", "file_path": original_file_path})
 
         try:
             result = json.loads(proc.stdout.decode("utf-8"))
         except Exception as e:  # noqa: BLE001
             err_msg = proc.stderr.decode("utf-8", errors="replace")
             return Data(
-                data={"error": f"Invalid JSON from Docling subprocess: {e}. stderr={err_msg}", "file_path": file_path},
+                data={
+                    "error": f"Invalid JSON from Docling subprocess: {e}. stderr={err_msg}",
+                    "file_path": original_file_path,
+                },
             )
 
         if not result.get("ok"):
@@ -555,6 +645,18 @@ class FileComponent(BaseFileComponent):
         if not file_list:
             msg = "No files to process."
             raise ValueError(msg)
+
+        # Validate that files requiring Docling are only processed when advanced mode is enabled
+        if not self.advanced_mode:
+            for file in file_list:
+                extension = file.path.suffix[1:].lower()
+                if extension in self.DOCLING_ONLY_EXTENSIONS:
+                    msg = (
+                        f"File '{file.path.name}' has extension '.{extension}' which requires "
+                        f"Advanced Parser mode. Please enable 'Advanced Parser' to process this file."
+                    )
+                    self.log(msg)
+                    raise ValueError(msg)
 
         def process_file_standard(file_path: str, *, silent_errors: bool = False) -> Data | None:
             try:

@@ -1,4 +1,5 @@
 import json
+import tempfile
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
@@ -18,7 +19,7 @@ from langflow.template.field.base import Output
 
 class SaveToFileComponent(Component):
     display_name = "Save File"
-    description = "Save data to a local file in the selected format."
+    description = "Save data to storage (S3 or local) in the selected format."
     documentation: str = "https://docs.langflow.org/components-processing#save-file"
     icon = "save"
     name = "SaveToFile"
@@ -55,7 +56,7 @@ class SaveToFileComponent(Component):
     outputs = [Output(display_name="File Path", name="message", method="save_to_file")]
 
     async def save_to_file(self) -> Message:
-        """Save the input to a file and upload it, returning a confirmation message."""
+        """Save the input to a temp file and upload to storage, returning a confirmation message."""
         # Validate inputs
         if not self.file_name:
             msg = "File name must be provided."
@@ -73,30 +74,42 @@ class SaveToFileComponent(Component):
             msg = f"Invalid file format '{file_format}' for {self._get_input_type()}. Allowed: {allowed_formats}"
             raise ValueError(msg)
 
-        # Prepare file path
-        file_path = Path(self.file_name).expanduser()
-        if not file_path.parent.exists():
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path = self._adjust_file_path_with_format(file_path, file_format)
+        # Create temp file with proper extension
+        file_extension = self._get_extension_for_format(file_format)
+        base_name = Path(self.file_name).stem  # Get filename without extension
 
-        # Save the input to file based on type
-        if self._get_input_type() == "DataFrame":
-            confirmation = self._save_dataframe(self.input, file_path, file_format)
-        elif self._get_input_type() == "Data":
-            confirmation = self._save_data(self.input, file_path, file_format)
-        elif self._get_input_type() == "Message":
-            confirmation = await self._save_message(self.input, file_path, file_format)
-        else:
-            msg = f"Unsupported input type: {self._get_input_type()}"
-            raise ValueError(msg)
+        # Create temp file - this will be cleaned up after upload
+        with tempfile.NamedTemporaryFile(
+            mode="wb", suffix=f".{file_extension}", prefix=f"{base_name}_", delete=False
+        ) as tmp_file:
+            temp_path = Path(tmp_file.name)
 
-        # Upload the saved file
-        await self._upload_file(file_path)
+        try:
+            # Save the input to temp file based on type
+            if self._get_input_type() == "DataFrame":
+                confirmation = self._save_dataframe(self.input, temp_path, file_format)
+            elif self._get_input_type() == "Data":
+                confirmation = self._save_data(self.input, temp_path, file_format)
+            elif self._get_input_type() == "Message":
+                confirmation = await self._save_message(self.input, temp_path, file_format)
+            else:
+                msg = f"Unsupported input type: {self._get_input_type()}"
+                raise ValueError(msg)
 
-        # Return the final file path and confirmation message
-        final_path = Path.cwd() / file_path if not file_path.is_absolute() else file_path
+            # Upload the saved file to storage service (S3 or local)
+            final_filename = f"{base_name}.{file_extension}"
+            await self._upload_file(temp_path, final_filename)
 
-        return Message(text=f"{confirmation} at {final_path}")
+            # Return confirmation message with storage location
+            storage_type = get_settings_service().settings.storage_type
+            location = f"storage ({storage_type})"
+
+            return Message(text=f"{confirmation} and uploaded to {location} as '{final_filename}'")
+
+        finally:
+            # Clean up temp file
+            if temp_path.exists():
+                temp_path.unlink()
 
     def _get_input_type(self) -> str:
         """Determine the input type based on the provided input."""
@@ -122,15 +135,19 @@ class SaveToFileComponent(Component):
             return "json"
         return "json"  # Fallback
 
-    def _adjust_file_path_with_format(self, path: Path, fmt: str) -> Path:
-        """Adjust the file path to include the correct extension."""
-        file_extension = path.suffix.lower().lstrip(".")
+    def _get_extension_for_format(self, fmt: str) -> str:
+        """Get the file extension for the given format."""
         if fmt == "excel":
-            return Path(f"{path}.xlsx").expanduser() if file_extension not in ["xlsx", "xls"] else path
-        return Path(f"{path}.{fmt}").expanduser() if file_extension != fmt else path
+            return "xlsx"
+        return fmt
 
-    async def _upload_file(self, file_path: Path) -> None:
-        """Upload the saved file using the upload_user_file service."""
+    async def _upload_file(self, file_path: Path, filename: str) -> None:
+        """Upload the saved file to storage service using the upload_user_file API.
+
+        Args:
+            file_path: Path to the temp file to upload
+            filename: Desired filename in storage
+        """
         if not file_path.exists():
             msg = f"File not found: {file_path}"
             raise FileNotFoundError(msg)
@@ -143,7 +160,7 @@ class SaveToFileComponent(Component):
                 current_user = await get_user_by_id(db, self.user_id)
 
                 await upload_user_file(
-                    file=UploadFile(filename=file_path.name, file=f, size=file_path.stat().st_size),
+                    file=UploadFile(filename=filename, file=f, size=file_path.stat().st_size),
                     session=db,
                     current_user=current_user,
                     storage_service=get_storage_service(),
