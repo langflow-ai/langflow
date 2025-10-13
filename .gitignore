@@ -282,5 +282,6 @@ src/frontend/temp
 news-aggregated.json
 CLAUDE.md
 
-member_servers.json# Debug logs that may contain sensitive information
-debug.log*
+member_servers.json
+# Component index cache (user-specific)
+**/.cache/lfx/
