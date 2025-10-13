@@ -1,6 +1,6 @@
 import * as dotenv from "dotenv";
 import path from "path";
-import { test } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
@@ -17,6 +17,8 @@ withEventDeliveryModes(
     if (!process.env.CI) {
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
+
+    expect(true).toBe(false);
 
     await awaitBootstrapTest(page);
 
