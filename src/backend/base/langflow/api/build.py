@@ -35,7 +35,6 @@ from langflow.services.telemetry.schema import (
     ComponentInputsPayload,
     ComponentPayload,
     PlaygroundPayload,
-    serialize_input_values,
 )
 
 
@@ -384,16 +383,15 @@ async def generate_flow_events(
             # Extract and send component input telemetry (separate payload)
             if hasattr(vertex, "custom_component") and vertex.custom_component:
                 inputs_dict = vertex.custom_component.get_telemetry_input_values()
-                inputs_json = serialize_input_values(inputs_dict)
 
-                if inputs_json:
+                if inputs_dict:
                     background_tasks.add_task(
                         telemetry_service.log_package_component_inputs,
                         ComponentInputsPayload(
                             component_run_id=component_run_id,
                             component_id=vertex_id,
                             component_name=vertex_id.split("-")[0],
-                            component_inputs=inputs_json,
+                            component_inputs=inputs_dict,
                         ),
                     )
 
@@ -416,16 +414,15 @@ async def generate_flow_events(
             # Extract and send component input telemetry even on error (separate payload)
             if hasattr(vertex, "custom_component") and vertex.custom_component:
                 inputs_dict = vertex.custom_component.get_telemetry_input_values()
-                inputs_json = serialize_input_values(inputs_dict)
 
-                if inputs_json:
+                if inputs_dict:
                     background_tasks.add_task(
                         telemetry_service.log_package_component_inputs,
                         ComponentInputsPayload(
                             component_run_id=component_run_id,
                             component_id=vertex_id,
                             component_name=vertex_id.split("-")[0],
-                            component_inputs=inputs_json,
+                            component_inputs=inputs_dict,
                         ),
                     )
 
