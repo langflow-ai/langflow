@@ -14,6 +14,8 @@ import { cn, getNumberFromString } from "@/utils/utils";
 import { useGetTemplateStyle } from "@/pages/MainPage/utils/get-template-style";
 import { timeElapsed } from "@/pages/MainPage/utils/time-elapse";
 import type { FlowType } from "@/types/flow";
+import { RiChatAiLine } from "react-icons/ri";
+import { VscSend } from "react-icons/vsc";
 
 // Agent Card Component
 const AgentCard = ({
@@ -44,7 +46,7 @@ const AgentCard = ({
       className="group cursor-pointer hover:shadow-md transition-all duration-200 h-full"
       onClick={() => navigate(`/flow/${flow.id}/folder/${folderId}/`)}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 pr-2">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div
@@ -59,8 +61,11 @@ const AgentCard = ({
                 className="h-5 w-5"
               />
             </div>
-            <div className="min-w-0 flex-1">
-              <CardTitle className="text-base font-semibold truncate">
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <CardTitle
+                className="text-sm md:text-base font-semibold leading-snug whitespace-normal"
+                title={flow.name}
+              >
                 {flow.name}
               </CardTitle>
             </div>
@@ -98,11 +103,96 @@ const AgentCard = ({
   );
 };
 
+// Agent List Item Component (for list view)
+const AgentListItem = ({
+  flow,
+  onDelete,
+  folderId,
+}: {
+  flow: FlowType;
+  onDelete: () => void;
+  folderId: string;
+}) => {
+  const navigate = useCustomNavigate();
+  const { getIcon } = useGetTemplateStyle(flow);
+  const [icon, setIcon] = useState<string>("");
+
+  useEffect(() => {
+    getIcon().then(setIcon);
+  }, [getIcon]);
+
+  const swatchIndex =
+    (flow.gradient && !isNaN(parseInt(flow.gradient))
+      ? parseInt(flow.gradient)
+      : getNumberFromString(flow.gradient ?? flow.id)) %
+    swatchColors.length;
+
+  return (
+    <Card
+      key={flow.id}
+      onClick={() => navigate(`/flow/${flow.id}/folder/${folderId}/`)}
+      className="flex flex-row bg-background cursor-pointer justify-between rounded-lg border-none px-4 py-3 shadow-none hover:bg-muted"
+      data-testid="list-card"
+    >
+      <div className="flex min-w-0 items-start gap-4">
+        <div
+          className={cn(
+            "item-center flex h-8 w-8 shrink-0 items-center justify-center rounded-lg p-1.5",
+            swatchColors[swatchIndex]
+          )}
+        >
+          <ForwardedIconComponent
+            name={flow?.icon || icon}
+            aria-hidden="true"
+            className="h-4 w-4"
+          />
+        </div>
+
+        <div className="flex min-w-0 flex-col">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+            <div className="flex min-w-0 flex-shrink truncate text-sm font-semibold">
+              <span className="truncate" title={flow.name}>{flow.name}</span>
+            </div>
+            <div className="flex min-w-0 flex-shrink text-xs text-muted-foreground">
+              <span className="truncate">
+                {flow.updated_at ? `Edited ${timeElapsed(flow.updated_at)} ago` : "Never edited"}
+              </span>
+            </div>
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground line-clamp-2">
+            {flow.description || "No description available"}
+          </div>
+        </div>
+      </div>
+
+      <div className="ml-5 flex items-center gap-2 shrink-0">
+        <Button
+          variant="ghost"
+          size="iconSm"
+          className="group"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          aria-label="Delete"
+        >
+          <ForwardedIconComponent
+            name="Trash2"
+            aria-hidden="true"
+            className="h-4 w-4 text-muted-foreground group-hover:text-foreground"
+          />
+        </Button>
+      </div>
+    </Card>
+  );
+};
+
 export default function AgentBuilderPage() {
   const navigate = useCustomNavigate();
   const [promptValue, setPromptValue] = useState("");
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const [showAllAgents, setShowAllAgents] = useState(false);
+  const [view, setView] = useState<"list" | "grid">("grid");
 
   // Fetch folders and agents (same logic as StudioHomePage)
   const myCollectionId = useFolderStore((s) => s.myCollectionId);
@@ -110,7 +200,7 @@ export default function AgentBuilderPage() {
   const folderId = myCollectionId || folders?.[0]?.id || "";
 
   const [pageIndex, setPageIndex] = useState(1);
-  const pageSize = 5; // Show 5 agents per page
+  const pageSize = 9; // Show 9 agents per page
   const { data: folderData, isLoading: agentsLoading } = useGetFolderQuery(
     {
       id: folderId,
@@ -131,7 +221,9 @@ export default function AgentBuilderPage() {
   // Get agents to display (4 for home view, all for expanded view)
   const agentsToShow = showAllAgents 
     ? (folderData?.flows?.items ?? [])
-    : (folderData?.flows?.items ?? []).slice(0, 4);
+    : (folderData?.flows?.items ?? []).slice(0, 9);
+
+  console.log(folderData);
 
   const handlePromptSubmit = () => {
     if (promptValue.trim()) {
@@ -153,7 +245,8 @@ export default function AgentBuilderPage() {
         </div>
 
         {/* Hero Section */}
-        <div className="flex flex-col items-center justify-center mt-20 mb-12 max-w-[876px] mx-auto">
+        <div className="flex flex-col items-center justify-center mt-8 mb-8 max-w-[876px] mx-auto">
+          <RiChatAiLine size={36} opacity={0.5} className="mb-2" />
           <p className="text-xl mb-2">
             Hi <span className="font-medium">Rishi</span>, What can I help you today?
           </p>
@@ -184,7 +277,7 @@ export default function AgentBuilderPage() {
               disabled={!promptValue.trim()}
               aria-label="Submit prompt"
             >
-              <ForwardedIconComponent name="Send" className="h-4 w-4" />
+              <VscSend name="Send" className="h-4 w-4" />
             </button>
           </div>
           <div className="mt-3 text-center">
@@ -192,7 +285,7 @@ export default function AgentBuilderPage() {
               onClick={() => setShowTemplatesModal(true)}
               className="text-sm text-primary-blue font-medium"
             >
-              Or Start Manually
+              Or Get Started Step-by-Step
             </button>
           </div>
         </div>
@@ -201,18 +294,50 @@ export default function AgentBuilderPage() {
         <div className="mt-4 pt-4 max-w-[876px] mx-auto border-t border-[#efefef]">
           <div className="flex items-center justify-between mb-6">
             <div className="text-base font-semibold">
-              Your Recent Agents ({folderData?.flows?.total || 0})
+              Top {folderData?.flows?.items.length || 0} Agents
             </div>
-            {(folderData?.flows?.items ?? []).length > 4 && (
-              <Button
-                variant="default"
-                type="button"
-                size="sm"
-                onClick={() => setShowAllAgents(!showAllAgents)}
-              >
-                {showAllAgents ? "Show Less" : "View All"}
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+                            <div className="relative flex h-fit rounded-lg border border-muted bg-muted">
+                <div
+                  className={`absolute top-[2px] h-[32px] w-8 transform rounded-md bg-background shadow-md transition-transform duration-300 ${
+                    view === "list"
+                      ? "left-[2px] translate-x-0"
+                      : "left-[6px] translate-x-full"
+                  }`}
+                ></div>
+                {(["list", "grid"] as const).map((viewType) => (
+                  <Button
+                    key={viewType}
+                    unstyled
+                    size="icon"
+                    className={`group relative z-10 m-[2px] flex-1 rounded-lg p-2 ${
+                      view === viewType
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:bg-muted"
+                    }`}
+                    onClick={() => setView(viewType)}
+                    aria-label={`Switch to ${viewType} view`}
+                  >
+                    <ForwardedIconComponent
+                      name={viewType === "list" ? "Menu" : "LayoutGrid"}
+                      aria-hidden="true"
+                      className="h-4 w-4 group-hover:text-foreground"
+                    />
+                  </Button>
+                ))}
+              </div>
+              {(folderData?.flows?.items ?? []).length >= 9 && (
+                <Button
+                  variant="link"
+                  type="button"
+                  size="sm"
+                  onClick={() => navigate("/flows")}
+                >
+                  {"View All >"}
+                </Button>
+              )}
+
+            </div>
           </div>
           
           {agentsLoading && (
@@ -228,16 +353,29 @@ export default function AgentBuilderPage() {
           )}
           
           {!agentsLoading && agentsToShow.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {agentsToShow.map((flow) => (
-                <AgentCard
-                  key={flow.id}
-                  flow={flow}
-                  onDelete={() => handleDeleteAgent(flow.id)}
-                  folderId={folderId}
-                />
-              ))}
-            </div>
+            view === "grid" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {agentsToShow.map((flow) => (
+                  <AgentCard
+                    key={flow.id}
+                    flow={flow}
+                    onDelete={() => handleDeleteAgent(flow.id)}
+                    folderId={folderId}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {agentsToShow.map((flow) => (
+                  <AgentListItem
+                    key={flow.id}
+                    flow={flow}
+                    onDelete={() => handleDeleteAgent(flow.id)}
+                    folderId={folderId}
+                  />
+                ))}
+              </div>
+            )
           )}
         </div>
       </div>
