@@ -3,11 +3,11 @@ import { debounce } from "lodash";
 import { Search, Grid3x3, List, Filter, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
-import { useFolderStore } from "@/stores/foldersStore";
+
 import AgentCard from "./components/AgentCard";
 import AgentPagination from "./components/AgentPagination";
 import ListSkeleton from "../MainPage/components/listSkeleton";
+import useGetPublishedAgentsQuery from "@/controllers/API/queries/published-agent/use-get-publshed-agent";
 
 export default function AgentMarketplacePage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -15,8 +15,7 @@ export default function AgentMarketplacePage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(12);
-
-  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
 
   // Debounce the search query
   const debouncedSetSearchQuery = useCallback(
@@ -35,23 +34,29 @@ export default function AgentMarketplacePage() {
     };
   }, [debouncedSearch, debouncedSetSearchQuery]);
 
-  const { data: folderData, isLoading } = useGetFolderQuery({
-    id: myCollectionId!,
+  const { data: publishedAgentsData, isLoading } = useGetPublishedAgentsQuery({
     page: pageIndex,
     size: pageSize,
-    is_flow: true,
-    is_component: false,
-    search: searchQuery,
+    category_id: selectedCategory,
+    is_published: true,
+    include_deleted: false,
   });
 
-  const agents = folderData?.flows?.items ?? [];
-  const filteredAgents = agents;
+  const agents = publishedAgentsData?.items ?? [];
+  
+
+  const filteredAgents = searchQuery 
+    ? agents.filter(agent => 
+        agent.display_name && 
+        agent.display_name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : agents;
 
   const paginationData = {
-    page: folderData?.flows?.page ?? 1,
-    size: folderData?.flows?.size ?? 12,
-    total: folderData?.flows?.total ?? 0,
-    pages: folderData?.flows?.pages ?? 0,
+    page: publishedAgentsData?.page ?? 1,
+    size: publishedAgentsData?.size ?? 12,
+    total: publishedAgentsData?.total ?? 0,
+    pages: publishedAgentsData?.pages ?? 0,
   };
 
   const handlePageChange = useCallback((newPageIndex: number) => {
@@ -80,7 +85,7 @@ export default function AgentMarketplacePage() {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="text"
-                  placeholder="Search agent..."
+                  placeholder="Search agents..."
                   value={debouncedSearch}
                   onChange={(e) => setDebouncedSearch(e.target.value)}
                   className="pl-10"
@@ -144,15 +149,18 @@ export default function AgentMarketplacePage() {
                     : "flex flex-col gap-4"
                 }
               >
-                {filteredAgents.map((flow) => (
-                  <AgentCard key={flow.id} flow={flow} />
+                {filteredAgents.map((agent) => (
+                  <AgentCard key={agent.id} agent={agent} />
                 ))}
               </div>
 
               {/* Empty State */}
               {filteredAgents.length === 0 && (
                 <div className="flex h-64 items-center justify-center text-muted-foreground">
-                  No agents found matching your search.
+                  {searchQuery 
+                    ? "No agents found matching your search."
+                    : "No published agents available yet."
+                  }
                 </div>
               )}
             </>

@@ -8,18 +8,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FlowType } from "@/types/flow";
+
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { PublishedAgentHeader } from "@/controllers/API/queries/published-agent/use-get-publshed-agent";
 
 interface AgentCardProps {
-  flow: FlowType;
+  agent: PublishedAgentHeader;
 }
 
-export default function AgentCard({ flow }: AgentCardProps) {
+export default function AgentCard({ agent }: AgentCardProps) { 
   const navigate = useCustomNavigate();
 
-  // Determine status based on flow properties
-  const status = flow.endpoint_name ? "Deployed" : "Published";
+  const status = "Published";
 
   const statusColors = {
     Published: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
@@ -27,7 +27,7 @@ export default function AgentCard({ flow }: AgentCardProps) {
   };
 
   const handleCardClick = () => {
-    navigate(`/flow/${flow.id}`);
+    navigate(`/flow/${agent.flow_id}`); // Use agent.flow_id instead of flow.id
   };
 
   return (
@@ -39,17 +39,15 @@ export default function AgentCard({ flow }: AgentCardProps) {
       <div className="mb-3 flex items-start justify-between">
         <div className="flex-1">
           <h3 className="text-base font-semibold text-foreground mb-1">
-            {flow.name}
+            {agent.display_name || `Agent ${agent.id.slice(0, 8)}`} {/* Use agent.display_name */}
           </h3>
           <div className="flex items-center gap-2">
             <Badge className={statusColors[status]}>
               {status}
             </Badge>
-            {flow.updated_at && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <span>Updated {new Date(flow.updated_at).toLocaleDateString()}</span>
-              </div>
-            )}
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span>Created {new Date(agent.created_at).toLocaleDateString()}</span> {/* Use agent.created_at */}
+            </div>
           </div>
         </div>
 
@@ -66,10 +64,10 @@ export default function AgentCard({ flow }: AgentCardProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-            <DropdownMenuItem onClick={() => navigate(`/flow/${flow.id}`)}>
+            <DropdownMenuItem onClick={() => navigate(`/flow/${agent.flow_id}`)}>
               View Details
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate(`/flow/${flow.id}`)}>
+            <DropdownMenuItem onClick={() => navigate(`/flow/${agent.flow_id}`)}>
               Edit
             </DropdownMenuItem>
             <DropdownMenuItem>Duplicate</DropdownMenuItem>
@@ -82,25 +80,15 @@ export default function AgentCard({ flow }: AgentCardProps) {
 
       {/* Description */}
       <p className="mb-4 text-sm text-muted-foreground line-clamp-2">
-        {flow.description || "No description provided"}
+        {agent.description || "No description provided"} {/* Use agent.description */}
       </p>
 
-      {/* Tags */}
-      {flow.tags && flow.tags.length > 0 && (
+      {/* Category Tag */}
+      {agent.category_id && (
         <div className="flex flex-wrap gap-2 mt-auto">
-          {flow.tags.slice(0, 3).map((tag, index) => (
-            <span
-              key={index}
-              className="rounded-md bg-gray-100 dark:bg-gray-800 px-2 py-1 text-xs text-gray-700 dark:text-gray-300"
-            >
-              {tag}
-            </span>
-          ))}
-          {flow.tags.length > 3 && (
-            <span className="rounded-md bg-gray-100 dark:bg-gray-800 px-2 py-1 text-xs text-gray-700 dark:text-gray-300">
-              +{flow.tags.length - 3}
-            </span>
-          )}
+          <span className="rounded-md bg-gray-100 dark:bg-gray-800 px-2 py-1 text-xs text-gray-700 dark:text-gray-300">
+            {agent.category_id}
+          </span>
         </div>
       )}
     </div>
