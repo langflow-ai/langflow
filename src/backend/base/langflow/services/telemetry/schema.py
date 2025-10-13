@@ -2,6 +2,10 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+# Maximum URL length for telemetry GET requests (Scarf pixel tracking)
+# Conservative limit to ensure compatibility with most servers/proxies
+MAX_TELEMETRY_URL_SIZE = 2000
+
 
 class BasePayload(BaseModel):
     client_type: str | None = Field(default=None, serialization_alias="clientType")
@@ -161,11 +165,11 @@ class ComponentInputsPayload(BasePayload):
 
         return truncated_value
 
-    def split_if_needed(self, max_url_size: int = 2000) -> list["ComponentInputsPayload"]:
+    def split_if_needed(self, max_url_size: int = MAX_TELEMETRY_URL_SIZE) -> list["ComponentInputsPayload"]:
         """Split payload into multiple chunks if URL size exceeds max_url_size.
 
         Args:
-            max_url_size: Maximum allowed URL length in characters (default: 2000)
+            max_url_size: Maximum allowed URL length in characters (default: MAX_TELEMETRY_URL_SIZE)
 
         Returns:
             List of ComponentInputsPayload objects. Single item if no split needed,
