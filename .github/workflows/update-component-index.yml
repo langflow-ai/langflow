@@ -19,8 +19,7 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ github.head_ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout repository (workflow_dispatch)
@@ -35,34 +34,14 @@ jobs:
           version: "latest"
 
       - name: Install dependencies
-        run: uv sync --dev --project .
-
-      - name: Check if script exists
-        id: check_script
-        run: |
-          echo "Current directory: $(pwd)"
-          echo "Checking for script at: scripts/build_component_index.py"
-          ls -la scripts/ || echo "scripts/ directory not found"
-          if [ ! -f scripts/build_component_index.py ]; then
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "⚠️ Script not found - PR needs to be rebased with main"
-            echo "Repository contents:"
-            ls -la
-            echo "Checking git history for the script:"
-            git log --oneline --all -- scripts/build_component_index.py | head -5 || echo "No history found"
-          else
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "✅ Script found"
-          fi
+        run: uv sync --dev
 
       - name: Build component index
-        if: steps.check_script.outputs.exists == 'true'
         env:
           LFX_DEV: "1"
-        run: make build_component_index
+        run: uv run python scripts/build_component_index.py
 
       - name: Check if index changed
-        if: steps.check_script.outputs.exists == 'true'
         id: check_changes
         run: |
           INDEX_FILE="src/lfx/src/lfx/_assets/component_index.json"
@@ -127,35 +106,11 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const marker = '<!-- component-index-update-needed -->';
-            const commentBody = `${marker}\n⚠️ **Component index needs to be updated**\n\nPlease run the following command locally and commit the changes:\n\n\`\`\`bash\nmake build_component_index\n\`\`\`\n\nOr alternatively:\n\n\`\`\`bash\nLFX_DEV=1 uv run python scripts/build_component_index.py\n\`\`\`\n\nThen commit and push the updated \`src/lfx/src/lfx/_assets/component_index.json\` file.`;
-
-            // Find existing comments from github-actions bot with the marker
-            const { data: comments } = await github.rest.issues.listComments({
+            github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-            });
-
-            const botComments = comments.filter(
-              comment => comment.user.login === 'github-actions[bot]' && comment.body.includes(marker)
-            );
-
-            // Delete old comments to avoid duplicates
-            for (const comment of botComments) {
-              await github.rest.issues.deleteComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: comment.id,
-              });
-            }
-
-            // Post new comment
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: commentBody
+              body: '⚠️ Component index needs to be updated. Please run `uv run python scripts/build_component_index.py` locally and commit the changes.'
             })
 
       - name: Comment on PR (same repo - auto-updated)
@@ -275,33 +230,9 @@ jobs:
               changeDetails = '\n\n*Could not analyze specific changes.*';
             }
 
-            const marker = '<!-- component-index-auto-updated -->';
-            const commentBody = `${marker}\n✅ **Component index has been automatically updated** due to changes in \`src/lfx/src/lfx/components/\`${changeDetails}`;
-
-            // Find existing comments from github-actions bot with the marker
-            const { data: comments } = await github.rest.issues.listComments({
+            github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-            });
-
-            const botComments = comments.filter(
-              comment => comment.user.login === 'github-actions[bot]' && comment.body.includes(marker)
-            );
-
-            // Delete old comments to avoid duplicates
-            for (const comment of botComments) {
-              await github.rest.issues.deleteComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: comment.id,
-              });
-            }
-
-            // Post new comment
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: commentBody
+              body: `✅ **Component index has been automatically updated** due to changes in \`src/lfx/src/lfx/components/\`${changeDetails}`
             })

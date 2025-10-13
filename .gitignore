@@ -283,5 +283,10 @@ news-aggregated.json
 CLAUDE.md
 
 member_servers.json
+# Debug logs that may contain sensitive information
+debug.log*
 # Component index cache (user-specific)
 **/.cache/lfx/
+
+# data files used for desktop registration
+data/user
