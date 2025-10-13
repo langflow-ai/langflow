@@ -16,14 +16,14 @@ export default function FlowPanel({ flowId, yamlSpec, flowData, folderId, onClos
   const isDisabled = !flowId;
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col">
       {/* Tabs - Left aligned */}
-      <div className="border-b px-4 pt-4">
-        <div className="flex gap-2">
+      <div className="px-5 py-2 mb-2 min-h-[49px] border-b border-[#eee] flex items-center">
+        <div className="flex items-center gap-2 bg-white">
           <button
             onClick={() => !isDisabled && setActiveTab("visualization")}
             disabled={isDisabled}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 text-sm font-medium border-b-2 transition-colors ${
               isDisabled
                 ? "border-transparent text-muted-foreground/50 cursor-not-allowed"
                 : activeTab === "visualization"
@@ -37,7 +37,7 @@ export default function FlowPanel({ flowId, yamlSpec, flowData, folderId, onClos
           <button
             onClick={() => !isDisabled && setActiveTab("specification")}
             disabled={isDisabled}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 text-sm font-medium border-b-2 transition-colors ${
               isDisabled
                 ? "border-transparent text-muted-foreground/50 cursor-not-allowed"
                 : activeTab === "specification"
@@ -56,7 +56,7 @@ export default function FlowPanel({ flowId, yamlSpec, flowData, folderId, onClos
         {activeTab === "specification" && (
           <>
             {isDisabled ? (
-              <div className="flex items-center justify-center h-full p-8 text-center">
+              <div className="flex items-center justify-center h-full p-8 text-center bg-[#FBFAFF]">
                 <div className="max-w-md">
                   <ForwardedIconComponent
                     name="FileText"
@@ -76,7 +76,7 @@ export default function FlowPanel({ flowId, yamlSpec, flowData, folderId, onClos
         {activeTab === "visualization" && (
           <>
             {isDisabled ? (
-              <div className="flex items-center justify-center h-full p-8 text-center">
+              <div className="flex items-center justify-center h-full p-8 text-center bg-[#FBFAFF]">
                 <div className="max-w-md">
                   <ForwardedIconComponent
                     name="Workflow"

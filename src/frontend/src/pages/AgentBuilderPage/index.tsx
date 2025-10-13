@@ -253,7 +253,7 @@ export default function AgentBuilderPage() {
 
   return (
     <div className="flex h-full w-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-7xl p-4 md:p-6 lg:p-8">
+      <div className="mx-auto w-full max-w-7xl p-4">
         {/* AI Agent Builder Title */}
         <div className="mb-8">
           <h1 className="text-xl font-medium" style={{ color: '#350E84' }}>

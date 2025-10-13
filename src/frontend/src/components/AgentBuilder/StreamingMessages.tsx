@@ -75,8 +75,8 @@ function UserMessage({ data }: { data: any }) {
   return (
     <div className="flex justify-end mb-4">
       <div className="max-w-[80%]">
-        <div className="rounded-lg bg-muted px-4 py-3">
-          <p className="text-sm text-text-grey">{data.message}</p>
+        <div className="rounded-lg bg-[#F5F2FF] px-4 py-3">
+          <p className="text-sm text-[#64616A] font-medium">{data.message}</p>
         </div>
       </div>
     </div>

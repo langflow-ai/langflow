@@ -11,6 +11,10 @@ import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import FlowPanel from "./FlowPanel";
+import { HistoryIcon } from "@/assets/icons/HistoryIcon";
+import { ChatIcon } from "@/assets/icons/ChatIcon";
+import { SendIcon } from "lucide-react";
+import { Textarea } from "@headlessui/react";
 
 export default function ConversationPage() {
   const location = useLocation();
@@ -182,47 +186,13 @@ export default function ConversationPage() {
   };
 
   return (
-    <div className="flex h-full w-full flex-col agent-builder-conversation-page">
+    <div className="p-4 flex h-full w-full flex-col agent-builder-conversation-page bg-[#FBFAFF] ">
       {/* Header Section */}
-      <div className="border-b bg-background px-6 py-4">
+      <div className="bg-[#FBFAFF] mb-4">
         {/* AI Studio Title */}
-        <div className="mb-4">
-          <h1 className="text-xl font-medium" style={{ color: '#350E84' }}>
+          <h1 className="text-xl font-medium text-[#350E84]">
             AI Studio
           </h1>
-        </div>
-
-        {/* Agent Name and Navigation */}
-        <div className="flex items-center justify-between">
-          {/* Left: Back, Agent Name, Draft Badge */}
-          <div className="flex items-center gap-3">
-            {/* Back Button */}
-            <button
-              onClick={handleBack}
-              className="p-2 hover:bg-muted rounded-md transition-colors"
-              aria-label="Back to Agent Builder"
-            >
-              <ForwardedIconComponent name="RotateCcw" className="h-5 w-5 text-muted-foreground" />
-            </button>
-
-            {/* Agent Name and Status */}
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-medium">{agentName}</h2>
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100">
-                Draft
-              </Badge>
-            </div>
-          </div>
-
-          {/* Right: New Chat Button */}
-          <button
-            onClick={handleNewChat}
-            className="p-2 hover:bg-muted rounded-md transition-colors"
-            aria-label="Start new chat"
-          >
-            <ForwardedIconComponent name="RotateCw" className="h-5 w-5 text-muted-foreground" />
-          </button>
-        </div>
       </div>
 
       {/* Main Content - Always 2-column layout */}
@@ -234,12 +204,41 @@ export default function ConversationPage() {
         >
           {/* Chat Messages Area */}
           <StickToBottom
-            className="flex-1 overflow-y-auto px-4 py-6"
-            resize="smooth"
+            className="flex-1 overflow-y-auto"           resize="smooth"
             initial="instant"
           >
             <StickToBottom.Content className="flex flex-col min-h-full">
-              <div className="max-w-full">
+              <div className="max-w-full min-h-full">
+                        {/* Agent Name and Navigation */}
+        <div className="mb-2 flex items-center gap-2 justify-between border-b border-[#eee] w-full px-5 py-2 bg-white">
+          {/* Left: Back, Agent Name, Draft Badge */}
+            {/* Back Button */}
+            <button
+              onClick={handleBack}
+              className="p-2 hover:bg-muted rounded-md transition-colors"
+              aria-label="Back to Agent Builder"
+            >
+              <HistoryIcon className="w-4 h-4" />
+            </button>
+
+            {/* Agent Name and Status */}
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-medium text-[#444]">{agentName}</h2>
+              <Badge variant="secondary" className="bg-[#FFFBEB] text-[#C46E39] text-xs">
+                Draft
+              </Badge>
+            </div>
+
+          {/* Right: New Chat Button */}
+          <button
+            onClick={handleNewChat}
+            className="p-2 hover:bg-muted rounded-md transition-colors"
+            aria-label="Start new chat"
+          >
+            <ChatIcon className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="bg-white p-3 h-[calc(100vh-266px)] overflow-y-auto scrollbar-hide">
                 <StreamingMessages
                   messages={messages}
                   isLoading={isLoading}
@@ -247,26 +246,41 @@ export default function ConversationPage() {
                   onTriggerBuild={handleTriggerBuild}
                   isFlowBuilt={!!createdFlowId}
                 />
+                </div>
               </div>
             </StickToBottom.Content>
           </StickToBottom>
 
           {/* Input Section - Fixed at bottom */}
-          <div className="border-t bg-background px-4 py-4">
+          <div className="bg-background p-4">
             <div className="max-w-full">
               <div className="relative">
-                <textarea
-                  value={promptValue}
+                {/* <Textarea  value={promptValue}
+                  rows={1}
                   onChange={(e) => setPromptValue(e.target.value)}
                   placeholder="Continue the conversation..."
-                  className="w-full min-h-[80px] p-3 pr-12 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className="w-full p-3 pr-12 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       handlePromptSubmit();
                     }
-                  }}
+                  }}   
+                    /> */}
+                <textarea
+                  value={promptValue}
+                  rows={1}
+                  onChange={(e) => setPromptValue(e.target.value)}
+                  placeholder="Continue the conversation..."
+                  className="w-full p-3 pr-12 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handlePromptSubmit();
+                    }
+                  }}                  
                 />
+                {/* <SendIcon onClick={handlePromptSubmit}/> */}
                 <button
                   onClick={handlePromptSubmit}
                   className="absolute right-3 bottom-3 p-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
