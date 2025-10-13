@@ -220,6 +220,16 @@ class Settings(BaseSettings):
     """If set to True, Langflow will track transactions between flows."""
     vertex_builds_storage_enabled: bool = True
     """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
+    message_deferred_writes_enabled: bool = False
+    """If set to True, message writes are batched and cached for improved performance under load."""
+    message_cache_ttl: int = 300
+    """Time-to-live for message cache in seconds (default: 300 = 5 minutes)."""
+    message_write_batch_size: int = 100
+    """Number of messages to batch per database write (default: 100)."""
+    message_queue_max_size: int = 1000
+    """Maximum message queue size before applying backpressure (default: 1000)."""
+    message_flush_interval: float = 2.0
+    """Seconds between message batch flushes (default: 2.0)."""
 
     # Config
     host: str = "localhost"

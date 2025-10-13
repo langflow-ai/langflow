@@ -19,8 +19,7 @@ if TYPE_CHECKING:
 
     from langchain.callbacks.base import BaseCallbackHandler
     from lfx.graph.vertex.base import Vertex
-
-    from langflow.services.tracing.schema import Log
+    from lfx.schema.log import Log
 
 
 def get_distributed_trace_headers(trace_id, span_id):

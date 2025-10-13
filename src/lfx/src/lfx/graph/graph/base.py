@@ -30,7 +30,6 @@ from lfx.graph.graph.utils import (
     should_continue,
 )
 from lfx.graph.schema import InterfaceComponentTypes, RunOutputs
-from lfx.graph.utils import log_vertex_build
 from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
@@ -47,6 +46,7 @@ if TYPE_CHECKING:
 
     from lfx.custom.custom_component.component import Component
     from lfx.events.event_manager import EventManager
+    from lfx.graph.callbacks import LogCallbacks
     from lfx.graph.edge.schema import EdgeData
     from lfx.graph.schema import ResultData
     from lfx.schema.schema import InputValueRequest
@@ -67,6 +67,7 @@ class Graph:
         user_id: str | None = None,
         log_config: LogConfig | None = None,
         context: dict[str, Any] | None = None,
+        log_callbacks: LogCallbacks | None = None,
     ) -> None:
         """Initializes a new Graph instance.
 
@@ -74,6 +75,17 @@ class Graph:
         If only one is provided, a ValueError is raised. The context must be a dictionary if specified,
         otherwise a TypeError is raised. Internal data structures for vertices, edges, state management,
         run management, and tracing are set up during initialization.
+
+        Args:
+            start: The start component of the graph
+            end: The end component of the graph
+            flow_id: The flow ID
+            flow_name: The flow name
+            description: The flow description
+            user_id: The user ID
+            log_config: Configuration for logging
+            context: Additional context dictionary
+            log_callbacks: Optional callbacks for logging events
         """
         if log_config:
             configure(**log_config)
@@ -132,6 +144,8 @@ class Graph:
             msg = "Context must be a dictionary"
             raise TypeError(msg)
         self._context = dotdict(context or {})
+        # Store log callbacks for transaction and vertex build logging
+        self.log_callbacks = log_callbacks
         # Lazy initialization - only get tracing service when needed
         self._tracing_service: TracingService | None = None
         self._tracing_service_initialized = False
@@ -465,6 +479,11 @@ class Graph:
                     # Create a future to gather all pending tasks
                     cleanup_future = asyncio.gather(*pending, return_exceptions=True)
                     loop.run_until_complete(cleanup_future)
+                # Best-effort flush of any remaining queued transactions
+                try:
+                    loop.run_until_complete(self.flush_transaction_logs())
+                except Exception as e:  # noqa: BLE001
+                    logger.debug(f"flush_transaction_logs failed during start() shutdown: {e!s}")
 
                 # Close the loop
                 loop.close()
@@ -792,10 +811,12 @@ class Graph:
             self.increment_run_count()
         except Exception as exc:
             self._end_all_traces_async(error=exc)
+
             msg = f"Error running graph: {exc}"
             raise ValueError(msg) from exc
 
         self._end_all_traces_async()
+
         # Get the outputs
         vertex_outputs = []
         for vertex in self.vertices:
@@ -1127,6 +1148,7 @@ class Graph:
         flow_name: str | None = None,
         user_id: str | None = None,
         context: dict | None = None,
+        log_callbacks: LogCallbacks | None = None,
     ) -> Graph:
         """Creates a graph from a payload.
 
@@ -1136,6 +1158,7 @@ class Graph:
             flow_name: The flow name.
             user_id: The user ID.
             context: Optional context dictionary for request-specific data.
+            log_callbacks: Optional callbacks for logging events.
 
         Returns:
             Graph: The created graph.
@@ -1145,7 +1168,13 @@ class Graph:
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
-            graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id, context=context)
+            graph = cls(
+                flow_id=flow_id,
+                flow_name=flow_name,
+                user_id=user_id,
+                context=context,
+                log_callbacks=log_callbacks,
+            )
             graph.add_nodes_and_edges(vertices, edges)
         except KeyError as exc:
             logger.exception(exc)
@@ -1404,6 +1433,8 @@ class Graph:
             raise ValueError(msg)
         if not self._run_queue:
             self._end_all_traces_async()
+            # Ensure queued transactions are persisted for generator/step flows
+            await self.flush_transaction_logs()
             return Finish()
         vertex_id = self.get_next_in_queue()
         if not vertex_id:
@@ -1761,14 +1792,16 @@ class Graph:
             "used_frozen_result": False,
         }
 
-        await log_vertex_build(
-            flow_id=self.flow_id or "",
-            vertex_id=vertex_id or "errors",
-            valid=False,
-            params=params,
-            data=result_data_response,
-            artifacts={},
-        )
+        # Log vertex build error via callback if available
+        if self.flow_id and self.log_callbacks and self.log_callbacks.vertex_build:
+            self.log_callbacks.vertex_build(
+                flow_id=self.flow_id,
+                vertex_id=vertex_id or "errors",
+                valid=False,
+                params=params,
+                result_dict=result_data_response,
+                artifacts={},
+            )
 
     async def _execute_tasks(
         self, tasks: list[asyncio.Task], lock: asyncio.Lock, *, has_webhook_component: bool = False
@@ -1798,13 +1831,14 @@ class Graph:
                     t.cancel()
                 raise result
             if isinstance(result, VertexBuildResult):
-                if self.flow_id is not None:
-                    await log_vertex_build(
-                        flow_id=self.flow_id,
-                        vertex_id=result.vertex.id,
+                # Use callback for vertex build logging if available
+                if self.flow_id is not None and self.log_callbacks:
+                    self.log_callbacks.log_vertex_build(
+                        self.flow_id,
+                        result.vertex.id,
                         valid=result.valid,
                         params=result.params,
-                        data=result.result_dict,
+                        result_dict=result.result_dict,
                         artifacts=result.artifacts,
                     )
 

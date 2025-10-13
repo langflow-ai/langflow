@@ -1,8 +1,13 @@
+import logging
 import os
 import time
 from http import HTTPStatus
 
 from locust import FastHttpUser, between, events, task
+
+# Set up detailed logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 @events.quitting.add_listener
@@ -52,15 +57,25 @@ class FlowRunUser(FastHttpUser):
 
     def on_start(self):
         """Setup and validate required configurations."""
+        logger.info("Starting user - API_KEY present: %s", bool(os.getenv("API_KEY")))
+        logger.info("Flow ID: %s", self.flow_id)
+        logger.info("Host: %s", self.host)
+
         if not os.getenv("API_KEY"):
-            msg = "API_KEY environment variable is required for load testing"
-            raise ValueError(msg)
+            logger.warning("No API_KEY environment variable - proceeding without authentication")
 
         # Test connection and auth before starting
-        with self.client.get("/health", catch_response=True) as response:
-            if response.status_code != HTTPStatus.OK:
-                msg = f"Initial health check failed: {response.status_code}"
-                raise ConnectionError(msg)
+        logger.debug("Performing initial health check")
+        try:
+            with self.client.get("/health", catch_response=True, timeout=5.0) as response:
+                logger.info("Health check response: %s - %s", response.status_code, response.text[:100])
+                if response.status_code != HTTPStatus.OK:
+                    msg = f"Initial health check failed: {response.status_code}"
+                    logger.error(msg)
+                    raise ConnectionError(msg)
+        except Exception:
+            logger.exception("Health check exception")
+            raise
 
     def log_error(self, name: str, exc: Exception, response_time: float):
         """Helper method to log errors in a format Locust expects.
@@ -83,8 +98,11 @@ class FlowRunUser(FastHttpUser):
         """
         if not self.flow_id:
             msg = "FLOW_ID environment variable is required for load testing"
+            logger.error("No flow ID provided")
             raise ValueError(msg)
+
         endpoint = f"/api/v1/run/{self.flow_id}?stream=false"
+        logger.info("Starting request to endpoint: %s", endpoint)
 
         # Realistic payload that exercises the system
         payload = {
@@ -98,28 +116,41 @@ class FlowRunUser(FastHttpUser):
 
         headers = {
             "Content-Type": "application/json",
-            "x-api-key": os.getenv("API_KEY"),
-            "Accept": "application/json",
         }
+        api_key = os.getenv("API_KEY")
+        if api_key:
+            headers["x-api-key"] = api_key
+            logger.debug("Using API key: %s***", api_key[:8] if len(api_key) > 8 else "short")
+        else:
+            logger.debug("No API key - making unauthenticated request")
 
         start_time = time.time()
+        logger.debug("Request start time: %s", start_time)
+
         try:
+            logger.debug("Opening connection to %s with timeout %s", endpoint, self.connection_timeout)
             with self.client.post(
                 endpoint, json=payload, headers=headers, catch_response=True, timeout=self.connection_timeout
             ) as response:
                 response_time = (time.time() - start_time) * 1000
+                logger.info("Response received after %s ms with status %s", response_time, response.status_code)
+
                 if response.status_code == HTTPStatus.OK:
+                    logger.debug("Success response, parsing JSON")
                     try:
                         self._last_response = response.json()
+                        logger.info("Successfully parsed response JSON (%s chars)", len(response.text))
                     except ValueError as e:
+                        logger.exception("Failed to parse JSON response")
                         response.failure("Invalid JSON response")
                         self.log_error(endpoint, e, response_time)
                 else:
                     error_text = response.text or "No response text"
+                    logger.error("HTTP error %s: %s", response.status_code, error_text[:200])
                     error_msg = f"Unexpected status code: {response.status_code}, Response: {error_text[:200]}"
                     response.failure(error_msg)
                     self.log_error(endpoint, Exception(error_msg), response_time)
         except Exception as e:
             response_time = (time.time() - start_time) * 1000
+            logger.exception("Request exception after %s ms", response_time)
             self.log_error(endpoint, e, response_time)
-            response.failure(f"Error: {e}")

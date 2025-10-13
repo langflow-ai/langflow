@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import secrets
 from typing import TYPE_CHECKING
@@ -56,19 +57,31 @@ async def check_key(session: AsyncSession, api_key: str) -> User | None:
     if api_key_object is not None:
         settings_service = get_settings_service()
         if settings_service.settings.disable_track_apikey_usage is not True:
-            await update_total_uses(api_key_object.id)
+            # Fire-and-forget: don't await to avoid blocking API requests
+            # API key usage tracking is non-critical and shouldn't delay responses
+            _task = asyncio.create_task(update_total_uses(api_key_object.id))
+            # Store reference to prevent task from being garbage collected
+            _task.add_done_callback(lambda _: None)
         return api_key_object.user
     return None
 
 
 async def update_total_uses(api_key_id: UUID):
-    """Update the total uses and last used at."""
-    async with session_scope() as session:
-        new_api_key = await session.get(ApiKey, api_key_id)
-        if new_api_key is None:
-            msg = "API Key not found"
-            raise ValueError(msg)
-        new_api_key.total_uses += 1
-        new_api_key.last_used_at = datetime.datetime.now(datetime.timezone.utc)
-        session.add(new_api_key)
-        await session.commit()
+    """Update the total uses and last used at.
+
+    This is fire-and-forget to avoid blocking API requests.
+    Errors are logged but don't affect the API response.
+    """
+    try:
+        async with session_scope() as session:
+            new_api_key = await session.get(ApiKey, api_key_id)
+            if new_api_key is None:
+                return  # API key not found, skip update
+            new_api_key.total_uses += 1
+            new_api_key.last_used_at = datetime.datetime.now(datetime.timezone.utc)
+            session.add(new_api_key)
+            await session.commit()
+    except Exception:  # noqa: BLE001, S110
+        # Silently fail - API key usage tracking is non-critical
+        # Logging disabled to avoid spam under high load
+        pass

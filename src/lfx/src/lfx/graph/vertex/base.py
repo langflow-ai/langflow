@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
-from lfx.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
+from lfx.graph.utils import UnbuiltObject, UnbuiltResult
 from lfx.graph.vertex.param_handler import ParameterHandler
 from lfx.interface import initialize
 from lfx.interface.listing import lazy_load_dict
@@ -105,7 +105,6 @@ class Vertex:
         self.use_result = False
         self.build_times: list[float] = []
         self.state = VertexStates.ACTIVE
-        self.log_transaction_tasks: set[asyncio.Task] = set()
         self.output_names: list[str] = [
             output["name"] for output in self.outputs if isinstance(output, dict) and "name" in output
         ]
@@ -527,7 +526,7 @@ class Vertex:
         async with self.lock:
             return await self._get_result(requester, target_handle_name)
 
-    async def _log_transaction_async(
+    def _log_transaction(
         self,
         flow_id: str | UUID,
         source: Vertex,
@@ -535,7 +534,10 @@ class Vertex:
         target: Vertex | None = None,
         error=None,
     ) -> None:
-        """Log a transaction asynchronously with proper task handling and cancellation.
+        """Log a transaction using callbacks if available.
+
+        This method uses the graph's log callbacks to record transactions
+        for batch processing later.
 
         Args:
             flow_id: The ID of the flow
@@ -544,15 +546,9 @@ class Vertex:
             target: Optional target vertex
             error: Optional error information
         """
-        if self.log_transaction_tasks:
-            # Safely await and remove completed tasks
-            task = self.log_transaction_tasks.pop()
-            await task
-
-            # Create and track new task
-        task = asyncio.create_task(log_transaction(flow_id, source, status, target, error))
-        self.log_transaction_tasks.add(task)
-        task.add_done_callback(self.log_transaction_tasks.discard)
+        # Use callback for transaction logging if available
+        if self.graph and self.graph.log_callbacks:
+            self.graph.log_callbacks.log_transaction(flow_id, source, status, target, error)
 
     async def _get_result(
         self,
@@ -569,13 +565,13 @@ class Vertex:
         flow_id = self.graph.flow_id
         if not self.built:
             if flow_id:
-                await self._log_transaction_async(str(flow_id), source=self, target=requester, status="error")
+                self._log_transaction(str(flow_id), source=self, target=requester, status="error")
             msg = f"Component {self.display_name} has not been built yet"
             raise ValueError(msg)
 
         result = self.built_result if self.use_result else self.built_object
         if flow_id:
-            await self._log_transaction_async(str(flow_id), source=self, target=requester, status="success")
+            self._log_transaction(str(flow_id), source=self, target=requester, status="success")
         return result
 
     async def _build_vertex_and_update_params(self, key, vertex: Vertex) -> None:

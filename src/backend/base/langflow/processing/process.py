@@ -33,7 +33,11 @@ async def run_graph_internal(
     outputs: list[str] | None = None,
     event_manager: EventManager | None = None,
 ) -> tuple[list[RunOutputs], str]:
-    """Run the graph and generate the result."""
+    """Run the graph and generate the result.
+
+    Returns:
+        Tuple of (run_outputs, session_id)
+    """
     inputs = inputs or []
     effective_session_id = session_id or flow_id
     components = []
@@ -59,6 +63,8 @@ async def run_graph_internal(
         fallback_to_env_vars=fallback_to_env_vars,
         event_manager=event_manager,
     )
+
+    # Collectors handle the queues automatically now, no need to return them
     return run_outputs, effective_session_id
 
 

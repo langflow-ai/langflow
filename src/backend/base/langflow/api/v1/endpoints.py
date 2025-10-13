@@ -60,6 +60,9 @@ if TYPE_CHECKING:
 router = APIRouter(tags=["Base"])
 
 
+# Background flush functions removed - now handled by queue services with automatic batching
+
+
 async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIRequest:
     """Parse SimplifiedAPIRequest from HTTP request body.
 
@@ -151,8 +154,19 @@ async def simple_run_flow(
             raise ValueError(msg)
         graph_data = flow.data.copy()
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
+
+        # Create callbacks and collectors for transaction and vertex build logging
+        from langflow.graph.log_collector import create_log_callbacks
+
+        callbacks, transaction_collector, vertex_build_collector = create_log_callbacks()
+
         graph = Graph.from_payload(
-            graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
+            graph_data,
+            flow_id=flow_id_str,
+            user_id=str(user_id),
+            flow_name=flow.name,
+            context=context,
+            log_callbacks=callbacks,
         )
         inputs = None
         if input_request.input_value is not None:
@@ -183,6 +197,8 @@ async def simple_run_flow(
             outputs=outputs,
             stream=stream,
             event_manager=event_manager,
+            transaction_collector=transaction_collector,
+            vertex_build_collector=vertex_build_collector,
         )
 
         return RunResponse(outputs=task_result, session_id=session_id)
@@ -394,7 +410,11 @@ async def simplified_run_flow(
 
     try:
         result = await simple_run_flow(
-            flow=flow, input_request=input_request, stream=stream, api_key_user=api_key_user, context=context
+            flow=flow,
+            input_request=input_request,
+            stream=stream,
+            api_key_user=api_key_user,
+            context=context,
         )
         end_time = time.perf_counter()
         background_tasks.add_task(
@@ -623,7 +643,13 @@ async def experimental_run_flow(
         try:
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
-            graph = Graph.from_payload(graph_data, flow_id=flow_id_str)
+
+            # Create callbacks and collectors for transaction and vertex build logging
+            from langflow.graph.log_collector import create_log_callbacks
+
+            callbacks, transaction_collector, vertex_build_collector = create_log_callbacks()
+
+            graph = Graph.from_payload(graph_data, flow_id=flow_id_str, log_callbacks=callbacks)
         except Exception as exc:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
@@ -635,11 +661,13 @@ async def experimental_run_flow(
             inputs=inputs,
             outputs=outputs,
             stream=stream,
+            transaction_collector=transaction_collector,
+            vertex_build_collector=vertex_build_collector,
         )
+
+        return RunResponse(outputs=task_result, session_id=session_id)
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
-
-    return RunResponse(outputs=task_result, session_id=session_id)
 
 
 @router.post(

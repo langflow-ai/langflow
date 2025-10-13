@@ -4,15 +4,17 @@ from typing import Any
 
 from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
-from pydantic import SecretStr
-
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
-from lfx.services.deps import get_settings_service, session_scope
+from pydantic import SecretStr
+
+from langflow.services.auth.utils import decrypt_api_key
+from langflow.services.database.models.user.crud import get_user_by_id
+from langflow.services.deps import get_settings_service, session_scope
 
 settings = get_settings_service().settings
 knowledge_directory = settings.knowledge_bases_dir
@@ -117,14 +119,8 @@ class KnowledgeRetrievalComponent(Component):
         if "api_key" in metadata and metadata.get("api_key"):
             settings_service = get_settings_service()
             try:
-                try:
-                    from langflow.services.auth.utils import decrypt_api_key
-
-                    decrypted_key = decrypt_api_key(metadata["api_key"], settings_service)
-                    metadata["api_key"] = decrypted_key
-                except ImportError as e:
-                    msg = "Knowledge bases are not available in lfx."
-                    raise ValueError(msg) from e
+                decrypted_key = decrypt_api_key(metadata["api_key"], settings_service)
+                metadata["api_key"] = decrypted_key
             except (InvalidToken, TypeError, ValueError) as e:
                 logger.error(f"Could not decrypt API key. Please provide it manually. Error: {e}")
                 metadata["api_key"] = None
@@ -185,18 +181,11 @@ class KnowledgeRetrievalComponent(Component):
             if not self.user_id:
                 msg = "User ID is required for fetching Knowledge Base data."
                 raise ValueError(msg)
-            try:
-                from langflow.services.database.models.user.crud import get_user_by_id
-
-                current_user = await get_user_by_id(db, self.user_id)
-                if not current_user:
-                    msg = f"User with ID {self.user_id} not found."
-                    raise ValueError(msg)
-                kb_user = current_user.username
-            except ImportError as e:
-                # langflow not available, use user_id as username fallback
-                msg = "Knowledge bases are not available in lfx."
-                raise ValueError(msg) from e
+            current_user = await get_user_by_id(db, self.user_id)
+            if not current_user:
+                msg = f"User with ID {self.user_id} not found."
+                raise ValueError(msg)
+            kb_user = current_user.username
         kb_path = KNOWLEDGE_BASES_ROOT_PATH / kb_user / self.knowledge_base
 
         metadata = self._get_kb_metadata(kb_path)

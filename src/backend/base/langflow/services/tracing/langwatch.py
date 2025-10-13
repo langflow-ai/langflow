@@ -17,8 +17,7 @@ if TYPE_CHECKING:
     from langchain.callbacks.base import BaseCallbackHandler
     from langwatch.tracer import ContextSpan
     from lfx.graph.vertex.base import Vertex
-
-    from langflow.services.tracing.schema import Log
+    from lfx.schema.log import Log
 
 
 class LangWatchTracer(BaseTracer):

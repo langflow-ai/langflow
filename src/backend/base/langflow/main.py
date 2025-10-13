@@ -232,6 +232,17 @@ def get_lifespan(*, fix_migration=False, version=None):
                 f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s"
             )
 
+            # Start message queue service for deferred writes
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Starting message queue service")
+            from langflow.services.message_queue import get_message_queue_service
+
+            message_queue_service = get_message_queue_service()
+            await message_queue_service.start()
+            await logger.adebug(
+                f"Started message queue service in {asyncio.get_event_loop().time() - current_time:.2f}s"
+            )
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Loading flows")
             await load_flows_from_directory()
@@ -316,6 +327,18 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 2: Cleaning Up Services
                 with shutdown_progress.step(2):
+                    # First flush message queue to ensure no data loss
+                    try:
+                        from langflow.services.message_queue import get_message_queue_service
+
+                        message_queue_service = get_message_queue_service()
+                        await asyncio.wait_for(message_queue_service.stop(), timeout=10)
+                    except asyncio.TimeoutError:
+                        await logger.awarning("Message queue shutdown timed out after 10s.")
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Error stopping message queue service: {e}")
+
+                    # Then teardown other services
                     try:
                         await asyncio.wait_for(teardown_services(), timeout=30)
                     except asyncio.TimeoutError:
