@@ -56,7 +56,10 @@ withEventDeliveryModes(
     }
 
     // Assert the assistant response mentions "John Doe"
-    const finalText = await page.getByTestId("div-chat-message").innerText();
+    const finalText = await page
+      .getByTestId("div-chat-message")
+      .last()
+      .innerText();
     expect(finalText.toLowerCase()).toContain("john doe");
   },
 );
