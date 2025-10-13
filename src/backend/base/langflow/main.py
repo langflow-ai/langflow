@@ -248,6 +248,17 @@ def get_lifespan(*, fix_migration=False, version=None):
                 )
 
             current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Creating/updating builder agent flow")
+            try:
+                from langflow.initial_setup.setup import create_or_update_builder_agent_flow
+                await create_or_update_builder_agent_flow()
+                await logger.adebug(
+                    f"Builder agent flow created/updated in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                )
+            except Exception as e:  # noqa: BLE001
+                await logger.awarning(f"Failed to create/update builder agent flow: {e}")
+
+            current_time = asyncio.get_event_loop().time()
             await logger.adebug("Starting telemetry service")
             telemetry_service.start()
             await logger.adebug(f"started telemetry service in {asyncio.get_event_loop().time() - current_time:.2f}s")

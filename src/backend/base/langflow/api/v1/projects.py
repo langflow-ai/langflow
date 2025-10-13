@@ -137,6 +137,8 @@ async def read_projects(
                 )
             )
         ).all()
+        # Filter out starter folder, but keep Builder Agent folder visible to all users
+        # TODO: Add role-based access control - only admins should see Builder Agent folder
         projects = [project for project in projects if project.name != STARTER_FOLDER_NAME]
         return sorted(projects, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
     except Exception as e:
@@ -157,11 +159,16 @@ async def read_project(
     search: str = "",
 ):
     try:
+        # Allow access to both user-owned folders and system folders (user_id=None)
+        # TODO: Add role-based access control for system folders
         project = (
             await session.exec(
                 select(Folder)
                 .options(selectinload(Folder.flows))
-                .where(Folder.id == project_id, Folder.user_id == current_user.id)
+                .where(
+                    Folder.id == project_id,
+                    or_(Folder.user_id == current_user.id, Folder.user_id == None)  # noqa: E711
+                )
             )
         ).first()
     except Exception as e:
@@ -202,8 +209,12 @@ async def read_project(
 
             return FolderWithPaginatedFlows(folder=FolderRead.model_validate(project), flows=paginated_flows)
 
-        # If no pagination requested, return all flows for the current user
-        flows_from_current_user_in_project = [flow for flow in project.flows if flow.user_id == current_user.id]
+        # If no pagination requested, return flows for current user and system flows (user_id=None)
+        # TODO: Add role-based access control for system flows
+        flows_from_current_user_in_project = [
+            flow for flow in project.flows 
+            if flow.user_id == current_user.id or flow.user_id is None
+        ]
         project.flows = flows_from_current_user_in_project
         return project  # noqa: TRY300
 

@@ -6,6 +6,7 @@ import json
 import logging
 import uuid
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 import httpx
 
@@ -26,15 +27,53 @@ class MultiAgentOrchestrator:
         """
         self.logger = logging.getLogger(__name__)
 
-        # Single unified multi-orchestrator flow ID
-        self.flow_id = settings.BUILDER_AGENT_FLOW_ID
-        #"f08ea9f1-b1d7-4eca-b100-78f22b572b39"
+        # Load flow ID from BuilderAgent.json (single source of truth)
+        self.flow_id = self._load_builder_agent_flow_id()
 
-        # Langflow API base URL (assuming running on same host)
+        # Langflow API base URL from config
         self.base_url = settings.LANGFLOW_API_URL
 
         # Use provided session ID or generate new one for conversation continuity
         self.session_id = session_id or str(uuid.uuid4())
+
+    def _load_builder_agent_flow_id(self) -> str:
+        """Load the Builder Agent flow ID from BuilderAgent.json file.
+
+        Returns:
+            Flow ID from the JSON file
+
+        Raises:
+            FileNotFoundError: If BuilderAgent.json is not found
+            ValueError: If the JSON file is invalid or missing the 'id' field
+        """
+        try:
+            # Path to BuilderAgent.json relative to this file
+            builder_agent_path = (
+                Path(__file__).parent.parent.parent.parent.parent
+                / "initial_setup"
+                / "builder_agent"
+                / "BuilderAgent.json"
+            )
+
+            with open(builder_agent_path, encoding="utf-8") as f:
+                flow_data = json.load(f)
+
+            flow_id = flow_data.get("id")
+            if not flow_id:
+                msg = "BuilderAgent.json is missing the 'id' field"
+                raise ValueError(msg)
+
+            self.logger.debug(f"Loaded Builder Agent flow ID: {flow_id}")
+            return flow_id
+
+        except FileNotFoundError as e:
+            self.logger.error(f"BuilderAgent.json not found at {builder_agent_path}")
+            raise FileNotFoundError(
+                f"BuilderAgent.json not found. Expected at: {builder_agent_path}"
+            ) from e
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Invalid JSON in BuilderAgent.json: {e}")
+            raise ValueError(f"BuilderAgent.json contains invalid JSON: {e}") from e
 
     async def build_streaming(self, user_input: str) -> AsyncGenerator[str, None]:
         """

@@ -31,7 +31,12 @@ from langflow.base.constants import (
     SKIPPED_COMPONENTS,
     SKIPPED_FIELD_ATTRIBUTES,
 )
-from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
+from langflow.initial_setup.constants import (
+    BUILDER_AGENT_FOLDER_DESCRIPTION,
+    BUILDER_AGENT_FOLDER_NAME,
+    STARTER_FOLDER_DESCRIPTION,
+    STARTER_FOLDER_NAME,
+)
 from langflow.logging.logger import logger
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
@@ -712,6 +717,125 @@ async def get_or_create_starter_folder(session):
         return db_folder
     stmt = select(Folder).where(Folder.name == STARTER_FOLDER_NAME)
     return (await session.exec(stmt)).first()
+
+
+async def get_or_create_builder_agent_folder(session: AsyncSession) -> Folder:
+    """Get or create the Builder Agent folder (system folder)."""
+    if not await folder_exists(session, BUILDER_AGENT_FOLDER_NAME):
+        new_folder = FolderCreate(name=BUILDER_AGENT_FOLDER_NAME, description=BUILDER_AGENT_FOLDER_DESCRIPTION)
+        db_folder = Folder.model_validate(new_folder, from_attributes=True)
+        db_folder.user_id = None  # System folder - not owned by any user
+        session.add(db_folder)
+        await session.commit()
+        await session.refresh(db_folder)
+        return db_folder
+    stmt = select(Folder).where(Folder.name == BUILDER_AGENT_FOLDER_NAME)
+    return (await session.exec(stmt)).first()
+
+
+async def load_builder_agent_flow(retries=3, delay=1) -> tuple[anyio.Path, dict] | None:
+    """Load the builder agent flow JSON file."""
+    file_path = anyio.Path(__file__).parent / "builder_agent" / "BuilderAgent.json"
+    await logger.adebug(f"Loading builder agent flow from {file_path}")
+
+    if not await file_path.exists():
+        await logger.awarning(f"Builder agent flow file not found at {file_path}")
+        return None
+
+    attempt = 0
+    while attempt < retries:
+        try:
+            async with async_open(str(file_path), "r", encoding="utf-8") as f:
+                content = await f.read()
+            flow_data = orjson.loads(content)
+            await logger.adebug("Builder agent flow loaded successfully")
+            return (file_path, flow_data)
+        except orjson.JSONDecodeError as e:
+            attempt += 1
+            if attempt >= retries:
+                await logger.aerror(f"Error loading builder agent flow {file_path}: {e}")
+                return None
+            await asyncio.sleep(delay)
+        except Exception as e:  # noqa: BLE001
+            await logger.aerror(f"Unexpected error loading builder agent flow: {e}")
+            return None
+
+    return None
+
+
+async def create_or_update_builder_agent_flow() -> None:
+    """Create or update the builder agent flow in the database."""
+    try:
+        # Load the builder agent flow
+        flow_result = await load_builder_agent_flow()
+        if flow_result is None:
+            await logger.awarning("Builder agent flow not loaded, skipping initialization")
+            return
+
+        _file_path, flow_data = flow_result
+
+        # Extract flow ID from the JSON
+        flow_id = flow_data.get("id")
+        if not flow_id:
+            await logger.aerror("Builder agent flow JSON missing 'id' field")
+            return
+
+        # Validate UUID
+        if isinstance(flow_id, str):
+            try:
+                flow_id = UUID(flow_id)
+            except ValueError:
+                await logger.aerror(f"Invalid UUID in builder agent flow: {flow_id}")
+                return
+
+        async with session_scope() as session:
+            # Get or create the builder agent folder
+            builder_folder = await get_or_create_builder_agent_folder(session)
+
+            # Check if flow already exists
+            flow_endpoint_name = flow_data.get("endpoint_name")
+            existing = await find_existing_flow(session, flow_id, flow_endpoint_name)
+
+            if existing:
+                await logger.adebug(f"Found existing builder agent flow: {existing.name}")
+                
+                # If the existing flow belongs to a user, we need to handle the unique constraint
+                if existing.user_id is not None:
+                    await logger.ainfo(f"Existing flow belongs to user {existing.user_id}, deleting and recreating as system flow")
+                    await session.delete(existing)
+                    await session.commit()
+                    
+                    # Create new system flow
+                    flow_data["folder_id"] = builder_folder.id
+                    flow_data["user_id"] = None
+                    flow = Flow.model_validate(flow_data)
+                    flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
+                    session.add(flow)
+                else:
+                    # Already a system flow, just update it
+                    await logger.ainfo(f"Updating builder agent flow: {flow_id}")
+                    for key, value in flow_data.items():
+                        if hasattr(existing, key) and key not in ["user_id", "id"]:
+                            setattr(existing, key, value)
+                    existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
+                    existing.folder_id = builder_folder.id
+                    session.add(existing)
+            else:
+                await logger.ainfo(f"Creating new builder agent flow: {flow_id}")
+
+                # Create new flow
+                flow_data["folder_id"] = builder_folder.id
+                flow_data["user_id"] = None  # System flow - not owned by any user
+                flow = Flow.model_validate(flow_data)
+                flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
+
+                session.add(flow)
+
+            await session.commit()
+            await logger.adebug("Builder agent flow created/updated successfully")
+
+    except Exception as e:  # noqa: BLE001
+        await logger.aexception(f"Error creating/updating builder agent flow: {e}")
 
 
 def _is_valid_uuid(val):
