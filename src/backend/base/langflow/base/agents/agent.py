@@ -24,7 +24,7 @@ from langflow.utils.constants import MESSAGE_SENDER_AI
 if TYPE_CHECKING:
     from langchain_core.messages import BaseMessage
 
-    from langflow.schema.log import SendMessageFunctionType, OnTokenFunctionType
+    from langflow.schema.log import OnTokenFunctionType, SendMessageFunctionType
 
 
 DEFAULT_TOOLS_DESCRIPTION = "A helpful assistant with access to the following tools:"
