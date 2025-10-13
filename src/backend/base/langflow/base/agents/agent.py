@@ -119,7 +119,7 @@ class LCAgentComponent(Component):
 
     def _data_to_messages_skip_empty(self, data: list[Data]):
         """Convert data to messages, filtering only empty text while preserving non-text content.
-        
+
         Note: added to fix issue with certain providers failing when given empty text.
         """
         messages = []

@@ -543,6 +543,7 @@ async def test_handle_on_chain_stream_no_output():
     assert updated_message.properties.state == "partial"
     assert isinstance(start_time, float)
 
+
 async def test_agent_streaming_no_text_accumulation():
     """Test that agent streaming sends individual token events without accumulating text."""
     sent_messages = []
