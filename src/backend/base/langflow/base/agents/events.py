@@ -386,10 +386,6 @@ async def process_agent_events(
                         start_time,
                         had_streaming=had_streaming,
                     )
-                elif event["event"] == "on_chain_end":
-                    agent_message, start_time = await chain_handler(
-                        event, agent_message, send_message_callback, None, start_time, had_streaming=had_streaming
-                    )
                 else:
                     agent_message, start_time = await chain_handler(
                         event, agent_message, send_message_callback, None, start_time, had_streaming=had_streaming

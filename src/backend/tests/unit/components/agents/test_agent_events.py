@@ -572,8 +572,6 @@ async def test_agent_streaming_no_text_accumulation():
     )
     # Add an ID to the message (normally set when persisted to DB)
     agent_message.data["id"] = "test-message-id"
-    # Add an ID to the message (normally set when persisted to DB)
-    agent_message.data["id"] = "test-message-id"
 
     # Simulate streaming events with individual chunks
     events = [
