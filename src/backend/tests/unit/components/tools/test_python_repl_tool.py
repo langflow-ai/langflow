@@ -51,4 +51,4 @@ class TestPythonREPLComponent(ComponentTestBaseWithoutClient):
         assert python_code["required"] is True
 
         # Test base configuration
-        assert "Data" in node_data["base_classes"]
+        assert "JSON" in node_data["base_classes"]

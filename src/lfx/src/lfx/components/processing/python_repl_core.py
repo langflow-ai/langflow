@@ -38,6 +38,7 @@ class PythonREPLComponent(Component):
             name="results",
             type_=Data,
             method="run_python_repl",
+            types=["JSON"],
         ),
     ]
 
