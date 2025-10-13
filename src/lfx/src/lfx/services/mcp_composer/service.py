@@ -321,8 +321,8 @@ class MCPComposerService(Service):
         project_id: str,
         sse_url: str,
         auth_config: dict[str, Any] | None,
-        max_startup_checks: int = 5,
-        startup_delay: float = 2.0,
+        max_startup_checks: int = 60,
+        startup_delay: float = 3.0,
     ) -> None:
         """Start an MCP Composer instance for a specific project.
 
@@ -413,8 +413,8 @@ class MCPComposerService(Service):
         port: int,
         sse_url: str,
         auth_config: dict[str, Any] | None = None,
-        max_startup_checks: int = 5,
-        startup_delay: float = 2.0,
+        max_startup_checks: int = 60,
+        startup_delay: float = 3.0,
     ) -> subprocess.Popen:
         """Start the MCP Composer subprocess for a specific project."""
         settings = get_settings_service().settings

@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { memo, type ReactNode, useCallback, useState } from "react";
+import { memo, type ReactNode, useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
@@ -156,8 +156,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const [apiKey, setApiKey] = useState<string>("");
   const [isGeneratingApiKey, setIsGeneratingApiKey] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [isWaitingForComposer, setIsWaitingForComposer] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const queryClient = useQueryClient();
 
   const { data: mcpProjectData, isLoading: isLoadingMCPProjectData } =
     useGetFlowsMCP({ projectId });
@@ -174,12 +176,20 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     currentAuthSettings?.auth_type === "oauth" && ENABLE_MCP_COMPOSER;
   const shouldQueryComposerUrl = isOAuthProject && !isPatchingFlowsMCP;
 
-  const { data: composerUrlData } = useGetProjectComposerUrl(
-    {
-      projectId,
-    },
-    { enabled: !!projectId && shouldQueryComposerUrl },
-  );
+  const { data: composerUrlData, isLoading: isLoadingComposerUrl } =
+    useGetProjectComposerUrl(
+      {
+        projectId,
+      },
+      { enabled: !!projectId && shouldQueryComposerUrl },
+    );
+
+  // Reset waiting state when composer URL is loaded or has error
+  useEffect(() => {
+    if (isWaitingForComposer && !isLoadingComposerUrl && composerUrlData) {
+      setIsWaitingForComposer(false);
+    }
+  }, [isWaitingForComposer, isLoadingComposerUrl, composerUrlData]);
 
   const { mutate: patchInstallMCP } = usePatchInstallMCP({
     project_id: projectId,
@@ -247,7 +257,25 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       auth_settings: authSettings,
     };
 
-    patchFlowsMCP(requestData);
+    // Set waiting state for OAuth projects
+    if (authSettings.auth_type === "oauth") {
+      setIsWaitingForComposer(true);
+    }
+
+    patchFlowsMCP(requestData, {
+      onSuccess: () => {
+        // Invalidate composer URL cache to force refetch after OAuth settings change
+        if (authSettings.auth_type === "oauth") {
+          queryClient.invalidateQueries({
+            queryKey: ["project-composer-url", projectId],
+          });
+        }
+      },
+      onError: () => {
+        // Reset waiting state on error
+        setIsWaitingForComposer(false);
+      },
+    });
   };
 
   const flowsMCPData = flowsMCP?.map((flow) => ({
@@ -389,7 +417,16 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const hasAuthentication =
     currentAuthSettings?.auth_type && currentAuthSettings.auth_type !== "none";
 
-  const isLoadingMCPProjectAuth = isLoadingMCPProjectData || isPatchingFlowsMCP;
+  // Show loading during:
+  // 1. Initial data load
+  // 2. Saving settings
+  // 3. For OAuth projects: waiting for composer to initialize (forced loading state)
+  // 4. For OAuth projects: also loading composer URL (happens after save completes)
+  const isLoadingMCPProjectAuth =
+    isLoadingMCPProjectData ||
+    isPatchingFlowsMCP ||
+    isWaitingForComposer ||
+    (isOAuthProject && isLoadingComposerUrl);
 
   return (
     <div>
