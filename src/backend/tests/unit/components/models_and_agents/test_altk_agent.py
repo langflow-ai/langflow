@@ -154,6 +154,7 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
 
     @pytest.mark.api_key_required
     @pytest.mark.no_blockbuster
+    @pytest.mark.slow
     async def test_agent_component_with_all_anthropic_models(self):
         # Mock inputs
         api_key = os.getenv("ANTHROPIC_API_KEY")
