@@ -53,7 +53,6 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
         assert filtered_items[0]["name"] == "test2", f"Expected 'test2', got {filtered_items[0]['name']}"
         assert filtered_items[0]["value"] == 20, f"Expected value 20, got {filtered_items[0]['value']}"
 
-
     async def test_lambda_with_large_dataset(self, component_class, default_kwargs):
         """Test lambda execution with a large dataset."""
         large_data = {"items": [{"name": f"test{i}", "value": i} for i in range(2000)]}
@@ -77,7 +76,6 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
         # Verify first and last items
         assert filtered_items[0]["value"] == 1501, f"Expected first value 1501, got {filtered_items[0]['value']}"
         assert filtered_items[-1]["value"] == 1999, f"Expected last value 1999, got {filtered_items[-1]['value']}"
-
 
     async def test_lambda_with_complex_data_structure(self, component_class, default_kwargs):
         """Test lambda execution with complex nested data structures."""
