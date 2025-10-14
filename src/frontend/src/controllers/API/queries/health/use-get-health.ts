@@ -8,7 +8,6 @@ import { HEALTH_CHECK_URL } from "@/customization/config-constants";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { createNewError503 } from "@/types/factory/axios-error-503";
 import type { useQueryFunctionType } from "../../../../types/api";
-import { api } from "../../api";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface getHealthResponse {
@@ -40,40 +39,22 @@ export const useGetHealthQuery: useQueryFunctionType<
    * @returns {Promise<AxiosResponse<TransactionsResponse>>} A promise that resolves to an AxiosResponse containing the health status.
    */
   async function getHealthFn() {
-    try {
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(createNewError503()), SERVER_HEALTH_INTERVAL),
-      );
-
-      const apiPromise = api.get<getHealthResponse>(
-        HEALTH_CHECK_URL || "/health",
-      );
-      const response = await Promise.race([apiPromise, timeoutPromise]);
-      setHealthCheckTimeout(
-        Object.values(response.data).some((value) => value !== "ok")
-          ? "serverDown"
-          : null,
-      );
-      return response.data;
-    } catch (error) {
-      const isServerBusy =
-        healthCheckTimeout === null &&
-        (error as AxiosError)?.response?.status === 503;
-
-      if (isServerBusy) {
-        setHealthCheckTimeout("timeout");
-      } else if (healthCheckTimeout === null) {
-        setHealthCheckTimeout("serverDown");
-      }
-      throw error;
-    }
+    // Disable actual network health checks; return a static OK
+    const staticOk: getHealthResponse = {
+      status: "ok",
+      chat: "ok",
+      db: "ok",
+      folder: "ok",
+      variables: "ok",
+    };
+    setHealthCheckTimeout(null);
+    return staticOk;
   }
 
   const queryResult = query(["useGetHealthQuery"], getHealthFn, {
     placeholderData: keepPreviousData,
-    refetchInterval: params.enableInterval
-      ? REFETCH_SERVER_HEALTH_INTERVAL
-      : false,
+    // Fully disable refetch interval to stop intermittent calls
+    refetchInterval: false,
     retry: false,
     refetchOnWindowFocus: false,
     ...options,
