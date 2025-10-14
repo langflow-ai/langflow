@@ -18,7 +18,14 @@ import { useGetTemplateStyle } from "@/pages/MainPage/utils/get-template-style";
 import { timeElapsed } from "@/pages/MainPage/utils/time-elapse";
 import type { FlowType } from "@/types/flow";
 import { RiChatAiLine } from "react-icons/ri";
+import { useContext, useMemo } from "react";
+import { AuthContext } from "@/contexts/authContext";
+import { envConfig } from "@/config/env";
+import KeycloakService from "@/services/keycloak";
 import { VscSend } from "react-icons/vsc";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 // Agent Card Component
 const AgentCard = ({
@@ -191,9 +198,41 @@ const AgentListItem = ({
 };
 
 export default function AgentBuilderPage() {
+  const { userData } = useContext(AuthContext);
+
+  const displayName = useMemo(() => {
+    if (envConfig.keycloakEnabled) {
+      try {
+        const info = KeycloakService.getInstance().getUserInfo();
+        if (info) {
+          const first = (info.firstName || "").trim();
+          const last = (info.lastName || "").trim();
+          const full = `${first} ${last}`.trim();
+          if (full) return full;
+          const username = (info.username || "").trim();
+          if (username) return username;
+        }
+      } catch {
+        // ignore and fallback
+      }
+    }
+    if (userData) {
+      const first = (userData.username || "").trim();
+      const full = `${first}`.trim();
+      if (full) return full;
+      const username = (userData.username || "").trim();
+      if (username) return username;
+    }
+    return "there";
+  }, [userData]);
   const navigate = useCustomNavigate();
   const [promptValue, setPromptValue] = useState("");
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+  const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
+  const [projectName, setProjectName] = useState("");
+  const [projectDescription, setProjectDescription] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [isSavingProject, setIsSavingProject] = useState(false);
   const [showAllAgents, setShowAllAgents] = useState(false);
   const [view, setView] = useState<"list" | "grid">("grid");
   const [sortOpen, setSortOpen] = useState(false);
@@ -263,18 +302,38 @@ export default function AgentBuilderPage() {
     setPageIndex(1);
   };
 
-  const handleCreateProject = () => {
+  const handleOpenCreateProjectModal = () => {
+    setProjectName("");
+    setProjectDescription("");
+    setNameError(null);
+    setShowCreateProjectModal(true);
+  };
+
+  const handleSaveProject = () => {
+    const trimmedName = projectName.trim();
+    if (!trimmedName) {
+      setNameError("Project name is required");
+      return;
+    }
+    setNameError(null);
+    setIsSavingProject(true);
     mutateAddFolder(
       {
         data: {
-          name: "New Project",
+          name: trimmedName,
           parent_id: null,
-          description: "",
+          description: projectDescription.trim(),
         },
       },
       {
         onSuccess: (folder: any) => {
           setMyCollectionId(folder.id);
+          setIsSavingProject(false);
+          setShowCreateProjectModal(false);
+        },
+        onError: () => {
+          setIsSavingProject(false);
+          setNameError("Failed to create project. Please try again.");
         },
       },
     );
@@ -308,7 +367,7 @@ export default function AgentBuilderPage() {
                 variant="outline"
                 size="sm"
                 className="h-9"
-                onClick={handleCreateProject}
+                onClick={handleOpenCreateProjectModal}
                 disabled={isCreatingFolder}
               >
                 <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
@@ -322,7 +381,7 @@ export default function AgentBuilderPage() {
         <div className="flex flex-col items-center justify-center mt-8 mb-8 max-w-[876px] mx-auto">
           <RiChatAiLine size={36} opacity={0.5} className="mb-2" />
           <p className="text-xl mb-2">
-            Hi <span className="font-medium">Rishi</span>, What can I help you today?
+            Hi <span className="font-medium">{displayName}</span>, What can I help you today?
           </p>
           <p className="text-sm text-muted-foreground text-center max-w-2xl">
             Build workflows from the library of AI Agents, or create your own custom agent from scratch
@@ -508,6 +567,60 @@ export default function AgentBuilderPage() {
         open={showTemplatesModal}
         setOpen={setShowTemplatesModal}
       />
+
+      {/* Create Project Modal */}
+      <Dialog open={showCreateProjectModal} onOpenChange={setShowCreateProjectModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Project</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="project-name">Project Name</Label>
+              <Input
+                id="project-name"
+                value={projectName}
+                onChange={(e) => {
+                  setProjectName(e.target.value);
+                  if (nameError) setNameError(null);
+                }}
+                placeholder="Enter project name"
+                aria-invalid={!!nameError}
+              />
+              {nameError && (
+                <p className="text-xs text-destructive" role="alert">
+                  {nameError}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="project-description">Project Description</Label>
+              <Input
+                id="project-description"
+                value={projectDescription}
+                onChange={(e) => setProjectDescription(e.target.value)}
+                placeholder="Optional description"
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowCreateProjectModal(false)}
+              disabled={isSavingProject}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSaveProject}
+              disabled={isSavingProject}
+            >
+              {isSavingProject ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

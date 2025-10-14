@@ -12,8 +12,13 @@ import { CustomProfileIcon } from "@/customization/components/custom-profile-ico
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
+import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useFolderStore } from "@/stores/foldersStore";
 import { useDarkStore } from "@/stores/darkStore";
 import { cn, stripReleaseStageFromVersion } from "@/utils/utils";
+import { envConfig } from "@/config/env";
+import KeycloakService from "@/services/keycloak";
 import {
   HeaderMenu,
   HeaderMenuItemButton,
@@ -34,7 +39,26 @@ export const AccountMenu = () => {
     autoLogin: state.autoLogin,
   }));
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // If Keycloak is enabled, perform Keycloak logout and local cleanup
+    if (envConfig.keycloakEnabled) {
+      try {
+        console.log("logout clicked")
+        // Local cleanup mirroring useLogout onSuccess behavior
+        useAuthStore.getState().logout();
+        useFlowStore.getState().resetFlowState();
+        useFlowsManagerStore.getState().resetStore();
+        useFolderStore.getState().resetStore();
+        await KeycloakService.getInstance().logout();
+      } catch (error) {
+        console.error("Keycloak logout failed, falling back to API logout:", error);
+        // Fallback to existing logout mutation
+        mutationLogout();
+      }
+      return;
+    }
+
+    // Default behavior: existing API logout
     mutationLogout();
   };
 
