@@ -1,13 +1,13 @@
 from typing import Any
 
 from langchain_anthropic import ChatAnthropic
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
 from lfx.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
+from lfx.components.google.google_generative_ai import ChatGoogleGenerativeAIFixed
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput
@@ -112,7 +112,7 @@ class LanguageModelComponent(LCModelComponent):
             if not self.api_key:
                 msg = "Google API key is required when using Google provider"
                 raise ValueError(msg)
-            return ChatGoogleGenerativeAI(
+            return ChatGoogleGenerativeAIFixed(
                 model=model_name,
                 temperature=temperature,
                 streaming=stream,
