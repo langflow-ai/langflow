@@ -91,7 +91,7 @@ def _check_variable(var, invalid_chars, wrong_variables, empty_variables):
 def _check_for_errors(input_variables, fixed_variables, wrong_variables, empty_variables) -> None:
     if any(var for var in input_variables if var not in fixed_variables):
         error_message = (
-            f"Error: Input variables contain invalid characters or formats. \n"
+            f"Input variables contain invalid characters or formats. \n"
             f"Invalid variables: {', '.join(wrong_variables)}.\n"
             f"Empty variables: {', '.join(empty_variables)}. \n"
             f"Fixed variables: {', '.join(fixed_variables)}."
@@ -125,9 +125,25 @@ def _check_input_variables(input_variables):
 
 def validate_prompt(prompt_template: str, *, silent_errors: bool = False, is_mustache: bool = False) -> list[str]:
     if is_mustache:
+        # Extract only mustache variables
         input_variables = mustache_template_vars(prompt_template)
+
+        # Also get f-string variables to filter them out
+        fstring_vars = extract_input_variables_from_prompt(prompt_template)
+
+        # Only keep variables that are actually in mustache syntax (not in f-string syntax)
+        # This handles cases where template has both {var} and {{var}}
+        input_variables = [v for v in input_variables if v not in fstring_vars or f"{{{{{v}}}}}" in prompt_template]
     else:
+        # Extract f-string variables
         input_variables = extract_input_variables_from_prompt(prompt_template)
+
+        # Also get mustache variables to filter them out
+        mustache_vars = mustache_template_vars(prompt_template)
+
+        # Only keep variables that are NOT in mustache syntax
+        # This handles cases where template has both {var} and {{var}}
+        input_variables = [v for v in input_variables if v not in mustache_vars]
 
     # Check if there are invalid characters in the input_variables
     input_variables = _check_input_variables(input_variables)
