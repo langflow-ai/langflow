@@ -1,12 +1,12 @@
 import { useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
-import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { addUserMessage } from "@/utils/messageUtils";
+import { useGetFlowId } from "./use-get-flow-id";
 
 export const useSendMessage = () => {
   const buildFlow = useFlowStore((state) => state.buildFlow);
