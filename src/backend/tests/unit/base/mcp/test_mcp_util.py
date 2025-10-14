@@ -421,6 +421,7 @@ class TestFieldNameConversion:
     def test_json_schema_alias_functionality(self):
         """Test that JSON schema creation includes aliases for camelCase field names."""
         from lfx.schema.json_schema import create_input_schema_from_json_schema
+
         from pydantic import ValidationError
 
         # Create a JSON schema with snake_case field names
@@ -1672,7 +1673,6 @@ class TestSSLVerificationFeature:
     def test_create_mcp_http_client_with_ssl_and_timeout(self):
         """Test creating httpx client with SSL option and custom timeout."""
         import httpx
-
         from lfx.base.mcp.util import create_mcp_http_client_with_ssl_option
 
         custom_timeout = httpx.Timeout(60.0, read=120.0)
@@ -1685,7 +1685,6 @@ class TestSSLVerificationFeature:
     def test_create_mcp_http_client_with_ssl_and_auth(self):
         """Test creating httpx client with SSL option and authentication."""
         import httpx
-
         from lfx.base.mcp.util import create_mcp_http_client_with_ssl_option
 
         auth = httpx.BasicAuth(username="user", password="pass")
@@ -1698,7 +1697,6 @@ class TestSSLVerificationFeature:
     def test_create_mcp_http_client_all_options(self):
         """Test creating httpx client with all options including SSL."""
         import httpx
-
         from lfx.base.mcp.util import create_mcp_http_client_with_ssl_option
 
         test_headers = {"Authorization": "Bearer token123"}
