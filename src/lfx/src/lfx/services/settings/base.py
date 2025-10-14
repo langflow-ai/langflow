@@ -158,6 +158,13 @@ class Settings(BaseSettings):
     disable_track_apikey_usage: bool = False
     remove_api_keys: bool = False
     components_path: list[str] = []
+    components_index_path: str | None = None
+    """Path or URL to a prebuilt component index JSON file.
+
+    If None, uses the built-in index at lfx/_assets/component_index.json.
+    Set to a file path (e.g., '/path/to/index.json') or URL (e.g., 'https://example.com/index.json')
+    to use a custom index.
+    """
     langchain_cache: str = "InMemoryCache"
     load_flows_path: str | None = None
     bundle_urls: list[str] = []
@@ -285,6 +292,9 @@ class Settings(BaseSettings):
     # MCP Composer
     mcp_composer_enabled: bool = True
     """If set to False, Langflow will not start the MCP Composer service."""
+    mcp_composer_version: str = "~=0.1.0.7"
+    """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax.
+    ~=0.1.0.7 allows patch updates (0.1.0.x) but prevents minor/major version changes."""
 
     # Public Flow Settings
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
@@ -348,6 +358,34 @@ class Settings(BaseSettings):
         logger.debug(f"Setting user agent to {value}")
         return value
 
+    @field_validator("mcp_composer_version", mode="before")
+    @classmethod
+    def validate_mcp_composer_version(cls, value):
+        """Ensure the version string has a version specifier prefix.
+
+        If a bare version like '0.1.0.7' is provided, prepend '~=' to allow patch updates.
+        Supports PEP 440 specifiers: ==, !=, <=, >=, <, >, ~=, ===
+        """
+        if not value:
+            return "~=0.1.0.7"  # Default
+
+        # Check if it already has a version specifier
+        # Order matters: check longer specifiers first to avoid false matches
+        specifiers = ["===", "==", "!=", "<=", ">=", "~=", "<", ">"]
+        if any(value.startswith(spec) for spec in specifiers):
+            return value
+
+        # If it's a bare version number, add ~= prefix
+        # This regex matches version numbers like 0.1.0.7, 1.2.3, etc.
+        import re
+
+        if re.match(r"^\d+(\.\d+)*", value):
+            logger.debug(f"Adding ~= prefix to bare version '{value}' -> '~={value}'")
+            return f"~={value}"
+
+        # If we can't determine, return as-is and let uvx handle it
+        return value
+
     @field_validator("variables_to_get_from_environment", mode="before")
     @classmethod
     def set_variables_to_get_from_environment(cls, value):
@@ -381,6 +419,8 @@ class Settings(BaseSettings):
 
         if isinstance(value, str):
             value = Path(value)
+        # Resolve to absolute path to handle relative paths correctly
+        value = value.resolve()
         if not value.exists():
             value.mkdir(parents=True, exist_ok=True)
 
