@@ -1,4 +1,4 @@
-# AI Studio Frontend CI/CD Pipeline
+# AI Studio Backend CI/CD Pipeline
 # Follows Genesis template pattern
 
 variables:
@@ -12,10 +12,11 @@ variables:
   AZURE_CONTAINER_REGISTRY: sprintregistry
   ACR_ENDPOINT: 'sprintregistry.azurecr.io'
 
-  # Frontend Configuration
-  IMAGE_NAME: 'ai-studio-frontend'
-  DOCKERFILE_PATH: 'docker/frontend/Dockerfile'
-  NODE_VERSION: '20.x'
+  # Backend Configuration
+  IMAGE_NAME: 'ai-studio-backend'
+  DOCKERFILE_PATH: 'docker/backend/Dockerfile'
+  PYTHON_VERSION: '3.12'
+  UV_VERSION: '0.4.0'
 
   # Platform Charts Configuration
   VALUES_FILE: 'charts/genesis-platform/values-dev.yaml'
@@ -36,12 +37,13 @@ trigger:
     - feature/*
   paths:
     include:
-      - src/frontend/**
-      - docker/frontend/**
-      - azure-devops/frontend-cicd.yaml
-      - azure-devops/templates/*frontend*
-      - azure-devops/templates/release-template.yml
-      - azure-devops/templates/security-template.yml
+      - src/backend/**
+      - docker/backend/**
+      - pyproject.toml
+      - uv.lock
+      - .azure-pipelines/backend-cicd.yaml
+      - .azure-pipelines/templates/*backend*
+      - .azure-pipelines/templates/release-template.yml
 
 pr:
   branches:
@@ -50,30 +52,26 @@ pr:
     - develop
   paths:
     include:
-      - src/frontend/**
-      - docker/frontend/**
-      - azure-devops/frontend-cicd.yaml
-      - azure-devops/templates/*frontend*
+      - src/backend/**
+      - docker/backend/**
+      - pyproject.toml
+      - uv.lock
+      - .azure-pipelines/backend-cicd.yaml
+      - .azure-pipelines/templates/*backend*
 
 stages:
-- stage: Test
-  displayName: 'Frontend Test and Validate'
-  jobs:
-  - template: templates/frontend-test-template.yml
-
 - stage: Build
-  displayName: 'Build Frontend Image'
-  dependsOn: Test
+  displayName: 'Build Backend Image'
   condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   jobs:
-  - template: templates/frontend-build-template.yml
+  - template: templates/backend-build-template.yml
     parameters:
       CONTAINER_NAME: $(IMAGE_NAME)
       DOCKERFILE_PATH: $(DOCKERFILE_PATH)
       AZURE_CONTAINER_REGISTRY: $(AZURE_CONTAINER_REGISTRY)
       BUILD_ARGS: |
         --build-arg BUILD_VERSION=$(Build.BuildNumber)
-        --build-arg NODE_ENV=production
+        --build-arg PYTHON_VERSION=$(PYTHON_VERSION)
 
 - stage: UpdatePlatformCharts
   displayName: 'Update Platform Charts'
@@ -82,14 +80,6 @@ stages:
   jobs:
   - template: templates/release-template.yml
     parameters:
-      SERVICE_NAME: 'frontend'
+      SERVICE_NAME: 'backend'
       IMAGE_NAME: $(IMAGE_NAME)
 
-- stage: SecurityScan
-  displayName: 'Security Scanning'
-  dependsOn: UpdatePlatformCharts
-  condition: succeeded()
-  jobs:
-  - template: templates/frontend-security-template.yml
-    parameters:
-      IMAGE_NAME: $(IMAGE_NAME)
