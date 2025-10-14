@@ -452,8 +452,8 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for Langflow's server status health checks. |
 | `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. |
 | `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. |
-| `LANGFLOW_SSL_CERT_FILE` | String | Not set | Path to the SSL certificate file on the local system for SSL-encrypted connections. |
-| `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file on the local system for SSL-encrypted connections. |
+| `LANGFLOW_SSL_CERT_FILE` | String | Not set | Path to the SSL certificate file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
+| `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_DEACTIVATE_TRACING` | Boolean | `False` | Deactivate tracing functionality. |
 | `LANGFLOW_CELERY_ENABLED` | Boolean | `False` | Enable Celery for distributed task processing. |
 
