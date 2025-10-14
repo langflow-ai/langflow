@@ -38,11 +38,11 @@ coverage:
 
       # LFX coverage: Target for core package (excludes components)
       # Components (third-party integrations) tracked separately
-      # Current core coverage: ~44%, Target: 40% (maintains baseline)
+      # Current core coverage: ~44%, Target: 60% (aspirational improvement)
       lfx:
-        target: 40%
+        target: 60%
         # Threshold: Allowable drop in coverage before failing the check
-        # 5% = reasonable threshold for a growing package
+        # 5% = coverage can drop from 44% to 39% without failing status
         threshold: 5%
         flags:
           - lfx
