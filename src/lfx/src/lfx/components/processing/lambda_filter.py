@@ -110,7 +110,7 @@ class LambdaFilterComponent(Component):
                         combined_data.append(item.data)
                     elif isinstance(item.data, list):
                         combined_data.extend(item.data)
-            data = combined_data if combined_data else {}
+            data = combined_data if combined_data else []
         elif isinstance(self.data, DataFrame):
             # Single DataFrame to list of dicts
             data = self.data.to_dict(orient="records")
