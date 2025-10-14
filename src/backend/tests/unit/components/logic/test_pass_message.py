@@ -2,25 +2,42 @@ import pytest
 from langflow.components.logic.pass_message import PassMessageComponent
 from langflow.schema.message import Message
 
+from tests.base import ComponentTestBaseWithoutClient
 
-class TestPassMessageComponent:
+
+class TestPassMessageComponent(ComponentTestBaseWithoutClient):
     """Test cases for PassMessageComponent."""
 
     @pytest.fixture
-    def component(self):
-        """Create a PassMessageComponent instance for testing."""
-        return PassMessageComponent()
+    def component_class(self):
+        """Return the component class to test."""
+        return PassMessageComponent
 
-    def test_component_initialization(self, component):
+    @pytest.fixture
+    def default_kwargs(self):
+        """Return the default kwargs for the component."""
+        return {
+            "input_message": None,
+            "ignored_message": None,
+        }
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        """Return an empty list since this component doesn't have version-specific files."""
+        return []
+
+    async def test_component_initialization(self, component_class, default_kwargs):
         """Test proper initialization of PassMessageComponent."""
+        component = await self.component_setup(component_class, default_kwargs)
         assert component.display_name == "Pass"
         assert component.description == "Forwards the input message, unchanged."
         assert component.name == "Pass"
         assert component.icon == "arrow-right"
         assert component.legacy is True
 
-    def test_inputs_configuration(self, component):
+    async def test_inputs_configuration(self, component_class, default_kwargs):
         """Test that inputs are properly configured."""
+        component = await self.component_setup(component_class, default_kwargs)
         assert len(component.inputs) == 2
 
         input_names = [inp.name for inp in component.inputs]
@@ -39,8 +56,9 @@ class TestPassMessageComponent:
         assert ignored_message.advanced is True
         assert "workaround for continuity" in ignored_message.info
 
-    def test_outputs_configuration(self, component):
+    async def test_outputs_configuration(self, component_class, default_kwargs):
         """Test that outputs are properly configured."""
+        component = await self.component_setup(component_class, default_kwargs)
         assert len(component.outputs) == 1
 
         output = component.outputs[0]
@@ -48,8 +66,9 @@ class TestPassMessageComponent:
         assert output.display_name == "Output Message"
         assert output.method == "pass_message"
 
-    def test_pass_message_basic_functionality(self, component):
+    async def test_pass_message_basic_functionality(self, component_class, default_kwargs):
         """Test pass_message method basic functionality."""
+        component = await self.component_setup(component_class, default_kwargs)
         # Setup
         test_message = Message(content="Hello World")
         component.input_message = test_message
@@ -62,8 +81,9 @@ class TestPassMessageComponent:
         assert result is test_message  # Should be the same object, not a copy
         assert component.status == test_message
 
-    def test_pass_message_different_message_types(self, component):
+    async def test_pass_message_different_message_types(self, component_class, default_kwargs):
         """Test pass_message with different message content types."""
+        component = await self.component_setup(component_class, default_kwargs)
         test_cases = [
             Message(content="Simple text"),
             Message(content=""),  # Empty content
@@ -82,8 +102,9 @@ class TestPassMessageComponent:
             assert result.content == test_message.content
             assert component.status == test_message
 
-    def test_pass_message_with_ignored_message(self, component):
+    async def test_pass_message_with_ignored_message(self, component_class, default_kwargs):
         """Test that ignored_message parameter is truly ignored."""
+        component = await self.component_setup(component_class, default_kwargs)
         # Setup
         input_msg = Message(content="This should be returned")
         ignored_msg = Message(content="This should be ignored")
@@ -99,8 +120,9 @@ class TestPassMessageComponent:
         assert result != ignored_msg
         assert component.status == input_msg
 
-    def test_pass_message_status_assignment(self, component):
+    async def test_pass_message_status_assignment(self, component_class, default_kwargs):
         """Test that status is properly assigned."""
+        component = await self.component_setup(component_class, default_kwargs)
         test_message = Message(content="Status test")
         component.input_message = test_message
 
@@ -112,8 +134,9 @@ class TestPassMessageComponent:
         assert component.status == test_message
         assert component.status == result
 
-    def test_pass_message_no_side_effects(self, component):
+    async def test_pass_message_no_side_effects(self, component_class, default_kwargs):
         """Test that pass_message doesn't modify the input message."""
+        component = await self.component_setup(component_class, default_kwargs)
         original_content = "Original content"
         test_message = Message(content=original_content)
         component.input_message = test_message
@@ -131,8 +154,9 @@ class TestPassMessageComponent:
         # Result should be identical
         assert result == test_message
 
-    def test_pass_message_method_signature(self, component):
+    async def test_pass_message_method_signature(self, component_class, default_kwargs):
         """Test that pass_message method has correct signature."""
+        component = await self.component_setup(component_class, default_kwargs)
         import inspect
 
         sig = inspect.signature(component.pass_message)
@@ -146,25 +170,29 @@ class TestPassMessageComponent:
             or str(sig.return_annotation) == "<class 'langflow.schema.message.Message'>"
         )
 
-    def test_component_legacy_status(self, component):
+    async def test_component_legacy_status(self, component_class, default_kwargs):
         """Test that component is properly marked as legacy."""
+        component = await self.component_setup(component_class, default_kwargs)
         assert hasattr(component, "legacy")
         assert component.legacy is True
 
-    def test_component_inheritance(self, component):
+    async def test_component_inheritance(self, component_class, default_kwargs):
         """Test that component properly inherits from Component base class."""
+        component = await self.component_setup(component_class, default_kwargs)
         from langflow.custom.custom_component.component import Component
 
         assert isinstance(component, Component)
 
-    def test_output_method_mapping(self, component):
+    async def test_output_method_mapping(self, component_class, default_kwargs):
         """Test that output is correctly mapped to pass_message method."""
+        component = await self.component_setup(component_class, default_kwargs)
         output = component.outputs[0]
         assert hasattr(component, output.method)
         assert callable(getattr(component, output.method))
 
-    def test_message_attributes_preservation(self, component):
+    async def test_message_attributes_preservation(self, component_class, default_kwargs):
         """Test that all message attributes are preserved through pass_message."""
+        component = await self.component_setup(component_class, default_kwargs)
         # Create a message with various attributes
         test_message = Message(
             content="Test content", sender="Test Sender", sender_name="Test Name", session_id="test_session"
@@ -179,8 +207,9 @@ class TestPassMessageComponent:
         assert result.sender_name == test_message.sender_name
         assert result.session_id == test_message.session_id
 
-    def test_pass_message_multiple_calls(self, component):
+    async def test_pass_message_multiple_calls(self, component_class, default_kwargs):
         """Test calling pass_message multiple times with different inputs."""
+        component = await self.component_setup(component_class, default_kwargs)
         messages = [
             Message(content="First message"),
             Message(content="Second message"),
@@ -202,8 +231,9 @@ class TestPassMessageComponent:
             assert result == msg
             assert result.content == f"{['First', 'Second', 'Third'][i]} message"
 
-    def test_pass_message_with_none_input(self, component):
+    async def test_pass_message_with_none_input(self, component_class, default_kwargs):
         """Test pass_message behavior with None input."""
+        component = await self.component_setup(component_class, default_kwargs)
         component.input_message = None
 
         result = component.pass_message()
@@ -211,8 +241,9 @@ class TestPassMessageComponent:
         assert result is None
         assert component.status is None
 
-    def test_ignored_message_truly_ignored(self, component):
+    async def test_ignored_message_truly_ignored(self, component_class, default_kwargs):
         """Test that ignored_message has no impact on the result regardless of its value."""
+        component = await self.component_setup(component_class, default_kwargs)
         input_msg = Message(content="Input")
 
         # Test with different ignored message values

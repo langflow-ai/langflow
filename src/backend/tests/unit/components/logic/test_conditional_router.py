@@ -4,17 +4,39 @@ import pytest
 from lfx.components.logic.conditional_router import ConditionalRouterComponent
 from lfx.schema.message import Message
 
+from tests.base import ComponentTestBaseWithoutClient
 
-class TestConditionalRouterComponent:
+
+class TestConditionalRouterComponent(ComponentTestBaseWithoutClient):
     """Test cases for ConditionalRouterComponent."""
 
     @pytest.fixture
-    def component(self):
-        """Create a ConditionalRouterComponent instance for testing."""
-        return ConditionalRouterComponent()
+    def component_class(self):
+        """Return the component class to test."""
+        return ConditionalRouterComponent
 
-    def test_component_initialization(self, component):
+    @pytest.fixture
+    def default_kwargs(self):
+        """Return the default kwargs for the component."""
+        return {
+            "input_text": "test input",
+            "operator": "equals",
+            "match_text": "test input",
+            "case_sensitive": True,
+            "true_case_message": Message(content="true result"),
+            "false_case_message": Message(content="false result"),
+            "max_iterations": 10,
+            "default_route": "true_result",
+        }
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        """Return an empty list since this component doesn't have version-specific files."""
+        return []
+
+    async def test_component_initialization(self, component_class, default_kwargs):
         """Test proper initialization of ConditionalRouterComponent."""
+        component = await self.component_setup(component_class, default_kwargs)
         assert component.display_name == "If-Else"
         assert "Routes an input message" in component.description
         assert component.name == "ConditionalRouter"
@@ -23,8 +45,9 @@ class TestConditionalRouterComponent:
         assert hasattr(component, "_ConditionalRouterComponent__iteration_updated")
         assert component._ConditionalRouterComponent__iteration_updated is False
 
-    def test_inputs_configuration(self, component):
+    async def test_inputs_configuration(self, component_class, default_kwargs):
         """Test that inputs are properly configured."""
+        component = await self.component_setup(component_class, default_kwargs)
         expected_inputs = [
             "input_text",
             "operator",
@@ -42,15 +65,17 @@ class TestConditionalRouterComponent:
         for expected_input in expected_inputs:
             assert expected_input in input_names
 
-    def test_outputs_configuration(self, component):
+    async def test_outputs_configuration(self, component_class, default_kwargs):
         """Test that outputs are properly configured."""
+        component = await self.component_setup(component_class, default_kwargs)
         assert len(component.outputs) == 2
         output_names = [out.name for out in component.outputs]
         assert "true_result" in output_names
         assert "false_result" in output_names
 
-    def test_pre_run_setup(self, component):
+    async def test_pre_run_setup(self, component_class, default_kwargs):
         """Test _pre_run_setup method."""
+        component = await self.component_setup(component_class, default_kwargs)
         component._ConditionalRouterComponent__iteration_updated = True
         component._pre_run_setup()
         assert component._ConditionalRouterComponent__iteration_updated is False
@@ -101,18 +126,21 @@ class TestConditionalRouterComponent:
             ("10", "abc", "less than", True, False),
         ],
     )
-    def test_evaluate_condition(self, component, input_text, match_text, operator, case_sensitive, expected):
+    async def test_evaluate_condition(self, component_class, default_kwargs, input_text, match_text, operator, case_sensitive, expected):
         """Test evaluate_condition method with various inputs."""
+        component = await self.component_setup(component_class, default_kwargs)
         result = component.evaluate_condition(input_text, match_text, operator, case_sensitive=case_sensitive)
         assert result == expected
 
-    def test_evaluate_condition_unknown_operator(self, component):
+    async def test_evaluate_condition_unknown_operator(self, component_class, default_kwargs):
         """Test evaluate_condition with unknown operator."""
+        component = await self.component_setup(component_class, default_kwargs)
         result = component.evaluate_condition("hello", "hello", "unknown_operator", case_sensitive=True)
         assert result is False
 
-    def test_iterate_and_stop_once_initial_call(self, component):
+    async def test_iterate_and_stop_once_initial_call(self, component_class, default_kwargs):
         """Test iterate_and_stop_once method on initial call."""
+        component = await self.component_setup(component_class, default_kwargs)
         # Set up component attributes
         component.max_iterations = 5
         component.default_route = "false_result"
@@ -137,8 +165,9 @@ class TestConditionalRouterComponent:
             mock_exclude.assert_called_once_with("test_id", output_name="false_result")
             assert component._ConditionalRouterComponent__iteration_updated is True
 
-    def test_iterate_and_stop_once_max_iterations_reached(self, component):
+    async def test_iterate_and_stop_once_max_iterations_reached(self, component_class, default_kwargs):
         """Test iterate_and_stop_once when max iterations are reached."""
+        component = await self.component_setup(component_class, default_kwargs)
         # Set up component attributes
         component.max_iterations = 5
         component.default_route = "false_result"
@@ -167,8 +196,9 @@ class TestConditionalRouterComponent:
             # exclude_branch_conditionally should NOT be called when breaking cycle
             mock_exclude.assert_not_called()
 
-    def test_iterate_and_stop_once_already_updated(self, component):
+    async def test_iterate_and_stop_once_already_updated(self, component_class, default_kwargs):
         """Test iterate_and_stop_once when already updated in this iteration."""
+        component = await self.component_setup(component_class, default_kwargs)
         # Set up component state - when already updated, method should return early
         component._ConditionalRouterComponent__iteration_updated = True
 
@@ -184,37 +214,48 @@ class TestConditionalRouterComponent:
             mock_update.assert_not_called()
             mock_stop.assert_not_called()
 
-    def test_true_response_condition_true(self, component):
+    async def test_true_response_condition_true(self, component_class, default_kwargs):
         """Test true_response when condition evaluates to True."""
+        component = await self.component_setup(component_class, default_kwargs)
         component.input_text = "hello"
         component.match_text = "hello"
         component.operator = "equals"
         component.case_sensitive = True
         component.true_case_message = Message(content="True case")
 
-        with patch.object(component, "iterate_and_stop_once") as mock_iterate:
+        with (
+            patch.object(component, "iterate_and_stop_once") as mock_iterate,
+            patch.object(type(component), "ctx", new_callable=dict),
+            patch.object(component, "_id", "test_id"),
+        ):
             result = component.true_response()
 
             assert result == component.true_case_message
             assert component.status == component.true_case_message
             mock_iterate.assert_called_once_with("false_result")
 
-    def test_true_response_condition_false(self, component):
+    async def test_true_response_condition_false(self, component_class, default_kwargs):
         """Test true_response when condition evaluates to False."""
+        component = await self.component_setup(component_class, default_kwargs)
         component.input_text = "hello"
         component.match_text = "world"
         component.operator = "equals"
         component.case_sensitive = True
 
-        with patch.object(component, "iterate_and_stop_once") as mock_iterate:
+        with (
+            patch.object(component, "iterate_and_stop_once") as mock_iterate,
+            patch.object(type(component), "ctx", new_callable=dict),
+            patch.object(component, "_id", "test_id"),
+        ):
             result = component.true_response()
 
             assert isinstance(result, Message)
             assert result.content == ""
             mock_iterate.assert_called_once_with("true_result")
 
-    def test_false_response_condition_false(self, component):
+    async def test_false_response_condition_false(self, component_class, default_kwargs):
         """Test false_response when condition evaluates to False."""
+        component = await self.component_setup(component_class, default_kwargs)
         component.input_text = "hello"
         component.match_text = "world"
         component.operator = "equals"
@@ -228,8 +269,9 @@ class TestConditionalRouterComponent:
             assert component.status == component.false_case_message
             mock_iterate.assert_called_once_with("true_result")
 
-    def test_false_response_condition_true(self, component):
+    async def test_false_response_condition_true(self, component_class, default_kwargs):
         """Test false_response when condition evaluates to True."""
+        component = await self.component_setup(component_class, default_kwargs)
         component.input_text = "hello"
         component.match_text = "hello"
         component.operator = "equals"
@@ -242,16 +284,18 @@ class TestConditionalRouterComponent:
             assert result.content == ""
             mock_iterate.assert_called_once_with("false_result")
 
-    def test_update_build_config_regex_operator(self, component):
+    async def test_update_build_config_regex_operator(self, component_class, default_kwargs):
         """Test update_build_config when operator is regex."""
+        component = await self.component_setup(component_class, default_kwargs)
         build_config = {"case_sensitive": {"show": True}}
 
         result = component.update_build_config(build_config, "regex", "operator")
 
         assert "case_sensitive" not in result
 
-    def test_update_build_config_non_regex_operator(self, component):
+    async def test_update_build_config_non_regex_operator(self, component_class, default_kwargs):
         """Test update_build_config when operator is not regex."""
+        component = await self.component_setup(component_class, default_kwargs)
         build_config = {}
 
         # Find the actual case_sensitive input in the component
@@ -264,22 +308,25 @@ class TestConditionalRouterComponent:
         assert "case_sensitive" in result
         assert isinstance(result["case_sensitive"], dict)
 
-    def test_update_build_config_non_operator_field(self, component):
+    async def test_update_build_config_non_operator_field(self, component_class, default_kwargs):
         """Test update_build_config when field is not operator."""
+        component = await self.component_setup(component_class, default_kwargs)
         build_config = {"some_field": "value"}
 
         result = component.update_build_config(build_config, "some_value", "some_field")
 
         assert result == build_config  # Should return unchanged
 
-    def test_regex_error_handling(self, component):
+    async def test_regex_error_handling(self, component_class, default_kwargs):
         """Test that invalid regex patterns are handled gracefully."""
+        component = await self.component_setup(component_class, default_kwargs)
         # Test with an invalid regex pattern
         result = component.evaluate_condition("test", "[invalid", "regex", case_sensitive=True)
         assert result is False
 
-    def test_numeric_comparison_edge_cases(self, component):
+    async def test_numeric_comparison_edge_cases(self, component_class, default_kwargs):
         """Test numeric comparison with edge cases."""
+        component = await self.component_setup(component_class, default_kwargs)
         # Float comparison
         result = component.evaluate_condition("10.5", "10", "greater than", case_sensitive=True)
         assert result is True
@@ -292,8 +339,9 @@ class TestConditionalRouterComponent:
         result = component.evaluate_condition("100000.0", "100000.0", "equals", case_sensitive=True)
         assert result is True
 
-    def test_case_insensitive_operations(self, component):
+    async def test_case_insensitive_operations(self, component_class, default_kwargs):
         """Test that case insensitive operations work correctly for string operators."""
+        component = await self.component_setup(component_class, default_kwargs)
         test_cases = [
             ("Hello", "hello", "equals", False, True),
             ("Hello World", "WORLD", "contains", False, True),

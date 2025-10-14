@@ -3,17 +3,37 @@ from unittest.mock import patch
 import pytest
 from langflow.components.tools.python_code_structured_tool import PythonCodeStructuredTool
 
+from tests.base import ComponentTestBaseWithoutClient
 
-class TestPythonCodeStructuredTool:
+
+class TestPythonCodeStructuredTool(ComponentTestBaseWithoutClient):
     """Test cases for PythonCodeStructuredTool component."""
 
     @pytest.fixture
-    def component(self):
-        """Create a PythonCodeStructuredTool instance for testing."""
-        return PythonCodeStructuredTool()
+    def component_class(self):
+        """Return the component class to test."""
+        return PythonCodeStructuredTool
 
-    def test_initialization(self, component):
+    @pytest.fixture
+    def default_kwargs(self):
+        """Return the default kwargs for the component."""
+        return {
+            "tool_code": "def test_func(): return 42",
+            "tool_name": "test_tool",
+            "tool_description": "Test description",
+            "return_direct": False,
+            "tool_function": "test_func",
+            "global_variables": [],
+        }
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        """Return an empty list since this component doesn't have version-specific files."""
+        return []
+
+    async def test_initialization(self, component_class, default_kwargs):
         """Test proper initialization of component."""
+        component = await self.component_setup(component_class, default_kwargs)
         assert component.display_name == "Python Code Structured"
         assert component.description == "structuredtool dataclass code to tool"
         assert component.name == "PythonCodeStructuredTool"
@@ -36,16 +56,18 @@ class TestPythonCodeStructuredTool:
         ]
         assert expected_keys == component.DEFAULT_KEYS
 
-    def test_field_order(self, component):
+    async def test_field_order(self, component_class, default_kwargs):
         """Test field order configuration."""
+        component = await self.component_setup(component_class, default_kwargs)
         # field_order can be None if not explicitly set at instance level
         assert hasattr(component, "field_order")
         # The class-level field_order is what we expect
         expected_order = ["name", "description", "tool_code", "return_direct", "tool_function"]
         assert PythonCodeStructuredTool.field_order == expected_order
 
-    def test_inputs_configuration(self, component):
+    async def test_inputs_configuration(self, component_class, default_kwargs):
         """Test that inputs are properly configured."""
+        component = await self.component_setup(component_class, default_kwargs)
         # The component should have inputs defined
         assert hasattr(component, "inputs")
         assert len(component.inputs) > 0
@@ -57,14 +79,16 @@ class TestPythonCodeStructuredTool:
         for expected_input in expected_inputs:
             assert expected_input in input_names
 
-    def test_outputs_configuration(self, component):
+    async def test_outputs_configuration(self, component_class, default_kwargs):
         """Test that outputs are properly configured."""
+        component = await self.component_setup(component_class, default_kwargs)
         assert hasattr(component, "outputs")
         assert len(component.outputs) > 0
 
     @pytest.mark.asyncio
-    async def test_build_tool_method_exists(self, component):
+    async def test_build_tool_method_exists(self, component_class, default_kwargs):
         """Test that build_tool method exists and can be called."""
+        component = await self.component_setup(component_class, default_kwargs)
         # Set up required attributes for build_tool
         component.tool_code = "def test_func(): return 42"
         component.tool_name = "test_tool"
