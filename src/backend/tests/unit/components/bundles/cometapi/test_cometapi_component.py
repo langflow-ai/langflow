@@ -1,11 +1,10 @@
 import os
 from unittest.mock import MagicMock, patch
-from pydantic.v1 import SecretStr
 
 import pytest
-import requests
 from langchain_openai import ChatOpenAI
 from lfx.components.cometapi.cometapi import CometAPIComponent
+from pydantic.v1 import SecretStr
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -36,7 +35,7 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
         """Test basic component initialization."""
         component = component_class()
         component.set_attributes(default_kwargs)
-        
+
         assert component.display_name == "CometAPI"
         assert component.description == "All AI Models in One API 500+ AI Models"
         assert component.icon == "CometAPI"
@@ -54,7 +53,7 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
         """Test successful model building."""
         mock_instance = MagicMock()
         mock_chat_openai.return_value = mock_instance
-        
+
         component = component_class()
         component.set_attributes(default_kwargs)
         model = component.build_model()
@@ -111,15 +110,14 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="Please select a valid CometAPI model"):
             component.build_model()
 
-
     @patch("lfx.components.cometapi.cometapi.ChatOpenAI")
     def test_build_model_exception_handling(self, mock_chat_openai, component_class, default_kwargs):
         """Test that build_model handles exceptions properly."""
         mock_chat_openai.side_effect = ValueError("Invalid API key")
-        
+
         component = component_class()
         component.set_attributes(default_kwargs)
-        
+
         with pytest.raises(ValueError, match="Could not connect to CometAPI"):
             component.build_model()
 
@@ -128,11 +126,7 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
         """Test successful model fetching from API."""
         mock_response = MagicMock()
         mock_response.json.return_value = {
-            "data": [
-                {"id": "gpt-4o-mini"},
-                {"id": "claude-3-5-haiku-latest"},
-                {"id": "gemini-2.5-flash"}
-            ]
+            "data": [{"id": "gpt-4o-mini"}, {"id": "claude-3-5-haiku-latest"}, {"id": "gemini-2.5-flash"}]
         }
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
@@ -144,13 +138,9 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
         assert models == ["gpt-4o-mini", "claude-3-5-haiku-latest", "gemini-2.5-flash"]
         mock_get.assert_called_once_with(
             "https://api.cometapi.com/v1/models",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": "Bearer test-cometapi-key"
-            },
-            timeout=10
+            headers={"Content-Type": "application/json", "Authorization": "Bearer test-cometapi-key"},
+            timeout=10,
         )
-
 
     @patch("requests.get")
     def test_get_models_json_decode_error(self, mock_get, component_class, default_kwargs):
@@ -166,6 +156,7 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
 
         # Should return fallback models
         from lfx.base.models.cometapi_constants import MODEL_NAMES
+
         assert models == MODEL_NAMES
         assert "Error decoding models response" in component.status
 
@@ -201,41 +192,41 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
         """Test that component has all required inputs."""
         component = component_class()
         input_names = [input_.name for input_ in component.inputs]
-        
+
         expected_inputs = [
             "api_key",
-            "app_name", 
+            "app_name",
             "model_name",
             "model_kwargs",
             "temperature",
             "max_tokens",
             "seed",
-            "json_mode"
+            "json_mode",
         ]
-        
+
         for input_name in expected_inputs:
             assert input_name in input_names
 
     def test_component_input_requirements(self, component_class):
         """Test that required inputs are properly marked."""
         component = component_class()
-        
+
         # Find required inputs
         required_inputs = [input_ for input_ in component.inputs if input_.required]
         required_names = [input_.name for input_ in required_inputs]
-        
+
         assert "api_key" in required_names
         assert "model_name" in required_names
 
     def test_component_input_types(self, component_class):
         """Test that inputs have correct types."""
         component = component_class()
-        
+
         # Find specific inputs by name
         api_key_input = next(input_ for input_ in component.inputs if input_.name == "api_key")
         model_name_input = next(input_ for input_ in component.inputs if input_.name == "model_name")
         temperature_input = next(input_ for input_ in component.inputs if input_.name == "temperature")
-        
+
         assert api_key_input.field_type.value == "str"  # SecretStrInput
         assert model_name_input.field_type.value == "dropdown"  # DropdownInput
         assert temperature_input.field_type.value == "slider"  # SliderInput
