@@ -147,6 +147,7 @@ class SmartRouterComponent(Component):
         # Clear any previous match state
         self._matched_category = None
 
+        # Get categories and input text
         categories = getattr(self, "routes", [])
         input_text = getattr(self, "input_text", "")
 
