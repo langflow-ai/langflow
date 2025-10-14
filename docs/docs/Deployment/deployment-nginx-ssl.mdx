@@ -199,6 +199,15 @@ Install the Certbot client on your server to manage certificates, and install th
     sudo certbot --nginx -d DOMAIN_NAME
     ```
 
+    This result indicates that Certbot succeeded.
+    ```bash
+    Successfully received certificate.
+    Certificate is saved at: /etc/letsencrypt/live/DOMAIN_NAME/fullchain.pem
+    Key is saved at: /etc/letsencrypt/live/DOMAIN_NAME/privkey.pem
+    ```
+
+    When using `--nginx`, Certbot automatically injects the paths into your Nginx configuration as `ssl_certificate` and `ssl_certificate_key`.
+
 3. Start Langflow from the virtual environment.
 
     a. Activate the virtual environment.

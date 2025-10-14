@@ -177,6 +177,11 @@ module.exports = {
           label: "Deploy a public Langflow server"
         },
         {
+          type: "doc",
+          id: "Deployment/deployment-nginx-ssl",
+          label: "Deploy Langflow with Nginx and SSL"
+        },
+        {
           type: "category",
           label: "Containerized deployments",
           items: [
@@ -190,11 +195,6 @@ module.exports = {
               type: "doc",
               id: "Deployment/deployment-caddyfile",
               label: "Deploy Langflow on a remote server"
-            },
-            {
-              type: "doc",
-              id: "Deployment/deployment-nginx-ssl",
-              label: "Deploy Langflow with Nginx and SSL"
             },
             {
               type: "category",
