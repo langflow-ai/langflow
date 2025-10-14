@@ -8,7 +8,6 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, HandleInput, IntInput, MultilineInput, Output
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
-from lfx.utils.data_structure import get_data_structure
 
 if TYPE_CHECKING:
     from collections.abc import Callable
