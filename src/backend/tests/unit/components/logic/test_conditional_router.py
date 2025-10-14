@@ -126,7 +126,9 @@ class TestConditionalRouterComponent(ComponentTestBaseWithoutClient):
             ("10", "abc", "less than", True, False),
         ],
     )
-    async def test_evaluate_condition(self, component_class, default_kwargs, input_text, match_text, operator, case_sensitive, expected):
+    async def test_evaluate_condition(
+        self, component_class, default_kwargs, input_text, match_text, operator, case_sensitive, expected
+    ):
         """Test evaluate_condition method with various inputs."""
         component = await self.component_setup(component_class, default_kwargs)
         result = component.evaluate_condition(input_text, match_text, operator, case_sensitive=case_sensitive)
