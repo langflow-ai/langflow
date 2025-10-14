@@ -366,8 +366,8 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
     async def test_agent_filters_empty_chat_history_messages(self, component_class, default_kwargs):
         """Test that empty messages in chat history are filtered out."""
-        from lfx.schema.message import Message
         from lfx.base.agents.utils import data_to_messages
+        from lfx.schema.message import Message
 
         # Create messages with varying content
         empty_message = Message(text="", sender="User", sender_name="User")
@@ -491,7 +491,6 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
             except Exception as e:
                 failed_models[model_name] = f"Exception occurred: {e!s}"
 
-
         assert not failed_models, "The following models failed the test:\n" + "\n".join(
             f"{model}: {error}" for model, error in failed_models.items()
         )
@@ -572,7 +571,9 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
             # If an error occurs, make sure it's NOT the empty content error
             error_message = str(e)
             assert "messages.2" not in error_message, f"Empty content error still occurs: {error_message}"
-            assert "must have non-empty content" not in error_message, f"Empty content error still occurs: {error_message}"
+            assert "must have non-empty content" not in error_message, (
+                f"Empty content error still occurs: {error_message}"
+            )
             # Re-raise if it's a different error
             raise
 
@@ -603,6 +604,8 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
             # If an error occurs, make sure it's NOT the empty content error
             error_message = str(e)
             assert "messages.2" not in error_message, f"Empty content error still occurs: {error_message}"
-            assert "must have non-empty content" not in error_message, f"Empty content error still occurs: {error_message}"
+            assert "must have non-empty content" not in error_message, (
+                f"Empty content error still occurs: {error_message}"
+            )
             # Re-raise if it's a different error
             raise

@@ -55,13 +55,10 @@ def data_to_messages(data: list[Data | Message]) -> list[BaseMessage]:
             lc_message = value.to_lc_message()
             # Only add messages with non-empty content (prevents Anthropic API errors)
             content = lc_message.content
-            if content and (
-                (isinstance(content, str) and content.strip())
-                or (isinstance(content, list) and content)
-            ):
+            if content and ((isinstance(content, str) and content.strip()) or (isinstance(content, list) and content)):
                 messages.append(lc_message)
             else:
-                logger.warning(f"Skipping message with empty content in chat history")
+                logger.warning("Skipping message with empty content in chat history")
         except (ValueError, AttributeError) as e:
             logger.warning(f"Failed to convert message to BaseMessage: {e}")
             continue

@@ -169,9 +169,7 @@ class LCAgentComponent(Component):
             # Extract text content from remaining items
             if text_items:
                 # If there are text items, extract their text content
-                input_text = " ".join(
-                    item.get("text", "") for item in text_items if item.get("type") == "text"
-                ).strip()
+                input_text = " ".join(item.get("text", "") for item in text_items if item.get("type") == "text").strip()
 
             # If input_text is still a list or empty, provide a default
             if isinstance(input_text, list) or not input_text:
