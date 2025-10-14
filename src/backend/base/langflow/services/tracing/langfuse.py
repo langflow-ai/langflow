@@ -156,7 +156,7 @@ class LangFuseTracer(BaseTracer):
 
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         """Get langchain callback for tracing.
-        
+
         Note: Langfuse callbacks have an architectural issue with agent tool execution.
         The callback's internal run tracking doesn't properly handle agent tool calls
         because the agent's run_id is cleaned up before tools execute. We wrap the
@@ -195,11 +195,9 @@ def _create_dummy_parent(base_callback):
                     if parent_run_id not in self.runs:
                         logger.debug("Langfuse: Auto-creating missing parent span")
                         self.runs[parent_run_id] = self.trace.span(
-                            name="Agent Execution",
-                            metadata={"auto_created": True}
+                            name="Agent Execution", metadata={"auto_created": True}
                         )
-            return super().on_tool_start(serialized, input_str, run_id=run_id,
-                                        parent_run_id=parent_run_id, **kwargs)
+            return super().on_tool_start(serialized, input_str, run_id=run_id, parent_run_id=parent_run_id, **kwargs)
 
     wrapped = DummyParent.__new__(DummyParent)
     wrapped.__dict__.update(base_callback.__dict__)
