@@ -22,6 +22,7 @@ COMETAPI_MODELS: Final[list[str]] = [
     "o4-mini-2025-04-16",
     "o3-pro-2025-06-10",
     # Claude series
+    "claude-sonnet-4-5-20250929",
     "claude-opus-4-1-20250805",
     "claude-opus-4-1-20250805-thinking",
     "claude-sonnet-4-20250514",
