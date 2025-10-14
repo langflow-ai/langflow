@@ -4,7 +4,7 @@ from typing import Any
 from fastapi import HTTPException
 from langchain_core.prompts import PromptTemplate
 
-from lfx.inputs.inputs import DefaultPromptField
+from lfx.inputs.inputs import DefaultPromptField, JinjaPromptField
 from lfx.interface.utils import extract_input_variables_from_prompt
 from lfx.log.logger import logger
 
@@ -122,8 +122,16 @@ def _check_input_variables(input_variables):
     return fixed_variables
 
 
-def validate_prompt(prompt_template: str, *, silent_errors: bool = False) -> list[str]:
-    input_variables = extract_input_variables_from_prompt(prompt_template)
+def validate_prompt(
+    prompt_template: str,
+    template_format: str = "f-string",
+    *,
+    silent_errors: bool = False,
+) -> list[str]:
+    if isinstance(template_format, str) and template_format.startswith("jinja"):
+        input_variables = PromptTemplate.from_template(prompt_template, template_format=template_format).input_variables
+    else:
+        input_variables = extract_input_variables_from_prompt(prompt_template)
 
     # Check if there are invalid characters in the input_variables
     input_variables = _check_input_variables(input_variables)
@@ -132,7 +140,11 @@ def validate_prompt(prompt_template: str, *, silent_errors: bool = False) -> lis
         raise ValueError(msg)
 
     try:
-        PromptTemplate(template=prompt_template, input_variables=input_variables)
+        PromptTemplate(
+            template=prompt_template,
+            template_format=template_format,
+            input_variables=input_variables,
+        )
     except Exception as exc:
         msg = f"Invalid prompt: {exc}"
         logger.exception(msg)
@@ -161,9 +173,16 @@ def get_old_custom_fields(custom_fields, name):
 
 
 def add_new_variables_to_template(input_variables, custom_fields, template, name) -> None:
+    template_format = template.get("template_format", {}).get("value", "f-string")
     for variable in input_variables:
         try:
-            template_field = DefaultPromptField(name=variable, display_name=variable)
+            if template_format == "f-string":
+                template_field = DefaultPromptField(name=variable, display_name=variable)
+            else:
+                if variable in template:
+                    template[variable]["advanced"] = False
+                    continue
+                template_field = JinjaPromptField(name=variable, display_name=variable)
             if variable in template:
                 # Set the new field with the old value
                 template_field.value = template[variable]["value"]
@@ -199,11 +218,15 @@ def update_input_variables_field(input_variables, template) -> None:
 
 
 def process_prompt_template(
-    template: str, name: str, custom_fields: dict[str, list[str]] | None, frontend_node_template: dict[str, Any]
+    template: str,
+    name: str,
+    custom_fields: dict[str, list[str]] | None,
+    frontend_node_template: dict[str, Any],
 ):
     """Process and validate prompt template, update template and custom fields."""
     # Validate the prompt template and extract input variables
-    input_variables = validate_prompt(template)
+    template_format = frontend_node_template.get("template_format", {}).get("value", "f-string")
+    input_variables = validate_prompt(template, template_format)
 
     # Initialize custom_fields if None
     if custom_fields is None:

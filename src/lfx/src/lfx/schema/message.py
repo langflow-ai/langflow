@@ -28,6 +28,8 @@ from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSA
 from lfx.utils.image import create_image_content_dict
 
 if TYPE_CHECKING:
+    from langchain_core.prompts.string import PromptTemplateFormat
+
     from lfx.schema.dataframe import DataFrame
 
 
@@ -251,7 +253,9 @@ class Message(Data):
         return cls(prompt=prompt_json)
 
     def format_text(self):
-        prompt_template = PromptTemplate.from_template(self.template)
+        prompt_template = PromptTemplate.from_template(
+            self.template, template_format=(self.template_format or "f-string")
+        )
         variables_with_str_values = dict_values_to_string(self.variables)
         formatted_prompt = prompt_template.format(**variables_with_str_values)
         self.text = formatted_prompt
@@ -265,8 +269,8 @@ class Message(Data):
 
     # Define a sync version for backwards compatibility with versions >1.0.15, <1.1
     @classmethod
-    def from_template(cls, template: str, **variables):
-        instance = cls(template=template, variables=variables)
+    def from_template(cls, template: str, template_format: PromptTemplateFormat = "f-string", **variables):
+        instance = cls(template=template, template_format=template_format, variables=variables)
         text = instance.format_text()
         message = HumanMessage(content=text)
         contents = []

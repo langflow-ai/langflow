@@ -658,6 +658,15 @@ class DefaultPromptField(Input):
     value: Any = ""  # Set the value to empty string
 
 
+class JinjaPromptField(Input):
+    name: str
+    display_name: str | None = None
+    field_type: str = "Any"
+    advanced: bool = False
+    input_types: list[str] = ["Message", "str", "Data"]
+    value: Any = ""  # Set the value to empty string
+
+
 InputTypes: TypeAlias = (
     Input
     | AuthInput
