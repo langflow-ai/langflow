@@ -1,51 +1,18 @@
-"""Tests for PromptComponent with both f-string and mustache modes."""
-
-import pytest
+"""Tests for PromptComponent with f-string syntax."""
 
 from lfx.components.processing.prompt import PromptComponent
-from lfx.inputs.input_mixin import FieldTypes
 
 
 class TestPromptComponent:
-    """Test the PromptComponent with both modes."""
+    """Test the PromptComponent."""
 
-    # Mode switching tests
-    def test_update_build_config_changes_to_mustache(self):
-        """Test that mode change to {{variable}} changes template field type to mustache."""
-        component = PromptComponent()
-        build_config = {"template": {"type": "prompt"}}
-
-        result = component.update_build_config(build_config, "{{variable}}", "mode")
-
-        assert result["template"]["type"] == FieldTypes.MUSTACHE_PROMPT.value
-
-    def test_update_build_config_changes_to_fstring(self):
-        """Test that mode change to {variable} changes template field type to prompt."""
-        component = PromptComponent()
-        build_config = {"template": {"type": "mustache"}}
-
-        result = component.update_build_config(build_config, "{variable}", "mode")
-
-        assert result["template"]["type"] == FieldTypes.PROMPT.value
-
-    def test_update_build_config_ignores_other_fields(self):
-        """Test that update_build_config ignores non-mode fields."""
-        component = PromptComponent()
-        build_config = {"template": {"type": "prompt"}}
-
-        result = component.update_build_config(build_config, "some value", "other_field")
-
-        assert result["template"]["type"] == "prompt"  # Unchanged
-
-    # F-string mode tests
-    def test_update_template_fstring_mode(self):
-        """Test template update with f-string mode."""
+    def test_update_template_single_variable(self):
+        """Test template update with a single variable."""
         component = PromptComponent()
 
         frontend_node = {
             "template": {
                 "template": {"value": "Hello {name}!"},
-                "mode": {"value": "{variable}"},
             },
             "custom_fields": {},
         }
@@ -55,14 +22,13 @@ class TestPromptComponent:
         assert "name" in result["custom_fields"]["template"]
         assert "name" in result["template"]
 
-    def test_update_template_fstring_multiple_variables(self):
-        """Test f-string template with multiple variables."""
+    def test_update_template_multiple_variables(self):
+        """Test template with multiple variables."""
         component = PromptComponent()
 
         frontend_node = {
             "template": {
                 "template": {"value": "{greeting} {name}!"},
-                "mode": {"value": "{variable}"},
             },
             "custom_fields": {},
         }
@@ -72,94 +38,58 @@ class TestPromptComponent:
         assert "greeting" in result["custom_fields"]["template"]
         assert "name" in result["custom_fields"]["template"]
 
-    # Mustache mode tests
-    def test_update_template_mustache_mode(self):
-        """Test template update with mustache mode."""
+    def test_update_template_duplicate_variables(self):
+        """Test template with duplicate variables only creates one field."""
         component = PromptComponent()
 
         frontend_node = {
             "template": {
-                "template": {"value": "Hello {{name}}!"},
-                "mode": {"value": "{{variable}}"},
+                "template": {"value": "Hello {name}! How are you {name}?"},
             },
             "custom_fields": {},
         }
 
         result = component._update_template(frontend_node)
 
-        assert "name" in result["custom_fields"]["template"]
+        assert result["custom_fields"]["template"].count("name") == 1
         assert "name" in result["template"]
 
-    def test_update_template_mustache_multiple_variables(self):
-        """Test mustache template with multiple variables."""
+    def test_update_template_no_variables(self):
+        """Test template with no variables."""
         component = PromptComponent()
 
         frontend_node = {
             "template": {
-                "template": {"value": "{{greeting}} {{name}}!"},
-                "mode": {"value": "{{variable}}"},
+                "template": {"value": "Hello World!"},
             },
             "custom_fields": {},
         }
 
         result = component._update_template(frontend_node)
 
-        assert "greeting" in result["custom_fields"]["template"]
-        assert "name" in result["custom_fields"]["template"]
+        assert len(result["custom_fields"].get("template", [])) == 0
 
-    def test_update_template_mustache_dot_notation(self):
-        """Test mustache template with dot notation."""
+    def test_update_template_escaped_braces(self):
+        """Test template with escaped braces doesn't create variables."""
         component = PromptComponent()
 
         frontend_node = {
             "template": {
-                "template": {"value": "User: {{user.name}}"},
-                "mode": {"value": "{{variable}}"},
+                "template": {"value": "Result: {{not_a_var}} but {real_var} works"},
             },
             "custom_fields": {},
         }
 
         result = component._update_template(frontend_node)
 
-        # Should extract the dotted variable
-        assert len(result["custom_fields"]["template"]) > 0
+        # Only {real_var} should be extracted
+        assert "real_var" in result["custom_fields"]["template"]
+        # {{not_a_var}} should NOT be extracted in f-string mode
+        assert "not_a_var" not in result["custom_fields"]["template"]
 
-    def test_update_template_mustache_rejects_complex_syntax(self):
-        """Test that mustache mode rejects complex syntax."""
+    async def test_build_prompt_basic(self):
+        """Test building a basic prompt."""
         component = PromptComponent()
-
-        frontend_node = {
-            "template": {
-                "template": {"value": "{{#show}}Hello{{/show}}"},
-                "mode": {"value": "{{variable}}"},
-            },
-            "custom_fields": {},
-        }
-
-        with pytest.raises(ValueError, match="Complex mustache syntax is not allowed"):
-            component._update_template(frontend_node)
-
-    def test_update_template_defaults_to_fstring(self):
-        """Test that template defaults to f-string mode when mode is missing."""
-        component = PromptComponent()
-
-        frontend_node = {
-            "template": {
-                "template": {"value": "Hello {name}!"},
-                # mode is missing
-            },
-            "custom_fields": {},
-        }
-
-        result = component._update_template(frontend_node)
-
-        assert "name" in result["custom_fields"]["template"]
-
-    # Build prompt tests
-    async def test_build_prompt_fstring_mode(self):
-        """Test building prompt with f-string mode."""
-        component = PromptComponent()
-        component.mode = "{variable}"
         component._attributes = {
             "template": "Hello {name}!",
             "name": "World",
@@ -170,55 +100,27 @@ class TestPromptComponent:
         assert result.text == "Hello World!"
         assert result.template == "Hello {name}!"
 
-    async def test_build_prompt_mustache_mode(self):
-        """Test building prompt with mustache mode."""
+    async def test_build_prompt_multiple_variables(self):
+        """Test building prompt with multiple variables."""
         component = PromptComponent()
-        component.mode = "{{variable}}"
         component._attributes = {
-            "template": "Hello {{name}}!",
-            "name": "World",
+            "template": "{greeting} {name}! You are {age} years old.",
+            "greeting": "Hello",
+            "name": "Alice",
+            "age": "25",
         }
 
         result = await component.build_prompt()
 
-        assert result.text == "Hello World!"
-        assert result.template == "Hello {{name}}!"
+        assert result.text == "Hello Alice! You are 25 years old."
 
-    async def test_build_prompt_mustache_missing_variable(self):
-        """Test mustache mode with missing variable."""
-        component = PromptComponent()
-        component.mode = "{{variable}}"
-        component._attributes = {
-            "template": "Hello {{name}}!",
-            # name is missing
-        }
-
-        result = await component.build_prompt()
-
-        assert result.text == "Hello !"
-
-    async def test_build_prompt_defaults_to_fstring(self):
-        """Test that build_prompt defaults to f-string mode."""
-        component = PromptComponent()
-        # Don't set mode - should default
-        component._attributes = {
-            "template": "Hello {name}!",
-            "name": "World",
-        }
-
-        result = await component.build_prompt()
-
-        assert result.text == "Hello World!"
-
-    # Update frontend node tests
-    async def test_update_frontend_node_fstring_mode(self):
-        """Test update_frontend_node with f-string mode."""
+    async def test_update_frontend_node(self):
+        """Test update_frontend_node processes template correctly."""
         component = PromptComponent()
 
         new_node = {
             "template": {
                 "template": {"value": "Hello {name}!"},
-                "mode": {"value": "{variable}"},
             },
             "custom_fields": {},
         }
@@ -230,15 +132,15 @@ class TestPromptComponent:
         result = await component.update_frontend_node(new_node, current_node)
 
         assert "name" in result["custom_fields"]["template"]
+        assert "name" in result["template"]
 
-    async def test_update_frontend_node_mustache_mode(self):
-        """Test update_frontend_node with mustache mode."""
+    async def test_update_frontend_node_creates_variable_fields(self):
+        """Test that update_frontend_node creates fields for template variables."""
         component = PromptComponent()
 
         new_node = {
             "template": {
-                "template": {"value": "Hello {{name}}!"},
-                "mode": {"value": "{{variable}}"},
+                "template": {"value": "Hello {name} and {greeting}!"},
             },
             "custom_fields": {},
         }
@@ -249,23 +151,6 @@ class TestPromptComponent:
 
         result = await component.update_frontend_node(new_node, current_node)
 
+        # Both variables should be in custom_fields
         assert "name" in result["custom_fields"]["template"]
-
-    async def test_update_frontend_node_mustache_rejects_complex(self):
-        """Test that update_frontend_node rejects complex mustache syntax."""
-        component = PromptComponent()
-
-        new_node = {
-            "template": {
-                "template": {"value": "{{#show}}Hello{{/show}}"},
-                "mode": {"value": "{{variable}}"},
-            },
-            "custom_fields": {},
-        }
-
-        current_node = {
-            "template": {"template": {"value": ""}},
-        }
-
-        with pytest.raises(ValueError, match="Complex mustache syntax is not allowed"):
-            await component.update_frontend_node(new_node, current_node)
+        assert "greeting" in result["custom_fields"]["template"]

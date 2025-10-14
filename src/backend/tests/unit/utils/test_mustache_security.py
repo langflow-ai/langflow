@@ -11,7 +11,7 @@ class TestMustacheSecurity:
         """Test that simple variables are accepted."""
         # Should not raise
         validate_mustache_template("Hello {{name}}!")
-        validate_mustache_template("{{user.name}} - {{user.email}}")
+        validate_mustache_template("{{user_name}} - {{user_email}}")
         validate_mustache_template("Price: {{price_100}}")
         validate_mustache_template("")
         validate_mustache_template("No variables here")
@@ -60,6 +60,10 @@ class TestMustacheSecurity:
         with pytest.raises(ValueError, match="Invalid mustache variable"):
             validate_mustache_template("{{}}")
 
+        # Dot notation (not supported)
+        with pytest.raises(ValueError, match="Invalid mustache variable"):
+            validate_mustache_template("{{user.name}}")
+
     def test_safe_render_simple_variables(self):
         """Test safe rendering of simple variables."""
         template = "Hello {{name}}! You are {{age}} years old."
@@ -67,26 +71,12 @@ class TestMustacheSecurity:
         result = safe_mustache_render(template, variables)
         assert result == "Hello Alice! You are 25 years old."
 
-    def test_safe_render_dot_notation(self):
-        """Test safe rendering with dot notation."""
-        template = "User: {{user.name}} ({{user.email}})"
-        variables = {"user": {"name": "Bob", "email": "bob@example.com"}}
-        result = safe_mustache_render(template, variables)
-        assert result == "User: Bob (bob@example.com)"
-
     def test_safe_render_missing_variables(self):
         """Test rendering with missing variables."""
         template = "Hello {{name}}! Your score is {{score}}."
         variables = {"name": "Charlie"}
         result = safe_mustache_render(template, variables)
         assert result == "Hello Charlie! Your score is ."
-
-    def test_safe_render_nested_objects(self):
-        """Test rendering with nested object properties."""
-        template = "Location: {{company.address.city}}, {{company.address.country}}"
-        variables = {"company": {"address": {"city": "San Francisco", "country": "USA"}}}
-        result = safe_mustache_render(template, variables)
-        assert result == "Location: San Francisco, USA"
 
     def test_safe_render_none_values(self):
         """Test rendering with None values."""
@@ -107,22 +97,23 @@ class TestMustacheSecurity:
         with pytest.raises(ValueError, match="Complex mustache syntax is not allowed"):
             safe_mustache_render("{{#if}}test{{/if}}", {"if": True})
 
-    def test_safe_render_with_object_attributes(self):
-        """Test rendering with object attributes."""
-
-        class User:
-            def __init__(self, name, email):
-                self.name = name
-                self.email = email
-
-        template = "User: {{user.name}} ({{user.email}})"
-        variables = {"user": User("David", "david@example.com")}
+    def test_safe_render_multiple_variables(self):
+        """Test rendering with multiple variables."""
+        template = "{{greeting}} {{name}}, welcome to {{place}}!"
+        variables = {"greeting": "Hello", "name": "Alice", "place": "Langflow"}
         result = safe_mustache_render(template, variables)
-        assert result == "User: David (david@example.com)"
+        assert result == "Hello Alice, welcome to Langflow!"
 
-    def test_safe_render_deep_nesting(self):
-        """Test rendering with deep nesting."""
-        template = "Value: {{a.b.c.d.e}}"
-        variables = {"a": {"b": {"c": {"d": {"e": "deep value"}}}}}
+    def test_safe_render_underscore_variables(self):
+        """Test rendering with underscore variable names."""
+        template = "Private: {{_private_var}}, Public: {{public_var}}"
+        variables = {"_private_var": "secret", "public_var": "visible"}
         result = safe_mustache_render(template, variables)
-        assert result == "Value: deep value"
+        assert result == "Private: secret, Public: visible"
+
+    def test_safe_render_empty_string_values(self):
+        """Test rendering with empty string values."""
+        template = "Start{{middle}}End"
+        variables = {"middle": ""}
+        result = safe_mustache_render(template, variables)
+        assert result == "StartEnd"
