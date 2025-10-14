@@ -257,7 +257,7 @@ def test_split_truncates_oversized_single_field():
 
     # Verify the chunk respects max size
     chunk_size = result[0]._calculate_url_size()
-    assert chunk_size <= 2000
+    assert chunk_size <= MAX_TELEMETRY_URL_SIZE
 
 
 def test_split_handles_empty_inputs():
@@ -300,7 +300,7 @@ def test_split_truncates_oversized_non_string_field():
 
     # Verify the chunk respects max size
     chunk_size = result[0]._calculate_url_size()
-    assert chunk_size <= 2000
+    assert chunk_size <= MAX_TELEMETRY_URL_SIZE
 
 
 def test_split_truncates_oversized_field_in_multi_field_payload():
@@ -328,7 +328,7 @@ def test_split_truncates_oversized_field_in_multi_field_payload():
     # All chunks must respect max size
     for chunk in result:
         chunk_size = chunk._calculate_url_size()
-        assert chunk_size <= 2000
+        assert chunk_size <= MAX_TELEMETRY_URL_SIZE
 
     # The huge_field should be truncated
     huge_field_found = False

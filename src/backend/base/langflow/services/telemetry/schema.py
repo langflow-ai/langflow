@@ -3,8 +3,8 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 # Maximum URL length for telemetry GET requests (Scarf pixel tracking)
-# Conservative limit to ensure compatibility with most servers/proxies
-MAX_TELEMETRY_URL_SIZE = 2000
+# Scarf supports up to 2KB (2048 bytes) for query parameters
+MAX_TELEMETRY_URL_SIZE = 2048
 
 
 class BasePayload(BaseModel):
