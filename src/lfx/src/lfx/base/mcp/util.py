@@ -65,6 +65,45 @@ ALLOWED_HEADERS = {
 }
 
 
+def create_mcp_http_client_with_ssl_option(
+    headers: dict[str, str] | None = None,
+    timeout: httpx.Timeout | None = None,
+    auth: httpx.Auth | None = None,
+    verify_ssl: bool = True,
+) -> httpx.AsyncClient:
+    """Create an httpx AsyncClient with configurable SSL verification.
+
+    This is a custom factory that extends the standard MCP client factory
+    to support disabling SSL verification for self-signed certificates.
+
+    Args:
+        headers: Optional headers to include with all requests.
+        timeout: Request timeout as httpx.Timeout object.
+        auth: Optional authentication handler.
+        verify_ssl: Whether to verify SSL certificates (default: True).
+
+    Returns:
+        Configured httpx.AsyncClient instance.
+    """
+    kwargs: dict[str, Any] = {
+        "follow_redirects": True,
+        "verify": verify_ssl,
+    }
+
+    if timeout is None:
+        kwargs["timeout"] = httpx.Timeout(30.0)
+    else:
+        kwargs["timeout"] = timeout
+
+    if headers is not None:
+        kwargs["headers"] = headers
+
+    if auth is not None:
+        kwargs["auth"] = auth
+
+    return httpx.AsyncClient(**kwargs)
+
+
 def validate_headers(headers: dict[str, str]) -> dict[str, str]:
     """Validate and sanitize HTTP headers according to RFC 7230.
 
@@ -675,7 +714,7 @@ class MCPSessionManager:
 
         Args:
             session_id: Unique identifier for this session
-            connection_params: Connection parameters including URL, headers, timeouts
+            connection_params: Connection parameters including URL, headers, timeouts, verify_ssl
             preferred_transport: If set to "sse", skip Streamable HTTP and go directly to SSE
 
         Returns:
@@ -691,6 +730,19 @@ class MCPSessionManager:
         # Track which transport succeeded
         used_transport: list[str] = []
 
+        # Get verify_ssl option from connection params, default to True
+        verify_ssl = connection_params.get("verify_ssl", True)
+
+        # Create custom httpx client factory with SSL verification option
+        def custom_httpx_factory(
+            headers: dict[str, str] | None = None,
+            timeout: httpx.Timeout | None = None,
+            auth: httpx.Auth | None = None,
+        ) -> httpx.AsyncClient:
+            return create_mcp_http_client_with_ssl_option(
+                headers=headers, timeout=timeout, auth=auth, verify_ssl=verify_ssl
+            )
+
         async def session_task():
             """Background task that keeps the session alive."""
             streamable_error = None
@@ -705,6 +757,7 @@ class MCPSessionManager:
                         url=connection_params["url"],
                         headers=connection_params["headers"],
                         timeout=connection_params["timeout_seconds"],
+                        httpx_client_factory=custom_httpx_factory,
                     ) as (read, write, _):
                         session = ClientSession(read, write)
                         async with session:
@@ -745,6 +798,7 @@ class MCPSessionManager:
                         connection_params["headers"],
                         connection_params["timeout_seconds"],
                         sse_read_timeout,
+                        httpx_client_factory=custom_httpx_factory,
                     ) as (read, write):
                         session = ClientSession(read, write)
                         async with session:
@@ -1196,6 +1250,7 @@ class MCPStreamableHttpClient:
         headers: dict[str, str] | None = None,
         timeout_seconds: int = 30,
         sse_read_timeout_seconds: int = 30,
+        verify_ssl: bool = True,
     ) -> list[StructuredTool]:
         """Connect to MCP server using Streamable HTTP transport with SSE fallback (SDK style)."""
         # Validate and sanitize headers early
@@ -1213,12 +1268,13 @@ class MCPStreamableHttpClient:
                 msg = f"Invalid Streamable HTTP or SSE URL ({url}): {error_msg}"
                 raise ValueError(msg)
             # Store connection parameters for later use in run_tool
-            # Include SSE read timeout for fallback
+            # Include SSE read timeout for fallback and SSL verification option
             self._connection_params = {
                 "url": url,
                 "headers": validated_headers,
                 "timeout_seconds": timeout_seconds,
                 "sse_read_timeout_seconds": sse_read_timeout_seconds,
+                "verify_ssl": verify_ssl,
             }
         elif headers:
             self._connection_params["headers"] = validated_headers
@@ -1238,11 +1294,17 @@ class MCPStreamableHttpClient:
         return response.tools
 
     async def connect_to_server(
-        self, url: str, headers: dict[str, str] | None = None, sse_read_timeout_seconds: int = 30
+        self,
+        url: str,
+        headers: dict[str, str] | None = None,
+        sse_read_timeout_seconds: int = 30,
+        verify_ssl: bool = True,
     ) -> list[StructuredTool]:
         """Connect to MCP server using Streamable HTTP with SSE fallback transport (SDK style)."""
         return await asyncio.wait_for(
-            self._connect_to_server(url, headers, sse_read_timeout_seconds=sse_read_timeout_seconds),
+            self._connect_to_server(
+                url, headers, sse_read_timeout_seconds=sse_read_timeout_seconds, verify_ssl=verify_ssl
+            ),
             timeout=get_settings_service().settings.mcp_server_timeout,
         )
 
@@ -1473,7 +1535,8 @@ async def update_tools(
         client = mcp_stdio_client
     elif mode in ["Streamable_HTTP", "SSE"]:
         # Streamable HTTP connection with SSE fallback
-        tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers)
+        verify_ssl = server_config.get("verify_ssl", True)
+        tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
         client = mcp_streamable_http_client
     else:
         logger.error(f"Invalid MCP server mode for '{server_name}': {mode}")
