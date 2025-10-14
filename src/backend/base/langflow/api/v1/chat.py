@@ -42,6 +42,7 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import (
     get_chat_service,
     get_queue_service,
+    get_session,
     get_telemetry_service,
     session_scope,
 )
@@ -289,12 +290,11 @@ async def build_vertex(
         if isinstance(cache, CacheMiss):
             # If there's no cache
             await logger.awarning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
-            async with session_scope() as session:
-                graph = await build_graph_from_db(
-                    flow_id=flow_id,
-                    session=session,
-                    chat_service=chat_service,
-                )
+            graph = await build_graph_from_db(
+                flow_id=flow_id,
+                session=await anext(get_session()),
+                chat_service=chat_service,
+            )
             run_id = str(uuid.uuid4())
             graph.set_run_id(run_id)
         else:
@@ -355,14 +355,6 @@ async def build_vertex(
             )
 
         timedelta = time.perf_counter() - start_time
-
-        # Use client_request_time if available for accurate end-to-end duration
-        if inputs and inputs.client_request_time:
-            # Convert client timestamp (ms) to seconds and calculate elapsed time
-            client_start_seconds = inputs.client_request_time / 1000
-            current_time_seconds = time.time()
-            timedelta = current_time_seconds - client_start_seconds
-
         duration = format_elapsed_time(timedelta)
         result_data_response.duration = duration
         result_data_response.timedelta = timedelta
