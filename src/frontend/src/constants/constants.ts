@@ -662,6 +662,7 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "float",
   "code",
   "prompt",
+  "mustache",
   "file",
   "int",
   "dict",
