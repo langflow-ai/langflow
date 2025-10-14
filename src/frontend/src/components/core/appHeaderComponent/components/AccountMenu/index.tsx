@@ -19,6 +19,7 @@ import { useDarkStore } from "@/stores/darkStore";
 import { cn, stripReleaseStageFromVersion } from "@/utils/utils";
 import { envConfig } from "@/config/env";
 import KeycloakService from "@/services/keycloak";
+import { BASENAME } from "@/customization/config-constants";
 import {
   HeaderMenu,
   HeaderMenuItemButton,
@@ -49,7 +50,8 @@ export const AccountMenu = () => {
         useFlowStore.getState().resetFlowState();
         useFlowsManagerStore.getState().resetStore();
         useFolderStore.getState().resetStore();
-        await KeycloakService.getInstance().logout();
+        const redirectToLogin = `${window.location.origin}${BASENAME || ""}/login`;
+        await KeycloakService.getInstance().logout(redirectToLogin);
       } catch (error) {
         console.error("Keycloak logout failed, falling back to API logout:", error);
         // Fallback to existing logout mutation

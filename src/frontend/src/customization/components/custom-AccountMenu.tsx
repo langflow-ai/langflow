@@ -7,6 +7,7 @@ import { HeaderMenuItems, HeaderMenuItemButton } from "@/components/core/appHead
 import { useLogout } from "@/controllers/API/queries/auth";
 import { envConfig } from "@/config/env";
 import KeycloakService from "@/services/keycloak";
+import { BASENAME } from "@/customization/config-constants";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -22,7 +23,8 @@ export function CustomAccountMenu() {
         useFlowStore.getState().resetFlowState();
         useFlowsManagerStore.getState().resetStore();
         useFolderStore.getState().resetStore();
-        await KeycloakService.getInstance().logout();
+        const redirectToLogin = `${window.location.origin}${BASENAME || ""}/login`;
+        await KeycloakService.getInstance().logout(redirectToLogin);
       } catch (error) {
         console.error("Keycloak logout failed, falling back to API logout:", error);
         mutationLogout();
