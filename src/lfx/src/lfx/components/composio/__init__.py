@@ -5,12 +5,18 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
+    from .agentql_composio import ComposioAgentQLAPIComponent
+    from .agiled_composio import ComposioAgiledAPIComponent
     from .airtable_composio import ComposioAirtableAPIComponent
     from .asana_composio import ComposioAsanaAPIComponent
     from .attio_composio import ComposioAttioAPIComponent
+    from .bolna_composio import ComposioBolnaAPIComponent
+    from .brightdata_composio import ComposioBrightdataAPIComponent
     from .calendly_composio import ComposioCalendlyAPIComponent
+    from .canvas_composio import ComposioCanvaasAPIComponent
     from .composio_api import ComposioAPIComponent
     from .contentful_composio import ComposioContentfulAPIComponent
+    from .digicert_composio import ComposioDigicertAPIComponent
     from .discord_composio import ComposioDiscordAPIComponent
     from .figma_composio import ComposioFigmaAPIComponent
     from .finage_composio import ComposioFinageAPIComponent
@@ -26,6 +32,7 @@ if TYPE_CHECKING:
     from .googlesheets_composio import ComposioGoogleSheetsAPIComponent
     from .googletasks_composio import ComposioGoogleTasksAPIComponent
     from .instagram_composio import ComposioInstagramAPIComponent
+    from .jira_composio import ComposioJiraAPIComponent
     from .jotform_composio import ComposioJotformAPIComponent
     from .klaviyo_composio import ComposioKlaviyoAPIComponent
     from .linear_composio import ComposioLinearAPIComponent
@@ -40,39 +47,48 @@ if TYPE_CHECKING:
     from .slack_composio import ComposioSlackAPIComponent
     from .slackbot_composio import ComposioSlackbotAPIComponent
     from .supabase_composio import ComposioSupabaseAPIComponent
+    from .timelinesai_composio import ComposioTimelinesAIAPIComponent
     from .todoist_composio import ComposioTodoistAPIComponent
     from .wrike_composio import ComposioWrikeAPIComponent
     from .youtube_composio import ComposioYoutubeAPIComponent
 
 _dynamic_imports = {
     "ComposioAPIComponent": "composio_api",
-    "ComposioGitHubAPIComponent": "github_composio",
-    "ComposioGmailAPIComponent": "gmail_composio",
-    "ComposioGoogleCalendarAPIComponent": "googlecalendar_composio",
-    "ComposioGooglemeetAPIComponent": "googlemeet_composio",
-    "ComposioOutlookAPIComponent": "outlook_composio",
-    "ComposioSlackAPIComponent": "slack_composio",
-    "ComposioGoogleTasksAPIComponent": "googletasks_composio",
-    "ComposioLinearAPIComponent": "linear_composio",
-    "ComposioRedditAPIComponent": "reddit_composio",
-    "ComposioSlackbotAPIComponent": "slackbot_composio",
-    "ComposioSupabaseAPIComponent": "supabase_composio",
-    "ComposioTodoistAPIComponent": "todoist_composio",
-    "ComposioYoutubeAPIComponent": "youtube_composio",
-    "ComposioGoogleDocsAPIComponent": "googledocs_composio",
-    "ComposioGoogleSheetsAPIComponent": "googlesheets_composio",
-    "ComposioKlaviyoAPIComponent": "klaviyo_composio",
-    "ComposioNotionAPIComponent": "notion_composio",
-    "ComposioOneDriveAPIComponent": "onedrive_composio",
+    "ComposioAgentQLAPIComponent": "agentql_composio",
+    "ComposioAgiledAPIComponent": "agiled_composio",
     "ComposioAirtableAPIComponent": "airtable_composio",
     "ComposioAsanaAPIComponent": "asana_composio",
     "ComposioAttioAPIComponent": "attio_composio",
+    "ComposioBolnaAPIComponent": "bolna_composio",
+    "ComposioBrightdataAPIComponent": "brightdata_composio",
     "ComposioCalendlyAPIComponent": "calendly_composio",
+    "ComposioCanvaasAPIComponent": "canvaas_composio",
     "ComposioContentfulAPIComponent": "contentful_composio",
     "ComposioDiscordAPIComponent": "discord_composio",
+    "ComposioDigicertAPIComponent": "digicert_composio",
     "ComposioFigmaAPIComponent": "figma_composio",
+    "ComposioGitHubAPIComponent": "github_composio",
+    "ComposioGmailAPIComponent": "gmail_composio",
+    "ComposioGoogleCalendarAPIComponent": "googlecalendar_composio",
+    "ComposioGoogleDocsAPIComponent": "googledocs_composio",
+    "ComposioGoogleSheetsAPIComponent": "googlesheets_composio",
+    "ComposioGoogleTasksAPIComponent": "googletasks_composio",
+    "ComposioGooglemeetAPIComponent": "googlemeet_composio",
+    "ComposioJiraAPIComponent": "jira_composio",
+    "ComposioKlaviyoAPIComponent": "klaviyo_composio",
+    "ComposioLinearAPIComponent": "linear_composio",
     "ComposioMiroAPIComponent": "miro_composio",
+    "ComposioNotionAPIComponent": "notion_composio",
+    "ComposioOneDriveAPIComponent": "onedrive_composio",
+    "ComposioOutlookAPIComponent": "outlook_composio",
+    "ComposioRedditAPIComponent": "reddit_composio",
+    "ComposioSlackAPIComponent": "slack_composio",
+    "ComposioSlackbotAPIComponent": "slackbot_composio",
+    "ComposioSupabaseAPIComponent": "supabase_composio",
+    "ComposioTimelinesAIAPIComponent": "timelinesai_composio",
+    "ComposioTodoistAPIComponent": "todoist_composio",
     "ComposioWrikeAPIComponent": "wrike_composio",
+    "ComposioYoutubeAPIComponent": "youtube_composio",
     "ComposioFinageAPIComponent": "finage_composio",
     "ComposioFixerAPIComponent": "fixer_composio",
     "ComposioFlexisignAPIComponent": "flexisign_composio",
@@ -88,11 +104,17 @@ _dynamic_imports = {
 # Always expose all components - individual failures will be handled on import
 __all__ = [
     "ComposioAPIComponent",
+    "ComposioAgentQLAPIComponent",
+    "ComposioAgiledAPIComponent",
     "ComposioAirtableAPIComponent",
     "ComposioAsanaAPIComponent",
     "ComposioAttioAPIComponent",
+    "ComposioBolnaAPIComponent",
+    "ComposioBrightdataAPIComponent",
     "ComposioCalendlyAPIComponent",
+    "ComposioCanvaasAPIComponent",
     "ComposioContentfulAPIComponent",
+    "ComposioDigicertAPIComponent",
     "ComposioDiscordAPIComponent",
     "ComposioFigmaAPIComponent",
     "ComposioFinageAPIComponent",
@@ -108,6 +130,7 @@ __all__ = [
     "ComposioGoogleclassroomAPIComponent",
     "ComposioGooglemeetAPIComponent",
     "ComposioInstagramAPIComponent",
+    "ComposioJiraAPIComponent",
     "ComposioJotformAPIComponent",
     "ComposioKlaviyoAPIComponent",
     "ComposioLinearAPIComponent",
@@ -122,6 +145,7 @@ __all__ = [
     "ComposioSlackAPIComponent",
     "ComposioSlackbotAPIComponent",
     "ComposioSupabaseAPIComponent",
+    "ComposioTimelinesAIAPIComponent",
     "ComposioTodoistAPIComponent",
     "ComposioWrikeAPIComponent",
     "ComposioYoutubeAPIComponent",
