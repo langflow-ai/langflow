@@ -57,7 +57,10 @@ class SmartRouterComponent(Component):
                     "name": "output_value",
                     "display_name": "Route Message (Optional)",
                     "type": "str",
-                    "description": "Optional message to send when this route is matched. Leave empty to pass through the original input text.",
+                    "description": (
+                        "Optional message to send when this route is matched."
+                        "Leave empty to pass through the original input text."
+                    ),
                     "default": "",
                     "edit_mode": EditMode.POPOVER,
                 },
