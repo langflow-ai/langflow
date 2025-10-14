@@ -26,7 +26,7 @@ class AstraDBChatMemory(AstraDBBaseComponent, LCChatMemoryComponent):
         except ImportError as e:
             msg = (
                 "Could not import langchain Astra DB integration package. "
-                "Please install it with `pip install langchain-astradb`."
+                "Please install it with `uv pip install langchain-astradb`."
             )
             raise ImportError(msg) from e
 
