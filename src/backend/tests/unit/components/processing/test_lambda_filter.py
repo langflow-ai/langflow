@@ -61,7 +61,7 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
         component = await self.component_setup(component_class, default_kwargs)
         component.llm.ainvoke.return_value.content = "lambda x: [item for item in x['items'] if item['value'] > 1500]"
 
-        # Execute filter
+        # Execute filter on the data
         result = await component.process_as_data()
 
         # Assertions - process_as_data() returns a Data object
