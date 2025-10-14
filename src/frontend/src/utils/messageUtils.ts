@@ -8,18 +8,23 @@ export const updateMessage = (updatedMessage: Message) => {
       { id: updatedMessage.flow_id, session_id: updatedMessage.session_id },
     ],
     (old: Message[]) => {
-      return (old.find((message) => message.id === updatedMessage.id)
-        ? old.map((message) =>
-            message.id === updatedMessage.id ? updatedMessage : message,
-          )
-        : [...old, updatedMessage]).filter((message) => message.id !== null);
+      return (
+        old.find((message) => message.id === updatedMessage.id)
+          ? old.map((message) =>
+              message.id === updatedMessage.id ? updatedMessage : message,
+            )
+          : [...old, updatedMessage]
+      ).filter((message) => message.id !== null);
     },
   );
 };
 
 export const addUserMessage = (updatedMessage: Message) => {
   queryClient.setQueryData(
-    ["useGetMessagesQuery", { id: updatedMessage.flow_id, session_id: updatedMessage.session_id }],
+    [
+      "useGetMessagesQuery",
+      { id: updatedMessage.flow_id, session_id: updatedMessage.session_id },
+    ],
     (old: Message[]) => {
       return [...old, updatedMessage];
     },
