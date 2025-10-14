@@ -10,8 +10,8 @@ type Message = {
   files: Array<string>;
   id: string | null;
   edit: boolean;
-  background_color: string;
-  text_color: string;
+  background_color?: string;
+  text_color?: string;
   category?: string;
   properties?: any;
   content_blocks?: ContentBlock[];
