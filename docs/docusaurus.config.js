@@ -132,7 +132,7 @@ const config = {
         specs: [
           {
             id: "api",
-            spec: "openapi/openapi.yaml",
+            spec: "openapi/openapi.json",
             route: "/api",
           },
         ],
