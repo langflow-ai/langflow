@@ -4,11 +4,33 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CustomProfileIcon } from "./custom-profile-icon";
 import { HeaderMenuItems, HeaderMenuItemButton } from "@/components/core/appHeaderComponent/components/HeaderMenu";
+import { useLogout } from "@/controllers/API/queries/auth";
+import { envConfig } from "@/config/env";
+import KeycloakService from "@/services/keycloak";
+import useAuthStore from "@/stores/authStore";
+import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useFolderStore } from "@/stores/foldersStore";
 
 export function CustomAccountMenu() {
-  const handleLogout = () => {
-    // TODO: Implement real logout logic later
-    console.log("Logout clicked");
+  const { mutate: mutationLogout } = useLogout();
+
+  const handleLogout = async () => {
+    if (envConfig.keycloakEnabled) {
+      try {
+        useAuthStore.getState().logout();
+        useFlowStore.getState().resetFlowState();
+        useFlowsManagerStore.getState().resetStore();
+        useFolderStore.getState().resetStore();
+        await KeycloakService.getInstance().logout();
+      } catch (error) {
+        console.error("Keycloak logout failed, falling back to API logout:", error);
+        mutationLogout();
+      }
+      return;
+    }
+
+    mutationLogout();
   };
 
   return (
