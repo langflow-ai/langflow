@@ -113,6 +113,7 @@ jobs:
           VITE_AUTO_LOGIN=false \
           VITE_CLERK_AUTH_ENABLED=true \
           VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.CLERK_PUBLISHABLE_KEY }} \
+          VITE_CLERK_FRONTEND_API=${{ vars.STAGING_CLERK_FRONTEND_API }} \
           make docker_build TAG=langflow:staging-$BRANCH_NAME-$COMMIT_ID
 
           docker tag langflow:staging-$BRANCH_NAME-$COMMIT_ID forwardemailforaifirstdesk/langflow:staging-$BRANCH_NAME-$COMMIT_ID
@@ -123,6 +124,7 @@ jobs:
           VITE_AUTO_LOGIN=false \
           VITE_CLERK_AUTH_ENABLED=true \
           VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.PROD_CLERK_PUBLISHABLE_KEY }} \
+          VITE_CLERK_FRONTEND_API=${{ vars.PROD_CLERK_FRONTEND_API }} \
           make docker_build TAG=langflow:prod-$BRANCH_NAME-$COMMIT_ID
         
           docker tag langflow:prod-$BRANCH_NAME-$COMMIT_ID forwardemailforaifirstdesk/langflow:prod-$BRANCH_NAME-$COMMIT_ID
