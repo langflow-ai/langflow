@@ -44,7 +44,10 @@ export const usePostValidatePrompt: useMutationFunctionType<
     PromptTypeAPI,
     ResponseErrorDetailAPI,
     IPostValidatePrompt
-  > = mutate(["usePostValidatePrompt"], postValidatePromptFn, options);
+  > = mutate(["usePostValidatePrompt"], postValidatePromptFn, {
+    ...options,
+    retry: 0, // Don't retry validation errors - they're not transient
+  });
 
   return mutation;
 };
