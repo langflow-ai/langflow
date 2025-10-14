@@ -50,8 +50,7 @@ async def test_multimodal_input_text_extraction():
     text_content = [item for item in mock_lc_message.content if item.get("type") != "image"]
 
     text_strings = [
-        item.get("text", "") for item in text_content
-        if item.get("type") == "text" and item.get("text", "").strip()
+        item.get("text", "") for item in text_content if item.get("type") == "text" and item.get("text", "").strip()
     ]
 
     result_text = " ".join(text_strings) if text_strings else ""
@@ -74,8 +73,7 @@ async def test_multimodal_input_only_images():
     # Extract logic
     text_content = [item for item in mock_lc_message.content if item.get("type") != "image"]
     text_strings = [
-        item.get("text", "") for item in text_content
-        if item.get("type") == "text" and item.get("text", "").strip()
+        item.get("text", "") for item in text_content if item.get("type") == "text" and item.get("text", "").strip()
     ]
 
     result_text = " ".join(text_strings) if text_strings else ""
@@ -112,12 +110,10 @@ async def test_multimodal_input_empty_text():
     # Extract logic
     text_content = [item for item in mock_lc_message.content if item.get("type") != "image"]
     text_strings = [
-        item.get("text", "") for item in text_content
-        if item.get("type") == "text" and item.get("text", "").strip()
+        item.get("text", "") for item in text_content if item.get("type") == "text" and item.get("text", "").strip()
     ]
 
     result_text = " ".join(text_strings) if text_strings else ""
 
     # Verify - only non-empty text should be included
     assert result_text == "Valid text"
-
