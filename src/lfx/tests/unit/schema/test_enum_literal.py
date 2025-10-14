@@ -106,4 +106,3 @@ def test_mixed_type_enum_fallback():
     # Should be Literal for hashable values
     assert get_origin(annotation) is Literal
     assert set(get_args(annotation)) == {"a", "b", "c"}
-

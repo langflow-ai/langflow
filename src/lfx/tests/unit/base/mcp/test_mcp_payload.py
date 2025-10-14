@@ -1,6 +1,5 @@
 """Test MCP payload sanitization and optional parameter handling."""
 
-import asyncio
 import types
 from typing import Any
 
@@ -187,4 +186,3 @@ async def test_whitespace_only_string_is_omitted():
 
     # Whitespace-only filter should be omitted
     assert client.args == {"query": "hello"}
-

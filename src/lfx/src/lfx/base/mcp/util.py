@@ -73,6 +73,7 @@ def _omit_empty_optionals(args: dict[str, Any], arg_schema: type[BaseModel]) -> 
         cleaned[name] = value
     return cleaned
 
+
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 
 # HTTP status codes used in validation
