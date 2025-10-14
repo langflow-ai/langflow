@@ -40,9 +40,8 @@ class TestFlowToolComponent(ComponentTestBaseWithClient):
         assert component.legacy is True
         assert component.trace_type == "tool"
 
-    async def test_field_order_configuration(self, component_class, default_kwargs):
+    async def test_field_order_configuration(self):
         """Test field_order configuration."""
-        component = await self.component_setup(component_class, default_kwargs)
         expected_order = ["flow_name", "name", "description", "return_direct"]
         # field_order is a class attribute
         assert FlowToolComponent.field_order == expected_order
