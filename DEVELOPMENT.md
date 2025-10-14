@@ -48,6 +48,8 @@ Install Pre-Requisites:
 
 Open this repository as a Dev Container per your IDEs instructions.
 
+A preconfigured `.devcontainer` is included in this repository and is auto-detected by supported IDEs.
+
 #### Microsoft VS Code
 
 - See [Developing inside a Container](https://code.visualstudio.com/docs/devcontainers/containers)
