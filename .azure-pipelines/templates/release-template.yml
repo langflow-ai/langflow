@@ -31,7 +31,7 @@ jobs:
       if [ "$(Build.SourceBranchName)" = "develop" ]; then
         valuesFile="$(VALUES_FILE)"
       elif [ "$(Build.SourceBranchName)" = "main" ]; then
-        valuesFile="charts/genesis-platform/values-prod.yaml"
+        valuesFile="genesis-umbrella/values-prod.yaml"
       else
         echo "Branch $(Build.SourceBranchName) not configured for deployment"
         exit 0
@@ -40,7 +40,7 @@ jobs:
       echo "Updating ${{ parameters.SERVICE_NAME }} image tag in: $valuesFile"
 
       # Update specific service image tag
-      buildnumber="$(Build.BuildNumber)" yq -i e '.ai-studio.${{ parameters.SERVICE_NAME }}.image.tag = env(buildnumber)' $valuesFile
+      buildnumber="$(Build.BuildNumber)" yq -i e '.genesis-studio.${{ parameters.SERVICE_NAME }}.image.tag = env(buildnumber)' $valuesFile
 
       # Show the changes
       echo "=== Changes Made ==="
@@ -53,7 +53,7 @@ jobs:
         valuesFile="$(VALUES_FILE)"
         environment="development"
       elif [ "$(Build.SourceBranchName)" = "main" ]; then
-        valuesFile="charts/genesis-platform/values-prod.yaml"
+        valuesFile="genesis-umbrella/values-prod.yaml"
         environment="production"
       else
         echo "Branch $(Build.SourceBranchName) not configured for deployment"

@@ -33,5 +33,4 @@ variables:
   # Platform Charts Configuration
   PLATFORM_CHARTS_REPO: 'platform-charts'
   PLATFORM_CHARTS_PATH: '$(Pipeline.Workspace)/platform-charts'
-  VALUES_FILE_UMBRELLA: 'charts/genesis-platform/values-dev.yaml'
-  VALUES_FILE_STANDALONE: 'charts/ai-studio/values-dev.yaml'
+  VALUES_FILE_UMBRELLA: 'genesis-umbrella/values-dev.yaml'

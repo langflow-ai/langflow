@@ -19,7 +19,7 @@ variables:
   UV_VERSION: '0.4.0'
 
   # Platform Charts Configuration
-  VALUES_FILE: 'charts/genesis-platform/values-dev.yaml'
+  VALUES_FILE: 'genesis-umbrella/values-dev.yaml'
 
 resources:
   repositories:
