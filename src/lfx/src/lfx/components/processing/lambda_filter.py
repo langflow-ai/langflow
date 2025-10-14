@@ -111,7 +111,14 @@ class LambdaFilterComponent(Component):
                         combined_data.append(item.data)
                     elif isinstance(item.data, list):
                         combined_data.extend(item.data)
-            data = combined_data if combined_data else []
+
+            # If we have a single dict, unwrap it so lambdas can access it directly
+            if len(combined_data) == 1 and isinstance(combined_data[0], dict):
+                data = combined_data[0]
+            elif len(combined_data) == 0:
+                data = {}
+            else:
+                data = combined_data  # type: ignore[assignment]
         elif isinstance(self.data, DataFrame) or isinstance(self.data, Table):
             # Single DataFrame or Table to list of dicts
             data = self.data.to_dict(orient="records")
