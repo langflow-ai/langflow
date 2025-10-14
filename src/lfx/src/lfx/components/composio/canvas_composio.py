@@ -1,9 +1,9 @@
 from lfx.base.composio.composio_base import ComposioBaseComponent
 
 
-class ComposioCanvaasAPIComponent(ComposioBaseComponent):
+class ComposioCanvasAPIComponent(ComposioBaseComponent):
     display_name: str = "Canvas"
-    icon = "Canvaas"
+    icon = "Canvas"
     documentation: str = "https://docs.composio.dev"
     app_name = "canvas"
 
