@@ -24,12 +24,13 @@ class MockLangfuseCallback:
         span.metadata = kwargs.get("metadata", {})
         return span
 
-    def on_tool_start(self, serialized, input_str, *, run_id, parent_run_id=None, **kwargs):
+    def on_tool_start(self, serialized, input_str, *, run_id, parent_run_id=None, **kwargs):  # noqa: ARG002
         """Original implementation that would fail."""
         self.tool_starts.append({"run_id": run_id, "parent_run_id": parent_run_id, "input_str": input_str})
 
         if parent_run_id is None or parent_run_id not in self.runs:
-            raise Exception("parent run not found")
+            error_msg = "parent run not found"
+            raise ValueError(error_msg)
 
         # Create child span
         self.runs[run_id] = self.runs[parent_run_id]
@@ -37,9 +38,16 @@ class MockLangfuseCallback:
 
 
 @pytest.fixture
-def mock_langfuse_client():
-    """Mock Langfuse client."""
-    with patch("langfuse.Langfuse") as mock_langfuse, patch("langfuse.api.core.request_options.RequestOptions"):
+def langfuse_tracer():
+    """Create a LangFuseTracer instance."""
+    with patch("langfuse.Langfuse") as mock_langfuse, patch("langfuse.api.core.request_options.RequestOptions"), patch.dict(
+        "os.environ",
+        {
+            "LANGFUSE_SECRET_KEY": "test-secret",
+            "LANGFUSE_PUBLIC_KEY": "test-public",
+            "LANGFUSE_HOST": "http://localhost:3000",
+        },
+    ):
         client = Mock()
         trace = Mock()
 
@@ -57,20 +65,6 @@ def mock_langfuse_client():
         client.client.health = Mock()
         client.client.health.health = Mock()
 
-        yield client
-
-
-@pytest.fixture
-def langfuse_tracer(mock_langfuse_client):
-    """Create a LangFuseTracer instance."""
-    with patch.dict(
-        "os.environ",
-        {
-            "LANGFUSE_SECRET_KEY": "test-secret",
-            "LANGFUSE_PUBLIC_KEY": "test-public",
-            "LANGFUSE_HOST": "http://localhost:3000",
-        },
-    ):
         tracer = LangFuseTracer(
             trace_name="test-flow", trace_type="test", project_name="test-project", trace_id=uuid.uuid4()
         )
@@ -303,7 +297,7 @@ class TestLangfuseTracerIntegration:
         assert type(callback).__name__ == "DummyParent"
 
     @pytest.mark.asyncio
-    async def test_tracer_with_span_context(self, langfuse_tracer, mock_langfuse_client):
+    async def test_tracer_with_span_context(self, langfuse_tracer):
         """Test tracer works correctly with active spans."""
         if not langfuse_tracer.ready:
             pytest.skip("Langfuse not ready")
