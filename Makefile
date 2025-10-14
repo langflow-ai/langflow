@@ -171,7 +171,7 @@ lfx_tests: ## run lfx package unit tests
 	@echo 'Running LFX Package Tests...'
 	@cd src/lfx && \
 	uv sync && \
-	uv run pytest tests/unit -v $(args)
+	uv run pytest tests/unit -v --cov=src/lfx --cov-report=xml --cov-report=html --cov-report=term-missing $(args)
 
 integration_tests:
 	uv run pytest src/backend/tests/integration \
