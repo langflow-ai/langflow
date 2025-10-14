@@ -39,7 +39,7 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
         component = await self.component_setup(component_class, default_kwargs)
         component.llm.ainvoke.return_value.content = "lambda x: [item for item in x['items'] if item['value'] > 15]"
 
-        # Execute filter
+        # Execute the lambda filter
         result = await component.process_as_data()
 
         # Assertions - process_as_data() returns a Data object
