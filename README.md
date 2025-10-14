@@ -2,7 +2,6 @@
 
 ![Langflow logo](./docs/static/img/langflow-logo-color-black-solid.svg)
 
-
 [![Release Notes](https://img.shields.io/github/release/langflow-ai/langflow?style=flat-square)](https://github.com/langflow-ai/langflow/releases)
 [![PyPI - License](https://img.shields.io/badge/license-MIT-orange)](https://opensource.org/licenses/MIT)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/langflow?style=flat-square)](https://pypistats.org/packages/langflow)
@@ -14,6 +13,7 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/langflow-ai/langflow)
 
 > [!CAUTION]
+> - Langflow versions 1.6.0 through 1.6.3 have a critical bug where `.env` files are not read, potentially causing security vulnerabilities. **DO NOT** upgrade to these versions if you use `.env` files for configuration. Instead, upgrade to 1.6.4, which includes a fix for this bug.
 > - Windows users of Langflow Desktop should **not** use the in-app update feature to upgrade to Langflow version 1.6.0. For upgrade instructions, see [Windows Desktop update issue](https://docs.langflow.org/release-notes#windows-desktop-update-issue).
 > - Users must update to Langflow >= 1.3 to protect against [CVE-2025-3248](https://nvd.nist.gov/vuln/detail/CVE-2025-3248)
 > - Users must update to Langflow >= 1.5.1 to protect against [CVE-2025-57760](https://github.com/langflow-ai/langflow/security/advisories/GHSA-4gv9-mp8m-592r)
@@ -35,23 +35,36 @@
 
 ## ⚡️ Quickstart
 
-Langflow requires [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/) and [uv](https://docs.astral.sh/uv/getting-started/installation/).
+### Install locally (recommended)
 
-1. To install Langflow, run:
+Requires Python 3.10–3.13 and [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended package manager).
 
-```shell
-uv pip install langflow -U
-```
-
-2. To run Langflow, run:
+#### Install
 
 ```shell
-uv run langflow run
+$ uv pip install langflow -U
 ```
 
-3. Go to the default Langflow URL at `http://127.0.0.1:7860`.
+Installs the latest Langflow package.
 
-For more information about installing Langflow, including Docker and Desktop options, see [Install Langflow](https://docs.langflow.org/get-started-installation).
+#### Run
+
+```shell
+$ uv run langflow run
+```
+
+Starts the Langflow server at http://127.0.0.1:7860.
+
+That's it! You're ready to build with Langflow 🎉
+
+### Other install options
+
+- [Docker](https://docs.langflow.org/deployment-docker)
+- [Desktop app](https://docs.langflow.org/get-started-installation#install-and-run-langflow-desktop)
+
+### Install from repo
+
+If you're contributing or running from source, see [DEVELOPMENT.md](./DEVELOPMENT.md) for setup instructions.
 
 ## 📦 Deployment
 
@@ -74,4 +87,3 @@ We welcome contributions from developers of all levels. If you'd like to contrib
 ## ❤️ Contributors
 
 [![langflow contributors](https://contrib.rocks/image?repo=langflow-ai/langflow)](https://github.com/langflow-ai/langflow/graphs/contributors)
-
