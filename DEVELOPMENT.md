@@ -31,27 +31,31 @@ git remote set-url --push upstream no_push
 
 ## Set up Environment
 
-There are two options available to you: the 'easy' and recommended option is to use a Development Container ("[Dev Container](https://containers.dev/)"), or you can choose to use your own OS / environment.
+There are two options available to you: use your local environment with `make` commands (recommended for macOS and Linux), or use a Development Container ("[Dev Container](https://containers.dev/)") which is recommended for Windows users.
 
-### Option 1 (Preferred): Use a Dev Container
-
-Open this repository as a Dev Container per your IDEs instructions.
-
-#### Microsoft VS Code
-
-- See [Developing inside a Container](https://code.visualstudio.com/docs/devcontainers/containers)
-- You may also find it helpful to [share `git` credentials](https://code.visualstudio.com/remote/advancedcontainers/sharing-git-credentials) with the container
-
-### Option 2: Use Your Own Environment
+### Option 1 (Recommended): Use Your Local Environment
 
 Install Pre-Requisites:
 
-- **Operating System**: macOS or Linux; Windows users **_MUST_** develop under WSL.
+- **Operating System**: macOS or Linux; Windows users should use WSL or consider Option 2 (Dev Container).
 - **`git`**: The project uses the ubiquitous `git` tool for change control.
-- **`make`**: The project uses `make` to coordidinate packaging.
+- **`make`**: The project uses `make` to coordinate packaging.
 - **`uv`**: This project uses `uv` (`>=0.4`), a Python package and project manager from Astral. Install instructions at https://docs.astral.sh/uv/getting-started/installation/.
 - **`npm`**: The frontend files are built with Node.js (`v22.12 LTS`) and `npm` (`v10.9`). Install instructions at https://nodejs.org/en/download/package-manager.
   - Windows (WSL) users: ensure `npm` is installed within WSL environment; `which npm` should resolve to a Linux location, not a Windows location.
+
+### Option 2: Use a Dev Container (Recommended for Windows)
+
+Open this repository as a Dev Container per your IDEs instructions.
+
+A preconfigured `.devcontainer` is included in this repository and is auto-detected by supported IDEs.
+
+#### Microsoft VS Code
+
+To start the preconfigured `.devcontainer` with the VS Code Dev Containers extension, from the Command Palette, run the Dev Containers: Reopen in Container command.
+
+- See [Developing inside a Container](https://code.visualstudio.com/docs/devcontainers/containers)
+- You may also find it helpful to [share `git` credentials](https://code.visualstudio.com/remote/advancedcontainers/sharing-git-credentials) with the container
 
 ### Initial Environment Validation
 
