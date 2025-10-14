@@ -28,16 +28,16 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
 
     async def test_successful_lambda_generation(self, component_class, default_kwargs):
         component = await self.component_setup(component_class, default_kwargs)
-        component.llm.ainvoke.return_value.content = "lambda x: [item for item in x['items'] if item['value'] > 15]"
+        component.llm.ainvoke.return_value.content = "lambda x: [item for item in x[0]['items'] if item['value'] > 15]"
 
         # Execute filter
-        result = await component.filter_data()
+        result = await component._execute_lambda()
 
         # Assertions
         assert isinstance(result, list)
         assert len(result) == 1
-        assert result[0].name == "test2"
-        assert result[0].value == 20
+        assert result[0]['name'] == "test2"
+        assert result[0]['value'] == 20
 
     async def test_invalid_lambda_response(self, component_class, default_kwargs):
         component = await self.component_setup(component_class, default_kwargs)
@@ -45,22 +45,22 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
 
         # Test exception handling
         with pytest.raises(ValueError, match="Could not find lambda in response"):
-            await component.filter_data()
+            await component._execute_lambda()
 
     async def test_lambda_with_large_dataset(self, component_class, default_kwargs):
         large_data = {"items": [{"name": f"test{i}", "value": i} for i in range(2000)]}
         default_kwargs["data"] = [Data(data=large_data)]
         default_kwargs["filter_instruction"] = "Filter items with value greater than 1500"
         component = await self.component_setup(component_class, default_kwargs)
-        component.llm.ainvoke.return_value.content = "lambda x: [item for item in x['items'] if item['value'] > 1500]"
+        component.llm.ainvoke.return_value.content = "lambda x: [item for item in x[0]['items'] if item['value'] > 1500]"
 
         # Execute filter
-        result = await component.filter_data()
+        result = await component._execute_lambda()
 
         # Assertions
         assert isinstance(result, list)
         assert len(result) == 499  # Items with value from 1501 to 1999
-        assert all(item.value > 1500 for item in result)
+        assert all(item['value'] > 1500 for item in result)
 
     async def test_lambda_with_complex_data_structure(self, component_class, default_kwargs):
         complex_data = {
@@ -73,20 +73,20 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
         default_kwargs["filter_instruction"] = "Filter items with score greater than 90"
         component = await self.component_setup(component_class, default_kwargs)
         component.llm.ainvoke.return_value.content = (
-            "lambda x: [item for cat in x['categories'].values() for item in cat if item['score'] > 90]"
+            "lambda x: [item for cat in x[0]['categories'].values() for item in cat if item['score'] > 90]"
         )
 
         # Execute filter
-        result = await component.filter_data()
+        result = await component._execute_lambda()
 
         # Assertions
         assert isinstance(result, list)
         assert len(result) == 1
-        assert result[0].id == 3
-        assert result[0].score == 95
+        assert result[0]['id'] == 3
+        assert result[0]['score'] == 95
 
-    def test_validate_lambda(self, component_class):
-        component = component_class()
+    async def test_validate_lambda(self, component_class, default_kwargs):
+        component = await self.component_setup(component_class, default_kwargs)
 
         # Valid lambda
         valid_lambda = "lambda x: x + 1"
@@ -100,8 +100,8 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
         invalid_lambda_2 = "lambda x x + 1"
         assert component._validate_lambda(invalid_lambda_2) is False
 
-    def test_get_data_structure(self, component_class):
-        component = component_class()
+    async def test_get_data_structure(self, component_class, default_kwargs):
+        component = await self.component_setup(component_class, default_kwargs)
         test_data = {
             "string": "test",
             "number": 42,
@@ -112,12 +112,12 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
 
         structure = component.get_data_structure(test_data)
 
-        # Assertions - each value should have a 'structure' key
-        assert structure["string"]["structure"] == "str", structure
-        assert structure["number"]["structure"] == "int", structure
-        assert structure["list"]["structure"] == "list(int)[size=3]", structure
-        assert isinstance(structure["dict"]["structure"], dict), structure
-        assert structure["dict"]["structure"]["key"] == "str", structure
-        assert isinstance(structure["nested"]["structure"], dict), structure
-        assert "a" in structure["nested"]["structure"], structure
-        assert structure["nested"]["structure"]["a"] == 'list(dict)[size=1], sample: {"b": "int"}', structure
+        # Assertions - each value should be replaced with its type
+        assert structure["string"] == "str", structure
+        assert structure["number"] == "int", structure
+        assert structure["list"] == ["int"], structure  # For lists, it returns the structure of first item
+        assert isinstance(structure["dict"], dict), structure
+        assert structure["dict"]["key"] == "str", structure
+        assert isinstance(structure["nested"], dict), structure
+        assert "a" in structure["nested"], structure
+        assert structure["nested"]["a"] == [{"b": "int"}], structure
