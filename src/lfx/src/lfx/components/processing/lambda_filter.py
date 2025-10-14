@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, HandleInput, IntInput, MultilineInput, Output
 from lfx.schema.data import Data
-from lfx.utils.data_structure import get_data_structure
+from lfx.schema.dataframe import DataFrame
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -25,6 +25,7 @@ class LambdaFilterComponent(Component):
             name="data",
             display_name="Data",
             info="The structured data to filter or transform using a lambda function.",
+            input_types=["Data", "DataFrame"],
             is_list=True,
             required=True,
         ),
@@ -63,24 +64,60 @@ class LambdaFilterComponent(Component):
 
     outputs = [
         Output(
-            display_name="Filtered Data",
-            name="filtered_data",
-            method="filter_data",
+            display_name="Output",
+            name="data_output",
+            method="process_as_data",
+        ),
+        Output(
+            display_name="Output",
+            name="dataframe_output",
+            method="process_as_dataframe",
         ),
     ]
 
     def get_data_structure(self, data):
-        """Extract the structure of a dictionary, replacing values with their types."""
-        return {k: get_data_structure(v) for k, v in data.items()}
+        """Extract the structure of data, replacing values with their types."""
+        if isinstance(data, list):
+            # For lists, get structure of first item if available
+            if data:
+                return [self.get_data_structure(data[0])]
+            return []
+        if isinstance(data, dict):
+            return {k: self.get_data_structure(v) for k, v in data.items()}
+        # For primitive types, return the type name
+        return type(data).__name__
 
     def _validate_lambda(self, lambda_text: str) -> bool:
         """Validate the provided lambda function text."""
         # Return False if the lambda function does not start with 'lambda' or does not contain a colon
         return lambda_text.strip().startswith("lambda") and ":" in lambda_text
 
-    async def filter_data(self) -> list[Data]:
+    async def _execute_lambda(self) -> Any:
         self.log(str(self.data))
-        data = self.data[0].data if isinstance(self.data, list) else self.data.data
+
+        # Convert input to a unified format
+        if isinstance(self.data, list):
+            # Handle list of Data or DataFrame objects
+            combined_data = []
+            for item in self.data:
+                if isinstance(item, DataFrame):
+                    # DataFrame to list of dicts
+                    combined_data.extend(item.to_dict(orient="records"))
+                elif hasattr(item, "data"):
+                    # Data object
+                    if isinstance(item.data, dict):
+                        combined_data.append(item.data)
+                    elif isinstance(item.data, list):
+                        combined_data.extend(item.data)
+            data = combined_data if combined_data else []
+        elif isinstance(self.data, DataFrame):
+            # Single DataFrame to list of dicts
+            data = self.data.to_dict(orient="records")
+        elif hasattr(self.data, "data"):
+            # Single Data object
+            data = self.data.data
+        else:
+            data = self.data
 
         dump = json.dumps(data)
         self.log(str(data))
@@ -142,13 +179,33 @@ class LambdaFilterComponent(Component):
         fn: Callable[[Any], Any] = eval(lambda_text)  # noqa: S307
 
         # Apply the lambda function to the data
-        processed_data = fn(data)
+        return fn(data)
 
-        # If it's a dict, wrap it in a Data object
-        if isinstance(processed_data, dict):
-            return [Data(**processed_data)]
-        # If it's a list, convert each item to a Data object
-        if isinstance(processed_data, list):
-            return [Data(**item) if isinstance(item, dict) else Data(text=str(item)) for item in processed_data]
-        # If it's anything else, convert to string and wrap in a Data object
-        return [Data(text=str(processed_data))]
+    async def process_as_data(self) -> Data:
+        """Process the data and return as a Data object."""
+        result = await self._execute_lambda()
+
+        # Convert result to Data based on type
+        if isinstance(result, dict):
+            return Data(data=result)
+        if isinstance(result, list):
+            return Data(data={"_results": result})
+        # For other types, convert to string
+        return Data(data={"text": str(result)})
+
+    async def process_as_dataframe(self) -> DataFrame:
+        """Process the data and return as a DataFrame."""
+        result = await self._execute_lambda()
+
+        # Convert result to DataFrame based on type
+        if isinstance(result, list):
+            # Check if it's a list of dicts
+            if all(isinstance(item, dict) for item in result):
+                return DataFrame(result)
+            # List of non-dicts: wrap each value
+            return DataFrame([{"value": item} for item in result])
+        if isinstance(result, dict):
+            # Single dict becomes single-row DataFrame
+            return DataFrame([result])
+        # Other types: convert to string and wrap
+        return DataFrame([{"value": str(result)}])
