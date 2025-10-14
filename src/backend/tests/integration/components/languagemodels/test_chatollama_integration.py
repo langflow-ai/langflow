@@ -161,7 +161,6 @@ class TestChatOllamaIntegration:
         invalid_response = "This is not valid JSON at all!"
         mock_message = Message(text=invalid_response)
         
-        with patch.object(component, 'text_response', new_callable=AsyncMock, return_value=mock_message):
-            # Should raise ValueError with helpful message
-            with pytest.raises(ValueError, match="Invalid JSON response"):
-                await component.build_data_output()
+        with patch.object(component, 'text_response', new_callable=AsyncMock, return_value=mock_message), \
+             pytest.raises(ValueError, match="Invalid JSON response"):
+            await component.build_data_output()
