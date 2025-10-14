@@ -145,8 +145,8 @@ const config = {
   plugins: [
     ["docusaurus-node-polyfills", { excludeAliases: ["console"] }],
     "docusaurus-plugin-image-zoom",
-    ["./src/plugins/segment/index.js", { segmentPublicWriteKey: process.env.SEGMENT_PUBLIC_WRITE_KEY, allowedInDev: true }],
-    ["./src/plugins/scroll-tracking/index.js", {
+    ["./src/plugins/segment", { segmentPublicWriteKey: process.env.SEGMENT_PUBLIC_WRITE_KEY, allowedInDev: true }],
+    ["./src/plugins/scroll-tracking", {
       segmentPublicWriteKey: process.env.SEGMENT_PUBLIC_WRITE_KEY,
       allowedInDev: true,
       selectors: [
