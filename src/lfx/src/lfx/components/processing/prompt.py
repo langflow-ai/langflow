@@ -47,10 +47,47 @@ class PromptComponent(Component):
         """Update the template field type based on the selected mode."""
         if field_name == "mode":
             # Change the template field type based on mode
-            if field_value == "{{variable}}":
+            is_mustache = field_value == "{{variable}}"
+            if is_mustache:
                 build_config["template"]["type"] = FieldTypes.MUSTACHE_PROMPT.value
             else:
                 build_config["template"]["type"] = FieldTypes.PROMPT.value
+
+            # Re-process the template to update variables when mode changes
+            template_value = build_config.get("template", {}).get("value", "")
+            if template_value:
+                # Ensure custom_fields is properly initialized
+                if "custom_fields" not in build_config:
+                    build_config["custom_fields"] = {}
+
+                # Clean up fields from the OLD mode before processing with NEW mode
+                # This ensures we don't keep fields with wrong syntax even if validation fails
+                old_custom_fields = build_config["custom_fields"].get("template", [])
+                for old_field in list(old_custom_fields):
+                    # Remove the field from custom_fields and template
+                    if old_field in old_custom_fields:
+                        old_custom_fields.remove(old_field)
+                    build_config.pop(old_field, None)
+
+                # Try to process template with new mode to add new variables
+                # If validation fails, at least we cleaned up old fields
+                try:
+                    # Validate mustache templates for security
+                    if is_mustache:
+                        validate_mustache_template(template_value)
+
+                    # Re-process template with new mode to add new variables
+                    _ = process_prompt_template(
+                        template=template_value,
+                        name="template",
+                        custom_fields=build_config["custom_fields"],
+                        frontend_node_template=build_config,
+                        is_mustache=is_mustache,
+                    )
+                except ValueError:
+                    # If validation fails, we still updated the mode and cleaned old fields
+                    # User will see error when they try to save
+                    pass
         return build_config
 
     async def build_prompt(self) -> Message:
@@ -65,19 +102,23 @@ class PromptComponent(Component):
         mode = frontend_node["template"].get("mode", {}).get("value", "{variable}")
         is_mustache = mode == "{{variable}}"
 
-        # Validate mustache templates for security
-        if is_mustache:
-            validate_mustache_template(prompt_template)
+        try:
+            # Validate mustache templates for security
+            if is_mustache:
+                validate_mustache_template(prompt_template)
 
-        custom_fields = frontend_node["custom_fields"]
-        frontend_node_template = frontend_node["template"]
-        _ = process_prompt_template(
-            template=prompt_template,
-            name="template",
-            custom_fields=custom_fields,
-            frontend_node_template=frontend_node_template,
-            is_mustache=is_mustache,
-        )
+            custom_fields = frontend_node["custom_fields"]
+            frontend_node_template = frontend_node["template"]
+            _ = process_prompt_template(
+                template=prompt_template,
+                name="template",
+                custom_fields=custom_fields,
+                frontend_node_template=frontend_node_template,
+                is_mustache=is_mustache,
+            )
+        except ValueError:
+            # If validation fails, don't add variables but allow component to be created
+            pass
         return frontend_node
 
     async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):
@@ -87,18 +128,22 @@ class PromptComponent(Component):
         mode = frontend_node["template"].get("mode", {}).get("value", "{variable}")
         is_mustache = mode == "{{variable}}"
 
-        # Validate mustache templates for security
-        if is_mustache:
-            validate_mustache_template(template)
+        try:
+            # Validate mustache templates for security
+            if is_mustache:
+                validate_mustache_template(template)
 
-        # Kept it duplicated for backwards compatibility
-        _ = process_prompt_template(
-            template=template,
-            name="template",
-            custom_fields=frontend_node["custom_fields"],
-            frontend_node_template=frontend_node["template"],
-            is_mustache=is_mustache,
-        )
+            # Kept it duplicated for backwards compatibility
+            _ = process_prompt_template(
+                template=template,
+                name="template",
+                custom_fields=frontend_node["custom_fields"],
+                frontend_node_template=frontend_node["template"],
+                is_mustache=is_mustache,
+            )
+        except ValueError:
+            # If validation fails, don't add variables but allow component to be updated
+            pass
         # Now that template is updated, we need to grab any values that were set in the current_frontend_node
         # and update the frontend_node with those values
         update_template_values(new_template=frontend_node, previous_template=current_frontend_node["template"])
