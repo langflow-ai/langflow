@@ -177,7 +177,7 @@ class ComponentInputsPayload(BasePayload):
 
         # Distribute input fields across chunks
         chunks_data = []
-        current_chunk_inputs = {}
+        current_chunk_inputs: dict[str, Any] = {}
 
         for key, value in self.component_inputs.items():
             # Calculate size if we add this field to current chunk
