@@ -130,6 +130,7 @@ dev = [
 ]
 
 [tool.coverage.run]
+branch = true
 omit = [
     "*/tests/*",
     "*/__init__.py",
@@ -142,7 +143,7 @@ exclude_lines = [
     "def __repr__",
     "raise AssertionError",
     "raise NotImplementedError",
-    "if __name__ == .__main__.:",
+    "if __name__ == '__main__':",
     "if TYPE_CHECKING:",
     "@abstractmethod",
 ]
