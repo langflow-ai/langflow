@@ -221,6 +221,7 @@ class SmartRouterComponent(Component):
                         f"Comparing '{categorization}' with category {i + 1}: route_category='{route_category}'"
                     )
 
+                    # Case-insensitive match
                     if categorization.lower() == route_category.lower():
                         matched_category = i
                         self.status = f"MATCH FOUND! Category {i + 1} matched with '{categorization}'"
