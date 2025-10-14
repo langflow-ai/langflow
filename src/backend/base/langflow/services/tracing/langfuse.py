@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 
     from langflow.services.tracing.schema import Log
 
+from threading import Lock
+
 
 class LangFuseTracer(BaseTracer):
     flow_id: str
@@ -169,29 +171,8 @@ class LangFuseTracer(BaseTracer):
             base_callback = current_span.get_langchain_handler()
         else:
             base_callback = self.trace.get_langchain_handler()
-        
-        # Minimal wrapper - only fix the tool start issue
-        class DummyParent(type(base_callback)):
-            """Ensures parent runs exist when tools start to prevent parent-not-found errors."""
-            
-            def on_tool_start(self, serialized, input_str, *, run_id, parent_run_id=None, **kwargs):
-                # If parent is missing, create it
-                if parent_run_id and parent_run_id not in self.runs:
-                    logger.debug(f"Langfuse: Auto-creating missing parent span for tool execution")
-                    self.runs[parent_run_id] = self.trace.span(
-                        name="Agent Execution",
-                        metadata={"auto_created": True, "reason": "parent_missing_on_tool_start"}
-                    )
-                
-                # Call original
-                return super().on_tool_start(serialized, input_str, run_id=run_id, 
-                                            parent_run_id=parent_run_id, **kwargs)
-        
-        # Copy callback state
-        wrapped = DummyParent.__new__(DummyParent)
-        wrapped.__dict__.update(base_callback.__dict__)
-        
-        return wrapped
+
+        return _create_dummy_parent(base_callback)
 
     @staticmethod
     def _get_config() -> dict:
@@ -201,3 +182,25 @@ class LangFuseTracer(BaseTracer):
         if secret_key and public_key and host:
             return {"secret_key": secret_key, "public_key": public_key, "host": host}
         return {}
+
+
+def _create_dummy_parent(base_callback):
+    """Create a callback wrapper that ensures parent runs exist for tool execution."""
+    instance_lock = Lock()
+
+    class DummyParent(type(base_callback)):
+        def on_tool_start(self, serialized, input_str, *, run_id, parent_run_id=None, **kwargs):
+            if parent_run_id and parent_run_id not in self.runs:
+                with instance_lock:
+                    if parent_run_id not in self.runs:
+                        logger.debug("Langfuse: Auto-creating missing parent span")
+                        self.runs[parent_run_id] = self.trace.span(
+                            name="Agent Execution",
+                            metadata={"auto_created": True}
+                        )
+            return super().on_tool_start(serialized, input_str, run_id=run_id,
+                                        parent_run_id=parent_run_id, **kwargs)
+
+    wrapped = DummyParent.__new__(DummyParent)
+    wrapped.__dict__.update(base_callback.__dict__)
+    return wrapped
