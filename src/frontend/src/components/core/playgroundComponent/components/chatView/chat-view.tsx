@@ -74,8 +74,6 @@ export default function ChatView(): JSX.Element {
     (state) => state.isVoiceAssistantActive,
   );
 
-  console.log("messages", messages);
-
   return (
     <StickToBottom
       className={cn(
