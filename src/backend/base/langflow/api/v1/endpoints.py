@@ -60,6 +60,20 @@ if TYPE_CHECKING:
 router = APIRouter(tags=["Base"])
 
 
+def check_run_endpoints_enabled() -> None:
+    """Check if run endpoints are enabled based on LANGFLOW_ONLY_CANVAS setting.
+
+    Raises:
+        HTTPException: 404 error if run endpoints are disabled in canvas-only mode.
+    """
+    settings_service = get_settings_service()
+    if settings_service.settings.only_canvas:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Run endpoints are disabled in canvas-only mode",
+        )
+
+
 async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIRequest:
     """Parse SimplifiedAPIRequest from HTTP request body.
 
@@ -299,7 +313,12 @@ async def run_flow_generator(
         await event_manager.queue.put((None, None, time.time))
 
 
-@router.post("/run/{flow_id_or_name}", response_model=None, response_model_exclude_none=True)
+@router.post(
+    "/run/{flow_id_or_name}",
+    response_model=None,
+    response_model_exclude_none=True,
+    dependencies=[Depends(check_run_endpoints_enabled)],
+)
 async def simplified_run_flow(
     *,
     background_tasks: BackgroundTasks,
@@ -440,7 +459,12 @@ async def simplified_run_flow(
     return result
 
 
-@router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)  # noqa: RUF100, FAST003
+@router.post(
+    "/webhook/{flow_id_or_name}",
+    response_model=dict,
+    status_code=HTTPStatus.ACCEPTED,
+    dependencies=[Depends(check_run_endpoints_enabled)],
+)  # noqa: RUF100, FAST003
 async def webhook_run_flow(
     flow_id_or_name: str,
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
@@ -523,6 +547,7 @@ async def webhook_run_flow(
     "/run/advanced/{flow_id}",
     response_model=RunResponse,
     response_model_exclude_none=True,
+    dependencies=[Depends(check_run_endpoints_enabled)],
 )
 async def experimental_run_flow(
     *,
