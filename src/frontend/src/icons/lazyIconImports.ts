@@ -29,6 +29,8 @@ export const lazyIconsMapping = {
     })),
   Klaviyo: () =>
     import("@/icons/klaviyo").then((mod) => ({ default: mod.KlaviyoIcon })),
+  Klipfolio: () =>
+    import("@/icons/Klipfolio").then((mod) => ({ default: mod.KlipfolioIcon })),
   One_Drive: () =>
     import("@/icons/one_drive").then((mod) => ({ default: mod.One_DriveIcon })),
   Wrike: () =>
@@ -98,6 +100,8 @@ export const lazyIconsMapping = {
     })),
   Couchbase: () =>
     import("@/icons/Couchbase").then((mod) => ({ default: mod.CouchbaseIcon })),
+  Classroom: () =>
+    import("@/icons/Classroom").then((mod) => ({ default: mod.ClassroomIcon })),
   Claude: () =>
     import("@/icons/Claude").then((mod) => ({ default: mod.ClaudeIcon })),
   CrewAI: () =>
@@ -121,14 +125,24 @@ export const lazyIconsMapping = {
   Evernote: () =>
     import("@/icons/Evernote").then((mod) => ({ default: mod.EvernoteIcon })),
   Exa: () => import("@/icons/Exa").then((mod) => ({ default: mod.ExaIcon })),
+  Excel: () =>
+    import("@/icons/Excel").then((mod) => ({ default: mod.ExcelIcon })),
   FacebookMessenger: () =>
     import("@/icons/FacebookMessenger").then((mod) => ({
       default: mod.FBIcon,
     })),
   Firecrawl: () =>
     import("@/icons/Firecrawl").then((mod) => ({ default: mod.FirecrawlIcon })),
+  Finage: () =>
+    import("@/icons/Finage").then((mod) => ({ default: mod.FinageIcon })),
+  Fixer: () =>
+    import("@/icons/Fixer").then((mod) => ({ default: mod.FixerIcon })),
+  Flexisign: () =>
+    import("@/icons/Flexisign").then((mod) => ({ default: mod.FlexisignIcon })),
   FreezeAll: () =>
     import("@/icons/freezeAll").then((mod) => ({ default: mod.freezeAllIcon })),
+  Freshdesk: () =>
+    import("@/icons/Freshdesk").then((mod) => ({ default: mod.FreshdeskIcon })),
   GitBook: () =>
     import("@/icons/GitBook").then((mod) => ({ default: mod.GitBookIcon })),
   GitLoader: () =>
@@ -159,6 +173,8 @@ export const lazyIconsMapping = {
     import("@/icons/gmail").then((mod) => ({ default: mod.GmailIcon })),
   Outlook: () =>
     import("@/icons/outlook").then((mod) => ({ default: mod.OutlookIcon })),
+  Pandadoc: () =>
+    import("@/icons/Pandadoc").then((mod) => ({ default: mod.PandadocIcon })),
   Googlecalendar: () =>
     import("@/icons/googlecalendar").then((mod) => ({
       default: mod.GooglecalendarIcon,
@@ -209,12 +225,16 @@ export const lazyIconsMapping = {
     import("@/icons/Icosa").then((mod) => ({ default: mod.IcosaIcon })),
   IFixIt: () =>
     import("@/icons/IFixIt").then((mod) => ({ default: mod.IFixIcon })),
+  Instagram: () =>
+    import("@/icons/Instagram").then((mod) => ({ default: mod.InstagramIcon })),
   javascript: () =>
     import("@/icons/JSicon").then((mod) => ({ default: mod.JSIcon })),
   JigsawStack: () =>
     import("@/icons/JigsawStack").then((mod) => ({
       default: mod.JigsawStackIcon,
     })),
+  Jotform: () =>
+    import("@/icons/Jotform").then((mod) => ({ default: mod.JotformIcon })),
   Linear: () =>
     import("@/icons/linear").then((mod) => ({ default: mod.LinearIcon })),
   LangChain: () =>
@@ -223,6 +243,10 @@ export const lazyIconsMapping = {
     import("@/icons/Langwatch").then((mod) => ({ default: mod.LangwatchIcon })),
   LMStudio: () =>
     import("@/icons/LMStudio").then((mod) => ({ default: mod.LMStudioIcon })),
+  Listennotes: () =>
+    import("@/icons/Listennotes").then((mod) => ({
+      default: mod.ListennotesIcon,
+    })),
   Maritalk: () =>
     import("@/icons/Maritalk").then((mod) => ({ default: mod.MaritalkIcon })),
   Mcp: () => import("@/icons/MCP").then((mod) => ({ default: mod.McpIcon })),
@@ -234,12 +258,17 @@ export const lazyIconsMapping = {
     })),
   Milvus: () =>
     import("@/icons/Milvus").then((mod) => ({ default: mod.MilvusIcon })),
+  Missive: () =>
+    import("@/icons/Missive").then((mod) => ({ default: mod.MissiveIcon })),
   Mistral: () =>
     import("@/icons/mistral").then((mod) => ({ default: mod.MistralIcon })),
   MongoDB: () =>
     import("@/icons/MongoDB").then((mod) => ({ default: mod.MongoDBIcon })),
   Needle: () =>
     import("@/icons/Needle").then((mod) => ({ default: mod.NeedleIcon })),
+  Neon: () => import("@/icons/Neon").then((mod) => ({ default: mod.NeonIcon })),
+  Newsapi: () =>
+    import("@/icons/Newsapi").then((mod) => ({ default: mod.NewsapiIcon })),
   NotDiamond: () =>
     import("@/icons/NotDiamond").then((mod) => ({
       default: mod.NotDiamondIcon,
@@ -256,6 +285,8 @@ export const lazyIconsMapping = {
     import("@/icons/Ollama").then((mod) => ({ default: mod.OllamaIcon })),
   OpenAI: () =>
     import("@/icons/OpenAi").then((mod) => ({ default: mod.OpenAiIcon })),
+  OpenAICopy: () =>
+    import("@/icons/OpenAI copy").then((mod) => ({ default: mod.OpenAIIcon })),
   OpenRouter: () =>
     import("@/icons/OpenRouter").then((mod) => ({
       default: mod.OpenRouterIcon,
@@ -316,6 +347,8 @@ export const lazyIconsMapping = {
     import("@/icons/Share2").then((mod) => ({ default: mod.Share2Icon })),
   Slack: () =>
     import("@/icons/Slack/SlackIcon").then((mod) => ({ default: mod.default })),
+  Slides: () =>
+    import("@/icons/Slides").then((mod) => ({ default: mod.SlidesIcon })),
   Spider: () =>
     import("@/icons/Spider").then((mod) => ({ default: mod.SpiderIcon })),
   Streamlit: () =>
@@ -339,6 +372,10 @@ export const lazyIconsMapping = {
   TwitterX: () =>
     import("@/icons/Twitter X").then((mod) => ({
       default: mod.TwitterXIcon,
+    })),
+  VLMRun: () =>
+    import("@/icons/VLMRun").then((mod) => ({
+      default: mod.VLMRunIcon,
     })),
   Unstructured: () =>
     import("@/icons/Unstructured").then((mod) => ({
