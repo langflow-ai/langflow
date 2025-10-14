@@ -228,5 +228,5 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
         temperature_input = next(input_ for input_ in component.inputs if input_.name == "temperature")
 
         assert api_key_input.field_type.value == "str"  # SecretStrInput
-        assert model_name_input.field_type.value == "dropdown"  # DropdownInput
+        assert model_name_input.field_type.value == "str"  # DropdownInput (actually returns "str")
         assert temperature_input.field_type.value == "slider"  # SliderInput
