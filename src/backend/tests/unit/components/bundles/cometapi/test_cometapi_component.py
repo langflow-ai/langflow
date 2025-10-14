@@ -96,7 +96,7 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         component.set_attributes(default_kwargs)
         component.stream = True
-        model = component.build_model()
+        component.build_model()
 
         _args, kwargs = mock_chat_openai.call_args
         assert kwargs["streaming"] is True

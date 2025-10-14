@@ -149,7 +149,7 @@ class TestCometAPIIntegration:
         assert models == MODEL_NAMES
         assert "Error fetching models" in component.status
 
-    def test_update_build_config_integration(self, component, mock_api_key):
+    def test_update_build_config_integration(self, component):
         """Test update_build_config integration."""
         build_config = {"model_name": {"value": "current-model", "placeholder": "Select a model"}}
 

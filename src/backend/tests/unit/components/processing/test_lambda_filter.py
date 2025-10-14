@@ -150,4 +150,3 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
         assert structure["nested"] == {"a": [{"b": "int"}]}, (
             f"Expected nested structure {{'a': [{{'b': 'int'}}]}}, got {structure['nested']}"
         )
-        
