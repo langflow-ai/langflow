@@ -30,10 +30,7 @@ def test_enum_maps_to_literal():
         # Get all args and filter out None
         args = get_args(annotation)
         non_none_types = [arg for arg in args if arg is not type(None)]
-        if non_none_types:
-            inner_type = non_none_types[0]
-        else:
-            inner_type = annotation
+        inner_type = non_none_types[0] if non_none_types else annotation
     else:
         inner_type = annotation
 

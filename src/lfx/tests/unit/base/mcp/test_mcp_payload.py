@@ -16,7 +16,7 @@ class CapturingClient:
     def __init__(self):
         self.args: dict[str, Any] | None = None
 
-    async def run_tool(self, name: str, arguments: dict[str, Any]) -> Any:
+    async def run_tool(self, _name: str, arguments: dict[str, Any]) -> Any:
         self.args = arguments
         # Return a minimal result object
         return types.SimpleNamespace(content=[])
