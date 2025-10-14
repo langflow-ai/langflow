@@ -164,7 +164,18 @@ class LCAgentComponent(Component):
             # ! Because the input has to be a string, we must pass the images in the chat_history
 
             image_dicts = [item for item in lc_message.content if item.get("type") == "image"]
-            lc_message.content = [item for item in lc_message.content if item.get("type") != "image"]
+            text_items = [item for item in lc_message.content if item.get("type") != "image"]
+
+            # Extract text content from remaining items
+            if text_items:
+                # If there are text items, extract their text content
+                input_text = " ".join(
+                    item.get("text", "") for item in text_items if item.get("type") == "text"
+                ).strip()
+
+            # If input_text is still a list or empty, provide a default
+            if isinstance(input_text, list) or not input_text:
+                input_text = "Process the provided images."
 
             if "chat_history" not in input_dict:
                 input_dict["chat_history"] = []
@@ -172,6 +183,11 @@ class LCAgentComponent(Component):
                 input_dict["chat_history"].extend(HumanMessage(content=[image_dict]) for image_dict in image_dicts)
             else:
                 input_dict["chat_history"] = [HumanMessage(content=[image_dict]) for image_dict in image_dicts]
+
+        # Final safety check: ensure input_text is never empty (prevents Anthropic API errors)
+        if not input_text or (isinstance(input_text, (list, str)) and not str(input_text).strip()):
+            input_text = "Continue the conversation."
+
         input_dict["input"] = input_text
         if hasattr(self, "graph"):
             session_id = self.graph.session_id
