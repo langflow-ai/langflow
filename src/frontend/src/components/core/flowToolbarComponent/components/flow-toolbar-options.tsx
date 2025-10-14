@@ -1,20 +1,10 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useState } from "react";
 import useFlowStore from "@/stores/flowStore";
 import PublishDropdown from "./deploy-dropdown";
 import PlaygroundButton from "./playground-button";
 
-type FlowToolbarOptionsProps = {
-  open: boolean;
-  setOpen: Dispatch<SetStateAction<boolean>>;
-  openApiModal: boolean;
-  setOpenApiModal: Dispatch<SetStateAction<boolean>>;
-};
-const FlowToolbarOptions = ({
-  open,
-  setOpen,
-  openApiModal,
-  setOpenApiModal,
-}: FlowToolbarOptionsProps) => {
+export default function FlowToolbarOptions() {
+  const [open, setOpen] = useState<boolean>(false);
   const hasIO = useFlowStore((state) => state.hasIO);
 
   return (
@@ -27,12 +17,7 @@ const FlowToolbarOptions = ({
           canvasOpen
         />
       </div>
-      <PublishDropdown
-        openApiModal={openApiModal}
-        setOpenApiModal={setOpenApiModal}
-      />
+      <PublishDropdown />
     </div>
   );
-};
-
-export default FlowToolbarOptions;
+}

@@ -1,4 +1,4 @@
-import { type Dispatch, type SetStateAction, useState } from "react";
+import { useState } from "react";
 import { useHref } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltipComponent from "@/components/common/shadTooltipComponent";
@@ -22,16 +22,9 @@ import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
+import FlowSettingsModal from "@/modals/flowSettingsModal";
 
-type PublishDropdownProps = {
-  openApiModal: boolean;
-  setOpenApiModal: Dispatch<SetStateAction<boolean>>;
-};
-
-export default function PublishDropdown({
-  openApiModal,
-  setOpenApiModal,
-}: PublishDropdownProps) {
+export default function PublishDropdown() {
   const location = useHref("/");
   const domain = window.location.origin + location;
   const [openEmbedModal, setOpenEmbedModal] = useState(false);
@@ -47,6 +40,8 @@ export default function PublishDropdown({
   const isPublished = currentFlow?.access_type === "PUBLIC";
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
+  const [openApiModal, setOpenApiModal] = useState(false);
+  const [publishAgent, setPublishModal] = useState(false);
   const [openExportModal, setOpenExportModal] = useState(false);
 
   const handlePublishedSwitch = async (checked: boolean) => {
@@ -68,10 +63,9 @@ export default function PublishDropdown({
             );
             setCurrentFlow(updatedFlow);
           } else {
-            setErrorData({
-              title: "Failed to save flow",
-              list: ["Flows variable undefined"],
-            });
+            // If flows array is not available, just update the current flow
+            // This can happen when loading flows directly via URL
+            setCurrentFlow(updatedFlow);
           }
         },
         onError: (e) => {
@@ -105,6 +99,13 @@ export default function PublishDropdown({
           align="end"
           className="w-full min-w-[275px]"
         >
+          <DropdownMenuItem
+            className="deploy-dropdown-item group"
+            onClick={() => setPublishModal(true)}
+          >
+            <IconComponent name="file" className={`icon-size mr-2`} />
+            <span>Publish</span>
+          </DropdownMenuItem>
           <DropdownMenuItem
             className="deploy-dropdown-item group"
             onClick={() => setOpenApiModal(true)}
@@ -148,65 +149,8 @@ export default function PublishDropdown({
             </DropdownMenuItem>
           )}
 
-          {ENABLE_PUBLISH && (
-            <DropdownMenuItem
-              className="deploy-dropdown-item group"
-              disabled={!hasIO}
-              onClick={() => {}}
-              data-testid="shareable-playground"
-            >
-              <div className="flex w-full items-center justify-between">
-                <div className="flex items-center">
-                  <ShadTooltipComponent
-                    styleClasses="truncate"
-                    side="left"
-                    content={
-                      hasIO
-                        ? isPublished
-                          ? encodeURI(`${domain}/playground/${flowId}`)
-                          : "Activate to share a public version of this Playground"
-                        : "Add a Chat Input or Chat Output to access your flow"
-                    }
-                  >
-                    <div className="flex items-center">
-                      <IconComponent
-                        name="Globe"
-                        className={cn(
-                          `icon-size mr-2`,
-                          !isPublished && "opacity-50",
-                        )}
-                      />
+          {/* Shareable Playground section has been removed */}
 
-                      {isPublished ? (
-                        <CustomLink
-                          className="flex-1"
-                          to={`/playground/${flowId}`}
-                          target="_blank"
-                        >
-                          <span>Shareable Playground</span>
-                        </CustomLink>
-                      ) : (
-                        <span className={cn(!isPublished && "opacity-50")}>
-                          Shareable Playground
-                        </span>
-                      )}
-                    </div>
-                  </ShadTooltipComponent>
-                </div>
-                <Switch
-                  data-testid="publish-switch"
-                  className="scale-[85%]"
-                  checked={isPublished}
-                  disabled={!hasIO}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handlePublishedSwitch(isPublished);
-                  }}
-                />
-              </div>
-            </DropdownMenuItem>
-          )}
         </DropdownMenuContent>
       </DropdownMenu>
       <ApiModal open={openApiModal} setOpen={setOpenApiModal}>
@@ -222,6 +166,12 @@ export default function PublishDropdown({
         activeTweaks={false}
       ></EmbedModal>
       <ExportModal open={openExportModal} setOpen={setOpenExportModal} />
+      <FlowSettingsModal
+        open={publishAgent}
+        setOpen={setPublishModal}
+        flowData={currentFlow}
+        isPublishMode={true}
+      />
     </>
   );
 }
