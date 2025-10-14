@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from .bolna_composio import ComposioBolnaAPIComponent
     from .brightdata_composio import ComposioBrightdataAPIComponent
     from .calendly_composio import ComposioCalendlyAPIComponent
-    from .canvas_composio import ComposioCanvaasAPIComponent
+    from .canvas_composio import ComposioCanvasAPIComponent
     from .composio_api import ComposioAPIComponent
     from .contentful_composio import ComposioContentfulAPIComponent
     from .digicert_composio import ComposioDigicertAPIComponent
@@ -62,7 +62,7 @@ _dynamic_imports = {
     "ComposioBolnaAPIComponent": "bolna_composio",
     "ComposioBrightdataAPIComponent": "brightdata_composio",
     "ComposioCalendlyAPIComponent": "calendly_composio",
-    "ComposioCanvaasAPIComponent": "canvaas_composio",
+    "ComposioCanvasAPIComponent": "canvas_composio",
     "ComposioContentfulAPIComponent": "contentful_composio",
     "ComposioDiscordAPIComponent": "discord_composio",
     "ComposioDigicertAPIComponent": "digicert_composio",
@@ -112,7 +112,7 @@ __all__ = [
     "ComposioBolnaAPIComponent",
     "ComposioBrightdataAPIComponent",
     "ComposioCalendlyAPIComponent",
-    "ComposioCanvaasAPIComponent",
+    "ComposioCanvasAPIComponent",
     "ComposioContentfulAPIComponent",
     "ComposioDigicertAPIComponent",
     "ComposioDiscordAPIComponent",
