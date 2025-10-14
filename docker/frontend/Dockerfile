@@ -49,8 +49,8 @@ RUN cp .env.example build/ && \
 # Production stage
 FROM nginx:1.25-alpine
 
-# Copy custom nginx configuration
-COPY src/frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# Copy custom nginx configuration as template
+COPY src/frontend/nginx.conf /usr/share/nginx/html/nginx.conf.template
 
 # Copy built application with runtime scripts from build stage
 COPY --from=frontend_build /app/build /usr/share/nginx/html
@@ -65,10 +65,13 @@ RUN chmod +x /usr/share/nginx/html/env.sh && \
     chmod -R 755 /usr/share/nginx/html/ && \
     chown -R aistudio:aistudio /usr/share/nginx/html/
 
-# Set up nginx permissions for non-root user
-RUN chown -R aistudio:aistudio /var/cache/nginx && \
+# Create directories and set permissions for non-root nginx
+RUN mkdir -p /tmp/nginx /tmp/client_body /tmp/proxy_temp /tmp/fastcgi_temp /tmp/uwsgi_temp /tmp/scgi_temp && \
+    mkdir -p /etc/nginx/extra-conf.d && \
+    chown -R aistudio:aistudio /tmp/nginx /tmp/client_body /tmp/proxy_temp /tmp/fastcgi_temp /tmp/uwsgi_temp /tmp/scgi_temp && \
+    chown -R aistudio:aistudio /var/cache/nginx && \
     chown -R aistudio:aistudio /var/log/nginx && \
-    chown -R aistudio:aistudio /etc/nginx/conf.d && \
+    chown -R aistudio:aistudio /etc/nginx/extra-conf.d && \
     touch /var/run/nginx.pid && \
     chown -R aistudio:aistudio /var/run/nginx.pid
 

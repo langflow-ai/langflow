@@ -15,7 +15,37 @@ if [ -z "${VITE_BACKEND_URL:-}" ]; then
 fi
 
 echo "INFO: Environment configuration complete"
-echo "INFO: Starting nginx server for AI Studio Frontend"
 
-# Start nginx with the default configuration
-exec nginx -g "daemon off;"
+# Set default values for nginx configuration
+if [ -z "${FRONTEND_PORT}" ]; then
+    FRONTEND_PORT="3000"
+fi
+
+if [ -z "${BACKEND_URL}" ]; then
+    BACKEND_URL="${VITE_BACKEND_URL:-http://localhost:7860}"
+fi
+
+if [ -z "${LANGFLOW_MAX_FILE_SIZE_UPLOAD}" ]; then
+    LANGFLOW_MAX_FILE_SIZE_UPLOAD="100"
+fi
+
+# Export variables for envsubst
+export FRONTEND_PORT BACKEND_URL LANGFLOW_MAX_FILE_SIZE_UPLOAD
+
+# Create directory for processed nginx configuration
+mkdir -p /tmp/nginx
+
+# Process nginx.conf template with environment variables
+echo "INFO: Processing nginx configuration with FRONTEND_PORT=${FRONTEND_PORT}"
+envsubst '${FRONTEND_PORT} ${BACKEND_URL} ${LANGFLOW_MAX_FILE_SIZE_UPLOAD}' \
+    < /usr/share/nginx/html/nginx.conf.template \
+    > /tmp/nginx/nginx.conf
+
+# Create required temp directories for non-root nginx
+mkdir -p /tmp/client_body /tmp/proxy_temp /tmp/fastcgi_temp /tmp/uwsgi_temp /tmp/scgi_temp
+mkdir -p /etc/nginx/extra-conf.d
+
+echo "INFO: Starting nginx server for AI Studio Frontend on port ${FRONTEND_PORT}"
+
+# Start nginx with the processed configuration
+exec nginx -c /tmp/nginx/nginx.conf -g "daemon off;"
