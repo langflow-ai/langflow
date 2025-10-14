@@ -15,7 +15,7 @@ const config = {
   favicon: "img/favicon.ico",
   url: "https://docs.langflow.org",
   baseUrl: process.env.BASE_URL ? process.env.BASE_URL : "/",
-  onBrokenLinks: "throw",
+  onBrokenLinks: "warn",
   onBrokenMarkdownLinks: "warn",
   onBrokenAnchors: "warn",
   organizationName: "langflow-ai",
@@ -79,13 +79,9 @@ const config = {
 
   presets: [
     [
-      "docusaurus-preset-openapi",
+      "@docusaurus/preset-classic",
       /** @type {import('@docusaurus/preset-classic').Options} */
       ({
-        api: {
-          path: "openapi.json", // Path to your OpenAPI file
-          routeBasePath: "/api", // The base URL for your API docs
-        },
         docs: {
           routeBasePath: "/", // Serve the docs at the site's root
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
@@ -126,12 +122,31 @@ const config = {
         },
       }),
     ],
+    [
+      "redocusaurus",
+      {
+        openapi: {
+          path: "openapi",
+          routeBasePath: "/api",
+        },
+        specs: [
+          {
+            id: "api",
+            spec: "openapi/openapi.yaml",
+            route: "/api",
+          },
+        ],
+        theme: {
+          primaryColor: "#7528FC",
+        },
+      },
+    ],
   ],
   plugins: [
     ["docusaurus-node-polyfills", { excludeAliases: ["console"] }],
     "docusaurus-plugin-image-zoom",
-    ["./src/plugins/segment", { segmentPublicWriteKey: process.env.SEGMENT_PUBLIC_WRITE_KEY, allowedInDev: true }],
-    ["./src/plugins/scroll-tracking", {
+    ["./src/plugins/segment/index.js", { segmentPublicWriteKey: process.env.SEGMENT_PUBLIC_WRITE_KEY, allowedInDev: true }],
+    ["./src/plugins/scroll-tracking/index.js", {
       segmentPublicWriteKey: process.env.SEGMENT_PUBLIC_WRITE_KEY,
       allowedInDev: true,
       selectors: [

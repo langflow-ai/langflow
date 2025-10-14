@@ -26,22 +26,6 @@
             }
           },
           {
-            "name": "data",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/FlowDataRequest"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Data"
-            }
-          },
-          {
             "name": "stop_component_id",
             "in": "query",
             "required": false,
@@ -74,6 +58,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/FlowDataRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Data"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -603,7 +604,7 @@
           "Base"
         ],
         "summary": "Simplified Run Flow",
-        "description": "Executes a specified flow by ID with support for streaming and telemetry.\n\nThis endpoint executes a flow identified by ID or name, with options for streaming the response\nand tracking execution metrics. It handles both streaming and non-streaming execution modes.\n\nArgs:\n    background_tasks (BackgroundTasks): FastAPI background task manager\n    flow (FlowRead | None): The flow to execute, loaded via dependency\n    input_request (SimplifiedAPIRequest | None): Input parameters for the flow\n    stream (bool): Whether to stream the response\n    api_key_user (UserRead): Authenticated user from API key\n    request (Request): The incoming HTTP request\n\nReturns:\n    Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results\n    or a RunResponse with the complete execution results\n\nRaises:\n    HTTPException: For flow not found (404) or invalid input (400)\n    APIException: For internal execution errors (500)\n\nNotes:\n    - Supports both streaming and non-streaming execution modes\n    - Tracks execution time and success/failure via telemetry\n    - Handles graceful client disconnection in streaming mode\n    - Provides detailed error handling with appropriate HTTP status codes\n    - In streaming mode, uses EventManager to handle events:\n        - \"add_message\": New messages during execution\n        - \"token\": Individual tokens during streaming\n        - \"end\": Final execution result",
+        "description": "Executes a specified flow by ID with support for streaming and telemetry.\n\nThis endpoint executes a flow identified by ID or name, with options for streaming the response\nand tracking execution metrics. It handles both streaming and non-streaming execution modes.\n\nArgs:\n    background_tasks (BackgroundTasks): FastAPI background task manager\n    flow (FlowRead | None): The flow to execute, loaded via dependency\n    input_request (SimplifiedAPIRequest | None): Input parameters for the flow\n    stream (bool): Whether to stream the response\n    api_key_user (UserRead): Authenticated user from API key\n    context (dict | None): Optional context to pass to the flow\n    http_request (Request): The incoming HTTP request for extracting global variables\n\nReturns:\n    Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results\n    or a RunResponse with the complete execution results\n\nRaises:\n    HTTPException: For flow not found (404) or invalid input (400)\n    APIException: For internal execution errors (500)\n\nNotes:\n    - Supports both streaming and non-streaming execution modes\n    - Tracks execution time and success/failure via telemetry\n    - Handles graceful client disconnection in streaming mode\n    - Provides detailed error handling with appropriate HTTP status codes\n    - Extracts global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*\n    - Merges extracted variables with the context parameter as \"request_variables\"\n    - In streaming mode, uses EventManager to handle events:\n        - \"add_message\": New messages during execution\n        - \"token\": Individual tokens during streaming\n        - \"end\": Final execution result",
         "operationId": "simplified_run_flow_api_v1_run__flow_id_or_name__post",
         "security": [
           {
@@ -658,15 +659,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/SimplifiedAPIRequest"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "title": "Input Request"
+                "$ref": "#/components/schemas/Body_simplified_run_flow_api_v1_run__flow_id_or_name__post"
               }
             }
           }
@@ -699,7 +692,7 @@
           "Base"
         ],
         "summary": "Webhook Run Flow",
-        "description": "Run a flow using a webhook request.\n\nArgs:\n    flow (Flow, optional): The flow to be executed. Defaults to Depends(get_flow_by_id).\n    user (User): The flow user.\n    request (Request): The incoming HTTP request.\n    background_tasks (BackgroundTasks): The background tasks manager.\n\nReturns:\n    dict: A dictionary containing the status of the task.\n\nRaises:\n    HTTPException: If the flow is not found or if there is an error processing the request.",
+        "description": "Run a flow using a webhook request.\n\nArgs:\n    flow_id_or_name (str): The flow ID or endpoint name.\n    flow (Flow): The flow to be executed.\n    request (Request): The incoming HTTP request.\n    background_tasks (BackgroundTasks): The background tasks manager.\n\nReturns:\n    dict: A dictionary containing the status of the task.\n\nRaises:\n    HTTPException: If the flow is not found or if there is an error processing the request.",
         "operationId": "webhook_run_flow_api_v1_webhook__flow_id_or_name__post",
         "parameters": [
           {
@@ -1950,7 +1943,7 @@
                       }
                     },
                     {
-                      "$ref": "#/components/schemas/Page_FlowRead_"
+                      "$ref": "#/components/schemas/Page_FlowRead_-Output"
                     },
                     {
                       "type": "array",
@@ -3848,7 +3841,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/MessageResponse"
+                    "$ref": "#/components/schemas/MessageResponse-Output"
                   },
                   "title": "Response Get Messages Api V1 Monitor Messages Get"
                 }
@@ -4028,7 +4021,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/MessageResponse"
+                    "$ref": "#/components/schemas/MessageResponse-Output"
                   },
                   "title": "Response Update Session Id Api V1 Monitor Messages Session  Old Session Id  Patch"
                 }
@@ -4289,10 +4282,10 @@
                 "schema": {
                   "anyOf": [
                     {
-                      "$ref": "#/components/schemas/FolderWithPaginatedFlows"
+                      "$ref": "#/components/schemas/FolderWithPaginatedFlows-Output"
                     },
                     {
-                      "$ref": "#/components/schemas/FolderReadWithFlows"
+                      "$ref": "#/components/schemas/FolderReadWithFlows-Output"
                     }
                   ],
                   "title": "Response Read Folder Redirect Api V1 Folders  Folder Id  Get"
@@ -4644,10 +4637,10 @@
                 "schema": {
                   "anyOf": [
                     {
-                      "$ref": "#/components/schemas/FolderWithPaginatedFlows"
+                      "$ref": "#/components/schemas/FolderWithPaginatedFlows-Output"
                     },
                     {
-                      "$ref": "#/components/schemas/FolderReadWithFlows"
+                      "$ref": "#/components/schemas/FolderReadWithFlows-Output"
                     }
                   ],
                   "title": "Response Read Project Api V1 Projects  Project Id  Get"
@@ -4900,7 +4893,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/GraphDump"
+                    "$ref": "#/components/schemas/GraphDumpResponse-Output"
                   },
                   "type": "array",
                   "title": "Response Get Starter Projects Api V1 Starter Projects  Get"
@@ -5777,7 +5770,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/langflow__services__database__models__file__model__File"
+                    "$ref": "#/components/schemas/File"
                   },
                   "type": "array",
                   "title": "Response List Files Api V2 Files  Get"
@@ -5894,7 +5887,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/langflow__services__database__models__file__model__File"
+                    "$ref": "#/components/schemas/File"
                   },
                   "type": "array",
                   "title": "Response List Files Api V2 Files Get"
@@ -7299,6 +7292,33 @@
         ],
         "title": "Body_login_to_get_access_token_api_v1_login_post"
       },
+      "Body_simplified_run_flow_api_v1_run__flow_id_or_name__post": {
+        "properties": {
+          "input_request": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SimplifiedAPIRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "context": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "title": "Body_simplified_run_flow_api_v1_run__flow_id_or_name__post"
+      },
       "Body_upload_file_api_v1_files_upload__flow_id__post": {
         "properties": {
           "file": {
@@ -7486,7 +7506,7 @@
           },
           "files": {
             "items": {
-              "$ref": "#/components/schemas/langflow__utils__schemas__File"
+              "$ref": "#/components/schemas/lfx__utils__schemas__File"
             },
             "type": "array",
             "title": "Files",
@@ -7518,7 +7538,7 @@
         ],
         "title": "Code"
       },
-      "CodeContent": {
+      "CodeContent-Output": {
         "type": "object"
       },
       "CodeValidationResponse": {
@@ -7593,9 +7613,21 @@
             ],
             "title": "Event Delivery"
           },
+          "webhook_auth_enable": {
+            "type": "boolean",
+            "title": "Webhook Auth Enable"
+          },
           "voice_mode_available": {
             "type": "boolean",
             "title": "Voice Mode Available"
+          },
+          "default_folder_name": {
+            "type": "string",
+            "title": "Default Folder Name"
+          },
+          "hide_getting_started_progress": {
+            "type": "boolean",
+            "title": "Hide Getting Started Progress"
           }
         },
         "type": "object",
@@ -7612,11 +7644,14 @@
           "public_flow_cleanup_interval",
           "public_flow_expiration",
           "event_delivery",
-          "voice_mode_available"
+          "webhook_auth_enable",
+          "voice_mode_available",
+          "default_folder_name",
+          "hide_getting_started_progress"
         ],
         "title": "ConfigResponse"
       },
-      "ContentBlock": {
+      "ContentBlock-Output": {
         "properties": {
           "title": {
             "type": "string",
@@ -7787,48 +7822,7 @@
         ],
         "title": "DownloadComponentResponse"
       },
-      "EdgeData": {
-        "properties": {
-          "source": {
-            "type": "string",
-            "title": "Source"
-          },
-          "target": {
-            "type": "string",
-            "title": "Target"
-          },
-          "data": {
-            "$ref": "#/components/schemas/EdgeDataDetails"
-          }
-        },
-        "type": "object",
-        "title": "EdgeData"
-      },
-      "EdgeDataDetails": {
-        "properties": {
-          "sourceHandle": {
-            "$ref": "#/components/schemas/SourceHandleDict"
-          },
-          "targetHandle": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TargetHandleDict"
-              },
-              {
-                "$ref": "#/components/schemas/LoopTargetHandleDict"
-              }
-            ],
-            "title": "Targethandle"
-          }
-        },
-        "type": "object",
-        "required": [
-          "sourceHandle",
-          "targetHandle"
-        ],
-        "title": "EdgeDataDetails"
-      },
-      "ErrorContent": {
+      "ErrorContent-Output": {
         "type": "object"
       },
       "ErrorLog": {
@@ -7869,6 +7863,61 @@
         "additionalProperties": false,
         "type": "object",
         "title": "FeatureFlags"
+      },
+      "File": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "name",
+          "path",
+          "size"
+        ],
+        "title": "File"
       },
       "Flow": {
         "properties": {
@@ -8973,7 +9022,70 @@
         ],
         "title": "FolderRead"
       },
-      "FolderReadWithFlows": {
+      "FolderReadWithFlows-Input": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "auth_settings": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth Settings",
+            "description": "Authentication settings for the folder/project"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "flows": {
+            "items": {
+              "$ref": "#/components/schemas/FlowRead"
+            },
+            "type": "array",
+            "title": "Flows",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id",
+          "parent_id"
+        ],
+        "title": "FolderReadWithFlows"
+      },
+      "FolderReadWithFlows-Output": {
         "properties": {
           "name": {
             "type": "string",
@@ -9103,13 +9215,29 @@
         "type": "object",
         "title": "FolderUpdate"
       },
-      "FolderWithPaginatedFlows": {
+      "FolderWithPaginatedFlows-Input": {
         "properties": {
           "folder": {
             "$ref": "#/components/schemas/FolderRead"
           },
           "flows": {
-            "$ref": "#/components/schemas/Page_Flow_"
+            "$ref": "#/components/schemas/Page_Flow_-Input"
+          }
+        },
+        "type": "object",
+        "required": [
+          "folder",
+          "flows"
+        ],
+        "title": "FolderWithPaginatedFlows"
+      },
+      "FolderWithPaginatedFlows-Output": {
+        "properties": {
+          "folder": {
+            "$ref": "#/components/schemas/FolderRead"
+          },
+          "flows": {
+            "$ref": "#/components/schemas/Page_Flow_-Output"
           }
         },
         "type": "object",
@@ -9571,20 +9699,27 @@
         "properties": {
           "nodes": {
             "items": {
-              "$ref": "#/components/schemas/NodeData"
+              "type": "object"
             },
             "type": "array",
             "title": "Nodes"
           },
           "edges": {
             "items": {
-              "$ref": "#/components/schemas/EdgeData"
+              "type": "object"
             },
             "type": "array",
             "title": "Edges"
           },
           "viewport": {
-            "$ref": "#/components/schemas/ViewPort"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ViewPort"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -9594,30 +9729,117 @@
         ],
         "title": "GraphData"
       },
-      "GraphDump": {
+      "GraphDumpResponse-Input": {
         "properties": {
           "data": {
             "$ref": "#/components/schemas/GraphData"
           },
           "is_component": {
-            "type": "boolean",
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Is Component"
           },
           "name": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Name"
           },
           "description": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Description"
           },
           "endpoint_name": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Endpoint Name"
           }
         },
         "type": "object",
-        "title": "GraphDump"
+        "required": [
+          "data"
+        ],
+        "title": "GraphDumpResponse"
+      },
+      "GraphDumpResponse-Output": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/GraphData"
+          },
+          "is_component": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Component"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "endpoint_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endpoint Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "GraphDumpResponse"
       },
       "HTTPValidationError": {
         "properties": {
@@ -9781,7 +10003,7 @@
           }
         ]
       },
-      "JSONContent": {
+      "JSONContent-Output": {
         "type": "object"
       },
       "KnowledgeBaseInfo": {
@@ -10035,7 +10257,7 @@
         ],
         "title": "ListComponentResponseModel"
       },
-      "Log": {
+      "Log-Input": {
         "properties": {
           "name": {
             "type": "string",
@@ -10066,7 +10288,7 @@
                 "$ref": "#/components/schemas/BaseModel"
               },
               {
-                "$ref": "#/components/schemas/PlaygroundEvent"
+                "$ref": "#/components/schemas/PlaygroundEvent-Input"
               },
               {
                 "type": "null"
@@ -10087,36 +10309,57 @@
         ],
         "title": "Log"
       },
-      "LoopTargetHandleDict": {
+      "Log-Output": {
         "properties": {
-          "dataType": {
-            "type": "string",
-            "title": "Datatype"
-          },
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
           "name": {
             "type": "string",
             "title": "Name"
           },
-          "output_types": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Output Types"
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "$ref": "#/components/schemas/BaseModel"
+              },
+              {
+                "$ref": "#/components/schemas/PlaygroundEvent-Output"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
           }
         },
         "type": "object",
         "required": [
-          "dataType",
-          "id",
           "name",
-          "output_types"
+          "message",
+          "type"
         ],
-        "title": "LoopTargetHandleDict"
+        "title": "Log"
       },
       "MCPInstallRequest": {
         "properties": {
@@ -10255,7 +10498,7 @@
         "title": "MCPSettings",
         "description": "Model representing MCP settings for a flow."
       },
-      "MediaContent": {
+      "MediaContent-Output": {
         "type": "object"
       },
       "MessageRead": {
@@ -10299,7 +10542,7 @@
             "default": false
           },
           "properties": {
-            "$ref": "#/components/schemas/Properties"
+            "$ref": "#/components/schemas/langflow__schema__properties__Properties"
           },
           "category": {
             "type": "string",
@@ -10308,7 +10551,7 @@
           },
           "content_blocks": {
             "items": {
-              "$ref": "#/components/schemas/ContentBlock"
+              "$ref": "#/components/schemas/ContentBlock-Output"
             },
             "type": "array",
             "title": "Content Blocks"
@@ -10342,7 +10585,7 @@
         ],
         "title": "MessageRead"
       },
-      "MessageResponse": {
+      "MessageResponse-Input": {
         "properties": {
           "id": {
             "anyOf": [
@@ -10418,7 +10661,7 @@
           "properties": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Properties"
+                "$ref": "#/components/schemas/langflow__schema__properties__Properties"
               },
               {
                 "type": "null"
@@ -10440,7 +10683,126 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/ContentBlock"
+                  "$ref": "#/components/schemas/lfx__schema__content_block__ContentBlock-Input"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Blocks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sender",
+          "sender_name",
+          "session_id",
+          "text",
+          "edit"
+        ],
+        "title": "MessageResponse"
+      },
+      "MessageResponse-Output": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "flow_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flow Id"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "sender": {
+            "type": "string",
+            "title": "Sender"
+          },
+          "sender_name": {
+            "type": "string",
+            "title": "Sender Name"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Files",
+            "default": []
+          },
+          "edit": {
+            "type": "boolean",
+            "title": "Edit"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "properties": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/langflow__schema__properties__Properties"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "content_blocks": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ContentBlock-Output"
                 },
                 "type": "array"
               },
@@ -10546,7 +10908,7 @@
           "properties": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Properties"
+                "$ref": "#/components/schemas/langflow__schema__properties__Properties"
               },
               {
                 "type": "null"
@@ -10556,61 +10918,6 @@
         },
         "type": "object",
         "title": "MessageUpdate"
-      },
-      "NodeData": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "data": {
-            "type": "object",
-            "title": "Data"
-          },
-          "dragging": {
-            "type": "boolean",
-            "title": "Dragging"
-          },
-          "height": {
-            "type": "integer",
-            "title": "Height"
-          },
-          "width": {
-            "type": "integer",
-            "title": "Width"
-          },
-          "position": {
-            "$ref": "#/components/schemas/Position"
-          },
-          "positionAbsolute": {
-            "$ref": "#/components/schemas/Position"
-          },
-          "selected": {
-            "type": "boolean",
-            "title": "Selected"
-          },
-          "parent_node_id": {
-            "type": "string",
-            "title": "Parent Node Id"
-          },
-          "type": {
-            "$ref": "#/components/schemas/NodeTypeEnum"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "data"
-        ],
-        "title": "NodeData"
-      },
-      "NodeTypeEnum": {
-        "type": "string",
-        "enum": [
-          "noteNode",
-          "genericNode"
-        ],
-        "title": "NodeTypeEnum"
       },
       "OpenAIResponsesRequest": {
         "properties": {
@@ -10857,7 +11164,7 @@
         ],
         "title": "OutputValue"
       },
-      "Page_FlowRead_": {
+      "Page_FlowRead_-Input": {
         "properties": {
           "items": {
             "items": {
@@ -10897,7 +11204,87 @@
         ],
         "title": "Page[FlowRead]"
       },
-      "Page_Flow_": {
+      "Page_FlowRead_-Output": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FlowRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Page"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Size"
+          },
+          "pages": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "size",
+          "pages"
+        ],
+        "title": "Page[FlowRead]"
+      },
+      "Page_Flow_-Input": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Flow"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Page"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Size"
+          },
+          "pages": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "size",
+          "pages"
+        ],
+        "title": "Page[Flow]"
+      },
+      "Page_Flow_-Output": {
         "properties": {
           "items": {
             "items": {
@@ -10941,7 +11328,7 @@
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/TransactionTable"
+              "$ref": "#/components/schemas/TransactionTable-Output"
             },
             "type": "array",
             "title": "Items"
@@ -10977,12 +11364,12 @@
         ],
         "title": "Page[TransactionTable]"
       },
-      "PlaygroundEvent": {
+      "PlaygroundEvent-Input": {
         "properties": {
           "properties": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Properties"
+                "$ref": "#/components/schemas/langflow__schema__properties__Properties"
               },
               {
                 "type": "null"
@@ -11004,7 +11391,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/ContentBlock"
+                  "$ref": "#/components/schemas/lfx__schema__content_block__ContentBlock-Input"
                 },
                 "type": "array"
               },
@@ -11074,23 +11461,102 @@
         "type": "object",
         "title": "PlaygroundEvent"
       },
-      "Position": {
+      "PlaygroundEvent-Output": {
         "properties": {
-          "x": {
-            "type": "number",
-            "title": "X"
+          "properties": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/langflow__schema__properties__Properties"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
-          "y": {
-            "type": "number",
-            "title": "Y"
+          "sender_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sender Name"
+          },
+          "content_blocks": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ContentBlock-Output"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Blocks"
+          },
+          "format_type": {
+            "type": "string",
+            "enum": [
+              "default",
+              "error",
+              "warning",
+              "info"
+            ],
+            "title": "Format Type",
+            "default": "default"
+          },
+          "files": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Files"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
           }
         },
+        "additionalProperties": true,
         "type": "object",
-        "required": [
-          "x",
-          "y"
-        ],
-        "title": "Position"
+        "title": "PlaygroundEvent"
       },
       "PromptValidationResponse": {
         "properties": {
@@ -11116,85 +11582,7 @@
         ],
         "title": "PromptValidationResponse"
       },
-      "Properties": {
-        "properties": {
-          "text_color": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Text Color"
-          },
-          "background_color": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Background Color"
-          },
-          "edited": {
-            "type": "boolean",
-            "title": "Edited",
-            "default": false
-          },
-          "source": {
-            "$ref": "#/components/schemas/Source"
-          },
-          "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
-          },
-          "allow_markdown": {
-            "type": "boolean",
-            "title": "Allow Markdown",
-            "default": false
-          },
-          "positive_feedback": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Positive Feedback"
-          },
-          "state": {
-            "type": "string",
-            "enum": [
-              "partial",
-              "complete"
-            ],
-            "title": "State",
-            "default": "complete"
-          },
-          "targets": {
-            "items": {},
-            "type": "array",
-            "title": "Targets",
-            "default": []
-          }
-        },
-        "type": "object",
-        "title": "Properties"
-      },
-      "ResultData": {
+      "ResultData-Input": {
         "properties": {
           "results": {
             "anyOf": [
@@ -11310,10 +11698,210 @@
         "type": "object",
         "title": "ResultData"
       },
-      "ResultDataResponse": {
+      "ResultData-Output": {
+        "properties": {
+          "results": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Results"
+          },
+          "artifacts": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifacts"
+          },
+          "outputs": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outputs"
+          },
+          "logs": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logs"
+          },
+          "messages": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChatOutputResponse"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Messages"
+          },
+          "timedelta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timedelta"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "component_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Component Display Name"
+          },
+          "component_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Component Id"
+          },
+          "used_frozen_result": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Used Frozen Result",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ResultData"
+      },
+      "ResultDataResponse-Input": {
+        "properties": {
+          "results": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Results"
+          },
+          "outputs": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/OutputValue"
+            },
+            "type": "object",
+            "title": "Outputs"
+          },
+          "logs": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/Log-Input"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Logs"
+          },
+          "message": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "artifacts": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifacts"
+          },
+          "timedelta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timedelta"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "used_frozen_result": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Used Frozen Result",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ResultDataResponse"
+      },
+      "ResultDataResponse-Output": {
         "type": "object"
       },
-      "RunOutputs": {
+      "RunOutputs-Input": {
         "properties": {
           "inputs": {
             "type": "object",
@@ -11323,7 +11911,31 @@
             "items": {
               "anyOf": [
                 {
-                  "$ref": "#/components/schemas/ResultData"
+                  "$ref": "#/components/schemas/ResultData-Input"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Outputs"
+          }
+        },
+        "type": "object",
+        "title": "RunOutputs"
+      },
+      "RunOutputs-Output": {
+        "properties": {
+          "inputs": {
+            "type": "object",
+            "title": "Inputs"
+          },
+          "outputs": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ResultData-Output"
                 },
                 {
                   "type": "null"
@@ -11343,7 +11955,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/RunOutputs"
+                  "$ref": "#/components/schemas/RunOutputs-Output"
                 },
                 "type": "array"
               },
@@ -11460,87 +12072,6 @@
         },
         "type": "object",
         "title": "SimplifiedAPIRequest"
-      },
-      "Source": {
-        "properties": {
-          "id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Id",
-            "description": "The id of the source component."
-          },
-          "display_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Display Name",
-            "description": "The display name of the source component."
-          },
-          "source": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source",
-            "description": "The source of the message. Normally used to display the model name (e.g. 'gpt-4o')"
-          }
-        },
-        "type": "object",
-        "title": "Source"
-      },
-      "SourceHandleDict": {
-        "properties": {
-          "baseClasses": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Baseclasses"
-          },
-          "dataType": {
-            "type": "string",
-            "title": "Datatype"
-          },
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          },
-          "output_types": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Output Types"
-          }
-        },
-        "type": "object",
-        "title": "SourceHandleDict"
       },
       "StoreComponentCreate": {
         "properties": {
@@ -11673,44 +12204,6 @@
         ],
         "title": "TagResponse"
       },
-      "TargetHandleDict": {
-        "properties": {
-          "fieldName": {
-            "type": "string",
-            "title": "Fieldname"
-          },
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "inputTypes": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Inputtypes"
-          },
-          "type": {
-            "type": "string",
-            "title": "Type"
-          }
-        },
-        "type": "object",
-        "required": [
-          "fieldName",
-          "id",
-          "inputTypes",
-          "type"
-        ],
-        "title": "TargetHandleDict"
-      },
       "TaskStatusResponse": {
         "properties": {
           "status": {
@@ -11734,7 +12227,7 @@
         "title": "TaskStatusResponse",
         "description": "Task status response schema."
       },
-      "TextContent": {
+      "TextContent-Output": {
         "type": "object"
       },
       "Token": {
@@ -11760,10 +12253,95 @@
         ],
         "title": "Token"
       },
-      "ToolContent": {
+      "ToolContent-Output": {
         "type": "object"
       },
-      "TransactionTable": {
+      "TransactionTable-Input": {
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "vertex_id": {
+            "type": "string",
+            "title": "Vertex Id"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "inputs": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inputs"
+          },
+          "outputs": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outputs"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "flow_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Flow Id"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "vertex_id",
+          "status",
+          "flow_id"
+        ],
+        "title": "TransactionTable"
+      },
+      "TransactionTable-Output": {
         "properties": {
           "timestamp": {
             "type": "string",
@@ -12511,7 +13089,7 @@
           "vertex_builds": {
             "additionalProperties": {
               "items": {
-                "$ref": "#/components/schemas/VertexBuildTable"
+                "$ref": "#/components/schemas/VertexBuildTable-Output"
               },
               "type": "array"
             },
@@ -12616,7 +13194,81 @@
         ],
         "title": "VertexBuildResponse"
       },
-      "VertexBuildTable": {
+      "VertexBuildTable-Input": {
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "artifacts": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifacts"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Params"
+          },
+          "valid": {
+            "type": "boolean",
+            "title": "Valid"
+          },
+          "flow_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Flow Id"
+          },
+          "build_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Build Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "valid",
+          "flow_id"
+        ],
+        "title": "VertexBuildTable"
+      },
+      "VertexBuildTable-Output": {
         "properties": {
           "timestamp": {
             "type": "string",
@@ -12784,31 +13436,104 @@
         "title": "UploadFileResponse",
         "description": "Upload file response schema."
       },
-      "langflow__services__database__models__file__model__File": {
+      "langflow__schema__content_block__ContentBlock-Input": {
         "properties": {
-          "id": {
+          "title": {
             "type": "string",
-            "format": "uuid",
-            "title": "Id"
+            "title": "Title"
           },
-          "user_id": {
+          "contents": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/lfx__schema__content_types__ToolContent"
+                },
+                {
+                  "$ref": "#/components/schemas/lfx__schema__content_types__ErrorContent"
+                },
+                {
+                  "$ref": "#/components/schemas/langflow__schema__content_types__TextContent"
+                },
+                {
+                  "$ref": "#/components/schemas/langflow__schema__content_types__MediaContent"
+                },
+                {
+                  "$ref": "#/components/schemas/langflow__schema__content_types__CodeContent"
+                },
+                {
+                  "$ref": "#/components/schemas/langflow__schema__content_types__JSONContent"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Contents"
+          },
+          "allow_markdown": {
+            "type": "boolean",
+            "title": "Allow Markdown",
+            "default": true
+          },
+          "media_url": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "contents"
+        ],
+        "title": "ContentBlock",
+        "description": "A block of content that can contain different types of content."
+      },
+      "langflow__schema__content_types__CodeContent": {
+        "properties": {
+          "type": {
             "type": "string",
-            "format": "uuid",
-            "title": "User Id"
+            "const": "code",
+            "title": "Type",
+            "default": "code"
           },
-          "name": {
+          "duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeaderDict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "code": {
             "type": "string",
-            "title": "Name"
+            "title": "Code"
           },
-          "path": {
+          "language": {
             "type": "string",
-            "title": "Path"
+            "title": "Language"
           },
-          "size": {
-            "type": "integer",
-            "title": "Size"
-          },
-          "provider": {
+          "title": {
             "anyOf": [
               {
                 "type": "string"
@@ -12817,29 +13542,491 @@
                 "type": "null"
               }
             ],
-            "title": "Provider"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At"
+            "title": "Title"
           }
         },
         "type": "object",
         "required": [
-          "user_id",
-          "name",
-          "path",
-          "size"
+          "code",
+          "language"
         ],
-        "title": "File"
+        "title": "CodeContent",
+        "description": "Content type for code snippets."
       },
-      "langflow__utils__schemas__File": {
+      "langflow__schema__content_types__JSONContent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "json",
+            "title": "Type",
+            "default": "json"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeaderDict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "data": {
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "JSONContent",
+        "description": "Content type for JSON content."
+      },
+      "langflow__schema__content_types__MediaContent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "media",
+            "title": "Type",
+            "default": "media"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeaderDict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "urls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Urls"
+          },
+          "caption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          }
+        },
+        "type": "object",
+        "required": [
+          "urls"
+        ],
+        "title": "MediaContent",
+        "description": "Content type for media content."
+      },
+      "langflow__schema__content_types__TextContent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "text",
+            "title": "Type",
+            "default": "text"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeaderDict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "TextContent",
+        "description": "Content type for simple text content."
+      },
+      "langflow__schema__properties__Properties": {
+        "properties": {
+          "text_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Color"
+          },
+          "background_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Background Color"
+          },
+          "edited": {
+            "type": "boolean",
+            "title": "Edited",
+            "default": false
+          },
+          "source": {
+            "$ref": "#/components/schemas/langflow__schema__properties__Source"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "allow_markdown": {
+            "type": "boolean",
+            "title": "Allow Markdown",
+            "default": false
+          },
+          "positive_feedback": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Positive Feedback"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "partial",
+              "complete"
+            ],
+            "title": "State",
+            "default": "complete"
+          },
+          "targets": {
+            "items": {},
+            "type": "array",
+            "title": "Targets",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "Properties"
+      },
+      "langflow__schema__properties__Source": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id",
+            "description": "The id of the source component."
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name",
+            "description": "The display name of the source component."
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "The source of the message. Normally used to display the model name (e.g. 'gpt-4o')"
+          }
+        },
+        "type": "object",
+        "title": "Source"
+      },
+      "lfx__schema__content_block__ContentBlock-Input": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "contents": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/lfx__schema__content_types__ToolContent"
+                },
+                {
+                  "$ref": "#/components/schemas/lfx__schema__content_types__ErrorContent"
+                },
+                {
+                  "$ref": "#/components/schemas/langflow__schema__content_types__TextContent"
+                },
+                {
+                  "$ref": "#/components/schemas/langflow__schema__content_types__MediaContent"
+                },
+                {
+                  "$ref": "#/components/schemas/langflow__schema__content_types__CodeContent"
+                },
+                {
+                  "$ref": "#/components/schemas/langflow__schema__content_types__JSONContent"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Contents"
+          },
+          "allow_markdown": {
+            "type": "boolean",
+            "title": "Allow Markdown",
+            "default": true
+          },
+          "media_url": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "contents"
+        ],
+        "title": "ContentBlock",
+        "description": "A block of content that can contain different types of content."
+      },
+      "lfx__schema__content_types__ErrorContent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "error",
+            "title": "Type",
+            "default": "error"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeaderDict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "component": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Component"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "solution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Solution"
+          },
+          "traceback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Traceback"
+          }
+        },
+        "type": "object",
+        "title": "ErrorContent",
+        "description": "Content type for error messages."
+      },
+      "lfx__schema__content_types__ToolContent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "tool_use",
+            "title": "Type",
+            "default": "tool_use"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeaderDict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "input": {
+            "type": "object",
+            "title": "Input"
+          },
+          "output": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "error": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "title": "ToolContent",
+        "description": "Content type for tool start content."
+      },
+      "lfx__utils__schemas__File": {
         "properties": {
           "path": {
             "type": "string",
