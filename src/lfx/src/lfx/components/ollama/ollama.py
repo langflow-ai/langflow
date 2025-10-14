@@ -193,10 +193,7 @@ class ChatOllamaComponent(LCModelComponent):
                 "If you want to use the OpenAI-compatible API, please use the OpenAI component instead. "
                 "Learn more at https://docs.ollama.com/openai#openai-compatibility"
             )
-        # ADD THESE DEBUG LINES:
-        print(f"🔍 DEBUG format field - Raw value: {self.format!r}, Type: {type(self.format)}")
-        parsed_format = self._parse_format_field(self.format)
-        print(f"🔍 DEBUG format field - Parsed value: {parsed_format!r}, Type: {type(parsed_format)}")
+
         # Mapping system settings to their corresponding values
         llm_params = {
             "base_url": transformed_base_url,

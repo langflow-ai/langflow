@@ -3,9 +3,9 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
 from langchain_ollama import ChatOllama
-
 from lfx.components.ollama.ollama import ChatOllamaComponent
 from lfx.schema import Data, DataFrame
+
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -598,10 +598,10 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         """Test _parse_json_response with valid JSON dict response."""
         mock_message = MagicMock()
         mock_message.text = '{"name": "John", "age": 30}'
-        
+
         component = component_class(**default_kwargs)
         component.text_response = AsyncMock(return_value=mock_message)
-        
+
         result = await component._parse_json_response()
 
         assert result == {"name": "John", "age": 30}
@@ -612,10 +612,10 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         """Test _parse_json_response with valid JSON list response."""
         mock_message = MagicMock()
         mock_message.text = '[{"id": 1}, {"id": 2}]'
-        
+
         component = component_class(**default_kwargs)
         component.text_response = AsyncMock(return_value=mock_message)
-        
+
         result = await component._parse_json_response()
 
         assert result == [{"id": 1}, {"id": 2}]
@@ -626,7 +626,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         """Test _parse_json_response with invalid JSON raises ValueError."""
         mock_message = MagicMock()
         mock_message.text = "This is not JSON"
-        
+
         component = component_class(**default_kwargs)
         component.text_response = AsyncMock(return_value=mock_message)
 
@@ -638,7 +638,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         """Test _parse_json_response with empty response raises ValueError."""
         mock_message = MagicMock()
         mock_message.text = ""
-        
+
         component = component_class(**default_kwargs)
         component.text_response = AsyncMock(return_value=mock_message)
 

@@ -1,7 +1,6 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from lfx.components.ollama.ollama import ChatOllamaComponent
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
@@ -42,9 +41,9 @@ class TestChatOllamaIntegration:
         # Mock the text_response to return a Message with JSON content
         json_response = '{"name": "John Doe", "age": 30, "email": "john@example.com"}'
         mock_message = Message(text=json_response)
-        
+
         # Patch text_response as an async method
-        with patch.object(component, 'text_response', new_callable=AsyncMock, return_value=mock_message):
+        with patch.object(component, "text_response", new_callable=AsyncMock, return_value=mock_message):
             # Get Data output
             data_output = await component.build_data_output()
 
@@ -81,8 +80,8 @@ class TestChatOllamaIntegration:
             {"name": "Charlie", "age": 42, "city": "Chicago"}
         ]"""
         mock_message = Message(text=json_response)
-        
-        with patch.object(component, 'text_response', new_callable=AsyncMock, return_value=mock_message):
+
+        with patch.object(component, "text_response", new_callable=AsyncMock, return_value=mock_message):
             # Get DataFrame output
             df_output = await component.build_dataframe_output()
 
@@ -130,8 +129,8 @@ class TestChatOllamaIntegration:
         # Mock the text_response
         json_response = '{"name": "Jane Smith", "age": 25, "email": "jane@test.com", "city": "Boston"}'
         mock_message = Message(text=json_response)
-        
-        with patch.object(component, 'text_response', new_callable=AsyncMock, return_value=mock_message):
+
+        with patch.object(component, "text_response", new_callable=AsyncMock, return_value=mock_message):
             # Verify Data output works
             data_output = await component.build_data_output()
             assert isinstance(data_output, Data)
@@ -160,7 +159,7 @@ class TestChatOllamaIntegration:
         # Mock text_response with invalid JSON
         invalid_response = "This is not valid JSON at all!"
         mock_message = Message(text=invalid_response)
-        
-        with patch.object(component, 'text_response', new_callable=AsyncMock, return_value=mock_message), \
+
+        with patch.object(component, "text_response", new_callable=AsyncMock, return_value=mock_message), \
              pytest.raises(ValueError, match="Invalid JSON response"):
             await component.build_data_output()
