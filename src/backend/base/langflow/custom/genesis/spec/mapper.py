@@ -5,6 +5,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Lazy import to avoid circular dependencies
+_component_schema_inspector = None
+
 
 class ComponentMapper:
     """Maps Genesis specification types to AI Studio (Langflow) components."""
@@ -12,6 +15,7 @@ class ComponentMapper:
     def __init__(self):
         """Initialize component mapper with mappings."""
         self._init_mappings()
+        self._use_real_introspection = True  # Flag to enable real component inspection
 
     def _init_mappings(self):
         """Initialize all component mappings."""
@@ -305,143 +309,29 @@ class ComponentMapper:
             logger.warning(f"Completely unknown type '{spec_type}', using MCPTools as fallback")
             return {"component": "MCPTools", "config": {}}
 
-    def get_component_io_mapping(self, component_type: str) -> Dict[str, Any]:
+    def get_component_io_mapping(self, component_type: str = None) -> Dict[str, Any]:
         """
-        Get input/output field mappings for a component type.
+        Get input/output field mappings for component types.
 
-        Returns dictionary with:
-        - input_field: The field name for inputs
-        - output_field: The field name for outputs
-        - output_types: Expected output types
+        Args:
+            component_type: Optional specific component type to get mapping for.
+                           If None, returns all mappings.
+
+        Returns:
+            Dictionary with component I/O mappings (enhanced with real introspection if available)
         """
-        io_mappings = {
-            "AutonomizeModel": {
-                "input_field": "search_query",  # AutonomizeModel uses search_query
-                "output_field": "prediction",   # Outputs prediction
-                "output_types": ["Data"]
-            },
-            "ChatInput": {
-                "input_field": None,
-                "output_field": "message",
-                "output_types": ["Message"]
-            },
-            "ChatOutput": {
-                "input_field": "input_value",
-                "output_field": "message",
-                "output_types": ["Message"]
-            },
-            "Agent": {
-                "input_field": "input_value",
-                "output_field": "response",  # Most agents use response
-                "output_types": ["Message"]
-            },
-            "AutonomizeAgent": {
-                "input_field": "input_value",
-                "output_field": "response",
-                "output_types": ["Message"]
-            },
-            "LanguageModelComponent": {
-                "input_field": "input_message",
-                "output_field": "message",
-                "output_types": ["Message"]
-            },
-            "Prompt": {
-                "input_field": "template",
-                "output_field": "prompt",
-                "output_types": ["Message"]
-            },
-            "GenesisPromptComponent": {
-                "input_field": "template",
-                "output_field": "prompt",
-                "output_types": ["Message"]
-            },
-            "MCPTools": {
-                "input_field": None,
-                "output_field": "response",
-                "output_types": ["DataFrame"]
-            },
-            "APIRequest": {
-                "input_field": "url_input",
-                "output_field": "data",
-                "output_types": ["Data"]
-            },
-            "CustomComponent": {
+        # Use enhanced method that includes real component introspection
+        all_mappings = self.get_component_io_mapping_enhanced()
+
+        if component_type:
+            return all_mappings.get(component_type, {
                 "input_field": "input_value",
                 "output_field": "output",
-                "output_types": ["Any"]
-            },
-            "Memory": {
-                "input_field": "input_value",
-                "output_field": "memory",
-                "output_types": ["Message"]
-            },
-            "OpenAIModel": {
-                "input_field": "input_value",
-                "output_field": "text_output",
-                "output_types": ["Message"]
-            },
-            "AzureOpenAIModel": {
-                "input_field": "input_value",
-                "output_field": "text_output",
-                "output_types": ["Message"]
-            },
-            "KnowledgeHubSearch": {
-                "input_field": "search_query",
-                "output_field": "query_results",
-                "output_types": ["Data"]
-            },
-            "EncoderProTool": {
-                "input_field": "default_service_code",
-                "output_field": "component_as_tool",
-                "output_types": ["Tool"]
-            },
-            "GenesisPromptComponent": {
-                "input_field": "template",
-                "output_field": "prompt",
-                "output_types": ["Message"]
-            },
-            "FileComponent": {
-                "input_field": "file_path",
-                "output_field": "data",
-                "output_types": ["Data"]
-            },
-            "URLComponent": {
-                "input_field": "url",
-                "output_field": "data",
-                "output_types": ["Data"]
-            },
-            "CSVToDataComponent": {
-                "input_field": "csv_file",
-                "output_field": "data",
-                "output_types": ["Data"]
-            },
-            "JSONToDataComponent": {
-                "input_field": "json_string",
-                "output_field": "data",
-                "output_types": ["Data"]
-            },
-            "DoclingInlineComponent": {
-                "input_field": "file_path",
-                "output_field": "document",
-                "output_types": ["Document"]
-            },
-            "WebSearchComponent": {
-                "input_field": "query",
-                "output_field": "results",
-                "output_types": ["Data"]
-            },
-            "SQLExecutor": {
-                "input_field": "query",
-                "output_field": "results",
-                "output_types": ["Data"]
-            }
-        }
+                "output_types": ["Any"],
+                "input_types": ["any"]
+            })
 
-        return io_mappings.get(component_type, {
-            "input_field": "input_value",
-            "output_field": "output",
-            "output_types": ["Any"]
-        })
+        return all_mappings
 
     def is_tool_component(self, spec_type: str) -> bool:
         """Check if a component type should be used as a tool."""
@@ -487,3 +377,360 @@ class ComponentMapper:
         ]
 
         return spec_type in tool_types
+
+    def _get_component_schema_inspector(self):
+        """Get ComponentSchemaInspector instance with lazy loading."""
+        global _component_schema_inspector
+
+        if _component_schema_inspector is None:
+            try:
+                from langflow.services.spec.component_schema_inspector import ComponentSchemaInspector
+                _component_schema_inspector = ComponentSchemaInspector()
+            except ImportError as e:
+                logger.warning(f"Could not import ComponentSchemaInspector: {e}")
+                _component_schema_inspector = None
+
+        return _component_schema_inspector
+
+    def get_component_io_mapping_enhanced(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Get enhanced I/O mappings using real component introspection.
+
+        Returns:
+            Dictionary mapping component names to their I/O information
+        """
+        if not self._use_real_introspection:
+            return self._get_hardcoded_io_mappings()
+
+        inspector = self._get_component_schema_inspector()
+        if inspector is None:
+            logger.warning("ComponentSchemaInspector not available, falling back to hardcoded mappings")
+            return self._get_hardcoded_io_mappings()
+
+        try:
+            # Get real component I/O mappings
+            real_mappings = inspector.get_component_io_mapping()
+
+            # Merge with hardcoded mappings (real mappings take precedence)
+            hardcoded_mappings = self._get_hardcoded_io_mappings()
+
+            # Start with hardcoded mappings as base
+            combined_mappings = hardcoded_mappings.copy()
+
+            # Update with real component data where available
+            for component_name, mapping_data in real_mappings.items():
+                if component_name in combined_mappings:
+                    # Merge real data with hardcoded data
+                    combined_mappings[component_name].update(mapping_data)
+                    logger.debug(f"Enhanced mapping for {component_name} with real component data")
+                else:
+                    # Add new component discovered through introspection
+                    combined_mappings[component_name] = mapping_data
+                    logger.info(f"Added new component mapping from introspection: {component_name}")
+
+            return combined_mappings
+
+        except Exception as e:
+            logger.error(f"Error during component introspection: {e}")
+            logger.warning("Falling back to hardcoded I/O mappings")
+            return self._get_hardcoded_io_mappings()
+
+    def _get_hardcoded_io_mappings(self) -> Dict[str, Dict[str, Any]]:
+        """Get the original hardcoded I/O mappings as fallback."""
+        io_mappings = {
+            "AutonomizeModel": {
+                "input_field": "search_query",
+                "output_field": "prediction",
+                "output_types": ["Data"],
+                "input_types": ["str"]
+            },
+            "ChatInput": {
+                "input_field": None,
+                "output_field": "message",
+                "output_types": ["Message"],
+                "input_types": []
+            },
+            "ChatOutput": {
+                "input_field": "input_value",
+                "output_field": "message",
+                "output_types": ["Message"],
+                "input_types": ["Message", "str"]
+            },
+            "Agent": {
+                "input_field": "input_value",
+                "output_field": "response",
+                "output_types": ["Message"],
+                "input_types": ["Message", "str"]
+            },
+            "AutonomizeAgent": {
+                "input_field": "input_value",
+                "output_field": "response",
+                "output_types": ["Message"],
+                "input_types": ["Message", "str"]
+            },
+            "LanguageModelComponent": {
+                "input_field": "input_message",
+                "output_field": "message",
+                "output_types": ["Message"],
+                "input_types": ["Message"]
+            },
+            "Prompt": {
+                "input_field": "template",
+                "output_field": "prompt",
+                "output_types": ["Message"],
+                "input_types": ["str", "Text"]
+            },
+            "PromptComponent": {
+                "input_field": "template",
+                "output_field": "prompt",
+                "output_types": ["Message"],
+                "input_types": ["str", "Text"]
+            },
+            "GenesisPromptComponent": {
+                "input_field": "template",
+                "output_field": "prompt",
+                "output_types": ["Message"],
+                "input_types": ["str", "Text"]
+            },
+            "MCPTools": {
+                "input_field": None,
+                "output_field": "response",
+                "output_types": ["DataFrame"],
+                "input_types": []
+            },
+            "APIRequest": {
+                "input_field": "url_input",
+                "output_field": "data",
+                "output_types": ["Data"],
+                "input_types": ["str"]
+            },
+            "CustomComponent": {
+                "input_field": "input_value",
+                "output_field": "output",
+                "output_types": ["Any"],
+                "input_types": ["any"]
+            },
+            "Memory": {
+                "input_field": "input_value",
+                "output_field": "memory",
+                "output_types": ["Message"],
+                "input_types": ["Message", "str"]
+            },
+            "OpenAIModel": {
+                "input_field": "input_value",
+                "output_field": "text_output",
+                "output_types": ["Message"],
+                "input_types": ["Message", "str"]
+            },
+            "AzureOpenAIModel": {
+                "input_field": "input_value",
+                "output_field": "text_output",
+                "output_types": ["Message"],
+                "input_types": ["Message", "str"]
+            },
+            "KnowledgeHubSearch": {
+                "input_field": "search_query",
+                "output_field": "query_results",
+                "output_types": ["Data"],
+                "input_types": ["str", "Message"]
+            },
+            "EncoderProTool": {
+                "input_field": "default_service_code",
+                "output_field": "component_as_tool",
+                "output_types": ["Tool"],
+                "input_types": ["str", "Data"]
+            },
+            "FileComponent": {
+                "input_field": "file_path",
+                "output_field": "data",
+                "output_types": ["Data"],
+                "input_types": ["str"]
+            },
+            "File": {
+                "input_field": "path",
+                "output_field": "data",
+                "output_types": ["Document"],
+                "input_types": ["str"]
+            },
+            "Directory": {
+                "input_field": "path",
+                "output_field": "data",
+                "output_types": ["Data"],
+                "input_types": ["str"]
+            },
+            "URL": {
+                "input_field": "url",
+                "output_field": "data",
+                "output_types": ["Data"],
+                "input_types": ["str"]
+            },
+            "CSVToDataComponent": {
+                "input_field": "csv_file",
+                "output_field": "data",
+                "output_types": ["Data"],
+                "input_types": ["str", "Document"]
+            },
+            "JSONToDataComponent": {
+                "input_field": "json_string",
+                "output_field": "data",
+                "output_types": ["Data"],
+                "input_types": ["str", "Data"]
+            },
+            "DoclingInlineComponent": {
+                "input_field": "file_path",
+                "output_field": "document",
+                "output_types": ["Document"],
+                "input_types": ["str"]
+            },
+            "WebSearchComponent": {
+                "input_field": "query",
+                "output_field": "results",
+                "output_types": ["Data"],
+                "input_types": ["str", "Message"]
+            },
+            "SQLExecutor": {
+                "input_field": "query",
+                "output_field": "results",
+                "output_types": ["Data"],
+                "input_types": ["str"]
+            },
+            "CrewAIAgentComponent": {
+                "input_field": "input_value",
+                "output_field": "response",
+                "output_types": ["Message"],
+                "input_types": ["Message", "str"]
+            }
+        }
+
+        return io_mappings
+
+    def get_available_components(self) -> Dict[str, Dict[str, Dict[str, Any]]]:
+        """
+        Get all available components organized by category.
+
+        Returns:
+            Dictionary with categories and their component mappings
+        """
+        inspector = self._get_component_schema_inspector()
+
+        result = {
+            "genesis_mapped": {},  # Genesis spec types mapped to components
+            "discovered_components": {}  # Components discovered through introspection
+        }
+
+        # Add all genesis mappings
+        all_mappings = {**self.AUTONOMIZE_MODELS, **self.MCP_MAPPINGS, **self.STANDARD_MAPPINGS}
+        for genesis_type, mapping in all_mappings.items():
+            result["genesis_mapped"][genesis_type] = mapping
+
+        # Add discovered components if inspector available
+        if inspector:
+            try:
+                schemas = inspector.get_all_schemas()
+                for component_name, schema in schemas.items():
+                    result["discovered_components"][component_name] = {
+                        "name": schema.name,
+                        "class_name": schema.class_name,
+                        "module_path": schema.module_path,
+                        "description": schema.description,
+                        "display_name": schema.display_name,
+                        "input_types": schema.input_types,
+                        "output_types": schema.output_types,
+                        "inputs": schema.inputs,
+                        "outputs": schema.outputs,
+                        "base_classes": schema.base_classes
+                    }
+            except Exception as e:
+                logger.warning(f"Could not get discovered components: {e}")
+
+        return result
+
+    def validate_component_connection_enhanced(self, source_type: str, target_type: str,
+                                             source_output: str, target_input: str) -> Dict[str, Any]:
+        """
+        Validate connection between components using real component introspection.
+
+        Args:
+            source_type: Genesis type of source component
+            target_type: Genesis type of target component
+            source_output: Output field name
+            target_input: Input field name
+
+        Returns:
+            Validation result with compatibility information
+        """
+        inspector = self._get_component_schema_inspector()
+
+        # Map genesis types to component names
+        source_mapping = self.map_component(source_type)
+        target_mapping = self.map_component(target_type)
+
+        source_component = source_mapping.get("component")
+        target_component = target_mapping.get("component")
+
+        if not source_component or not target_component:
+            return {
+                "valid": False,
+                "error": f"Could not map component types: {source_type} -> {target_type}"
+            }
+
+        # Try real component validation first
+        if inspector and self._use_real_introspection:
+            try:
+                result = inspector.validate_component_connection(
+                    source_component, target_component, source_output, target_input
+                )
+                if result.get("valid") is not None:  # Got a real validation result
+                    return result
+            except Exception as e:
+                logger.warning(f"Real component validation failed: {e}")
+
+        # Fallback to hardcoded I/O validation
+        return self._validate_connection_hardcoded(
+            source_component, target_component, source_output, target_input
+        )
+
+    def _validate_connection_hardcoded(self, source_component: str, target_component: str,
+                                     source_output: str, target_input: str) -> Dict[str, Any]:
+        """Fallback validation using hardcoded I/O mappings."""
+        hardcoded_mappings = self._get_hardcoded_io_mappings()
+
+        source_io = hardcoded_mappings.get(source_component, {})
+        target_io = hardcoded_mappings.get(target_component, {})
+
+        # Check output field exists
+        if source_io.get("output_field") != source_output:
+            return {
+                "valid": False,
+                "error": f"Output field {source_output} not found in {source_component}"
+            }
+
+        # Check input field exists
+        if target_io.get("input_field") != target_input:
+            return {
+                "valid": False,
+                "error": f"Input field {target_input} not found in {target_component}"
+            }
+
+        # Check type compatibility
+        source_types = source_io.get("output_types", [])
+        target_types = target_io.get("input_types", [])
+
+        # Basic compatibility check
+        compatible = (
+            any(otype in target_types for otype in source_types) or
+            "any" in target_types or
+            "Any" in target_types
+        )
+
+        return {
+            "valid": compatible,
+            "source_types": source_types,
+            "target_types": target_types,
+            "error": None if compatible else f"Type mismatch: {source_types} -> {target_types}"
+        }
+
+    def enable_real_introspection(self, enabled: bool = True):
+        """Enable or disable real component introspection."""
+        self._use_real_introspection = enabled
+        logger.info(f"Real component introspection {'enabled' if enabled else 'disabled'}")

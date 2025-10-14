@@ -137,6 +137,24 @@ class SpecService:
             validation["errors"].extend(component_validation["errors"])
             validation["warnings"].extend(component_validation["warnings"])
 
+            # Validate type compatibility between components
+            components = spec_dict.get("components", [])
+            if isinstance(components, list):
+                type_validation = self._validate_component_type_compatibility(components)
+                validation["errors"].extend(type_validation["errors"])
+                validation["warnings"].extend(type_validation["warnings"])
+            elif isinstance(components, dict):
+                # Convert dict format to list format for validation
+                component_list = []
+                for comp_id, comp_data in components.items():
+                    comp_data_with_id = comp_data.copy()
+                    comp_data_with_id["id"] = comp_id
+                    component_list.append(comp_data_with_id)
+
+                type_validation = self._validate_component_type_compatibility(component_list)
+                validation["errors"].extend(type_validation["errors"])
+                validation["warnings"].extend(type_validation["warnings"])
+
             # Update valid status
             validation["valid"] = len(validation["errors"]) == 0
 
@@ -372,6 +390,427 @@ class SpecService:
                 warnings.append(f"Components may be disconnected from main flow: {disconnected}")
 
         return {"errors": errors, "warnings": warnings}
+
+    def _validate_component_type_compatibility(self, components: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Validate type compatibility between connected components.
+
+        This method performs comprehensive type compatibility validation:
+        1. Pre-validates output→input type matching for all 'provides' connections
+        2. Uses ComponentMapper's I/O mappings for accurate type information
+        3. Validates tool mode consistency (asTools + useAs + Tool output type)
+        4. Checks multi-tool agent capabilities
+        5. Validates field mapping compatibility
+        6. Detects circular dependencies
+
+        Args:
+            components: List of component dictionaries
+
+        Returns:
+            Dict containing validation results: {"valid": bool, "errors": list, "warnings": list}
+        """
+        errors = []
+        warnings = []
+
+        try:
+            # Get enhanced component I/O mappings (includes real component introspection)
+            io_mappings = self.mapper.get_component_io_mapping()
+
+            # Create component lookup for validation
+            component_lookup = {comp.get("id"): comp for comp in components}
+
+            # Track connections for circular dependency detection
+            connections = []
+
+            for component in components:
+                comp_id = component.get("id")
+                comp_type = component.get("type", "")
+                provides = component.get("provides", [])
+
+                if not provides:
+                    continue
+
+                for connection in provides:
+                    if not isinstance(connection, dict):
+                        errors.append(f"Invalid connection format in component '{comp_id}'")
+                        continue
+
+                    target_id = connection.get("in")
+                    use_as = connection.get("useAs")
+
+                    if not target_id or not use_as:
+                        errors.append(f"Missing 'in' or 'useAs' in connection from '{comp_id}'")
+                        continue
+
+                    # Track connection for circular dependency check
+                    connections.append((comp_id, target_id))
+
+                    # Get target component
+                    target_component = component_lookup.get(target_id)
+                    if not target_component:
+                        errors.append(f"Component '{comp_id}' references non-existent target '{target_id}'")
+                        continue
+
+                    # Validate tool mode consistency
+                    tool_validation = self._validate_tool_mode_consistency(
+                        component, connection, target_component
+                    )
+                    errors.extend(tool_validation["errors"])
+                    warnings.extend(tool_validation["warnings"])
+
+                    # Validate type compatibility using enhanced validation
+                    type_validation = self._validate_connection_type_compatibility_enhanced(
+                        component, connection, target_component
+                    )
+                    errors.extend(type_validation["errors"])
+                    warnings.extend(type_validation["warnings"])
+
+            # Check for circular dependencies
+            circular_errors = self._detect_circular_dependencies(connections)
+            errors.extend(circular_errors)
+
+            return {
+                "valid": len(errors) == 0,
+                "errors": errors,
+                "warnings": warnings
+            }
+
+        except Exception as e:
+            logger.error(f"Error in _validate_component_type_compatibility: {e}")
+            return {
+                "valid": False,
+                "errors": [f"Type compatibility validation failed: {e}"],
+                "warnings": []
+            }
+
+    def _validate_tool_mode_consistency(self, source_comp: Dict[str, Any],
+                                      connection: Dict[str, Any],
+                                      target_comp: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate tool mode consistency.
+
+        Checks:
+        1. If component has asTools: true, it should be used with useAs: "tools"
+        2. If useAs: "tools", component should have asTools: true or be a tool component
+        3. Tool components should have appropriate output types
+        """
+        errors = []
+        warnings = []
+
+        source_type = source_comp.get("type", "")
+        use_as = connection.get("useAs")
+        as_tools = source_comp.get("asTools", False)
+
+        # Check tool mode consistency
+        if use_as == "tools":
+            # Component used as tool should be marked as tool or be a tool component
+            is_tool_component = self.mapper.is_tool_component(source_type)
+
+            if not as_tools and not is_tool_component:
+                errors.append(
+                    f"Tool mode inconsistency: Component '{source_comp.get('id')}' used as tool "
+                    f"but not marked with 'asTools: true' and is not inherently a tool component"
+                )
+        elif as_tools and use_as != "tools":
+            warnings.append(
+                f"Component '{source_comp.get('id')}' marked as tool (asTools: true) "
+                f"but used as '{use_as}' instead of 'tools'"
+            )
+
+        return {"errors": errors, "warnings": warnings}
+
+    def _validate_connection_type_compatibility(self, source_comp: Dict[str, Any],
+                                              connection: Dict[str, Any],
+                                              target_comp: Dict[str, Any],
+                                              io_mappings: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate type compatibility between source and target components.
+
+        Uses ComponentMapper's I/O mappings and FlowConverter's compatibility matrix
+        to validate that output types match input requirements.
+        """
+        errors = []
+        warnings = []
+
+        try:
+            source_type = source_comp.get("type", "")
+            target_type = target_comp.get("type", "")
+            use_as = connection.get("useAs")
+
+            # Get Langflow component names
+            source_langflow_comp = self._get_langflow_component_name(source_type)
+            target_langflow_comp = self._get_langflow_component_name(target_type)
+
+            if not source_langflow_comp or not target_langflow_comp:
+                warnings.append(
+                    f"Could not determine Langflow components for type validation: "
+                    f"{source_type} -> {target_type}"
+                )
+                return {"errors": errors, "warnings": warnings}
+
+            # Get I/O type information
+            source_io = io_mappings.get(source_langflow_comp, {})
+            target_io = io_mappings.get(target_langflow_comp, {})
+
+            output_types = source_io.get("output_types", [])
+
+            # Determine expected input types based on useAs
+            if use_as == "tools":
+                # Tools can be any type, agents should accept them
+                input_types = ["Tool", "DataFrame", "Data", "any"]
+            elif use_as == "system_prompt":
+                # Prompts should output Message/str types
+                input_types = ["Message", "str", "text"]
+            else:  # use_as == "input"
+                # Regular input field
+                input_field = target_io.get("input_field")
+                if input_field:
+                    # Map common input field names to types
+                    input_type_mapping = {
+                        "input_value": ["Message", "str", "Data", "any"],
+                        "message": ["Message", "str"],
+                        "search_query": ["str", "Message"],
+                        "url_input": ["str"],
+                        "template": ["str", "Message"]
+                    }
+                    input_types = input_type_mapping.get(input_field, ["any"])
+                else:
+                    input_types = ["any"]
+
+            # Use converter's type compatibility validation
+            if output_types and input_types:
+                is_compatible = self.converter._validate_type_compatibility_fixed(
+                    output_types, input_types, source_langflow_comp, target_langflow_comp
+                )
+
+                if not is_compatible:
+                    errors.append(
+                        f"Type mismatch: Component '{source_comp.get('id')}' outputs {output_types} "
+                        f"but component '{target_comp.get('id')}' expects {input_types} "
+                        f"for connection type '{use_as}'"
+                    )
+                else:
+                    logger.debug(
+                        f"Type compatibility validated: {source_comp.get('id')} "
+                        f"({output_types}) -> {target_comp.get('id')} ({input_types})"
+                    )
+
+            # Validate field mappings if specified
+            field_mapping = connection.get("fieldMapping", {})
+            if field_mapping:
+                field_validation = self._validate_field_mappings(
+                    field_mapping, source_io, target_io, source_comp.get("id"), target_comp.get("id")
+                )
+                errors.extend(field_validation["errors"])
+                warnings.extend(field_validation["warnings"])
+
+        except Exception as e:
+            logger.error(f"Error validating connection compatibility: {e}")
+            warnings.append(f"Could not validate type compatibility for connection: {e}")
+
+        return {"errors": errors, "warnings": warnings}
+
+    def _validate_connection_type_compatibility_enhanced(self, source_comp: Dict[str, Any],
+                                                        connection: Dict[str, Any],
+                                                        target_comp: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Enhanced type compatibility validation using real component introspection.
+
+        This method attempts to use real Langflow component schemas for validation,
+        falling back to the original hardcoded validation if introspection fails.
+        """
+        errors = []
+        warnings = []
+
+        try:
+            source_type = source_comp.get("type", "")
+            target_type = target_comp.get("type", "")
+            use_as = connection.get("useAs")
+
+            # Get Langflow component names
+            source_langflow_comp = self._get_langflow_component_name(source_type)
+            target_langflow_comp = self._get_langflow_component_name(target_type)
+
+            if not source_langflow_comp or not target_langflow_comp:
+                warnings.append(
+                    f"Could not determine Langflow components for enhanced validation: "
+                    f"{source_type} -> {target_type}"
+                )
+                return {"errors": errors, "warnings": warnings}
+
+            # Try enhanced ComponentMapper validation with real component schemas
+            try:
+                # Determine field names based on connection type
+                source_output_field = self._determine_output_field(source_langflow_comp, use_as)
+                target_input_field = self._determine_input_field(target_langflow_comp, use_as)
+
+                # Use ComponentMapper's enhanced validation
+                validation_result = self.mapper.validate_component_connection_enhanced(
+                    source_type, target_type, source_output_field, target_input_field
+                )
+
+                if not validation_result.get("valid", False):
+                    error_msg = validation_result.get("error", "Unknown validation error")
+                    errors.append(
+                        f"Enhanced validation failed for {source_comp.get('id')} -> "
+                        f"{target_comp.get('id')}: {error_msg}"
+                    )
+                else:
+                    logger.debug(
+                        f"Enhanced validation passed: {source_comp.get('id')} "
+                        f"({validation_result.get('source_types')}) -> "
+                        f"{target_comp.get('id')} ({validation_result.get('target_types')})"
+                    )
+
+            except Exception as e:
+                logger.warning(f"Enhanced validation failed, falling back to original method: {e}")
+                # Fall back to original validation method
+                io_mappings = self.mapper.get_component_io_mapping()
+                fallback_result = self._validate_connection_type_compatibility(
+                    source_comp, connection, target_comp, io_mappings
+                )
+                errors.extend(fallback_result["errors"])
+                warnings.extend(fallback_result["warnings"])
+
+        except Exception as e:
+            logger.error(f"Error in enhanced connection validation: {e}")
+            warnings.append(f"Could not perform enhanced type validation: {e}")
+
+        return {"errors": errors, "warnings": warnings}
+
+    def _determine_output_field(self, component_name: str, use_as: str) -> str:
+        """
+        Determine the output field name based on component type and usage.
+
+        This helps map the conceptual connection to actual component ports.
+        """
+        # Get I/O mapping from ComponentMapper
+        io_mapping = self.mapper.get_component_io_mapping(component_name)
+        if io_mapping and io_mapping.get("output_field"):
+            return io_mapping["output_field"]
+
+        # Default field mappings based on component patterns
+        if "Input" in component_name:
+            return "message"
+        elif "Agent" in component_name or "Model" in component_name:
+            return "response"
+        elif "Tool" in component_name or "MCP" in component_name:
+            return "response"
+        elif "Prompt" in component_name:
+            return "prompt"
+        else:
+            return "output"  # Generic fallback
+
+    def _determine_input_field(self, component_name: str, use_as: str) -> str:
+        """
+        Determine the input field name based on component type and usage.
+
+        This helps map the conceptual connection to actual component ports.
+        """
+        # Get I/O mapping from ComponentMapper
+        io_mapping = self.mapper.get_component_io_mapping(component_name)
+        if io_mapping and io_mapping.get("input_field"):
+            return io_mapping["input_field"]
+
+        # Special handling for tool connections
+        if use_as == "tools":
+            return "tools"  # Agents typically have a tools input
+        elif use_as == "system_prompt":
+            return "system_message"  # System prompt input
+
+        # Default field mappings based on component patterns
+        if "Agent" in component_name or "Model" in component_name:
+            return "input_value"
+        elif "Output" in component_name:
+            return "input_value"
+        elif "Search" in component_name:
+            return "search_query"
+        elif "API" in component_name:
+            return "url_input"
+        else:
+            return "input_value"  # Generic fallback
+
+    def _validate_field_mappings(self, field_mapping: Dict[str, str],
+                                source_io: Dict[str, Any], target_io: Dict[str, Any],
+                                source_id: str, target_id: str) -> Dict[str, Any]:
+        """Validate field-level mappings between components."""
+        errors = []
+        warnings = []
+
+        source_output_field = source_io.get("output_field")
+        target_input_field = target_io.get("input_field")
+
+        for source_field, target_field in field_mapping.items():
+            # Validate source field exists
+            if source_output_field and source_field != source_output_field:
+                warnings.append(
+                    f"Field mapping uses '{source_field}' but component '{source_id}' "
+                    f"outputs '{source_output_field}'"
+                )
+
+            # Validate target field exists
+            if target_input_field and target_field != target_input_field:
+                warnings.append(
+                    f"Field mapping targets '{target_field}' but component '{target_id}' "
+                    f"expects '{target_input_field}'"
+                )
+
+        return {"errors": errors, "warnings": warnings}
+
+    def _detect_circular_dependencies(self, connections: List[tuple]) -> List[str]:
+        """Detect circular dependencies in component connections."""
+        errors = []
+
+        # Build adjacency list
+        graph = {}
+        for source, target in connections:
+            if source not in graph:
+                graph[source] = []
+            graph[source].append(target)
+
+        # DFS to detect cycles
+        visited = set()
+        rec_stack = set()
+
+        def has_cycle(node):
+            if node in rec_stack:
+                return True
+            if node in visited:
+                return False
+
+            visited.add(node)
+            rec_stack.add(node)
+
+            for neighbor in graph.get(node, []):
+                if has_cycle(neighbor):
+                    return True
+
+            rec_stack.remove(node)
+            return False
+
+        # Check each component for cycles
+        for component in graph:
+            if component not in visited:
+                if has_cycle(component):
+                    errors.append(f"Circular dependency detected involving component '{component}'")
+                    break
+
+        return errors
+
+    def _get_langflow_component_name(self, genesis_type: str) -> Optional[str]:
+        """Get Langflow component name from genesis type."""
+        try:
+            mapping = self.mapper.STANDARD_MAPPINGS.get(genesis_type)
+            if not mapping:
+                mapping = self.mapper.MCP_MAPPINGS.get(genesis_type)
+            if not mapping:
+                mapping = self.mapper.AUTONOMIZE_MODELS.get(genesis_type)
+
+            if mapping and isinstance(mapping, dict):
+                return mapping.get("component")
+            return None
+        except Exception:
+            return None
 
     async def _save_flow_to_database(self, flow_data: Dict[str, Any], name: str,
                                     session: AsyncSession, user_id: UUID,
