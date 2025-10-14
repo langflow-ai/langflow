@@ -42,7 +42,7 @@ export default defineConfig(({ mode }) => {
     base: BASENAME || "",
     build: {
       outDir: "build",
-      sourcemap: true,
+      sourcemap: env.PLAYWRIGHT_COVERAGE_TEST === "true",
     },
     define: {
       "process.env.BACKEND_URL": JSON.stringify(
@@ -57,6 +57,9 @@ export default defineConfig(({ mode }) => {
       ),
       "process.env.LANGFLOW_MCP_COMPOSER_ENABLED": JSON.stringify(
         envLangflow.LANGFLOW_MCP_COMPOSER_ENABLED ?? "true",
+      ),
+      "process.env.PLAYWRIGHT_COVERAGE_TEST": JSON.stringify(
+        env.PLAYWRIGHT_COVERAGE_TEST ?? "false",
       ),
     },
     plugins: [
