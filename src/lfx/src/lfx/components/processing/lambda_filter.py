@@ -81,10 +81,10 @@ class LambdaFilterComponent(Component):
         if isinstance(data, list):
             # For lists, get structure of first item if available
             if data:
-                return [get_data_structure(data[0])]
+                return [self.get_data_structure(data[0])]
             return []
         if isinstance(data, dict):
-            return {k: get_data_structure(v) for k, v in data.items()}
+            return {k: self.get_data_structure(v) for k, v in data.items()}
         # For primitive types, return the type name
         return type(data).__name__
 
