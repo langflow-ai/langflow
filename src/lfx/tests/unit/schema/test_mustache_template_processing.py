@@ -53,16 +53,6 @@ class TestMustacheTemplateProcessing:
 
         assert result == ""
 
-    def test_format_text_mustache_with_objects(self):
-        """Test mustache template with object properties (dot notation)."""
-        message = Message(
-            template="User: {{user.name}} ({{user.email}})",
-            variables={"user": {"name": "John", "email": "john@example.com"}},
-        )
-        result = message.format_text(template_format="mustache")
-
-        assert result == "User: John (john@example.com)"
-
     def test_format_text_mustache_with_numeric_values(self):
         """Test mustache template with numeric values."""
         message = Message(
@@ -80,16 +70,6 @@ class TestMustacheTemplateProcessing:
         result = message.format_text(template_format="mustache")
 
         assert result == "Line 1: First\nLine 2: Second"
-
-    def test_format_text_mustache_with_nested_objects(self):
-        """Test mustache template with nested object properties."""
-        message = Message(
-            template="Company: {{company.name}}, CEO: {{company.ceo.name}}",
-            variables={"company": {"name": "Tech Corp", "ceo": {"name": "Jane Smith"}}},
-        )
-        result = message.format_text(template_format="mustache")
-
-        assert result == "Company: Tech Corp, CEO: Jane Smith"
 
     def test_format_text_mustache_with_empty_string_variable(self):
         """Test mustache template with empty string variable."""
@@ -178,11 +158,12 @@ class TestMustacheTemplateProcessing:
         validate_mustache_template("Hello {{name}}!")
         validate_mustache_template("{{var1}} and {{var2}}")
 
-    def test_mustache_security_allows_dot_notation(self):
-        """Test that dot notation is allowed."""
-        # Should not raise
-        validate_mustache_template("{{user.name}}")
-        validate_mustache_template("{{company.ceo.name}}")
+    def test_mustache_security_rejects_dot_notation(self):
+        """Test that dot notation is NOT allowed."""
+        with pytest.raises(ValueError, match="Invalid mustache variable"):
+            validate_mustache_template("{{user.name}}")
+        with pytest.raises(ValueError, match="Invalid mustache variable"):
+            validate_mustache_template("{{company.ceo.name}}")
 
     def test_format_text_defaults_to_f_string(self):
         """Test that format_text defaults to f-string format."""
