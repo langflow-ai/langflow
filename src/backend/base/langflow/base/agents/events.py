@@ -61,6 +61,7 @@ async def handle_on_chain_start(
     start_time: float,
     *,
     had_streaming: bool = False,  # noqa: ARG001
+    message_id: str | None = None,  # noqa: ARG001
 ) -> tuple[Message, float]:
     # Create content blocks if they don't exist
     if not agent_message.content_blocks:
@@ -136,6 +137,7 @@ async def handle_on_chain_end(
     start_time: float,
     *,
     had_streaming: bool = False,
+    message_id: str | None = None,  # noqa: ARG001
 ) -> tuple[Message, float]:
     data_output = event["data"].get("output")
     if data_output and isinstance(data_output, AgentFinish) and data_output.return_values.get("output"):
@@ -272,11 +274,12 @@ async def handle_on_tool_error(
 async def handle_on_chain_stream(
     event: dict[str, Any],
     agent_message: Message,
-    send_message_callback: SendMessageFunctionType,
+    send_message_callback: SendMessageFunctionType,  # noqa: ARG001
     send_token_callback: OnTokenFunctionType | None,
     start_time: float,
     *,
     had_streaming: bool = False,  # noqa: ARG001
+    message_id: str | None = None,
 ) -> tuple[Message, float]:
     data_chunk = event["data"].get("chunk", {})
     if isinstance(data_chunk, dict) and data_chunk.get("output"):
@@ -284,7 +287,9 @@ async def handle_on_chain_stream(
         if output and isinstance(output, str | list):
             agent_message.text = _extract_output_text(output)
         agent_message.properties.state = "complete"
-        agent_message = await send_message_callback(message=agent_message)
+        # Don't call send_message_callback here - we must update in place
+        # in order to keep the message id consistent throughout the stream.
+        # The final message will be sent after the loop completes
         start_time = perf_counter()
     elif isinstance(data_chunk, AIMessageChunk):
         output_text = _extract_output_text(data_chunk.content)
@@ -292,12 +297,12 @@ async def handle_on_chain_stream(
         # For streaming, send token event if callback is available
         # Note: we should expect the callback, but we keep it optional for backwards compatibility
         # as of v1.6.5
-        if output_text and output_text.strip() and send_token_callback:
+        if output_text and output_text.strip() and send_token_callback and message_id:
             await asyncio.to_thread(
                 send_token_callback,
                 data={
                     "chunk": output_text,
-                    "id": str(agent_message.id),
+                    "id": str(message_id), # The initial message id (must stay consistent throughout during streaming)
                 },
             )
         if not agent_message.text:
@@ -327,6 +332,7 @@ class ChainEventHandler(Protocol):
         start_time: float,
         *,
         had_streaming: bool = False,
+        message_id: str | None = None,
     ) -> tuple[Message, float]: ...
 
 
@@ -359,8 +365,10 @@ async def process_agent_events(
     else:
         agent_message.properties.icon = "Bot"
         agent_message.properties.state = "partial"
-    # Store the initial message
+    # Store the initial message and capture its ID
     agent_message = await send_message_callback(message=agent_message)
+    # Capture the original message id - this must stay consistent throughout if streaming
+    initial_message_id = agent_message.data.get("id")
     try:
         # Create a mapping of run_ids to tool contents
         tool_blocks_map: dict[str, ToolContent] = {}
@@ -385,6 +393,7 @@ async def process_agent_events(
                         send_token_callback,
                         start_time,
                         had_streaming=had_streaming,
+                        message_id=initial_message_id,
                     )
                 else:
                     agent_message, start_time = await chain_handler(
