@@ -152,7 +152,7 @@ class CometAPIComponent(LCModelComponent):
                 max_tokens=max_tokens or None,
                 temperature=temperature,
                 model_kwargs=model_kwargs,
-                streaming=self.stream,
+                streaming=bool(self.stream),
                 seed=seed,
                 base_url="https://api.cometapi.com/v1",
             )
