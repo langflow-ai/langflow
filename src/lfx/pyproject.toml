@@ -125,5 +125,24 @@ dev = [
     "hypothesis>=6.136.3",
     "pytest>=8.4.1",
     "pytest-asyncio>=0.26.0",
+    "pytest-cov>=7.0.0",
     "ruff>=0.9.10",
+]
+
+[tool.coverage.run]
+omit = [
+    "*/tests/*",
+    "*/__init__.py",
+    "*/components/*",  # Third-party integrations tracked separately
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
 ]
