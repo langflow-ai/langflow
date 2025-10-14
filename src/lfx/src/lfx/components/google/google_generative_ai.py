@@ -125,7 +125,8 @@ class GoogleGenerativeAIComponent(LCModelComponent):
         top_p = self.top_p
         n = self.n
 
-        # Use the fixed version that handles empty function response names for Gemini compatibility
+        # Use modified ChatGoogleGenerativeAIFixed class for multiple function support
+        # TODO: Potentially remove when fixed upstream
         return ChatGoogleGenerativeAIFixed(
             model=model,
             max_output_tokens=max_output_tokens or None,
