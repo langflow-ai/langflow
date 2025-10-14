@@ -26,6 +26,11 @@ class TestExceptionTelemetryIntegration:
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.common_telemetry_fields = {
+            "langflow_version": "1.0.0",
+            "platform": "python_package",
+            "os": "darwin",
+        }
 
         # Mock successful response
         mock_response = MagicMock()
@@ -78,6 +83,11 @@ class TestExceptionTelemetryIntegration:
         telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
+        telemetry_service.common_telemetry_fields = {
+            "langflow_version": "1.0.0",
+            "platform": "python_package",
+            "os": "darwin",
+        }
 
         # Mock the async queue and HTTP client
         telemetry_service.telemetry_queue = asyncio.Queue()
