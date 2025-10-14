@@ -4,7 +4,7 @@ import re
 from typing import Any
 
 # Regex pattern for simple variables only - same as frontend
-SIMPLE_VARIABLE_PATTERN = re.compile(r"\{\{([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)\}\}")
+SIMPLE_VARIABLE_PATTERN = re.compile(r"\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}")
 
 # Patterns for complex mustache syntax that we want to block
 DANGEROUS_PATTERNS = [
@@ -31,7 +31,7 @@ def validate_mustache_template(template: str) -> None:
         if pattern.search(template):
             msg = (
                 "Complex mustache syntax is not allowed. Only simple variable substitution "
-                "like {{variable}} or {{object.property}} is permitted."
+                "like {{variable}} is permitted."
             )
             raise ValueError(msg)
 
@@ -39,10 +39,7 @@ def validate_mustache_template(template: str) -> None:
     all_mustache_patterns = re.findall(r"\{\{[^}]*\}\}", template)
     for pattern in all_mustache_patterns:
         if not SIMPLE_VARIABLE_PATTERN.match(pattern):
-            msg = (
-                f"Invalid mustache variable: {pattern}. Only simple variable names "
-                "like {{variable}} or {{object.property}} are allowed."
-            )
+            msg = f"Invalid mustache variable: {pattern}. Only simple variable names like {{{{variable}}}} are allowed."
             raise ValueError(msg)
 
 
@@ -64,21 +61,13 @@ def safe_mustache_render(template: str, variables: dict[str, Any]) -> str:
 
     # Simple replacement - find all simple variables and replace them
     def replace_variable(match):
-        var_path = match.group(1)
+        var_name = match.group(1)
 
-        # Handle dot notation (e.g., user.name)
-        parts = var_path.split(".")
-        value = variables
+        # Get the variable value directly (no dot notation support)
+        value = variables.get(var_name, "")
 
-        try:
-            for part in parts:
-                value = value.get(part, "") if isinstance(value, dict) else getattr(value, part, "")
-
-            # Convert to string
-            return str(value) if value is not None else ""
-        except (KeyError, AttributeError):
-            # Variable not found - return empty string like mustache does
-            return ""
+        # Convert to string
+        return str(value) if value is not None else ""
 
     # Replace all simple variables
     return SIMPLE_VARIABLE_PATTERN.sub(replace_variable, template)
