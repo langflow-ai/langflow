@@ -302,7 +302,7 @@ async def handle_on_chain_stream(
                 send_token_callback,
                 data={
                     "chunk": output_text,
-                    "id": str(message_id), # The initial message id (must stay consistent throughout during streaming)
+                    "id": str(message_id),  
                 },
             )
         if not agent_message.text:
