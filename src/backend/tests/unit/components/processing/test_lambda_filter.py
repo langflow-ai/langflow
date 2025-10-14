@@ -68,7 +68,7 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Data), f"Expected Data object, got {type(result)}"
         assert "_results" in result.data, "Expected '_results' key in Data object"
 
-        # Check the filtered results
+        # Check the filtered results from the lambda
         filtered_items = result.data["_results"]
         assert isinstance(filtered_items, list), "Expected list of filtered items"
         assert len(filtered_items) == 499, f"Expected 499 items (1501-1999), got {len(filtered_items)}"
