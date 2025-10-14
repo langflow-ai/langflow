@@ -40,13 +40,17 @@ class MockLangfuseCallback:
 @pytest.fixture
 def langfuse_tracer():
     """Create a LangFuseTracer instance."""
-    with patch("langfuse.Langfuse") as mock_langfuse, patch("langfuse.api.core.request_options.RequestOptions"), patch.dict(
-        "os.environ",
-        {
-            "LANGFUSE_SECRET_KEY": "test-secret",
-            "LANGFUSE_PUBLIC_KEY": "test-public",
-            "LANGFUSE_HOST": "http://localhost:3000",
-        },
+    with (
+        patch("langfuse.Langfuse") as mock_langfuse,
+        patch("langfuse.api.core.request_options.RequestOptions"),
+        patch.dict(
+            "os.environ",
+            {
+                "LANGFUSE_SECRET_KEY": "test-secret",
+                "LANGFUSE_PUBLIC_KEY": "test-public",
+                "LANGFUSE_HOST": "http://localhost:3000",
+            },
+        ),
     ):
         client = Mock()
         trace = Mock()
