@@ -17,34 +17,34 @@ const timestampCache = new WeakMap<Message, number>();
  * @returns Sort comparison result (-1, 0, 1)
  */
 const sortSenderMessages = (a: Message, b: Message): number => {
-	// Use WeakMap cache to avoid repeated Date parsing for same message objects
-	let timeA = timestampCache.get(a);
-	if (timeA === undefined) {
-		timeA = new Date(a.timestamp).getTime();
-		timestampCache.set(a, timeA);
-	}
+  // Use WeakMap cache to avoid repeated Date parsing for same message objects
+  let timeA = timestampCache.get(a);
+  if (timeA === undefined) {
+    timeA = new Date(a.timestamp).getTime();
+    timestampCache.set(a, timeA);
+  }
 
-	let timeB = timestampCache.get(b);
-	if (timeB === undefined) {
-		timeB = new Date(b.timestamp).getTime();
-		timestampCache.set(b, timeB);
-	}
+  let timeB = timestampCache.get(b);
+  if (timeB === undefined) {
+    timeB = new Date(b.timestamp).getTime();
+    timestampCache.set(b, timeB);
+  }
 
-	// Primary sort: by timestamp
-	if (timeA !== timeB) {
-		return timeA - timeB;
-	}
+  // Primary sort: by timestamp
+  if (timeA !== timeB) {
+    return timeA - timeB;
+  }
 
-	// Secondary sort: if timestamps are identical, User messages come before AI/Machine
-	// This ensures proper chronological order when backend generates identical timestamps
-	if (a.sender === "User" && b.sender !== "User") {
-		return -1; // User message (isSend=true) comes first
-	}
-	if (a.sender !== "User" && b.sender === "User") {
-		return 1; // User message (isSend=true) comes first
-	}
+  // Secondary sort: if timestamps are identical, User messages come before AI/Machine
+  // This ensures proper chronological order when backend generates identical timestamps
+  if (a.sender === "User" && b.sender !== "User") {
+    return -1; // User message (isSend=true) comes first
+  }
+  if (a.sender !== "User" && b.sender === "User") {
+    return 1; // User message (isSend=true) comes first
+  }
 
-	return 0; // Keep original order for same sender types
+  return 0; // Keep original order for same sender types
 };
 
 export default sortSenderMessages;
