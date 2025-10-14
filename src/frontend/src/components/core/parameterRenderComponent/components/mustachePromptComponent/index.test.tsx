@@ -50,10 +50,10 @@ describe("MustachePromptAreaComponent", () => {
     });
 
     it("should NOT highlight complex mustache syntax", () => {
-      const input = "{{#if user}}Hello {{user.name}}{{/if}}";
+      const input = "{{#if user}}Hello {{name}}{{/if}}";
       const result = applyMustacheHighlighting(input);
       expect(result).toBe(
-        '{{#if user}}Hello <span class="chat-message-highlight">{{user.name}}</span>{{/if}}',
+        '{{#if user}}Hello <span class="chat-message-highlight">{{name}}</span>{{/if}}',
       );
     });
 
@@ -98,12 +98,11 @@ describe("MustachePromptAreaComponent", () => {
       );
     });
 
-    it("should handle dot notation variables", () => {
+    it("should NOT highlight dot notation variables", () => {
       const input = "Hello {{user.name}} from {{company.address.city}}";
       const result = applyMustacheHighlighting(input);
-      expect(result).toBe(
-        'Hello <span class="chat-message-highlight">{{user.name}}</span> from <span class="chat-message-highlight">{{company.address.city}}</span>',
-      );
+      // Dot notation is not supported, so should not be highlighted
+      expect(result).toBe("Hello {{user.name}} from {{company.address.city}}");
     });
 
     it("should reject variables starting with numbers", () => {
