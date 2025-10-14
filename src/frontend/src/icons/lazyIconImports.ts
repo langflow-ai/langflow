@@ -182,6 +182,8 @@ export const lazyIconsMapping = {
     })),
   Firecrawl: () =>
     import("@/icons/Firecrawl").then((mod) => ({ default: mod.FirecrawlIcon })),
+  Fireflies: () =>
+    import("@/icons/Fireflies").then((mod) => ({ default: mod.FirefliesIcon })),
   Finage: () =>
     import("@/icons/Finage").then((mod) => ({ default: mod.FinageIcon })),
   Fixer: () =>
