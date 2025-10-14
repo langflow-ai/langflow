@@ -59,7 +59,7 @@ Langflow can more efficiently handle multiple users and larger workloads by usin
         LANGFLOW_DATABASE_URL="postgresql://user@db.example.com:5432/dbname?sslmode=verify-full&sslcert=/path/to/client.crt&sslkey=/path/to/client.key&sslrootcert=/path/to/ca.crt"
         ```
 
-        Do not use the Langflow environment variables [`LANGFLOW_SSL_CERT_FILE_PATH`](/environment-variables#server) and [`LANGFLOW_SSL_KEY_FILE_PATH`](/environment-variables#server) for your PostgreSQL certificates: these variables are for enabling HTTPS on the Langflow server, not for PostgreSQL database connections.
+        Do not use the Langflow environment variables [`LANGFLOW_SSL_CERT_FILE`](/environment-variables#server) and [`LANGFLOW_SSL_KEY_FILE`](/environment-variables#server) for your PostgreSQL certificates: these variables are for enabling HTTPS on the Langflow server, not for PostgreSQL database connections.
 
         For more on managing SSL certificates in PostgreSQL, see the [PostgreSQL documentation](https://www.postgresql.org/docs/9.1/ssl-tcp.html).
 
