@@ -70,6 +70,7 @@ class ChatOllamaComponent(LCModelComponent):
             display_name="Format",
             info="Specify the format of the output (options: JSON schema).",
             advanced=True,
+            value=None
         ),
         DictInput(name="metadata", display_name="Metadata", info="Metadata to add to the run trace.", advanced=True),
         DropdownInput(
@@ -192,7 +193,10 @@ class ChatOllamaComponent(LCModelComponent):
                 "If you want to use the OpenAI-compatible API, please use the OpenAI component instead. "
                 "Learn more at https://docs.ollama.com/openai#openai-compatibility"
             )
-
+        # ADD THESE DEBUG LINES:
+        print(f"🔍 DEBUG format field - Raw value: {self.format!r}, Type: {type(self.format)}")
+        parsed_format = self._parse_format_field(self.format)
+        print(f"🔍 DEBUG format field - Parsed value: {parsed_format!r}, Type: {type(parsed_format)}")
         # Mapping system settings to their corresponding values
         llm_params = {
             "base_url": transformed_base_url,
@@ -365,14 +369,12 @@ class ChatOllamaComponent(LCModelComponent):
         Returns:
             Parsed format value as string, dict, or None
         """
-        if format_value is None or (isinstance(format_value, dict) and not format_value):
-            return format_value  # langchain handles None and empty dict (and empty string)
         formatted_value = format_value
         if isinstance(format_value, str):  # parse as json if string
             with suppress(json.JSONDecodeError):
                 formatted_value = json.loads(format_value)
 
-        return formatted_value
+        return formatted_value or None
 
     async def _parse_json_response(self) -> Any:
         """Parse the JSON response from the model.
