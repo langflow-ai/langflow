@@ -55,7 +55,7 @@ const MemoizedApiKeyButton = memo(
       />
       <span>{apiKey === "" ? "Generate API key" : "API key generated"}</span>
     </Button>
-  ),
+  )
 );
 MemoizedApiKeyButton.displayName = "MemoizedApiKeyButton";
 
@@ -107,7 +107,7 @@ const MemoizedCodeTag = memo(
         <span>{children}</span>
       </div>
     </div>
-  ),
+  )
 );
 MemoizedCodeTag.displayName = "MemoizedCodeTag";
 
@@ -166,12 +166,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const { mutate: patchFlowsMCP, isPending: isPatchingFlowsMCP } =
     usePatchFlowsMCP({ project_id: projectId });
 
-  // Extract tools and auth_settings from the response
   const flowsMCP = mcpProjectData?.tools || [];
   const currentAuthSettings = mcpProjectData?.auth_settings;
 
-  // Only get composer URL for OAuth projects
-  // Disable the query during mutations to prevent stale auth state issues
   const isOAuthProject =
     currentAuthSettings?.auth_type === "oauth" && ENABLE_MCP_COMPOSER;
   const shouldQueryComposerUrl = isOAuthProject && !isPatchingFlowsMCP;
@@ -181,10 +178,9 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       {
         projectId,
       },
-      { enabled: !!projectId && shouldQueryComposerUrl },
+      { enabled: !!projectId && shouldQueryComposerUrl }
     );
 
-  // Reset waiting state when composer URL is loaded or has error
   useEffect(() => {
     if (isWaitingForComposer && !isLoadingComposerUrl && composerUrlData) {
       setIsWaitingForComposer(false);
@@ -205,7 +201,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const [selectedPlatform, setSelectedPlatform] = useState(
     operatingSystemTabs.find((tab) => tab.name.includes(getOS() || "windows"))
-      ?.name,
+      ?.name
   );
 
   const isAutoLogin = useAuthStore((state) => state.autoLogin);
@@ -213,11 +209,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     ? currentAuthSettings?.auth_type === "apikey"
     : !isAutoLogin;
 
-  // Check if the current connection is local
   const isLocalConnection = useCustomIsLocalConnection();
 
   const [selectedMode, setSelectedMode] = useState(
-    isLocalConnection ? "Auto install" : "JSON",
+    isLocalConnection ? "Auto install" : "JSON"
   );
 
   const handleOnNewValue = (value: any) => {
@@ -228,8 +223,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       mcp_enabled: flow.status,
     }));
 
-    // Prepare the request with both settings and auth_settings
-    // If ENABLE_MCP_COMPOSER is false, always use "none" for auth_type
     const finalAuthSettings = ENABLE_MCP_COMPOSER
       ? currentAuthSettings
       : { auth_type: "none" };
@@ -257,14 +250,12 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       auth_settings: authSettings,
     };
 
-    // Set waiting state for OAuth projects
     if (authSettings.auth_type === "oauth") {
       setIsWaitingForComposer(true);
     }
 
     patchFlowsMCP(requestData, {
       onSuccess: () => {
-        // Invalidate composer URL cache to force refetch after OAuth settings change
         if (authSettings.auth_type === "oauth") {
           queryClient.invalidateQueries({
             queryKey: ["project-composer-url", projectId],
@@ -272,7 +263,6 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         }
       },
       onError: () => {
-        // Reset waiting state on error
         setIsWaitingForComposer(false);
       },
     });
@@ -306,7 +296,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
     isOAuthProject &&
       !!composerUrlData?.sse_url &&
       composerUrlData?.uses_composer,
-    composerUrlData?.sse_url,
+    composerUrlData?.sse_url
   );
 
   // Generate auth headers based on authentication type
@@ -345,8 +335,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         selectedPlatform === "windows"
           ? "cmd"
           : selectedPlatform === "wsl"
-            ? "wsl"
-            : "uvx"
+          ? "wsl"
+          : "uvx"
       }",
       "args": [
         ${
@@ -355,27 +345,27 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
         "uvx",
         `
             : selectedPlatform === "wsl"
-              ? `"uvx",
+            ? `"uvx",
         `
-              : ""
+            : ""
         }${
-          isOAuthProject ? '"mcp-composer",' : '"mcp-proxy",'
-        }${getAuthHeaders()}${
-          isOAuthProject
-            ? `
+    isOAuthProject ? '"mcp-composer",' : '"mcp-proxy",'
+  }${getAuthHeaders()}${
+    isOAuthProject
+      ? `
         "--mode",
         "stdio",
         "--sse-url",`
-            : ""
-        }
+      : ""
+  }
         "${apiUrl}"${
-          isOAuthProject
-            ? `,
+    isOAuthProject
+      ? `,
         "--disable-composer-tools",
         "--client_auth_type",
         "oauth"`
-            : ""
-        }
+      : ""
+  }
       ]
     }
   }
@@ -413,18 +403,11 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
   const [loadingMCP, setLoadingMCP] = useState<string[]>([]);
 
-  // Check if authentication is configured (not "none")
-  // Also consider waiting state for OAuth to show loading immediately
   const hasAuthentication =
     (currentAuthSettings?.auth_type &&
       currentAuthSettings.auth_type !== "none") ||
     isWaitingForComposer;
 
-  // Show loading during:
-  // 1. Initial data load
-  // 2. Saving settings
-  // 3. For OAuth projects: waiting for composer to initialize (forced loading state)
-  // 4. For OAuth projects: also loading composer URL (happens after save completes)
   const isLoadingMCPProjectAuth =
     isLoadingMCPProjectData ||
     isPatchingFlowsMCP ||
@@ -511,8 +494,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                         isLoadingMCPProjectAuth
                           ? "text-muted-foreground"
                           : !composerUrlData?.error_message
-                            ? "text-accent-emerald-foreground"
-                            : "text-accent-amber-foreground",
+                          ? "text-accent-emerald-foreground"
+                          : "text-accent-amber-foreground"
                       )}
                     >
                       <ForwardedIconComponent
@@ -520,12 +503,12 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                           isLoadingMCPProjectAuth
                             ? "Loader2"
                             : !composerUrlData?.error_message
-                              ? "Check"
-                              : "AlertTriangle"
+                            ? "Check"
+                            : "AlertTriangle"
                         }
                         className={cn(
                           "h-4 w-4 shrink-0",
-                          isLoadingMCPProjectAuth && "animate-spin",
+                          isLoadingMCPProjectAuth && "animate-spin"
                         )}
                       />
                       {isLoadingMCPProjectAuth
@@ -670,10 +653,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                   key={installer.name}
                   content={
                     !installedMCPData?.find(
-                      (client) => client.name === installer.name,
+                      (client) => client.name === installer.name
                     )?.available
                       ? `Install ${toSpaceCase(
-                          installer.name,
+                          installer.name
                         )} to enable auto-install.`
                       : ""
                   }
@@ -687,7 +670,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                         loadingMCP.includes(installer.name) ||
                         !isLocalConnection ||
                         !installedMCPData?.find(
-                          (client) => client.name === installer.name,
+                          (client) => client.name === installer.name
                         )?.available
                       }
                       onClick={() => {
@@ -703,8 +686,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                               });
                               setLoadingMCP(
                                 loadingMCP.filter(
-                                  (name) => name !== installer.name,
-                                ),
+                                  (name) => name !== installer.name
+                                )
                               );
                             },
                             onError: (e) => {
@@ -714,11 +697,11 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                               });
                               setLoadingMCP(
                                 loadingMCP.filter(
-                                  (name) => name !== installer.name,
-                                ),
+                                  (name) => name !== installer.name
+                                )
                               );
                             },
-                          },
+                          }
                         );
                       }}
                     >
@@ -736,22 +719,22 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                             installedMCP?.includes(installer.name)
                               ? "Check"
                               : loadingMCP.includes(installer.name)
-                                ? "Loader2"
-                                : "Plus"
+                              ? "Loader2"
+                              : "Plus"
                           }
                           className={cn(
                             "h-4 w-4 absolute top-0 left-0 opacity-100",
                             loadingMCP.includes(installer.name) &&
                               "animate-spin",
                             installedMCP?.includes(installer.name) &&
-                              "group-hover:opacity-0",
+                              "group-hover:opacity-0"
                           )}
                         />
                         {installedMCP?.includes(installer.name) && (
                           <ForwardedIconComponent
                             name={"RefreshCw"}
                             className={cn(
-                              "h-4 w-4 absolute top-0 left-0 opacity-0 group-hover:opacity-100",
+                              "h-4 w-4 absolute top-0 left-0 opacity-0 group-hover:opacity-100"
                             )}
                           />
                         )}
