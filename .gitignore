@@ -280,3 +280,8 @@ src/frontend/temp
 *.mcp.json
 
 member_servers.json
+
+# AI Assistant working files
+CLAUDE.md
+SPEC_CREATION_PROMPT.md
+test_spec_conversion.py

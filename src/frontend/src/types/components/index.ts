@@ -741,6 +741,7 @@ export type FlowSettingsPropsType = {
   open: boolean;
   setOpen: (open: boolean) => void;
   flowData?: FlowType;
+  isPublishMode?:boolean
 };
 
 export type groupDataType = {

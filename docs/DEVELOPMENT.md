@@ -436,13 +436,13 @@ helm upgrade ai-studio helmcharts/ai-studio/ --set frontend.image.tag=latest
 Azure DevOps pipelines have been reorganized for better maintainability:
 
 ```
-azure-devops/
-├── pipelines/
-│   ├── azure-pipelines-backend.yml
-│   └── azure-pipelines-frontend.yml
+.azure-pipelines/
+├── backend-cicd.yaml
+├── frontend-cicd.yaml
 ├── templates/
-│   ├── docker-build-template.yml
-│   └── helm-deploy-template.yml
+│   ├── backend-build-template.yml
+│   ├── frontend-build-template.yml
+│   └── release-template.yml
 └── variables/
     └── common.yml
 ```

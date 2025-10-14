@@ -6,16 +6,15 @@ This document provides detailed information about the reorganized Azure DevOps s
 
 ```
 ai-studio/
-├── azure-devops/
-│   ├── pipelines/
-│   │   ├── azure-pipelines-backend.yml     # Backend CI/CD pipeline
-│   │   └── azure-pipelines-frontend.yml    # Frontend CI/CD pipeline
+├── .azure-pipelines/
+│   ├── backend-cicd.yaml                   # Backend CI/CD pipeline
+│   ├── frontend-cicd.yaml                  # Frontend CI/CD pipeline
 │   ├── templates/
-│   │   ├── docker-build-template.yml       # Docker build template
-│   │   └── helm-deploy-template.yml        # Helm deployment template
+│   │   ├── backend-build-template.yml      # Backend build template
+│   │   ├── frontend-build-template.yml     # Frontend build template
+│   │   └── release-template.yml            # Release template
 │   └── variables/
 │       └── common.yml                      # Common variables
-├── helmcharts/ai-studio/                   # Unified Helm chart
 └── docs/
     ├── AZURE_DEVOPS.md                     # This document
     └── HELM.md                             # Helm chart documentation
@@ -27,47 +26,48 @@ ai-studio/
 
 The reorganized structure maintains the **dual pipeline approach** for optimal efficiency:
 
-1. **Backend Pipeline** (`azure-devops/pipelines/azure-pipelines-backend.yml`)
+1. **Backend Pipeline** (`.azure-pipelines/backend-cicd.yaml`)
    - Triggers on: `src/backend/**`, `pyproject.toml`, `uv.lock`, `docker/backend/**`
    - Builds: Python backend with Langflow and Genesis components
-   - Output: `aistudioregistry.azurecr.io/ai-studio-backend:${BUILD_ID}`
+   - Output: `sprintregistry.azurecr.io/ai-studio-backend:${BUILD_ID}`
+   - Stages: Build → UpdatePlatformCharts
 
-2. **Frontend Pipeline** (`azure-devops/pipelines/azure-pipelines-frontend.yml`)
+2. **Frontend Pipeline** (`.azure-pipelines/frontend-cicd.yaml`)
    - Triggers on: `src/frontend/**`, `docker/frontend/**`
    - Builds: React/TypeScript frontend with Vite
-   - Output: `aistudioregistry.azurecr.io/ai-studio-frontend:${BUILD_ID}`
+   - Output: `sprintregistry.azurecr.io/ai-studio-frontend:${BUILD_ID}`
+   - Stages: Build → UpdatePlatformCharts
 
 ### Pipeline Templates
 
-#### Docker Build Template (`templates/docker-build-template.yml`)
+#### Build Templates
 
-Standardized Docker build and push operations:
+Build templates handle Docker image build and push operations:
+
+- `backend-build-template.yml` - Backend Docker build
+- `frontend-build-template.yml` - Frontend Docker build
 
 ```yaml
 # Usage in pipeline
-- template: ../templates/docker-build-template.yml
+- template: templates/backend-build-template.yml
   parameters:
-    serviceName: 'backend'
-    dockerfilePath: 'docker/backend/Dockerfile'
-    buildArgs:
-      BUILD_VERSION: $(Build.BuildId)
-      PYTHON_VERSION: $(PYTHON_VERSION)
+    CONTAINER_NAME: $(IMAGE_NAME)
+    DOCKERFILE_PATH: $(DOCKERFILE_PATH)
+    AZURE_CONTAINER_REGISTRY: $(AZURE_CONTAINER_REGISTRY)
+    BUILD_ARGS: |
+      --build-arg BUILD_VERSION=$(Build.BuildNumber)
 ```
 
-#### Helm Deploy Template (`templates/helm-deploy-template.yml`)
+#### Release Template
 
-Unified deployment using the AI Studio Helm chart:
+The release template (`templates/release-template.yml`) updates platform-charts repository for ArgoCD deployment:
 
 ```yaml
 # Usage in pipeline
-- template: ../templates/helm-deploy-template.yml
+- template: templates/release-template.yml
   parameters:
-    environment: 'development'
-    namespace: 'ai-studio-dev'
-    valuesFile: 'environments/dev-values.yaml'
-    setValues:
-      frontend.image.tag: $(Build.BuildId)
-      backend.image.tag: $(Build.BuildId)
+    SERVICE_NAME: 'backend'
+    IMAGE_NAME: $(IMAGE_NAME)
 ```
 
 ## ⚙️ Pipeline Configuration
@@ -81,12 +81,14 @@ Both pipeline files have been updated to reference their new locations:
 trigger:
   paths:
     include:
-      - azure-devops/pipelines/azure-pipelines-backend.yml  # Updated path
+      - .azure-pipelines/backend-cicd.yaml
+      - .azure-pipelines/templates/*backend*
 
 pr:
   paths:
     include:
-      - azure-devops/pipelines/azure-pipelines-backend.yml  # Updated path
+      - .azure-pipelines/backend-cicd.yaml
+      - .azure-pipelines/templates/*backend*
 ```
 
 ### Common Variables
@@ -121,7 +123,7 @@ variables:
 Create a new deployment pipeline that uses the unified Helm chart:
 
 ```yaml
-# azure-devops/pipelines/azure-pipelines-deploy.yml
+# .azure-pipelines/deploy.yaml
 trigger: none
 
 pr: none
@@ -303,8 +305,8 @@ Configure Slack notifications:
 1. **Update Pipeline References**
    ```bash
    # In Azure DevOps, update pipeline file paths:
-   # From: azure-pipelines-backend.yml
-   # To: azure-devops/pipelines/azure-pipelines-backend.yml
+   # From: azure-devops/pipelines/azure-pipelines-backend.yml
+   # To: .azure-pipelines/backend-cicd.yaml
    ```
 
 2. **Update Trigger Paths**
@@ -313,32 +315,34 @@ Configure Slack notifications:
    trigger:
      paths:
        include:
-         - azure-devops/pipelines/azure-pipelines-backend.yml
+         - .azure-pipelines/backend-cicd.yaml
+         - .azure-pipelines/templates/*backend*
    ```
 
-3. **Migrate to Templates**
+3. **Simplified Pipeline Structure**
    ```yaml
-   # Replace inline build steps with template calls
-   - template: ../templates/docker-build-template.yml
-     parameters:
-       serviceName: 'backend'
-       dockerfilePath: 'docker/backend/Dockerfile'
+   # Pipelines now focus on build and release stages only
+   stages:
+   - stage: Build
+     jobs:
+     - template: templates/backend-build-template.yml
+   
+   - stage: UpdatePlatformCharts
+     jobs:
+     - template: templates/release-template.yml
    ```
 
 ### Testing Migration
 
 ```bash
 # 1. Validate pipeline syntax
-az pipelines validate --repository ai-studio --yaml-path azure-devops/pipelines/azure-pipelines-backend.yml
+az pipelines validate --repository ai-studio --yaml-path .azure-pipelines/backend-cicd.yaml
 
-# 2. Test template rendering
-helm template ai-studio helmcharts/ai-studio/ --debug
+# 2. Check pipeline structure
+cat .azure-pipelines/backend-cicd.yaml
 
-# 3. Run test deployment
-helm install ai-studio-test helmcharts/ai-studio/ \
-  --namespace ai-studio-test \
-  --create-namespace \
-  --dry-run
+# 3. Verify template files exist
+ls -la .azure-pipelines/templates/
 ```
 
 ## 🚨 Troubleshooting
@@ -349,19 +353,19 @@ helm install ai-studio-test helmcharts/ai-studio/ \
 ```
 Error: Pipeline file 'azure-pipelines-backend.yml' not found
 ```
-*Solution*: Update Azure DevOps pipeline definition to point to new path
+*Solution*: Update Azure DevOps pipeline definition to point to `.azure-pipelines/backend-cicd.yaml`
 
 **2. Template Path Errors**
 ```
-Error: Template 'templates/docker-build-template.yml' not found
+Error: Template 'templates/backend-build-template.yml' not found
 ```
-*Solution*: Use relative paths from pipeline file location (`../templates/`)
+*Solution*: Ensure templates exist in `.azure-pipelines/templates/` directory
 
 **3. Variable Resolution Issues**
 ```
 Error: Variable 'ACR_NAME' not found
 ```
-*Solution*: Import common variables template in each pipeline
+*Solution*: Variables are defined directly in pipeline files or can import from `variables/common.yml`
 
 ### Debug Commands
 
@@ -370,15 +374,11 @@ Error: Variable 'ACR_NAME' not found
 az pipelines list --organization https://dev.azure.com/yourorg --project ai-studio
 
 # Validate pipeline YAML
-az pipelines validate --repository ai-studio --yaml-path azure-devops/pipelines/azure-pipelines-backend.yml
+az pipelines validate --repository ai-studio --yaml-path .azure-pipelines/backend-cicd.yaml
 
-# Test Helm chart deployment
-helm install ai-studio-debug helmcharts/ai-studio/ \
-  --namespace ai-studio-debug \
-  --create-namespace \
-  --set frontend.image.tag=debug \
-  --set backend.image.tag=debug \
-  --dry-run --debug
+# Check pipeline files
+ls -la .azure-pipelines/
+ls -la .azure-pipelines/templates/
 ```
 
 ## 📈 Performance Optimizations
