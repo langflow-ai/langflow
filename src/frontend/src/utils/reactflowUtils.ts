@@ -543,8 +543,14 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
           (output) => output.name === name,
         );
         if (output) {
+          // For single-type outputs, use types directly
+          // For multi-type outputs, use selected if it exists, otherwise use types
           const outputTypes =
-            output!.types.length === 1 ? output!.types : [output!.selected!];
+            output!.types.length === 1
+              ? output!.types
+              : output!.selected
+                ? [output!.selected]
+                : output!.types;
 
           const id: sourceHandleType = {
             id: sourceNode.data.id,
@@ -553,6 +559,13 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
             dataType: sourceNode.data.type,
           };
           if (!handlesMatch(scapedJSONStringfy(id), sourceHandle)) {
+            console.log("❌ Source handle mismatch:", {
+              edge: `${edge.source} -> ${edge.target}`,
+              expected: scapedJSONStringfy(id),
+              actual: sourceHandle,
+              expectedParsed: id,
+              actualParsed: parsedSourceHandle,
+            });
             newEdges = newEdges.filter((e) => e.id !== edge.id);
             BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
           }

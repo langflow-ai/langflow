@@ -178,33 +178,16 @@ class TypeConverterComponent(Component):
         ),
     ]
 
-    def __init__(self, **data):
-        """Initialize and set the correct output based on output_type."""
-        super().__init__(**data)
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):
+        """Ensure outputs are synced with output_type when component is loaded."""
+        # Call parent implementation first
+        await super().update_frontend_node(new_frontend_node, current_frontend_node)
 
-        # Get the current output_type value (from template or default)
-        output_type = getattr(self, "output_type", "Message")
+        # Then sync outputs with current output_type value
+        output_type = new_frontend_node.get("template", {}).get("output_type", {}).get("value", "Message")
+        self.update_outputs(new_frontend_node, "output_type", output_type)
 
-        # Set the correct output based on output_type
-        if output_type in ("Data", "JSON"):
-            self.outputs = [
-                Output(
-                    display_name="JSON Output",
-                    name="data_output",
-                    method="convert_to_data",
-                    types=["JSON"],
-                )
-            ]
-        elif output_type in ("DataFrame", "Table"):
-            self.outputs = [
-                Output(
-                    display_name="Table Output",
-                    name="dataframe_output",
-                    method="convert_to_dataframe",
-                    types=["Table"],
-                )
-            ]
-        # else: keep Message output (already set)
+        return new_frontend_node
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Dynamically show only the relevant output based on the selected output type."""
