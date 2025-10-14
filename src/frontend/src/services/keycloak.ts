@@ -1,5 +1,5 @@
 import Keycloak from "keycloak-js";
-import type { KeycloakConfig } from "keycloak-js";
+import type { KeycloakConfig, KeycloakLoginOptions } from "keycloak-js";
 
 export interface KeycloakServiceConfig {
   url: string;
@@ -49,14 +49,17 @@ class KeycloakService {
     }
   }
 
-  public async login(redirectUri?: string): Promise<void> {
+  public async login(options?: KeycloakLoginOptions): Promise<void> {
     if (!this.keycloak) {
       throw new Error("Keycloak not initialized");
     }
 
-    await this.keycloak.login({
-      redirectUri: redirectUri || window.location.origin,
-    });
+    const finalOptions: KeycloakLoginOptions = {
+      ...(options || {}),
+      redirectUri: options?.redirectUri || window.location.origin,
+    };
+
+    await this.keycloak.login(finalOptions);
   }
 
   public async logout(redirectUri?: string): Promise<void> {

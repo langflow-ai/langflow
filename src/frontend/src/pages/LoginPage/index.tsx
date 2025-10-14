@@ -19,7 +19,7 @@ import AutonomizeIcon from "@/icons/Autonomize";
 import { envConfig } from "@/config/env";
 import KeycloakService from "@/services/keycloak";
 
-export default function LoginPage(): JSX.Element {
+export default function LoginPage(): JSX.Element | null {
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
 
@@ -39,7 +39,7 @@ export default function LoginPage(): JSX.Element {
   const handleKeycloakLogin = async () => {
     try {
       const keycloakService = KeycloakService.getInstance();
-      await keycloakService.login();
+      await keycloakService.login({ prompt: "login" });
     } catch (error) {
       console.error("Keycloak login failed:", error);
       setErrorData({
@@ -48,6 +48,18 @@ export default function LoginPage(): JSX.Element {
       });
     }
   };
+
+  // Auto-redirect to Keycloak login when reaching this page
+  useEffect(() => {
+    if (envConfig.keycloakEnabled) {
+      void handleKeycloakLogin();
+    }
+  }, []);
+
+  // When Keycloak is enabled, render nothing; effect above will redirect
+  if (envConfig.keycloakEnabled) {
+    return null;
+  }
 
   function signIn() {
     const user: LoginType = {
@@ -68,6 +80,12 @@ export default function LoginPage(): JSX.Element {
     });
   }
 
+  // // Render nothing when Keycloak is enabled; the effect above will redirect
+  // if (envConfig.keycloakEnabled) {
+  //   return null;
+  // }
+
+  // Fallback: traditional login UI when Keycloak is disabled
   return (
     <Form.Root
       onSubmit={(event) => {
