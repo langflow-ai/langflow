@@ -59,7 +59,7 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
         default_kwargs["data"] = [Data(data=large_data)]
         default_kwargs["filter_instruction"] = "Filter items with value greater than 1500"
         component = await self.component_setup(component_class, default_kwargs)
-        component.llm.ainvoke.return_value.content = "lambda x: [item for item in x[0]['items'] if item['value'] > 1500]"
+        component.llm.ainvoke.return_value.content = "lambda x: [item for item in x['items'] if item['value'] > 1500]"
 
         # Execute filter on the data
         result = await component.process_as_data()
@@ -89,7 +89,7 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
         default_kwargs["filter_instruction"] = "Filter items with score greater than 90"
         component = await self.component_setup(component_class, default_kwargs)
         component.llm.ainvoke.return_value.content = (
-            "lambda x: [item for cat in x[0]['categories'].values() for item in cat if item['score'] > 90]"
+            "lambda x: [item for cat in x['categories'].values() for item in cat if item['score'] > 90]"
         )
 
         # Execute filter
@@ -106,8 +106,8 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
         assert filtered_items[0]["id"] == 3, f"Expected id 3, got {filtered_items[0]['id']}"
         assert filtered_items[0]["score"] == 95, f"Expected score 95, got {filtered_items[0]['score']}"
 
-    async def test_validate_lambda(self, component_class, default_kwargs):
-        component = await self.component_setup(component_class, default_kwargs)
+    def test_validate_lambda(self, component_class):
+        component = component_class()
 
         # Valid lambda
         valid_lambda = "lambda x: x + 1"
@@ -150,3 +150,4 @@ class TestLambdaFilterComponent(ComponentTestBaseWithoutClient):
         assert structure["nested"] == {"a": [{"b": "int"}]}, (
             f"Expected nested structure {{'a': [{{'b': 'int'}}]}}, got {structure['nested']}"
         )
+        
