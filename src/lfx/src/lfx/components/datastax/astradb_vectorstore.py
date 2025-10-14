@@ -31,7 +31,7 @@ from lfx.utils.version import get_version_info
 class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Astra DB"
     description: str = "Ingest and search documents in Astra DB"
-    documentation: str = "https://docs.datastax.com/en/langflow/astra-components.html"
+    documentation: str = "https://docs.langflow.org/bundles-datastax#astra-db"
     name = "AstraDB"
     icon: str = "AstraDB"
 
