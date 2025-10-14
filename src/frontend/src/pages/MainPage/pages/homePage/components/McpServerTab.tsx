@@ -414,8 +414,11 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   const [loadingMCP, setLoadingMCP] = useState<string[]>([]);
 
   // Check if authentication is configured (not "none")
+  // Also consider waiting state for OAuth to show loading immediately
   const hasAuthentication =
-    currentAuthSettings?.auth_type && currentAuthSettings.auth_type !== "none";
+    (currentAuthSettings?.auth_type &&
+      currentAuthSettings.auth_type !== "none") ||
+    isWaitingForComposer;
 
   // Show loading during:
   // 1. Initial data load
@@ -528,8 +531,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                       {isLoadingMCPProjectAuth
                         ? "Loading..."
                         : AUTH_METHODS[
-                            currentAuthSettings.auth_type as keyof typeof AUTH_METHODS
-                          ]?.label || currentAuthSettings.auth_type}
+                            currentAuthSettings?.auth_type as keyof typeof AUTH_METHODS
+                          ]?.label || currentAuthSettings?.auth_type}
                     </span>
                   </ShadTooltip>
                 )}
