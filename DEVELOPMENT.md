@@ -52,6 +52,8 @@ A preconfigured `.devcontainer` is included in this repository and is auto-detec
 
 #### Microsoft VS Code
 
+To start the preconfigured `.devcontainer` with the VS Code Dev Containers extension, from the Command Palette, run the Dev Containers: Reopen in Container command.
+
 - See [Developing inside a Container](https://code.visualstudio.com/docs/devcontainers/containers)
 - You may also find it helpful to [share `git` credentials](https://code.visualstudio.com/remote/advancedcontainers/sharing-git-credentials) with the container
 
