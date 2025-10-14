@@ -128,7 +128,7 @@ async def test_send_message_without_database(monkeypatch):  # noqa: ARG001
 
 @pytest.mark.usefixtures("use_noop_session")
 @pytest.mark.asyncio
-async def test_agent_component_send_message_events(monkeypatch):
+async def test_agent_component_send_message_events():
     from unittest.mock import AsyncMock
 
     from langflow.components.agents.agent import AgentComponent
