@@ -98,11 +98,20 @@ def _do_run_migrations(connection):
 
 
 async def _run_async_migrations() -> None:
+    # Disable prepared statements for PostgreSQL (required for PgBouncer compatibility)
+    # SQLite doesn't support this parameter, so only add it for PostgreSQL
+    config_section = config.get_section(config.config_ini_section, {})
+    db_url = config_section.get("sqlalchemy.url", "")
+    
+    connect_args = {}
+    if "postgresql" in db_url:
+        connect_args["prepare_threshold"] = None
+    
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        config_section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
-        connect_args={"prepare_threshold": None},
+        connect_args=connect_args,
     )
 
     if connectable.dialect.name == "sqlite":
