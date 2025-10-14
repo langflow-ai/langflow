@@ -29,71 +29,52 @@ class AzureDocumentIntelligenceComponent(BaseFileComponent):
 
     VALID_EXTENSIONS = ["pdf", "jpg", "jpeg", "png", "bmp", "tiff", "tif"]
 
-    # Model options for Azure Document Intelligence
-    MODEL_OPTIONS = [
-        "prebuilt-document",
-        "prebuilt-read",
-        "prebuilt-layout",
-        "prebuilt-businessCard",
-        "prebuilt-idDocument",
-        "prebuilt-invoice",
-        "prebuilt-receipt",
-        "prebuilt-tax.us.w2",
-        "prebuilt-healthInsuranceCard.us"
-    ]
-
     inputs = [
         HandleInput(
             name="url",
-            display_name="Document URL",
-            info="URL to the document to process (HTTP/HTTPS)",
+            display_name="URL",
+            info="URL to the document to process",
             input_types=["str", "Data", "Message", "list"],
             required=False,
         ),
-        # Include base file component inputs
+        # Include only the HandleInput and BoolInputs from base_inputs
         next(
-            input_
-            for input_ in BaseFileComponent._base_inputs
-            if input_.name == "file_path"
+            input
+            for input in BaseFileComponent._base_inputs
+            if input.name == "file_path"
         ),
         next(
-            input_
-            for input_ in BaseFileComponent._base_inputs
-            if input_.name == "silent_errors"
+            input
+            for input in BaseFileComponent._base_inputs
+            if input.name == "silent_errors"
         ),
         next(
-            input_
-            for input_ in BaseFileComponent._base_inputs
-            if input_.name == "delete_server_file_after_processing"
+            input
+            for input in BaseFileComponent._base_inputs
+            if input.name == "delete_server_file_after_processing"
         ),
         next(
-            input_
-            for input_ in BaseFileComponent._base_inputs
-            if input_.name == "ignore_unsupported_extensions"
+            input
+            for input in BaseFileComponent._base_inputs
+            if input.name == "ignore_unsupported_extensions"
         ),
         next(
-            input_
-            for input_ in BaseFileComponent._base_inputs
-            if input_.name == "ignore_unspecified_files"
+            input
+            for input in BaseFileComponent._base_inputs
+            if input.name == "ignore_unspecified_files"
         ),
         DropdownInput(
             name="model_type",
             display_name="Model Type",
-            options=MODEL_OPTIONS,
+            options=["prebuilt-document", "prebuilt-read", "prebuilt-layout"],
             value="prebuilt-document",
-            info="Choose the Document Intelligence model to use for processing",
+            info="Choose the Form Recognizer model to use",
         ),
         BoolInput(
             name="extract_tables",
             display_name="Extract Tables",
             value=True,
             info="Extract and format tables from the document",
-        ),
-        BoolInput(
-            name="extract_key_value_pairs",
-            display_name="Extract Key-Value Pairs",
-            value=True,
-            info="Extract form fields and key-value pairs",
         ),
         BoolInput(
             name="include_confidence",
@@ -119,9 +100,7 @@ class AzureDocumentIntelligenceComponent(BaseFileComponent):
 
     outputs = [
         Output(
-            display_name="Document Analysis",
-            name="document_analysis",
-            method="process_documents"
+            display_name="Structured Data", name="structured_data", method="load_files"
         ),
     ]
 
@@ -364,28 +343,22 @@ class AzureDocumentIntelligenceComponent(BaseFileComponent):
     async def process_file(
         self, file_path: str, *, silent_errors: bool = False
     ) -> tuple[Data, str]:
-        """Process a single file using the Document Intelligence service."""
+        """Process a single file using the OCR service."""
         try:
-            from langflow.services.manager import service_manager
-
-            # Try to get the document intelligence service
-            doc_intel_service = service_manager.get("document_intelligence_service")
-            if not doc_intel_service:
-                # Fallback to ocr_service if available
-                doc_intel_service = service_manager.get("ocr_service")
-
-            if not doc_intel_service:
-                raise ValueError("No Document Intelligence or OCR service available")
+            from langflow.custom.genesis.services.ocr.factory import OCRServiceFactory
+            
+            # Create OCR service directly
+            ocr_factory = OCRServiceFactory()
+            ocr_service = ocr_factory.create()
 
             with open(file_path, "rb") as file:
                 file_content = file.read()
 
-            extracted_content, plain_text = await doc_intel_service.process_document(
+            extracted_content, plain_text = await ocr_service.process_document(
                 file_content=file_content,
                 model_type=self.model_type,
                 include_confidence=self.include_confidence,
                 extract_tables=self.extract_tables,
-                extract_key_value_pairs=getattr(self, 'extract_key_value_pairs', True),
             )
 
             structured_data = Data(
@@ -393,9 +366,6 @@ class AzureDocumentIntelligenceComponent(BaseFileComponent):
                 data={
                     self.SERVER_FILE_PATH_FIELDNAME: str(file_path),
                     "result": extracted_content,
-                    "model_type": self.model_type,
-                    "extracted_tables": len([page for page in extracted_content if page.get("tables")]) if self.extract_tables else 0,
-                    "extracted_forms": len([page for page in extracted_content if page.get("form")]) if getattr(self, 'extract_key_value_pairs', True) else 0,
                 },
             )
 
@@ -485,57 +455,6 @@ class AzureDocumentIntelligenceComponent(BaseFileComponent):
 
         return self.rollup_data(file_list, processed_data)
 
-    async def process_documents(self) -> Data:
-        """Process documents using Azure Document Intelligence."""
-        try:
-            # Resolve file paths (including URLs)
-            files = self._validate_and_resolve_paths()
-
-            if not files:
-                raise ValueError("No valid files provided for processing")
-
-            # Process files
-            processed_files = self.process_files(files)
-
-            # Create output data
-            results = []
-            total_pages = 0
-            total_tables = 0
-            total_forms = 0
-
-            for file_data in processed_files:
-                if file_data and file_data.data:
-                    results.append(file_data.data)
-                    if "result" in file_data.data:
-                        pages = file_data.data["result"]
-                        total_pages += len(pages) if isinstance(pages, list) else 1
-                        total_tables += file_data.data.get("extracted_tables", 0)
-                        total_forms += file_data.data.get("extracted_forms", 0)
-
-            output_data = {
-                "model_type": self.model_type,
-                "processed_files": len(processed_files),
-                "total_pages": total_pages,
-                "total_tables_extracted": total_tables,
-                "total_forms_extracted": total_forms,
-                "results": results,
-                "full_text": self._text_content
-            }
-
-            data = Data(value=output_data)
-            self.status = f"Processed {len(files)} files with {self.model_type}"
-            return data
-
-        except Exception as e:
-            error_msg = f"Document processing failed: {e!s}"
-            logger.error(error_msg)
-            if not self.silent_errors:
-                raise ValueError(error_msg) from e
-
-            data = Data(value={"error": str(e), "model_type": self.model_type})
-            self.status = f"Error: {str(e)}"
-            return data
-
     def __del__(self):
         """Cleanup temporary files and directory."""
         try:
@@ -547,8 +466,4 @@ class AzureDocumentIntelligenceComponent(BaseFileComponent):
                 # Remove the temporary directory
                 os.rmdir(self.temp_dir)
         except Exception as e:
-            logger.error(f"Error cleaning up temporary files: {e}")
-
-    def build(self):
-        """Return the main build function for Langflow framework."""
-        return self.process_documents
+            logger.error(f"Error cleaning up temporary files: {e!s}")
