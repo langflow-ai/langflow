@@ -778,3 +778,274 @@ Use this decision tree when selecting components:
 Ready to create specifications from requirements.
 
 Provide requirements one at a time.
+
+---
+
+# ENHANCEMENT PLAN: Type Validation and Missing Mappings
+
+## Phase 1: Enhanced Type Compatibility Validation
+
+### 1.1 Add Type Compatibility Validation to SpecService
+- **Location**: `src/backend/base/langflow/services/spec/service.py`
+- **Enhancement**: Add `_validate_component_type_compatibility()` method
+- **Features**:
+  - Pre-validate output→input type matching for all `provides` connections
+  - Use ComponentMapper's I/O mappings to get accurate type information
+  - Validate tool mode consistency (`asTools: true` + `useAs: tools` + Tool output type)
+  - Check multi-tool agent capabilities
+  - Validate field mapping compatibility
+
+### 1.2 Expand Type Compatibility Matrix
+- **Location**: `src/backend/base/langflow/custom/genesis/spec/converter.py`
+- **Enhancement**: Extend `compatible` dictionary with more type combinations
+- **Add Support For**:
+  - Document types (Document → Data, Data → Document)
+  - Tool chain compatibility (Tool → Agent, Agent → Data → Tool)
+  - Extended type conversions
+
+## Phase 2: Runtime-Agnostic Component Mapping Architecture
+
+### 2.1 Database Schema for Extensible Mappings
+**Create runtime-agnostic component mapping system**:
+```sql
+-- Component mappings (runtime-independent)
+CREATE TABLE component_mappings (
+    id SERIAL PRIMARY KEY,
+    genesis_type VARCHAR(100), -- "genesis:agent"
+    base_config JSONB,
+    io_mapping JSONB,
+    component_category VARCHAR(50), -- "agent", "tool", "data", "prompt"
+    created_at TIMESTAMP,
+    active BOOLEAN DEFAULT true
+);
+
+-- Runtime adapters (separate table for extensibility)
+CREATE TABLE runtime_adapters (
+    id SERIAL PRIMARY KEY,
+    genesis_type VARCHAR(100), -- "genesis:agent"
+    runtime_type VARCHAR(50),  -- "langflow", "temporal", "kafka" (future)
+    target_component VARCHAR(100), -- "Agent"
+    adapter_config JSONB,
+    version VARCHAR(20),
+    active BOOLEAN DEFAULT true
+);
+```
+
+### 2.2 Converter Architecture Refactor
+**Create extensible converter system**:
+- **Location**: `src/backend/base/langflow/services/runtime/`
+- **Create**: `base_converter.py` - Abstract converter interface
+- **Create**: `factory.py` - Runtime converter factory
+- **Refactor**: Current FlowConverter → `langflow_converter.py`
+- **Features**:
+  - Pluggable runtime support
+  - Future-ready for Temporal, Kafka, Airflow
+  - Runtime capability validation
+
+### 2.3 Missing Langflow Component Mappings
+**Add to current ComponentMapper (transitional)**:
+```python
+# CrewAI missing mappings
+"genesis:crewai_hierarchical_task": {"component": "HierarchicalTask", "config": {}},
+"genesis:crewai_hierarchical_crew": {"component": "HierarchicalCrew", "config": {}},
+
+# Data processing
+"genesis:directory_loader": {"component": "Directory", "config": {}},
+"genesis:file_loader": {"component": "File", "config": {}},
+
+# External services
+"genesis:tavily_search": {"component": "TavilySearch", "config": {}},
+"genesis:serper_search": {"component": "SerperSearch", "config": {}},
+```
+
+## Phase 3: Comprehensive Validation Rules
+
+### 3.1 Component Configuration Schema Validation
+- **Create**: `src/backend/base/langflow/services/spec/config_schemas.py`
+- **Features**:
+  - Define configuration schemas for each genesis component type
+  - Validate config field types, required fields, and constraints
+  - MCP tool name validation
+
+### 3.2 Advanced Edge Validation
+- **Enhancement**: Add to `_validate_components_enhanced()`
+- **Validation Rules**:
+  - Tool mode consistency checking
+  - Multi-input validation (agents accepting multiple tools)
+  - Circular dependency detection (enhanced)
+  - Field compatibility pre-checking
+
+### 3.3 Type Compatibility Matrix Enhancement
+- **Expand compatibility rules**:
+  - Document ↔ Data conversion
+  - Tool → Agent → Output chains
+  - Extended type conversion patterns
+
+## Phase 4: Missing Component Discovery
+
+### 4.1 Component Gap Analysis Tool
+- **Create**: `src/backend/base/langflow/services/spec/component_analyzer.py`
+- **Features**:
+  - Scan all Langflow components
+  - Identify unmapped components
+  - Generate proposed genesis mappings
+  - Priority ranking for relevance
+
+### 4.2 Automated Mapping Generation
+- **Features**:
+  - Auto-generate I/O type mappings from component inspection
+  - Suggest genesis type names based on component functionality
+  - Component classification
+
+## Implementation Priority
+
+### Week 1: Critical Validation & Current Mappings
+1. Type compatibility validation in SpecService
+2. Tool mode consistency validation
+3. Missing Langflow component mappings (immediate need)
+
+### Week 2: Runtime-Agnostic Architecture
+4. Database schema for extensible mappings
+5. Converter architecture refactor (base classes + factory)
+6. Configuration schema validation
+
+### Week 3: Enhanced Validation & Automation
+7. Advanced edge validation rules
+8. Component gap analysis tool
+9. Automated mapping generation
+
+## Low Priority Improvements (Future)
+- Healthcare-optimized validation rules
+- Domain-specific edge validation
+- Advanced workflow pattern validation
+
+## Expected Outcomes
+- **100% accurate** type compatibility validation before conversion
+- **Complete mapping coverage** for existing Langflow components
+- **Automated detection** of missing mappings
+- **Zero failed conversions** due to type mismatches
+
+## Phase 4: Real Component Schema Validation (AUTPE-6151 Extension)
+
+### 4.1 Component Schema Inspector
+- **Create**: `src/backend/base/langflow/services/spec/component_schema_inspector.py`
+- **Features**:
+  - Dynamically scan all Langflow components in `/components/` directory
+  - Extract actual input/output field definitions from component classes
+  - Cache component schemas for performance
+  - Support for custom components and their schemas
+
+### 4.2 Enhanced ComponentMapper Integration
+- **Enhancement**: Update ComponentMapper to use real component introspection
+- **Features**:
+  - Replace hardcoded I/O mappings with real component inspection
+  - Add fallback to hardcoded mappings for backward compatibility
+  - Dynamic discovery of component input/output schemas
+  - Support for dynamically loaded components
+
+### 4.3 Comprehensive Edge Connection Validation
+- **Enhancement**: Add port-level validation in SpecService
+- **Features**:
+  - Validate actual input/output port names (e.g., "input_value", "message")
+  - Check port availability and constraints
+  - Validate multiple input/output scenarios
+  - Component-specific connection rules
+  - Connection cardinality validation (1-to-many, many-to-1)
+
+### 4.4 Live Component Validation
+- **Features**:
+  - Validate against actual component input/output schemas
+  - Real-time validation updates when components change
+  - Support for conditional connections based on component configuration
+  - Comprehensive edge rules for complex routing scenarios
+
+---
+
+# DEVELOPMENT WORKFLOW RULES
+
+## Branch and Commit Guidelines
+
+### Branch Naming Convention
+- Create feature branch for each JIRA story: `feature/AUTPE-XXXX-brief-description`
+- Example: `feature/AUTPE-6151-type-compatibility-validation`
+- Use lowercase with hyphens for readability
+
+### Commit Guidelines
+- **NEVER** include "Claude" or "claude" keyword in commit messages
+- Use present tense, imperative mood for commit messages
+- Format: `Add [feature/fix]: brief description`
+- Examples:
+  - `Add enhanced type compatibility validation to SpecService`
+  - `Fix component mapping registration for CrewAI components`
+  - `Update validation rules for tool mode consistency`
+
+### Git Workflow Process
+1. **Start Story**: Create branch from main with story ID
+2. **Development**: Follow reflection workflow with unit tests
+3. **Complete Story**: Commit all changes to feature branch
+4. **Push**: Push feature branch to remote repository
+5. **Manual PR**: User will create pull request manually
+
+### Unit Testing Requirements
+- **Minimum 80% code coverage** for new code
+- Write tests BEFORE implementing functionality (TDD approach)
+- Use pytest framework for consistency
+- Test files: `test_[module_name].py` in same directory or tests/ folder
+- Mock external dependencies appropriately
+
+### Reflection Workflow
+For each implementation:
+1. **Plan**: Break down story into smaller tasks
+2. **Design**: Create high-level design and interfaces
+3. **Test First**: Write comprehensive unit tests
+4. **Implement**: Code to make tests pass
+5. **Refactor**: Clean up code while keeping tests green
+6. **Review**: Self-review code for quality and completeness
+7. **Validate**: Run full test suite and validation checks
+
+### Code Quality Standards
+- Follow PEP 8 Python style guidelines
+- Add type hints for all function parameters and returns
+- Include comprehensive docstrings for classes and methods
+- Handle errors gracefully with appropriate exception handling
+- Log important operations for debugging and monitoring
+
+### Implementation Completion Criteria
+For each JIRA story to be considered complete:
+- [ ] All acceptance criteria implemented and tested
+- [ ] Unit tests written with minimum 80% coverage
+- [ ] Code follows style guidelines and quality standards
+- [ ] Integration tests pass (if applicable)
+- [ ] Documentation updated (docstrings, comments)
+- [ ] Self-review completed using reflection workflow
+- [ ] Feature branch created with story ID
+- [ ] All changes committed to feature branch
+- [ ] Feature branch pushed to remote repository
+
+### Story Transition Process
+1. **In Progress**: Move JIRA ticket to "In Progress" when starting
+2. **Development**: Implement following reflection workflow
+3. **Testing**: Ensure all tests pass and coverage requirements met
+4. **Review**: Complete self-review and quality checks
+5. **Done**: Move JIRA ticket to "Done" when all criteria met
+6. **Branch Management**: Push feature branch for manual PR creation
+
+### Dependencies and Integration
+- Coordinate changes across multiple files/modules
+- Update related documentation and configuration
+- Test integration points thoroughly
+- Consider backward compatibility impact
+- Update API documentation if endpoints change
+
+## Quality Assurance Checklist
+Before marking any story as complete:
+- [ ] Functionality works as specified in acceptance criteria
+- [ ] Unit tests written and passing (80%+ coverage)
+- [ ] Integration tests passing (if applicable)
+- [ ] Code follows established patterns and conventions
+- [ ] Error handling implemented appropriately
+- [ ] Logging added for important operations
+- [ ] Documentation updated (code comments, docstrings)
+- [ ] No hardcoded values or security vulnerabilities
+- [ ] Performance impact considered and acceptable
+- [ ] Feature branch created, committed, and pushed
