@@ -12,6 +12,7 @@ export default function PageLayout({
   button,
   betaIcon,
   backTo = "",
+  showSeparator = true,
 }: {
   title: string;
   description: string;
@@ -19,6 +20,7 @@ export default function PageLayout({
   button?: React.ReactNode;
   betaIcon?: boolean;
   backTo?: To;
+  showSeparator?: boolean;
 }) {
   const navigate = useCustomNavigate();
 
@@ -27,7 +29,7 @@ export default function PageLayout({
       <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col">
         <div className="flex flex-col gap-4 p-6 pt-0">
           <CustomBanner />
-          <div className="flex w-full items-center justify-between gap-4 space-y-0.5 pb-2 pt-10">
+          <div className="flex w-full items-center justify-between gap-4 space-y-0.5 pb-2 pt-4">
             <div className="flex w-full flex-col">
               <div className="flex items-center gap-2">
                 {backTo && (
@@ -58,7 +60,7 @@ export default function PageLayout({
           </div>
         </div>
         <div className="flex shrink-0 px-6">
-          <Separator className="flex" />
+          {showSeparator && <Separator className="flex" />}
         </div>
         <div className="flex flex-1 p-6 pt-7">{children}</div>
       </div>

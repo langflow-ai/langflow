@@ -57,9 +57,9 @@ export default function LoginPage(): JSX.Element | null {
   }, []);
 
   // When Keycloak is enabled, render nothing; effect above will redirect
-  if (envConfig.keycloakEnabled) {
-    return null;
-  }
+  // if (envConfig.keycloakEnabled) {
+  //   return null;
+  // }
 
   function signIn() {
     const user: LoginType = {
@@ -79,11 +79,6 @@ export default function LoginPage(): JSX.Element | null {
       },
     });
   }
-
-  // // Render nothing when Keycloak is enabled; the effect above will redirect
-  // if (envConfig.keycloakEnabled) {
-  //   return null;
-  // }
 
   // Fallback: traditional login UI when Keycloak is disabled
   return (
