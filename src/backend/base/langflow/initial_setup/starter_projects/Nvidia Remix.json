@@ -2042,7 +2042,7 @@
                 ],
                 "total_dependencies": 2
               },
-              "module": "lfx.components.vectorstores.faiss.FaissVectorStoreComponent"
+              "module": "lfx.components.FAISS.faiss.FaissVectorStoreComponent"
             },
             "minimized": false,
             "output_types": [],
