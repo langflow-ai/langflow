@@ -143,7 +143,7 @@ class ArXivComponent(Component):
             urllib.request.install_opener(opener)
 
             # Make the request with validated URL using restricted opener
-            response = opener.open(url)
+            response = opener.open(url, timeout=30)
             response_text = response.read().decode("utf-8")
 
             # Parse the response
