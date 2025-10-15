@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, Optional
 
@@ -19,6 +20,7 @@ class AgentSpecItem(BaseModel):
     folder_name: str = Field(..., description="Folder under specifications_library/agents")
     file_name: str = Field(..., description="YAML file name containing the specification")
     spec: dict[str, Any] = Field(..., description="Agent specification converted from YAML to JSON")
+    flow_id: Optional[str] = Field(None, description="Flow ID if spec has been converted to a flow")
 
 
 class AgentMarketplaceResponse(BaseModel):
@@ -79,6 +81,25 @@ def _load_yaml_file(file_path: Path) -> dict[str, Any]:
         ) from e
 
 
+def _load_flow_mappings() -> dict[str, str]:
+    """Load flow ID mappings from flow_mappings.json.
+
+    Returns a dict mapping spec URN (e.g., 'urn:agent:genesis:accumulator_check:1') to flow_id.
+    Returns empty dict if file doesn't exist or can't be loaded.
+    """
+    try:
+        mappings_file = _get_agents_base_path() / "flow_mappings.json"
+        if not mappings_file.exists():
+            return {}
+
+        with mappings_file.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data if isinstance(data, dict) else {}
+    except Exception:
+        # Log error but don't fail - mappings are optional
+        return {}
+
+
 @router.get(
     "/",
     response_model=AgentMarketplaceResponse,
@@ -131,17 +152,26 @@ async def list_agent_specifications(
     items: list[AgentSpecItem] = []
     errors: list[AgentSpecError] = []
 
+    # Load flow mappings
+    flow_mappings = _load_flow_mappings()
+
     # Scan YAML files in target paths
     for folder_path in target_paths:
         # Only consider YAML files; ignore markdown or other assets
         for yaml_file in folder_path.glob("*.yaml"):
             try:
                 spec_dict = _load_yaml_file(yaml_file)
+
+                # Lookup flow_id from mappings using spec URN
+                spec_urn = spec_dict.get("id", "")
+                flow_id = flow_mappings.get(spec_urn, None)
+
                 items.append(
                     AgentSpecItem(
                         folder_name=folder_path.name,
                         file_name=yaml_file.name,
                         spec=spec_dict,
+                        flow_id=flow_id,
                     )
                 )
             except HTTPException as e:

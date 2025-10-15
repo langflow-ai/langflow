@@ -83,7 +83,9 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid", interact
   const specYaml = useMemo(() => jsonToYaml(item.spec ?? {}), [item.spec]);
 
   const handleCardClick = () => {
-    navigate("/agent-marketplace/detail", {
+    // If flow_id exists, navigate with it in the URL
+    const flowId = item.flow_id || "no-flow";
+    navigate(`/agent-marketplace/detail/${flowId}`, {
       state: {
         name,
         description,
@@ -94,6 +96,7 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid", interact
         fileName: item.file_name,
         folderName: item.folder_name,
         status,
+        noFlow: !item.flow_id,
       },
     });
   };

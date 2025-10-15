@@ -13,6 +13,7 @@ export interface AgentSpecError {
 export interface AgentSpecItem {
   folder_name: string;
   file_name: string;
+  flow_id?: string | null;
   // Spec schema is flexible; we surface name/description/tags when present
   spec: {
     name?: string;

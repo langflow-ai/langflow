@@ -1,0 +1,7 @@
+{
+  "urn:agent:genesis:accumulator_check:1": "fc6f9864-93e0-49eb-b1fa-de1823155875",
+  "urn:agent:genesis:attach_document:1": "1130b41e-8dc5-4a9d-baa7-e788ca36099b",
+  "urn:agent:genesis:eligibility_checker:1": "df5584f6-de30-4f54-b38a-c602ae3629e7",
+  "urn:agent:genesis:eoc_check:1":"2f648763-824f-4a10-9d9b-05f1f105fde5",
+  "urn:agent:genesis:guideline_check:1": "e0354ed0-7274-4964-9935-a9fe878c515b",
+}

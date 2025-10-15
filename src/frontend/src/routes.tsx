@@ -142,7 +142,7 @@ const router = createBrowserRouter(
                     />
                   </Route>
                 </Route>
-                <Route path="agent-marketplace/detail" element={<AgentMarketplaceDetailPage />} />
+                <Route path="agent-marketplace/detail/:flowId" element={<AgentMarketplaceDetailPage />} />
                 <Route path="settings" element={<SettingsPage />}>
                   <Route
                     index

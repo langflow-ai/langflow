@@ -1,4 +1,5 @@
-import { useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useParams } from "react-router-dom";
 import PageLayout from "@/components/common/pageLayout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -6,6 +7,9 @@ import { oneDark, oneLight } from "react-syntax-highlighter/dist/cjs/styles/pris
 import { useDarkStore } from "@/stores/darkStore";
 import { Button } from "@/components/ui/button";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import FlowPage from "../FlowPage";
 
 type MarketplaceDetailState = {
   name?: string;
@@ -17,15 +21,44 @@ type MarketplaceDetailState = {
   fileName?: string;
   folderName?: string;
   status?: string;
+  noFlow?: boolean;
 };
 
 export default function AgentMarketplaceDetailPage() {
   const location = useLocation();
+  const { flowId } = useParams<{ flowId: string }>();
   const dark = useDarkStore((state) => state.dark);
   const state = (location.state || {}) as MarketplaceDetailState;
 
+  const { mutateAsync: getFlow } = useGetFlow();
+  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
+
+  const [flowLoaded, setFlowLoaded] = useState(false);
+  const [isLoadingFlow, setIsLoadingFlow] = useState(false);
+  const [flowError, setFlowError] = useState<string | null>(null);
+
   const title = state.name || state.fileName || "Agent Details";
   const description = state.description || "Explore details and specification.";
+  const hasNoFlow = flowId === "no-flow" || state.noFlow;
+
+  useEffect(() => {
+    if (flowId && !hasNoFlow) {
+      setIsLoadingFlow(true);
+      setFlowError(null);
+      getFlow({ id: flowId })
+        .then((flow) => {
+          setCurrentFlow(flow);
+          setFlowLoaded(true);
+        })
+        .catch((error) => {
+          console.error("Failed to load flow:", error);
+          setFlowError(error?.message || "Failed to load flow");
+        })
+        .finally(() => {
+          setIsLoadingFlow(false);
+        });
+    }
+  }, [flowId, hasNoFlow, getFlow, setCurrentFlow]);
 
   return (
     <PageLayout
@@ -46,17 +79,54 @@ export default function AgentMarketplaceDetailPage() {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="flow" className="mt-4 w-full">
-              <div className="flex h-[520px] w-full items-center justify-center rounded-lg border border-border bg-card">
-                <div className="flex max-w-[640px] flex-col items-center gap-3 text-center">
-                  <ForwardedIconComponent name="GitBranch" className="h-6 w-6" />
-                  <p className="text-sm text-muted-foreground">
-                    Flow visualization will appear here when available.
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Name: {state.name || "Unknown"} • Version: {state.version || "—"}
-                  </p>
+              {hasNoFlow ? (
+                <div className="flex h-[520px] w-full items-center justify-center rounded-lg border border-border bg-card">
+                  <div className="flex max-w-[640px] flex-col items-center gap-3 text-center">
+                    <ForwardedIconComponent name="AlertCircle" className="h-6 w-6 text-amber-500" />
+                    <p className="text-sm font-medium text-foreground">
+                      No flow available for this agent specification
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      This agent needs to be converted to a flow first. Check the Specification tab to view the YAML definition.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : isLoadingFlow ? (
+                <div className="flex h-[520px] w-full items-center justify-center rounded-lg border border-border bg-card">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                    <p className="text-sm text-muted-foreground">Loading flow visualization...</p>
+                  </div>
+                </div>
+              ) : flowError ? (
+                <div className="flex h-[520px] w-full items-center justify-center rounded-lg border border-border bg-card">
+                  <div className="flex max-w-[640px] flex-col items-center gap-3 text-center">
+                    <ForwardedIconComponent name="AlertTriangle" className="h-6 w-6 text-red-500" />
+                    <p className="text-sm font-medium text-foreground">
+                      Failed to load flow
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {flowError}
+                    </p>
+                  </div>
+                </div>
+              ) : flowLoaded ? (
+                <div className="h-[calc(100vh-200px)] w-full overflow-hidden rounded-lg border border-border">
+                  <FlowPage view={true} flowId={flowId} />
+                </div>
+              ) : (
+                <div className="flex h-[520px] w-full items-center justify-center rounded-lg border border-border bg-card">
+                  <div className="flex max-w-[640px] flex-col items-center gap-3 text-center">
+                    <ForwardedIconComponent name="GitBranch" className="h-6 w-6" />
+                    <p className="text-sm text-muted-foreground">
+                      Flow visualization will appear here when available.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Name: {state.name || "Unknown"} • Version: {state.version || "—"}
+                    </p>
+                  </div>
+                </div>
+              )}
             </TabsContent>
             <TabsContent value="spec" className="mt-4 w-full">
               <div className="flex h-[520px] w-full flex-col overflow-hidden rounded-lg border border-border">
