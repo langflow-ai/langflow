@@ -103,22 +103,5 @@ The **Amazon Bedrock** component was deprecated in favor of the **Amazon Bedrock
 
 To use Amazon Bedrock models in your flows, use the [**Amazon Bedrock Converse**](#amazon-bedrock-converse) component instead.
 
-### Amazon Bedrock parameters
-
-<PartialParams />
-
-| Name | Type | Description |
-|------|------|-------------|
-| input | String | Input parameter. The input string for text generation. |
-| system_message | String | Input parameter. A system message to pass to the model. |
-| stream | Boolean | Input parameter. Whether to stream the response. Only works in chat. Default: `false`. |
-| model_id | String | Input parameter. The Amazon Bedrock model to use. |
-| aws_access_key_id | SecretString | Input parameter. AWS Access Key for authentication. |
-| aws_secret_access_key | SecretString | Input parameter. AWS Secret Key for authentication. |
-| aws_session_token | SecretString | Input parameter. The session key for your AWS account. |
-| credentials_profile_name | String | Input parameter. Name of the AWS credentials profile to use. |
-| region_name | String | Input parameter. AWS region where your Bedrock resources are located. Default: `us-east-1`. |
-| model_kwargs | Dictionary | Input parameter. Additional keyword arguments to pass to the model. |
-| endpoint_url | String | Input parameter. Custom endpoint URL for a Bedrock service. |
 
 </details>
