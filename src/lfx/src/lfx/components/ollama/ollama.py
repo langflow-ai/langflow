@@ -70,7 +70,7 @@ class ChatOllamaComponent(LCModelComponent):
             display_name="Format",
             info="Specify the format of the output (options: JSON schema).",
             advanced=True,
-            value=None
+            value=None,
         ),
         DictInput(name="metadata", display_name="Metadata", info="Metadata to add to the run trace.", advanced=True),
         DropdownInput(
