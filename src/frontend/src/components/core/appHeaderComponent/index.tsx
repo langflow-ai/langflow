@@ -17,6 +17,7 @@ import { useSidebar } from "@/contexts/sidebarContext";
 import { PanelLeft, Moon, Sun } from "lucide-react";
 import FlowMenu from "./components/FlowMenu";
 import Breadcrumb from "@/components/common/Breadcrumb";
+import { useLocation } from "react-router-dom";
 import { useDarkStore } from "@/stores/darkStore";
 // import AutonomizeIcon from "@/icons/Autonomize";
 
@@ -30,6 +31,7 @@ export default function AppHeader(): JSX.Element {
   const dark = useDarkStore((state) => state.dark);
   const setDark = useDarkStore((state) => state.setDark);
   useTheme();
+  const location = useLocation();
 
   const toggleTheme = () => {
     setDark(!dark);
@@ -60,11 +62,29 @@ export default function AppHeader(): JSX.Element {
   //     : "hidden";
   // };
 
-  // Breadcrumb navigation
-  const breadcrumbItems = [
-    { label: "/" },
-    { label: "AI Studio", href: "/agent-builder" },
-  ];
+  // Breadcrumb navigation (route-aware)
+  const breadcrumbItems = (() => {
+    const pathname = location.pathname || "";
+    const state = location.state as { name?: string; fileName?: string } | undefined;
+
+    // AI Studio (builder) hierarchy
+    if (pathname.startsWith("/agent-builder")) {
+      return [{ label: "AI Studio", href: "/agent-builder" }];
+    }
+
+    // Agent Marketplace hierarchy
+    if (pathname.startsWith("/agent-marketplace")) {
+      const items = [{ label: "Agent Marketplace", href: "/agent-marketplace" }];
+      if (pathname.startsWith("/agent-marketplace/detail")) {
+        const current = state?.name || state?.fileName || "Details";
+        items.push({ label: current, href: '' });
+      }
+      return items;
+    }
+
+    // Default: no breadcrumbs beyond logo
+    return [];
+  })();
 
   return (
     <div

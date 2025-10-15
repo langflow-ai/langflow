@@ -29,6 +29,11 @@ export default function Breadcrumb({ items, className }: BreadcrumbProps) {
   return (
     <BreadcrumbRoot className={className}>
       <BreadcrumbList>
+        {items.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <BreadcrumbSeparator />
+          </div>
+        )}
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
 
@@ -53,7 +58,7 @@ export default function Breadcrumb({ items, className }: BreadcrumbProps) {
                   </BreadcrumbPage>
                 )}
               </BreadcrumbItem>
-              {/* {!isLast && <BreadcrumbSeparator>/</BreadcrumbSeparator>} */}
+              {!isLast && <BreadcrumbSeparator />}
             </div>
           );
         })}
