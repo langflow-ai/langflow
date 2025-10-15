@@ -172,7 +172,7 @@ class LangFuseTracer(BaseTracer):
         else:
             base_callback = self.trace.get_langchain_handler()
 
-        return _create_dummy_parent(base_callback)
+        return _wrap_lc_cb(base_callback)
 
     @staticmethod
     def _get_config() -> dict:
@@ -184,11 +184,11 @@ class LangFuseTracer(BaseTracer):
         return {}
 
 
-def _create_dummy_parent(base_callback):
+def _wrap_lc_cb(base_callback):
     """Create a callback wrapper that ensures parent runs exist for tool execution."""
     instance_lock = Lock()
 
-    class DummyParent(type(base_callback)):
+    class LangchainCBWrapper(type(base_callback)):
         def on_tool_start(self, serialized, input_str, *, run_id, parent_run_id=None, **kwargs):
             if parent_run_id and parent_run_id not in self.runs:
                 with instance_lock:
@@ -199,6 +199,6 @@ def _create_dummy_parent(base_callback):
                         )
             return super().on_tool_start(serialized, input_str, run_id=run_id, parent_run_id=parent_run_id, **kwargs)
 
-    wrapped = DummyParent.__new__(DummyParent)
+    wrapped = LangchainCBWrapper.__new__(LangchainCBWrapper)
     wrapped.__dict__.update(base_callback.__dict__)
     return wrapped
