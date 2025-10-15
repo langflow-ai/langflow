@@ -49,8 +49,8 @@ jobs:
         uses: mikepenz/action-junit-report@v5
         if: always()
         with:
-          report_paths: 'src/frontend/test-results/junit.xml'
-          check_name: 'Frontend Unit Test Results'
+          report_paths: "src/frontend/test-results/junit.xml"
+          check_name: "Frontend Unit Test Results"
           fail_on_failure: true
           require_tests: true
 
@@ -58,7 +58,7 @@ jobs:
         uses: MishaKav/jest-coverage-comment@main
         if: github.event_name == 'pull_request'
         with:
-          coverage-summary-path: src/frontend/coverage/coverage-summary.json
+          coverage-summary-path: src/frontend/coverage/jest/coverage-summary.json
           title: Frontend Unit Test Coverage Report
           summary-title: Coverage Summary
           badge-title: Coverage
@@ -72,11 +72,11 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: src/frontend/coverage/lcov.info
+          files: src/frontend/coverage/jest/lcov.info
           flags: frontend
           name: frontend-coverage
           fail_ci_if_error: false
-          directory: src/frontend/coverage/
+          directory: src/frontend/coverage/jest/
 
       - name: Upload Coverage Reports
         uses: actions/upload-artifact@v4
