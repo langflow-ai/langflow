@@ -468,6 +468,23 @@ class MCPComposerService(Service):
                             startup_delay,
                         )
 
+                    except MCPComposerError as e:
+                        last_error = e
+                        await logger.aerror(
+                            f"MCP Composer startup attempt {retry_attempt}/{max_retries} failed "
+                            f"for project {project_id}: {e.message}"
+                        )
+
+                        # Clean up any partially started process before retrying
+                        if project_id in self.project_composers:
+                            await self._do_stop_project_composer(project_id)
+
+                        # If not the last attempt, wait a bit before retrying
+                        if retry_attempt < max_retries:
+                            await logger.adebug(f"Waiting 2 seconds before retry attempt {retry_attempt + 1}...")
+                            await asyncio.sleep(2)
+
+                    else:
                         # Success! Store the composer info
                         self.project_composers[project_id] = {
                             "process": process,
@@ -482,21 +499,6 @@ class MCPComposerService(Service):
                             f"(PID: {process.pid}) after {retry_attempt} attempt(s)"
                         )
                         return  # Success!
-
-                    except MCPComposerError as e:
-                        last_error = e
-                        await logger.aerror(
-                            f"MCP Composer startup attempt {retry_attempt}/{max_retries} failed for project {project_id}: {e.message}"
-                        )
-
-                        # Clean up any partially started process before retrying
-                        if project_id in self.project_composers:
-                            await self._do_stop_project_composer(project_id)
-
-                        # If not the last attempt, wait a bit before retrying
-                        if retry_attempt < max_retries:
-                            await logger.adebug(f"Waiting 2 seconds before retry attempt {retry_attempt + 1}...")
-                            await asyncio.sleep(2)
 
                 # All retries failed, raise the last error
                 if last_error:
