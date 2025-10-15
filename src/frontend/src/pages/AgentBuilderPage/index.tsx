@@ -36,7 +36,8 @@ import {
 } from "@/components/ui/select";
 import { envConfig } from "@/config/env";
 import { AuthContext } from "@/contexts/authContext";
-import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
+import { api } from "@/controllers/API/api";
+import { getURL } from "@/controllers/API/helpers/constants";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { usePostFolders } from "@/controllers/API/queries/folders/use-post-folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -48,6 +49,7 @@ import { useFolderStore } from "@/stores/foldersStore";
 import type { FlowType } from "@/types/flow";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Delete Confirmation Modal Component
 const DeleteConfirmationModal = ({
@@ -351,8 +353,9 @@ export default function AgentBuilderPage() {
     { enabled: !!folderId },
   );
 
-  // Delete mutation
-  const deleteMutation = useDeleteDeleteFlows();
+  // Query client for refetching after delete
+  const queryClient = useQueryClient();
+  const [isDeleting, setIsDeleting] = useState(false);
   const { mutate: mutateAddFolder, isPending: isCreatingFolder } =
     usePostFolders();
 
@@ -361,20 +364,21 @@ export default function AgentBuilderPage() {
     setShowDeleteModal(true);
   };
 
-  const handleConfirmDelete = () => {
-    if (agentToDelete) {
-      deleteMutation.mutate(
-        { flow_ids: [agentToDelete.id] },
-        {
-          onSuccess: () => {
-            setShowDeleteModal(false);
-            setAgentToDelete(null);
-          },
-          onError: () => {
-            // Handle error if needed
-          },
-        }
-      );
+  const handleConfirmDelete = async () => {
+    if (!agentToDelete) return;
+    try {
+      setIsDeleting(true);
+      await api.delete(`${getURL("FLOWS")}/${agentToDelete.id}`);
+      // Close modal and clear state
+      setShowDeleteModal(false);
+      setAgentToDelete(null);
+      // Ensure folder list is updated
+      await queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
+    } catch (e) {
+      // Optionally surface an error toast here
+      // console.error(e);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -774,7 +778,7 @@ export default function AgentBuilderPage() {
         onClose={handleCancelDelete}
         onConfirm={handleConfirmDelete}
         agentName={agentToDelete?.name || ""}
-        isDeleting={deleteMutation.isPending}
+        isDeleting={isDeleting}
       />
     </div>
   );
