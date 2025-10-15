@@ -168,13 +168,26 @@ class TypeConverterComponent(Component):
         ),
     ]
 
-    # Define ONLY ONE default output - __init__ will set the correct one
+    # Define ALL outputs so they exist during validation
+    # update_frontend_node will filter to show only the selected one
     outputs = [
         Output(
             display_name="Message Output",
             name="message_output",
             method="convert_to_message",
             types=["Message"],
+        ),
+        Output(
+            display_name="JSON Output",
+            name="data_output",
+            method="convert_to_data",
+            types=["JSON"],
+        ),
+        Output(
+            display_name="Table Output",
+            name="dataframe_output",
+            method="convert_to_dataframe",
+            types=["Table"],
         ),
     ]
 

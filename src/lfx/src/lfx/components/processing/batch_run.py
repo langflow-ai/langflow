@@ -73,6 +73,7 @@ class BatchRunComponent(Component):
             name="batch_results",
             method="run_batch",
             info="A DataFrame with all original columns plus the model's response column.",
+            types=["Table"],
         ),
     ]
 

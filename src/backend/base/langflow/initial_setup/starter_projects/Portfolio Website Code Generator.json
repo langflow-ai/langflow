@@ -162,7 +162,9 @@
             "id": "parser-6caGE",
             "inputTypes": [
               "DataFrame",
-              "Data"
+              "Table",
+              "Data",
+              "JSON"
             ],
             "type": "other"
           }
@@ -172,7 +174,7 @@
         "source": "StructuredOutput-wsAT3",
         "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutput-wsAT3œ, œnameœ: œdataframe_outputœ, œoutput_typesœ: [œTableœ]}",
         "target": "parser-6caGE",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-6caGEœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-6caGEœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -779,7 +781,9 @@
                 "info": "Accepts either a DataFrame or a Data object.",
                 "input_types": [
                   "DataFrame",
-                  "Data"
+                  "Table",
+                  "Data",
+                  "JSON"
                 ],
                 "list": false,
                 "list_add_label": "Add More",

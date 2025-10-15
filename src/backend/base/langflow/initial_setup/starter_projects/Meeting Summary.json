@@ -76,7 +76,9 @@
             "id": "parser-6bJ9b",
             "inputTypes": [
               "DataFrame",
-              "Data"
+              "Table",
+              "Data",
+              "JSON"
             ],
             "type": "other"
           }
@@ -86,7 +88,7 @@
         "source": "AssemblyAITranscriptionJobPoller-sCJsy",
         "sourceHandle": "{œdataTypeœ: œAssemblyAITranscriptionJobPollerœ, œidœ: œAssemblyAITranscriptionJobPoller-sCJsyœ, œnameœ: œtranscription_resultœ, œoutput_typesœ: [œJSONœ]}",
         "target": "parser-6bJ9b",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-6bJ9bœ, œinputTypesœ: [œDataFrameœ, œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-6bJ9bœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -321,7 +323,7 @@
             "legacy": false,
             "lf_version": "1.1.5",
             "metadata": {
-              "code_hash": "ad5387233fa4",
+              "code_hash": "f53740e3e30f",
               "dependencies": {
                 "dependencies": [
                   {
@@ -391,7 +393,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import assemblyai as aai\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import DataInput, FloatInput, Output, SecretStrInput\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import JSON, Data\n\n\nclass AssemblyAITranscriptionJobPoller(Component):\n    display_name = \"AssemblyAI Poll Transcript\"\n    description = \"Poll for the status of a transcription job using AssemblyAI\"\n    documentation = \"https://www.assemblyai.com/docs\"\n    icon = \"AssemblyAI\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Assembly API Key\",\n            info=\"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/\",\n            required=True,\n        ),\n        DataInput(\n            name=\"transcript_id\",\n            display_name=\"Transcript ID\",\n            info=\"The ID of the transcription job to poll\",\n            required=True,\n        ),\n        FloatInput(\n            name=\"polling_interval\",\n            display_name=\"Polling Interval\",\n            value=3.0,\n            info=\"The polling interval in seconds\",\n            advanced=True,\n            range_spec=RangeSpec(min=3, max=30),\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Transcription Result\", name=\"transcription_result\", method=\"poll_transcription_job\"),\n    ]\n\n    def poll_transcription_job(self) -> JSON:\n        \"\"\"Polls the transcription status until completion and returns the Data.\"\"\"\n        aai.settings.api_key = self.api_key\n        aai.settings.polling_interval = self.polling_interval\n\n        # check if it's an error message from the previous step\n        if self.transcript_id.data.get(\"error\"):\n            self.status = self.transcript_id.data[\"error\"]\n            return self.transcript_id\n\n        try:\n            transcript = aai.Transcript.get_by_id(self.transcript_id.data[\"transcript_id\"])\n        except Exception as e:  # noqa: BLE001\n            error = f\"Getting transcription failed: {e}\"\n            logger.debug(error, exc_info=True)\n            self.status = error\n            return Data(data={\"error\": error})\n\n        if transcript.status == aai.TranscriptStatus.completed:\n            json_response = transcript.json_response\n            text = json_response.pop(\"text\", None)\n            utterances = json_response.pop(\"utterances\", None)\n            transcript_id = json_response.pop(\"id\", None)\n            sorted_data = {\"text\": text, \"utterances\": utterances, \"id\": transcript_id}\n            sorted_data.update(json_response)\n            data = Data(data=sorted_data)\n            self.status = data\n            return data\n        self.status = transcript.error\n        return Data(data={\"error\": transcript.error})\n"
+                "value": "import assemblyai as aai\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.field_typing.range_spec import RangeSpec\nfrom lfx.io import DataInput, FloatInput, Output, SecretStrInput\nfrom lfx.log.logger import logger\nfrom lfx.schema.data import JSON, Data\n\n\nclass AssemblyAITranscriptionJobPoller(Component):\n    display_name = \"AssemblyAI Poll Transcript\"\n    description = \"Poll for the status of a transcription job using AssemblyAI\"\n    documentation = \"https://www.assemblyai.com/docs\"\n    icon = \"AssemblyAI\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Assembly API Key\",\n            info=\"Your AssemblyAI API key. You can get one from https://www.assemblyai.com/\",\n            required=True,\n        ),\n        DataInput(\n            name=\"transcript_id\",\n            display_name=\"Transcript ID\",\n            info=\"The ID of the transcription job to poll\",\n            required=True,\n        ),\n        FloatInput(\n            name=\"polling_interval\",\n            display_name=\"Polling Interval\",\n            value=3.0,\n            info=\"The polling interval in seconds\",\n            advanced=True,\n            range_spec=RangeSpec(min=3, max=30),\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Transcription Result\",\n            name=\"transcription_result\",\n            method=\"poll_transcription_job\",\n            types=[\"JSON\"],\n        ),\n    ]\n\n    def poll_transcription_job(self) -> JSON:\n        \"\"\"Polls the transcription status until completion and returns the Data.\"\"\"\n        aai.settings.api_key = self.api_key\n        aai.settings.polling_interval = self.polling_interval\n\n        # check if it's an error message from the previous step\n        if self.transcript_id.data.get(\"error\"):\n            self.status = self.transcript_id.data[\"error\"]\n            return self.transcript_id\n\n        try:\n            transcript = aai.Transcript.get_by_id(self.transcript_id.data[\"transcript_id\"])\n        except Exception as e:  # noqa: BLE001\n            error = f\"Getting transcription failed: {e}\"\n            logger.debug(error, exc_info=True)\n            self.status = error\n            return Data(data={\"error\": error})\n\n        if transcript.status == aai.TranscriptStatus.completed:\n            json_response = transcript.json_response\n            text = json_response.pop(\"text\", None)\n            utterances = json_response.pop(\"utterances\", None)\n            transcript_id = json_response.pop(\"id\", None)\n            sorted_data = {\"text\": text, \"utterances\": utterances, \"id\": transcript_id}\n            sorted_data.update(json_response)\n            data = Data(data=sorted_data)\n            self.status = data\n            return data\n        self.status = transcript.error\n        return Data(data={\"error\": transcript.error})\n"
               },
               "polling_interval": {
                 "_input_type": "FloatInput",
@@ -2735,7 +2737,9 @@
                 "info": "Accepts either a DataFrame or a Data object.",
                 "input_types": [
                   "DataFrame",
-                  "Data"
+                  "Table",
+                  "Data",
+                  "JSON"
                 ],
                 "list": false,
                 "list_add_label": "Add More",

@@ -37,7 +37,12 @@ class AssemblyAITranscriptionJobPoller(Component):
     ]
 
     outputs = [
-        Output(display_name="Transcription Result", name="transcription_result", method="poll_transcription_job"),
+        Output(
+            display_name="Transcription Result",
+            name="transcription_result",
+            method="poll_transcription_job",
+            types=["JSON"],
+        ),
     ]
 
     def poll_transcription_job(self) -> JSON:
