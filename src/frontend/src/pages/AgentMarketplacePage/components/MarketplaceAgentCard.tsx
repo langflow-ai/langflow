@@ -163,7 +163,7 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid", interact
                 View Pricing
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); /* TODO: wire Delete */ }} className="gap-2 text-destructive">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); /* TODO: wire Delete */ }} className="gap-2 text-destructive" disabled={true}>
                 <Trash2 className="h-4 w-4" />
                 Delete
               </DropdownMenuItem>

@@ -382,19 +382,19 @@ const RAW_AGENTS_LIST: StaticAgentInput[] = [
   },
   {
     "name": "Cost Benchmarking Agent",
-    "description": "Benchmarks plan costs versus Care ManagementS, industry, and competitor data using claims, actuarial databases, and fee schedules.",
+    "description": "Benchmarks plan costs versus Care Management, industry, and competitor data using claims, actuarial databases, and fee schedules.",
     "tag": "Actuarial / Finance",
     "version": "1.0"
   },
   {
     "name": "Policy Change Impact Analyzer Agent",
-    "description": "Summarizes Care ManagementS/state regulation updates and maps them to impacted workflows, policies, and implementation playbooks.",
+    "description": "Summarizes Care Management/state regulation updates and maps them to impacted workflows, policies, and implementation playbooks.",
     "tag": "Compliance / Audit",
     "version": "1.0"
   },
   {
     "name": "Audit Response Generator Agent",
-    "description": "Drafts audit responses using internal logs, EHR metadata, and document retrieval. Supports Care ManagementS, OIG, and RADV audits.",
+    "description": "Drafts audit responses using internal logs, EHR metadata, and document retrieval. Supports Care Management, OIG, and RADV audits.",
     "tag": "Compliance / Audit",
     "version": "1.0"
   },
@@ -405,8 +405,8 @@ const RAW_AGENTS_LIST: StaticAgentInput[] = [
     "version": "1.0"
   },
   {
-    "name": "Care ManagementS Memo Summarization Agent",
-    "description": "Ingests Care ManagementS HPMS memos, filters key operational changes, and produces stakeholder alerts with summary and impact callouts.",
+    "name": "Care Management Memo Summarization Agent",
+    "description": "Ingests Care Management HPMS memos, filters key operational changes, and produces stakeholder alerts with summary and impact callouts.",
     "tag": "Compliance / Audit",
     "version": "1.0"
   },
