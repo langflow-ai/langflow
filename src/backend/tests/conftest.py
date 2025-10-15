@@ -1,5 +1,4 @@
 import asyncio
-import os
 import json
 import shutil
 
@@ -157,7 +156,7 @@ def get_text():
 #     return bool((os.getenv(var) or "").strip())
 
 
-# def pytest_runtest_setup(item):  # noqa: ARG001
+# def pytest_runtest_setup(item):
 #     """Auto-skip tests marked with `api_key_required` when no valid OPENAI_API_KEY is provided."""
 #     if item.get_closest_marker("api_key_required") and not _has_nonempty_env("OPENAI_API_KEY"):
 #         import pytest as _pytest

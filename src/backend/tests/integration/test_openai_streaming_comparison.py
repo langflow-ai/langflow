@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 import pathlib
 
 import httpx
@@ -52,6 +51,7 @@ async def load_and_prepare_flow(client: AsyncClient, created_api_key):
 
     # Create OPENAI_API_KEY global variable
     from tests.api_keys import get_openai_api_key
+
     openai_api_key = get_openai_api_key()
     if not openai_api_key or openai_api_key == "dummy":
         pytest.skip("OPENAI_API_KEY environment variable not set")
@@ -125,6 +125,7 @@ async def test_openai_streaming_format_comparison(client: AsyncClient, created_a
 
     # Get OpenAI API key
     from tests.api_keys import get_openai_api_key
+
     try:
         openai_api_key = get_openai_api_key()
     except ValueError:

@@ -1,5 +1,4 @@
 import json
-import os
 from uuid import UUID
 
 import orjson
@@ -20,6 +19,7 @@ from lfx.components.processing import (
 from lfx.graph import Graph
 from lfx.schema.data import Data
 
+from tests.api_keys import get_openai_api_key, has_api_key
 from tests.base import ComponentTestBaseWithClient
 from tests.unit.build_utils import build_flow, get_build_events
 
@@ -127,9 +127,6 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
         assert "outputs" in data
         assert "session_id" in data
         assert len(data["outputs"][-1]["outputs"]) > 0
-
-
-from tests.api_keys import has_api_key, get_openai_api_key
 
 
 @pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY is not set")

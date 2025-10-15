@@ -10,6 +10,7 @@ import os
 
 import pytest
 from langflow.utils.image import create_image_content_dict
+
 from tests.api_keys import has_api_key
 
 
@@ -38,7 +39,7 @@ def sample_jpeg_image(tmp_path):
     return image_path
 
 
- # use shared has_api_key from tests.api_keys
+# use shared has_api_key from tests.api_keys
 
 
 @pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY not available in CI")
@@ -50,6 +51,7 @@ def test_openai_vision_api_real_call(sample_image):
         pytest.skip("OpenAI package not installed")
 
     from tests.api_keys import get_openai_api_key
+
     client = openai.OpenAI(api_key=get_openai_api_key())
     content_dict = create_image_content_dict(sample_image)
 
@@ -80,6 +82,7 @@ def test_openai_vision_api_with_jpeg(sample_jpeg_image):
         pytest.skip("OpenAI package not installed")
 
     from tests.api_keys import get_openai_api_key
+
     client = openai.OpenAI(api_key=get_openai_api_key())
     content_dict = create_image_content_dict(sample_jpeg_image)
 
@@ -282,6 +285,7 @@ def test_cross_provider_consistency(sample_image):
         import openai
 
         from tests.api_keys import get_openai_api_key
+
         openai_client = openai.OpenAI(api_key=get_openai_api_key())
 
         openai_response = openai_client.chat.completions.create(

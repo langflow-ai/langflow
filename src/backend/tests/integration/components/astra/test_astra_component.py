@@ -1,5 +1,3 @@
-import os
-
 import pytest
 from astrapy import DataAPIClient
 from langchain_astradb import AstraDBVectorStore, VectorServiceOptions
@@ -151,8 +149,6 @@ def test_astra_vectorize_with_provider_api_key():
             api_endpoint=api_endpoint,
             token=application_token,
             collection_vector_service_options=VectorServiceOptions._from_dict(options),
-            from tests.api_keys import get_openai_api_key
-
             collection_embedding_api_key=get_openai_api_key(),
         )
         documents = [Document(page_content="test1"), Document(page_content="test2")]

@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 import pathlib
 
 import pytest
@@ -31,6 +30,7 @@ async def load_and_prepare_flow(client: AsyncClient, created_api_key):
 
     # Create OPENAI_API_KEY global variable
     from tests.api_keys import get_openai_api_key
+
     try:
         openai_api_key = get_openai_api_key()
     except ValueError:

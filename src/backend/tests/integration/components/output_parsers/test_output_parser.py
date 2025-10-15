@@ -1,5 +1,3 @@
-import os
-
 import pytest
 from lfx.components.helpers import OutputParserComponent
 from lfx.components.openai.openai_chat_model import OpenAIModelComponent

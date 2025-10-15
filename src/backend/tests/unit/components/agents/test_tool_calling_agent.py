@@ -1,5 +1,3 @@
-import os
-
 import pytest
 from lfx.components.langchain_utilities import ToolCallingAgentComponent
 from lfx.components.openai.openai_chat_model import OpenAIModelComponent

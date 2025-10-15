@@ -1,4 +1,3 @@
-import os
 import sqlite3
 from pathlib import Path
 
@@ -9,9 +8,10 @@ from lfx.components.input_output.chat_output import ChatOutput
 from lfx.components.langchain_utilities import ToolCallingAgentComponent
 from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.tools.calculator import CalculatorToolComponent
-from tests.api_keys import get_openai_api_key
 from lfx.graph.graph.base import Graph
+
 from pydantic import BaseModel
+from tests.api_keys import get_openai_api_key
 
 
 @pytest.fixture

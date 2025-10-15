@@ -1,13 +1,11 @@
-import os
 from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_openai import ChatOpenAI
 from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 
+from tests.api_keys import get_openai_api_key, has_api_key
 from tests.base import ComponentTestBaseWithoutClient
-from tests.api_keys import get_openai_api_key
-from tests.api_keys import has_api_key
 
 
 class TestOpenAIModelComponent(ComponentTestBaseWithoutClient):
