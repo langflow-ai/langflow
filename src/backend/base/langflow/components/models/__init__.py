@@ -17,9 +17,11 @@ _dynamic_imports = {
     "AutonomizeModelComponent": "autonomize_model",
     "AutonomizeDocumentModelComponent": "autonomize_document_model",
     "AzureDocumentIntelligenceComponent": "document_intelligence",
+    "LabValueExtractionComponent": "lab_value_extraction",
+    "JsonOutputComponent": "json_output",
 }
 
-__all__ = ["EmbeddingModelComponent", "LanguageModelComponent", "AutonomizeModelComponent", "AutonomizeDocumentModelComponent", "AzureDocumentIntelligenceComponent"]
+__all__ = ["EmbeddingModelComponent", "LanguageModelComponent", "AutonomizeModelComponent", "AutonomizeDocumentModelComponent", "AzureDocumentIntelligenceComponent", "LabValueExtractionComponent", "JsonOutputComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:
