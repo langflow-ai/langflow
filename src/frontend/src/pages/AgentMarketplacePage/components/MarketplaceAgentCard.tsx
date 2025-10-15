@@ -17,9 +17,10 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 interface MarketplaceAgentCardProps {
   item: AgentSpecItem;
   viewMode?: "grid" | "list";
+  interactive?: boolean; // when false, disables navigation on click
 }
 
-export default function MarketplaceAgentCard({ item, viewMode = "grid" }: MarketplaceAgentCardProps) {
+export default function MarketplaceAgentCard({ item, viewMode = "grid", interactive = true }: MarketplaceAgentCardProps) {
   const name = item.spec?.name ?? item.file_name.replace(/\.ya?ml$/i, "");
   const description = item.spec?.description ?? "No description provided";
   const tags: string[] = Array.isArray(item.spec?.tags) ? item.spec?.tags : [];
@@ -101,17 +102,21 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid" }: Market
     <div
       className={cn(
         "group relative flex h-full flex-col rounded-lg border border-[#EBE8FF] bg-white dark:bg-card px-4 py-3 transition-shadow hover:shadow-md",
-        viewMode === "list" ? "cursor-pointer" : "cursor-pointer",
+        interactive ? "cursor-pointer" : "cursor-default",
       )}
-      onClick={handleCardClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          handleCardClick();
-        }
-      }}
+      onClick={interactive ? handleCardClick : undefined}
+      role={interactive ? "button" : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onKeyDown={
+        interactive
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleCardClick();
+              }
+            }
+          : undefined
+      }
     >
       {/* Header */}
       <div className="mb-3 flex items-start justify-between">
@@ -128,9 +133,6 @@ export default function MarketplaceAgentCard({ item, viewMode = "grid" }: Market
           {version && (
             <span className="text-xs text-muted-foreground">ver {version}</span>
           )}
-          <Badge variant="successStatic" size="xq" className="px-2 opacity-80">
-            Published
-          </Badge>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
