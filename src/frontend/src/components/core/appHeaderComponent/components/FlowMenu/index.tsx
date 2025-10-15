@@ -95,7 +95,7 @@ export const MenuBar = memo((): JSX.Element => {
           className="relative flex w-full items-center justify-center gap-2"
           data-testid="menu_bar_wrapper"
         >
-          {/* <div
+           {/* <div
             className="header-menu-bar hidden max-w-40 justify-end truncate md:flex xl:max-w-full"
             data-testid="menu_flow_bar"
             id="menu_flow_bar_navigation"
@@ -116,12 +116,12 @@ export const MenuBar = memo((): JSX.Element => {
                 </div>
               </div>
             )}
-          </div>
+          </div> */}
           <div
             className="hidden w-fit shrink-0 select-none font-normal text-muted-foreground md:flex"
             data-testid="menu_bar_separator"
           >
-            /
+            
           </div>
           <div className={cn(`flex rounded p-1`, swatchColors[swatchIndex])}>
             <IconComponent
@@ -151,7 +151,7 @@ export const MenuBar = memo((): JSX.Element => {
                 )}
               />
             </div>
-          </PopoverTrigger> */}
+          </PopoverTrigger> 
           <div className={"ml-5 hidden shrink-0 items-center sm:flex"}>
             {!autoSaving && (
               <ShadTooltip
