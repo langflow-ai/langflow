@@ -1085,6 +1085,7 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
                     await logger.aexception(f"Error while creating starter project {project_name}")
 
                 successfully_updated_projects += 1
+            await session.commit()
             await logger.adebug(f"Successfully updated {successfully_updated_projects} starter projects")
         else:
             # Even if we're not updating starter projects, we still need to create any that don't exist
@@ -1119,10 +1120,11 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
                             project_tags=project_tags,
                             new_folder_id=new_folder.id,
                         )
+                        successfully_created_projects += 1
                     except Exception:  # noqa: BLE001
                         await logger.aexception(f"Error while creating starter project {project_name}")
-                    successfully_created_projects += 1
-                await logger.adebug(f"Successfully created {successfully_created_projects} starter projects")
+            await session.commit()
+            await logger.adebug(f"Successfully created {successfully_created_projects} starter projects")
 
 
 async def initialize_auto_login_default_superuser() -> None:

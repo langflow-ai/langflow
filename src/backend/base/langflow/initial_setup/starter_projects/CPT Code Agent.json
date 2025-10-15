@@ -503,11 +503,9 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "JSON",
-                "hidden": null,
+                "group_outputs": false,
                 "method": "json_response",
                 "name": "json",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

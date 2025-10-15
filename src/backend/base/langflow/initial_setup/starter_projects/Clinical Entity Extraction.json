@@ -898,6 +898,7 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "JSON",
+                "group_outputs": false,
                 "method": "json_response",
                 "name": "json",
                 "selected": "Message",

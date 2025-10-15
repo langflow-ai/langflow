@@ -27,9 +27,9 @@
         "id": "xy-edge__Agent-IvBZC{œdataTypeœ:œAgentœ,œidœ:œAgent-IvBZCœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-oOIY7{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-oOIY7œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "Agent-IvBZC",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-IvBZCœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-IvBZCœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-oOIY7",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-oOIY7œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-oOIY7œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "xy-edge__Prompt Template-DE864{œdataTypeœ:œPrompt Templateœ,œidœ:œPrompt Template-DE864œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-IvBZC{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-IvBZCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt Template-DE864",
-        "sourceHandle": "{œdataTypeœ:œPrompt Templateœ,œidœ:œPrompt Template-DE864œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPrompt Templateœ, œidœ: œPrompt Template-DE864œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-IvBZC",
-        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-IvBZCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-IvBZCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -83,9 +83,9 @@
         "id": "xy-edge__ChatInput-C2UKL{œdataTypeœ:œChatInputœ,œidœ:œChatInput-C2UKLœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-IvBZC{œfieldNameœ:œinput_valueœ,œidœ:œAgent-IvBZCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-C2UKL",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-C2UKLœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-C2UKLœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-IvBZC",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-IvBZCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-IvBZCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -111,9 +111,9 @@
         "id": "xy-edge__APIRequest-hldUa{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-hldUaœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-IvBZC{œfieldNameœ:œtoolsœ,œidœ:œAgent-IvBZCœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "APIRequest-hldUa",
-        "sourceHandle": "{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-hldUaœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œAPIRequestœ, œidœ: œAPIRequest-hldUaœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-IvBZC",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-IvBZCœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-IvBZCœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -127,7 +127,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Agent that verifies eligibility and benefits",
+            "description": "Define the agent's instructions, then enter a task to complete using tools.",
             "display_name": "Eligibility Verification Agent",
             "documentation": "https://docs.langflow.org/agents",
             "edited": false,
@@ -169,8 +169,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "response",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -306,7 +304,6 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -385,25 +382,6 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
-              },
-              "json_mode": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "JSON Mode",
-                "dynamic": false,
-                "info": "If True, it will output JSON regardless of passing a schema.",
-                "input_types": [],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "json_mode",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
               },
               "max_iterations": {
                 "_input_type": "IntInput",
@@ -816,7 +794,7 @@
             "category": "input_output",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Display eligibility verification results",
+            "description": "Display a chat message in the Playground.",
             "display_name": "Eligibility Results",
             "documentation": "https://docs.langflow.org/components-io#chat-output",
             "edited": false,
@@ -1037,7 +1015,7 @@
             "custom_fields": {
               "template": []
             },
-            "description": "Prompt template for agent instructions",
+            "description": "Create a prompt template with dynamic variables.",
             "display_name": "Agent Instructions",
             "documentation": "https://docs.langflow.org/components-prompts",
             "edited": false,
@@ -1063,11 +1041,8 @@
                 "cache": true,
                 "display_name": "Prompt",
                 "group_outputs": false,
-                "hidden": null,
                 "method": "build_prompt",
                 "name": "prompt",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1170,7 +1145,7 @@
             "category": "input_output",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Receive member ID and service details",
+            "description": "Get chat inputs from the Playground.",
             "display_name": "Member Information",
             "documentation": "https://docs.langflow.org/components-io#chat-input",
             "edited": false,
@@ -1413,7 +1388,7 @@
             "category": "data",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Real-time eligibility verification service via MCP",
+            "description": "Make HTTP requests using URL or cURL commands.",
             "display_name": "Eligibility Lookup Service",
             "documentation": "https://docs.langflow.org/components-data#api-request",
             "edited": false,
@@ -1863,5 +1838,12 @@
   "is_component": false,
   "last_tested_version": "1.6.3",
   "name": "Eligibility Checker",
-  "tags": ["UM", "eligibility", "insurance", "verification", "benefits", "healthcare"]
+  "tags": [
+    "UM",
+    "eligibility",
+    "insurance",
+    "verification",
+    "benefits",
+    "healthcare"
+  ]
 }

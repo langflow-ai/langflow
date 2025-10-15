@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # AI Studio Frontend with exact dev environment configuration
+  ai-studio-frontend-dev-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+      args:
+        BACKEND_URL: https://genesis.dev-v2.platform.autonomize.dev/genesis-platform/bff
+    container_name: ai-studio-frontend-dev-test
+    ports:
+      - "3000:3000"
+    environment:
+      # ===========================================
+      # EXACT DEV ENVIRONMENT CONFIGURATION
+      # Matching platform-charts values-dev.yaml
+      # ===========================================
+
+      # Development Configuration
+      NODE_ENV: "development"
+      FRONTEND_PORT: "3000"
+
+      # Backend Integration - Core API endpoint
+      BACKEND_URL: "https://genesis.dev-v2.platform.autonomize.dev/genesis-platform/bff"
+      VITE_BACKEND_URL: "https://genesis.dev-v2.platform.autonomize.dev/genesis-platform/bff"
+      VITE_API_PREFIX: "/api/v1/genesis-studio"
+
+      # Application Configuration
+      VITE_APP_TITLE: "AI Studio - Development"
+      VITE_BUILD_VERSION: "development"
+
+      # Feature Flags
+      VITE_ENABLE_CHAT: "true"
+      VITE_ENABLE_AGENT_BUILDER: "true"
+      VITE_ENABLE_HEALTHCARE_COMPONENTS: "true"
+
+      # Debug Configuration for Development
+      VITE_DEBUG_MODE: "true"
+      VITE_LOG_LEVEL: "debug"
+
+      # Keycloak Authentication Configuration
+      VITE_KEYCLOAK_ENABLED: "true"
+      VITE_KEYCLOAK_URL: "https://genesis.dev-v2.platform.autonomize.dev/genesis-platform/auth/"
+      VITE_KEYCLOAK_REALM: "autonomize"
+      VITE_KEYCLOAK_CLIENT_ID: "ai-studio-frontend"
+
+      # Optional Advanced Configuration (Runtime configurable)
+      VITE_WEBSOCKET_URL: ""
+      VITE_MAX_FILE_SIZE: ""
+      VITE_TIMEOUT: ""
+    volumes:
+      - /tmp/frontend-logs:/var/log/nginx
+    restart: unless-stopped
+
+networks:
+  default:
+    driver: bridge

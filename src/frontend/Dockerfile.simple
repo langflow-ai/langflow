@@ -1,0 +1,44 @@
+FROM node:20-alpine as frontend_build
+ARG BACKEND_URL
+WORKDIR /app
+ENV NODE_OPTIONS=--max-old-space-size=4096
+
+COPY ./package.json ./package-lock.json ./tsconfig.json ./vite.config.mts ./index.html ./tailwind.config.mjs ./postcss.config.js /app/
+RUN npm install
+COPY ./src /app/src
+RUN npm run build
+
+FROM nginx:alpine
+ARG BACKEND_URL
+
+# Copy built frontend files
+COPY --from=frontend_build /app/build/ /usr/share/nginx/html
+
+# Create a simple nginx server configuration
+RUN echo 'server {' > /etc/nginx/conf.d/default.conf && \
+    echo '    listen 3000;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    server_name localhost;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    root /usr/share/nginx/html;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    index index.html;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    location / {' >> /etc/nginx/conf.d/default.conf && \
+    echo '        try_files $uri $uri/ /index.html;' >> /etc/nginx/conf.d/default.conf && \
+    echo '    }' >> /etc/nginx/conf.d/default.conf && \
+    echo '}' >> /etc/nginx/conf.d/default.conf
+
+# Copy environment injection script and example file
+COPY env.sh /usr/share/nginx/html/env.sh
+COPY .env.example /usr/share/nginx/html/.env.example
+RUN chmod +x /usr/share/nginx/html/env.sh
+
+# Set environment variables
+ENV BACKEND_URL=$BACKEND_URL
+ENV FRONTEND_PORT=3000
+
+# Create startup script that injects environment and starts nginx
+RUN echo '#!/bin/sh' > /start-nginx.sh && \
+    echo 'cd /usr/share/nginx/html' >> /start-nginx.sh && \
+    echo './env.sh' >> /start-nginx.sh && \
+    echo 'nginx -g "daemon off;"' >> /start-nginx.sh && \
+    chmod +x /start-nginx.sh
+
+CMD ["/start-nginx.sh"]

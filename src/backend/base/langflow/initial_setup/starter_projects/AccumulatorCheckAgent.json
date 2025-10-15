@@ -25,9 +25,9 @@
         "id": "xy-edge__APIRequest-kOQlg{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-kOQlgœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-PcQZu{œfieldNameœ:œtoolsœ,œidœ:œAgent-PcQZuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "APIRequest-kOQlg",
-        "sourceHandle": "{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-kOQlgœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œAPIRequestœ, œidœ: œAPIRequest-kOQlgœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-PcQZu",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-PcQZuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-PcQZuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "xy-edge__Prompt Template-3wbnh{œdataTypeœ:œPrompt Templateœ,œidœ:œPrompt Template-3wbnhœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-PcQZu{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-PcQZuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt Template-3wbnh",
-        "sourceHandle": "{œdataTypeœ:œPrompt Templateœ,œidœ:œPrompt Template-3wbnhœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPrompt Templateœ, œidœ: œPrompt Template-3wbnhœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-PcQZu",
-        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-PcQZuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-PcQZuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "xy-edge__ChatInput-CUC59{œdataTypeœ:œChatInputœ,œidœ:œChatInput-CUC59œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-PcQZu{œfieldNameœ:œinput_valueœ,œidœ:œAgent-PcQZuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-CUC59",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-CUC59œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-CUC59œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-PcQZu",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-PcQZuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-PcQZuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -109,9 +109,9 @@
         "id": "xy-edge__APIRequest-6A2FC{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-6A2FCœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-PcQZu{œfieldNameœ:œtoolsœ,œidœ:œAgent-PcQZuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "APIRequest-6A2FC",
-        "sourceHandle": "{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-6A2FCœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œAPIRequestœ, œidœ: œAPIRequest-6A2FCœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-PcQZu",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-PcQZuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-PcQZuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -137,9 +137,9 @@
         "id": "xy-edge__APIRequest-0RjZf{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-0RjZfœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-PcQZu{œfieldNameœ:œtoolsœ,œidœ:œAgent-PcQZuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "APIRequest-0RjZf",
-        "sourceHandle": "{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-0RjZfœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œAPIRequestœ, œidœ: œAPIRequest-0RjZfœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-PcQZu",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-PcQZuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-PcQZuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -167,9 +167,9 @@
         "id": "xy-edge__Agent-PcQZu{œdataTypeœ:œAgentœ,œidœ:œAgent-PcQZuœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-ClIpO{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ClIpOœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "Agent-PcQZu",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-PcQZuœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-PcQZuœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-ClIpO",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ClIpOœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-ClIpOœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -185,7 +185,7 @@
             "custom_fields": {
               "template": []
             },
-            "description": "Prompt template for agent instructions",
+            "description": "Create a prompt template with dynamic variables.",
             "display_name": "Agent Instructions",
             "documentation": "https://docs.langflow.org/components-prompts",
             "edited": false,
@@ -212,11 +212,8 @@
                 "cache": true,
                 "display_name": "Prompt",
                 "group_outputs": false,
-                "hidden": null,
                 "method": "build_prompt",
                 "name": "prompt",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -319,7 +316,7 @@
             "category": "data",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Calculate member responsibility based on accumulators via MCP",
+            "description": "Make HTTP requests using URL or cURL commands.",
             "display_name": "Member Responsibility Calculator",
             "documentation": "https://docs.langflow.org/components-data#api-request",
             "edited": false,
@@ -767,7 +764,7 @@
             "category": "input_output",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Member and service information for accumulator check",
+            "description": "Get chat inputs from the Playground.",
             "display_name": "Accumulator Request",
             "documentation": "https://docs.langflow.org/components-io#chat-input",
             "edited": false,
@@ -1011,7 +1008,7 @@
             "category": "data",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Retrieve claims and authorization history via MCP",
+            "description": "Make HTTP requests using URL or cURL commands.",
             "display_name": "QNXT Auth History",
             "documentation": "https://docs.langflow.org/components-data#api-request",
             "edited": false,
@@ -1459,7 +1456,7 @@
             "category": "data",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Analyze claims history for accumulator impact via MCP",
+            "description": "Make HTTP requests using URL or cURL commands.",
             "display_name": "Claims History API",
             "documentation": "https://docs.langflow.org/components-data#api-request",
             "edited": false,
@@ -1907,7 +1904,7 @@
             "category": "input_output",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Display accumulator check results",
+            "description": "Display a chat message in the Playground.",
             "display_name": "Accumulator Report",
             "documentation": "https://docs.langflow.org/components-io#chat-output",
             "edited": false,
@@ -2128,7 +2125,7 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Analyzes benefit accumulators",
+            "description": "Define the agent's instructions, then enter a task to complete using tools.",
             "display_name": "Accumulator Check Agent",
             "documentation": "https://docs.langflow.org/agents",
             "edited": false,
@@ -2171,8 +2168,6 @@
                 "group_outputs": false,
                 "method": "message_response",
                 "name": "response",
-                "options": null,
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2287,9 +2282,9 @@
               "api_key": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
-                "display_name": "Azure Chat OpenAI API Key",
+                "display_name": "OpenAI API Key",
                 "dynamic": false,
-                "info": "",
+                "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [],
                 "load_from_db": false,
                 "name": "api_key",
@@ -2302,95 +2297,12 @@
                 "type": "str",
                 "value": ""
               },
-              "api_version": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "API Version",
-                "dynamic": false,
-                "external_options": {},
-                "info": "",
-                "input_types": [],
-                "name": "api_version",
-                "options": [
-                  "2025-02-01-preview",
-                  "2025-01-01-preview",
-                  "2024-12-01-preview",
-                  "2024-10-01-preview",
-                  "2024-09-01-preview",
-                  "2024-08-01-preview",
-                  "2024-07-01-preview",
-                  "2024-06-01",
-                  "2024-03-01-preview",
-                  "2024-02-15-preview",
-                  "2023-12-01-preview",
-                  "2023-05-15"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "2025-01-01-preview"
-              },
-              "azure_deployment": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Deployment Name",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "azure_deployment",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "gpt-4o"
-              },
-              "azure_endpoint": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Azure Endpoint",
-                "dynamic": false,
-                "info": "Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "azure_endpoint",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "https://openai-v2-lab.openai.azure.com/"
-              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2489,6 +2401,24 @@
                 "type": "int",
                 "value": 15
               },
+              "max_retries": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Retries",
+                "dynamic": false,
+                "info": "The maximum number of retries to make when generating.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_retries",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 5
+              },
               "max_tokens": {
                 "_input_type": "IntInput",
                 "advanced": true,
@@ -2508,6 +2438,67 @@
                 "type": "int",
                 "value": ""
               },
+              "model_kwargs": {
+                "_input_type": "DictInput",
+                "advanced": true,
+                "display_name": "Model Kwargs",
+                "dynamic": false,
+                "info": "Additional keyword arguments to pass to the model.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "model_kwargs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
+              "model_name": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": true,
+                "dialog_inputs": {},
+                "display_name": "Model Name",
+                "dynamic": false,
+                "external_options": {},
+                "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
+                "name": "model_name",
+                "options": [
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "gpt-4.1",
+                  "gpt-4.1-mini",
+                  "gpt-4.1-nano",
+                  "gpt-4-turbo",
+                  "gpt-4-turbo-preview",
+                  "gpt-4",
+                  "gpt-3.5-turbo",
+                  "gpt-5",
+                  "gpt-5-mini",
+                  "gpt-5-nano",
+                  "gpt-5-chat-latest",
+                  "o1",
+                  "o3-mini",
+                  "o3",
+                  "o3-pro",
+                  "o4-mini",
+                  "o4-mini-high"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "real_time_refresh": false,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "gpt-4o-mini"
+              },
               "n_messages": {
                 "_input_type": "IntInput",
                 "advanced": true,
@@ -2526,6 +2517,25 @@
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 100
+              },
+              "openai_api_base": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "OpenAI API Base",
+                "dynamic": false,
+                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "openai_api_base",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
               },
               "output_schema": {
                 "_input_type": "TableInput",
@@ -2612,6 +2622,24 @@
                 "type": "table",
                 "value": []
               },
+              "seed": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Seed",
+                "dynamic": false,
+                "info": "The seed controls the reproducibility of the job.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "seed",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 1
+              },
               "system_prompt": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
@@ -2642,7 +2670,7 @@
                 "advanced": true,
                 "display_name": "Temperature",
                 "dynamic": false,
-                "info": "Controls randomness. Lower values are more deterministic, higher values are more creative.",
+                "info": "",
                 "input_types": [],
                 "max_label": "",
                 "max_label_icon": "",
@@ -2665,6 +2693,24 @@
                 "tool_mode": false,
                 "type": "slider",
                 "value": 0.7
+              },
+              "timeout": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Timeout",
+                "dynamic": false,
+                "info": "The timeout for requests to OpenAI completion API.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "timeout",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 700
               },
               "tools": {
                 "_input_type": "HandleInput",
@@ -2737,5 +2783,12 @@
   "is_component": false,
   "last_tested_version": "1.6.3",
   "name": "Accumulator Check Agent",
-  "tags": ["UM", "accumulator", "utilization", "reusable", "healthcare", "benefits"]
+  "tags": [
+    "UM",
+    "accumulator",
+    "utilization",
+    "reusable",
+    "healthcare",
+    "benefits"
+  ]
 }

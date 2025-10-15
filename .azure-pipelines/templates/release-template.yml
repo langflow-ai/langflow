@@ -39,8 +39,8 @@ jobs:
 
       echo "Updating ${{ parameters.SERVICE_NAME }} image tag in: $valuesFile"
 
-      # Update specific service image tag
-      buildnumber="$(Build.BuildNumber)" yq -i e '.ai-studio.${{ parameters.SERVICE_NAME }}.image.tag = env(buildnumber)' $valuesFile
+      # Update specific service image tag with proper string formatting (ensures quotes)
+      buildnumber="$(Build.BuildNumber)" yq -i e '.ai-studio.${{ parameters.SERVICE_NAME }}.image.tag = strenv(buildnumber)' $valuesFile
 
       # Show the changes
       echo "=== Changes Made ==="
