@@ -2,19 +2,25 @@
 
 from __future__ import annotations
 
-from typing import Dict, Any, Optional
-from uuid import UUID
+from typing import Dict, Any, Optional, List
+from uuid import UUID, uuid4
+from pathlib import Path
+import yaml
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils import DbSession
+from langflow.api.utils import DbSession, CurrentActiveUser
 from langflow.services.spec.service import SpecService
+from langflow.services.database.models.flow import Flow
 from langflow.logging import logger
 
 # Build router
 router = APIRouter(prefix="/spec", tags=["Specification"])
+
+# Base path to specifications library
+SPEC_LIBRARY_BASE_PATH = Path(__file__).parent.parent.parent / "specifications_library" / "agents"
 
 
 class SpecConvertRequest(BaseModel):
@@ -272,5 +278,230 @@ async def get_knowledge(
     except Exception as e:
         logger.error(f"Error loading knowledge: {e}")
         raise HTTPException(status_code=500, detail="Internal server error loading knowledge") from e
+
+
+# New models for specification library endpoints
+class CreateFlowFromLibraryRequest(BaseModel):
+    """Request to create flow from specification library."""
+    specification_file: str = Field(
+        ...,
+        description="Relative path to YAML file from specifications_library/agents/",
+        examples=["multi-tool/accumulator-check-agent.yaml", "simple/classification-agent.yaml"]
+    )
+    folder_id: Optional[UUID] = Field(None, description="Optional folder ID to organize the flow")
+
+
+class CreateFlowFromLibraryResponse(BaseModel):
+    """Response after creating flow from specification library."""
+    success: bool = Field(..., description="Creation success status")
+    flow_id: Optional[str] = Field(None, description="Created flow ID")
+    flow_name: Optional[str] = Field(None, description="Created flow name")
+    specification_urn: Optional[str] = Field(None, description="Specification URN from YAML")
+    specification_file: str = Field(..., description="Source specification file path")
+    message: str = Field(..., description="Success/error message")
+    error: Optional[str] = Field(None, description="Error type if failed")
+    details: Optional[str] = Field(None, description="Additional error details")
+
+
+class AvailableSpecification(BaseModel):
+    """Available specification metadata."""
+    file_path: str = Field(..., description="Relative path from specifications_library/agents/")
+    name: str = Field(..., description="Agent name from YAML")
+    specification_urn: str = Field(..., description="Specification URN")
+    kind: str = Field(..., description="Agent kind (Single Agent, Multi Agent, etc.)")
+    subdomain: Optional[str] = Field(None, description="Sub-domain category")
+    description: Optional[str] = Field(None, description="Agent description")
+
+
+class AvailableSpecificationsResponse(BaseModel):
+    """Response listing available specifications."""
+    success: bool = Field(True, description="Success status")
+    total: int = Field(..., description="Total number of available specifications")
+    specifications: List[AvailableSpecification] = Field(..., description="List of specifications")
+
+
+@router.get("/available-specifications", response_model=AvailableSpecificationsResponse)
+async def list_available_specifications() -> AvailableSpecificationsResponse:
+    """
+    List all YAML specifications available in the library.
+
+    Returns metadata for all specification files that can be converted to flows.
+    Use the file_path from this response in the create-flow-from-library endpoint.
+    """
+    specifications = []
+
+    try:
+        # Find all YAML files in specifications_library/agents
+        yaml_files = list(SPEC_LIBRARY_BASE_PATH.rglob("*.yaml"))
+
+        for yaml_file in yaml_files:
+            try:
+                # Read and parse YAML
+                with open(yaml_file, 'r', encoding='utf-8') as f:
+                    spec_dict = yaml.safe_load(f.read())
+
+                if not spec_dict:
+                    continue
+
+                # Get relative path from base
+                relative_path = yaml_file.relative_to(SPEC_LIBRARY_BASE_PATH)
+
+                # Extract metadata
+                specifications.append(AvailableSpecification(
+                    file_path=str(relative_path),
+                    name=spec_dict.get('name', yaml_file.stem),
+                    specification_urn=spec_dict.get('id', ''),
+                    kind=spec_dict.get('kind', 'Unknown'),
+                    subdomain=spec_dict.get('subDomain'),
+                    description=spec_dict.get('description')
+                ))
+
+            except Exception as e:
+                logger.warning(f"Could not read specification {yaml_file.name}: {e}")
+                continue
+
+        # Sort by file path
+        specifications.sort(key=lambda s: s.file_path)
+
+        return AvailableSpecificationsResponse(
+            success=True,
+            total=len(specifications),
+            specifications=specifications
+        )
+
+    except Exception as e:
+        logger.error(f"Error listing specifications: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to list available specifications"
+        )
+
+
+@router.post("/create-flow-from-library", response_model=CreateFlowFromLibraryResponse, status_code=201)
+async def create_flow_from_specification_library(
+    *,
+    request: CreateFlowFromLibraryRequest,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+) -> CreateFlowFromLibraryResponse:
+    """
+    Create a Langflow flow from YAML specification in the library.
+
+    Reads the specified YAML file from specifications_library/agents/ directory,
+    converts it to a Langflow flow, and saves it to the database using the
+    authenticated current user as the flow owner.
+
+    Use GET /api/v1/spec/available-specifications to see all available files.
+    """
+    try:
+        # Construct full path to YAML file
+        yaml_file_path = SPEC_LIBRARY_BASE_PATH / request.specification_file
+
+        # Check if file exists
+        if not yaml_file_path.exists():
+            logger.error(f"Specification file not found: {yaml_file_path}")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Specification file '{request.specification_file}' not found in library"
+            )
+
+        # Security check: ensure path is within specifications_library (prevent path traversal)
+        try:
+            yaml_file_path.resolve().relative_to(SPEC_LIBRARY_BASE_PATH.resolve())
+        except ValueError:
+            logger.error(f"Path traversal attempt: {request.specification_file}")
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid specification file path"
+            )
+
+        # Read YAML file
+        try:
+            with open(yaml_file_path, 'r', encoding='utf-8') as f:
+                yaml_content = f.read()
+                spec_dict = yaml.safe_load(yaml_content)
+        except yaml.YAMLError as e:
+            logger.error(f"YAML parsing error for {request.specification_file}: {e}")
+            return CreateFlowFromLibraryResponse(
+                success=False,
+                specification_file=request.specification_file,
+                message="Invalid YAML format",
+                error="YAML parsing failed",
+                details=str(e)
+            )
+        except Exception as e:
+            logger.error(f"Error reading file {request.specification_file}: {e}")
+            return CreateFlowFromLibraryResponse(
+                success=False,
+                specification_file=request.specification_file,
+                message="Failed to read specification file",
+                error="File read error",
+                details=str(e)
+            )
+
+        if not spec_dict:
+            return CreateFlowFromLibraryResponse(
+                success=False,
+                specification_file=request.specification_file,
+                message="Empty YAML specification",
+                error="Empty YAML"
+            )
+
+        # Convert YAML to flow JSON using SpecService
+        service = SpecService()
+        try:
+            flow_data = await service.convert_spec_to_flow(yaml_content)
+        except Exception as e:
+            logger.error(f"Spec conversion error for {request.specification_file}: {e}")
+            return CreateFlowFromLibraryResponse(
+                success=False,
+                specification_file=request.specification_file,
+                message="Failed to convert specification to flow",
+                error="Conversion error",
+                details=str(e)
+            )
+
+        # Extract flow metadata from YAML
+        flow_name = spec_dict.get('name', yaml_file_path.stem)
+        description = spec_dict.get('description', '')
+        specification_urn = spec_dict.get('id', '')
+
+        # Create Flow record in database using authenticated user
+        flow = Flow(
+            id=uuid4(),
+            name=flow_name,
+            description=description,
+            data=flow_data.get("data"),
+            user_id=current_user.id,  # Use authenticated user automatically
+            folder_id=request.folder_id,
+            is_component=False,
+        )
+
+        session.add(flow)
+        await session.commit()
+        await session.refresh(flow)
+
+        logger.info(f"✅ Created flow '{flow_name}' (ID: {flow.id}) from {request.specification_file} for user {current_user.id}")
+
+        return CreateFlowFromLibraryResponse(
+            success=True,
+            flow_id=str(flow.id),
+            flow_name=flow_name,
+            specification_urn=specification_urn,
+            specification_file=request.specification_file,
+            message="Flow created successfully from specification library"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error creating flow from {request.specification_file}: {e}", exc_info=True)
+        return CreateFlowFromLibraryResponse(
+            success=False,
+            specification_file=request.specification_file,
+            message="Internal server error",
+            error="Unexpected error",
+            details=str(e)
+        )
 
 
