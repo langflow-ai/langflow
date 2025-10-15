@@ -16,6 +16,7 @@ import { TemplateCategoryComponent } from "../TemplateCategoryComponent";
 export default function TemplateContentComponent({
   currentTab,
   categories,
+  useCaseIds,
 }: TemplateContentProps) {
   const allExamples = useFlowsManagerStore((state) => state.examples);
 
@@ -26,11 +27,16 @@ export default function TemplateContentComponent({
       }
       return true;
     })
-    .filter(
-      (example) =>
-        example.tags?.includes(currentTab ?? "") ||
-        currentTab === "all-templates",
-    );
+    .filter((example) => {
+      if (currentTab === "all-templates") {
+        // Aggregate all templates that belong to any Use Case
+        // Fallback: if useCaseIds not provided, include all examples
+        return useCaseIds?.length
+          ? useCaseIds.some((id) => example.tags?.includes(id))
+          : true;
+      }
+      return example.tags?.includes(currentTab ?? "");
+    });
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredExamples, setFilteredExamples] = useState(examples);
@@ -85,7 +91,7 @@ export default function TemplateContentComponent({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="flex flex-1 flex-col gap-6 overflow-hidden">
+    <div className="flex flex-1 flex-col gap-6">
       <div className="relative mx-3 flex-1 grow-0 py-px">
         <ForwardedIconComponent
           name="Search"
