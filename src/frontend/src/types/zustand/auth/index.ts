@@ -16,6 +16,7 @@ export interface AuthStoreType {
   setAutoLogin: (autoLogin: boolean) => void;
   setApiKey: (apiKey: string | null) => void;
   setAuthenticationErrorCount: (authenticationErrorCount: number) => void;
+  syncKeycloakAuthState: () => void;
   logout: () => Promise<void>;
   // setUserData: (userData: Users | null) => void;
   // setIsAdmin: (isAdmin: boolean) => void;

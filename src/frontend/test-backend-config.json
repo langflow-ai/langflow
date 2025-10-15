@@ -1,0 +1,32 @@
+{
+  "test_config": {
+    "name": "AI Studio Mock Backend",
+    "version": "1.0.0-test",
+    "authentication": {
+      "traditional": {
+        "enabled": true,
+        "auto_login": true,
+        "mock_token": "mock-traditional-token"
+      },
+      "keycloak": {
+        "enabled": false,
+        "note": "Keycloak authentication handled by actual Keycloak server"
+      }
+    },
+    "endpoints": {
+      "/health": "Health check endpoint",
+      "/api/v1/auto_login": "Traditional auto login",
+      "/api/v1/users/whoami": "User information",
+      "/api/v1/version": "Application version",
+      "/api/v1/config": "Frontend configuration",
+      "/api/v1/variables": "Global variables",
+      "/api/v1/refresh": "Token refresh",
+      "/api/v1/logout": "User logout"
+    },
+    "testing": {
+      "bearer_token_validation": "All API endpoints check for Authorization header",
+      "cors_enabled": true,
+      "debug_mode": true
+    }
+  }
+}
