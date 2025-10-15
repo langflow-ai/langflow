@@ -3,11 +3,19 @@ name: Smoke Tests
 on:
   pull_request:
     types: [opened, labeled, synchronize, reopened]
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to checkout (branch, tag, or commit SHA)'
+        required: false
+        default: ''
+        type: string
 
 jobs:
   backend-smoke-tests:
-    if: contains(github.event.pull_request.labels.*.name, 'smoke-test')
+    if: contains(github.event.pull_request.labels.*.name, 'smoke-test') || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     name: "Backend Smoke Tests"
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -17,6 +25,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          ref: ${{ github.event.inputs.ref || github.ref }}
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -54,7 +63,7 @@ jobs:
           LANGFLOW_SUPERUSER_PASSWORD: 123456
 
   lfx-smoke-tests:
-    if: contains(github.event.pull_request.labels.*.name, 'smoke-test')
+    if: contains(github.event.pull_request.labels.*.name, 'smoke-test') || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     name: "LFX Smoke Tests (Isolated)"
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -64,6 +73,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          ref: ${{ github.event.inputs.ref || github.ref }}
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -96,7 +106,7 @@ jobs:
           LANGFLOW_SUPERUSER_PASSWORD: 123456
 
   frontend-smoke-tests:
-    if: contains(github.event.pull_request.labels.*.name, 'smoke-test')
+    if: contains(github.event.pull_request.labels.*.name, 'smoke-test') || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     name: "Frontend Smoke Tests"
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -106,6 +116,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          ref: ${{ github.event.inputs.ref || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -127,7 +138,7 @@ jobs:
           NODE_ENV: test
 
   comment-results:
-    if: always() && contains(github.event.pull_request.labels.*.name, 'smoke-test')
+    if: always() && (contains(github.event.pull_request.labels.*.name, 'smoke-test') || github.event_name == 'release' || github.event_name == 'workflow_dispatch')
     name: "Comment Results"
     needs: [backend-smoke-tests, lfx-smoke-tests, frontend-smoke-tests]
     runs-on: ubuntu-latest
@@ -161,9 +172,14 @@ jobs:
 
             View details in the [Actions tab](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).`;
 
-            await github.rest.issues.createComment({
-              issue_number: context.payload.pull_request.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
+            // Only comment on PRs, not on releases or manual runs
+            if (context.payload.pull_request) {
+              await github.rest.issues.createComment({
+                issue_number: context.payload.pull_request.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } else {
+              console.log('Smoke test results:', comment);
+            }
