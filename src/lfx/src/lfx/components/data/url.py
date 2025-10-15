@@ -4,6 +4,7 @@ import re
 import requests
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
@@ -174,6 +175,30 @@ class URLComponent(Component):
             required=False,
             advanced=True,
         ),
+        IntInput(
+            name="chunk_size",
+            display_name="Chunk Size",
+            info="Maximum size of each text chunk in characters. Set to 0 to disable chunking.",
+            value=4000,
+            required=False,
+            advanced=True,
+        ),
+        IntInput(
+            name="chunk_overlap",
+            display_name="Chunk Overlap",
+            info="Number of characters to overlap between chunks for context continuity.",
+            value=200,
+            required=False,
+            advanced=True,
+        ),
+        IntInput(
+            name="max_total_chars",
+            display_name="Max Total Characters",
+            info="Maximum total characters to return across all pages. Set to 0 for no limit.",
+            value=50000,
+            required=False,
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -244,7 +269,7 @@ class URLComponent(Component):
         )
 
     def fetch_url_contents(self) -> list[dict]:
-        """Load documents from the configured URLs.
+        """Load documents from the configured URLs with optional chunking.
 
         Returns:
             List[Data]: List of Data objects containing the fetched content
@@ -260,7 +285,14 @@ class URLComponent(Component):
                 raise ValueError(msg)
 
             all_docs = []
+            total_chars = 0
+            max_chars = getattr(self, "max_total_chars", 50000)
+
             for url in urls:
+                if max_chars > 0 and total_chars >= max_chars:
+                    logger.warning(f"Reached max character limit ({max_chars}), stopping crawl")
+                    break
+
                 logger.debug(f"Loading documents from {url}")
 
                 try:
@@ -274,6 +306,9 @@ class URLComponent(Component):
                     logger.debug(f"Found {len(docs)} documents from {url}")
                     all_docs.extend(docs)
 
+                    # Track total characters
+                    total_chars += sum(len(doc.page_content) for doc in docs)
+
                 except requests.exceptions.RequestException as e:
                     logger.exception(f"Error loading documents from {url}: {e}")
                     continue
@@ -282,18 +317,59 @@ class URLComponent(Component):
                 msg = "No documents were successfully loaded from any URL"
                 raise ValueError(msg)
 
-            # data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]
-            data = [
-                {
-                    "text": safe_convert(doc.page_content, clean_data=True),
-                    "url": doc.metadata.get("source", ""),
-                    "title": doc.metadata.get("title", ""),
-                    "description": doc.metadata.get("description", ""),
-                    "content_type": doc.metadata.get("content_type", ""),
-                    "language": doc.metadata.get("language", ""),
-                }
-                for doc in all_docs
-            ]
+            # Apply chunking if configured
+            chunk_size = getattr(self, "chunk_size", 4000)
+            chunk_overlap = getattr(self, "chunk_overlap", 200)
+
+            if chunk_size > 0:
+                text_splitter = RecursiveCharacterTextSplitter(
+                    chunk_size=chunk_size,
+                    chunk_overlap=chunk_overlap,
+                    length_function=len,
+                    separators=["\n\n", "\n", ". ", " ", ""],
+                )
+
+                chunked_docs = []
+                current_chars = 0
+                for doc in all_docs:
+                    if max_chars > 0 and current_chars >= max_chars:
+                        break
+                    chunks = text_splitter.split_text(doc.page_content)
+                    for i, chunk in enumerate(chunks):
+                        if max_chars > 0 and current_chars >= max_chars:
+                            break
+                        chunked_docs.append(
+                            {
+                                "text": safe_convert(chunk, clean_data=True),
+                                "url": doc.metadata.get("source", ""),
+                                "title": doc.metadata.get("title", ""),
+                                "description": doc.metadata.get("description", ""),
+                                "content_type": doc.metadata.get("content_type", ""),
+                                "language": doc.metadata.get("language", ""),
+                                "chunk_index": i,
+                                "total_chunks": len(chunks),
+                            }
+                        )
+                        current_chars += len(chunk)
+                data = chunked_docs
+            else:
+                data = [
+                    {
+                        "text": safe_convert(doc.page_content, clean_data=True),
+                        "url": doc.metadata.get("source", ""),
+                        "title": doc.metadata.get("title", ""),
+                        "description": doc.metadata.get("description", ""),
+                        "content_type": doc.metadata.get("content_type", ""),
+                        "language": doc.metadata.get("language", ""),
+                    }
+                    for doc in all_docs
+                ]
+
+            logger.info(
+                f"Successfully fetched {len(data)} chunks/documents "
+                f"totaling ~{sum(len(d['text']) for d in data)} characters"
+            )
+
         except Exception as e:
             error_msg = e.message if hasattr(e, "message") else e
             msg = f"Error loading documents: {error_msg!s}"
