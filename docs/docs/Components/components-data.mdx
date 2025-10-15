@@ -106,6 +106,15 @@ Outputs either a [`Data`](/data-types#data) or [`DataFrame`](/data-types#datafra
 | silent_errors      | BoolInput        | Input parameter. If `true`, errors don't raise an exception.         |
 | use_multithreading | BoolInput        | Input parameter. If `true`, multithreading is used.                   |
 
+## Mock Data
+
+The **Mock Data** component generates sample data for testing and development.
+You can select these output types:
+
+* `message_output`: A [Message (text)](/data-types#message) output with Lorem Ipsum sample text.
+* `data_output`: A [Data (JSON)](/data-types#data) object containing a JSON structure with one sample record under `records` and a `summary` section.
+* `dataframe_output`: A [DataFrame (tabular)](/data-types#dataframe) with 50 mock records, including columns such as `customer_id`, `first_name`, and `last_name`. 
+
 ## Read File {#file}
 
 In Langflow version 1.7.0, this component was renamed from **File** to **Read File**.
