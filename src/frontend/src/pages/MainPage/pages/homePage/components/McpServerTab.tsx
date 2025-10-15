@@ -253,6 +253,8 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
     if (authSettings.auth_type === "oauth") {
       setIsWaitingForComposer(true);
+    } else {
+      setIsWaitingForComposer(false);
     }
 
     patchFlowsMCP(requestData, {
