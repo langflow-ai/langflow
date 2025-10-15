@@ -5,15 +5,21 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
+    from .azure_blob_retriever import AzureBlobRetrieverComponent
+    from .azure_blob_uploader import AzureBlobUploaderComponent
     from .azure_openai import AzureChatOpenAIComponent
     from .azure_openai_embeddings import AzureOpenAIEmbeddingsComponent
 
 _dynamic_imports = {
     "AzureChatOpenAIComponent": "azure_openai",
     "AzureOpenAIEmbeddingsComponent": "azure_openai_embeddings",
+    "AzureBlobUploaderComponent": "azure_blob_uploader",
+    "AzureBlobRetrieverComponent": "azure_blob_retriever",
 }
 
 __all__ = [
+    "AzureBlobRetrieverComponent",
+    "AzureBlobUploaderComponent",
     "AzureChatOpenAIComponent",
     "AzureOpenAIEmbeddingsComponent",
 ]

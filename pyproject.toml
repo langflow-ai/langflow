@@ -217,6 +217,12 @@ audio = [
     "webrtcvad>=2.0.10",
 ]
 
+azure = [
+    "azure-storage-blob>=12.24.0",
+    "reportlab>=4.0.0",
+    "pypdf>=5.1.0",
+
+]
 
 couchbase = [
     "couchbase>=4.2.1"

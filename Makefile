@@ -76,7 +76,7 @@ reinstall_backend: ## forces reinstall all dependencies (no caching)
 
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
-	@uv sync --frozen --extra "postgresql" $(EXTRA_ARGS)
+	@uv sync --frozen --extra "postgresql" --extra "azure" $(EXTRA_ARGS)
 
 
 
